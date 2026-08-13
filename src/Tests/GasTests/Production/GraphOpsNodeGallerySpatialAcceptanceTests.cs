@@ -64,6 +64,38 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
     }
 
     [Test]
+    public void QueryHexNeighbors_LightsTheSixAdjacentPeople_NotTheOuterOne()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryHexNeighbors");
+        SpatialNodeDriver driver = (SpatialNodeDriver)runtime.Driver;
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("贴着的六格邻居"));
+        Assert.That(int.Parse(runtime.Context.CaptionValues["count"]), Is.EqualTo(6));
+        Assert.That(driver.LastTargetCount, Is.EqualTo(6));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("6"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("没亮"));
+    }
+
+    [Test]
+    public void QueryHexRange_LightsPeopleInsideTwoHexes_NotTheOuterOne()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryHexRange");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(int.Parse(runtime.Context.CaptionValues["count"]), Is.EqualTo(5));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("没亮"));
+    }
+
+    [Test]
+    public void QueryHexRing_LightsOnlyTheRing_NotInsideOrOutside()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QueryHexRing");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(int.Parse(runtime.Context.CaptionValues["count"]), Is.EqualTo(3));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("里外"));
+    }
+
+    [Test]
     public void SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty()
     {
         string[] ops =

@@ -175,4 +175,16 @@ internal sealed class GraphOpsNodeField
     public GraphOpsNodeActor[] Actors { get; set; } = Array.Empty<GraphOpsNodeActor>();
     public GraphOpsNodeCollection[] Collections { get; set; } = Array.Empty<GraphOpsNodeCollection>();
     public GraphOpsNodeLink[] Links { get; set; } = Array.Empty<GraphOpsNodeLink>();
+    public GraphOpsNodeCamera? Camera { get; set; }
+}
+
+internal sealed class GraphOpsNodeCamera
+{
+    public string VirtualCameraId { get; set; } = "";
+    public int TargetXCm { get; set; }
+    public int TargetYCm { get; set; }
+    public int DistanceCm { get; set; }
+    public float Pitch { get; set; }
+    public float Yaw { get; set; }
+    public float FovYDeg { get; set; }
 }

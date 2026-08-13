@@ -3600,7 +3600,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeBuiltinEntryMod",
       "projectPath": "CapabilityStandardGraphOpInvokeBuiltinEntryMod.csproj",
       "title": "跑一个内置步骤",
-      "summary": "事务里调用内置步骤，玩家看到一次生成清理的可见变化。",
+      "summary": "事务里先生成新身体，再清掉新身体上的残留效果。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5030,7 +5030,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexNeighborsEntryMod",
       "projectPath": "CapabilityStandardGraphOpQueryHexNeighborsEntryMod.csproj",
       "title": "贴着的六格邻居",
-      "summary": "身边六格有人就亮。",
+      "summary": "身边六格各站一个人就亮，再远一格的人是暗的。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5056,7 +5056,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexRangeEntryMod",
       "projectPath": "CapabilityStandardGraphOpQueryHexRangeEntryMod.csproj",
       "title": "这几格六角范围内",
-      "summary": "六角范围亮起。",
+      "summary": "两格以内的人亮，再远一格的人是暗的。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -5082,7 +5082,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexRingEntryMod",
       "projectPath": "CapabilityStandardGraphOpQueryHexRingEntryMod.csproj",
       "title": "只取这一圈六角环",
-      "summary": "环上的人亮，环内环外不亮。",
+      "summary": "只有环上的人亮，里圈和环外都不亮。",
       "tier": "T2",
       "category": "capability",
       "tags": [

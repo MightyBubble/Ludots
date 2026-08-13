@@ -49,10 +49,15 @@ def merge_field(vignette_dir: Path, vignette: dict) -> dict:
         raise SystemExit(
             f"Vignette {vignette.get('op')} sets field '{field}' and also actors; field owns the scene."
         )
-    for key in ("actors", "collections", "links"):
+    for key in ("actors", "collections", "links", "camera"):
         if key in scene:
             merged[key] = scene[key]
     return merged
+
+
+def json_number(value):
+    number = float(value)
+    return int(number) if number.is_integer() else number
 
 
 def actor_to_entity(actor: dict) -> dict:
@@ -74,20 +79,21 @@ def actor_to_entity(actor: dict) -> dict:
     return entity
 
 
-def write_map(path: Path, map_id: str, actors: list) -> None:
+def write_map(path: Path, map_id: str, actors: list, camera: dict | None = None) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
+    cam = camera or {}
     payload = {
         "Id": map_id,
         "Tags": MAP_TAGS,
         "DefaultCamera": {
-            "VirtualCameraId": "Camera.Profile.Tactical",
-            "TargetXCm": 0,
-            "TargetYCm": 0,
-            "DistanceCm": 2600,
-            "Pitch": 75,
-            "Yaw": 180,
-            "FovYDeg": 50,
+            "VirtualCameraId": cam.get("virtualCameraId", "Camera.Profile.Tactical"),
+            "TargetXCm": int(cam.get("targetXCm", 0)),
+            "TargetYCm": int(cam.get("targetYCm", 0)),
+            "DistanceCm": int(cam.get("distanceCm", 2600)),
+            "Pitch": json_number(cam.get("pitch", 75)),
+            "Yaw": json_number(cam.get("yaw", 180)),
+            "FovYDeg": json_number(cam.get("fovYDeg", 50)),
         },
         "Entities": [actor_to_entity(actor) for actor in actors],
     }
@@ -253,7 +259,7 @@ def main() -> int:
         ns = f"CapabilityStandardGraphOp{op}EntryMod"
         entry_path = f"{ENTRY_ROOT_REL}/{ns}"
         map_path = maps_dir / f"{sid}.json"
-        write_map(map_path, sid, scene.get("actors") or [])
+        write_map(map_path, sid, scene.get("actors") or [], scene.get("camera"))
         write_entry_mod(repo, op, title)
 
         upsert_by_key(

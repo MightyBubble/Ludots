@@ -2,12 +2,13 @@
   "op": "QueryHexRange",
   "driver": "spatial",
   "title": "这几格六角范围内",
-  "beat": "六角范围亮起。",
-  "detailTemplate": "六角范围内有{count}人。",
+  "beat": "两格以内的人亮，再远一格的人是暗的。",
+  "detailTemplate": "两格范围内亮了{count}人，更远那个没亮。",
   "assertDetailContains": [
-    "范围内"
+    "范围内",
+    "没亮"
   ],
   "featuredNodeId": "hexRange",
   "graphKind": "Query",
-  "field": "spatial"
+  "field": "hex_range"
 }

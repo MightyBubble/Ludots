@@ -89,7 +89,7 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
         DrawFeaturedShape(ctx, debugDraw);
-        if (_focusIndex >= 0 && _focusIndex < _units.Length)
+        if (_focusIndex >= 0 && _focusIndex < _units.Length && !IsHexOp(ctx.Vignette.Op))
         {
             int actorIndex = GraphOpsNodeActorBinding.IndexOf(ctx, _units[_focusIndex]);
             GraphShowcaseStagePresenter.DrawAggroLine(
@@ -303,11 +303,21 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawPolyline(debugDraw, points, GraphShowcaseStagePresenter.SentryAlert, thickness: 0.14f);
     }
 
+    private static bool IsHexOp(string op)
+        => op is nameof(GraphNodeOp.QueryHexRange)
+            or nameof(GraphNodeOp.QueryHexRing)
+            or nameof(GraphNodeOp.QueryHexNeighbors);
+
     private static void DrawHexCells(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int radius, bool ringOnly)
     {
         ISpatialCoordinateConverter coords = ctx.Coords
             ?? throw new InvalidOperationException("Spatial overlay requires host coordinate converter.");
-        var center = new HexCoordinates(0, 0);
+        if (!ctx.SimWorld.IsAlive(ctx.Caster) || !ctx.SimWorld.Has<WorldPositionCm>(ctx.Caster))
+        {
+            throw new InvalidOperationException("Hex overlay requires the caster's live WorldPositionCm.");
+        }
+
+        HexCoordinates center = coords.WorldToHex(ctx.SimWorld.Get<WorldPositionCm>(ctx.Caster).ToWorldCmInt2());
         int count = ringOnly ? HexCoordinates.RingCount(radius) : HexCoordinates.RangeCount(radius);
         Span<HexCoordinates> hexes = stackalloc HexCoordinates[count];
         int written = ringOnly
@@ -326,7 +336,7 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
                 points[p] = new Vector2(cx + MathF.Cos(a) * size, cy + MathF.Sin(a) * size);
             }
 
-            GraphShowcaseStagePresenter.DrawPolyline(debugDraw, points, GraphShowcaseStagePresenter.PathColor, thickness: 0.08f);
+            GraphShowcaseStagePresenter.DrawPolyline(debugDraw, points, GraphShowcaseStagePresenter.SentryAlert, thickness: 0.18f);
         }
     }
 

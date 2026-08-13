@@ -11,8 +11,8 @@
     "VirtualCameraId": "Camera.Profile.Tactical",
     "TargetXCm": 0,
     "TargetYCm": 0,
-    "DistanceCm": 2600,
-    "Pitch": 75,
+    "DistanceCm": 4200,
+    "Pitch": 52,
     "Yaw": 180,
     "FovYDeg": 50
   },
@@ -41,80 +41,11 @@
       }
     },
     {
-      "InstanceId": "ally",
-      "Template": "GraphOps.Ally",
-      "Overrides": {
-        "Name": {
-          "Value": "友军"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 0,
-            "Y": 250
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 1
-        }
-      }
-    },
-    {
-      "InstanceId": "north",
+      "InstanceId": "east",
       "Template": "GraphOps.Target",
       "Overrides": {
         "Name": {
-          "Value": "北面的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 0,
-            "Y": 450
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "hexN",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "北格的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 346,
-            "Y": 600
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "hexE",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "东格的人"
+          "Value": "东格"
         },
         "WorldPositionCm": {
           "Value": {
@@ -133,11 +64,11 @@
       }
     },
     {
-      "InstanceId": "hexSW",
+      "InstanceId": "northeast",
       "Template": "GraphOps.Target",
       "Overrides": {
         "Name": {
-          "Value": "西南格的人"
+          "Value": "东北格"
         },
         "WorldPositionCm": {
           "Value": {
@@ -156,11 +87,57 @@
       }
     },
     {
-      "InstanceId": "hexNW",
+      "InstanceId": "northwest",
       "Template": "GraphOps.Target",
       "Overrides": {
         "Name": {
-          "Value": "西北格的人"
+          "Value": "西北格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -346,
+            "Y": -600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "west",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -693,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "southwest",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西南格"
         },
         "WorldPositionCm": {
           "Value": {
@@ -179,130 +156,38 @@
       }
     },
     {
-      "InstanceId": "hexOuter",
+      "InstanceId": "southeast",
       "Template": "GraphOps.Target",
       "Overrides": {
         "Name": {
-          "Value": "外环的人"
+          "Value": "东南格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 346,
+            "Y": 600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "outer",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "再远一格"
         },
         "WorldPositionCm": {
           "Value": {
             "X": 1386,
-            "Y": 0
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "near",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "近处的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 60,
-            "Y": 20
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "side",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "身侧的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": -50,
-            "Y": 30
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "diag",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "斜线上的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 180,
-            "Y": 180
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "farDiag",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "更远斜线的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 250,
-            "Y": 250
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 100
-          }
-        },
-        "Team": {
-          "Id": 2
-        }
-      }
-    },
-    {
-      "InstanceId": "west",
-      "Template": "GraphOps.Target",
-      "Overrides": {
-        "Name": {
-          "Value": "西边的人"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": -900,
             "Y": 0
           }
         },
