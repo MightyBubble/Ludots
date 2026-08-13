@@ -6,6 +6,11 @@
         "paramKey": "animation_acceptance.tank.locomotion.speed",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "animation_acceptance.tank.fire.trigger",
+        "lane": "Int",
+        "intValue": 0
       }
     ],
     "behaviors": [
@@ -72,6 +77,11 @@
         "paramKey": "animation_acceptance.humanoid.locomotion.speed",
         "lane": "Float",
         "floatValue": 1
+      },
+      {
+        "paramKey": "animation_acceptance.humanoid.fire.trigger",
+        "lane": "Int",
+        "intValue": 0
       }
     ],
     "behaviors": [
