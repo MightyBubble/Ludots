@@ -95,7 +95,7 @@ namespace Ludots.Core.Scripting
         // WorldHudConfig removed; unified into Presenter entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
-        public const string RoadSplineBuffer = "RoadSplineBuffer";
+        public const string SplineRibbonBuffer = "SplineRibbonBuffer";
         // IndicatorRequestBuffer removed; unified into Presenter direct API
         public const string PresenterDefinitionRegistry = "PresenterDefinitionRegistry";
         public const string PresenterEntityRuntime = "PresenterEntityRuntime";

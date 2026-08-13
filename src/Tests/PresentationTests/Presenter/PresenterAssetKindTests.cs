@@ -326,7 +326,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void AssetBinding_Spline_EmitsRoadSplineRequest()
+        public void AssetBinding_Spline_EmitsSplineRibbonRequest()
         {
             using var world = World.Create();
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
@@ -381,10 +381,10 @@ namespace Ludots.Tests.Presentation
 
             ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.RoadSpline));
-            Assert.That(span[0].RoadSpline.StableId, Is.GreaterThan(0));
-            Assert.That(span[0].RoadSpline.Width, Is.EqualTo(2.25f).Within(0.001f));
-            Assert.That(span[0].RoadSpline.P0, Is.EqualTo(new Vector3(2f, 3f, 4f)));
+            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.SplineRibbon));
+            Assert.That(span[0].SplineRibbon.StableId, Is.GreaterThan(0));
+            Assert.That(span[0].SplineRibbon.Width, Is.EqualTo(2.25f).Within(0.001f));
+            Assert.That(span[0].SplineRibbon.P0, Is.EqualTo(new Vector3(2f, 3f, 4f)));
         }
 
         [Test]
@@ -698,7 +698,7 @@ namespace Ludots.Tests.Presentation
             Assert.Throws<System.InvalidOperationException>(() => system.Update(0.016f));
         }
 
-        [TestCase(AssetKind.Spline, PresentationRequestKind.RoadSpline)]
+        [TestCase(AssetKind.Spline, PresentationRequestKind.SplineRibbon)]
         [TestCase(AssetKind.WorldHud, PresentationRequestKind.WorldHud)]
         [TestCase(AssetKind.WorldText, PresentationRequestKind.WorldHud)]
         [TestCase(AssetKind.GroundOverlay, PresentationRequestKind.GroundOverlay)]
@@ -770,7 +770,7 @@ namespace Ludots.Tests.Presentation
 
         [TestCase(AssetKind.WorldHud, PresentationRequestKind.RemoveWorldHud)]
         [TestCase(AssetKind.WorldText, PresentationRequestKind.RemoveWorldHud)]
-        [TestCase(AssetKind.Spline, PresentationRequestKind.RemoveRoadSpline)]
+        [TestCase(AssetKind.Spline, PresentationRequestKind.RemoveSplineRibbon)]
         [TestCase(AssetKind.GroundOverlay, PresentationRequestKind.RemoveGroundOverlay)]
         public void RetainedPresentationRequest_StaticSubtype_RemovesExplicitlyWhenOwnerDies(
             AssetKind assetKind,
@@ -834,7 +834,7 @@ namespace Ludots.Tests.Presentation
 
         [TestCase(AssetKind.WorldHud, PresentationRequestKind.RemoveWorldHud)]
         [TestCase(AssetKind.WorldText, PresentationRequestKind.RemoveWorldHud)]
-        [TestCase(AssetKind.Spline, PresentationRequestKind.RemoveRoadSpline)]
+        [TestCase(AssetKind.Spline, PresentationRequestKind.RemoveSplineRibbon)]
         [TestCase(AssetKind.GroundOverlay, PresentationRequestKind.RemoveGroundOverlay)]
         public void RuntimeDestroy_RetainedPresentationSubtype_QueuesAdapterRemovalInProductionOrder(
             AssetKind assetKind,

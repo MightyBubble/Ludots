@@ -6,10 +6,10 @@ namespace Ludots.Core.Presentation.Rendering
 {
     /// <summary>
     /// Per-frame zero-allocation spline ribbon buffer.
-    /// Uses structure-of-arrays layout so large road batches can be written and read
+    /// Uses structure-of-arrays layout so large ribbon batches can be written and read
     /// without per-item allocations or transient object materialization.
     /// </summary>
-    public sealed class RoadSplineBuffer
+    public sealed class SplineRibbonBuffer
     {
         private readonly int[] _stableIds;
         private readonly float[] _p0x;
@@ -34,7 +34,6 @@ namespace Ludots.Core.Presentation.Rendering
         private readonly float[] _borderG;
         private readonly float[] _borderB;
         private readonly float[] _borderA;
-        private readonly byte[] _style;
         private readonly Dictionary<int, int> _retainedIndexByStableId = new();
         private int _count;
         private int _transientCount;
@@ -42,11 +41,11 @@ namespace Ludots.Core.Presentation.Rendering
         public int Count => _count;
         public int Capacity => _stableIds.Length;
 
-        public RoadSplineBuffer(int capacity = 2048)
+        public SplineRibbonBuffer(int capacity = 2048)
         {
             if (capacity <= 0)
             {
-                capacity = 2048;
+                throw new ArgumentOutOfRangeException(nameof(capacity));
             }
 
             _stableIds = new int[capacity];
@@ -72,7 +71,6 @@ namespace Ludots.Core.Presentation.Rendering
             _borderG = new float[capacity];
             _borderB = new float[capacity];
             _borderA = new float[capacity];
-            _style = new byte[capacity];
         }
 
         public bool TryAdd(
@@ -84,12 +82,11 @@ namespace Ludots.Core.Presentation.Rendering
             float width,
             in Vector4 fillColor,
             in Vector4 borderColor,
-            float borderWidth,
-            byte style = 0)
+            float borderWidth)
         {
             if (stableId > 0 && _retainedIndexByStableId.TryGetValue(stableId, out int existingIndex))
             {
-                Set(existingIndex, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth, style);
+                Set(existingIndex, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth);
                 return true;
             }
 
@@ -99,7 +96,7 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             int index = _count++;
-            Set(index, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth, style);
+            Set(index, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth);
             if (stableId > 0)
             {
                 _retainedIndexByStableId[stableId] = index;
@@ -122,8 +119,7 @@ namespace Ludots.Core.Presentation.Rendering
             float width,
             in Vector4 fillColor,
             in Vector4 borderColor,
-            float borderWidth,
-            byte style)
+            float borderWidth)
         {
             _stableIds[index] = stableId;
             _p0x[index] = p0.X;
@@ -148,7 +144,6 @@ namespace Ludots.Core.Presentation.Rendering
             _borderG[index] = borderColor.Y;
             _borderB[index] = borderColor.Z;
             _borderA[index] = borderColor.W;
-            _style[index] = style;
         }
 
         public void Remove(int stableId)
@@ -234,7 +229,6 @@ namespace Ludots.Core.Presentation.Rendering
             _borderG[destination] = _borderG[source];
             _borderB[destination] = _borderB[source];
             _borderA[destination] = _borderA[source];
-            _style[destination] = _style[source];
         }
 
         public bool TryAddLine(
@@ -244,12 +238,11 @@ namespace Ludots.Core.Presentation.Rendering
             float width,
             in Vector4 fillColor,
             in Vector4 borderColor,
-            float borderWidth,
-            byte style = 0)
+            float borderWidth)
         {
             Vector3 c1 = Vector3.Lerp(start, end, 1f / 3f);
             Vector3 c2 = Vector3.Lerp(start, end, 2f / 3f);
-            return TryAdd(stableId, start, c1, c2, end, width, fillColor, borderColor, borderWidth, style);
+            return TryAdd(stableId, start, c1, c2, end, width, fillColor, borderColor, borderWidth);
         }
 
         public void Clear()
@@ -282,6 +275,5 @@ namespace Ludots.Core.Presentation.Rendering
         public ReadOnlySpan<float> BorderG => _borderG.AsSpan(0, _count);
         public ReadOnlySpan<float> BorderB => _borderB.AsSpan(0, _count);
         public ReadOnlySpan<float> BorderA => _borderA.AsSpan(0, _count);
-        public ReadOnlySpan<byte> Style => _style.AsSpan(0, _count);
     }
 }

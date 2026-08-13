@@ -50,7 +50,7 @@ namespace Ludots.Tests.Presentation
         private PrimitiveDrawBuffer _primitives;
         private WorldHudBatchBuffer _hud;
         private GroundOverlayBuffer _overlays;
-        private RoadSplineBuffer _roadSplines;
+        private SplineRibbonBuffer _splineRibbons;
         private PresentationRequestBuffer _requests;
         private SoundRequestBuffer _soundRequests;
         private PresentationOwnerChangeBuffer _ownerChanges;
@@ -83,7 +83,7 @@ namespace Ludots.Tests.Presentation
             var skinnedBatchBuffer = new SkinnedVisualBatchBuffer(16384);
             _hud = new WorldHudBatchBuffer(16384);
             _overlays = new GroundOverlayBuffer(4096);
-            _roadSplines = new RoadSplineBuffer();
+            _splineRibbons = new SplineRibbonBuffer();
             _requests = new PresentationRequestBuffer();
             _soundRequests = new SoundRequestBuffer();
             _ownerChanges = new PresentationOwnerChangeBuffer(16384);
@@ -101,7 +101,7 @@ namespace Ludots.Tests.Presentation
             _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PresenterBehaviorSystem(_world, _instances, _defs, _presEvents, _ownerChanges, _soundRequests);
             _emitSystem = new PresenterEmitSystem(_world, _instances, _defs, _requests, _globals);
-            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _roadSplines, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _splineRibbons, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
         }
 
         [TearDown]
@@ -123,7 +123,7 @@ namespace Ludots.Tests.Presentation
             _hud.Clear();
             _primitives.Clear();
             _overlays.Clear();
-            _roadSplines.Clear();
+            _splineRibbons.Clear();
         }
 
         private Entity CreateOwner(Vector3 position, AttributeBuffer attributes = default, bool hasAttributes = false, bool visible = true)

@@ -141,7 +141,7 @@ namespace RoadNetworkShowcaseMod.Systems
             var desiredChunkKeys = new HashSet<long>(_runtime.ActiveBoard.LoadedChunksSource.ActiveChunkKeys);
             foreach (long chunkKey in _runtime.ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
             {
-                if (!_runtime.Scenario.TryGetRoadSplineChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadSplineSpec[]? chunkSplines))
+                if (!_runtime.Scenario.TryGetRoadRibbonChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadRibbonSpec[]? chunkSplines))
                 {
                     continue;
                 }
@@ -167,7 +167,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 var segments = new SurfaceSplineSegment[chunkSplines.Length];
                 for (int i = 0; i < chunkSplines.Length; i++)
                 {
-                    ref readonly RoadNetworkScenarioDefinition.RoadSplineSpec spec = ref chunkSplines[i];
+                    ref readonly RoadNetworkScenarioDefinition.RoadRibbonSpec spec = ref chunkSplines[i];
                     segments[i] = new SurfaceSplineSegment(spec.P0, spec.P1, spec.P2, spec.P3, spec.Width);
                 }
 

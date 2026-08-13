@@ -6,11 +6,11 @@ namespace Ludots.Core.Presentation.Requests
         Prefab = 2,
         GroundOverlay = 3,
         WorldHud = 4,
-        RoadSpline = 5,
+        SplineRibbon = 5,
         SurfaceSource = 6,
         RemoveGroundOverlay = 7,
         RemoveWorldHud = 8,
-        RemoveRoadSpline = 9,
+        RemoveSplineRibbon = 9,
         RemoveSurfaceSource = 10,
         ClearTransientVisualProjection = 11,
     }

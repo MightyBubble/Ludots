@@ -201,8 +201,8 @@ namespace Ludots.Tests.Presentation
             using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 12);
 
-            var splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
-                ?? throw new InvalidOperationException("RoadSplineBuffer missing.");
+            var splines = engine.GetService(CoreServiceKeys.SplineRibbonBuffer)
+                ?? throw new InvalidOperationException("SplineRibbonBuffer missing.");
             var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
                 ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
             var hud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)

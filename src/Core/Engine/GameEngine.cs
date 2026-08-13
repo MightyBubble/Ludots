@@ -236,7 +236,7 @@ namespace Ludots.Core.Engine
         private GasPresentationEventBuffer _gasPresentationEvents;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
-        private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
+        private Ludots.Core.Presentation.Rendering.SplineRibbonBuffer _splineRibbonBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
@@ -1060,7 +1060,7 @@ namespace Ludots.Core.Engine
                 presentationConfig.GlobalFieldVisualDirtyRectCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
-            var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.RoadSplineCapacity);
+            var splineRibbonBuffer = new SplineRibbonBuffer(presentationConfig.SplineRibbonCapacity);
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
             var presentationTimingDiagnostics = new PresentationTimingDiagnostics();
@@ -1185,7 +1185,7 @@ namespace Ludots.Core.Engine
                 primitiveDrawBuffer,
                 groundOverlayBuffer,
                 worldHudBuffer,
-                roadSplineBuffer,
+                splineRibbonBuffer,
                 visualSnapshotBuffer,
                 visualProxyBuffer,
                 skinnedVisualBatchBuffer,
@@ -1564,7 +1564,7 @@ namespace Ludots.Core.Engine
             _instancedBatchOperationBuffer = instancedBatchOperations;
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
-            _roadSplineBuffer = roadSplineBuffer;
+            _splineRibbonBuffer = splineRibbonBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
@@ -1591,7 +1591,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
             SetService(CoreServiceKeys.GlobalPresentationEventBuffer, globalPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
-            SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
+            SetService(CoreServiceKeys.SplineRibbonBuffer, splineRibbonBuffer);
             SetService(CoreServiceKeys.SoundRequestBuffer, soundRequestBuffer);
             SetService(CoreServiceKeys.PresenterDefinitionRegistry, presenterDefinitions);
             SetService(CoreServiceKeys.PresenterEntityRuntime, presenterRuntime);
@@ -3333,7 +3333,7 @@ namespace Ludots.Core.Engine
             _instancedBatchOperationBuffer = null;
             _gasPresentationEvents = null;
             _groundOverlayBuffer = null;
-            _roadSplineBuffer = null;
+            _splineRibbonBuffer = null;
             _worldHudBuffer = null;
             _physics2DController = null;
             _gasController = null;
@@ -3417,7 +3417,7 @@ namespace Ludots.Core.Engine
             _instancedBatchRequestBuffer?.Clear();
             _instancedBatchOperationBuffer?.Clear();
             _groundOverlayBuffer?.ClearTransient();
-            _roadSplineBuffer?.ClearTransient();
+            _splineRibbonBuffer?.ClearTransient();
             _worldHudBuffer?.ClearTransient();
             var timingDiagnostics = GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             bool captureSystemBreakdown = timingDiagnostics?.SystemBreakdownEnabled == true;

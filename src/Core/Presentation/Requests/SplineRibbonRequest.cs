@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Presentation.Requests
 {
-    public struct RoadSplineRequest
+    public struct SplineRibbonRequest
     {
         public int StableId;
         public Vector3 P0;
@@ -13,6 +13,5 @@ namespace Ludots.Core.Presentation.Requests
         public Vector4 FillColor;
         public Vector4 BorderColor;
         public float BorderWidth;
-        public byte Style;
     }
 }

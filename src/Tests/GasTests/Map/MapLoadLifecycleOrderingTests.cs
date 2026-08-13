@@ -166,7 +166,7 @@ public sealed class MapLoadLifecycleOrderingTests
                     "skinnedVisualBatchCapacity": 16,
                     "presentationRequestCapacity": 16,
                     "groundOverlayCapacity": 16,
-                    "roadSplineCapacity": 16,
+                    "splineRibbonCapacity": 16,
                     "worldHudCapacity": 16,
                     "screenHudCapacity": 16,
                     "minimapMarkerCapacity": 16,

@@ -22,7 +22,7 @@ namespace Ludots.Core.Presentation
         private int? _globalFieldVisualCellCapacity;
         private int? _globalFieldVisualDirtyRectCapacity;
         private int? _groundOverlayCapacity;
-        private int? _roadSplineCapacity;
+        private int? _splineRibbonCapacity;
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
         private int? _minimapMarkerCapacity;
@@ -47,7 +47,7 @@ namespace Ludots.Core.Presentation
         public int GlobalFieldVisualCellCapacity { get => _globalFieldVisualCellCapacity ?? 0; set => _globalFieldVisualCellCapacity = value; }
         public int GlobalFieldVisualDirtyRectCapacity { get => _globalFieldVisualDirtyRectCapacity ?? 0; set => _globalFieldVisualDirtyRectCapacity = value; }
         public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
-        public int RoadSplineCapacity { get => _roadSplineCapacity ?? 0; set => _roadSplineCapacity = value; }
+        public int SplineRibbonCapacity { get => _splineRibbonCapacity ?? 0; set => _splineRibbonCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
@@ -84,7 +84,7 @@ namespace Ludots.Core.Presentation
             RequirePositive(_globalFieldVisualCellCapacity, "presentation.globalFieldVisualCellCapacity");
             RequirePositive(_globalFieldVisualDirtyRectCapacity, "presentation.globalFieldVisualDirtyRectCapacity");
             RequirePositive(_groundOverlayCapacity, "presentation.groundOverlayCapacity");
-            RequirePositive(_roadSplineCapacity, "presentation.roadSplineCapacity");
+            RequirePositive(_splineRibbonCapacity, "presentation.splineRibbonCapacity");
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
             RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");

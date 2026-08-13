@@ -175,8 +175,8 @@ namespace Ludots.Core.Presentation.Hud
         public float LastMode3DMs { get; private set; }
         public float GroundOverlayRenderMs { get; private set; }
         public float LastGroundOverlayRenderMs { get; private set; }
-        public float RoadSplineRenderMs { get; private set; }
-        public float LastRoadSplineRenderMs { get; private set; }
+        public float SplineRibbonRenderMs { get; private set; }
+        public float LastSplineRibbonRenderMs { get; private set; }
         public float DebugDrawRenderMs { get; private set; }
         public float LastDebugDrawRenderMs { get; private set; }
         public float NativeDiagnosticHudMs { get; private set; }
@@ -212,7 +212,7 @@ namespace Ludots.Core.Presentation.Hud
         public int WorldHudProjectedLastFrame { get; private set; }
         public int WorldHudDensitySkippedLastFrame { get; private set; }
         public int GroundOverlaysLastFrame { get; private set; }
-        public int RoadSplinesLastFrame { get; private set; }
+        public int SplineRibbonsLastFrame { get; private set; }
         public int DebugDrawCommandsLastFrame { get; private set; }
         public int CompositeSkipCountLastSecond { get; private set; }
 
@@ -664,11 +664,11 @@ namespace Ludots.Core.Presentation.Hud
             GroundOverlaysLastFrame = count;
         }
 
-        public void ObserveRoadSplineRender(double sampleMs, int count)
+        public void ObserveSplineRibbonRender(double sampleMs, int count)
         {
-            LastRoadSplineRenderMs = (float)sampleMs;
-            RoadSplineRenderMs = Smooth(RoadSplineRenderMs, (float)sampleMs);
-            RoadSplinesLastFrame = count;
+            LastSplineRibbonRenderMs = (float)sampleMs;
+            SplineRibbonRenderMs = Smooth(SplineRibbonRenderMs, (float)sampleMs);
+            SplineRibbonsLastFrame = count;
         }
 
         public void ObserveDebugDrawRender(double sampleMs, int count)

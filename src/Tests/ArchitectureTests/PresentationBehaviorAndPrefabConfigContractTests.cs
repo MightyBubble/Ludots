@@ -1054,7 +1054,7 @@ namespace Ludots.Tests.Architecture
     "globalFieldVisualCellCapacity": 65536,
     "globalFieldVisualDirtyRectCapacity": 1024,
     "groundOverlayCapacity": 1024,
-    "roadSplineCapacity": 2048,
+    "splineRibbonCapacity": 2048,
     "worldHudCapacity": 4096,
     "screenHudCapacity": 4096,
     "minimapMarkerCapacity": 4096,
@@ -1100,7 +1100,7 @@ namespace Ludots.Tests.Architecture
     "globalFieldVisualCellCapacity": 262144,
     "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 16384,
-    "roadSplineCapacity": 32768,
+    "splineRibbonCapacity": 32768,
     "worldHudCapacity": 65536,
     "screenHudCapacity": 65536,
     "minimapMarkerCapacity": 65536,
@@ -1135,7 +1135,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.GlobalFieldVisualCellCapacity, Is.EqualTo(262144));
             Assert.That(config.Presentation.GlobalFieldVisualDirtyRectCapacity, Is.EqualTo(4096));
             Assert.That(config.Presentation.GroundOverlayCapacity, Is.EqualTo(16384));
-            Assert.That(config.Presentation.RoadSplineCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.SplineRibbonCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.ScreenHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.MinimapMarkerCapacity, Is.EqualTo(65536));

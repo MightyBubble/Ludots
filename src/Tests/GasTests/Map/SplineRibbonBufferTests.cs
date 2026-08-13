@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
@@ -5,12 +6,19 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
-    public sealed class RoadSplineBufferTests
+    public sealed class SplineRibbonBufferTests
     {
         [Test]
-        public void RoadSplineBuffer_StoresColumns_WithoutItemMaterialization()
+        public void SplineRibbonBuffer_WhenCapacityIsNotPositive_Throws()
         {
-            var buffer = new RoadSplineBuffer(capacity: 2);
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SplineRibbonBuffer(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SplineRibbonBuffer(-1));
+        }
+
+        [Test]
+        public void SplineRibbonBuffer_StoresColumns_WithoutItemMaterialization()
+        {
+            var buffer = new SplineRibbonBuffer(capacity: 2);
 
             Assert.That(buffer.TryAddLine(
                 stableId: 11,
@@ -19,8 +27,7 @@ namespace Ludots.Tests.GAS
                 width: 0.6f,
                 fillColor: new Vector4(0.2f, 0.3f, 0.4f, 0.5f),
                 borderColor: new Vector4(0.6f, 0.7f, 0.8f, 0.9f),
-                borderWidth: 0.05f,
-                style: 3), Is.True);
+                borderWidth: 0.05f), Is.True);
 
             Assert.That(buffer.Count, Is.EqualTo(1));
             Assert.That(buffer.StableIds[0], Is.EqualTo(11));
@@ -28,7 +35,7 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.P3Z[0], Is.EqualTo(8f));
             Assert.That(buffer.Width[0], Is.EqualTo(0.6f));
             Assert.That(buffer.FillA[0], Is.EqualTo(0.5f));
-            Assert.That(buffer.Style[0], Is.EqualTo(3));
+            Assert.That(buffer.BorderWidth[0], Is.EqualTo(0.05f));
         }
     }
 }

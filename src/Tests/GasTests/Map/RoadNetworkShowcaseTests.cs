@@ -79,9 +79,9 @@ namespace Ludots.Tests.GAS
             Assert.That(westernChunk.Graph.NodeCount, Is.GreaterThanOrEqualTo(1));
             Assert.That(scenario.TryGetGraphChunk(easternChunkKey, out var easternChunk), Is.True);
             Assert.That(easternChunk.Graph.NodeCount, Is.GreaterThanOrEqualTo(1));
-            Assert.That(scenario.TryGetRoadSplineChunk(centralChunkKey, out var centralSplines), Is.True);
+            Assert.That(scenario.TryGetRoadRibbonChunk(centralChunkKey, out var centralSplines), Is.True);
             Assert.That(centralSplines.Length, Is.GreaterThanOrEqualTo(1));
-            Assert.That(scenario.TryGetRoadSplineChunk(easternChunkKey, out var easternSplines), Is.True);
+            Assert.That(scenario.TryGetRoadRibbonChunk(easternChunkKey, out var easternSplines), Is.True);
             Assert.That(easternSplines.Length, Is.GreaterThanOrEqualTo(1));
         }
 
@@ -759,7 +759,7 @@ namespace Ludots.Tests.GAS
             int loadedSplineCount = 0;
             foreach (long chunkKey in loadedChunks.ActiveChunkKeys)
             {
-                if (scenario.TryGetRoadSplineChunk(chunkKey, out var splines))
+                if (scenario.TryGetRoadRibbonChunk(chunkKey, out var splines))
                 {
                     loadedSplineCount += splines.Length;
                 }
