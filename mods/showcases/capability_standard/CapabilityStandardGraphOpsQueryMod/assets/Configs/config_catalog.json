@@ -2,6 +2,5 @@
   { "Path": "GraphShowcaseConfig.json", "Policy": "Replace" },
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/tag_rules.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "GAS/func_lib.json", "Policy": "ArrayById", "IdField": "name" }
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" }
 ]
