@@ -79,6 +79,12 @@ public sealed class GraphOpsNodeDriverContext
                 $"Gallery '{Vignette.Op}' requires production builtin invocation (handlers, templates, config effect).");
         }
 
+        if (EffectRequests == null)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{Vignette.Op}' requires the production EffectRequestQueue to allocate a parent effect root.");
+        }
+
         if (!EffectTemplates.TryGet(ConfigEffectTemplateId, out EffectTemplateData template))
         {
             throw new InvalidOperationException(
@@ -87,6 +93,7 @@ public sealed class GraphOpsNodeDriverContext
 
         var effectContext = new EffectContext
         {
+            RootId = EffectRequests.AllocateRootId(),
             Source = Caster,
             Target = Target,
             TargetContext = TargetContext != Entity.Null ? TargetContext : Target

@@ -136,10 +136,15 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowCount = take;
         }
 
+        public int AllocateRootId()
+        {
+            return _nextRootId++;
+        }
+
         public void Publish(in EffectRequest req)
         {
             var r = req;
-            if (r.RootId == 0) r.RootId = _nextRootId++;
+            if (r.RootId == 0) r.RootId = AllocateRootId();
 
             if (_count < _items.Length)
             {

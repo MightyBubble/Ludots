@@ -51,7 +51,7 @@ N/A
 - [x] 未添加「说不清的」默认 fallback
 - [x] 角色绑定用地图活人，不把 Arch `default(Entity)` 当成 `Entity.Null` 而漏绑目标
 - [x] 卸标记走 `GameplayEffectFactory` + 已加载的 effect 模板，不再 `World.Create` 半成品效果实体
-- [x] 图执行只用生产 `GasGraphRuntimeApi`，去掉 `RuntimeApiOverride`
+- [x] 图作为效果阶段执行时，父效果 RootId 从 `EffectRequestQueue.AllocateRootId` 拿，与 Publish 同一计数器
 
 ### 8. Next variant test
 
