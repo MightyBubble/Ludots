@@ -64,8 +64,7 @@ namespace Ludots.Core.Presentation.Requests
         {
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             _stableDrawCache.BeginFrame();
-            ReadOnlySpan<PresentationRequest> span = _requests.GetSpan();
-            bool hasTransientVisualProxy = HasTransientVisualProxy(span);
+            bool hasTransientVisualProxy = HasTransientVisualProxy(_requests);
             bool projectionTargetsCleared = false;
             if (hasTransientVisualProxy || _hadTransientVisualProjection)
             {
@@ -74,67 +73,56 @@ namespace Ludots.Core.Presentation.Requests
             }
             _hadTransientVisualProjection = hasTransientVisualProxy;
 
-            for (int i = 0; i < span.Length; i++)
+            ReadOnlySpan<PresentationRequestOp> ops = _requests.Ops;
+            for (int i = 0; i < ops.Length; i++)
             {
-                ref readonly PresentationRequest request = ref span[i];
-                switch (request.Kind)
+                PresentationRequestOp op = ops[i];
+                switch (op.Channel)
                 {
-                    case PresentationRequestKind.VisualProxy:
-                        EmitVisualProxy(request.VisualProxy);
+                    case PresentationRequestChannel.VisualProxy:
+                        EmitVisualProxy(in _requests.VisualProxyAt(op.Slot).VisualProxy);
                         break;
 
-                    case PresentationRequestKind.Prefab:
-                        EmitPrefab(in request);
+                    case PresentationRequestChannel.Prefab:
+                        EmitPrefab(in _requests.PrefabAt(op.Slot));
                         break;
 
-                    case PresentationRequestKind.GroundOverlay:
-                        if (!_groundOverlays.Upsert(request.GroundOverlay))
+                    case PresentationRequestChannel.GroundOverlay:
+                        if (!_groundOverlays.Upsert(_requests.GroundOverlayAt(op.Slot).Item))
                         {
                             throw new InvalidOperationException("GroundOverlayBuffer overflowed while flushing PresentationRequest.");
                         }
 
                         break;
 
-                    case PresentationRequestKind.WorldHud:
-                        if (!_worldHud.TryAdd(request.WorldHud))
+                    case PresentationRequestChannel.WorldHud:
+                    {
+                        ref readonly WorldHudChannelItem hud = ref _requests.WorldHudAt(op.Slot);
+                        if (!_worldHud.TryAdd(hud.Item))
                         {
                             throw new InvalidOperationException(
-                                $"WorldHudBatchBuffer overflowed while flushing PresentationRequest stableId={request.WorldHud.StableId}.");
+                                $"WorldHudBatchBuffer overflowed while flushing PresentationRequest stableId={hud.Item.StableId}.");
                         }
 
                         break;
+                    }
 
-                    case PresentationRequestKind.SplineRibbon:
-                        EmitSplineRibbon(in request.SplineRibbon);
+                    case PresentationRequestChannel.SplineRibbon:
+                        EmitSplineRibbon(in _requests.SplineRibbonAt(op.Slot).Item);
                         break;
 
-                    case PresentationRequestKind.SurfaceSource:
-                        // SurfaceSource requests are consumed by the dedicated presenter-surface runtime
-                        // before request flush reaches adapter-facing buffers.
+                    case PresentationRequestChannel.SurfaceSource:
                         break;
 
-                    case PresentationRequestKind.RemoveSurfaceSource:
-                        // SurfaceSource removals are consumed by SurfaceSourceFlushSystem.
+                    case PresentationRequestChannel.ClearTransient:
                         break;
 
-                    case PresentationRequestKind.ClearTransientVisualProjection:
-                        // Projection targets are cleared once before request replay when this marker is present.
-                        break;
-
-                    case PresentationRequestKind.RemoveGroundOverlay:
-                        _groundOverlays.Remove(request.StableId);
-                        break;
-
-                    case PresentationRequestKind.RemoveWorldHud:
-                        _worldHud.Remove(request.StableId);
-                        break;
-
-                    case PresentationRequestKind.RemoveSplineRibbon:
-                        _splineRibbons.Remove(request.StableId);
+                    case PresentationRequestChannel.Removal:
+                        FlushRemoval(in _requests.RemovalAt(op.Slot));
                         break;
 
                     default:
-                        throw new InvalidOperationException($"Unknown PresentationRequestKind '{request.Kind}'.");
+                        throw new InvalidOperationException($"Unknown PresentationRequestChannel '{op.Channel}'.");
                 }
             }
 
@@ -184,7 +172,27 @@ namespace Ludots.Core.Presentation.Requests
             _stableDrawCache.ClearStaticMeshDeltas();
         }
 
-        private void EmitPrefab(in PresentationRequest request)
+        private void FlushRemoval(in PresentationRemovalRequest removal)
+        {
+            switch (removal.Kind)
+            {
+                case PresentationRequestKind.RemoveGroundOverlay:
+                    _groundOverlays.Remove(removal.StableId);
+                    break;
+                case PresentationRequestKind.RemoveWorldHud:
+                    _worldHud.Remove(removal.StableId);
+                    break;
+                case PresentationRequestKind.RemoveSplineRibbon:
+                    _splineRibbons.Remove(removal.StableId);
+                    break;
+                case PresentationRequestKind.RemoveSurfaceSource:
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown PresentationRequestKind '{removal.Kind}' on removal channel.");
+            }
+        }
+
+        private void EmitPrefab(in PrefabRequest request)
         {
             if (!_prefabs.TryGet(request.PrefabId, out PrefabDefinition prefab))
             {
@@ -219,29 +227,23 @@ namespace Ludots.Core.Presentation.Requests
             _stableDrawCache.Upsert(proxy);
         }
 
-        private static bool HasTransientVisualProxy(ReadOnlySpan<PresentationRequest> requests)
+        private static bool HasTransientVisualProxy(PresentationRequestBuffer requests)
         {
-            for (int i = 0; i < requests.Length; i++)
+            if (requests.PrefabCount > 0 || requests.ClearTransientCount > 0)
             {
-                ref readonly PresentationRequest request = ref requests[i];
-                if (IsTransientPresentationRequest(in request))
+                return true;
+            }
+
+            ReadOnlySpan<VisualProxyChannelItem> visualProxies = requests.VisualProxies;
+            for (int i = 0; i < visualProxies.Length; i++)
+            {
+                if (IsTransientVisualProxy(in visualProxies[i].VisualProxy))
                 {
                     return true;
                 }
             }
 
             return false;
-        }
-
-        private static bool IsTransientPresentationRequest(in PresentationRequest request)
-        {
-            return request.Kind switch
-            {
-                PresentationRequestKind.ClearTransientVisualProjection => true,
-                PresentationRequestKind.Prefab => true,
-                PresentationRequestKind.VisualProxy => IsTransientVisualProxy(in request.VisualProxy),
-                _ => false,
-            };
         }
 
         private static bool IsTransientVisualProxy(in PresentationVisualProxy proxy)
