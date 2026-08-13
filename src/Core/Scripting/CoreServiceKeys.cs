@@ -68,6 +68,7 @@ using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Surfaces;
@@ -299,6 +300,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PresentationOwnerChangeBuffer> PresentationOwnerChangeBuffer = new("PresentationOwnerChangeBuffer");
         public static readonly ServiceKey<PresenterCommandBuffer> PresenterCommandBuffer = new("PresenterCommandBuffer");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
+        public static readonly ServiceKey<ParticleVfxRegistry> PresentationParticleVfxRegistry = new("PresentationParticleVfxRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
         public static readonly ServiceKey<InstancedBatchAssetRegistry> InstancedBatchAssetRegistry = new("InstancedBatchAssetRegistry");
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");

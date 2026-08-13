@@ -51,7 +51,7 @@ namespace Ludots.Core.Presentation.Requests
                 primitives ?? throw new ArgumentNullException(nameof(primitives)),
                 _snapshotBuffer,
                 proxyBuffer ?? throw new ArgumentNullException(nameof(proxyBuffer)),
-                skinnedBatchBuffer ?? throw new ArgumentNullException(nameof(skinnedBatchBuffer));
+                skinnedBatchBuffer ?? throw new ArgumentNullException(nameof(skinnedBatchBuffer)));
             _groundOverlays = groundOverlays ?? throw new ArgumentNullException(nameof(groundOverlays));
             _worldHud = worldHud ?? throw new ArgumentNullException(nameof(worldHud));
             _splineRibbons = splineRibbons ?? throw new ArgumentNullException(nameof(splineRibbons));

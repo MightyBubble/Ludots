@@ -1,0 +1,23 @@
+[
+  {
+    "id": "vfx_forge.texture.flame_flipbook.raylib",
+    "assetKind": "Mesh",
+    "assetId": "vfx_forge.texture.flame_flipbook",
+    "backendId": "raylib",
+    "sourceUris": [ "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/flame_flipbook.png" ]
+  },
+  {
+    "id": "vfx_forge.texture.smoke_flipbook.raylib",
+    "assetKind": "Mesh",
+    "assetId": "vfx_forge.texture.smoke_flipbook",
+    "backendId": "raylib",
+    "sourceUris": [ "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/smoke_flipbook.png" ]
+  },
+  {
+    "id": "vfx_forge.texture.spark_streak_flipbook.raylib",
+    "assetKind": "Mesh",
+    "assetId": "vfx_forge.texture.spark_streak_flipbook",
+    "backendId": "raylib",
+    "sourceUris": [ "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/spark_streak_flipbook.png" ]
+  }
+]

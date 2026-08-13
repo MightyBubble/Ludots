@@ -48,6 +48,20 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void GameEngine_RegistersParticleVfxRegistryBeforeMeshAssets()
+        {
+            Assert.That(
+                typeof(CoreServiceKeys).GetField("PresentationParticleVfxRegistry", BindingFlags.Public | BindingFlags.Static),
+                Is.Not.Null);
+
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+
+            Assert.That(engine.GetService(CoreServiceKeys.PresentationParticleVfxRegistry), Is.Not.Null);
+        }
+
+        [Test]
         public void GameEngine_DoesNotRegisterPrefabOrPresentationBehaviorServices()
         {
             Assert.That(

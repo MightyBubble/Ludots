@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
@@ -421,7 +422,9 @@ namespace Ludots.Tests.Presentation
                 Assert.That(blacksmithTemplateKeyId, Is.GreaterThan(0));
 
                 var meshAssets = new MeshAssetRegistry();
-                new MeshAssetConfigLoader(pipeline, meshAssets).Load(catalog);
+                var particleVfx = new ParticleVfxRegistry();
+                new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshAssets, particleVfx).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
                 RegisterFixtureAssets(meshAssets, materialAssets);
 
@@ -583,12 +586,31 @@ namespace Ludots.Tests.Presentation
                 {
                     return kind switch
                     {
-                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.VFX => meshAssets.GetId(key),
+                        AssetKind.Mesh or AssetKind.SkinnedMesh => meshAssets.GetId(key),
+                        AssetKind.VFX => ResolveVfxFixtureAssetId(key),
                         AssetKind.Spline when string.Equals(key, PatrolSplineAssetKey, StringComparison.Ordinal) => PatrolSplineAssetId,
                         AssetKind.Sound when string.Equals(key, HammerSoundAssetKey, StringComparison.Ordinal) => HammerSoundAssetId,
                         _ => throw new InvalidOperationException(
                             $"Blacksmith presenter UAT has no fixture asset registered for {kind} '{key}'."),
                     };
+                }
+
+                int ResolveVfxFixtureAssetId(string key)
+                {
+                    int assetId = meshAssets.GetId(key);
+                    if (assetId <= 0)
+                    {
+                        return 0;
+                    }
+
+                    if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                        !descriptor.VfxData.IsValid)
+                    {
+                        throw new InvalidOperationException(
+                            $"Blacksmith performer UAT VFX fixture asset '{key}' must declare VFX particle data.");
+                    }
+
+                    return assetId;
                 }
 
                 int ResolveUnsupportedEffectTemplateId(string key)
@@ -611,7 +633,7 @@ namespace Ludots.Tests.Presentation
                 RegisterPrimitiveMesh(meshAssets, WorkshopDamagedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkshopRuinedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, FurnaceAssetKey);
-                RegisterPrimitiveMesh(meshAssets, SmokeAssetKey);
+                RegisterVfxAsset(meshAssets, SmokeAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkerAssetKey);
                 materialAssets.Register(
                     BrickNorthMaterialKey,
@@ -629,6 +651,54 @@ namespace Ludots.Tests.Presentation
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube);
                 meshAssets.Register(key, in descriptor);
+            }
+
+            private static void RegisterVfxAsset(MeshAssetRegistry meshAssets, string key)
+            {
+                MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+                descriptor.VfxData = new VfxAssetData(CreateSmokeParticleVfx(),
+                    particleVfxAssetId: 1);
+                meshAssets.Register(key, in descriptor);
+            }
+
+            private static ParticleVfxAssetData CreateSmokeParticleVfx()
+            {
+                return new ParticleVfxAssetData(
+                    ParticleVfxSpawnMode.Loop,
+                    ParticleEmitterShapeKind.Cone,
+                    ParticleRenderMode.Primitive,
+                    ParticleBlendMode.Alpha,
+                    ParticlePrimitiveKind.Sphere,
+                maxParticles: 32,
+                    seed: 345678u,
+                    durationSeconds: 1.2f,
+                    emissionRatePerSecond: 16f,
+                    burstCount: 8,
+                    shapeRadius: 0.25f,
+                    shapeAngleRadians: 0.35f,
+                    shapeThickness: 0.8f,
+                    new ParticleValueRange(0.7f, 1.1f),
+                    new ParticleValueRange(0.3f, 0.8f),
+                    new ParticleValueRange(0.06f, 0.14f),
+                    new Vector4(0.72f, 0.72f, 0.67f, 0.45f),
+                    new ParticleScalarCurve(
+                        new[]
+                        {
+                            new ParticleCurveKey(0f, 0.5f),
+                            new ParticleCurveKey(1f, 1.2f),
+                        }),
+                    new ParticleColorGradient(
+                        new[]
+                        {
+                            new ParticleColorKey(0f, Vector4.One),
+                            new ParticleColorKey(1f, new Vector4(0.42f, 0.43f, 0.39f, 0f)),
+                        }),
+                    new Vector3(0f, 0.2f, 0f),
+                    drag: 0.08f,
+                    worldSpace: true,
+                    textureSheet: null,
+                    stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
             }
 
             public Entity SpawnBlacksmith()

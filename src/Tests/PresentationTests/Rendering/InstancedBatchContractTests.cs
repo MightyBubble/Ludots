@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
@@ -1415,7 +1416,7 @@ namespace Ludots.Tests.Presentation
             registry = new InstancedBatchAssetRegistry();
 
             meshes.Register("mesh.unit", MeshAssetDescriptor.Model(0));
-            meshes.Register("effect.batch.spark", MeshAssetDescriptor.Billboard(0));
+            meshes.Register("effect.batch.spark", CreateEffectDescriptor());
 
             materials.Register("material.unit", MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
             return new InstancedBatchAssetConfigLoader(
@@ -1433,6 +1434,54 @@ namespace Ludots.Tests.Presentation
             return eventKind == PresentationEventKind.EffectApplied
                 ? EffectTemplateIdRegistry.GetId(key)
                 : AbilityIdRegistry.GetId(key);
+        }
+
+        private static MeshAssetDescriptor CreateEffectDescriptor()
+        {
+            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+            descriptor.VfxData = new VfxAssetData(CreateTestParticleVfx(),
+                particleVfxAssetId: 1);
+            return descriptor;
+        }
+
+        private static ParticleVfxAssetData CreateTestParticleVfx()
+        {
+            return new ParticleVfxAssetData(
+                ParticleVfxSpawnMode.Loop,
+                ParticleEmitterShapeKind.Cone,
+                ParticleRenderMode.Primitive,
+                ParticleBlendMode.Alpha,
+                ParticlePrimitiveKind.Sphere,
+                maxParticles: 32,
+                seed: 234567u,
+                durationSeconds: 1.2f,
+                emissionRatePerSecond: 16f,
+                burstCount: 8,
+                shapeRadius: 0.25f,
+                shapeAngleRadians: 0.35f,
+                shapeThickness: 0.8f,
+                new ParticleValueRange(0.7f, 1.1f),
+                new ParticleValueRange(0.3f, 0.8f),
+                new ParticleValueRange(0.06f, 0.14f),
+                new Vector4(0.72f, 0.72f, 0.67f, 0.45f),
+                new ParticleScalarCurve(
+                    new[]
+                    {
+                        new ParticleCurveKey(0f, 0.5f),
+                        new ParticleCurveKey(1f, 1.2f),
+                    }),
+                new ParticleColorGradient(
+                    new[]
+                    {
+                        new ParticleColorKey(0f, Vector4.One),
+                        new ParticleColorKey(1f, new Vector4(0.42f, 0.43f, 0.39f, 0f)),
+                    }),
+                new Vector3(0f, 0.2f, 0f),
+                drag: 0.08f,
+                worldSpace: true,
+                textureSheet: null,
+                stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
         }
 
         private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)

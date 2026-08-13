@@ -177,6 +177,7 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadiusCm = 140_000f,
             };
             var frameLighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: ResolveInitialDayPhase01());
+            RaylibRenderEnvironmentConfig renderEnvironmentConfig = RaylibRenderEnvironmentConfig.CreateDefault();
 
             try
             {
@@ -203,6 +204,7 @@ namespace Ludots.Adapter.Raylib
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
                 using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
+                using var environmentRenderer = new RaylibRenderEnvironmentRenderer(renderEnvironmentConfig);
                 var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
@@ -487,7 +489,6 @@ namespace Ludots.Adapter.Raylib
                             : (activeMapRequestsDeepBackground
                                 ? new Raylib_cs.Color(6, 10, 16, 255)
                                 : new Raylib_cs.Color(0, 0, 0, 255));
-                        Rl.ClearBackground(frameClearColor);
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
@@ -514,6 +515,15 @@ namespace Ludots.Adapter.Raylib
                                                 !waterOnVisualHeightmap &&
                                                 engine.VertexMap != null;
                         bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+                        bool postProcessWorldFrame = !waterFboEnabled;
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
+                        }
+                        else
+                        {
+                            Rl.ClearBackground(frameClearColor);
+                        }
                         if (waterFboEnabled)
                         {
                             waterPass.EnsureRenderTargets(lastW, lastH);
@@ -700,7 +710,15 @@ namespace Ludots.Adapter.Raylib
                                 visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
                             }
 
-                            primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
+                            primitiveRenderer.Draw(
+                                draw,
+                                activeCamera,
+                                snapshot,
+                                skinnedBatch,
+                                meshes,
+                                renderDebug.AcceptanceScaleMultiplier,
+                                visualHeightmap,
+                                runtimeStopwatch.Elapsed.TotalSeconds);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
                                 primitiveRenderer.LastInstancedInstances,
@@ -767,6 +785,10 @@ namespace Ludots.Adapter.Raylib
 
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
+                        }
 
                         if (drawSkiaUi)
                         {
@@ -860,6 +882,8 @@ namespace Ludots.Adapter.Raylib
                                 File.Copy(screenshotWorkingFilePath, fullScreenshotPath, overwrite: true);
                                 File.Delete(screenshotWorkingFilePath);
                             }
+
+                            ValidateRuntimeScreenshotEvidence(fullScreenshotPath, lastW, lastH);
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             if (screenshotSequenceEnabled)
@@ -1898,6 +1922,94 @@ namespace Ludots.Adapter.Raylib
             }
 
             return phase - MathF.Floor(phase);
+        }
+
+        internal static void ValidateRuntimeScreenshotEvidence(string screenshotPath, int expectedWidth, int expectedHeight)
+        {
+            if (string.IsNullOrWhiteSpace(screenshotPath))
+            {
+                throw new ArgumentException("Raylib screenshot evidence path cannot be null or whitespace.", nameof(screenshotPath));
+            }
+
+            if (expectedWidth <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(expectedWidth));
+            }
+
+            if (expectedHeight <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(expectedHeight));
+            }
+
+            string fullPath = Path.GetFullPath(screenshotPath);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence was not written: {fullPath}");
+            }
+
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length < 24)
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is too small to be a valid PNG: {fullPath} length={fileInfo.Length}.");
+            }
+
+            if (!string.Equals(Path.GetExtension(fullPath), ".png", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence must be a PNG so dimensions can be verified: {fullPath}");
+            }
+
+            using var bitmap = SKBitmap.Decode(fullPath);
+            if (bitmap == null)
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is not a decodable PNG image: {fullPath}");
+            }
+
+            int actualWidth = bitmap.Width;
+            int actualHeight = bitmap.Height;
+            if (actualWidth != expectedWidth || actualHeight != expectedHeight)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib screenshot evidence dimensions mismatch: {fullPath} actual={actualWidth}x{actualHeight} expected={expectedWidth}x{expectedHeight}.");
+            }
+
+            if (IsVisuallyFlat(bitmap))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is visually flat and cannot prove a rendered scene: {fullPath}");
+            }
+        }
+
+        private static bool IsVisuallyFlat(SKBitmap bitmap)
+        {
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            if (width <= 0 || height <= 0)
+            {
+                return true;
+            }
+
+            SKColor first = bitmap.GetPixel(0, 0);
+            int stepX = Math.Max(1, width / 16);
+            int stepY = Math.Max(1, height / 16);
+            for (int y = 0; y < height; y += stepY)
+            {
+                for (int x = 0; x < width; x += stepX)
+                {
+                    if (ColorDistance(bitmap.GetPixel(x, y), first) > 6)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return ColorDistance(bitmap.GetPixel(width - 1, height - 1), first) <= 6;
+        }
+
+        private static int ColorDistance(SKColor a, SKColor b)
+        {
+            return Math.Abs(a.Red - b.Red) +
+                Math.Abs(a.Green - b.Green) +
+                Math.Abs(a.Blue - b.Blue) +
+                Math.Abs(a.Alpha - b.Alpha);
         }
 
         private static double ElapsedMs(long startTicks)

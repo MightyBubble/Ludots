@@ -382,9 +382,9 @@ namespace Ludots.Tests.Presentation
                 "RaylibVisualAtmosphereShowcaseMod",
                 "assets",
                 "Presentation",
-                "performers.json");
+                "presenters.json");
             JsonNode root = JsonNode.Parse(File.ReadAllText(path))
-                ?? throw new InvalidOperationException("performers.json parsed to null.");
+                ?? throw new InvalidOperationException("presenters.json parsed to null.");
             JsonArray presenters = root.AsArray();
             JsonObject? footprints = null;
             foreach (JsonNode? node in presenters)

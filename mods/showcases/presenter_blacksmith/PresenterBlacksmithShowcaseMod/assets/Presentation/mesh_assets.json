@@ -25,7 +25,11 @@
   },
   {
     "id": "blacksmith.smoke.billboard",
-    "type": "Billboard"
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "particleVfxId": "blacksmith.smoke"
+    }
   },
   {
     "id": "blacksmith.worker.patrol",

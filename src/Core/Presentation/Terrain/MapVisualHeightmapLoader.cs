@@ -30,12 +30,12 @@ namespace Ludots.Core.Presentation.Terrain
 
             using Stream stream = OpenDeclaredAsset(vfs, loadedModIds, assetPath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
-            return new VisualHeightmapRuntime(asset);
+            return new VisualHeightmapRuntime(asset, ResolveRenderProfile(mapConfig));
         }
 
         public static string? ResolveDeclaredAssetPath(MapConfig mapConfig)
         {
-            string? resolved = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.VisualHeightmapAsset);
+            string? resolved = ResolveMapLevelDeclaredAssetPath(mapConfig);
 
             if (mapConfig.Boards == null)
             {
@@ -65,6 +65,32 @@ namespace Ludots.Core.Presentation.Terrain
             }
 
             return resolved;
+        }
+
+        public static VisualHeightmapRenderProfile ResolveRenderProfile(MapConfig mapConfig)
+        {
+            if (mapConfig == null)
+            {
+                throw new ArgumentNullException(nameof(mapConfig));
+            }
+
+            return (mapConfig.VisualHeightmap?.RenderProfile ?? VisualHeightmapRenderProfile.CreateDefault())
+                .NormalizeAndValidate();
+        }
+
+        private static string? ResolveMapLevelDeclaredAssetPath(MapConfig mapConfig)
+        {
+            string? legacy = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.VisualHeightmapAsset);
+            string? binding = MapDeclaredAssetResolver.NormalizeDeclaredAssetPath(mapConfig.VisualHeightmap?.Asset);
+            if (legacy != null &&
+                binding != null &&
+                !string.Equals(legacy, binding, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig.Id}' declares conflicting visual heightmap assets. visualHeightmapAsset and visualHeightmap.asset must resolve to the same asset path.");
+            }
+
+            return binding ?? legacy;
         }
 
         private static Stream OpenDeclaredAsset(IVirtualFileSystem vfs, IEnumerable<string>? loadedModIds, string assetPath)

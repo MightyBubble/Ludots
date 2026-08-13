@@ -93,6 +93,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
+        private readonly RaylibVfxRenderer _vfxRenderer;
+        private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -130,6 +132,8 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalDecalVisualCount { get; private set; }
         public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
+        public int LastDrawnVfxCount => _vfxRenderer.LastDrawnVfxCount;
+        public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
@@ -183,16 +187,17 @@ namespace Ludots.Client.Raylib.Rendering
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _vfxRenderer = new RaylibVfxRenderer(vfs);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
         public void Draw(
@@ -202,13 +207,15 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer? skinnedBatch,
             MeshAssetRegistry meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null)
+            IVisualHeightmap? visualHeightmap = null,
+            double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
             _frameViewPos = camera.position;
             _hasFrameViewPos = true;
+            _frameTimeSeconds = timeSeconds;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -232,6 +239,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
             _frameVisualHeightmap = visualHeightmap;
+            _vfxRenderer.BeginFrame();
             try
             {
                 var span = draw.GetSpan();
@@ -270,6 +278,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
             finally
             {
+                _vfxRenderer.EndFrame();
                 _frameVisualHeightmap = null;
             }
         }
@@ -432,17 +441,7 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 LastVfxVisualCount++;
                 TotalVfxVisualCount++;
-                DrawLeafAsset(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    item.MaterialId,
-                    instancedPrimitives,
-                    countAsMesh: false);
+                _vfxRenderer.Draw(in item, meshes, camera, _frameTimeSeconds, scaleMul);
                 return true;
             }
 
@@ -821,7 +820,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public string BuildVisualKindDiagnosticSummary()
         {
-            return $"typed-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
+            return $"typed-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnVfxCount},total={_vfxRenderer.TotalDrawnVfxCount})";
         }
 
         public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
@@ -2891,6 +2890,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
+            _vfxRenderer.Dispose();
             _effectShaders.Dispose();
             _materialHostBinder?.Dispose();
 

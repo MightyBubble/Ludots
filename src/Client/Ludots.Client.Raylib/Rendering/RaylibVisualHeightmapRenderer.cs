@@ -21,6 +21,9 @@ namespace Ludots.Client.Raylib.Rendering
         public const string BackendIdRaylib = "raylib";
         public const int TerrainAlbedoLayerCount = 4;
         internal const int DecalStampHeightSampleSegments = 6;
+        private const int OverviewTextureMinLongEdgePixels = 1024;
+        private const int OverviewTextureMaxLongEdgePixels = 3072;
+        private const int OverviewTextureScreenScale = 2;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
@@ -1096,6 +1099,145 @@ namespace Ludots.Client.Raylib.Rendering
         private static byte ClampToByte(float value)
         {
             return (byte)Math.Clamp((int)MathF.Round(value), 0, 255);
+        }
+
+        internal static int ResolveChunkSampleStride(int sampleColumns, int sampleRows)
+        {
+            if (sampleColumns < 2) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
+            if (sampleRows < 2) throw new ArgumentOutOfRangeException(nameof(sampleRows));
+
+            int stride = 1;
+            while (checked(ResolveChunkSampleAxisPointCount(sampleColumns, stride) * ResolveChunkSampleAxisPointCount(sampleRows, stride)) > ushort.MaxValue)
+            {
+                stride++;
+            }
+
+            return stride;
+        }
+
+        internal static int ResolveChunkSampleAxisPointCount(int sampleCount, int stride)
+        {
+            if (sampleCount < 2) throw new ArgumentOutOfRangeException(nameof(sampleCount));
+            if (stride <= 0) throw new ArgumentOutOfRangeException(nameof(stride));
+
+            return ((sampleCount - 2) / stride) + 2;
+        }
+
+        internal static int ResolveChunkSourceSampleIndex(int pointIndex, int sampleCount, int stride)
+        {
+            int pointCount = ResolveChunkSampleAxisPointCount(sampleCount, stride);
+            if ((uint)pointIndex >= (uint)pointCount) throw new ArgumentOutOfRangeException(nameof(pointIndex));
+
+            return pointIndex == pointCount - 1
+                ? sampleCount - 1
+                : pointIndex * stride;
+        }
+
+        internal static bool ShouldUseOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            in Camera3D camera,
+            float aspect,
+            float detailVisibleRadiusCm,
+            float activationMultiplier)
+        {
+            if (source == null)
+            {
+                return false;
+            }
+
+            if (source.ChunkColumns <= 0 || source.ChunkRows <= 0)
+            {
+                return false;
+            }
+
+            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
+            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
+            float detailRadiusCm = MathF.Max(
+                MathF.Max(1f, detailVisibleRadiusCm),
+                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+            float activationRadiusCm = detailRadiusCm * MathF.Max(1f, activationMultiplier);
+            return ComputeCameraFootprintRadiusCm(camera, aspect) > activationRadiusCm;
+        }
+
+        internal static float ComputeCameraFootprintRadiusCm(in Camera3D camera, float aspect)
+        {
+            float distanceMeters = Vector3.Distance(camera.position, camera.target);
+            if (!float.IsFinite(distanceMeters) || distanceMeters <= 0f)
+            {
+                return 0f;
+            }
+
+            float fovyRad = camera.fovy * (MathF.PI / 180f);
+            float clampedFovyRad = Math.Clamp(fovyRad, 0.001f, MathF.PI - 0.001f);
+            float halfHeightMeters = distanceMeters * MathF.Tan(clampedFovyRad * 0.5f);
+            float halfWidthMeters = halfHeightMeters * MathF.Max(0.001f, aspect);
+            float radiusMeters = MathF.Sqrt((halfWidthMeters * halfWidthMeters) + (halfHeightMeters * halfHeightMeters));
+            return radiusMeters * 100f;
+        }
+
+        internal static void ResolveOverviewTextureSize(
+            WorldAabbCm bounds,
+            int screenWidth,
+            int screenHeight,
+            out int textureWidth,
+            out int textureHeight)
+        {
+            int screenLongEdge = Math.Max(1, Math.Max(screenWidth, screenHeight));
+            int longEdge = Math.Clamp(
+                checked(screenLongEdge * OverviewTextureScreenScale),
+                OverviewTextureMinLongEdgePixels,
+                OverviewTextureMaxLongEdgePixels);
+            float aspect = MathF.Max(0.001f, bounds.Width / (float)Math.Max(1, bounds.Height));
+            if (aspect >= 1f)
+            {
+                textureWidth = longEdge;
+                textureHeight = Math.Clamp((int)MathF.Round(longEdge / aspect), 1, OverviewTextureMaxLongEdgePixels);
+                return;
+            }
+
+            textureHeight = longEdge;
+            textureWidth = Math.Clamp((int)MathF.Round(longEdge * aspect), 1, OverviewTextureMaxLongEdgePixels);
+        }
+
+        internal static int ResolveOverviewStepChunks(int chunkColumns, int chunkRows, int maxVertices)
+        {
+            if (chunkColumns <= 0) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
+            if (chunkRows <= 0) throw new ArgumentOutOfRangeException(nameof(chunkRows));
+
+            int vertexLimit = Math.Clamp(maxVertices, 4, ushort.MaxValue);
+            int step = 1;
+            while (checked(ResolveOverviewAxisPointCount(chunkColumns, step) * ResolveOverviewAxisPointCount(chunkRows, step)) > vertexLimit)
+            {
+                step++;
+            }
+
+            return step;
+        }
+
+        internal static int ResolveOverviewAxisPointCount(int chunkCount, int stepChunks)
+        {
+            if (chunkCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkCount));
+            if (stepChunks <= 0) throw new ArgumentOutOfRangeException(nameof(stepChunks));
+
+            return ((chunkCount + stepChunks - 1) / stepChunks) + 1;
+        }
+
+        internal static float ResolveEffectiveSeaLevelCm(VisualHeightmapRenderProfile renderProfile, float minHeightCm)
+        {
+            if (renderProfile == null)
+            {
+                throw new ArgumentNullException(nameof(renderProfile));
+            }
+
+            VisualHeightmapRenderProfile normalized = renderProfile.NormalizeAndValidate();
+            if (!float.IsFinite(minHeightCm))
+            {
+                throw new ArgumentOutOfRangeException(nameof(minHeightCm));
+            }
+
+            return normalized.WaterEnabled
+                ? normalized.SeaLevelCm
+                : minHeightCm - 1f;
         }
 
         public void Dispose()

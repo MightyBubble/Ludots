@@ -1,0 +1,558 @@
+[
+  {
+    "id": "vfx_forge_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "vfx_forge_anchor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "vfx_forge_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "vfx_forge_anchor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_root",
+    "children": [
+      {
+        "definitionId": "vfx_forge_left_pedestal",
+        "scopeTag": "left"
+      },
+      {
+        "definitionId": "vfx_forge_center_pedestal",
+        "scopeTag": "center"
+      },
+      {
+        "definitionId": "vfx_forge_right_pedestal",
+        "scopeTag": "right"
+      },
+      {
+        "definitionId": "vfx_forge_ember_pedestal",
+        "scopeTag": "ember_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_shield_pedestal",
+        "scopeTag": "shield_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_gravity_pedestal",
+        "scopeTag": "gravity_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_flame_flipbook_pedestal",
+        "scopeTag": "flame_flipbook_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_smoke_flipbook_pedestal",
+        "scopeTag": "smoke_flipbook_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_stretched_sparks_pedestal",
+        "scopeTag": "stretched_sparks_pedestal"
+      },
+      {
+        "definitionId": "vfx_forge_spark_column",
+        "scopeTag": "spark"
+      },
+      {
+        "definitionId": "vfx_forge_energy_orbit",
+        "scopeTag": "orbit"
+      },
+      {
+        "definitionId": "vfx_forge_trail_arc",
+        "scopeTag": "trail"
+      },
+      {
+        "definitionId": "vfx_forge_ember_rain",
+        "scopeTag": "ember"
+      },
+      {
+        "definitionId": "vfx_forge_shield_dome",
+        "scopeTag": "shield"
+      },
+      {
+        "definitionId": "vfx_forge_gravity_well",
+        "scopeTag": "gravity"
+      },
+      {
+        "definitionId": "vfx_forge_flame_flipbook",
+        "scopeTag": "flame_flipbook"
+      },
+      {
+        "definitionId": "vfx_forge_smoke_flipbook",
+        "scopeTag": "smoke_flipbook"
+      },
+      {
+        "definitionId": "vfx_forge_stretched_sparks",
+        "scopeTag": "stretched_sparks"
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_left_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [-7.0, -0.15, -3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.62, 0.32, 0.2, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_center_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, -0.15, -3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.18, 0.46, 0.54, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_right_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [7.0, -0.15, -3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.22, 0.28, 0.48, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_ember_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [-7.0, -0.15, 3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.45, 0.22, 0.16, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_shield_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, -0.15, 3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.16, 0.32, 0.42, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_gravity_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [7.0, -0.15, 3.6],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.24, 0.22, 0.38, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_flame_flipbook_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [-7.0, -0.15, 7.2],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.52, 0.24, 0.12, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_smoke_flipbook_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, -0.15, 7.2],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.32, 0.34, 0.32, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_stretched_sparks_pedestal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [7.0, -0.15, 7.2],
+          "localScale": [2.8, 0.25, 2.8]
+        },
+        "style": {
+          "color": [0.5, 0.3, 0.14, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_spark_column",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.spark_column.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [-6.0, 0.35, 0.0],
+          "localScale": [2.8, 2.8, 2.8]
+        },
+        "style": {
+          "color": [1.0, 0.82, 0.42, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_energy_orbit",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.energy_orbit.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.75, 0.0],
+          "localScale": [2.4, 2.4, 2.4]
+        },
+        "style": {
+          "color": [0.72, 1.0, 0.88, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_trail_arc",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.trail_arc.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [6.0, 0.55, 0.0],
+          "localScale": [2.6, 2.6, 2.6]
+        },
+        "style": {
+          "color": [0.74, 0.86, 1.0, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_ember_rain",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.ember_rain.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [-7.0, 2.3, 3.6],
+          "localScale": [2.6, 2.6, 2.6]
+        },
+        "style": {
+          "color": [1.0, 0.72, 0.38, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_shield_dome",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.shield_dome.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 1.05, 3.6],
+          "localScale": [2.7, 2.7, 2.7]
+        },
+        "style": {
+          "color": [0.66, 0.92, 1.0, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_gravity_well",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.gravity_well.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [7.0, 0.95, 3.6],
+          "localScale": [2.8, 2.8, 2.8]
+        },
+        "style": {
+          "color": [0.88, 0.88, 1.0, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_flame_flipbook",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.flame_flipbook.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [-7.0, 0.55, 7.2],
+          "localScale": [2.5, 2.5, 2.5]
+        },
+        "style": {
+          "color": [1.0, 0.8, 0.32, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_smoke_flipbook",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.smoke_flipbook.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.8, 7.2],
+          "localScale": [2.4, 2.4, 2.4]
+        },
+        "style": {
+          "color": [0.82, 0.84, 0.82, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_stretched_sparks",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.stretched_sparks.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [7.0, 0.65, 7.2],
+          "localScale": [2.7, 2.7, 2.7]
+        },
+        "style": {
+          "color": [1.0, 0.86, 0.42, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_flame_flipbook",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.flame_flipbook.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [-7.0, 0.85, 7.2],
+          "localScale": [2.8, 2.8, 2.8]
+        },
+        "style": {
+          "color": [1.0, 0.72, 0.34, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_smoke_flipbook",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.smoke_flipbook.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.9, 7.2],
+          "localScale": [2.6, 2.6, 2.6]
+        },
+        "style": {
+          "color": [0.82, 0.82, 0.76, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "vfx_forge_stretched_sparks",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "vfx_forge.stretched_sparks.effect",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [7.0, 0.75, 7.2],
+          "localScale": [2.8, 2.8, 2.8]
+        },
+        "style": {
+          "color": [1.0, 0.86, 0.38, 1.0]
+        }
+      }
+    ]
+  }
+]

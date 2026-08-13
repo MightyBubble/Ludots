@@ -90,6 +90,27 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
+        private static int CountVisiblePrimitivesByMeshAndKind(
+            Ludots.Core.Engine.GameEngine engine,
+            int meshAssetId,
+            AssetKind assetKind)
+        {
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            int count = 0;
+            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
+            {
+                if (item.Visibility == VisualVisibility.Visible &&
+                    item.MeshAssetId == meshAssetId &&
+                    item.AssetKind == assetKind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         private static int CountVisibleSkinnedByMesh(Ludots.Core.Engine.GameEngine engine, int meshAssetId)
         {
             var skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
@@ -353,6 +374,10 @@ namespace Ludots.Tests.Presentation
             int workerMeshId = ResolveMeshAssetId(engine, "blacksmith.worker.knight");
             int smokeDefId = ResolvePresenterDefId(engine, PresenterBlacksmithShowcaseIds.SmokeDefinitionId);
             int workerDefId = ResolvePresenterDefId(engine, PresenterBlacksmithShowcaseIds.WorkerDefinitionId);
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                ?? throw new InvalidOperationException("MeshAssetRegistry missing.");
+            Assert.That(meshes.TryGetDescriptor(smokeMeshId, out MeshAssetDescriptor smokeDescriptor), Is.True);
+            Assert.That(smokeDescriptor.VfxData.IsValid, Is.True, "Blacksmith smoke must be an authored VFX effect asset, not a plain billboard fallback.");
             var sounds = engine.GetService(CoreServiceKeys.SoundRequestBuffer)
                 ?? throw new InvalidOperationException("SoundRequestBuffer missing.");
             var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
@@ -371,6 +396,7 @@ namespace Ludots.Tests.Presentation
             PresenterBlacksmithShowcaseTestHarness.Tick(engine, 8);
 
             Assert.That(CountVisiblePrimitivesByMesh(engine, smokeMeshId), Is.GreaterThanOrEqualTo(1), "Smoke should become visible when working.");
+            Assert.That(CountVisiblePrimitivesByMeshAndKind(engine, smokeMeshId, AssetKind.VFX), Is.GreaterThanOrEqualTo(1), "Smoke should enter the VFX renderer path.");
             Assert.That(CountVisibleSkinnedByMesh(engine, workerMeshId), Is.GreaterThanOrEqualTo(1), "Worker should become visible when working.");
             Assert.That(sounds.Count, Is.GreaterThanOrEqualTo(1), "Worker sound loop should emit when working.");
             Assert.That((engine.World.Get<PresenterState>(smokeEntity).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Smoke asset binding slot should be active.");
