@@ -1,47 +1,46 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #915 P2 — RELATIONSHIP QUERY/AGG wave (`capability_standard_graph_ops_rel`)
-- **Date**: 2026-08-12
+- **Task / Issue**: Epic #915 / PR #919 — GraphNodeOp 画廊必须可读、可见、可玩；每个 covered op 真实跑通并留下截图/录屏
+- **Date**: 2026-08-13
 - **Agent / Author**: Cloud Agent
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A — graph op 组合（Query 链 + Effect 拆链）
+新变体主要交付物是（A/B/C/D）: **A** — 既有 graph 节点连线 + Showcase 舞台/字幕，不是新 enum/preset 开关
 
-结论: PASS
+结论: **PASS**
 
-一句话理由: 关系查询/过滤/排序/聚合与拆链均通过既有 Relationship* graph op 与 FuncLib 图组合表达，无新 enum 或 preset 开关。
+一句话理由: 补的是作者图、符号补丁、玩家字幕和真实结算；不新增 Core opcode / profile DSL。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 出链/入链/互链/成对查询 | 0 | RelationshipQuery* ops |
-| 好感过滤与排序 | 0 | RelationshipFilter* / RelationshipSortByMetric |
-| 聚合统计 | 0 | RelationshipAgg* / AggCount |
-| 拆链效果 | 0 | RelationshipHasLink / GetMetric / SetFlag / RemoveLink |
-| 玩家剧本 | 2 | CapabilityStandardGraphOpsRelMod graphs + runtime |
+| 既有 GraphNodeOp 执行 | 0 | GasGraphOpHandlerTable |
+| 生命周期事务演示 | 1 | BeginLifecycleTransaction + InvokeBuiltin |
+| 各家族剧本连线 | 2 | 各 GraphOps*Mod graphs.json / FrontDoor JSON |
+| 舞台与字幕 | 2 | GraphShowcaseStagePresenter + ScreenOverlayBuffer |
 
 ### 3. Reuse list
 
-- Handlers: GasGraphOpHandlerTable Relationship* handlers
-- Queues / Systems: GraphOpsRelSimulationSystem / PresentationSystem
-- Resolvers / Registries: RelationshipRuntime, GasGraphSymbolResolver, GraphProgramSymbolPatcher
-- Existing presets / graphs: SocialBond catalog from Relationships/catalog.json
+- Handlers: 既有 GraphNodeOp，禁止新 opcode
+- Queues / Systems: 各 Mod Simulation/Presentation；DebugDrawCommandBuffer；ScreenOverlayBuffer
+- Resolvers / Registries: GraphProgramSymbolPatcher、GraphProgramAuthoringFrontDoor、GasGraphRuntimeApi、launcher `--record`
+- Existing presets / graphs: 八个 GraphOps 画廊 + Ability Graph Sandbox
 
 ### 4. New Layer 0 ops (if any)
 
-N/A — 仅覆盖既有 P2 rel ops，未新增 BuiltinHandler。
+N/A
 
 ### 5. Transaction boundary
 
-拆链图顺序：HasLink → GetMetric → SetFlag(Estranged) → RemoveLink；展示用 headless runtime 逐波执行，无跨帧事务要求。
+仅黑板家族演示 `BeginLifecycleTransaction`；其余效果图单帧 halt，失败关闭。
 
 ### 6. Config SSOT
 
-行为配置落在: `mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod/assets/GAS/graphs.json` + `func_lib.json` + `Relationships/catalog.json`
+行为配置落在: 各 Mod `assets/GAS/graphs.json` / FrontDoor JSON + `assets/Configs/GAS/graph_node_op_coverage.registry.json`
 
-是否新增 JSON schema: NO
+是否新增 JSON schema: **NO**
 
 ### 7. Red flag scan
 
@@ -52,4 +51,16 @@ N/A — 仅覆盖既有 P2 rel ops，未新增 BuiltinHandler。
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**
+
+### 9. 可玩画廊合同（全家族共用）
+
+每个 `showcaseId` 必须同时满足：
+
+1. **可读**：`Metrics.Detail` 与屏幕字幕是玩家中文场景句；禁止 opcode 名、`FuncLib`/`Validation`/`tally`/`True`/`False`/`耗时…ms` 作为主文案。
+2. **可见**：舞台上能看出角色/血条/圈人/水位等变化；字幕走 `GraphShowcaseStagePresenter.DrawPlayerCaption(ScreenOverlayBuffer, title, detail)`。
+3. **可玩**：有 launcher binding + raylib preset；新玩家能启动看完整一局，不是只编译图。
+4. **真实**：每个 covered op 必须出现在该 Showcase 的图里并被执行；禁止 C# 演戏填 Detail。
+5. **证据**：`artifacts/evidence/<showcaseId>/` 含 launcher 六件套截图 + `play.mp4`；registry `screenshot` 指向一张能看懂剧情的 PNG。
+
+禁止静默失败：图编译失败、符号未补丁、吸附永远 False、读配置全 0 → 测试必须红。

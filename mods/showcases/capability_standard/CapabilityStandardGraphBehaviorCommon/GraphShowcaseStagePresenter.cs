@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardGraphBehaviorCommon;
 
@@ -119,6 +120,41 @@ public static class GraphShowcaseStagePresenter
             Thickness = 0.08f,
             Color = lastThinkMs < budgetMs ? DebugDrawColor.Green : DebugDrawColor.Red
         });
+    }
+
+    public static void DrawPlayerCaption(ScreenOverlayBuffer overlay, string title, string detail)
+    {
+        string[] lines = string.IsNullOrEmpty(detail)
+            ? Array.Empty<string>()
+            : SplitCaptionLines(detail).ToArray();
+        int height = 48 + Math.Max(1, lines.Length) * 22;
+        overlay.AddRect(16, 16, 1568, height, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(1f, 0.85f, 0.2f, 1f));
+        if (!string.IsNullOrEmpty(title))
+        {
+            overlay.AddText(32, 24, title, 22, new Vector4(1f, 0.92f, 0.35f, 1f));
+        }
+
+        int lineY = 54;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            overlay.AddText(32, lineY, lines[i], 18, new Vector4(1f, 1f, 1f, 1f));
+            lineY += 22;
+        }
+    }
+
+    private static IEnumerable<string> SplitCaptionLines(string detail)
+    {
+        string[] parts = detail.Split('；', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length <= 1)
+        {
+            yield return detail;
+            yield break;
+        }
+
+        for (int i = 0; i < parts.Length; i++)
+        {
+            yield return parts[i];
+        }
     }
 
     public static void DrawCrowdBand(DebugDrawCommandBuffer buffer, int count, float y = -15f, int maxDots = 400)
