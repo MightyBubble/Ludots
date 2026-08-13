@@ -3011,7 +3011,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod",
       "projectPath": "CapabilityStandardGraphOpsScriptMod.csproj",
       "title": "脚本续杯/巡逻/常量管线",
-      "summary": "先喝茶续杯（中途歇气），再巡逻走完两站，最后走 FuncLib 常量管线算出 7：展示脚本调用、跳转、Yield 续跑与返回。",
+      "summary": "先喝茶续杯（中途歇气），再巡逻走完两站，最后走常量管线算出 7。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3035,8 +3035,8 @@
       "id": "capability_standard_graph_ops_spatial",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod",
       "projectPath": "CapabilityStandardGraphOpsSpatialMod.csproj",
-      "title": "空间圈人/六角查询图节点",
-      "summary": "扇形、矩形、直线与六角圈人：在沙盘上筛出命中目标并标出最近单位，让玩家看懂空间查询图节点。",
+      "title": "空间圈人与六角圈人",
+      "summary": "扇形、矩形、直线与六角圈人：排除自己、只打敌对层与敌对关系，标出最近目标与名单上第一个命中。",
       "tier": "T2",
       "category": "capability",
       "tags": [

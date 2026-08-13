@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_ops_spatial",
-  "windowTitle": "Ludots - Graph Ops Spatial",
+  "windowTitle": "空间圈人与六角圈人",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -23,8 +23,8 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
 | Graph Ops Attr | `capability_standard_graph_ops_attr` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsAttrMod` | **可读剧本**：读血量、加伤、上效果、卸效果 |
 | Graph Ops Float | `capability_standard_graph_ops_float` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsFloatMod` | **可读剧本**：距离衰减、倍率、抖动再钳制，算出最终伤害 |
-| Graph Ops Script | `capability_standard_graph_ops_script` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod` | **可读剧本**：喝茶续杯 → 巡逻两站 → FuncLib 常量管线（Yield/Call/跳转） |
-| Graph Ops Spatial | `capability_standard_graph_ops_spatial` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod` | **可读剧本**：扇形/矩形/直线/六角圈人并标最近目标 |
+| Graph Ops Script | `capability_standard_graph_ops_script` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod` | **可读剧本**：喝茶续杯 → 巡逻两站 → 常量管线算出 7 |
+| Graph Ops Spatial | `capability_standard_graph_ops_spatial` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod` | **可读剧本**：扇形/矩形/直线/六角圈人，排除自己、只打敌对，标最近目标与名单上第一个命中 |
 | Graph Ops Query | `capability_standard_graph_ops_query` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsQueryMod` | **可读剧本**：全图搜人后按阵营标签筛人，再按生命排序聚合 |
 | Graph Ops Rel | `capability_standard_graph_ops_rel` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod` | **可读剧本**：查好友链、按好感排序、拆链（关系查询/过滤/排序/聚合 + 拆链） |
 | Graph Ops Blackboard | `capability_standard_graph_ops_blackboard` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod` | **黑板记事/读配置/生命周期事务**：写入来源与情境，从配置读出威力/阶位/连锁并回读，再跑生命周期内置步骤 |

@@ -1,6 +1,7 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardGraphOpsSpatialMod.Runtime;
 
@@ -8,12 +9,17 @@ internal sealed class GraphOpsSpatialPresentationSystem : ISystem<float>
 {
     private readonly GraphOpsSpatialRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly ScreenOverlayBuffer _overlay;
     private readonly GraphShowcaseConfig _config = new();
 
-    public GraphOpsSpatialPresentationSystem(GraphOpsSpatialRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public GraphOpsSpatialPresentationSystem(
+        GraphOpsSpatialRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        ScreenOverlayBuffer overlay)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
     }
 
     public void Initialize() { }
@@ -50,5 +56,6 @@ internal sealed class GraphOpsSpatialPresentationSystem : ISystem<float>
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, GraphOpsSpatialRuntime.CaptionTitle, _runtime.Metrics.Detail);
     }
 }

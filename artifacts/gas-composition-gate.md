@@ -83,3 +83,7 @@ Rel 查好友链/Trusted/好感区间/拆最弱并标记失和。FuncLib 放 Gal
 13 个覆盖 op 改走沙盘自有 Scout/Apply/Bond Effect 图（`sandbox_graphs.json`），不走 ConfigPipeline 的 `graphs.json`，也不改纯 Script FuncLib 的 slash/bash。
 巡逻查圈、挂状态、加好感、读状态牌均从图执行结果写 Detail；图必须在 registry freeze 前绑定。
 
+### 14. Script / Spatial 家族
+
+Script 把 Jump/Yield/Call/Halt 写成喝茶续杯、巡逻两站、常量管线算出 7；禁止 FuncLib 当玩家主文案。
+Spatial 把 TargetListGet 写进全部圈人图，过滤排除自己/敌对层/敌对关系，黑板最近目标闪白。图编译后必须 Patch 黑板键，禁止符号下标当 Imm。

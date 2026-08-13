@@ -1,7 +1,7 @@
 {
   "name": "CapabilityStandardGraphOpsScriptMod",
   "version": "1.0.0",
-  "description": "P2 Script control graph ops showcase: drink/patrol yield+call and FuncLib const pipeline.",
+  "description": "Script control showcase: drink until full, patrol two stops, then a const pipeline that returns 7.",
   "main": "bin/net8.0/CapabilityStandardGraphOpsScriptMod.dll",
   "priority": -1900,
   "dependencies": {

@@ -54,7 +54,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -64,7 +64,7 @@
         "Effect",
         "Script"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -287,7 +287,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -296,7 +296,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -305,7 +305,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -314,7 +314,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -323,7 +323,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -332,7 +332,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -342,7 +342,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -352,7 +352,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -361,7 +361,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -370,7 +370,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -379,7 +379,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -388,7 +388,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_ops_spatial",
       "status": "covered"
     },
@@ -1047,7 +1047,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -1056,7 +1056,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -1065,7 +1065,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -1074,7 +1074,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -1083,7 +1083,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     },
@@ -1092,7 +1092,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_script",
       "status": "covered"
     }

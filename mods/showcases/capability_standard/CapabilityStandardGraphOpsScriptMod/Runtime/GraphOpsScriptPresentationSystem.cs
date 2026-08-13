@@ -2,6 +2,7 @@ using System.Numerics;
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardGraphOpsScriptMod.Runtime;
 
@@ -14,11 +15,16 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
 
     private readonly GraphOpsScriptRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly ScreenOverlayBuffer _overlay;
 
-    public GraphOpsScriptPresentationSystem(GraphOpsScriptRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public GraphOpsScriptPresentationSystem(
+        GraphOpsScriptRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        ScreenOverlayBuffer overlay)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
     }
 
     public void Initialize() { }
@@ -34,14 +40,16 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
         DrawPatrolMarker();
         DrawConstValue();
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs);
+        GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, GraphOpsScriptRuntime.CaptionTitle, _runtime.Metrics.Detail);
     }
 
     private void DrawDrinkCup()
     {
         GraphShowcaseStagePresenter.DrawActor(_debugDraw, -6f, 0f, 2.0f, DebugDrawColor.Gray, 0.12f);
+        int filledCount = _runtime.DisplayedWater;
         for (int i = 0; i < _runtime.DrinkLimit; i++)
         {
-            bool filled = i < _runtime.Water;
+            bool filled = i < filledCount;
             _debugDraw.Boxes.Add(new DebugDrawBox2D
             {
                 Center = new Vector2(-6f, -1.1f + i * 0.5f),
@@ -49,7 +57,7 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
                 HalfHeight = 0.2f,
                 Thickness = 0.1f,
                 Color = filled
-                    ? (_runtime.AllPhasesComplete || _runtime.Water >= _runtime.DrinkLimit
+                    ? (_runtime.AllPhasesComplete || filledCount >= _runtime.DrinkLimit
                         ? DebugDrawColor.Green
                         : DebugDrawColor.Cyan)
                     : DebugDrawColor.Gray
@@ -59,7 +67,7 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
 
     private void DrawPatrolMarker()
     {
-        int step = Math.Clamp(_runtime.PatrolStep, 0, PatrolStops.Length - 1);
+        int step = Math.Clamp(_runtime.DisplayedPatrolStep, 0, PatrolStops.Length - 1);
         Vector2 pos = PatrolStops[step];
         GraphShowcaseStagePresenter.DrawActor(_debugDraw, pos.X, pos.Y, 0.55f, GraphShowcaseStagePresenter.GuardColor);
     }

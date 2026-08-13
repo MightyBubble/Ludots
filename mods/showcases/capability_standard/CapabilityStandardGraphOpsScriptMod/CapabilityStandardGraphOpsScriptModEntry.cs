@@ -4,6 +4,7 @@ using CapabilityStandardGraphOpsScriptMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsScriptMod;
@@ -28,8 +29,10 @@ public sealed class CapabilityStandardGraphOpsScriptModEntry : IMod
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+            ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("GraphOps Script showcase requires ScreenOverlayBuffer.");
             engine.RegisterSystem(new GraphOpsScriptSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new GraphOpsScriptPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new GraphOpsScriptPresentationSystem(runtime, debugDraw, overlay));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });

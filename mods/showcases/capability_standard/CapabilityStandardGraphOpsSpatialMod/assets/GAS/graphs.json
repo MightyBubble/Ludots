@@ -39,6 +39,20 @@
         "relationshipMode": "Hostile"
       },
       {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
+      },
+      {
         "id": "count",
         "op": "AggCount"
       },
@@ -90,6 +104,21 @@
       },
       {
         "from": "hostile",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
         "fromPort": "next",
         "to": "count"
       },
@@ -157,6 +186,24 @@
         "fromPort": "value",
         "to": "writeNearest",
         "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "value"
       }
     ]
   },
@@ -198,6 +245,20 @@
         "id": "hostile",
         "op": "QueryFilterRelationship",
         "relationshipMode": "Hostile"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
       },
       {
         "id": "count",
@@ -252,6 +313,21 @@
       {
         "from": "hostile",
         "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
+        "fromPort": "next",
         "to": "count"
       },
       {
@@ -318,6 +394,24 @@
         "fromPort": "value",
         "to": "writeNearest",
         "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "value"
       }
     ]
   },
@@ -359,6 +453,20 @@
         "id": "hostile",
         "op": "QueryFilterRelationship",
         "relationshipMode": "Hostile"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
       },
       {
         "id": "count",
@@ -412,6 +520,21 @@
       },
       {
         "from": "hostile",
+        "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
         "fromPort": "next",
         "to": "count"
       },
@@ -479,6 +602,24 @@
         "fromPort": "value",
         "to": "writeNearest",
         "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "value"
       }
     ]
   },
@@ -510,6 +651,20 @@
         "id": "hostile",
         "op": "QueryFilterRelationship",
         "relationshipMode": "Hostile"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
       },
       {
         "id": "count",
@@ -554,6 +709,21 @@
       {
         "from": "hostile",
         "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
+        "fromPort": "next",
         "to": "count"
       },
       {
@@ -608,6 +778,24 @@
         "fromPort": "value",
         "to": "writeNearest",
         "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "value"
       }
     ]
   },
@@ -639,6 +827,20 @@
         "id": "hostile",
         "op": "QueryFilterRelationship",
         "relationshipMode": "Hostile"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
       },
       {
         "id": "count",
@@ -683,6 +885,21 @@
       {
         "from": "hostile",
         "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
+        "fromPort": "next",
         "to": "count"
       },
       {
@@ -737,6 +954,24 @@
         "fromPort": "value",
         "to": "writeNearest",
         "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "value"
       }
     ]
   },
@@ -767,6 +1002,20 @@
         "id": "hostile",
         "op": "QueryFilterRelationship",
         "relationshipMode": "Hostile"
+      },
+      {
+        "id": "zero",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "first",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "writeFirst",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "spatial.showcase.first"
       },
       {
         "id": "count",
@@ -811,6 +1060,21 @@
       {
         "from": "hostile",
         "fromPort": "next",
+        "to": "zero"
+      },
+      {
+        "from": "zero",
+        "fromPort": "next",
+        "to": "first"
+      },
+      {
+        "from": "first",
+        "fromPort": "next",
+        "to": "writeFirst"
+      },
+      {
+        "from": "writeFirst",
+        "fromPort": "next",
         "to": "count"
       },
       {
@@ -864,6 +1128,24 @@
         "from": "nearest",
         "fromPort": "value",
         "to": "writeNearest",
+        "toPort": "value"
+      },
+      {
+        "from": "zero",
+        "fromPort": "value",
+        "to": "first",
+        "toPort": "value"
+      },
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "writeFirst",
+        "toPort": "source"
+      },
+      {
+        "from": "first",
+        "fromPort": "value",
+        "to": "writeFirst",
         "toPort": "value"
       }
     ]

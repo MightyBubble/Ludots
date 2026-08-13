@@ -27,6 +27,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private const uint EnemyLayer = 0b0010;
     private const string HitCountKey = "spatial.showcase.hitCount";
     private const string NearestKey = "spatial.showcase.nearest";
+    private const string FirstKey = "spatial.showcase.first";
     private const string ConeGraph = "Graph.SpatialShowcase.Cone";
     private const string RectGraph = "Graph.SpatialShowcase.Rectangle";
     private const string LineGraph = "Graph.SpatialShowcase.Line";
@@ -34,12 +35,20 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private const string HexRingGraph = "Graph.SpatialShowcase.HexRing";
     private const string HexNeighborsGraph = "Graph.SpatialShowcase.HexNeighbors";
 
+    public const string CaptionTitle = "空间圈人与六角圈人";
+
+    private static readonly string[] FeaturedGraphs =
+    {
+        ConeGraph, RectGraph, LineGraph, HexRangeGraph, HexRingGraph, HexNeighborsGraph
+    };
+
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphFunctionCatalog? _catalog;
     private World? _world;
     private int _hitCountKeyId;
     private int _nearestKeyId;
+    private int _firstKeyId;
     private SpatialQueryService? _spatial;
     private SpatialCoordinateConverter? _coords;
     private GridSpatialPartitionWorld? _grid;
@@ -57,12 +66,14 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private int _hexRangeHits;
     private int _hexRingHits;
     private int _hexNeighborHits;
-    private bool _hasNearest;
+    private bool _showNearest;
+    private bool _showFirst;
     private float _casterXM;
     private float _casterYM;
     private float[] _tx = Array.Empty<float>();
     private float[] _ty = Array.Empty<float>();
     private byte[] _flash = Array.Empty<byte>();
+    private Entity[] _targets = Array.Empty<Entity>();
 
     public float CasterX => _casterXM;
     public float CasterY => _casterYM;
@@ -77,6 +88,8 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     public int HexRangeHits => _hexRangeHits;
     public int HexRingHits => _hexRingHits;
     public int HexNeighborHits => _hexNeighborHits;
+    public bool HasFirstHit => _showFirst;
+    public bool HasNearest => _showNearest;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_spatial" };
 
     public void Bind(GraphProgramRegistry programs, GraphFunctionCatalog catalog)
@@ -99,8 +112,10 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         RequireGraph(HexRangeGraph);
         RequireGraph(HexRingGraph);
         RequireGraph(HexNeighborsGraph);
+        RequireTargetListGetOnAllGraphs();
         _hitCountKeyId = ConfigKeyRegistry.GetId(HitCountKey);
         _nearestKeyId = ConfigKeyRegistry.GetId(NearestKey);
+        _firstKeyId = ConfigKeyRegistry.GetId(FirstKey);
 
         TeamManager.SetRelationship(CasterTeamId, EnemyTeamId, TeamRelationship.Hostile);
         TeamManager.SetRelationship(EnemyTeamId, CasterTeamId, TeamRelationship.Hostile);
@@ -143,6 +158,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         _tx = new float[targets];
         _ty = new float[targets];
         _flash = new byte[targets];
+        _targets = new Entity[targets];
 
         SpawnEnemy(_coords.HexToWorld(new HexCoordinates(0, 1)), 0);
         SpawnEnemy(_coords.HexToWorld(new HexCoordinates(1, 0)), 1);
@@ -157,7 +173,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = "扇形/矩形/直线/六角圈人：空间查询图节点就绪。";
+        Metrics.Detail = "扇形、矩形、直线与六角圈人：排除自己，只打敌对层与敌对关系。";
     }
 
     public void Tick(float dt)
@@ -179,32 +195,25 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         {
             case 0:
                 _coneHits = RunSpell(ConeGraph);
-                _lastHitIndex = 0;
                 break;
             case 1:
                 _rectHits = RunSpell(RectGraph);
-                _lastHitIndex = 1;
                 break;
             case 2:
                 _lineHits = RunSpell(LineGraph);
-                _lastHitIndex = 2;
                 break;
             default:
                 _hexRangeHits = RunSpell(HexRangeGraph);
                 _hexRingHits = RunSpell(HexRingGraph);
                 _hexNeighborHits = RunSpell(HexNeighborsGraph);
-                _lastHitIndex = 3;
                 break;
         }
 
+        CapturePresentationFromBlackboard();
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
-        if (_lastHitIndex >= 0 && _lastHitIndex < _flash.Length)
-        {
-            _flash[_lastHitIndex] = 12;
-        }
 
         int crowd = Math.Min(_config.CrowdBandCount, 2000);
         for (int i = 0; i < crowd; i++)
@@ -214,9 +223,10 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
         Metrics.Detail =
             $"扇形命中{_coneHits}人；矩形命中{_rectHits}人；直线命中{_lineHits}人；" +
-            $"六角圈人（范围{_hexRangeHits}/环{_hexRingHits}/邻{_hexNeighborHits}）；" +
-            (_hasNearest ? "最近目标已锁定；" : "最近目标未命中；") +
-            $"耗时{Metrics.LastThinkMs:F3}ms";
+            $"六角圈人（范围内{_hexRangeHits}/外环{_hexRingHits}/邻格{_hexNeighborHits}）；" +
+            "排除自己；只打敌对层；只打敌对关系；" +
+            (_showNearest ? "最近目标已锁定" : "最近目标未命中") +
+            (_showFirst ? "；名单上第一个命中" : string.Empty);
     }
 
     public void Dispose()
@@ -238,14 +248,39 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         GraphExecutor.Execute(_world, _caster, Entity.Null, originCm, program, _api!, GraphKind.Effect);
 
         ref BlackboardIntBuffer ints = ref _world.Get<BlackboardIntBuffer>(_caster);
-        ref BlackboardEntityBuffer entities = ref _world.Get<BlackboardEntityBuffer>(_caster);
         if (!ints.TryGet(_hitCountKeyId, out int hitCount))
         {
             throw new InvalidOperationException($"Spatial graph '{graphKey}' did not write {HitCountKey}.");
         }
 
-        _hasNearest = entities.TryGet(_nearestKeyId, out Entity nearest) && nearest != Entity.Null;
         return hitCount;
+    }
+
+    private void CapturePresentationFromBlackboard()
+    {
+        ref BlackboardEntityBuffer entities = ref _world!.Get<BlackboardEntityBuffer>(_caster);
+        _showNearest = entities.TryGet(_nearestKeyId, out Entity nearest) && nearest != Entity.Null;
+        _showFirst = entities.TryGet(_firstKeyId, out Entity first) && first != Entity.Null;
+        _lastHitIndex = _showNearest ? IndexOfTarget(nearest) : -1;
+        if (_showNearest && _lastHitIndex < 0)
+        {
+            throw new InvalidOperationException("Nearest blackboard entity is not a spawned presentation target.");
+        }
+
+        if (_lastHitIndex >= 0 && _lastHitIndex < _flash.Length)
+        {
+            _flash[_lastHitIndex] = 12;
+        }
+    }
+
+    private int IndexOfTarget(Entity entity)
+    {
+        for (int i = 0; i < _targets.Length; i++)
+        {
+            if (_targets[i].Equals(entity)) return i;
+        }
+
+        return -1;
     }
 
     private void RequireGraph(string graphKey)
@@ -254,6 +289,34 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         if (graphId <= 0 || !_programs!.TryGetProgram(graphId, out _))
         {
             throw new InvalidOperationException($"Required spatial graph '{graphKey}' is missing.");
+        }
+    }
+
+    private void RequireTargetListGetOnAllGraphs()
+    {
+        for (int g = 0; g < FeaturedGraphs.Length; g++)
+        {
+            string graphKey = FeaturedGraphs[g];
+            int graphId = GraphIdRegistry.GetId(graphKey);
+            if (!_programs!.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+            {
+                throw new InvalidOperationException($"Required spatial graph '{graphKey}' is missing.");
+            }
+
+            bool saw = false;
+            for (int i = 0; i < program.Length; i++)
+            {
+                if ((GraphNodeOp)program[i].Op == GraphNodeOp.TargetListGet)
+                {
+                    saw = true;
+                    break;
+                }
+            }
+
+            if (!saw)
+            {
+                throw new InvalidOperationException($"Spatial graph '{graphKey}' must emit TargetListGet.");
+            }
         }
     }
 
@@ -272,11 +335,12 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
     private void SpawnEnemy(WorldCmInt2 worldCm, int presentationIndex)
     {
-        SpawnCombatant(worldCm.X, worldCm.Y, EnemyTeamId, EnemyLayer);
+        Entity entity = SpawnCombatant(worldCm.X, worldCm.Y, EnemyTeamId, EnemyLayer);
         if (presentationIndex >= 0 && presentationIndex < _tx.Length)
         {
             _tx[presentationIndex] = worldCm.X * 0.01f;
             _ty[presentationIndex] = worldCm.Y * 0.01f;
+            _targets[presentationIndex] = entity;
         }
     }
 

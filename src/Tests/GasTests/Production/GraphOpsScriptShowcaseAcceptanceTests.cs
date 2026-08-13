@@ -29,8 +29,7 @@ namespace Ludots.Tests.Gas.Production
 
             Assert.That(runtime.SawYield, Is.True);
             Assert.That(runtime.CompletedWater, Is.EqualTo(runtime.DrinkLimit));
-            // Patrol Call target graph ids are ActionLib-resolved; CoreGraphs assert Call/Yield IR.
-            // Keep this vignette focused on Yield resume + drink halt under budget.
+            Assert.That(runtime.CompletedPatrolSteps, Is.EqualTo(runtime.PatrolLimit));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
@@ -52,7 +51,82 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.AllPhasesComplete, Is.True);
             Assert.That(runtime.ConstValue, Is.EqualTo(7));
             Assert.That(runtime.Metrics.Detail, Does.Contain("常量管线"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("7"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("配方算出 7"));
+            AssertForbiddenJargon(runtime.Metrics.Detail);
+        }
+
+        [Test]
+        public void ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves()
+        {
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
+                out GraphFunctionCatalog catalog,
+                out GraphActionCatalog actions);
+            var runtime = new GraphOpsScriptRuntime();
+            runtime.Bind(programs, actions, catalog);
+            runtime.EnsureWorld();
+
+            var details = new List<string> { runtime.Metrics.Detail };
+            for (int i = 0; i < 40 && !runtime.AllPhasesComplete; i++)
+            {
+                runtime.Tick(0.2f);
+                details.Add(runtime.Metrics.Detail);
+            }
+
+            string joined = string.Join('\n', details);
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.AllPhasesComplete, Is.True);
+                Assert.That(runtime.CompletedWater, Is.EqualTo(runtime.DrinkLimit));
+                Assert.That(runtime.CompletedPatrolSteps, Is.EqualTo(runtime.PatrolLimit));
+                Assert.That(runtime.ConstValue, Is.EqualTo(7));
+                Assert.That(joined, Does.Contain("喝茶续杯"));
+                Assert.That(joined, Does.Contain("等待下一回合"));
+                Assert.That(joined, Does.Contain("巡逻"));
+                Assert.That(joined, Does.Contain("常量管线"));
+                Assert.That(joined, Does.Contain("配方算出 7"));
+            });
+            foreach (string detail in details)
+            {
+                AssertForbiddenJargon(detail);
+            }
+        }
+
+        [Test]
+        public void ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases()
+        {
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
+                out GraphFunctionCatalog catalog,
+                out GraphActionCatalog actions);
+            int drinkId = GraphRegistryScriptResolver.RequireActionId(actions, GraphOpsScriptRuntime.DrinkActionName);
+            var drinkOps = CollectOps(programs, drinkId);
+            Assert.That(
+                drinkOps.Contains(GraphNodeOp.Jump) || drinkOps.Contains(GraphNodeOp.JumpIfFalse),
+                Is.True,
+                "Drink-until-full graph must compile BranchBool into Jump/JumpIfFalse.");
+
+            var runtime = new GraphOpsScriptRuntime();
+            runtime.Bind(programs, actions, catalog);
+            runtime.EnsureWorld();
+
+            var details = new List<string>();
+            for (int i = 0; i < 20 && runtime.CompletedWater == 0; i++)
+            {
+                runtime.Tick(0.2f);
+                details.Add(runtime.Metrics.Detail);
+            }
+
+            string joined = string.Join('\n', details);
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.SawYield, Is.True);
+                Assert.That(runtime.CompletedWater, Is.EqualTo(runtime.DrinkLimit));
+                Assert.That(joined, Does.Contain("喝茶续杯"));
+                Assert.That(joined, Does.Contain("等待下一回合"));
+            });
+            foreach (string detail in details)
+            {
+                AssertForbiddenJargon(detail);
+            }
         }
 
         [Test]
@@ -88,6 +162,13 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(invoke, Does.Contain(GraphNodeOp.InvokeScript));
                 Assert.That(invoke, Does.Contain(GraphNodeOp.HaltReturnInt));
             });
+        }
+
+        private static void AssertForbiddenJargon(string detail)
+        {
+            Assert.That(detail, Does.Not.Contain("FuncLib"));
+            Assert.That(detail, Does.Not.Contain("图节点"));
+            Assert.That(detail, Does.Not.Contain("ms"));
         }
 
         private static HashSet<GraphNodeOp> CollectOps(GraphProgramRegistry programs, int graphId)

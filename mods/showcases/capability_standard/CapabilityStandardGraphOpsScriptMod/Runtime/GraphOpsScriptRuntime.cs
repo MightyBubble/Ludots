@@ -36,10 +36,13 @@ public sealed class GraphOpsScriptRuntime
     public const string DrinkActionName = "script.drinkUntilFull";
     public const string InvokeConstGraphKey = "Graph.FuncLib.Demo.InvokeConstSeven";
     public const string ConstFunctionName = "demo.const.seven";
+    public const string CaptionTitle = "喝茶续杯、巡逻与常量管线";
     public int DrinkLimit { get; } = 5;
     public int PatrolLimit { get; } = 2;
     public int Water => _ints[0];
     public int PatrolStep => _ints[0];
+    public int DisplayedWater => CompletedWater > 0 ? Math.Max(CompletedWater, Water) : Water;
+    public int DisplayedPatrolStep => CompletedPatrolSteps > 0 ? Math.Max(CompletedPatrolSteps, PatrolStep) : PatrolStep;
     public int CompletedWater { get; private set; }
     public int CompletedPatrolSteps { get; private set; }
     public int ConstValue { get; private set; }
@@ -71,7 +74,7 @@ public sealed class GraphOpsScriptRuntime
         _ = _catalog.Require(ConstFunctionName);
         EnsureInvokeGraphPatched();
         Metrics.AgentCount = 1;
-        Metrics.Detail = "脚本控制演示：先喝茶续杯，再巡逻推进，最后走常量管线。";
+        Metrics.Detail = "先喝茶续杯，再巡逻推进，最后走常量管线。";
     }
 
     private void EnsureInvokeGraphPatched()
@@ -169,7 +172,7 @@ public sealed class GraphOpsScriptRuntime
             case Phase.ConstPipeline:
                 ConstValue = returnInt;
                 AllPhasesComplete = true;
-                Metrics.Detail = $"常量管线就绪：FuncLib 算出 {ConstValue}。";
+                Metrics.Detail = $"常量管线就绪：配方算出 {ConstValue}。";
                 break;
         }
     }
