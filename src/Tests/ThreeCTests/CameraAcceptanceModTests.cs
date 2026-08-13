@@ -73,6 +73,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             int beforeDummyCount = CountEntitiesByName(engine.World, "Dummy");
             ClickGround(engine, backend, new Vector2(3200f, 2000f));
+            Tick(engine, 2);
 
             int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
             Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + spawnBatch), "Ground click should enqueue the configured runtime spawn batch.");
@@ -83,52 +84,47 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(HasNamedEntityAt(engine.World, "Dummy", new WorldCmInt2(3200, 2000)), Is.True, "Random scatter should still stay anchored to the clicked point.");
             Assert.That(AllPositionsWithinRadius(positions, new WorldCmInt2(3200, 2000), 1800), Is.True, "Projection scatter should remain near the clicked point.");
 
-            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient presenter marker.");
-            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
-            bool foundCueMarker = false;
-            foreach (ref readonly var primitive in primitives.GetSpan())
-            {
-                if (primitive.Position == cueMarkerPosition)
-                {
-                    foundCueMarker = true;
-                    break;
-                }
-            }
-            Assert.That(foundCueMarker, Is.True, "Ground click should emit a transient cue marker at the raycast point.");
-
             var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
                 ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int fixtureDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId);
+            int decalDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueDecalPresenterId);
+            int vfxDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueVfxPresenterId);
+            int surfaceDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueSurfacePresenterId);
+            Assert.That(fixtureDefId, Is.GreaterThan(0), "Projection cue fixture presenter must be registered.");
             Assert.That(
-                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId)),
+                CountPresentersWithDefinition(engine.World, fixtureDefId),
                 Is.EqualTo(1),
                 "Ground click must spawn the authored Mesh+Decal+VFX+Surface presenter tree, not a leaf mesh marker.");
+            Assert.That(CountPresentersWithDefinition(engine.World, decalDefId), Is.EqualTo(1));
+            Assert.That(CountPresentersWithDefinition(engine.World, vfxDefId), Is.EqualTo(1));
+            Assert.That(CountPresentersWithDefinition(engine.World, surfaceDefId), Is.EqualTo(1));
+
+            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
             Assert.That(
-                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueDecalPresenterId)),
-                Is.EqualTo(1));
+                TryGetSinglePresenterWorldPosition(engine.World, fixtureDefId, out Vector3 fixtureWorldPosition),
+                Is.True,
+                "Ground click must place exactly one cue fixture presenter in the world.");
             Assert.That(
-                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueVfxPresenterId)),
-                Is.EqualTo(1));
+                fixtureWorldPosition,
+                Is.EqualTo(cueMarkerPosition),
+                "The cue fixture presenter must sit at the clicked ground point, lifted off the floor.");
+
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+            Assert.That(primitives, Is.Not.Null);
             Assert.That(
-                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueSurfacePresenterId)),
-                Is.EqualTo(1));
+                HasPrimitiveNear(primitives!, cueMarkerPosition),
+                Is.True,
+                "Ground click should draw the authored cue mesh at the presenter world position.");
 
             Tick(engine, 60);
-            foundCueMarker = false;
-            foreach (ref readonly var primitive in primitives.GetSpan())
-            {
-                if (primitive.Position == cueMarkerPosition)
-                {
-                    foundCueMarker = true;
-                    break;
-                }
-            }
-            Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
             Assert.That(
-                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId)),
+                CountPresentersWithDefinition(engine.World, fixtureDefId),
                 Is.EqualTo(0),
                 "Authored cue presenter tree must expire with lifecycle.durationSeconds.");
+            Assert.That(
+                HasPrimitiveNear(primitives!, cueMarkerPosition),
+                Is.False,
+                "The authored cue mesh must disappear after the presenter tree expires.");
         }
 
         [Test]
@@ -1528,6 +1524,39 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             });
             return count;
+        }
+
+        private static bool TryGetSinglePresenterWorldPosition(World world, int definitionId, out Vector3 position)
+        {
+            Vector3 found = default;
+            int count = 0;
+            var query = new QueryDescription().WithAll<PresenterState, PresenterWorldPosition>();
+            world.Query(in query, (ref PresenterState state, ref PresenterWorldPosition worldPosition) =>
+            {
+                if (state.DefId != definitionId)
+                {
+                    return;
+                }
+
+                found = worldPosition.Value;
+                count++;
+            });
+            position = found;
+            return count == 1;
+        }
+
+        private static bool HasPrimitiveNear(PrimitiveDrawBuffer primitives, Vector3 expected)
+        {
+            const float maxDistanceSquared = 0.0001f;
+            foreach (ref readonly var primitive in primitives.GetSpan())
+            {
+                if (Vector3.DistanceSquared(primitive.Position, expected) <= maxDistanceSquared)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Entity FindEntityByName(World world, string name)
