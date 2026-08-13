@@ -1,0 +1,32 @@
+{
+  "op": "RelationshipSetMetric",
+  "driver": "sandbox",
+  "title": "把好感写成指定值",
+  "beat": "好感被写成 80，盟友条到八成。",
+  "detailTemplate": "好感被写成{loyalty}，盟友条到八成。",
+  "assertDetailContains": ["写成"],
+  "featuredNodeId": "setMetric",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "盟友",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

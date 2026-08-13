@@ -1199,6 +1199,110 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSortByMetricEntryMod",
         "projectPath": "CapabilityStandardGraphOpRelationshipSortByMetricEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ApplyEffectDynamic",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyEffectDynamicEntryMod",
+        "projectPath": "CapabilityStandardGraphOpApplyEffectDynamicEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FanOutApplyEffect",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFanOutApplyEffectEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFanOutApplyEffectEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FanOutApplyEffectDynamic",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFanOutApplyEffectDynamicEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFanOutApplyEffectDynamicEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_HasTag",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHasTagEntryMod",
+        "projectPath": "CapabilityStandardGraphOpHasTagEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LookupTagDisplayToken",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryLimit",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryLimitEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryLimitEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryRadius",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryRadiusEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryRadiusEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QuerySortStable",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQuerySortStableEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQuerySortStableEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAddMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAddMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAddMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipEnsureLink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipEnsureLinkEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipEnsureLinkEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipHasFlag",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipHasFlagEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipHasFlagEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipSetMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSetMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipSetMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SelectTagInMask",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectTagInMaskEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSelectTagInMaskEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

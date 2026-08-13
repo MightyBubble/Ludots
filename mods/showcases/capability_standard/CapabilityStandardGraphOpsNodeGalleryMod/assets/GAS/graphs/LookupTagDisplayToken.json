@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.LookupTagDisplayToken",
+  "kind": "Effect",
+  "entry": "scout",
+  "nodes": [
+    { "id": "scout", "op": "LoadExplicitTarget" },
+    { "id": "selectTag", "op": "SelectTagInMask", "displayTable": "graphops.sandbox.status.display", "tagSelectPolicy": "RequireOne" },
+    { "id": "lookup", "op": "LookupTagDisplayToken", "displayTable": "graphops.sandbox.status.display" }
+  ],
+  "controlEdges": [
+    { "from": "scout", "fromPort": "next", "to": "selectTag" },
+    { "from": "selectTag", "fromPort": "next", "to": "lookup" }
+  ],
+  "valueEdges": [
+    { "from": "scout", "fromPort": "value", "to": "selectTag", "toPort": "source" },
+    { "from": "selectTag", "fromPort": "value", "to": "lookup", "toPort": "a" }
+  ]
+}

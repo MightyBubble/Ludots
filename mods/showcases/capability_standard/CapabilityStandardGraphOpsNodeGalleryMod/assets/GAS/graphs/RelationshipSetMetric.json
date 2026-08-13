@@ -1,0 +1,25 @@
+{
+  "id": "showcase.graph_op.RelationshipSetMetric",
+  "kind": "Effect",
+  "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "target", "op": "LoadExplicitTarget" },
+    { "id": "value", "op": "ConstInt", "intValue": 80 },
+    { "id": "ensure", "op": "RelationshipEnsureLink", "relationshipType": "SocialBond" },
+    { "id": "setMetric", "op": "RelationshipSetMetric", "relationshipType": "SocialBond", "metric": "Loyalty" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "target" },
+    { "from": "target", "fromPort": "next", "to": "value" },
+    { "from": "value", "fromPort": "next", "to": "ensure" },
+    { "from": "ensure", "fromPort": "next", "to": "setMetric" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "ensure", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "ensure", "toPort": "target" },
+    { "from": "caster", "fromPort": "value", "to": "setMetric", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "setMetric", "toPort": "target" },
+    { "from": "value", "fromPort": "value", "to": "setMetric", "toPort": "value" }
+  ]
+}

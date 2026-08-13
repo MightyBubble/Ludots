@@ -1357,6 +1357,123 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ApplyEffectDynamic_raylib",
+      "name": "Graph Op ApplyEffectDynamic Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ApplyEffectDynamic"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FanOutApplyEffect_raylib",
+      "name": "Graph Op FanOutApplyEffect Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FanOutApplyEffect"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FanOutApplyEffectDynamic_raylib",
+      "name": "Graph Op FanOutApplyEffectDynamic Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FanOutApplyEffectDynamic"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_HasTag_raylib",
+      "name": "Graph Op HasTag Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_HasTag"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LookupTagDisplayToken_raylib",
+      "name": "Graph Op LookupTagDisplayToken Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LookupTagDisplayToken"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryLimit_raylib",
+      "name": "Graph Op QueryLimit Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryLimit"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryRadius_raylib",
+      "name": "Graph Op QueryRadius Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryRadius"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QuerySortStable_raylib",
+      "name": "Graph Op QuerySortStable Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QuerySortStable"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAddMetric_raylib",
+      "name": "Graph Op RelationshipAddMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAddMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipEnsureLink_raylib",
+      "name": "Graph Op RelationshipEnsureLink Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipEnsureLink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipHasFlag_raylib",
+      "name": "Graph Op RelationshipHasFlag Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipHasFlag"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipSetMetric_raylib",
+      "name": "Graph Op RelationshipSetMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipSetMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SelectTagInMask_raylib",
+      "name": "Graph Op SelectTagInMask Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SelectTagInMask"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "id": "showcase.graph_op.RelationshipHasFlag",
+  "kind": "Effect",
+  "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "target", "op": "LoadExplicitTarget" },
+    { "id": "trusted", "op": "ConstBool", "boolValue": true },
+    { "id": "ensure", "op": "RelationshipEnsureLink", "relationshipType": "SocialBond" },
+    { "id": "setFlag", "op": "RelationshipSetFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+    { "id": "hasFlag", "op": "RelationshipHasFlag", "relationshipType": "SocialBond", "flag": "Trusted" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "target" },
+    { "from": "target", "fromPort": "next", "to": "trusted" },
+    { "from": "trusted", "fromPort": "next", "to": "ensure" },
+    { "from": "ensure", "fromPort": "next", "to": "setFlag" },
+    { "from": "setFlag", "fromPort": "next", "to": "hasFlag" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "ensure", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "ensure", "toPort": "target" },
+    { "from": "caster", "fromPort": "value", "to": "setFlag", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "setFlag", "toPort": "target" },
+    { "from": "trusted", "fromPort": "value", "to": "setFlag", "toPort": "value" },
+    { "from": "caster", "fromPort": "value", "to": "hasFlag", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "hasFlag", "toPort": "target" }
+  ]
+}

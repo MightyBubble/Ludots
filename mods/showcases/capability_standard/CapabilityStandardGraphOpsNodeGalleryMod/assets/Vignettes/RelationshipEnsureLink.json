@@ -1,0 +1,32 @@
+{
+  "op": "RelationshipEnsureLink",
+  "driver": "sandbox",
+  "title": "先把关系链接上",
+  "beat": "施法者和盟友之间出现友谊/好感链。",
+  "detailTemplate": "接上了关系。",
+  "assertDetailContains": ["接上"],
+  "featuredNodeId": "ensure",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "盟友",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

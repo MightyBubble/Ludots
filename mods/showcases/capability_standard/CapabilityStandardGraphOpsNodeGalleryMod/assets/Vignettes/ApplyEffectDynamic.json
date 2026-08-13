@@ -1,0 +1,32 @@
+{
+  "op": "ApplyEffectDynamic",
+  "driver": "sandbox",
+  "title": "按读到的模板打到点名目标",
+  "beat": "模板号不是写死的，读出来再打木桩。",
+  "detailTemplate": "按读到的模板打到点名目标木桩。",
+  "assertDetailContains": ["点名"],
+  "featuredNodeId": "applyDyn",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "stake",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

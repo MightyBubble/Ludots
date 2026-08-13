@@ -1,0 +1,15 @@
+{
+  "displayTable": "graphops.sandbox.status.display",
+  "burningTag": "State.Sandbox.Burning",
+  "markedTag": "State.Sandbox.Marked",
+  "burningTokenId": 1,
+  "markedTokenId": 2,
+  "burningCaption": "灼烧",
+  "markedCaption": "标记",
+  "markEffect": "Effect.GraphOpsSandbox.Mark",
+  "buffEffect": "Effect.GraphOpsSandbox.Buff",
+  "buffBlackboardKey": "graphops.sandbox.buffTemplate",
+  "relationshipType": "SocialBond",
+  "loyaltyMetric": "Loyalty",
+  "trustedFlag": "Trusted"
+}

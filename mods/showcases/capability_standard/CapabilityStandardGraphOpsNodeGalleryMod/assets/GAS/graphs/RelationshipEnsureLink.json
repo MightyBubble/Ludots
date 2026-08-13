@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.RelationshipEnsureLink",
+  "kind": "Effect",
+  "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "target", "op": "LoadExplicitTarget" },
+    { "id": "ensure", "op": "RelationshipEnsureLink", "relationshipType": "SocialBond" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "target" },
+    { "from": "target", "fromPort": "next", "to": "ensure" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "ensure", "toPort": "source" },
+    { "from": "target", "fromPort": "value", "to": "ensure", "toPort": "target" }
+  ]
+}
