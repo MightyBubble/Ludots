@@ -17,6 +17,7 @@ Evidence lands in:
 | `03_cutout_vegetation.png` | Billboard vegetation with alpha cutout (no solid quad) |
 | `04_blend_modes.png` | AlphaBlend vs Additive VFX distinguishable |
 | `05_distance_fog.png` | Atmospheric distance fog (not FoW overlay) |
+| `06_water_reflect.png` | Planar reflection/refraction water silhouette |
 | `07_beach_decals.png` | 故事脚印/焦痕/血迹/裂痕贴在近景沙滩上 |
 | `08_decal_fields.png` | 对照区：大小、厚度、染色、朝向各改一个字段 |
 | `09_spline_ribbons.png` | 岸边细/宽/描边弯带 |
