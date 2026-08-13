@@ -45,7 +45,7 @@ namespace Ludots.Core.Presentation.Rendering
         {
             if (capacity <= 0)
             {
-                capacity = 2048;
+                throw new ArgumentOutOfRangeException(nameof(capacity));
             }
 
             _stableIds = new int[capacity];

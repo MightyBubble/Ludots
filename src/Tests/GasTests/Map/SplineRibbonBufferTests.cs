@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
@@ -7,6 +8,13 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public sealed class SplineRibbonBufferTests
     {
+        [Test]
+        public void SplineRibbonBuffer_WhenCapacityIsNotPositive_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SplineRibbonBuffer(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new SplineRibbonBuffer(-1));
+        }
+
         [Test]
         public void SplineRibbonBuffer_StoresColumns_WithoutItemMaterialization()
         {
