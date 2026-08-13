@@ -5,7 +5,6 @@ using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using CapabilityStandardLevelBlueprintTrialMod.Runtime;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
@@ -90,7 +89,7 @@ namespace Ludots.Tests.Gas.Production
         {
             using var runtime = new AbilityGraphSandboxRuntime();
             runtime.BindStandaloneFromModAssets();
-            HashSet<GraphNodeOp> emitted = CollectOps(runtime.Programs!);
+            HashSet<GraphNodeOp> emitted = CollectOps(runtime);
             GraphNodeOp[] required =
             [
                 GraphNodeOp.HasTag,
@@ -113,7 +112,7 @@ namespace Ludots.Tests.Gas.Production
             }
         }
 
-        private static HashSet<GraphNodeOp> CollectOps(GraphProgramRegistry programs)
+        private static HashSet<GraphNodeOp> CollectOps(AbilityGraphSandboxRuntime runtime)
         {
             var ops = new HashSet<GraphNodeOp>();
             foreach (string graphKey in new[]
@@ -123,8 +122,7 @@ namespace Ludots.Tests.Gas.Production
                          AbilityGraphSandboxGraphKeys.Bond
                      })
             {
-                int graphId = GraphIdRegistry.GetId(graphKey);
-                Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True, graphKey);
+                Assert.That(runtime.TryGetProgram(graphKey, out ReadOnlySpan<GraphInstruction> program), Is.True, graphKey);
                 for (int i = 0; i < program.Length; i++)
                 {
                     ops.Add((GraphNodeOp)program[i].Op);

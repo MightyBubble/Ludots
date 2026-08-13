@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -38,6 +39,7 @@ public static class AbilityGraphSandboxGraphKeys
 public sealed class AbilityGraphSandboxBundle
 {
     public required GraphProgramRegistry Programs { get; init; }
+    public required IReadOnlyDictionary<string, int> GraphIds { get; init; }
     public required TagDisplayTableRegistry TagDisplay { get; init; }
     public required RelationshipTypeRegistry Types { get; init; }
     public required RelationshipMetricRegistry Metrics { get; init; }
@@ -132,6 +134,8 @@ public static class AbilityGraphSandboxGraphBootstrap
         reasons.Register("Scenario.Setup");
 
         var programs = new GraphProgramRegistry();
+        var graphIds = new Dictionary<string, int>(StringComparer.Ordinal);
+        int nextGraphId = 1;
         var resolver = new AbilityGraphSandboxSymbolResolver(types, metrics, flags, reasons, tables);
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
@@ -168,13 +172,15 @@ public static class AbilityGraphSandboxGraphBootstrap
                 GasGraphOpHandlerTable.Instance,
                 entrypoint: nameof(AbilityGraphSandboxGraphBootstrap));
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
-            int graphId = GraphIdRegistry.Register(id);
+            int graphId = nextGraphId++;
+            graphIds[id] = graphId;
             programs.Register(graphId, package.Program, kind, GraphInstructionSourceMap.Empty, package.Symbols);
         }
 
         return new AbilityGraphSandboxBundle
         {
             Programs = programs,
+            GraphIds = graphIds,
             TagDisplay = tables,
             Types = types,
             Metrics = metrics,

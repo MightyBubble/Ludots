@@ -18,11 +18,11 @@ public sealed class CapabilityStandardAbilityGraphSandboxModEntry : IMod
     {
         context.Log("[CapabilityStandardAbilityGraphSandboxMod] Loaded (sandbox-owned Effect graphs)");
         var runtime = new AbilityGraphSandboxRuntime();
+        runtime.BindStandaloneFromModAssets();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
-            runtime.BindStandaloneFromModAssets();
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

@@ -70,9 +70,19 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
 
     public void BindStandaloneFromModAssets()
     {
+        if (_programs != null)
+        {
+            return;
+        }
+
         _bundle = AbilityGraphSandboxGraphBootstrap.LoadModGraphs(
             AbilityGraphSandboxGraphBootstrap.FindModAssetsRoot());
         _programs = _bundle.Programs;
+        _nearbyCountKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearbyCountKey);
+        _nearestKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearestKey);
+        _statusTokenKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.StatusTokenKey);
+        _buffTemplateKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.BuffTemplateKey);
+        _loyaltyKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.LoyaltyKey);
     }
 
     public void EnsureWorld()
@@ -87,12 +97,11 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         RequireGraph(AbilityGraphSandboxGraphKeys.Scout);
         RequireGraph(AbilityGraphSandboxGraphKeys.Apply);
         RequireGraph(AbilityGraphSandboxGraphKeys.Bond);
-
-        _nearbyCountKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearbyCountKey);
-        _nearestKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearestKey);
-        _statusTokenKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.StatusTokenKey);
-        _buffTemplateKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.BuffTemplateKey);
-        _loyaltyKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.LoyaltyKey);
+        RequireBoundKey(_nearbyCountKeyId, AbilityGraphSandboxGraphKeys.NearbyCountKey);
+        RequireBoundKey(_nearestKeyId, AbilityGraphSandboxGraphKeys.NearestKey);
+        RequireBoundKey(_statusTokenKeyId, AbilityGraphSandboxGraphKeys.StatusTokenKey);
+        RequireBoundKey(_buffTemplateKeyId, AbilityGraphSandboxGraphKeys.BuffTemplateKey);
+        RequireBoundKey(_loyaltyKeyId, AbilityGraphSandboxGraphKeys.LoyaltyKey);
 
         _world = World.Create();
         _requests = new EffectRequestQueue();
@@ -212,8 +221,7 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
 
     private void ExecuteEffectGraph(string graphKey, Entity explicitTarget, IntVector2 originCm)
     {
-        int graphId = GraphIdRegistry.GetId(graphKey);
-        if (!_programs!.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+        if (!TryGetProgram(graphKey, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
         {
             throw new InvalidOperationException($"Graph '{graphKey}' is not registered.");
         }
@@ -321,12 +329,31 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         _grid!.Add(entity, new IntRect(grid.X, grid.Y, grid.X + 1, grid.Y + 1));
     }
 
+    public bool TryGetProgram(string graphKey, out ReadOnlySpan<GraphInstruction> program)
+    {
+        program = default;
+        if (_bundle == null || _programs == null)
+        {
+            return false;
+        }
+
+        return _bundle.GraphIds.TryGetValue(graphKey, out int graphId) &&
+               _programs.TryGetProgram(graphId, out program);
+    }
+
     private void RequireGraph(string graphKey)
     {
-        int graphId = GraphIdRegistry.GetId(graphKey);
-        if (graphId <= 0 || !_programs!.TryGetProgram(graphId, out _))
+        if (!TryGetProgram(graphKey, out _))
         {
             throw new InvalidOperationException($"Required graph '{graphKey}' is missing from registry.");
+        }
+    }
+
+    private static void RequireBoundKey(int keyId, string key)
+    {
+        if (keyId <= 0)
+        {
+            throw new InvalidOperationException($"Blackboard key '{key}' was not registered during BindStandaloneFromModAssets.");
         }
     }
 
