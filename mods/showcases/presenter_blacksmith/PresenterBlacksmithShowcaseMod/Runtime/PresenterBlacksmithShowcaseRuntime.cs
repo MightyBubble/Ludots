@@ -119,6 +119,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
 
         public bool SuppressHostDiagnosticUi => _activeEngine != null &&
             PresenterBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
+            !IsInteractiveMode(_activeEngine) &&
             !ReadStrictBoolEnv(ForceBenchmarkUiEnvKey);
 
         public bool SuppressHostDebugGuides => _activeEngine != null &&

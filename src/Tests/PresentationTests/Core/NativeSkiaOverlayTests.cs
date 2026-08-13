@@ -358,8 +358,16 @@ public sealed class NativeSkiaOverlayTests
             "TopMost direct overlay must stay disabled while UnderUi HUD exists; otherwise minimap is drawn under world HUD.");
         Assert.That(
             source,
-            Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay"),
-            "UnderUi and TopMost may share a direct GPU path only when the compositor draws TopMost after the HUD.");
+            Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && _useGpuDirectUnderlay"),
+            "UnderUi and TopMost may share a direct GPU path when the compositor draws TopMost after the HUD.");
+        Assert.That(
+            source,
+            Does.Not.Contain("hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay"),
+            "A mounted Skia panel must not kick world HUD off the GPU underlay path.");
+        Assert.That(
+            source,
+            Does.Contain("drawCompositeTexture"),
+            "Skia UI must blit after GPU UnderUi HUD and before TopMost minimap so the UAT panel can stay mounted without rasterizing world HUD every frame.");
         Assert.That(
             source,
             Does.Contain("_framebufferTopOverlaySurface.Render("),

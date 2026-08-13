@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -179,6 +180,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountPresentersByDef(engine, workerId), Is.EqualTo(1), "Worker presenter should exist as a steady child.");
             Assert.That(CountPresentersByDef(engine, barId), Is.EqualTo(1));
             Assert.That(CountPresentersByDef(engine, textId), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BlacksmithShowcase_InteractiveMap_KeepsSkiaUatPanelDrawable()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 4);
+
+            IBenchmarkSceneController controller = engine.GetService(CoreServiceKeys.BenchmarkSceneController)
+                ?? throw new InvalidOperationException("BenchmarkSceneController missing.");
+            Assert.That(
+                controller.SuppressHostDiagnosticUi,
+                Is.False,
+                "Interactive blacksmith UAT is mouse-only: Working/Day/Destroy live on the Skia panel, so the host must keep drawing it.");
         }
 
         [Test]
