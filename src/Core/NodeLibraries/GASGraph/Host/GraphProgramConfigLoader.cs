@@ -19,6 +19,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly StringIntRegistry? _outputValueKeys;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, GraphInstructionSourceMap> _pendingSourceMaps = new(StringComparer.OrdinalIgnoreCase);
 
         public GraphProgramConfigLoader(
             ConfigPipeline pipeline,
@@ -44,6 +45,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _registry.Clear();
             GraphIdRegistry.Clear();
             _pendingOutputSchemas.Clear();
+            _pendingSourceMaps.Clear();
             _outputSchemas?.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
@@ -64,7 +66,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 try
                 {
                     GraphIdRegistry.Register(id);
-                    var (pkg, outputSchema, diags) = GraphProgramAuthoringFrontDoor.CompileJsonObject(obj, id, options);
+                    GraphControlFlowCompileResult compiled =
+                        GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options);
+                    GraphProgramPackage? pkg = compiled.Package;
+                    GraphOutputSchema outputSchema = compiled.OutputSchema;
+                    List<GraphDiagnostic> diags = compiled.Diagnostics;
 
                     for (int d = 0; d < diags.Count; d++)
                     {
@@ -77,6 +83,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     {
                         packages.Add(pkg.Value);
                         _pendingOutputSchemas[id] = outputSchema;
+                        _pendingSourceMaps[id] = compiled.SourceMap;
                     }
                 }
                 catch (Exception ex)
@@ -116,7 +123,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     id,
                     nameof(GraphProgramConfigLoader));
 
-                _registry.Register(id, program, kind, GraphInstructionSourceMap.Empty, symbols);
+                GraphInstructionSourceMap sourceMap = _pendingSourceMaps.TryGetValue(name, out GraphInstructionSourceMap pendingMap)
+                    ? pendingMap
+                    : GraphInstructionSourceMap.Empty;
+                _registry.Register(id, program, kind, sourceMap, symbols);
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
