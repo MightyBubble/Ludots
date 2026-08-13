@@ -160,7 +160,7 @@ public sealed class GraphOpsRelRuntime
 
         _relationships.SetMetric(_friends[1], _player, _socialBondTypeId, _loyaltyMetricId, 70, reasonId: 0);
         _relationships.SetMetric(_friends[2], _player, _socialBondTypeId, _loyaltyMetricId, 55, reasonId: 0);
-        if (_trustedFlagId <= 0 || _estrangedFlagId <= 0)
+        if (_trustedFlagId < 0 || _estrangedFlagId < 0)
         {
             throw new InvalidOperationException("Rel gallery requires Trusted and Estranged flags.");
         }
