@@ -82,7 +82,12 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         AssertWorldHealth(runtime, "west", 100f);
         AssertWorldHealth(runtime, "southwest", 100f);
         AssertWorldHealth(runtime, "southeast", 100f);
-        AssertWorldHealth(runtime, "outer", 0f);
+        AssertWorldHealth(runtime, "outer", 100f);
+        AssertHudLit(runtime, "caster", true);
+        AssertHudLit(runtime, "east", true);
+        AssertHudLit(runtime, "outer", false);
+        AssertHealthDisclosure(runtime, "east", true);
+        AssertHealthDisclosure(runtime, "outer", false);
         AssertActorHealthMatchesWorld(runtime);
     }
 
@@ -99,7 +104,11 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         AssertWorldHealth(runtime, "ring2a", 100f);
         AssertWorldHealth(runtime, "ring2b", 100f);
         AssertWorldHealth(runtime, "ring2c", 100f);
-        AssertWorldHealth(runtime, "outer", 0f);
+        AssertWorldHealth(runtime, "outer", 100f);
+        AssertHudLit(runtime, "ring1a", true);
+        AssertHudLit(runtime, "outer", false);
+        AssertHealthDisclosure(runtime, "ring1a", true);
+        AssertHealthDisclosure(runtime, "outer", false);
         AssertActorHealthMatchesWorld(runtime);
     }
 
@@ -114,9 +123,14 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         AssertWorldHealth(runtime, "ringEast", 100f);
         AssertWorldHealth(runtime, "ringSouth", 100f);
         AssertWorldHealth(runtime, "ringWest", 100f);
-        AssertWorldHealth(runtime, "innerEast", 0f);
-        AssertWorldHealth(runtime, "innerSouth", 0f);
-        AssertWorldHealth(runtime, "outer", 0f);
+        AssertWorldHealth(runtime, "innerEast", 100f);
+        AssertWorldHealth(runtime, "innerSouth", 100f);
+        AssertWorldHealth(runtime, "outer", 100f);
+        AssertHudLit(runtime, "ringEast", true);
+        AssertHudLit(runtime, "innerEast", false);
+        AssertHudLit(runtime, "outer", false);
+        AssertHealthDisclosure(runtime, "ringEast", true);
+        AssertHealthDisclosure(runtime, "innerEast", false);
         AssertActorHealthMatchesWorld(runtime);
     }
 
@@ -175,6 +189,21 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
             runtime.Context.SimActors[index]);
         Assert.That(runtime.Context.ActorHealth[index], Is.EqualTo(expected).Within(0.01f), actorId);
         Assert.That(world, Is.EqualTo(expected).Within(0.01f), actorId);
+    }
+
+    private static void AssertHudLit(GraphOpsNodeGalleryRuntime runtime, string actorId, bool expected)
+    {
+        int index = GraphOpsNodeActorBinding.IndexOfId(runtime.Vignette, actorId);
+        Assert.That(runtime.Context.ActorHudLit[index], Is.EqualTo(expected), actorId);
+    }
+
+    private static void AssertHealthDisclosure(GraphOpsNodeGalleryRuntime runtime, string actorId, bool expected)
+    {
+        int index = GraphOpsNodeActorBinding.IndexOfId(runtime.Vignette, actorId);
+        Assert.That(
+            GraphOpsNodeActorBinding.IsHealthDisclosed(runtime.Context, index),
+            Is.EqualTo(expected),
+            actorId);
     }
 
     private static void AssertActorHealthMatchesWorld(GraphOpsNodeGalleryRuntime runtime)

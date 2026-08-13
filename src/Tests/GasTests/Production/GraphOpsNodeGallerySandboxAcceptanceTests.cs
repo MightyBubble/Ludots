@@ -53,7 +53,7 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(runtime.Metrics.Detail, Does.Contain("近处"));
         bool inRangeLit = false;
-        bool farUnchanged = false;
+        bool farUnlit = false;
         var actors = runtime.Vignette.Actors;
         for (int i = 0; i < actors.Length; i++)
         {
@@ -62,22 +62,23 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
                 continue;
             }
 
+            Assert.That(runtime.Context.ActorHealth[i], Is.EqualTo(before[i]).Within(0.01f), actors[i].Id);
             float dist = MathF.Sqrt(actors[i].X * actors[i].X + actors[i].Y * actors[i].Y);
             if (dist <= 8f)
             {
-                if (Math.Abs(runtime.Context.ActorHealth[i] - before[i]) > 0.01f)
+                if (runtime.Context.ActorHudLit[i])
                 {
                     inRangeLit = true;
                 }
             }
-            else if (Math.Abs(runtime.Context.ActorHealth[i] - before[i]) < 0.01f)
+            else if (!runtime.Context.ActorHudLit[i])
             {
-                farUnchanged = true;
+                farUnlit = true;
             }
         }
 
-        Assert.That(inRangeLit, Is.True, "In-range units must change health after QueryRadius.");
-        Assert.That(farUnchanged, Is.True, "Out-of-range units must stay still.");
+        Assert.That(inRangeLit, Is.True, "In-range units must disclose Health after QueryRadius.");
+        Assert.That(farUnlit, Is.True, "Out-of-range units must keep Health undisclosed.");
         Assert.That(runtime.Metrics.Detail, Does.Not.Match("摸到0个近处"));
     }
 
@@ -100,7 +101,9 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
         }
 
         Assert.That(ally, Is.GreaterThanOrEqualTo(0));
-        Assert.That(runtime.Context.ActorHealth[ally], Is.EqualTo(80f).Within(0.01f));
+        Assert.That(runtime.Context.ActorHealth[ally], Is.EqualTo(100f).Within(0.01f));
+        Assert.That(runtime.Context.ActorHudLit[ally], Is.True);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("80"));
     }
 
     [Test]

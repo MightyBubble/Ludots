@@ -68,6 +68,7 @@ public sealed class GraphOpsNodeDriverContext
     public Entity[] SimActors { get; set; } = Array.Empty<Entity>();
     public Entity[] StageProxies { get; set; } = Array.Empty<Entity>();
     public float[] ActorHealth { get; set; } = Array.Empty<float>();
+    public bool[] ActorHudLit { get; set; } = Array.Empty<bool>();
     public int Wave { get; set; }
     public Dictionary<string, string> CaptionValues { get; } = new(StringComparer.Ordinal);
 

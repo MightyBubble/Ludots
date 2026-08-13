@@ -117,6 +117,56 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
     }
 
     [Test]
+    public void EveryVignette_TicksOnce_WithChineseCaption()
+    {
+        string repoRoot = FindRepoRoot();
+        string assets = Path.Combine(repoRoot, GraphOpsNodeIds.ModAssetsRelative);
+        var failures = new List<string>();
+        foreach (GraphNodeOp op in Enum.GetValues<GraphNodeOp>())
+        {
+            if (op == GraphNodeOp.None)
+            {
+                continue;
+            }
+
+            string name = op.ToString();
+            try
+            {
+                using var runtime = new GraphOpsNodeGalleryRuntime();
+                runtime.BindOp(name);
+                runtime.EnsureWorld();
+                int ticks = name is "Yield" or "JumpIfFalse" ? 12 : 1;
+                for (int i = 0; i < ticks; i++)
+                {
+                    runtime.Tick(0.35f);
+                }
+
+                if (runtime.Metrics.ThinkWaves < 1)
+                {
+                    failures.Add($"{name}: think waves stayed 0");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(runtime.Metrics.Detail))
+                {
+                    failures.Add($"{name}: empty caption");
+                }
+
+                if (runtime.Metrics.Detail.Contains('{', StringComparison.Ordinal))
+                {
+                    failures.Add($"{name}: unsubstituted caption '{runtime.Metrics.Detail}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{name}: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        Assert.That(failures, Is.Empty, "Per-op gallery tick failures:\n" + string.Join("\n", failures));
+    }
+
+    [Test]
     public void GeneratedMaps_SpawnEveryVignetteActor()
     {
         string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();

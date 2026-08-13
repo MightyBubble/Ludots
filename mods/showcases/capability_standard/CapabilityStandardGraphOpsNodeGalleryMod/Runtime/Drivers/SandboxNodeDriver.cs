@@ -245,27 +245,27 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                 }
 
                 ctx.CaptionValues["result"] = "有";
-                HighlightTargetHealth(ctx, 80f);
+                LightTarget(ctx);
                 break;
             case "SelectTagInMask":
                 ctx.CaptionValues["card"] = CaptionForTagId(result.IntValue);
-                HighlightTargetHealth(ctx, 80f);
+                LightTarget(ctx);
                 break;
             case "LookupTagDisplayToken":
                 ctx.CaptionValues["token"] = CaptionForTokenId(result.IntValue);
-                HighlightTargetHealth(ctx, 80f);
+                LightTarget(ctx);
                 break;
             case "QueryRadius":
-                HighlightRangeHealth(ctx, litHealth: 80f);
+                LightInRange(ctx);
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 break;
             case "QuerySortStable":
-                HighlightRangeHealth(ctx, litHealth: 80f);
+                LightInRange(ctx);
                 ctx.CaptionValues["order"] = JoinHitNames(ctx);
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 break;
             case "QueryLimit":
-                HighlightRangeHealth(ctx, litHealth: 80f);
+                LightInRange(ctx);
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 break;
             case "FanOutApplyEffect":
@@ -277,7 +277,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("ApplyEffectDynamic applied no effect to the named target.");
                 }
 
-                HighlightTargetHealth(ctx, 55f);
+                LightTarget(ctx);
                 ctx.CaptionValues["applied"] = ctx.EffectRequests.Count.ToString();
                 break;
             case "FanOutApplyEffectDynamic":
@@ -288,7 +288,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             case "RelationshipAddMetric":
                 RequireLink(ctx);
                 int loyalty = ctx.Relationships!.GetMetric(ctx.Caster, ctx.Target, _socialBondTypeId, _loyaltyMetricId);
-                WriteAllyHealth(ctx, loyalty);
+                LightAlly(ctx);
                 ctx.CaptionValues["loyalty"] = loyalty.ToString();
                 break;
             case "RelationshipHasFlag":
@@ -298,7 +298,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("RelationshipHasFlag expected Trusted after the flag was set.");
                 }
 
-                WriteAllyHealth(ctx, 100f);
+                LightAlly(ctx);
                 ctx.CaptionValues["result"] = "信得过";
                 break;
             default:
@@ -313,46 +313,36 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Sandbox {ctx.Vignette.Op} applied no effects.");
         }
 
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
+        var lit = new List<int>();
         for (int i = 0; i < ctx.EffectRequests.Count; i++)
         {
             int index = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.EffectRequests[i].Target);
             if (index >= 0)
             {
-                ctx.ActorHealth[index] = 55f;
                 _inRange[index] = true;
+                lit.Add(index);
             }
         }
+
+        GraphOpsNodeActorBinding.LightCasterAndIndices(ctx, lit.ToArray());
 
         ctx.CaptionValues["count"] = result.TargetCount.ToString();
         ctx.CaptionValues["applied"] = ctx.EffectRequests.Count.ToString();
     }
 
-    private void HighlightRangeHealth(GraphOpsNodeDriverContext ctx, float litHealth)
+    private static void LightInRange(GraphOpsNodeDriverContext ctx)
     {
-        for (int i = 0; i < ctx.ActorHealth.Length; i++)
-        {
-            if (string.Equals(ctx.Vignette.Actors[i].Role, "caster", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (_inRange[i])
-            {
-                ctx.ActorHealth[i] = litHealth;
-            }
-        }
+        GraphOpsNodeActorBinding.LightCasterAndHits(ctx);
     }
 
-    private static void HighlightTargetHealth(GraphOpsNodeDriverContext ctx, float health)
+    private static void LightTarget(GraphOpsNodeDriverContext ctx)
     {
         int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
-        if (target >= 0)
-        {
-            ctx.ActorHealth[target] = health;
-        }
+        GraphOpsNodeActorBinding.LightCasterAndIndices(ctx, target >= 0 ? [target] : []);
     }
 
-    private void WriteAllyHealth(GraphOpsNodeDriverContext ctx, float loyalty)
+    private static void LightAlly(GraphOpsNodeDriverContext ctx)
     {
         int ally = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (ally < 0)
@@ -360,7 +350,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Sandbox {ctx.Vignette.Op} requires an ally target actor.");
         }
 
-        ctx.ActorHealth[ally] = Math.Clamp(loyalty, 0f, ctx.Vignette.Actors[ally].HealthMax);
+        GraphOpsNodeActorBinding.LightCasterAndIndices(ctx, [ally]);
     }
 
     private void RequireLink(GraphOpsNodeDriverContext ctx)

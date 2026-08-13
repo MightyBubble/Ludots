@@ -318,14 +318,21 @@ public sealed class GraphOpsStageVisuals
         }
     }
 
-    private void DiscloseHealth(Entity subject)
+    public void GateWorldHudByKnowledge()
+    {
+        _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = false;
+    }
+
+    public void SetHealthBarVisible(Entity subject, bool discloseHealth)
     {
         if (_viewer == Entity.Null || !_world.IsAlive(_viewer) || !_world.IsAlive(subject))
         {
-            throw new InvalidOperationException("GraphOps HUD cannot disclose Health without a live viewer and subject.");
+            throw new InvalidOperationException("GraphOps HUD cannot set Health disclosure without a live viewer and subject.");
         }
 
-        KnowledgeIdMask256 attributeMask = KnowledgeIdMask256.Empty.WithId(_healthAttrId);
+        KnowledgeIdMask256 attributeMask = discloseHealth
+            ? KnowledgeIdMask256.Empty.WithId(_healthAttrId)
+            : KnowledgeIdMask256.Empty;
         KnowledgeIdMask256 empty = KnowledgeIdMask256.Empty;
         int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
         _knowledge.Upsert(
@@ -342,5 +349,10 @@ public sealed class GraphOpsStageVisuals
                 expiryTick: 0,
                 confidencePermille: 1000,
                 revision: 0));
+    }
+
+    private void DiscloseHealth(Entity subject)
+    {
+        SetHealthBarVisible(subject, discloseHealth: true);
     }
 }

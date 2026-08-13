@@ -132,5 +132,11 @@
         }
       }
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "self"
+    }
   ]
 }

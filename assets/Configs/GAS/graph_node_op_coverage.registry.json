@@ -7,7 +7,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_ValidationGraph_CompilesAndUsesClampAndCompare;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_ValidationGraph_CompilesAndUsesClampAndCompare;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_ConstBool",
       "status": "covered"
     },
@@ -16,7 +16,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_ConstInt",
       "status": "covered"
     },
@@ -26,7 +26,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_ConstFloat",
       "status": "covered"
     },
@@ -36,7 +36,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_LoadCaster",
       "status": "covered"
     },
@@ -45,7 +45,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_LoadExplicitTarget",
       "status": "covered"
     },
@@ -54,7 +54,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
       "showcaseId": "capability_standard_graph_op_Jump",
       "status": "covered"
     },
@@ -64,7 +64,7 @@
         "Effect",
         "Script"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_JumpOps_TiedToDrinkUntilFullPhrases",
       "showcaseId": "capability_standard_graph_op_JumpIfFalse",
       "status": "covered"
     },
@@ -73,7 +73,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_LoadAttribute",
       "status": "covered"
     },
@@ -82,7 +82,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_AddFloat",
       "status": "covered"
     },
@@ -91,7 +91,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_MulFloat",
       "status": "covered"
     },
@@ -100,7 +100,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_SubFloat",
       "status": "covered"
     },
@@ -109,7 +109,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_DivFloat",
       "status": "covered"
     },
@@ -118,7 +118,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_MinFloat",
       "status": "covered"
     },
@@ -127,7 +127,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_MaxFloat",
       "status": "covered"
     },
@@ -136,7 +136,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_ClampFloat",
       "status": "covered"
     },
@@ -145,7 +145,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_AbsFloat",
       "status": "covered"
     },
@@ -154,7 +154,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_NegFloat",
       "status": "covered"
     },
@@ -163,7 +163,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RandomFloat01",
       "status": "covered"
     },
@@ -172,7 +172,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_AddInt",
       "status": "covered"
     },
@@ -181,7 +181,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_CompareGtFloat",
       "status": "covered"
     },
@@ -190,7 +190,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_CompareLtInt",
       "status": "covered"
     },
@@ -199,7 +199,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_CompareEqInt",
       "status": "covered"
     },
@@ -209,7 +209,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_HasTag",
       "status": "covered"
     },
@@ -219,7 +219,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_CompareEqEntity",
       "status": "covered"
     },
@@ -229,7 +229,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_SelectTagInMask",
       "status": "covered"
     },
@@ -239,7 +239,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_LookupTagDisplayToken",
       "status": "covered"
     },
@@ -248,7 +248,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_SelectEntity",
       "status": "covered"
     },
@@ -258,7 +258,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy",
       "showcaseId": "capability_standard_graph_op_QueryRadius",
       "status": "covered"
     },
@@ -268,7 +268,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_QuerySortStable",
       "status": "covered"
     },
@@ -278,7 +278,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_QueryLimit",
       "status": "covered"
     },
@@ -287,7 +287,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryCone",
       "status": "covered"
     },
@@ -296,7 +296,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryRectangle",
       "status": "covered"
     },
@@ -305,7 +305,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryLine",
       "status": "covered"
     },
@@ -314,7 +314,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryFilterNotEntity",
       "status": "covered"
     },
@@ -323,7 +323,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryFilterLayer",
       "status": "covered"
     },
@@ -332,7 +332,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryFilterRelationship",
       "status": "covered"
     },
@@ -342,7 +342,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_AggCount",
       "status": "covered"
     },
@@ -352,7 +352,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_AggMinByDistance",
       "status": "covered"
     },
@@ -361,7 +361,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_TargetListGet",
       "status": "covered"
     },
@@ -370,7 +370,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryHexRange",
       "status": "covered"
     },
@@ -379,7 +379,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryHexRing",
       "status": "covered"
     },
@@ -388,7 +388,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail;GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_PlayerFacingPhrases_LockFiltersHexAndFirstHit",
       "showcaseId": "capability_standard_graph_op_QueryHexNeighbors",
       "status": "covered"
     },
@@ -397,7 +397,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_ApplyEffectTemplate",
       "status": "covered"
     },
@@ -406,7 +406,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate",
       "showcaseId": "capability_standard_graph_op_FanOutApplyEffect",
       "status": "covered"
     },
@@ -415,7 +415,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs",
       "showcaseId": "capability_standard_graph_op_ApplyEffectDynamic",
       "status": "covered"
     },
@@ -424,7 +424,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput",
       "showcaseId": "capability_standard_graph_op_FanOutApplyEffectDynamic",
       "status": "covered"
     },
@@ -433,7 +433,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_RemoveEffectTemplate",
       "status": "covered"
     },
@@ -442,7 +442,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_FanOutDispatchEffect",
       "status": "covered"
     },
@@ -451,7 +451,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_FanOutDispatchEffectDynamic",
       "status": "covered"
     },
@@ -460,7 +460,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_ModifyAttributeAdd",
       "status": "covered"
     },
@@ -469,7 +469,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_SendEvent",
       "status": "covered"
     },
@@ -478,7 +478,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_ReadBlackboardFloat",
       "status": "covered"
     },
@@ -487,7 +487,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_ReadBlackboardInt",
       "status": "covered"
     },
@@ -496,7 +496,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_ReadBlackboardEntity",
       "status": "covered"
     },
@@ -505,7 +505,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_WriteBlackboardFloat",
       "status": "covered"
     },
@@ -514,7 +514,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_WriteBlackboardInt",
       "status": "covered"
     },
@@ -523,7 +523,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_WriteBlackboardEntity",
       "status": "covered"
     },
@@ -532,7 +532,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_LoadConfigFloat",
       "status": "covered"
     },
@@ -541,7 +541,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_LoadConfigInt",
       "status": "covered"
     },
@@ -550,7 +550,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
       "showcaseId": "capability_standard_graph_op_LoadConfigEffectId",
       "status": "covered"
     },
@@ -559,7 +559,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadContextSource",
       "status": "covered"
     },
@@ -568,7 +568,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_LoadContextTarget",
       "status": "covered"
     },
@@ -577,7 +577,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadContextTargetContext",
       "status": "covered"
     },
@@ -586,7 +586,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_LoadSelfAttribute",
       "status": "covered"
     },
@@ -595,7 +595,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_op_WriteSelfAttribute",
       "status": "covered"
     },
@@ -604,7 +604,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_graph_op_RelationshipEnsureLink",
       "status": "covered"
     },
@@ -613,7 +613,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipRemoveLink",
       "status": "covered"
     },
@@ -622,7 +622,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_graph_op_RelationshipSetMetric",
       "status": "covered"
     },
@@ -631,7 +631,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": "capability_standard_graph_op_RelationshipAddMetric",
       "status": "covered"
     },
@@ -640,7 +640,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipGetMetric",
       "status": "covered"
     },
@@ -650,7 +650,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_graph_op_RelationshipHasFlag",
       "status": "covered"
     },
@@ -659,7 +659,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipSetFlag",
       "status": "covered"
     },
@@ -668,7 +668,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipQueryOutgoing",
       "status": "covered"
     },
@@ -677,7 +677,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipQueryIncoming",
       "status": "covered"
     },
@@ -686,7 +686,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipQueryMutual",
       "status": "covered"
     },
@@ -695,7 +695,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipQueryBetweenPair",
       "status": "covered"
     },
@@ -704,7 +704,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipFilterMetricRange",
       "status": "covered"
     },
@@ -713,7 +713,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipFilterFlag",
       "status": "covered"
     },
@@ -722,7 +722,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipSortByMetric",
       "status": "covered"
     },
@@ -731,7 +731,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggSumMetric",
       "status": "covered"
     },
@@ -740,7 +740,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggMaxMetric",
       "status": "covered"
     },
@@ -749,7 +749,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggAverageMetric",
       "status": "covered"
     },
@@ -758,7 +758,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryAllMapEntities",
       "status": "covered"
     },
@@ -767,7 +767,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFromCollection",
       "status": "covered"
     },
@@ -776,7 +776,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFilterTeam",
       "status": "covered"
     },
@@ -785,7 +785,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFilterTemplate",
       "status": "covered"
     },
@@ -794,7 +794,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFilterAttributeRange",
       "status": "covered"
     },
@@ -803,7 +803,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFilterTagAny",
       "status": "covered"
     },
@@ -812,7 +812,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QueryFilterTagNone",
       "status": "covered"
     },
@@ -821,7 +821,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_QuerySortByAttribute",
       "status": "covered"
     },
@@ -830,7 +830,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggSumAttribute",
       "status": "covered"
     },
@@ -839,7 +839,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggAverageAttribute",
       "status": "covered"
     },
@@ -848,7 +848,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggMaxAttribute",
       "status": "covered"
     },
@@ -857,7 +857,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggMinAttribute",
       "status": "covered"
     },
@@ -866,7 +866,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggMaxEntityByAttribute",
       "status": "covered"
     },
@@ -875,7 +875,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
       "showcaseId": "capability_standard_graph_op_AggMinEntityByAttribute",
       "status": "covered"
     },
@@ -884,7 +884,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggMinMetric",
       "status": "covered"
     },
@@ -893,7 +893,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric",
       "status": "covered"
     },
@@ -902,7 +902,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipAggMinEntityByMetric",
       "status": "covered"
     },
@@ -912,7 +912,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_op_RelationshipHasLink",
       "status": "covered"
     },
@@ -921,7 +921,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
       "showcaseId": "capability_standard_graph_op_BeginLifecycleTransaction",
       "status": "covered"
     },
@@ -930,7 +930,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase;GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
       "showcaseId": "capability_standard_graph_op_InvokeBuiltin",
       "status": "covered"
     },
@@ -939,7 +939,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadTargetPosX",
       "status": "covered"
     },
@@ -948,7 +948,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadTargetPosY",
       "status": "covered"
     },
@@ -957,7 +957,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_ClampTargetToRange",
       "status": "covered"
     },
@@ -966,7 +966,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_IsPointInCircle",
       "status": "covered"
     },
@@ -975,7 +975,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_SnapToNearestInCollection",
       "status": "covered"
     },
@@ -984,7 +984,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_SnapToNearestGraphEdge",
       "status": "covered"
     },
@@ -993,7 +993,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadViewer",
       "status": "covered"
     },
@@ -1002,7 +1002,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadEventPayloadInt",
       "status": "covered"
     },
@@ -1011,7 +1011,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_LoadEventPayloadFloat",
       "status": "covered"
     },
@@ -1020,7 +1020,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_ControlDomainResolve",
       "status": "covered"
     },
@@ -1029,7 +1029,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_ControlDomainControls",
       "status": "covered"
     },
@@ -1038,7 +1038,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_op_KnowledgeHasProjection",
       "status": "covered"
     },
@@ -1047,7 +1047,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_Call",
       "status": "covered"
     },
@@ -1056,7 +1056,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_Return",
       "status": "covered"
     },
@@ -1065,7 +1065,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_Yield",
       "status": "covered"
     },
@@ -1074,7 +1074,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_HaltReturnInt",
       "status": "covered"
     },
@@ -1083,7 +1083,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_InvokeScript",
       "status": "covered"
     },
@@ -1092,7 +1092,7 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_PlayerFacingPhrases_LockDrinkPatrolConstAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_op_MoveInt",
       "status": "covered"
     }

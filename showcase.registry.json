@@ -2977,14 +2977,14 @@
         "effect-template"
       ],
       "binding": "capability_standard_graph_ops_attr",
-      "preset": "capability_standard_graph_ops_attr_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsAttrShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_attr",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_float",
@@ -3002,14 +3002,14 @@
         "graph-ops"
       ],
       "binding": "capability_standard_graph_ops_float",
-      "preset": "capability_standard_graph_ops_float_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsFloatShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_float",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_script",
@@ -3027,14 +3027,14 @@
         "graph-ops"
       ],
       "binding": "capability_standard_graph_ops_script",
-      "preset": "capability_standard_graph_ops_script_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsScriptShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_script",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_spatial",
@@ -3052,14 +3052,14 @@
         "graph-ops"
       ],
       "binding": "capability_standard_graph_ops_spatial",
-      "preset": "capability_standard_graph_ops_spatial_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsSpatialShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_spatial",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_query",
@@ -3076,14 +3076,14 @@
         "gallery"
       ],
       "binding": "capability_standard_graph_ops_query",
-      "preset": "capability_standard_graph_ops_query_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsQueryShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_query",
       "screenshot": null,
-      "status": "active",
-      "notes": "Playable query gallery: seed world, tick graphs, live Chinese Detail."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_rel",
@@ -3101,14 +3101,14 @@
         "graph-ops"
       ],
       "binding": "capability_standard_graph_ops_rel",
-      "preset": "capability_standard_graph_ops_rel_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsRelShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_rel",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_blackboard",
@@ -3127,14 +3127,14 @@
         "lifecycle"
       ],
       "binding": "capability_standard_graph_ops_blackboard",
-      "preset": "capability_standard_graph_ops_blackboard_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsBlackboardShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_blackboard",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_ops_event",
@@ -3152,14 +3152,14 @@
         "placement"
       ],
       "binding": "capability_standard_graph_ops_event",
-      "preset": "capability_standard_graph_ops_event_raylib",
+      "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsEventShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_event",
       "screenshot": null,
-      "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "status": "retired",
+      "notes": "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
     },
     {
       "id": "capability_standard_graph_behavior_integration",
@@ -5936,7 +5936,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAddMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAddMetricEntryMod.csproj",
       "title": "好感再加一截",
-      "summary": "好感从 40 加到 70，条往上涨。",
+      "summary": "好感从 40 加到 70。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -6017,7 +6017,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSetMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipSetMetricEntryMod.csproj",
       "title": "把好感写成指定值",
-      "summary": "好感被写成 80，盟友条到八成。",
+      "summary": "好感被写成 80。",
       "tier": "T2",
       "category": "capability",
       "tags": [

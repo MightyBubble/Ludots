@@ -770,7 +770,7 @@ namespace Ludots.Core.Systems
 
         private void PublishTemplateOnSpawnEffect(Entity entity, string templateId)
         {
-            if (_effectRequests == null || string.IsNullOrWhiteSpace(templateId))
+            if (string.IsNullOrWhiteSpace(templateId))
             {
                 return;
             }
@@ -779,6 +779,12 @@ namespace Ludots.Core.Systems
             if (template == null || string.IsNullOrWhiteSpace(template.OnSpawnEffect))
             {
                 return;
+            }
+
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"MapLoader has no EffectRequestQueue; cannot publish onSpawnEffect '{template.OnSpawnEffect}' for template '{templateId}'.");
             }
 
             int effectTemplateId = EffectTemplateIdRegistry.GetId(template.OnSpawnEffect);

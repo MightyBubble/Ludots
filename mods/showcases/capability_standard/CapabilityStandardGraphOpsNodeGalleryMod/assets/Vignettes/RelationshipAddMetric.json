@@ -2,7 +2,7 @@
   "op": "RelationshipAddMetric",
   "driver": "sandbox",
   "title": "好感再加一截",
-  "beat": "好感从 40 加到 70，条往上涨。",
+  "beat": "好感从 40 加到 70。",
   "detailTemplate": "好感再加一截，写成{loyalty}。",
   "assertDetailContains": [
     "再加"

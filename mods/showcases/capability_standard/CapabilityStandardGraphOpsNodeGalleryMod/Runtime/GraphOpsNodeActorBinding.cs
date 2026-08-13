@@ -4,6 +4,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
@@ -12,7 +13,13 @@ public static class GraphOpsNodeActorBinding
     public static int HealthAttributeId()
     {
         int id = AttributeRegistry.GetId("Health");
-        return id >= 0 ? id : AttributeRegistry.Register("Health");
+        if (id < 0)
+        {
+            throw new InvalidOperationException(
+                "Gallery Health attribute is not registered; MapLoader templates must author Health before HUD bind.");
+        }
+
+        return id;
     }
 
     public static void RequireMapActors(GraphOpsNodeDriverContext ctx)
@@ -34,6 +41,7 @@ public static class GraphOpsNodeActorBinding
         }
 
         BindRolesFromMap(ctx);
+        EnsureHudLitBuffer(ctx);
     }
 
     public static void BindRolesFromMap(GraphOpsNodeDriverContext ctx)
@@ -187,6 +195,85 @@ public static class GraphOpsNodeActorBinding
         }
     }
 
+    public static void EnsureHudLitBuffer(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.ActorHudLit.Length == ctx.SimActors.Length)
+        {
+            return;
+        }
+
+        ctx.ActorHudLit = new bool[ctx.SimActors.Length];
+        Array.Fill(ctx.ActorHudLit, true);
+    }
+
+    public static void LightCasterAndHits(GraphOpsNodeDriverContext ctx)
+    {
+        EnsureHudLitBuffer(ctx);
+        Array.Fill(ctx.ActorHudLit, false);
+        int caster = FindRole(ctx.Vignette, "caster");
+        if (caster >= 0)
+        {
+            ctx.ActorHudLit[caster] = true;
+        }
+
+        for (int i = 0; i < ctx.HitTargetCount; i++)
+        {
+            int index = IndexOf(ctx, ctx.HitTargets[i]);
+            if (index >= 0)
+            {
+                ctx.ActorHudLit[index] = true;
+            }
+        }
+    }
+
+    public static void LightCasterAndIndices(GraphOpsNodeDriverContext ctx, ReadOnlySpan<int> indices)
+    {
+        EnsureHudLitBuffer(ctx);
+        Array.Fill(ctx.ActorHudLit, false);
+        int caster = FindRole(ctx.Vignette, "caster");
+        if (caster >= 0)
+        {
+            ctx.ActorHudLit[caster] = true;
+        }
+
+        for (int i = 0; i < indices.Length; i++)
+        {
+            int index = indices[i];
+            if (index >= 0 && index < ctx.ActorHudLit.Length)
+            {
+                ctx.ActorHudLit[index] = true;
+            }
+        }
+    }
+
+    public static void SetHudLit(GraphOpsNodeDriverContext ctx, int index, bool lit)
+    {
+        EnsureHudLitBuffer(ctx);
+        if (index < 0 || index >= ctx.ActorHudLit.Length)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' HUD lit index {index} is outside {ctx.ActorHudLit.Length} actors.");
+        }
+
+        ctx.ActorHudLit[index] = lit;
+    }
+
+    public static bool IsHealthDisclosed(GraphOpsNodeDriverContext ctx, int actorIndex)
+    {
+        if (ctx.Knowledge == null)
+        {
+            throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' requires KnowledgeProjectionStore.");
+        }
+
+        Entity viewer = ResolveKnowledgeViewer(ctx);
+        if (!ctx.Knowledge.TryGet(viewer, ctx.SimActors[actorIndex], currentTick: 0, out KnowledgeDisclosureRecord record))
+        {
+            return false;
+        }
+
+        return record.AttributeMask.ContainsId(HealthAttributeId());
+    }
+
     public static void BindHud(GraphOpsNodeDriverContext ctx)
     {
         if (ctx.Stage == null || HudAlreadyBound(ctx))
@@ -218,6 +305,9 @@ public static class GraphOpsNodeActorBinding
 
             BindHudActor(ctx, i, bindAsViewer: false);
         }
+
+        ctx.Stage.GateWorldHudByKnowledge();
+        ApplyHealthBarKnowledge(ctx);
     }
 
     public static void SyncHud(GraphOpsNodeDriverContext ctx)
@@ -230,6 +320,7 @@ public static class GraphOpsNodeActorBinding
             WriteHealth(ctx.SimWorld, ctx.SimActors[i], ctx.ActorHealth[i], healthMax, tagOps);
         }
 
+        ApplyHealthBarKnowledge(ctx);
         if (ctx.Stage == null || ctx.StageProxies.Length == 0)
         {
             return;
@@ -247,6 +338,40 @@ public static class GraphOpsNodeActorBinding
             GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
             ctx.Stage.SetPosition(proxy, actor.X, actor.Y);
             ctx.Stage.SetHealth(proxy, ctx.ActorHealth[i], actor.HealthMax > 0f ? actor.HealthMax : actor.Health);
+            ctx.Stage.SetHealthBarVisible(proxy, ctx.ActorHudLit[i]);
+        }
+    }
+
+    public static void ApplyHealthBarKnowledge(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Knowledge == null)
+        {
+            throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' requires KnowledgeProjectionStore.");
+        }
+
+        EnsureHudLitBuffer(ctx);
+        Entity viewer = ResolveKnowledgeViewer(ctx);
+        int healthId = HealthAttributeId();
+        KnowledgeIdMask256 empty = KnowledgeIdMask256.Empty;
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            KnowledgeIdMask256 attributeMask = ctx.ActorHudLit[i]
+                ? empty.WithId(healthId)
+                : empty;
+            ctx.Knowledge.Upsert(
+                viewer,
+                ctx.SimActors[i],
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    in attributeMask,
+                    in empty,
+                    in empty,
+                    viewer,
+                    observedTick: 0,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 0));
         }
     }
 
@@ -264,6 +389,21 @@ public static class GraphOpsNodeActorBinding
                 tagOps);
             ctx.ActorHealth[i] = ReadHealth(ctx.SimWorld, ctx.SimActors[i]);
         }
+    }
+
+    private static Entity ResolveKnowledgeViewer(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Viewer != Entity.Null && ctx.SimWorld.IsAlive(ctx.Viewer))
+        {
+            return ctx.Viewer;
+        }
+
+        if (ctx.Caster != Entity.Null && ctx.SimWorld.IsAlive(ctx.Caster))
+        {
+            return ctx.Caster;
+        }
+
+        throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' has no live viewer or caster for Health disclosure.");
     }
 
     private static void BindHudActor(GraphOpsNodeDriverContext ctx, int index, bool bindAsViewer)

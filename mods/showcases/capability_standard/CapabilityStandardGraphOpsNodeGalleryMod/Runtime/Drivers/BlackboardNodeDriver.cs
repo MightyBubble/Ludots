@@ -58,7 +58,11 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         ApplyVisibleResult(ctx, result, targetIndex);
 
         float healthAfter = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
-        ctx.CaptionValues["result"] = FormatFeaturedResult(ctx, result);
+        if (ctx.Vignette.DetailTemplate.Contains("{result}", StringComparison.Ordinal))
+        {
+            ctx.CaptionValues["result"] = FormatFeaturedResult(ctx, result);
+        }
+
         ctx.CaptionValues["healthBefore"] = healthBefore.ToString("0");
         ctx.CaptionValues["healthAfter"] = healthAfter.ToString("0");
         ctx.CaptionValues["named"] = ResolveNamed(ctx, result);
@@ -197,13 +201,7 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
                 int markIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "mark");
                 if (markIndex >= 0)
                 {
-                    ctx.ActorHealth[markIndex] = 0f;
-                    GraphOpsNodeActorBinding.WriteHealth(
-                        ctx.SimWorld,
-                        ctx.SimActors[markIndex],
-                        0f,
-                        ctx.Vignette.Actors[markIndex].HealthMax,
-                        GraphOpsNodeActorBinding.RequireTagOps(ctx));
+                    GraphOpsNodeActorBinding.SetHudLit(ctx, markIndex, false);
                 }
 
                 break;
@@ -218,7 +216,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             "WriteBlackboardFloat" => ReadFloat(ctx, ctx.Caster, _powerKey).ToString("0.#"),
             "ReadBlackboardInt" or "LoadConfigInt" or "LoadConfigEffectId" => result.IntValue.ToString(),
             "WriteBlackboardInt" => ReadInt(ctx, ctx.Caster, _stacksKey).ToString(),
-            _ => "1"
+            _ => throw new InvalidOperationException(
+                $"Blackboard gallery '{ctx.Vignette.Op}' has no featured result formatter.")
         };
     }
 
@@ -291,12 +290,24 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
 
     private static float ReadFloat(GraphOpsNodeDriverContext ctx, Entity entity, int key)
     {
-        return ctx.Api.TryReadBlackboardFloat(entity, key, out float value) ? value : 0f;
+        if (!ctx.Api.TryReadBlackboardFloat(entity, key, out float value))
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' blackboard float key {key} is missing on entity {entity.Id}.");
+        }
+
+        return value;
     }
 
     private static int ReadInt(GraphOpsNodeDriverContext ctx, Entity entity, int key)
     {
-        return ctx.Api.TryReadBlackboardInt(entity, key, out int value) ? value : 0;
+        if (!ctx.Api.TryReadBlackboardInt(entity, key, out int value))
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' blackboard int key {key} is missing on entity {entity.Id}.");
+        }
+
+        return value;
     }
 
     private static void RequireNonZeroFloat(GraphOpsNodeDriverContext ctx, float value, string label)

@@ -86,6 +86,8 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
         using GraphOpsNodeGalleryRuntime runtime = Play(op);
         AssertBannedEnglish(runtime.Metrics.Detail);
         AssertActorHealthMatchesWorld(runtime);
+        int caster = GraphOpsNodeActorBinding.FindRole(runtime.Vignette, "caster");
+        Assert.That(runtime.Context.ActorHudLit[caster], Is.True, op);
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));

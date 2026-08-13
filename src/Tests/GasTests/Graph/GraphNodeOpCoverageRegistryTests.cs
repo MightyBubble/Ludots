@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
@@ -67,6 +68,99 @@ namespace Ludots.Tests.GAS
                 Assert.That(extraInRegistry, Is.Empty,
                     "Coverage registry entries not present in GraphNodeOp enum:\n" + string.Join("\n", extraInRegistry));
             });
+        }
+
+        [Test]
+        public void CoveredEntries_RequireRegisteredGalleryAndGalleryTestFilters()
+        {
+            string repoRoot = FindRepoRoot();
+            HashSet<string> showcaseIds = LoadActiveOrExperimentalShowcaseIds(repoRoot);
+            HashSet<string> testMethods = LoadGasTestMethodNames(repoRoot);
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, RegistryRelativePath)));
+            var failures = new List<string>();
+            foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())
+            {
+                string op = entry.GetProperty("op").GetString() ?? string.Empty;
+                string status = entry.GetProperty("status").GetString() ?? string.Empty;
+                string showcaseId = entry.GetProperty("showcaseId").GetString() ?? string.Empty;
+                string filter = entry.GetProperty("unitTestFilter").GetString() ?? string.Empty;
+                if (!string.Equals(status, "covered", StringComparison.Ordinal))
+                {
+                    failures.Add($"{op}: status is '{status}', expected covered.");
+                    continue;
+                }
+
+                if (!showcaseIds.Contains(showcaseId))
+                {
+                    failures.Add($"{op}: showcaseId '{showcaseId}' is missing from showcase.registry.json.");
+                }
+
+                string[] tokens = filter.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                bool hasGalleryTest = false;
+                foreach (string token in tokens)
+                {
+                    int dot = token.IndexOf('.');
+                    if (dot <= 0 || dot >= token.Length - 1)
+                    {
+                        failures.Add($"{op}: unitTestFilter token '{token}' is not Class.Method.");
+                        continue;
+                    }
+
+                    string method = token[(dot + 1)..];
+                    if (!testMethods.Contains(method))
+                    {
+                        failures.Add($"{op}: unitTestFilter '{token}' does not match a GasTests method.");
+                    }
+
+                    if (token.StartsWith("GraphOpsNodeGallery", StringComparison.Ordinal))
+                    {
+                        hasGalleryTest = true;
+                    }
+                }
+
+                if (!hasGalleryTest)
+                {
+                    failures.Add($"{op}: covered filter has no GraphOpsNodeGallery* test.");
+                }
+            }
+
+            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
+        }
+
+        private static HashSet<string> LoadActiveOrExperimentalShowcaseIds(string repoRoot)
+        {
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "showcase.registry.json")));
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (JsonElement showcase in doc.RootElement.GetProperty("showcases").EnumerateArray())
+            {
+                string id = showcase.GetProperty("id").GetString() ?? string.Empty;
+                string status = showcase.TryGetProperty("status", out JsonElement statusEl)
+                    ? statusEl.GetString() ?? string.Empty
+                    : string.Empty;
+                if (string.Equals(status, "active", StringComparison.Ordinal) ||
+                    string.Equals(status, "experimental", StringComparison.Ordinal))
+                {
+                    ids.Add(id);
+                }
+            }
+
+            return ids;
+        }
+
+        private static HashSet<string> LoadGasTestMethodNames(string repoRoot)
+        {
+            var methods = new HashSet<string>(StringComparer.Ordinal);
+            string testsRoot = Path.Combine(repoRoot, "src", "Tests", "GasTests");
+            var methodPattern = new Regex(@"public void ([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled);
+            foreach (string file in Directory.EnumerateFiles(testsRoot, "*Tests.cs", SearchOption.AllDirectories))
+            {
+                foreach (Match match in methodPattern.Matches(File.ReadAllText(file)))
+                {
+                    methods.Add(match.Groups[1].Value);
+                }
+            }
+
+            return methods;
         }
 
         private static string FindRepoRoot()

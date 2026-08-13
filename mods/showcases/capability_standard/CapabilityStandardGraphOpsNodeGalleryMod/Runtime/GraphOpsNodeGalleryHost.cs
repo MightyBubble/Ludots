@@ -140,6 +140,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         };
         ctx.SimActors = actors;
         ctx.ActorHealth = new float[actors.Length];
+        ctx.ActorHudLit = new bool[actors.Length];
+        Array.Fill(ctx.ActorHudLit, true);
         for (int i = 0; i < actors.Length; i++)
         {
             GraphOpsNodeActorBinding.WriteHealth(
@@ -217,6 +219,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _pipeline = new ConfigPipeline(vfs, modLoader);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(_pipeline);
         var mapLoader = new MapLoader(World, new WorldMap(), _pipeline);
+        EffectRequests = new EffectRequestQueue();
+        mapLoader.SetEffectRequestQueue(EffectRequests);
         mapLoader.LoadTemplates(catalog);
         Templates = mapLoader.EntityTemplateKeys;
         _templateRegistry = mapLoader.TemplateRegistry;
@@ -249,7 +253,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         _spatialPartition = new SpatialPartitionUpdateSystem(World, partition, spec);
         _spatialPartition.Update(0f);
 
-        EffectRequests = new EffectRequestQueue();
         EventBus = new GameplayEventBus();
         TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
         RelationshipTypes = new RelationshipTypeRegistry();

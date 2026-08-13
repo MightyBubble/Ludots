@@ -77,7 +77,7 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
         for (int i = 0; i < _friends.Length; i++)
         {
             int actorIndex = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
-            if (ctx.ActorHealth[actorIndex] <= 0f)
+            if (!ctx.ActorHudLit[actorIndex])
             {
                 continue;
             }
@@ -308,12 +308,17 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
                 break;
         }
 
+        GraphOpsNodeActorBinding.EnsureHudLitBuffer(ctx);
+        Array.Fill(ctx.ActorHudLit, false);
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        if (caster >= 0)
+        {
+            ctx.ActorHudLit[caster] = true;
+        }
+
         for (int i = 0; i < _friends.Length; i++)
         {
-            int loyalty = _linked[i] == 0
-                ? 0
-                : ctx.Relationships!.GetMetric(ctx.Caster, _friends[i], _socialBondTypeId, _loyaltyMetricId);
-            ctx.ActorHealth[GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i])] = _lit[i] ? loyalty : 0;
+            ctx.ActorHudLit[GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i])] = _lit[i];
         }
     }
 

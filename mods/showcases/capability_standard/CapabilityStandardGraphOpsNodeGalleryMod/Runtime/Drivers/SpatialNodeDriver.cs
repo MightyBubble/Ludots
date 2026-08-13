@@ -192,7 +192,13 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
             }
 
             int unitIndex = IndexOfUnit(ctx.SimActors[i]);
-            ctx.ActorHealth[i] = unitIndex >= 0 && _unitInRange[unitIndex] != 0 ? 100f : 0f;
+            ctx.ActorHudLit[i] = unitIndex >= 0 && _unitInRange[unitIndex] != 0;
+        }
+
+        int casterIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        if (casterIndex >= 0)
+        {
+            ctx.ActorHudLit[casterIndex] = true;
         }
     }
 

@@ -48,6 +48,7 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
         }
 
         MarkInRange(ctx);
+        GraphOpsNodeActorBinding.LightCasterAndHits(ctx);
         ResolveExtremes(ctx, result);
         FillCaptions(ctx, result);
         ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);

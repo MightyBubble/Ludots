@@ -201,5 +201,15 @@
         }
       }
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "east"
+    }
   ]
 }

@@ -77,5 +77,15 @@
         }
       }
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "context"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
   ]
 }

@@ -97,5 +97,15 @@
         }
       }
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "allyA"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "target"
+    }
   ]
 }

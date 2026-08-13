@@ -20,11 +20,9 @@ public sealed class CapabilityStandardGraphOpsNodeGalleryModEntry : IMod
         var runtime = new GraphOpsNodeGalleryRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null)
-            {
-                return Task.CompletedTask;
-            }
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsNodeGalleryMod GameStart requires GameEngine.");
 
             runtime.BindFromStartupMapId(engine.MergedConfig?.StartupMapId);
             runtime.AttachEngine(engine);

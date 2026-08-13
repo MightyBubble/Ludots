@@ -57,5 +57,11 @@
         }
       }
     }
+  ],
+  "Teams": [
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "stake"
+    }
   ]
 }

@@ -9,7 +9,8 @@ Writes/upserts (do not hand-edit these outputs):
   - launcher.config.json bindings
   - launcher.presets.json raylib presets
   - showcase.registry.json entries + gallery csproj exemption
-  - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId
+  - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestFilter
+  - family capability_standard_graph_ops_* registry status=retired and player presets removed
 
 Subagents own vignettes, FrontDoor graphs, and family driver files only.
 """
@@ -26,6 +27,29 @@ ENTRY_ROOT_REL = "mods/showcases/capability_standard/graph_op_entries"
 COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
 ACCEPTANCE = "GraphOpsNodeGalleryAcceptanceTests"
 WIKI_DOCS = "gitbook/reference/graph-node-op-wiki"
+GALLERY_ID_TEST = "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId"
+GALLERY_TICK_TEST = "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption"
+DRIVER_FAMILY_TEST = {
+    "linear": "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
+    "attr": "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
+    "script": "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
+    "sandbox": "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
+    "spatial": "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
+    "event": "GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption",
+    "blackboard": "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
+    "rel": "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
+    "query": "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+}
+FAMILY_SHOWCASE_IDS = (
+    "capability_standard_graph_ops_attr",
+    "capability_standard_graph_ops_float",
+    "capability_standard_graph_ops_script",
+    "capability_standard_graph_ops_spatial",
+    "capability_standard_graph_ops_query",
+    "capability_standard_graph_ops_rel",
+    "capability_standard_graph_ops_blackboard",
+    "capability_standard_graph_ops_event",
+)
 
 MAP_TAGS = [
     "showcase",
@@ -79,7 +103,56 @@ def actor_to_entity(actor: dict) -> dict:
     return entity
 
 
-def write_map(path: Path, map_id: str, actors: list, camera: dict | None = None) -> None:
+def load_template_teams(templates_path: Path) -> dict[str, int]:
+    data = load(templates_path)
+    templates = data if isinstance(data, list) else data.get("templates") or data.get("Templates") or []
+    result: dict[str, int] = {}
+    for template in templates:
+        template_id = template.get("id")
+        team = (template.get("components") or {}).get("Team") or {}
+        team_id = team.get("Id", team.get("id"))
+        if template_id and team_id:
+            result[str(template_id)] = int(team_id)
+    return result
+
+
+def collect_team_bindings(actors: list, template_teams: dict[str, int]) -> list[dict]:
+    representatives: dict[int, str] = {}
+    for actor in actors:
+        team = actor.get("team")
+        if team is None:
+            team = template_teams.get(actor["template"])
+        if team is None:
+            continue
+        team_id = int(team)
+        if team_id <= 0:
+            continue
+        representatives.setdefault(team_id, actor["id"])
+    return [
+        {"TeamId": team_id, "RepresentativeInstanceId": instance_id}
+        for team_id, instance_id in sorted(representatives.items())
+    ]
+
+
+def coverage_filters(driver: str, existing: str) -> str:
+    parts: list[str] = [GALLERY_ID_TEST, GALLERY_TICK_TEST]
+    family = DRIVER_FAMILY_TEST.get(driver)
+    if family:
+        parts.append(family)
+    for token in (existing or "").split(";"):
+        token = token.strip()
+        if token and token not in parts:
+            parts.append(token)
+    return ";".join(parts)
+
+
+def write_map(
+    path: Path,
+    map_id: str,
+    actors: list,
+    camera: dict | None = None,
+    template_teams: dict[str, int] | None = None,
+) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
     cam = camera or {}
@@ -97,6 +170,9 @@ def write_map(path: Path, map_id: str, actors: list, camera: dict | None = None)
         },
         "Entities": [actor_to_entity(actor) for actor in actors],
     }
+    teams = collect_team_bindings(actors, template_teams or {})
+    if teams:
+        payload["Teams"] = teams
     dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
@@ -224,8 +300,17 @@ def main() -> int:
     if args.strict and missing:
         raise SystemExit("Missing vignettes:\n" + "\n".join(missing))
 
+    template_teams = load_template_teams(gallery / "assets" / "Entities" / "templates.json")
     for entry in coverage["entries"]:
-        entry["showcaseId"] = PREFIX + entry["op"]
+        op = entry["op"]
+        entry["showcaseId"] = PREFIX + op
+        vignette = vignettes.get(op)
+        driver = vignette["driver"] if vignette else None
+        if not driver:
+            raise SystemExit(f"Coverage op '{op}' has no vignette driver; cannot write gallery unitTestFilter.")
+        entry["unitTestFilter"] = coverage_filters(driver, entry.get("unitTestFilter", ""))
+        if entry.get("status") != "covered":
+            raise SystemExit(f"Coverage op '{op}' status is {entry.get('status')!r}; generator only emits covered per-op galleries.")
     dump(coverage_path, coverage)
 
     launcher_path = repo / "launcher.config.json"
@@ -259,7 +344,7 @@ def main() -> int:
         ns = f"CapabilityStandardGraphOp{op}EntryMod"
         entry_path = f"{ENTRY_ROOT_REL}/{ns}"
         map_path = maps_dir / f"{sid}.json"
-        write_map(map_path, sid, scene.get("actors") or [], scene.get("camera"))
+        write_map(map_path, sid, scene.get("actors") or [], scene.get("camera"), template_teams)
         write_entry_mod(repo, op, title)
 
         upsert_by_key(
@@ -321,13 +406,26 @@ def main() -> int:
             },
         )
 
+    family_ids = set(FAMILY_SHOWCASE_IDS)
+    family_presets = {f"{sid}_raylib" for sid in FAMILY_SHOWCASE_IDS}
+    for showcase in showcases:
+        if showcase.get("id") not in family_ids:
+            continue
+        showcase["status"] = "retired"
+        showcase["preset"] = None
+        showcase["notes"] = (
+            "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
+        )
+    presets["presets"] = [preset for preset in preset_list if preset.get("id") not in family_presets]
+
     dump(launcher_path, launcher)
     dump(presets_path, presets)
     dump(registry_path, registry)
 
     print(
         f"Generated {len(vignettes)} per-op galleries; "
-        f"coverage showcaseIds updated for {len(ops)} ops; "
+        f"coverage showcaseIds+filters updated for {len(ops)} ops; "
+        f"retired {len(FAMILY_SHOWCASE_IDS)} family player entries; "
         f"missing vignettes: {len(missing)}"
     )
     if missing:
