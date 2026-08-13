@@ -207,6 +207,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         int ownsType = RelationshipTypes.Register("Owns");
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
+        EnsureHostileCasterAndEnemyTeams();
     }
 
     private void BootstrapHeadless(string assetsRoot, string mapId)
@@ -313,6 +314,11 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             clock,
             TagDisplay));
         FinishResolver();
+        EnsureHostileCasterAndEnemyTeams();
+    }
+
+    private static void EnsureHostileCasterAndEnemyTeams()
+    {
         TeamManager.SetRelationship(1, 2, TeamRelationship.Hostile);
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
