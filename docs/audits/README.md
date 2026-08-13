@@ -16,6 +16,8 @@
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
 * [PR895 图基建 + LSW 审计交接（会话全量）](pr895_graph_infra_and_lsw_audit_handoff.md)
 * [PR895 图基建 + LSW 架构审计（交叉审计）](pr895_graph_infra_and_lsw_architecture_audit.md)
+* [PR911 审计需求交接](pr911_funclib_actionlib_audit_handoff.md)
+* [PR911 FuncLib/ActionLib 架构审计（#914 SSOT）](pr911_funclib_actionlib_architecture_audit.md)
 * [PR911 审计修复清单（#913+#914 合并 / Epic #915）](pr911_audit_fix_checklist.md)
 
 ## 2 使用边界
