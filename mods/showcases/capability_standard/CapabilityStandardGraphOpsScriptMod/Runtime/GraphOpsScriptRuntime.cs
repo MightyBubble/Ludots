@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.Numerics;
+using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.GraphRuntime;
@@ -37,6 +39,14 @@ public sealed class GraphOpsScriptRuntime
     public const string InvokeConstGraphKey = "Graph.FuncLib.Demo.InvokeConstSeven";
     public const string ConstFunctionName = "demo.const.seven";
     public const string CaptionTitle = "喝茶续杯、巡逻与常量管线";
+    public static readonly Vector2[] PatrolStops =
+    {
+        new(-4f, -2f), new(4f, -2f), new(4f, 2f), new(-4f, 2f)
+    };
+
+    private GraphOpsStageVisuals? _stage;
+    private Entity _patrolProxy;
+    private bool _visualsSpawned;
     public int DrinkLimit { get; } = 5;
     public int PatrolLimit { get; } = 2;
     public int Water => _ints[0];
@@ -57,6 +67,11 @@ public sealed class GraphOpsScriptRuntime
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
     }
 
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
+    }
+
     public void EnsureWorld()
     {
         if (_drinkGraphId > 0) return;
@@ -75,6 +90,32 @@ public sealed class GraphOpsScriptRuntime
         EnsureInvokeGraphPatched();
         Metrics.AgentCount = 1;
         Metrics.Detail = "先喝茶续杯，再巡逻推进，最后走常量管线。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.Spawn(GraphOpsVisualTemplates.Caster, "喝茶人", -6f, 0f, 100f, 100f);
+        Vector2 firstStop = PatrolStops[0];
+        _patrolProxy = _stage.Spawn(GraphOpsVisualTemplates.Scout, "巡逻", firstStop.X, firstStop.Y, 100f, 100f);
+        _visualsSpawned = true;
+    }
+
+    private void SyncPatrolVisual()
+    {
+        if (_stage == null || !_visualsSpawned)
+        {
+            return;
+        }
+
+        int step = Math.Clamp(DisplayedPatrolStep, 0, PatrolStops.Length - 1);
+        Vector2 pos = PatrolStops[step];
+        _stage.SetPosition(_patrolProxy, pos.X, pos.Y);
     }
 
     private void EnsureInvokeGraphPatched()
@@ -90,6 +131,7 @@ public sealed class GraphOpsScriptRuntime
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
         if (AllPhasesComplete) return;
 
         _accum += dt;
@@ -127,6 +169,7 @@ public sealed class GraphOpsScriptRuntime
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
+        SyncPatrolVisual();
 
         if (result.Yielded)
         {

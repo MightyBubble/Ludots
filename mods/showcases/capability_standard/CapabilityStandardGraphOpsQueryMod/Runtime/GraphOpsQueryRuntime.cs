@@ -26,6 +26,8 @@ public sealed class GraphOpsQueryRuntime : IDisposable
     private readonly GraphShowcaseConfig _config = new();
     private GraphOpsQueryShowcaseBundle? _bundle;
     private GraphProgramRegistry? _programs;
+    private GraphOpsStageVisuals? _stage;
+    private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
     private EntitySetQueryRuntime? _entityQueries;
@@ -80,6 +82,11 @@ public sealed class GraphOpsQueryRuntime : IDisposable
         _programs = _bundle.Programs;
         _collections = _bundle.Collections;
         CompiledGraphs = 2;
+    }
+
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
     }
 
     public void EnsureWorld()
@@ -144,11 +151,37 @@ public sealed class GraphOpsQueryRuntime : IDisposable
 
         Metrics.AgentCount = SeededMapEntityCount;
         Metrics.Detail = "全图搜人：花名册与敌军生命档案已就位。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.Spawn(GraphOpsVisualTemplates.Caster, "指挥", CasterX, CasterY, 100f, 100f);
+        for (int i = 0; i < _units.Length; i++)
+        {
+            bool scout = i == 9 || i == 11;
+            bool ally = i == 10 || i == 11;
+            string template = scout
+                ? GraphOpsVisualTemplates.Scout
+                : ally
+                    ? GraphOpsVisualTemplates.Ally
+                    : GraphOpsVisualTemplates.Soldier;
+            string name = ally ? $"友军{i + 1}" : $"敌军{i + 1}";
+            _stage.Spawn(template, name, UnitX[i], UnitY[i], UnitHp[i]);
+        }
+
+        _visualsSpawned = true;
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;
         _accum = 0f;

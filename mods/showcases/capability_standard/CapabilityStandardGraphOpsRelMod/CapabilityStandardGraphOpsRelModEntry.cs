@@ -23,6 +23,7 @@ public sealed class CapabilityStandardGraphOpsRelModEntry : IMod
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
             runtime.BindStandaloneFromModAssets();
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

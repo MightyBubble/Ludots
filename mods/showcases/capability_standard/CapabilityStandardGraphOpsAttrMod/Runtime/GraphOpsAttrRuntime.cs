@@ -16,6 +16,10 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     public const int WoundLine = 70;
     public const float FullHit = 13f;
     public const float GlanceHit = 6f;
+    public const float CasterX = -2.5f;
+    public const float CasterY = 0f;
+    public const float TargetX = 2.5f;
+    public const float TargetY = 0f;
 
     private enum Phase
     {
@@ -32,6 +36,10 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     private readonly int[] _lastInts = new int[GraphVmLimits.MaxIntRegisters];
     private readonly Entity[] _lastEntities = new Entity[GraphVmLimits.MaxEntityRegisters];
     private GraphProgramRegistry? _programs;
+    private GraphOpsStageVisuals? _stage;
+    private Entity _casterProxy;
+    private Entity _targetProxy;
+    private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
     private EffectRequestQueue? _requests;
@@ -70,6 +78,11 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     {
         _programs = GraphOpsAttrGraphBootstrap.LoadModGraphs(GraphOpsAttrGraphBootstrap.FindModAssetsRoot());
         _ownsPrograms = true;
+    }
+
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
     }
 
     public void EnsureWorld()
@@ -111,11 +124,36 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         ResetCombatants();
         Metrics.AgentCount = 2;
         Metrics.Detail = "读血量：准备查看目标当前生命值。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _casterProxy = _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, CasterHealth, 100f);
+        _targetProxy = _stage.Spawn(GraphOpsVisualTemplates.Target, "目标", TargetX, TargetY, TargetHealth, OpeningHealth);
+        _visualsSpawned = true;
+    }
+
+    private void SyncStageVisuals()
+    {
+        if (_stage == null || !_visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.SetHealth(_casterProxy, CasterHealth, 100f);
+        _stage.SetHealth(_targetProxy, TargetHealth, OpeningHealth);
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
         if (_phase == Phase.Complete) return;
 
         _accum += dt;
@@ -129,6 +167,7 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
+        SyncStageVisuals();
     }
 
     public void Dispose()

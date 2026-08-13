@@ -32,6 +32,7 @@ public sealed class CapabilityStandardGraphOpsEventModEntry : IMod
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is required for event snap collections.");
             runtime.Bind(programs, presets, collections);
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

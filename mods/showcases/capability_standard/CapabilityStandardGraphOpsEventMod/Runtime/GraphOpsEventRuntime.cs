@@ -29,6 +29,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
 
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
+    private GraphOpsStageVisuals? _stage;
+    private bool _visualsSpawned;
     private TargetDispatchPresetRegistry? _targetDispatchPresets;
     private World? _world;
     private GasGraphRuntimeApi? _api;
@@ -116,6 +118,11 @@ public sealed class GraphOpsEventRuntime : IDisposable
         _ownsPrograms = true;
     }
 
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
+    }
+
     public void EnsureWorld()
     {
         if (_world != null) return;
@@ -185,11 +192,27 @@ public sealed class GraphOpsEventRuntime : IDisposable
 
         Metrics.AgentCount = 4;
         Metrics.Detail = "发事件/控制域/吸附沙盘就位：等待第一波图节点执行。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.Spawn(GraphOpsVisualTemplates.Caster, "自己", PlayerRepX, PlayerRepY, 100f, 100f);
+        _stage.Spawn(GraphOpsVisualTemplates.Ally, "操控者", ControllerX, ControllerY, 100f, 100f);
+        _stage.Spawn(GraphOpsVisualTemplates.Target, "单位", UnitX, UnitY, 100f, 100f);
+        _stage.Spawn(GraphOpsVisualTemplates.Scout, "吸附点", SnapMarkerX, SnapMarkerY, 100f, 100f);
+        _visualsSpawned = true;
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
 
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;

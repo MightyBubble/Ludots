@@ -25,6 +25,10 @@ public sealed class GraphOpsRelRuntime
     private GraphOpsRelShowcaseBundle? _bundle;
     private GraphProgramRegistry? _programs;
     private GraphOpsRelFunctionIndex? _functions;
+    private GraphOpsStageVisuals? _stage;
+    private Entity[] _friendProxies = Array.Empty<Entity>();
+    private int[] _friendLoyalty = Array.Empty<int>();
+    private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
     private RelationshipRuntime? _relationships;
@@ -58,6 +62,8 @@ public sealed class GraphOpsRelRuntime
 
     public float PlayerX => 0f;
     public float PlayerY => 0f;
+    public float[] FriendX { get; private set; } = Array.Empty<float>();
+    public float[] FriendY { get; private set; } = Array.Empty<float>();
     public int FriendSlotCount => _friends.Length;
     public int FriendCount => _friendCount;
     public int LoyaltyTop => _loyaltyTop;
@@ -85,6 +91,11 @@ public sealed class GraphOpsRelRuntime
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _functions = functions ?? throw new ArgumentNullException(nameof(functions));
+    }
+
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
     }
 
     public void EnsureWorld()
@@ -146,9 +157,15 @@ public sealed class GraphOpsRelRuntime
         _player = _world.Create();
         _friends = new Entity[4];
         _linked = new byte[4];
+        FriendX = new float[4];
+        FriendY = new float[4];
         int[] loyalty = [85, 62, 48, 35];
+        _friendLoyalty = loyalty;
         for (int i = 0; i < _friends.Length; i++)
         {
+            float ang = -0.9f + i * 0.55f;
+            FriendX[i] = MathF.Sin(ang) * 5.5f;
+            FriendY[i] = 3.5f + MathF.Cos(ang) * 0.6f;
             _friends[i] = _world.Create();
             _relationships.SetMetric(_player, _friends[i], _socialBondTypeId, _loyaltyMetricId, loyalty[i], reasonId: 0);
             _linked[i] = 1;
@@ -167,11 +184,52 @@ public sealed class GraphOpsRelRuntime
 
         Metrics.AgentCount = _friends.Length;
         Metrics.Detail = "好友链就位：查好友链、按好感排序、必要时拆链。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.Spawn(GraphOpsVisualTemplates.Caster, "自己", PlayerX, PlayerY, 100f, 100f);
+        _friendProxies = new Entity[_friends.Length];
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            _friendProxies[i] = _stage.Spawn(
+                GraphOpsVisualTemplates.Ally,
+                $"好友{i + 1}",
+                FriendX[i],
+                FriendY[i],
+                _friendLoyalty[i],
+                100f);
+        }
+
+        _visualsSpawned = true;
+    }
+
+    private void SyncFriendVisuals()
+    {
+        if (_stage == null || _friendProxies.Length == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            int loyalty = _linked[i] == 0
+                ? 0
+                : _relationships!.GetMetric(_player, _friends[i], _socialBondTypeId, _loyaltyMetricId);
+            _stage.SetHealth(_friendProxies[i], loyalty, 100f);
+        }
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;
         _accum = 0f;
@@ -191,6 +249,7 @@ public sealed class GraphOpsRelRuntime
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
+        SyncFriendVisuals();
     }
 
     private void RunQueryWave()

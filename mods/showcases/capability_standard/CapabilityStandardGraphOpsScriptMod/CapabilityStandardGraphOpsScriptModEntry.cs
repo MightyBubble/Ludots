@@ -26,6 +26,7 @@ public sealed class CapabilityStandardGraphOpsScriptModEntry : IMod
                 engine.GetService(CoreServiceKeys.GraphProgramRegistry),
                 engine.GetService(CoreServiceKeys.GraphActionCatalog),
                 engine.GetService(CoreServiceKeys.GraphFunctionCatalog));
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

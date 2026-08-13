@@ -8,11 +8,6 @@ namespace CapabilityStandardGraphOpsScriptMod.Runtime;
 
 internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
 {
-    private static readonly Vector2[] PatrolStops =
-    {
-        new(-4f, -2f), new(4f, -2f), new(4f, 2f), new(-4f, 2f)
-    };
-
     private readonly GraphOpsScriptRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
     private readonly ScreenOverlayBuffer _overlay;
@@ -35,17 +30,14 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
-        GraphShowcaseStagePresenter.DrawPolyline(_debugDraw, PatrolStops, GraphShowcaseStagePresenter.PathColor);
+        GraphShowcaseStagePresenter.DrawPolyline(_debugDraw, GraphOpsScriptRuntime.PatrolStops, GraphShowcaseStagePresenter.PathColor);
         DrawDrinkCup();
-        DrawPatrolMarker();
         DrawConstValue();
-        GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs);
         GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, GraphOpsScriptRuntime.CaptionTitle, _runtime.Metrics.Detail);
     }
 
     private void DrawDrinkCup()
     {
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, -6f, 0f, 2.0f, DebugDrawColor.Gray, 0.12f);
         int filledCount = _runtime.DisplayedWater;
         for (int i = 0; i < _runtime.DrinkLimit; i++)
         {
@@ -63,13 +55,6 @@ internal sealed class GraphOpsScriptPresentationSystem : ISystem<float>
                     : DebugDrawColor.Gray
             });
         }
-    }
-
-    private void DrawPatrolMarker()
-    {
-        int step = Math.Clamp(_runtime.DisplayedPatrolStep, 0, PatrolStops.Length - 1);
-        Vector2 pos = PatrolStops[step];
-        GraphShowcaseStagePresenter.DrawActor(_debugDraw, pos.X, pos.Y, 0.55f, GraphShowcaseStagePresenter.GuardColor);
     }
 
     private void DrawConstValue()

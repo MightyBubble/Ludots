@@ -105,6 +105,7 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.RelationshipScore, Is.EqualTo(13));
             Assert.That(runtime.TrustedFlag, Is.True);
             Assert.That(runtime.StatusToken, Is.AnyOf("鼓舞", "标记"));
+            Assert.That(runtime.Metrics.Detail, Does.Not.Contain("耗时"));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 

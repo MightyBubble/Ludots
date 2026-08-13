@@ -9,17 +9,16 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 {
     private readonly AbilityGraphSandboxRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
-    private readonly ScreenOverlayBuffer? _overlay;
-    private readonly GraphShowcaseConfig _config = new();
+    private readonly ScreenOverlayBuffer _overlay;
 
     public AbilityGraphSandboxPresentationSystem(
         AbilityGraphSandboxRuntime runtime,
         DebugDrawCommandBuffer debugDraw,
-        ScreenOverlayBuffer? overlay = null)
+        ScreenOverlayBuffer overlay)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
-        _overlay = overlay;
+        _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
     }
 
     public void Initialize() { }
@@ -31,15 +30,6 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
         GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, _runtime.CasterX, _runtime.CasterY, 8f, armed: true);
-        GraphShowcaseStagePresenter.DrawActor(
-            _debugDraw, _runtime.CasterX, _runtime.CasterY, 0.7f, GraphShowcaseStagePresenter.CasterColor, 0.2f);
-
-        for (int i = 0; i < _runtime.TargetCount; i++)
-        {
-            var color = _runtime.Flash[i] > 0 ? DebugDrawColor.White : GraphShowcaseStagePresenter.EnemyColor;
-            GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.TargetX[i], _runtime.TargetY[i], 0.45f, color);
-        }
-
         int hit = _runtime.LastHit;
         if (hit >= 0 && hit < _runtime.TargetCount)
         {
@@ -51,15 +41,6 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
                 _runtime.TargetY[hit]);
         }
 
-        if (_config.ShowCrowdBand)
-        {
-            GraphShowcaseStagePresenter.DrawCrowdBand(_debugDraw, _config.CrowdBandCount);
-        }
-
-        GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
-        if (_overlay != null)
-        {
-            GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, "能力图沙盘", _runtime.Metrics.Detail);
-        }
+        GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, "能力图沙盘", _runtime.Metrics.Detail);
     }
 }

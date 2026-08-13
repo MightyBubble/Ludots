@@ -12,6 +12,8 @@ namespace CapabilityStandardGraphOpsBlackboardMod.Runtime;
 public sealed class GraphOpsBlackboardRuntime
 {
   private readonly GraphShowcaseConfig _config = new();
+  private GraphOpsStageVisuals? _stage;
+  private bool _visualsSpawned;
   private World? _world;
   private GasGraphRuntimeApi? _memoApi;
   private LifecycleShowcaseGraphApi? _lifecycleApi;
@@ -51,6 +53,11 @@ public sealed class GraphOpsBlackboardRuntime
   public int BuiltinSteps => _builtinSteps;
   public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_blackboard" };
 
+  public void BindStageVisuals(GraphOpsStageVisuals stage)
+  {
+    _stage = stage ?? throw new ArgumentNullException(nameof(stage));
+  }
+
   public void EnsureWorld()
   {
     if (_world != null) return;
@@ -84,11 +91,25 @@ public sealed class GraphOpsBlackboardRuntime
 
     Metrics.AgentCount = 2;
     Metrics.Detail = "黑板记事就位：写入来源与情境，从配置读出威力/阶位/连锁并回读验证。";
+    SpawnStageVisuals();
+  }
+
+  private void SpawnStageVisuals()
+  {
+    if (_stage == null || _visualsSpawned)
+    {
+      return;
+    }
+
+    _stage.Spawn(GraphOpsVisualTemplates.Caster, "记事员", ClerkX, ClerkY, 100f, 100f);
+    _stage.Spawn(GraphOpsVisualTemplates.Ally, "情境", ContextX, ContextY, 100f, 100f);
+    _visualsSpawned = true;
   }
 
   public void Tick(float dt)
   {
     EnsureWorld();
+    SpawnStageVisuals();
 
     _accum += dt;
     if (_accum < _config.ThinkPeriodSeconds) return;

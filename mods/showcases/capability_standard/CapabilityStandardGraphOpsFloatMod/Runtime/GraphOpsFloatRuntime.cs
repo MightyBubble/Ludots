@@ -13,6 +13,10 @@ public sealed class GraphOpsFloatRuntime
     public const float MaxRange = 45f;
 
     private readonly GraphShowcaseConfig _config = new();
+    private GraphOpsStageVisuals? _stage;
+    private Entity _casterProxy;
+    private Entity _targetProxy;
+    private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
     private Entity _caster;
@@ -45,6 +49,11 @@ public sealed class GraphOpsFloatRuntime
     public float TargetHealth { get; private set; }
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_float" };
 
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
+    }
+
     public void EnsureWorld()
     {
         if (_world != null) return;
@@ -60,11 +69,36 @@ public sealed class GraphOpsFloatRuntime
 
         Metrics.AgentCount = 2;
         Metrics.Detail = "浮点伤害管线就位：按距离衰减、乘伤害倍率，负面修正翻成正数再加算，再钳制到上下限。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _casterProxy = _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, OpeningHealth, OpeningHealth);
+        _targetProxy = _stage.Spawn(GraphOpsVisualTemplates.Target, "目标", TargetX, TargetY, TargetHealth, OpeningHealth);
+        _visualsSpawned = true;
+    }
+
+    private void SyncStageVisuals()
+    {
+        if (_stage == null || !_visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.SetPosition(_targetProxy, TargetX, TargetY);
+        _stage.SetHealth(_targetProxy, TargetHealth, OpeningHealth);
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
 
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;
@@ -104,6 +138,7 @@ public sealed class GraphOpsFloatRuntime
         Metrics.Detail =
             $"距离{_distance:F0}：衰减后乘伤害倍率1.5，负面修正翻成正数再加算，随机扰动再钳制0~80 → {applyText}；" +
             $"出手许可：{permitText}；射程判定：{rangeText}。";
+        SyncStageVisuals();
     }
 
     private void RecompileGraphs(float distance, bool permit)

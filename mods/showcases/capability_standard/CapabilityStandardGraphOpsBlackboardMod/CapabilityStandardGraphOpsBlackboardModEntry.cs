@@ -23,6 +23,7 @@ public sealed class CapabilityStandardGraphOpsBlackboardModEntry : IMod
       GameEngine? engine = ctx.GetEngine();
       if (engine == null) return Task.CompletedTask;
       engine.SetService(MetricsKey, runtime.Metrics);
+      runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
       var debugDraw = new DebugDrawCommandBuffer();
       engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
       ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)

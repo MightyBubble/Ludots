@@ -45,6 +45,8 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphFunctionCatalog? _catalog;
+    private GraphOpsStageVisuals? _stage;
+    private bool _visualsSpawned;
     private World? _world;
     private int _hitCountKeyId;
     private int _nearestKeyId;
@@ -96,6 +98,11 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+    }
+
+    public void BindStageVisuals(GraphOpsStageVisuals stage)
+    {
+        _stage = stage ?? throw new ArgumentNullException(nameof(stage));
     }
 
     public void EnsureWorld()
@@ -174,11 +181,35 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
         Metrics.AgentCount = targets;
         Metrics.Detail = "扇形、矩形、直线与六角圈人：排除自己，只打敌对层与敌对关系。";
+        SpawnStageVisuals();
+    }
+
+    private void SpawnStageVisuals()
+    {
+        if (_stage == null || _visualsSpawned)
+        {
+            return;
+        }
+
+        _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, 100f, 100f);
+        for (int i = 0; i < _tx.Length; i++)
+        {
+            _stage.Spawn(
+                GraphOpsVisualTemplates.Target,
+                $"敌军{i + 1}",
+                _tx[i],
+                _ty[i],
+                100f,
+                100f);
+        }
+
+        _visualsSpawned = true;
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
+        SpawnStageVisuals();
         for (int i = 0; i < _flash.Length; i++)
         {
             if (_flash[i] > 0) _flash[i]--;

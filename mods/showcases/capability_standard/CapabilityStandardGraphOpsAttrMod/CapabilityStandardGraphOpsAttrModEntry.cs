@@ -23,10 +23,12 @@ public sealed class CapabilityStandardGraphOpsAttrModEntry : IMod
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
             runtime.Bind(engine.GetService(CoreServiceKeys.GraphProgramRegistry));
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
-            ScreenOverlayBuffer? overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("Attr gallery requires ScreenOverlayBuffer.");
             engine.RegisterSystem(new GraphOpsAttrSimulationSystem(engine, runtime), SystemGroup.PostMovement);
             engine.RegisterPresentationSystem(new GraphOpsAttrPresentationSystem(runtime, debugDraw, overlay));
             return Task.CompletedTask;

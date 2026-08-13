@@ -25,6 +25,7 @@ public sealed class CapabilityStandardGraphOpsSpatialModEntry : IMod
             if (engine == null) return Task.CompletedTask;
             GraphProgramRegistry programs = GraphOpsSpatialCatalogBootstrap.Load(out GraphFunctionCatalog catalog);
             runtime.Bind(programs, catalog);
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

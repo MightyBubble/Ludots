@@ -24,9 +24,11 @@ public sealed class CapabilityStandardAbilityGraphSandboxModEntry : IMod
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
             engine.SetService(MetricsKey, runtime.Metrics);
+            runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
-            engine.TryGetService(CoreServiceKeys.ScreenOverlayBuffer, out ScreenOverlayBuffer overlay);
+            ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("Ability Graph Sandbox requires ScreenOverlayBuffer.");
             engine.RegisterSystem(new AbilityGraphSandboxSimulationSystem(engine, runtime), SystemGroup.PostMovement);
             engine.RegisterPresentationSystem(new AbilityGraphSandboxPresentationSystem(runtime, debugDraw, overlay));
             return Task.CompletedTask;

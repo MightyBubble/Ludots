@@ -2,19 +2,80 @@
   {
     "id": "Unit.Soldier",
     "components": {
-      "Name": { "Value": "Soldier" },
-      "Team": { "Id": 2 },
-      "AttributeBuffer": { "base": { "Health": 100 } },
+      "Name": {
+        "Value": "Soldier"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "Unit.Scout",
     "components": {
-      "Name": { "Value": "Scout" },
-      "Team": { "Id": 2 },
-      "AttributeBuffer": { "base": { "Health": 80 } },
+      "Name": {
+        "Value": "Scout"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 80
+        }
+      },
       "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "GraphOps.Caster",
+    "components": {
+      "Name": {
+        "Value": "Caster"
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
+    }
+  },
+  {
+    "id": "GraphOps.Ally",
+    "components": {
+      "Name": {
+        "Value": "Ally"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
+    }
+  },
+  {
+    "id": "GraphOps.Target",
+    "components": {
+      "Name": {
+        "Value": "Target"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
     }
   }
 ]
