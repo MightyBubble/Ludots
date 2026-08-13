@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Unit.Soldier",
+    "components": {
+      "Name": { "Value": "Soldier" },
+      "Team": { "Id": 2 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "Unit.Scout",
+    "components": {
+      "Name": { "Value": "Scout" },
+      "Team": { "Id": 2 },
+      "AttributeBuffer": { "base": { "Health": 80 } },
+      "GameplayTagContainer": {}
+    }
+  }
+]
