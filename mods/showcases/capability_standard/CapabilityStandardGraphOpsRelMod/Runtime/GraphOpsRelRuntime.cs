@@ -201,8 +201,8 @@ public sealed class GraphOpsRelRuntime
         RefreshLinkedFlags();
         Metrics.Detail =
             $"查好友链：Trusted筛选后按好感排序，好感区间剩{_friendCount}人；" +
-            $"总和{_loyaltySum}、最高{_loyaltyTop}、最低{_loyaltyMin}、均值{_loyaltyAverage}；" +
-            $"最强{_topFriendLabel}、最弱好友{_weakFriendLabel}；入链{_incomingCount}、互链{_mutualCount}、双人链{_betweenCount}";
+            $"总和{_loyaltySum}、最高{_loyaltyTop}、好感最低{_loyaltyMin}、均值{_loyaltyAverage}；" +
+            $"最强{_topFriendLabel}、最弱{_weakFriendLabel}；入链{_incomingCount}、互链{_mutualCount}、双人链{_betweenCount}";
     }
 
     private void RunUnlinkWave()
@@ -235,7 +235,7 @@ public sealed class GraphOpsRelRuntime
             ? $"确认仍有链后拆掉好感最低的{unlinked}并标记失和"
             : $"确认仍有链，已标记失和{_brokenLinks}次";
         Metrics.Detail =
-            $"拆链：{unlinkBeat}；查好友链 Trusted筛选后按好感排序，好感区间剩{_friendCount}人，总和{_loyaltySum}、最低{_loyaltyMin}，最弱好友{_weakFriendLabel}；双人链{_betweenCount}";
+            $"拆链：{unlinkBeat}；查好友链 Trusted筛选后按好感排序，好感区间剩{_friendCount}人，总和{_loyaltySum}、好感最低{_loyaltyMin}，最弱{_weakFriendLabel}；双人链{_betweenCount}";
     }
 
     private int CountLinkedFriends()
@@ -314,7 +314,7 @@ public sealed class GraphOpsRelRuntime
         _entities[1] = explicitTarget;
         return new()
         {
-            World = _world,
+            World = _world!,
             Caster = caster,
             ExplicitTarget = explicitTarget,
             TargetPosCm = default,

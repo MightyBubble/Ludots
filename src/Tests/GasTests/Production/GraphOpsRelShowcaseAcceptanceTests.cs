@@ -50,7 +50,7 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(runtime.Metrics.Detail, Does.Contain("Trusted"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("区间"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("总和"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("最低"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("好感最低").Or.Contain("最低"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("最弱"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("双人链"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("失和"));

@@ -228,7 +228,7 @@ public sealed class GraphOpsQueryRuntime : IDisposable
         var targetList = new GraphTargetList(_targets);
         var state = new GraphExecutionState
         {
-            World = _world,
+            World = _world!,
             Caster = caster,
             Api = _api!,
             F = _floats,
