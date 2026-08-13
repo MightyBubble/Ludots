@@ -69,6 +69,8 @@ namespace Ludots.Tests.Presentation
             modLoader.LoadMods(RepoModPaths.ResolveExplicit(_repoRoot, new[]
             {
                 "LudotsCoreMod",
+                "CoreInputMod",
+                "SharedThreeCProfilesMod",
                 "CameraAcceptanceMod",
             }));
 
