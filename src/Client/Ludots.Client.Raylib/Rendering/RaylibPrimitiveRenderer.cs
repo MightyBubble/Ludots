@@ -44,12 +44,14 @@ namespace Ludots.Client.Raylib.Rendering
         private Shader _shader;
         private Shader _skinningShader;
         private Shader _vegetationCutoutShader;
+        private Shader _decalUnlitShader;
         private Material _material;
         private Material _vfxMaterial;
         private Material _decalMaterial;
         private bool _vfxMaterialLoaded;
         private bool _decalMaterialLoaded;
         private bool _vegetationCutoutShaderReady;
+        private bool _decalUnlitShaderReady;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
@@ -59,6 +61,8 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locHasMetallicMap;
         private int _locVegetationCutoutColDiffuse;
         private int _locVegetationCutoutAlphaCutoff;
+        private int _locDecalUnlitColDiffuse;
+        private int _locDecalUnlitTint;
         private int _locSkinningColDiffuse;
         private int _locSkinningTint;
         private int _locSkinningRoughness;
@@ -888,7 +892,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-            _decalMaterial.maps[albedoIndex].color = ToRaylibColor(color);
+            _decalMaterial.maps[albedoIndex].color = Color.WHITE;
 
             Matrix4x4 transform =
                 Matrix4x4.CreateScale(resolvedSize.X, 1f, resolvedSize.Y) *
@@ -911,11 +915,12 @@ namespace Ludots.Client.Raylib.Rendering
             Shader previousShader = _decalMaterial.shader;
             try
             {
+                Vector4 colDiffuse = Vector4.One;
+                Vector4 tint = color;
                 if (blendMode == MaterialBlendMode.Cutout)
                 {
                     EnsureVegetationCutoutShader();
                     float cutoff = DefaultVegetationAlphaCutoff;
-                    Vector4 colDiffuse = Vector4.One;
                     Rl.SetShaderValue(
                         _vegetationCutoutShader,
                         _locVegetationCutoutColDiffuse,
@@ -927,6 +932,22 @@ namespace Ludots.Client.Raylib.Rendering
                         &cutoff,
                         (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
                     _decalMaterial.shader = _vegetationCutoutShader;
+                }
+                else
+                {
+                    // Unlit textured stamp: lit default material made flat quads read as planks.
+                    EnsureDecalUnlitShader();
+                    Rl.SetShaderValue(
+                        _decalUnlitShader,
+                        _locDecalUnlitColDiffuse,
+                        &colDiffuse,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                    Rl.SetShaderValue(
+                        _decalUnlitShader,
+                        _locDecalUnlitTint,
+                        &tint,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                    _decalMaterial.shader = _decalUnlitShader;
                 }
 
                 Rl.DrawMesh(_decalQuadMesh, _decalMaterial, RaylibMatrix.FromSystemNumerics(transform));
@@ -966,6 +987,43 @@ namespace Ludots.Client.Raylib.Rendering
                 _decalMaterial = Rl.LoadMaterialDefault();
                 _decalMaterialLoaded = true;
             }
+        }
+
+        private void EnsureDecalUnlitShader()
+        {
+            if (_decalUnlitShaderReady)
+            {
+                return;
+            }
+
+            string baseDir = AppContext.BaseDirectory;
+            _decalUnlitShader = Rl.LoadShader(
+                Path.Combine(baseDir, "decal_unlit.vs"),
+                Path.Combine(baseDir, "decal_unlit.fs"));
+            if (_decalUnlitShader.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} failed to load decal_unlit shader.");
+            }
+
+            _locDecalUnlitColDiffuse = Rl.GetShaderLocation(_decalUnlitShader, "colDiffuse");
+            _locDecalUnlitTint = Rl.GetShaderLocation(_decalUnlitShader, "tint");
+            int locMap = Rl.GetShaderLocation(_decalUnlitShader, "texture0");
+            int locMvp = Rl.GetShaderLocation(_decalUnlitShader, "mvp");
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_decalUnlitShader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_decalUnlitShader, "vertexTexCoord");
+            if (_locDecalUnlitColDiffuse < 0 ||
+                _locDecalUnlitTint < 0 ||
+                locMap < 0 ||
+                locMvp < 0 ||
+                locVertexPosition < 0 ||
+                locVertexTexCoord < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} decal_unlit is missing required attribs/uniforms.");
+            }
+
+            _decalUnlitShaderReady = true;
         }
 
         private static Mesh CreateCenteredDecalQuadMesh()
@@ -3017,6 +3075,11 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 Rl.UnloadShader(_vegetationCutoutShader);
                 _vegetationCutoutShaderReady = false;
+            }
+            if (_decalUnlitShaderReady)
+            {
+                Rl.UnloadShader(_decalUnlitShader);
+                _decalUnlitShaderReady = false;
             }
             if (_skinningShaderReady)
             {

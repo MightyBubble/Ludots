@@ -222,20 +222,20 @@
   },
   {
     "id": "raylib_visual_atmosphere.camera.beach_decals",
-    "displayName": "Island Beach Textured Decals",
+    "displayName": "Island Classic Decal Gallery",
     "priority": 10,
     "rigKind": "Orbit",
-    "distanceCm": 11000,
-    "pitch": 52,
-    "fovYDeg": 48,
-    "yaw": 200,
+    "distanceCm": 8500,
+    "pitch": 58,
+    "fovYDeg": 46,
+    "yaw": 210,
     "targetSource": "Fixed",
     "fixedTargetCm": {
-      "x": -16500,
-      "y": -10500
+      "x": -15600,
+      "y": -10600
     },
     "targetHeightMode": "Flat",
-    "targetHeightOffsetCm": 80,
+    "targetHeightOffsetCm": 40,
     "minDistanceCm": 1200,
     "maxDistanceCm": 20000,
     "minPitchDeg": 8,

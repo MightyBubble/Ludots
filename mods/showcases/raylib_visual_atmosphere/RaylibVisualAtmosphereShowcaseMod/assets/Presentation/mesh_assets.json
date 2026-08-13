@@ -21,7 +21,7 @@
     "primitiveKind": "Cube"
   },
   {
-    "id": "raylib_visual_atmosphere.beach_path_decal",
+    "id": "raylib_visual_atmosphere.decal_footprints",
     "type": "Prefab",
     "parts": [
       {
@@ -32,7 +32,29 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.sand_scar_decal",
+    "id": "raylib_visual_atmosphere.decal_scorch",
+    "type": "Prefab",
+    "parts": [
+      {
+        "kind": "Decal",
+        "size": [1, 1],
+        "alignToSurface": true
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_blood",
+    "type": "Prefab",
+    "parts": [
+      {
+        "kind": "Decal",
+        "size": [1, 1],
+        "alignToSurface": true
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_cracks",
     "type": "Prefab",
     "parts": [
       {

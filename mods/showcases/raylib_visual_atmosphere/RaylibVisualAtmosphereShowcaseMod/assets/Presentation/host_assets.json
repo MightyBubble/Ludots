@@ -82,21 +82,39 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.beach_path_decal.material.raylib",
+    "id": "raylib_visual_atmosphere.decal_footprints.material.raylib",
     "assetKind": "Material",
-    "assetId": "raylib_visual_atmosphere.beach_path_decal",
+    "assetId": "raylib_visual_atmosphere.decal_footprints",
     "backendId": "raylib",
     "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_beach_path.png"
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_footprints.png"
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.sand_scar_decal.material.raylib",
+    "id": "raylib_visual_atmosphere.decal_scorch.material.raylib",
     "assetKind": "Material",
-    "assetId": "raylib_visual_atmosphere.sand_scar_decal",
+    "assetId": "raylib_visual_atmosphere.decal_scorch",
     "backendId": "raylib",
     "sourceUris": [
-      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_sand_scar.png"
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_scorch.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_blood.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.decal_blood",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_blood.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_cracks.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.decal_cracks",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_cracks.png"
     ]
   }
 ]

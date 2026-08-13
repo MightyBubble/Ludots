@@ -81,6 +81,12 @@ internal static class DecalPlacementBootstrap
                 ?? throw new InvalidOperationException($"{RelativePath} placements[{i}] missing templateId.");
             float xCm = item.GetProperty("xCm").GetSingle();
             float yCm = item.GetProperty("yCm").GetSingle();
+            float yawDeg = 0f;
+            if (item.TryGetProperty("yawDeg", out JsonElement yawNode))
+            {
+                yawDeg = yawNode.GetSingle();
+            }
+
             short heightCm = IslandTerrainGenerator.HeightCmAt(xCm, yCm);
             if (heightCm <= IslandTerrainGenerator.SeaLevelCm)
             {
@@ -99,6 +105,8 @@ internal static class DecalPlacementBootstrap
                 MapId = session.MapId,
                 WorldPositionCm = world,
                 HasWorldPosition = 1,
+                FacingAngleRad = yawDeg * (MathF.PI / 180f),
+                HasFacing = 1,
                 ComponentPatches = Array.Empty<RuntimeEntitySpawnComponentPatch>(),
             };
 

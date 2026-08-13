@@ -9,16 +9,20 @@ internal static class RaylibVisualAtmosphereShowcaseIds
     public const string BushTemplateId = "raylib_visual_atmosphere_bush";
     public const string VfxBlendTemplateId = "raylib_visual_atmosphere_vfx_blend";
     public const string VfxAdditiveTemplateId = "raylib_visual_atmosphere_vfx_additive";
-    public const string BeachPathMarkTemplateId = "raylib_visual_atmosphere_beach_path_mark";
-    public const string SandScarTemplateId = "raylib_visual_atmosphere_sand_scar";
+    public const string DecalFootprintsTemplateId = "raylib_visual_atmosphere_decal_footprints";
+    public const string DecalScorchTemplateId = "raylib_visual_atmosphere_decal_scorch";
+    public const string DecalBloodTemplateId = "raylib_visual_atmosphere_decal_blood";
+    public const string DecalCracksTemplateId = "raylib_visual_atmosphere_decal_cracks";
     public const string RockTemplateId = "raylib_visual_atmosphere_rock";
 
     public const string TreePerformerId = "raylib_visual_atmosphere_tree_actor";
     public const string BushPerformerId = "raylib_visual_atmosphere_bush_actor";
     public const string VfxBlendPerformerId = "raylib_visual_atmosphere_vfx_blend_actor";
     public const string VfxAdditivePerformerId = "raylib_visual_atmosphere_vfx_additive_actor";
-    public const string BeachPathMarkPerformerId = "raylib_visual_atmosphere_beach_path_mark_actor";
-    public const string SandScarPerformerId = "raylib_visual_atmosphere_sand_scar_actor";
+    public const string DecalFootprintsPerformerId = "raylib_visual_atmosphere_decal_footprints_actor";
+    public const string DecalScorchPerformerId = "raylib_visual_atmosphere_decal_scorch_actor";
+    public const string DecalBloodPerformerId = "raylib_visual_atmosphere_decal_blood_actor";
+    public const string DecalCracksPerformerId = "raylib_visual_atmosphere_decal_cracks_actor";
     public const string RockPerformerId = "raylib_visual_atmosphere_rock_actor";
 
     public const string TreeMeshKey = "raylib_visual_atmosphere.palm";

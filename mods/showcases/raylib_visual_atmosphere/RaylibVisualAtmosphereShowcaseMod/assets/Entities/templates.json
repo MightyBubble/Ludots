@@ -96,10 +96,10 @@
     }
   },
   {
-    "id": "raylib_visual_atmosphere_beach_path_mark",
+    "id": "raylib_visual_atmosphere_decal_footprints",
     "components": {
       "Name": {
-        "Value": "AtmosphereBeachPathMark"
+        "Value": "AtmosphereDecalFootprints"
       },
       "WorldPositionCm": {
         "Value": {
@@ -120,10 +120,58 @@
     }
   },
   {
-    "id": "raylib_visual_atmosphere_sand_scar",
+    "id": "raylib_visual_atmosphere_decal_scorch",
     "components": {
       "Name": {
-        "Value": "AtmosphereSandScar"
+        "Value": "AtmosphereDecalScorch"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_blood",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalBlood"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_cracks",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalCracks"
       },
       "WorldPositionCm": {
         "Value": {

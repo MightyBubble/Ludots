@@ -14,7 +14,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V8 | Minimal directional MR (no IBL) | done | cloud-agent | Host `sourceUris[0..3]`; GGX in instancing/skinning; normals need TBN (skipped) |
 | V9 | Anti-tiling | done | cloud-agent | hash-rotated UV + IGN in `terrain.fs` |
 | V10 | Real weight layers | done | cloud-agent | baked RGBA control map (R sand/G grass/B dirt/A rock); not height-band fake when URI set |
-| V11 | Textured Decals | done | cloud-agent | performer `AssetKind.Decal` XZ textured quads + host albedo; 12 beach placements |
+| V11 | Classic textured Decals | done | cloud-agent | unlit stamp shader; footprints / scorch / blood / cracks gallery on beach |
 
 ## Blockers
 

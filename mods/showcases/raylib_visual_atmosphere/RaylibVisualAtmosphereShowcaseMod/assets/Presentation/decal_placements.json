@@ -2,64 +2,52 @@
   "mapId": "raylib_visual_atmosphere_showcase",
   "placements": [
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": -17890.6,
-      "yCm": -10329.1
+      "templateId": "raylib_visual_atmosphere_decal_footprints",
+      "xCm": -17600,
+      "yCm": -11800,
+      "yawDeg": 35
     },
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": -15871.8,
-      "yCm": -5157.1
+      "templateId": "raylib_visual_atmosphere_decal_footprints",
+      "xCm": -17050,
+      "yCm": -11350,
+      "yawDeg": 38
     },
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": -15220.0,
-      "yCm": -4720.0
+      "templateId": "raylib_visual_atmosphere_decal_footprints",
+      "xCm": -16500,
+      "yCm": -10900,
+      "yawDeg": 42
     },
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": -14512.0,
-      "yCm": -11751.6
+      "templateId": "raylib_visual_atmosphere_decal_footprints",
+      "xCm": -15950,
+      "yCm": -10450,
+      "yawDeg": 40
     },
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": -6208.5,
-      "yCm": -19107.8
+      "templateId": "raylib_visual_atmosphere_decal_footprints",
+      "xCm": -15400,
+      "yCm": -10000,
+      "yawDeg": 45
     },
     {
-      "templateId": "raylib_visual_atmosphere_beach_path_mark",
-      "xCm": 2011.2,
-      "yCm": -19135.1
+      "templateId": "raylib_visual_atmosphere_decal_scorch",
+      "xCm": -14800,
+      "yCm": -11200,
+      "yawDeg": 12
     },
     {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": 11809.3,
-      "yCm": -16254.1
+      "templateId": "raylib_visual_atmosphere_decal_blood",
+      "xCm": -14200,
+      "yCm": -10600,
+      "yawDeg": -25
     },
     {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": 16417.2,
-      "yCm": -9478.5
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": 21508.9,
-      "yCm": 0.0
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": -19135.1,
-      "yCm": 2011.2
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": -4612.9,
-      "yCm": 17215.5
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_sand_scar",
-      "xCm": -15519.2,
-      "yCm": -8960.0
+      "templateId": "raylib_visual_atmosphere_decal_cracks",
+      "xCm": -13800,
+      "yCm": -9800,
+      "yawDeg": 70
     }
   ]
 }
