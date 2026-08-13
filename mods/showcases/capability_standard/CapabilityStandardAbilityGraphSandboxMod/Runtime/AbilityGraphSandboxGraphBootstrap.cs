@@ -95,7 +95,9 @@ public static class AbilityGraphSandboxGraphBootstrap
             throw new ArgumentException("Mod assets root is required.", nameof(modAssetsRoot));
         }
 
-        string graphsPath = Path.Combine(modAssetsRoot, "GAS", "graphs.json");
+        // Not assets/GAS/graphs.json: ConfigPipeline merges that path with GetId-only
+        // GasGraphSymbolResolver, which cannot Register sandbox tags/display tables.
+        string graphsPath = Path.Combine(modAssetsRoot, "GAS", "sandbox_graphs.json");
         if (!File.Exists(graphsPath))
         {
             throw new FileNotFoundException($"Missing ability graph sandbox graphs: {graphsPath}");
@@ -200,7 +202,7 @@ public static class AbilityGraphSandboxGraphBootstrap
                 "capability_standard",
                 "CapabilityStandardAbilityGraphSandboxMod",
                 "assets");
-            if (File.Exists(Path.Combine(candidate, "GAS", "graphs.json")))
+            if (File.Exists(Path.Combine(candidate, "GAS", "sandbox_graphs.json")))
             {
                 return candidate;
             }
