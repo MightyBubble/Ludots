@@ -21,8 +21,9 @@ void main()
     }
 
     vec4 local = matWorldToDecal * vec4(fragPos, 1.0);
-    vec3 a = abs(local.xyz);
-    if (a.x > 0.5 || a.y > 0.5 || a.z > 0.5)
+    // Ground stamps: clip only in the stamp plane (XZ). Vertical extent is handled by
+    // the CPU projector AABB / thickness so ridges are not sliced by a thin box lid.
+    if (abs(local.x) > 0.5 || abs(local.z) > 0.5)
     {
         discard;
     }
