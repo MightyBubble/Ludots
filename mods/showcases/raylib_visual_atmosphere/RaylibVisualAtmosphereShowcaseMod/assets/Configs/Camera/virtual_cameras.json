@@ -225,14 +225,14 @@
     "displayName": "Island Classic Decal Gallery",
     "priority": 10,
     "rigKind": "Orbit",
-    "distanceCm": 8500,
-    "pitch": 58,
+    "distanceCm": 7800,
+    "pitch": 60,
     "fovYDeg": 46,
-    "yaw": 210,
+    "yaw": 225,
     "targetSource": "Fixed",
     "fixedTargetCm": {
-      "x": -15600,
-      "y": -10600
+      "x": 16600,
+      "y": -12800
     },
     "targetHeightMode": "Flat",
     "targetHeightOffsetCm": 40,
