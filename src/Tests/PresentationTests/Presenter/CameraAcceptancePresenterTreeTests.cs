@@ -138,15 +138,18 @@ namespace Ludots.Tests.Presentation
                 new PresentationStableId { Value = 9101 },
                 VisualTransform.Default,
                 new CullState { IsVisible = true, LOD = LODLevel.High });
-            Entity presenter = instances.Create(
+            int nextStable = 9102;
+            Entity presenter = instances.CreateHierarchy(
+                definitions,
                 defId,
                 owner,
                 0,
                 PresentationAnchorKind.WorldPosition,
                 new Vector3(2f, 3f, 4f),
-                9102,
+                nextStable++,
                 Entity.Null,
-                default);
+                default,
+                () => nextStable++);
             PresenterDefinition definition = definitions.Get(defId);
             instances.SetParamDefault(definition, presenter);
             var presenterQuery = new QueryDescription().WithAll<PresenterState, PresenterWorldRotation, PresenterWorldScale>();
