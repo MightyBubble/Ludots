@@ -113,9 +113,9 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         RequireGraph(HexRingGraph);
         RequireGraph(HexNeighborsGraph);
         RequireTargetListGetOnAllGraphs();
-        _hitCountKeyId = ConfigKeyRegistry.GetId(HitCountKey);
-        _nearestKeyId = ConfigKeyRegistry.GetId(NearestKey);
-        _firstKeyId = ConfigKeyRegistry.GetId(FirstKey);
+        _hitCountKeyId = RequirePatchedConfigKey(HitCountKey);
+        _nearestKeyId = RequirePatchedConfigKey(NearestKey);
+        _firstKeyId = RequirePatchedConfigKey(FirstKey);
 
         TeamManager.SetRelationship(CasterTeamId, EnemyTeamId, TeamRelationship.Hostile);
         TeamManager.SetRelationship(EnemyTeamId, CasterTeamId, TeamRelationship.Hostile);
@@ -281,6 +281,18 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         }
 
         return -1;
+    }
+
+    private static int RequirePatchedConfigKey(string key)
+    {
+        int id = ConfigKeyRegistry.GetId(key);
+        if (id == ConfigKeyRegistry.InvalidId)
+        {
+            throw new InvalidOperationException(
+                $"Spatial blackboard key '{key}' was not patched; GraphProgramSymbolPatcher must run at catalog load.");
+        }
+
+        return id;
     }
 
     private void RequireGraph(string graphKey)

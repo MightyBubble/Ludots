@@ -4,11 +4,25 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsSpatialMod.Runtime;
+
+internal sealed class GraphOpsSpatialSymbolResolver : IGraphSymbolResolver
+{
+    public int ResolveTag(string name) => TagRegistry.Register(name);
+    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
+    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
+    public int ResolveRelationshipType(string name) => ConfigKeyRegistry.Register($"relationship.type.{name}");
+    public int ResolveRelationshipMetric(string name) => ConfigKeyRegistry.Register($"relationship.metric.{name}");
+    public int ResolveRelationshipFlag(string name) => ConfigKeyRegistry.Register($"relationship.flag.{name}");
+    public int ResolveRelationshipReason(string name) => ConfigKeyRegistry.Register($"relationship.reason.{name}");
+    public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
+    public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
+}
 
 internal static class GraphOpsSpatialCatalogBootstrap
 {
@@ -30,6 +44,7 @@ internal static class GraphOpsSpatialCatalogBootstrap
     private static void LoadEffectGraphs(GraphProgramRegistry programs, string graphsPath)
     {
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
+        var resolver = new GraphOpsSpatialSymbolResolver();
         using var doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
         foreach (JsonElement el in doc.RootElement.EnumerateArray())
         {
@@ -55,8 +70,16 @@ internal static class GraphOpsSpatialCatalogBootstrap
                 GasGraphOpHandlerTable.Instance,
                 entrypoint: nameof(GraphOpsSpatialCatalogBootstrap));
 
+            string[] symbols = compiled.Package?.Symbols
+                ?? throw new InvalidOperationException($"Compile {id} produced no symbol table; blackboard keys cannot be patched.");
+            if (symbols.Length == 0)
+            {
+                throw new InvalidOperationException($"Compile {id} produced an empty symbol table; blackboard keys cannot be patched.");
+            }
+
+            GraphProgramSymbolPatcher.Patch(symbols, compiled.Program, resolver);
+
             int graphId = GraphIdRegistry.Register(id);
-            string[] symbols = compiled.Package?.Symbols ?? Array.Empty<string>();
             programs.Register(
                 graphId,
                 compiled.Program,
