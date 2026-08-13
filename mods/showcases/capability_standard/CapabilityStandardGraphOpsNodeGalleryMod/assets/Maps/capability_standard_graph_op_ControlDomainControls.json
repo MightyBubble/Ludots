@@ -16,5 +16,46 @@
     "Yaw": 180,
     "FovYDeg": 50
   },
-  "Entities": []
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "队长"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "target",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "队员"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ]
 }

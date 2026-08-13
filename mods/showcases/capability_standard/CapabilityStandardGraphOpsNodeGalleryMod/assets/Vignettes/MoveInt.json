@@ -4,7 +4,9 @@
   "title": "把数字挪到下一个格子",
   "beat": "3 被挪到结果槽，字幕报 3。",
   "detailTemplate": "把数抄到结果上：把 3 挪过去，格子里是 {result}。",
-  "assertDetailContains": ["挪"],
+  "assertDetailContains": [
+    "挪"
+  ],
   "featuredNodeId": "move",
   "graphKind": "Script",
   "actors": [

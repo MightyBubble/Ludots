@@ -4,7 +4,9 @@
   "title": "读出当前状态牌",
   "beat": "从状态掩码里选出当前牌。",
   "detailTemplate": "当前状态牌是{card}。",
-  "assertDetailContains": ["状态牌"],
+  "assertDetailContains": [
+    "状态牌"
+  ],
   "featuredNodeId": "selectTag",
   "graphKind": "Effect",
   "actors": [

@@ -4,13 +4,51 @@
   "title": "按预设把效果派给圈里的人",
   "beat": "圈中单位同时挨打、挂上派发出来的状态。",
   "detailTemplate": "按预设把效果派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["派给"],
+  "assertDetailContains": [
+    "派给"
+  ],
   "featuredNodeId": "fanDispatch",
   "graphKind": "Effect",
   "actors": [
-    { "id": "caster", "role": "caster", "template": "GraphOps.Caster", "name": "施法者", "x": 0, "y": 0, "health": 100, "healthMax": 100 },
-    { "id": "target", "role": "target", "template": "GraphOps.Target", "name": "木桩", "x": 2, "y": 0, "health": 100, "healthMax": 100 },
-    { "id": "allyA", "role": "ally", "template": "GraphOps.Ally", "name": "圈里甲", "x": -1, "y": 1.7, "health": 100, "healthMax": 100 },
-    { "id": "allyB", "role": "ally", "template": "GraphOps.Ally", "name": "圈里乙", "x": -1, "y": -1.7, "health": 100, "healthMax": 100 }
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "allyA",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "圈里甲",
+      "x": -1,
+      "y": 1.7,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "allyB",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "圈里乙",
+      "x": -1,
+      "y": -1.7,
+      "health": 100,
+      "healthMax": 100
+    }
   ]
 }

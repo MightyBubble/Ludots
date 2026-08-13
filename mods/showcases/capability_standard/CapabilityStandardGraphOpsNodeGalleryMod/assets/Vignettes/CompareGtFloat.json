@@ -4,7 +4,9 @@
   "title": "有没有打出暴击",
   "beat": "伤害 30 对比暴击线 15，过线就是暴击。",
   "detailTemplate": "暴击判定：{result}。",
-  "assertDetailContains": ["暴击"],
+  "assertDetailContains": [
+    "暴击"
+  ],
   "featuredNodeId": "isCritical",
   "graphKind": "Effect",
   "actors": [

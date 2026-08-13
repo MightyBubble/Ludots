@@ -4,7 +4,9 @@
   "title": "把威力写到记事板",
   "beat": "算完 35 写上去，下一眼能读到。",
   "detailTemplate": "记下威力 {result}。",
-  "assertDetailContains": ["记下"],
+  "assertDetailContains": [
+    "记下"
+  ],
   "featuredNodeId": "writeF",
   "graphKind": "Effect",
   "actors": [

@@ -16,5 +16,46 @@
     "Yaw": 180,
     "FovYDeg": 50
   },
-  "Entities": []
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "target",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "落点"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2000,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ]
 }

@@ -33,50 +33,25 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        GraphOpsNodeActorBinding.RequireMapActors(ctx);
         if (!_seeded)
         {
-            if (actors.Length == 0)
-            {
-                throw new InvalidOperationException($"Script vignette {ctx.Vignette.Op} requires a caster actor.");
-            }
-
-            ctx.SimActors = new Entity[actors.Length];
-            ctx.ActorHealth = new float[actors.Length];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                Entity entity = ctx.SimWorld.Create();
-                ctx.SimActors[i] = entity;
-                ctx.ActorHealth[i] = actors[i].Health;
-                if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal))
-                {
-                    ctx.Caster = entity;
-                    _originX = actors[i].X;
-                    _originY = actors[i].Y;
-                }
-                else if (string.Equals(actors[i].Role, "target", StringComparison.Ordinal))
-                {
-                    ctx.Target = entity;
-                }
-            }
-
-            if (ctx.Caster == Entity.Null)
-            {
-                throw new InvalidOperationException($"Script vignette {ctx.Vignette.Op} requires a caster actor.");
-            }
-
+            int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+            _originX = ctx.Vignette.Actors[caster].X;
+            _originY = ctx.Vignette.Actors[caster].Y;
             ResetSlice();
             if (IsInvokeScript(ctx))
             {
                 RegisterConstSevenCallee(ctx);
+                ctx.Programs = _programs;
             }
 
-            ctx.Metrics.AgentCount = actors.Length;
+            ctx.Metrics.AgentCount = ctx.Vignette.Actors.Length;
             ctx.Metrics.Detail = ctx.Vignette.Beat;
             _seeded = true;
         }
 
-        SpawnStage(ctx);
+        GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
@@ -104,7 +79,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         }
 
         ApplyBeat(ctx);
-        SyncStage(ctx);
+        GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
@@ -114,7 +89,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
-        int ally = FindRole(ctx, "ally");
+        int ally = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "ally");
         if (ally < 0)
         {
             return;
@@ -162,8 +137,8 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     private void ApplyBeat(GraphOpsNodeDriverContext ctx)
     {
-        int caster = FindRole(ctx, "caster");
-        int ally = FindRole(ctx, "ally");
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        int ally = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "ally");
         int water = _ints[0];
         int limit = caster >= 0 ? (int)ctx.Vignette.Actors[caster].HealthMax : 0;
         int result = _cursor.ReturnInt;
@@ -193,7 +168,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         ctx.CaptionValues["result"] = result.ToString();
         ctx.CaptionValues["tea"] = "茶水";
         ctx.CaptionValues["place"] = IsAway(ctx) ? "驿站" : "原点";
-        ctx.Metrics.Detail = FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+        ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
     }
 
     private bool IsAway(GraphOpsNodeDriverContext ctx)
@@ -280,71 +255,4 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     private static bool IsPatrolOp(GraphOpsNodeDriverContext ctx)
         => ctx.Vignette.Op is nameof(GraphNodeOp.Call) or nameof(GraphNodeOp.Return);
-
-    private static string FormatDetail(string template, Dictionary<string, string> values)
-    {
-        string text = template;
-        foreach (KeyValuePair<string, string> pair in values)
-        {
-            text = text.Replace("{" + pair.Key + "}", pair.Value, StringComparison.Ordinal);
-        }
-
-        if (text.Contains('{', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Detail template still has unsubstituted placeholders: {text}");
-        }
-
-        return text;
-    }
-
-    private static int FindRole(GraphOpsNodeDriverContext ctx, string role)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, role, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void SpawnStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
-        {
-            return;
-        }
-
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.StageProxies = new Entity[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            ctx.StageProxies[i] = ctx.Stage.Spawn(
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax);
-        }
-    }
-
-    private static void SyncStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < ctx.StageProxies.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax);
-        }
-    }
 }

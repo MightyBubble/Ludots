@@ -4,7 +4,9 @@
   "title": "出手许可",
   "beat": "这一刀有没有被允许打出去，看许可开关；开着才能打。",
   "detailTemplate": "出手许可：{result}。",
-  "assertDetailContains": ["许可"],
+  "assertDetailContains": [
+    "许可"
+  ],
   "featuredNodeId": "permit",
   "graphKind": "Validation",
   "actors": [

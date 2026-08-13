@@ -13,10 +13,68 @@
     }
   },
   {
+    "id": "Effect.GraphOps.Strike",
+    "tags": ["Effect.GraphOps.Strike"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18 }
+    ]
+  },
+  {
+    "id": "Effect.GraphOps.Config",
+    "tags": ["Effect.GraphOps.Config"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "showcase.config.power": { "type": "Float", "value": 40 },
+      "showcase.config.tier": { "type": "Int", "value": 2 },
+      "showcase.config.chainEffect": { "type": "EffectTemplate", "value": "Effect.GraphOps.Strike" }
+    }
+  },
+  {
+    "id": "Effect.GraphOps.Mark",
+    "tags": ["Effect.GraphOps.Mark"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    }
+  },
+  {
     "id": "Effect.GraphOpsAttr.Mark",
     "tags": [
       "Effect.GraphOpsAttr.Mark"
     ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    }
+  },
+  {
+    "id": "Effect.GraphOpsSandbox.Mark",
+    "tags": ["Effect.GraphOpsSandbox.Mark"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    }
+  },
+  {
+    "id": "Effect.GraphOpsSandbox.Buff",
+    "tags": ["Effect.GraphOpsSandbox.Buff"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,

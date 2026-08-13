@@ -4,7 +4,9 @@
   "title": "先把关系链接上",
   "beat": "施法者和盟友之间出现友谊/好感链。",
   "detailTemplate": "接上了关系。",
-  "assertDetailContains": ["接上"],
+  "assertDetailContains": [
+    "接上"
+  ],
   "featuredNodeId": "ensure",
   "graphKind": "Effect",
   "actors": [

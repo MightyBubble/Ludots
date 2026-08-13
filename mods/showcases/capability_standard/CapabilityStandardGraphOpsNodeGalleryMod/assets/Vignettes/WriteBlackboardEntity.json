@@ -4,7 +4,9 @@
   "title": "把点名的人写到记事板",
   "beat": "木桩被记到板上。",
   "detailTemplate": "把{named}记到板上。",
-  "assertDetailContains": ["记到板上"],
+  "assertDetailContains": [
+    "记到板上"
+  ],
   "featuredNodeId": "writeE",
   "graphKind": "Effect",
   "actors": [

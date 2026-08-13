@@ -4,7 +4,9 @@
   "title": "打的是不是自己",
   "beat": "点名目标和施法者不是同一人，这一刀打出去；若是自己就收手。",
   "detailTemplate": "打的不是自己，这一刀打出去。",
-  "assertDetailContains": ["不是自己"],
+  "assertDetailContains": [
+    "不是自己"
+  ],
   "featuredNodeId": "notSelf",
   "graphKind": "Effect",
   "actors": [

@@ -37,8 +37,8 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(runtime.Title, Is.EqualTo("把场上的人都找出来"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("场上"));
-        Assert.That(runtime.Metrics.Detail, Does.Contain(QueryNodeDriver.SeededMapEntityCount.ToString()));
-        Assert.That(driver.LastTargetCount, Is.EqualTo(QueryNodeDriver.SeededMapEntityCount));
+        Assert.That(driver.LastTargetCount, Is.EqualTo(runtime.Vignette.Actors.Length));
+        Assert.That(runtime.Metrics.Detail, Does.Contain(runtime.Vignette.Actors.Length.ToString()));
         Assert.That(driver.LastTargetCount, Is.GreaterThan(0));
     }
 

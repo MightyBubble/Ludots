@@ -4,7 +4,9 @@
   "title": "出门办事再回来",
   "beat": "走到驿站办完事再回到原点，像叫了一声子程序。",
   "detailTemplate": "出门办事再回来。人在{place}。",
-  "assertDetailContains": ["回来"],
+  "assertDetailContains": [
+    "回来"
+  ],
   "featuredNodeId": "call",
   "graphKind": "Script",
   "actors": [

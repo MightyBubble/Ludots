@@ -4,7 +4,9 @@
   "title": "把状态牌翻成面板字",
   "beat": "选中的牌变成玩家能读的字。",
   "detailTemplate": "选中的牌翻成面板字「{token}」。",
-  "assertDetailContains": ["面板"],
+  "assertDetailContains": [
+    "面板"
+  ],
   "featuredNodeId": "lookup",
   "graphKind": "Effect",
   "actors": [

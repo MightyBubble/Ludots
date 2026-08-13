@@ -4,7 +4,9 @@
   "title": "从情境取出出手的人",
   "beat": "情境来源是施法者。",
   "detailTemplate": "从情境取出出手的人，就是施法者。",
-  "assertDetailContains": ["出手的人"],
+  "assertDetailContains": [
+    "出手的人"
+  ],
   "featuredNodeId": "src",
   "graphKind": "Effect",
   "actors": [

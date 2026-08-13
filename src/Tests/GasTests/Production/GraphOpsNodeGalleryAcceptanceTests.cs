@@ -10,6 +10,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 [TestFixture]
+[NonParallelizable]
 [Category("ci-gate")]
 public sealed class GraphOpsNodeGalleryAcceptanceTests
 {
@@ -113,6 +114,34 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
         }
 
         Assert.That(missing, Is.Empty, "Per-op galleries incomplete:\n" + string.Join("\n", missing));
+    }
+
+    [Test]
+    public void GeneratedMaps_SpawnEveryVignetteActor()
+    {
+        string assets = GraphOpsNodeGalleryRuntime.ResolveAssetsRoot();
+        string vignetteDir = Path.Combine(assets, "Vignettes");
+        string mapsDir = Path.Combine(assets, "Maps");
+        foreach (string file in Directory.GetFiles(vignetteDir, "*.json"))
+        {
+            string op = Path.GetFileNameWithoutExtension(file);
+            GraphOpsNodeVignette vignette = GraphOpsNodeVignetteLoader.Load(assets, op);
+            string mapPath = Path.Combine(mapsDir, GraphOpsNodeIds.MapId(op) + ".json");
+            Assert.That(File.Exists(mapPath), Is.True, op);
+            using JsonDocument map = JsonDocument.Parse(File.ReadAllText(mapPath));
+            JsonElement entities = map.RootElement.GetProperty("Entities");
+            Assert.That(entities.GetArrayLength(), Is.EqualTo(vignette.Actors.Length), op);
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (JsonElement entity in entities.EnumerateArray())
+            {
+                ids.Add(entity.GetProperty("InstanceId").GetString()!);
+            }
+
+            foreach (GraphOpsNodeActor actor in vignette.Actors)
+            {
+                Assert.That(ids, Does.Contain(actor.Id), $"{op} map missing {actor.Id}");
+            }
+        }
     }
 
     private static void AssertBannedPlayerCopy(string detail)

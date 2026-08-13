@@ -4,7 +4,9 @@
   "title": "好感再加一截",
   "beat": "好感从 40 加到 70，条往上涨。",
   "detailTemplate": "好感再加一截，写成{loyalty}。",
-  "assertDetailContains": ["再加"],
+  "assertDetailContains": [
+    "再加"
+  ],
   "featuredNodeId": "addMetric",
   "graphKind": "Effect",
   "actors": [

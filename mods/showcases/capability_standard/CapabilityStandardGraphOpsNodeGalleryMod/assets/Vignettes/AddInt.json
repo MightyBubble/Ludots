@@ -4,7 +4,9 @@
   "title": "连击数加一",
   "beat": "连击从 2 加到 3，字幕报连击。",
   "detailTemplate": "连击从 2 加到 {combo}。",
-  "assertDetailContains": ["连击"],
+  "assertDetailContains": [
+    "连击"
+  ],
   "featuredNodeId": "comboAdd",
   "graphKind": "Effect",
   "actors": [

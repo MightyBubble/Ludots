@@ -1,0 +1,110 @@
+{
+  "actors": [
+    {
+      "id": "self",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "自己",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "friend1",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友1",
+      "x": -4.3,
+      "y": 3.9,
+      "health": 85,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "friend2",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友2",
+      "x": -1.9,
+      "y": 4.1,
+      "health": 62,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "friend3",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友3",
+      "x": 1.1,
+      "y": 4.1,
+      "health": 48,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "friend4",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友4",
+      "x": 3.8,
+      "y": 3.9,
+      "health": 35,
+      "healthMax": 100,
+      "team": 1
+    }
+  ],
+  "collections": [],
+  "links": [
+    {
+      "from": "self",
+      "to": "friend1",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 85,
+      "flags": [
+        "Trusted"
+      ]
+    },
+    {
+      "from": "self",
+      "to": "friend2",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 62,
+      "flags": [
+        "Trusted"
+      ]
+    },
+    {
+      "from": "self",
+      "to": "friend3",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 48
+    },
+    {
+      "from": "self",
+      "to": "friend4",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 35
+    },
+    {
+      "from": "friend2",
+      "to": "self",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 70
+    },
+    {
+      "from": "friend3",
+      "to": "self",
+      "type": "SocialBond",
+      "metric": "Loyalty",
+      "metricValue": 55
+    }
+  ]
+}

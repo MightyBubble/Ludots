@@ -4,7 +4,9 @@
   "title": "减益翻成正数",
   "beat": "减益 -8 翻成 +8 再打出去。",
   "detailTemplate": "减益翻成正数后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["翻成"],
+  "assertDetailContains": [
+    "翻成"
+  ],
   "featuredNodeId": "negMod",
   "graphKind": "Effect",
   "actors": [

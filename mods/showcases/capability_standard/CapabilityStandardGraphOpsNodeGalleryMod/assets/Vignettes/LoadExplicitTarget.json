@@ -4,7 +4,10 @@
   "title": "锁定点名目标",
   "beat": "点到谁就打谁，血条在被点名的红块上掉。",
   "detailTemplate": "点名到木桩，准备出手。",
-  "assertDetailContains": ["点名到木桩", "准备出手"],
+  "assertDetailContains": [
+    "点名到木桩",
+    "准备出手"
+  ],
   "featuredNodeId": "loadTarget",
   "graphKind": "Effect",
   "actors": [

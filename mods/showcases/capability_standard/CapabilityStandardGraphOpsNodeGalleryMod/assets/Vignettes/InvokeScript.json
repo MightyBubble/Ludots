@@ -4,7 +4,9 @@
   "title": "把定数管线跑一遍",
   "beat": "叫另一张图来算出 7。",
   "detailTemplate": "把定数跑完了，得到七。结果是 {result}。",
-  "assertDetailContains": ["七"],
+  "assertDetailContains": [
+    "七"
+  ],
   "featuredNodeId": "invoke",
   "graphKind": "Script",
   "actors": [

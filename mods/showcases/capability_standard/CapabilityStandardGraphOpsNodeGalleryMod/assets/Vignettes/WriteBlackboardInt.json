@@ -4,7 +4,9 @@
   "title": "把层数写到记事板",
   "beat": "记下 4 层。",
   "detailTemplate": "层数写上 {result}。",
-  "assertDetailContains": ["层数写"],
+  "assertDetailContains": [
+    "层数写"
+  ],
   "featuredNodeId": "writeI",
   "graphKind": "Effect",
   "actors": [

@@ -1,9 +1,17 @@
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Association;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Knowledge;
+using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.TagDisplay;
+using Ludots.Core.Spatial;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
@@ -25,10 +33,32 @@ public sealed class GraphOpsNodeDriverContext
     public required GasGraphRuntimeApi Api { get; init; }
     public required GraphShowcaseMetrics Metrics { get; init; }
     public GraphOpsStageVisuals? Stage { get; set; }
+    public EffectRequestQueue? EffectRequests { get; set; }
+    public RelationshipRuntime? Relationships { get; set; }
+    public RelationshipTypeRegistry? RelationshipTypes { get; set; }
+    public RelationshipMetricRegistry? RelationshipMetrics { get; set; }
+    public RelationshipFlagRegistry? RelationshipFlags { get; set; }
+    public EntityCollectionStore? Collections { get; set; }
+    public TagOps? TagOps { get; set; }
+    public TagDisplayTableRegistry? TagDisplay { get; set; }
+    public GameplayEventBus? EventBus { get; set; }
+    public OwnershipResolver? Ownership { get; set; }
+    public KnowledgeProjectionStore? Knowledge { get; set; }
+    public ISpatialCoordinateConverter? Coords { get; set; }
     public Entity Caster { get; set; }
     public Entity Target { get; set; }
     public Entity TargetContext { get; set; }
+    public Entity Viewer { get; set; }
     public IGraphRuntimeApi? RuntimeApiOverride { get; set; }
+    public GraphProgramRegistry? Programs { get; set; }
+    public GraphEventPayload EventPayload { get; set; }
+    public IntVector2 TargetPosCm { get; set; }
+    public bool HasTargetPosCm { get; set; }
+    public Entity[] PrefillTargets { get; set; } = Array.Empty<Entity>();
+    public int PrefillTargetCount { get; set; }
+    public Entity[] HitTargets { get; set; } = new Entity[GraphVmLimits.MaxTargets];
+    public int HitTargetCount { get; set; }
+    public byte[] LastBoolRegisters { get; } = new byte[GraphVmLimits.MaxBoolRegisters];
     public Entity[] SimActors { get; set; } = Array.Empty<Entity>();
     public Entity[] StageProxies { get; set; } = Array.Empty<Entity>();
     public float[] ActorHealth { get; set; } = Array.Empty<float>();
@@ -44,6 +74,24 @@ public sealed class GraphOpsNodeDriverContext
         Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
         var targetList = new GraphTargetList(targets);
+        entities[0] = Caster;
+        entities[1] = Target;
+        entities[2] = Viewer != Entity.Null ? Viewer : TargetContext;
+        if (PrefillTargetCount > 0)
+        {
+            if (PrefillTargetCount > targets.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Gallery '{Vignette.Op}' prefilled {PrefillTargetCount} targets, max {targets.Length}.");
+            }
+
+            for (int i = 0; i < PrefillTargetCount; i++)
+            {
+                targets[i] = PrefillTargets[i];
+            }
+
+            targetList.SetCount(PrefillTargetCount);
+        }
 
         var state = new GraphExecutionState
         {
@@ -51,7 +99,11 @@ public sealed class GraphOpsNodeDriverContext
             Caster = Caster,
             ExplicitTarget = Target,
             TargetContext = TargetContext,
+            Viewer = Viewer,
+            EventPayload = EventPayload,
+            TargetPosCm = HasTargetPosCm ? TargetPosCm : default,
             Api = RuntimeApiOverride ?? Api,
+            Programs = Programs,
             F = floats,
             I = ints,
             B = bools,
@@ -70,6 +122,19 @@ public sealed class GraphOpsNodeDriverContext
                 $"Featured graph for {Vignette.Op} ended with status {state.Status}.");
         }
 
+        HitTargetCount = state.TargetList.Count;
+        ReadOnlySpan<Entity> hits = state.TargetList.Span;
+        for (int i = 0; i < HitTargetCount; i++)
+        {
+            HitTargets[i] = hits[i];
+        }
+
+        for (int i = 0; i < LastBoolRegisters.Length; i++)
+        {
+            LastBoolRegisters[i] = bools[i];
+        }
+
+        TargetPosCm = state.TargetPosCm;
         return new GraphOpsNodeExecuteResult(
             floats[FeaturedDest],
             ints[FeaturedDest],

@@ -4,29 +4,10 @@
   "title": "没有阵亡标记的人",
   "beat": "死掉的被滤掉。",
   "detailTemplate": "没阵亡标记的还剩{count}人。",
-  "assertDetailContains": ["没阵亡"],
+  "assertDetailContains": [
+    "没阵亡"
+  ],
   "featuredNodeId": "tagNone",
   "graphKind": "Query",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "指挥",
-      "x": 0,
-      "y": -2.2,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "soldier",
-      "role": "soldier",
-      "template": "Unit.Soldier",
-      "name": "士兵",
-      "x": -2.5,
-      "y": 1.2,
-      "health": 90,
-      "healthMax": 150
-    }
-  ]
+  "field": "query"
 }

@@ -4,7 +4,9 @@
   "title": "从配置读出要放的效果",
   "beat": "配置指着某效果再打出去。",
   "detailTemplate": "从配置读出要放的效果，木桩挨了一下。",
-  "assertDetailContains": ["要放的效果"],
+  "assertDetailContains": [
+    "要放的效果"
+  ],
   "featuredNodeId": "cfgFx",
   "graphKind": "Effect",
   "actors": [

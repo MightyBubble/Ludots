@@ -4,7 +4,9 @@
   "title": "这一刀带随机抖动",
   "beat": "每次抖动不一样，血条每次掉的数不完全相同。",
   "detailTemplate": "这一刀随机抖动是 {result}。",
-  "assertDetailContains": ["随机"],
+  "assertDetailContains": [
+    "随机"
+  ],
   "featuredNodeId": "variance",
   "graphKind": "Effect",
   "actors": [

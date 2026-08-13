@@ -4,7 +4,9 @@
   "title": "血量够不够打全力",
   "beat": "木桩血低于 80 就打全力，否则轻击。",
   "detailTemplate": "木桩血量偏低，这一刀打{style}。",
-  "assertDetailContains": ["全力"],
+  "assertDetailContains": [
+    "全力"
+  ],
   "featuredNodeId": "canFull",
   "graphKind": "Effect",
   "actors": [

@@ -4,7 +4,9 @@
   "title": "看自己还剩多少血",
   "beat": "不靠情境，施法者读自己生命，字幕报出。",
   "detailTemplate": "自己还剩 {hp} 点血。",
-  "assertDetailContains": ["自己"],
+  "assertDetailContains": [
+    "自己"
+  ],
   "featuredNodeId": "selfHp",
   "graphKind": "Effect",
   "actors": [

@@ -4,7 +4,9 @@
   "title": "距离把伤害削掉一截",
   "beat": "走远了，50 点里被削掉 12 点，血条按剩下的数掉。",
   "detailTemplate": "走远之后被削掉一截，这一刀剩下 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["削掉"],
+  "assertDetailContains": [
+    "削掉"
+  ],
   "featuredNodeId": "decay",
   "graphKind": "Effect",
   "actors": [

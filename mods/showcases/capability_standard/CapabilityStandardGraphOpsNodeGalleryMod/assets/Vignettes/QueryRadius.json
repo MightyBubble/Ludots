@@ -4,7 +4,9 @@
   "title": "摸一圈看看谁在近处",
   "beat": "施法者周围一圈亮起来，圈外的人不动。",
   "detailTemplate": "施法者周围一圈亮起来，摸到{count}个近处的人，圈外的人不动。",
-  "assertDetailContains": ["近处"],
+  "assertDetailContains": [
+    "近处"
+  ],
   "featuredNodeId": "radius",
   "graphKind": "Query",
   "actors": [

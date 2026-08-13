@@ -3,12 +3,8 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Placement;
-using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
@@ -17,7 +13,6 @@ using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.MultiLayerGraph;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.DebugDraw;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
@@ -26,8 +21,8 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 {
     public const string DamageDealtTag = "Event.DamageDealt";
     public const string DispatchStubEffect = "Effect.GraphOp.DispatchStub";
-    public const string DispatchPreset = "TargetToResolved";
-    public const string SnapCollectionKey = "showcase.graph_op.snap";
+    public const string DispatchPreset = GraphOpsNodeGalleryHost.TargetToResolvedPreset;
+    public const string SnapCollectionKey = GraphOpsNodeGalleryHost.SnapCollectionKey;
 
     private const float RangeCm = 500f;
     private const float SnapRadiusCm = 200f;
@@ -36,12 +31,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
     private const float HitMagnitude = 18f;
 
     private bool _seeded;
-    private KnowledgeProjectionStore? _knowledge;
-    private GasGraphRuntimeApi? _eventApi;
-    private GameplayEventBus? _eventBus;
-    private EffectRequestQueue? _effectRequests;
     private Entity _viewer;
-    private IntVector2 _seedTargetPosCm;
     private int _dispatchTemplateId;
     private bool _overlayArmed;
     private float _overlayRangeMeters;
@@ -50,33 +40,50 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
-        if (!_seeded)
+        GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        if (ctx.EventBus == null || ctx.EffectRequests == null || ctx.Ownership == null || ctx.Knowledge == null)
         {
-            SeedSimulation(ctx);
-            _seeded = true;
+            throw new InvalidOperationException($"Event gallery '{ctx.Vignette.Op}' requires host event/ownership/knowledge services.");
         }
 
-        SpawnStage(ctx);
+        TagRegistry.Register(DamageDealtTag);
+        _dispatchTemplateId = EffectTemplateIdRegistry.Register(DispatchStubEffect);
+        ctx.Api.BindLoadedGraphRuntime(BuildNavGraph());
+        BindViewer(ctx);
+        SeedOwnershipAndKnowledge(ctx);
+        ctx.TargetPosCm = SeedTargetPos(ctx);
+        ctx.HasTargetPosCm = true;
+        ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
+        PrefillFanOut(ctx);
+        _overlayRangeMeters = OverlayRangeMeters(ctx.Vignette.Op);
+        ctx.Metrics.AgentCount = ctx.SimActors.Length;
+        ctx.Metrics.Detail = ctx.Vignette.Beat;
+        _seeded = true;
+        GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
-        if (_eventApi == null || _eventBus == null || _effectRequests == null)
+        if (!_seeded || ctx.EventBus == null || ctx.EffectRequests == null)
         {
             throw new InvalidOperationException($"Event driver for {ctx.Vignette.Op} was not seeded.");
         }
 
-        _effectRequests.Clear();
-        GraphOpsNodeExecuteResult result = ExecuteEventGraph(ctx);
+        ctx.EffectRequests.Clear();
+        ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
+        GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
+        ctx.EventBus.Update();
+        _aimX = ctx.TargetPosCm.X;
+        _aimY = ctx.TargetPosCm.Y;
         ApplyBeat(ctx, result);
-        ctx.Metrics.Detail = FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+        ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
         GraphOpsNodeVignetteLoader.RejectBannedCaption(ctx.Metrics.Detail, ctx.Vignette.Op, "detail");
-        SyncStage(ctx);
+        GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        int caster = FindRole(ctx, "caster");
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         if (caster < 0)
         {
             return;
@@ -116,7 +123,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 GraphShowcaseStagePresenter.PathColor);
         }
 
-        int target = FindRole(ctx, "target");
+        int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (target >= 0)
         {
             GraphShowcaseStagePresenter.DrawAggroLine(
@@ -128,87 +135,27 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    private void SeedSimulation(GraphOpsNodeDriverContext ctx)
+    private void BindViewer(GraphOpsNodeDriverContext ctx)
     {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.SimActors = new Entity[actors.Length];
-        ctx.ActorHealth = new float[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            var position = WorldPositionCm.FromCmFloat(actor.X * 100f, actor.Y * 100f);
-            Entity entity = string.Equals(actor.Role, "caster", StringComparison.Ordinal)
-                ? ctx.SimWorld.Create(new PlayerIdentity { PlayerId = 1 }, position)
-                : ctx.SimWorld.Create(position);
-            ctx.SimActors[i] = entity;
-            ctx.ActorHealth[i] = actor.Health;
-            if (string.Equals(actor.Role, "caster", StringComparison.Ordinal))
-            {
-                ctx.Caster = entity;
-            }
-            else if (string.Equals(actor.Role, "target", StringComparison.Ordinal) && ctx.Target == Entity.Null)
-            {
-                ctx.Target = entity;
-            }
-        }
-
-        if (ctx.Caster == Entity.Null)
-        {
-            throw new InvalidOperationException($"Event vignette {ctx.Vignette.Op} requires a caster actor.");
-        }
-
         _viewer = ctx.SimActors[0];
-        int viewerRole = FindRole(ctx, "viewer");
+        int viewerRole = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "viewer");
         if (viewerRole >= 0)
         {
             _viewer = ctx.SimActors[viewerRole];
         }
 
-        TagRegistry.Register(DamageDealtTag);
-        _dispatchTemplateId = EffectTemplateIdRegistry.Register(DispatchStubEffect);
-
-        TargetDispatchPresetRegistry presets = GraphOpsNodeGallerySymbolResolver.DispatchPresets;
-        EntityCollectionStore collections = GraphOpsNodeGallerySymbolResolver.Collections;
-        _ = collections.KeyRegistry.Register(SnapCollectionKey);
-        _eventBus = new GameplayEventBus();
-        _effectRequests = new EffectRequestQueue();
-
-        var types = new RelationshipTypeRegistry();
-        int ownsType = types.Register("Owns");
-        int controlsType = types.Register("Controls");
-        var relationships = new RelationshipRuntime(
-            ctx.SimWorld,
-            types,
-            new RelationshipMetricRegistry(),
-            new RelationshipFlagRegistry(),
-            new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer(capacity: 16),
-            new RelationshipReverseIndex(ctx.SimWorld));
-        var ownership = new OwnershipResolver(relationships, ownsType);
-        var controlDomains = new ControlDomainQuery(ctx.SimWorld, relationships, ownership, ownsType, controlsType);
-        _knowledge = new KnowledgeProjectionStore();
-        var knowledgeResolver = new KnowledgeProjectionResolver(_knowledge);
-
-        _eventApi = new GasGraphRuntimeApi(
-            ctx.SimWorld,
-            spatialQueries: null,
-            coords: null,
-            eventBus: _eventBus,
-            effectRequests: _effectRequests,
-            relationshipRuntime: relationships,
-            targetDispatchPresets: presets,
-            entityCollections: collections);
-        _eventApi.BindTopologyServices(controlDomains, knowledgeResolver, new DiscreteClock());
-        _eventApi.BindLoadedGraphRuntime(BuildNavGraph());
-
-        int targetRole = FindRole(ctx, "target");
+        ctx.Viewer = _viewer;
+        int targetRole = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (targetRole >= 0)
         {
             ctx.Target = ctx.SimActors[targetRole];
             ctx.TargetContext = ctx.Target;
         }
+    }
 
-        var snapMembers = new List<Entity>();
+    private void SeedOwnershipAndKnowledge(GraphOpsNodeDriverContext ctx)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
         for (int i = 0; i < actors.Length; i++)
         {
             Entity entity = ctx.SimActors[i];
@@ -217,102 +164,48 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 continue;
             }
 
-            ownership.EnsureOwnership(ctx.Caster, entity);
-            _knowledge.Upsert(_viewer, entity, CreateDisclosure(_viewer));
-            snapMembers.Add(entity);
+            ctx.Ownership!.EnsureOwnership(ctx.Caster, entity);
+            ctx.Knowledge!.Upsert(_viewer, entity, CreateDisclosure(_viewer));
         }
 
         if (ctx.Target != Entity.Null && ctx.Target != _viewer)
         {
-            _knowledge.Upsert(_viewer, ctx.Target, CreateDisclosure(_viewer));
+            ctx.Knowledge!.Upsert(_viewer, ctx.Target, CreateDisclosure(_viewer));
         }
-
-        if (snapMembers.Count > 0)
-        {
-            collections.Replace(
-                ctx.Caster,
-                EntityCollectionDescriptor.Create(
-                    SnapCollectionKey,
-                    EntityCollectionSourceKind.Debug,
-                    EntityCollectionRoleKind.Debug),
-                snapMembers.ToArray());
-        }
-
-        _seedTargetPosCm = SeedTargetPos(ctx);
-        _overlayRangeMeters = OverlayRangeMeters(ctx.Vignette.Op);
-        ctx.Metrics.AgentCount = actors.Length;
-        ctx.Metrics.Detail = ctx.Vignette.Beat;
     }
 
-    private GraphOpsNodeExecuteResult ExecuteEventGraph(GraphOpsNodeDriverContext ctx)
+    private void PrefillFanOut(GraphOpsNodeDriverContext ctx)
     {
-        Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
-        Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
-        Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
-        Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
-        Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-        Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
-        var targetList = new GraphTargetList(targets);
-        int targetCount = FillFanOutTargets(ctx, targets);
-        targetList.SetCount(targetCount);
-        entities[0] = ctx.Caster;
-        entities[1] = ctx.Target;
-        entities[2] = _viewer;
-
-        var state = new GraphExecutionState
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        var targets = new List<Entity>();
+        for (int i = 0; i < actors.Length; i++)
         {
-            World = ctx.SimWorld,
-            Caster = ctx.Caster,
-            ExplicitTarget = ctx.Target,
-            TargetContext = ctx.Target,
-            Viewer = _viewer,
-            EventPayload = BuildPayload(ctx.Vignette.Op),
-            TargetPosCm = _seedTargetPosCm,
-            Api = _eventApi!,
-            F = floats,
-            I = ints,
-            B = bools,
-            E = entities,
-            Targets = targets,
-            TargetList = targetList,
-            CallStack = callStack,
-            RandomSeed = (uint)(0xA5A5A5A5u ^ (uint)ctx.Wave),
-            Status = GraphExecutionStatus.Running
-        };
+            if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal) ||
+                string.Equals(actors[i].Role, "viewer", StringComparison.Ordinal))
+            {
+                continue;
+            }
 
-        GasGraphOpHandlerTable.Execute(ref state, ctx.Compiled.Program, GasGraphOpHandlerTable.Instance);
-        if (state.Status != GraphExecutionStatus.Halted)
-        {
-            throw new InvalidOperationException(
-                $"Featured graph for {ctx.Vignette.Op} ended with status {state.Status}.");
+            targets.Add(ctx.SimActors[i]);
         }
 
-        _eventBus!.Update();
-        _aimX = state.TargetPosCm.X;
-        _aimY = state.TargetPosCm.Y;
-        byte dest = ctx.FeaturedDest;
-        GraphInstruction featured = FindFeaturedInstruction(ctx);
-        return new GraphOpsNodeExecuteResult(
-            floats[dest],
-            ints[dest],
-            ReadFeaturedBool(ctx.Vignette.Op, featured, bools, dest),
-            entities[dest],
-            state.ReturnInt,
-            targetList.Count);
+        ctx.PrefillTargets = targets.ToArray();
+        ctx.PrefillTargetCount = targets.Count;
     }
 
     private void ApplyBeat(GraphOpsNodeDriverContext ctx, GraphOpsNodeExecuteResult result)
     {
         string op = ctx.Vignette.Op;
-        int targetIndex = FindRole(ctx, "target");
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         ctx.CaptionValues.Clear();
+        bool featuredBool = ReadFeaturedBool(ctx);
 
         switch (op)
         {
             case "FanOutDispatchEffect":
                 RequireDispatchTargets(ctx, result.TargetCount);
-                RequireDispatched();
+                RequireDispatched(ctx);
                 HurtNonCasters(ctx, HitMagnitude);
                 ctx.CaptionValues["result"] = "派给";
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
@@ -320,14 +213,14 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 break;
             case "FanOutDispatchEffectDynamic":
                 RequireDispatchTargets(ctx, result.TargetCount);
-                RequireDispatched();
+                RequireDispatched(ctx);
                 HurtNonCasters(ctx, HitMagnitude);
                 ctx.CaptionValues["result"] = "读出来再派";
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 _overlayArmed = true;
                 break;
             case "SendEvent":
-                if (_eventBus!.Events.Count <= 0)
+                if (ctx.EventBus!.Events.Count <= 0)
                 {
                     throw new InvalidOperationException("SendEvent gallery must broadcast; event bus stayed empty.");
                 }
@@ -361,13 +254,13 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 _overlayArmed = true;
                 break;
             case "SnapToNearestInCollection":
-                RequireSnapSucceeded(ctx, featuredSuccess: result.BoolValue, phrase: "吸到");
+                RequireSnapSucceeded(ctx, featuredBool, "吸到");
                 MoveMarker(ctx, _aimX / 100f, _aimY / 100f);
                 ctx.CaptionValues["result"] = "吸到";
                 _overlayArmed = true;
                 break;
             case "SnapToNearestGraphEdge":
-                RequireSnapSucceeded(ctx, featuredSuccess: result.BoolValue, phrase: "路边");
+                RequireSnapSucceeded(ctx, featuredBool, "路边");
                 MoveMarker(ctx, _aimX / 100f, _aimY / 100f);
                 ctx.CaptionValues["result"] = "路边";
                 _overlayArmed = true;
@@ -456,7 +349,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 
     private static IntVector2 ActorPosCm(GraphOpsNodeDriverContext ctx, string role)
     {
-        int index = FindRole(ctx, role);
+        int index = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, role);
         if (index < 0)
         {
             throw new InvalidOperationException($"Event vignette {ctx.Vignette.Op} missing '{role}' actor.");
@@ -471,9 +364,9 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         return op is "FanOutDispatchEffect" or "FanOutDispatchEffectDynamic" ? 2.6f : RangeCm / 100f;
     }
 
-    private void RequireDispatched()
+    private static void RequireDispatched(GraphOpsNodeDriverContext ctx)
     {
-        if (_effectRequests!.Count <= 0)
+        if (ctx.EffectRequests!.Count <= 0)
         {
             throw new InvalidOperationException("Fan-out gallery dispatched 0 effect requests.");
         }
@@ -511,23 +404,20 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    private static bool ReadFeaturedBool(
-        string op,
-        in GraphInstruction featured,
-        Span<byte> bools,
-        byte dest)
+    private static bool ReadFeaturedBool(GraphOpsNodeDriverContext ctx)
     {
-        if (op == "SnapToNearestInCollection")
+        if (ctx.Vignette.Op != "SnapToNearestInCollection")
         {
-            if (featured.Flags == byte.MaxValue)
-            {
-                return false;
-            }
-
-            return bools[featured.Flags] != 0;
+            return ctx.LastBoolRegisters[ctx.FeaturedDest] != 0;
         }
 
-        return bools[dest] != 0;
+        GraphInstruction featured = FindFeaturedInstruction(ctx);
+        if (featured.Flags == byte.MaxValue)
+        {
+            return false;
+        }
+
+        return ctx.LastBoolRegisters[featured.Flags] != 0;
     }
 
     private static GraphInstruction FindFeaturedInstruction(GraphOpsNodeDriverContext ctx)
@@ -557,24 +447,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             $"Compiled graph for {ctx.Vignette.Op} is missing featured node '{ctx.Vignette.FeaturedNodeId}'.");
     }
 
-    private static int FillFanOutTargets(GraphOpsNodeDriverContext ctx, Span<Entity> targets)
-    {
-        int count = 0;
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length && count < targets.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal) ||
-                string.Equals(actors[i].Role, "viewer", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            targets[count++] = ctx.SimActors[i];
-        }
-
-        return count;
-    }
-
     private static void HurtNonCasters(GraphOpsNodeDriverContext ctx, float amount)
     {
         GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
@@ -598,12 +470,18 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 
         float opening = ctx.Vignette.Actors[targetIndex].Health;
         float next = ctx.ActorHealth[targetIndex] - amount;
-        ctx.ActorHealth[targetIndex] = next <= 0f ? opening : next;
+        next = next <= 0f ? opening : next;
+        GraphOpsNodeActorBinding.WriteHealth(
+            ctx.SimWorld,
+            ctx.SimActors[targetIndex],
+            next,
+            ctx.Vignette.Actors[targetIndex].HealthMax);
+        ctx.ActorHealth[targetIndex] = next;
     }
 
     private static void MoveMarker(GraphOpsNodeDriverContext ctx, float x, float y)
     {
-        int target = FindRole(ctx, "target");
+        int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (target < 0)
         {
             return;
@@ -644,72 +522,5 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             expiryTick: int.MaxValue,
             confidencePermille: 1000,
             revision: 0);
-    }
-
-    private static string FormatDetail(string template, Dictionary<string, string> values)
-    {
-        string text = template;
-        foreach (KeyValuePair<string, string> pair in values)
-        {
-            text = text.Replace("{" + pair.Key + "}", pair.Value, StringComparison.Ordinal);
-        }
-
-        if (text.Contains('{', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Detail template still has unsubstituted placeholders: {text}");
-        }
-
-        return text;
-    }
-
-    private static int FindRole(GraphOpsNodeDriverContext ctx, string role)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, role, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void SpawnStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
-        {
-            return;
-        }
-
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.StageProxies = new Entity[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            ctx.StageProxies[i] = ctx.Stage.Spawn(
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax);
-        }
-    }
-
-    private static void SyncStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < ctx.StageProxies.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax);
-        }
     }
 }

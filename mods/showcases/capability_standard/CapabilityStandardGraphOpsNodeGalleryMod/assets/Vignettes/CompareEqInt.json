@@ -4,7 +4,9 @@
   "title": "层数有没有叠满",
   "beat": "当前 3 层对比满层 3，叠满就爆。",
   "detailTemplate": "层数已经叠满，这一刀会爆。",
-  "assertDetailContains": ["叠满"],
+  "assertDetailContains": [
+    "叠满"
+  ],
   "featuredNodeId": "stacked",
   "graphKind": "Effect",
   "actors": [

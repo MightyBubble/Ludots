@@ -3,9 +3,6 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.GraphRuntime;
-using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.DebugDraw;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
@@ -14,88 +11,60 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
 {
     public const string MarkEffectId = "Effect.GraphOpsAttr.Mark";
 
-    private GasGraphRuntimeApi? _api;
-    private EffectRequestQueue? _requests;
-    private int _healthAttrId;
     private int _markTemplateId;
     private Entity _seededMark;
 
-    public int PendingEffectRequests => _requests?.Count ?? 0;
+    public int PendingEffectRequests => ctxRequests?.Count ?? 0;
+    private EffectRequestQueue? ctxRequests;
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
-        EnsureRuntime(ctx);
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        if (ctx.SimActors.Length == 0)
-        {
-            ctx.SimActors = new Entity[actors.Length];
-            ctx.ActorHealth = new float[actors.Length];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                Entity entity = CreateSimActor(ctx, actors[i]);
-                ctx.SimActors[i] = entity;
-                ctx.ActorHealth[i] = actors[i].Health;
-                if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal))
-                {
-                    ctx.Caster = entity;
-                }
-                else if (string.Equals(actors[i].Role, "target", StringComparison.Ordinal))
-                {
-                    ctx.Target = entity;
-                }
-            }
-
-            if (ctx.Caster == Entity.Null)
-            {
-                throw new InvalidOperationException($"Attr vignette {ctx.Vignette.Op} requires a caster actor.");
-            }
-
-            ctx.Metrics.AgentCount = actors.Length;
-            ctx.Metrics.Detail = ctx.Vignette.Beat;
-        }
-
+        GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        _markTemplateId = EffectTemplateIdRegistry.Register(MarkEffectId);
+        ctxRequests = ctx.EffectRequests
+            ?? throw new InvalidOperationException($"Attr gallery '{ctx.Vignette.Op}' requires EffectRequestQueue.");
         if (string.Equals(ctx.Vignette.Op, "RemoveEffectTemplate", StringComparison.Ordinal))
         {
             EnsureMarkOnTarget(ctx);
         }
 
-        SpawnStage(ctx);
+        GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
-        if (_api == null || _requests == null)
+        if (ctx.EffectRequests == null)
         {
             throw new InvalidOperationException(
-                $"AttrNodeDriver requires GasGraphRuntimeApi with EffectRequestQueue before Tick. Op={ctx.Vignette.Op}");
+                $"AttrNodeDriver requires EffectRequestQueue before Tick. Op={ctx.Vignette.Op}");
         }
 
-        WriteVignetteHealth(ctx);
+        ctxRequests = ctx.EffectRequests;
         if (string.Equals(ctx.Vignette.Op, "RemoveEffectTemplate", StringComparison.Ordinal))
         {
             EnsureMarkOnTarget(ctx);
         }
 
-        _requests.Clear();
-        int casterIndex = FindRole(ctx, "caster");
-        int targetIndex = FindRole(ctx, "target");
+        ctx.EffectRequests.Clear();
+        int casterIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float targetBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         float casterBefore = casterIndex >= 0 ? ctx.ActorHealth[casterIndex] : 0f;
-        GraphOpsNodeExecuteResult result = ExecuteFeatured(ctx);
-        SyncActorHealth(ctx);
+        GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
 
         float targetAfter = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         float casterAfter = casterIndex >= 0 ? ctx.ActorHealth[casterIndex] : 0f;
         FillCaptions(ctx, result, targetBefore, targetAfter, casterBefore, casterAfter);
-        ctx.Metrics.Detail = FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+        ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
         FailClose(ctx, result, targetBefore, targetAfter, casterBefore, casterAfter);
-        SyncStage(ctx);
+        GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        int caster = FindRole(ctx, "caster");
-        int target = FindRole(ctx, "target");
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (caster < 0 || target < 0)
         {
             return;
@@ -107,62 +76,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             ctx.Vignette.Actors[caster].Y,
             ctx.Vignette.Actors[target].X,
             ctx.Vignette.Actors[target].Y);
-    }
-
-    private void EnsureRuntime(GraphOpsNodeDriverContext ctx)
-    {
-        _healthAttrId = AttributeRegistry.Register("Health");
-        _markTemplateId = EffectTemplateIdRegistry.Register(MarkEffectId);
-        if (_api != null)
-        {
-            return;
-        }
-
-        _requests = new EffectRequestQueue();
-        var tagOps = new TagOps(
-            new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
-            new TagRuleRegistry());
-        _api = new GasGraphRuntimeApi(
-            ctx.SimWorld,
-            spatialQueries: null,
-            coords: null,
-            eventBus: null,
-            effectRequests: _requests,
-            tagOps: tagOps);
-    }
-
-    private Entity CreateSimActor(GraphOpsNodeDriverContext ctx, GraphOpsNodeActor actor)
-    {
-        Entity entity = string.Equals(actor.Role, "target", StringComparison.Ordinal)
-            ? ctx.SimWorld.Create(new AttributeBuffer(), new DirtyFlags(), new ActiveEffectContainer())
-            : ctx.SimWorld.Create(new AttributeBuffer(), new DirtyFlags());
-        WriteHealth(ctx.SimWorld, entity, actor.Health, actor.HealthMax);
-        return entity;
-    }
-
-    private void WriteVignetteHealth(GraphOpsNodeDriverContext ctx)
-    {
-        for (int i = 0; i < ctx.SimActors.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            WriteHealth(ctx.SimWorld, ctx.SimActors[i], actor.Health, actor.HealthMax);
-            ctx.ActorHealth[i] = actor.Health;
-        }
-    }
-
-    private void WriteHealth(World world, Entity entity, float health, float healthMax)
-    {
-        ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(_healthAttrId, healthMax);
-        attrs.SetCurrent(_healthAttrId, health);
-    }
-
-    private void SyncActorHealth(GraphOpsNodeDriverContext ctx)
-    {
-        for (int i = 0; i < ctx.SimActors.Length; i++)
-        {
-            ctx.ActorHealth[i] = ctx.SimWorld.Get<AttributeBuffer>(ctx.SimActors[i]).GetCurrent(_healthAttrId);
-        }
     }
 
     private void EnsureMarkOnTarget(GraphOpsNodeDriverContext ctx)
@@ -188,54 +101,16 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 AggregatesModifiers = true
             },
             new EffectTemplateRef { TemplateId = _markTemplateId });
+        if (!ctx.SimWorld.Has<ActiveEffectContainer>(ctx.Target))
+        {
+            ctx.SimWorld.Add(ctx.Target, new ActiveEffectContainer());
+        }
+
         ref ActiveEffectContainer container = ref ctx.SimWorld.Get<ActiveEffectContainer>(ctx.Target);
         if (!container.Add(_seededMark))
         {
             throw new InvalidOperationException("Failed to attach gallery mark effect for RemoveEffectTemplate.");
         }
-    }
-
-    private GraphOpsNodeExecuteResult ExecuteFeatured(GraphOpsNodeDriverContext ctx)
-    {
-        Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
-        Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
-        Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
-        Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
-        Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-        Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
-        var targetList = new GraphTargetList(targets);
-
-        var state = new GraphExecutionState
-        {
-            World = ctx.SimWorld,
-            Caster = ctx.Caster,
-            ExplicitTarget = ctx.Target,
-            Api = _api!,
-            F = floats,
-            I = ints,
-            B = bools,
-            E = entities,
-            Targets = targets,
-            TargetList = targetList,
-            CallStack = callStack,
-            RandomSeed = (uint)(0xA5A5A5A5u ^ (uint)ctx.Wave),
-            Status = GraphExecutionStatus.Running
-        };
-
-        GasGraphOpHandlerTable.Execute(ref state, ctx.Compiled.Program, GasGraphOpHandlerTable.Instance);
-        if (state.Status != GraphExecutionStatus.Halted)
-        {
-            throw new InvalidOperationException(
-                $"Featured graph for {ctx.Vignette.Op} ended with status {state.Status}.");
-        }
-
-        return new GraphOpsNodeExecuteResult(
-            floats[ctx.FeaturedDest],
-            ints[ctx.FeaturedDest],
-            bools[ctx.FeaturedDest] != 0,
-            entities[ctx.FeaturedDest],
-            state.ReturnInt,
-            targetList.Count);
     }
 
     private static void FillCaptions(
@@ -347,72 +222,4 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             }
         }
     }
-
-    private static string FormatDetail(string template, Dictionary<string, string> values)
-    {
-        string text = template;
-        foreach (KeyValuePair<string, string> pair in values)
-        {
-            text = text.Replace("{" + pair.Key + "}", pair.Value, StringComparison.Ordinal);
-        }
-
-        if (text.Contains('{', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Detail template still has unsubstituted placeholders: {text}");
-        }
-
-        return text;
-    }
-
-    private static int FindRole(GraphOpsNodeDriverContext ctx, string role)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, role, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void SpawnStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
-        {
-            return;
-        }
-
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.StageProxies = new Entity[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            ctx.StageProxies[i] = ctx.Stage.Spawn(
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax);
-        }
-    }
-
-    private static void SyncStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < ctx.StageProxies.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax);
-        }
-    }
-
 }

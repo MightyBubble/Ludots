@@ -4,7 +4,9 @@
   "title": "圈里每人挂一层",
   "beat": "圈中单位都被挂上状态，血条或字幕说挂上了。",
   "detailTemplate": "圈里每人挂上一层，血条显示挂上了。",
-  "assertDetailContains": ["每人"],
+  "assertDetailContains": [
+    "每人"
+  ],
   "featuredNodeId": "fanOut",
   "graphKind": "Effect",
   "actors": [

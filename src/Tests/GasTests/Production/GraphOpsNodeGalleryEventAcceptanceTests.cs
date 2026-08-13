@@ -4,6 +4,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production;
 
 [TestFixture]
+[NonParallelizable]
 [Category("ci-gate")]
 public sealed class GraphOpsNodeGalleryEventAcceptanceTests
 {

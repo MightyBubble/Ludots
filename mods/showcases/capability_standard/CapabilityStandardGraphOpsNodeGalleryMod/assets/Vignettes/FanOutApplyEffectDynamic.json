@@ -4,7 +4,9 @@
   "title": "按读到的模板打圈里所有人",
   "beat": "动态模板扇出。",
   "detailTemplate": "按读到的模板打圈里所有人，状态已经挂上了。",
-  "assertDetailContains": ["圈里"],
+  "assertDetailContains": [
+    "圈里"
+  ],
   "featuredNodeId": "fanDyn",
   "graphKind": "Effect",
   "actors": [

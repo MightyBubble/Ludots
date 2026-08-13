@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -10,7 +11,11 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
 public static class GraphOpsNodeGraphCompiler
 {
-    public static GraphControlFlowCompileResult Compile(string assetsRoot, GraphOpsNodeVignette vignette)
+    public static GraphControlFlowCompileResult Compile(
+        string assetsRoot,
+        GraphOpsNodeVignette vignette,
+        IGraphSymbolResolver? symbolResolver = null,
+        EntityCollectionStore? collections = null)
     {
         string opName = GraphOpsNodeIds.RequireOpName(vignette.Op);
         string path = Path.Combine(assetsRoot, "GAS", "graphs", opName + ".json");
@@ -43,11 +48,14 @@ public static class GraphOpsNodeGraphCompiler
         }
 
         GraphProgramPackage package = compiled.Package.Value;
+        IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone();
         GraphProgramSymbolPatcher.Patch(
             package.Symbols,
             package.Program,
-            new GraphOpsNodeGallerySymbolResolver(),
-            GraphOpsNodeGallerySymbolResolver.Collections);
+            resolver,
+            collections);
+
+        GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
 
         GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
         _ = RequireFeaturedDest(compiled, vignette);

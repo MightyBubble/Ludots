@@ -4,7 +4,9 @@
   "title": "从情境取出额外那个人",
   "beat": "情境里还有一个关联目标。",
   "detailTemplate": "从情境取出额外那个人，关联到{named}。",
-  "assertDetailContains": ["关联"],
+  "assertDetailContains": [
+    "关联"
+  ],
   "featuredNodeId": "tgtCtx",
   "graphKind": "Effect",
   "actors": [

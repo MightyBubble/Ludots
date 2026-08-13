@@ -27,27 +27,71 @@ COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
 ACCEPTANCE = "GraphOpsNodeGalleryAcceptanceTests"
 DOCS = "gitbook/architecture/capability-standard-showcases.md"
 
-MAP_JSON = """{
-  "Id": %s,
-  "Tags": [
+MAP_TAGS = [
     "showcase",
     "capability-standard",
     "gas",
     "graph-ops",
-    "per-op"
-  ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "DistanceCm": 2600,
-    "Pitch": 75,
-    "Yaw": 180,
-    "FovYDeg": 50
-  },
-  "Entities": []
-}
-"""
+    "per-op",
+]
+
+
+def merge_field(vignette_dir: Path, vignette: dict) -> dict:
+    field = vignette.get("field")
+    if not field:
+        return vignette
+    path = vignette_dir / "_fields" / f"{field}.json"
+    if not path.is_file():
+        raise SystemExit(f"Vignette field '{field}' missing: {path}")
+    scene = load(path)
+    merged = dict(vignette)
+    if vignette.get("actors"):
+        raise SystemExit(
+            f"Vignette {vignette.get('op')} sets field '{field}' and also actors; field owns the scene."
+        )
+    for key in ("actors", "collections", "links"):
+        if key in scene:
+            merged[key] = scene[key]
+    return merged
+
+
+def actor_to_entity(actor: dict) -> dict:
+    x_cm = int(round(float(actor.get("x", 0)) * 100))
+    y_cm = int(round(float(actor.get("y", 0)) * 100))
+    health = actor.get("health", 100)
+    entity = {
+        "InstanceId": actor["id"],
+        "Template": actor["template"],
+        "Overrides": {
+            "Name": {"Value": actor["name"]},
+            "WorldPositionCm": {"Value": {"X": x_cm, "Y": y_cm}},
+            "AttributeBuffer": {"base": {"Health": health}},
+        },
+    }
+    team = actor.get("team")
+    if team:
+        entity["Overrides"]["Team"] = {"Id": team}
+    return entity
+
+
+def write_map(path: Path, map_id: str, actors: list) -> None:
+    if not actors:
+        raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
+    payload = {
+        "Id": map_id,
+        "Tags": MAP_TAGS,
+        "DefaultCamera": {
+            "VirtualCameraId": "Camera.Profile.Tactical",
+            "TargetXCm": 0,
+            "TargetYCm": 0,
+            "DistanceCm": 2600,
+            "Pitch": 75,
+            "Yaw": 180,
+            "FovYDeg": 50,
+        },
+        "Entities": [actor_to_entity(actor) for actor in actors],
+    }
+    dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -203,12 +247,13 @@ def main() -> int:
 
     for op, vignette in vignettes.items():
         sid = PREFIX + op
-        title = vignette["title"]
-        beat = vignette["beat"]
+        scene = merge_field(vignette_dir, vignette)
+        title = scene["title"]
+        beat = scene["beat"]
         ns = f"CapabilityStandardGraphOp{op}EntryMod"
         entry_path = f"{ENTRY_ROOT_REL}/{ns}"
         map_path = maps_dir / f"{sid}.json"
-        map_path.write_text(MAP_JSON % json.dumps(sid), encoding="utf-8")
+        write_map(map_path, sid, scene.get("actors") or [])
         write_entry_mod(repo, op, title)
 
         upsert_by_key(

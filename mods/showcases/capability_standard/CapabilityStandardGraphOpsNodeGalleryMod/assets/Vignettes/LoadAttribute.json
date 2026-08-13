@@ -4,7 +4,9 @@
   "title": "先看对方还有多少血",
   "beat": "出手前先读木桩当前生命，字幕报出读到的数。",
   "detailTemplate": "木桩还有 {hp} 点血。",
-  "assertDetailContains": ["还有"],
+  "assertDetailContains": [
+    "还有"
+  ],
   "featuredNodeId": "loadHp",
   "graphKind": "Effect",
   "actors": [

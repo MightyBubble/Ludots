@@ -4,7 +4,9 @@
   "title": "把状态卸掉",
   "beat": "先挂上再卸掉，字幕说卸效果。",
   "detailTemplate": "把木桩身上的标记卸掉了。",
-  "assertDetailContains": ["卸"],
+  "assertDetailContains": [
+    "卸"
+  ],
   "featuredNodeId": "remove",
   "graphKind": "Effect",
   "actors": [

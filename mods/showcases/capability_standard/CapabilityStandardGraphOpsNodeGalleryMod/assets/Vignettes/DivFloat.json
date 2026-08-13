@@ -4,7 +4,9 @@
   "title": "按距离摊薄",
   "beat": "同样 40 点伤害，距离翻倍就摊成一半。",
   "detailTemplate": "按距离摊薄后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["摊"],
+  "assertDetailContains": [
+    "摊"
+  ],
   "featuredNodeId": "attenuation",
   "graphKind": "Effect",
   "actors": [

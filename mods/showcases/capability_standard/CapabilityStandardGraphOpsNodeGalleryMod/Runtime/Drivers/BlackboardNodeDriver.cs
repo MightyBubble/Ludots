@@ -18,14 +18,9 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
     public const string PowerKey = "showcase.bb.power";
     public const string StacksKey = "showcase.bb.stacks";
     public const string NamedKey = "showcase.bb.named";
-    public const string ConfigPowerKey = "showcase.config.power";
-    public const string ConfigTierKey = "showcase.config.tier";
-    public const string ConfigChainKey = "showcase.config.chainEffect";
     public const string StrikeEffectId = "Effect.GraphOps.Strike";
     public const float SeedPower = 35f;
     public const int SeedStacks = 4;
-    public const float ConfigPower = 40f;
-    public const int ConfigTier = 2;
     public const float StrikeDamage = 18f;
     public const float MarkHealth = 40f;
 
@@ -34,28 +29,17 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
     private int _powerKey;
     private int _stacksKey;
     private int _namedKey;
+    private bool _seeded;
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        if (ctx.SimActors.Length == 0)
+        GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        if (!_seeded)
         {
-            ctx.SimActors = new Entity[actors.Length];
-            ctx.ActorHealth = new float[actors.Length];
+            GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
             for (int i = 0; i < actors.Length; i++)
             {
-                Entity entity = ctx.SimWorld.Create(
-                    new BlackboardFloatBuffer(),
-                    new BlackboardIntBuffer(),
-                    new BlackboardEntityBuffer());
-                ctx.SimActors[i] = entity;
-                ctx.ActorHealth[i] = actors[i].Health;
-                BindRole(ctx, actors[i].Role, entity);
-            }
-
-            if (ctx.Caster == Entity.Null)
-            {
-                throw new InvalidOperationException($"Blackboard vignette {ctx.Vignette.Op} requires a caster actor.");
+                BindRole(ctx, actors[i].Role, ctx.SimActors[i]);
             }
 
             _powerKey = ConfigKeyRegistry.Register(PowerKey);
@@ -63,20 +47,17 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             _namedKey = ConfigKeyRegistry.Register(NamedKey);
             SeedBlackboard(ctx);
             SeedLifecycle(ctx);
-            BindConfig(ctx);
-            ctx.Metrics.AgentCount = actors.Length;
-            ctx.Metrics.Detail = ctx.Vignette.Beat;
+            _seeded = true;
         }
 
-        SpawnStage(ctx);
+        GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
-        BindConfig(ctx);
         _lifecycleApi?.ResetWave();
 
-        int targetIndex = FindRole(ctx, "target");
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         ApplyVisibleResult(ctx, result, targetIndex);
@@ -86,14 +67,14 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         ctx.CaptionValues["healthBefore"] = healthBefore.ToString("0");
         ctx.CaptionValues["healthAfter"] = healthAfter.ToString("0");
         ctx.CaptionValues["named"] = ResolveNamed(ctx, result);
-        ctx.Metrics.Detail = FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
-        SyncStage(ctx);
+        ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+        GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        int caster = FindRole(ctx, "caster");
-        int target = FindRole(ctx, "target");
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (caster < 0 || target < 0)
         {
             return;
@@ -161,21 +142,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         {
             throw new InvalidOperationException("InvokeBuiltin seed failed to attach the mark effect.");
         }
-    }
-
-    private static void BindConfig(GraphOpsNodeDriverContext ctx)
-    {
-        var config = new EffectConfigParams();
-        if (!config.TryAddFloat(ConfigKeyRegistry.Register(ConfigPowerKey), ConfigPower) ||
-            !config.TryAddInt(ConfigKeyRegistry.Register(ConfigTierKey), ConfigTier) ||
-            !config.TryAddEffectTemplateId(
-                ConfigKeyRegistry.Register(ConfigChainKey),
-                EffectTemplateIdRegistry.Register(StrikeEffectId)))
-        {
-            throw new InvalidOperationException("Blackboard gallery failed to bind effect-template config params.");
-        }
-
-        ctx.Api.SetConfigContext(in config);
     }
 
     private void ApplyVisibleResult(GraphOpsNodeDriverContext ctx, GraphOpsNodeExecuteResult result, int targetIndex)
@@ -271,7 +237,7 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("InvokeBuiltin ClearActiveEffects left the mark effect alive.");
                 }
 
-                int markIndex = FindRole(ctx, "mark");
+                int markIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "mark");
                 if (markIndex >= 0)
                 {
                     ctx.ActorHealth[markIndex] = 0f;
@@ -301,7 +267,7 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             named = ctx.TargetContext != Entity.Null ? ctx.TargetContext : ctx.Target;
         }
 
-        int index = IndexOfEntity(ctx, named);
+        int index = GraphOpsNodeActorBinding.IndexOf(ctx, named);
         return index >= 0 ? ctx.Vignette.Actors[index].Name : "木桩";
     }
 
@@ -330,7 +296,17 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
 
         float opening = ctx.Vignette.Actors[targetIndex].Health;
         float next = ctx.ActorHealth[targetIndex] - amount;
-        ctx.ActorHealth[targetIndex] = next <= 0f ? opening : next;
+        if (next <= 0f)
+        {
+            next = opening;
+        }
+
+        GraphOpsNodeActorBinding.WriteHealth(
+            ctx.SimWorld,
+            ctx.SimActors[targetIndex],
+            next,
+            ctx.Vignette.Actors[targetIndex].HealthMax);
+        ctx.ActorHealth[targetIndex] = next;
     }
 
     private static void SetTargetHealth(GraphOpsNodeDriverContext ctx, int targetIndex, float value)
@@ -340,6 +316,11 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Blackboard vignette {ctx.Vignette.Op} requires a target actor for health visibility.");
         }
 
+        GraphOpsNodeActorBinding.WriteHealth(
+            ctx.SimWorld,
+            ctx.SimActors[targetIndex],
+            value,
+            ctx.Vignette.Actors[targetIndex].HealthMax);
         ctx.ActorHealth[targetIndex] = value;
     }
 
@@ -358,86 +339,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         if (value == 0f)
         {
             throw new InvalidOperationException($"{ctx.Vignette.Op} returned 0 for {label}; missing config or unpatched blackboard key.");
-        }
-    }
-
-    private static string FormatDetail(string template, Dictionary<string, string> values)
-    {
-        string text = template;
-        foreach (KeyValuePair<string, string> pair in values)
-        {
-            text = text.Replace("{" + pair.Key + "}", pair.Value, StringComparison.Ordinal);
-        }
-
-        if (text.Contains('{', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Detail template still has unsubstituted placeholders: {text}");
-        }
-
-        return text;
-    }
-
-    private static int FindRole(GraphOpsNodeDriverContext ctx, string role)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, role, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static int IndexOfEntity(GraphOpsNodeDriverContext ctx, Entity entity)
-    {
-        for (int i = 0; i < ctx.SimActors.Length; i++)
-        {
-            if (ctx.SimActors[i] == entity)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void SpawnStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
-        {
-            return;
-        }
-
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.StageProxies = new Entity[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            ctx.StageProxies[i] = ctx.Stage.Spawn(
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax);
-        }
-    }
-
-    private static void SyncStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < ctx.StageProxies.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax);
         }
     }
 }
@@ -495,66 +396,103 @@ internal sealed class BlackboardLifecycleGraphApi : IGraphRuntimeApi
     public bool TryGetGridPos(Entity entity, out IntVector2 gridPos)
     {
         gridPos = default;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not answer grid queries.");
     }
 
-    public bool HasTag(Entity entity, int tagId) => false;
+    public bool HasTag(Entity entity, int tagId)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer tags.");
 
     public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
     {
         value = 0f;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not read attributes.");
     }
 
-    public SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer) => new(0, 0);
-    public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer) => new(0, 0);
-    public int GetTeamId(Entity entity) => 0;
-    public uint GetEntityLayerCategory(Entity entity) => 0u;
-    public int GetRelationship(int teamA, int teamB) => GraphRelationship.Neutral;
-    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId) { }
-    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
-    public void RemoveEffectTemplate(Entity target, int templateId) { }
-    public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
-    public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value) { }
-    public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
+    public SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
+
+    public int GetTeamId(Entity entity)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer teams.");
+
+    public uint GetEntityLayerCategory(Entity entity)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer layers.");
+
+    public int GetRelationship(int teamA, int teamB)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer team relationships.");
+
+    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not apply effects.");
+
+    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not apply effects.");
+
+    public void RemoveEffectTemplate(Entity target, int templateId)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not remove effects.");
+
+    public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not modify attributes.");
+
+    public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not modify attributes.");
+
+    public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not send events.");
 
     public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
     {
         value = 0f;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
     }
 
     public bool TryReadBlackboardInt(Entity entity, int keyId, out int value)
     {
         value = 0;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
     }
 
     public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value)
     {
         value = default;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
     }
 
-    public void WriteBlackboardFloat(Entity entity, int keyId, float value) { }
-    public void WriteBlackboardInt(Entity entity, int keyId, int value) { }
-    public void WriteBlackboardEntity(Entity entity, int keyId, Entity value) { }
+    public void WriteBlackboardFloat(Entity entity, int keyId, float value)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
+
+    public void WriteBlackboardInt(Entity entity, int keyId, int value)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
+
+    public void WriteBlackboardEntity(Entity entity, int keyId, Entity value)
+        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
 
     public bool TryLoadConfigFloat(int keyId, out float value)
     {
         value = 0f;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not load config.");
     }
 
     public bool TryLoadConfigInt(int keyId, out int value)
     {
         value = 0;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not load config.");
     }
 
     public bool TrySnapTargetToNearestInCollection(
@@ -565,7 +503,7 @@ internal sealed class BlackboardLifecycleGraphApi : IGraphRuntimeApi
         out Entity snappedEntity)
     {
         snappedEntity = Entity.Null;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not snap.");
     }
 
     public bool TrySnapTargetToNearestGraphEdge(
@@ -574,6 +512,6 @@ internal sealed class BlackboardLifecycleGraphApi : IGraphRuntimeApi
         out GraphEdgeProjection projection)
     {
         projection = default;
-        return false;
+        throw new InvalidOperationException("Lifecycle gallery adapter does not snap.");
     }
 }

@@ -4,7 +4,9 @@
   "title": "直接扣血",
   "beat": "不绕圈子，木桩血条按加算结果往下掉。",
   "detailTemplate": "直接扣血，木桩从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["扣"],
+  "assertDetailContains": [
+    "扣"
+  ],
   "featuredNodeId": "hit",
   "graphKind": "Effect",
   "actors": [

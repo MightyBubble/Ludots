@@ -4,7 +4,9 @@
   "title": "两刀取更大的那一刀",
   "beat": "左边 12、右边 28，打出去的是更大的 28。",
   "detailTemplate": "两刀里更大的那一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["更大"],
+  "assertDetailContains": [
+    "更大"
+  ],
   "featuredNodeId": "bigger",
   "graphKind": "Effect",
   "actors": [

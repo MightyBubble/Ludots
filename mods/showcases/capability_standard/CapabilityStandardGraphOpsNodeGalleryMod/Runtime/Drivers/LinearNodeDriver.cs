@@ -8,36 +8,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
 {
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        if (ctx.SimActors.Length == 0)
-        {
-            ctx.SimActors = new Entity[actors.Length];
-            ctx.ActorHealth = new float[actors.Length];
-            for (int i = 0; i < actors.Length; i++)
-            {
-                Entity entity = ctx.SimWorld.Create();
-                ctx.SimActors[i] = entity;
-                ctx.ActorHealth[i] = actors[i].Health;
-                if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal))
-                {
-                    ctx.Caster = entity;
-                }
-                else if (string.Equals(actors[i].Role, "target", StringComparison.Ordinal))
-                {
-                    ctx.Target = entity;
-                }
-            }
-
-            if (ctx.Caster == Entity.Null)
-            {
-                throw new InvalidOperationException($"Linear vignette {ctx.Vignette.Op} requires a caster actor.");
-            }
-
-            ctx.Metrics.AgentCount = actors.Length;
-            ctx.Metrics.Detail = ctx.Vignette.Beat;
-        }
-
-        SpawnStage(ctx);
+        GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        GraphOpsNodeActorBinding.BindHud(ctx);
     }
 
     public void Tick(GraphOpsNodeDriverContext ctx)
@@ -45,24 +17,25 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         GraphOpsNodeLinearOptions linear = ctx.Vignette.Linear
             ?? throw new InvalidOperationException($"Linear vignette {ctx.Vignette.Op} requires a linear block.");
 
-        int targetIndex = FindRole(ctx, "target");
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         string resultText = FormatResult(linear.ResultKind, result);
         ApplyResult(ctx, linear, result, targetIndex);
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
 
         float healthAfter = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         ctx.CaptionValues["result"] = resultText;
         ctx.CaptionValues["healthBefore"] = healthBefore.ToString("0");
         ctx.CaptionValues["healthAfter"] = healthAfter.ToString("0");
-        ctx.Metrics.Detail = FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
-        SyncStage(ctx);
+        ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
+        GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        int caster = FindRole(ctx, "caster");
-        int target = FindRole(ctx, "target");
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         if (caster < 0 || target < 0)
         {
             return;
@@ -111,6 +84,8 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Unknown linear.applyTo '{linear.ApplyTo}'.");
         }
 
+        GraphOpsNodeActor actor = ctx.Vignette.Actors[targetIndex];
+        GraphOpsNodeActorBinding.WriteHealth(ctx.SimWorld, ctx.SimActors[targetIndex], next, actor.HealthMax);
         ctx.ActorHealth[targetIndex] = next;
     }
 
@@ -134,72 +109,5 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             "bool" => result.BoolValue ? "成立" : "不成立",
             _ => throw new InvalidOperationException($"Unknown linear.resultKind '{resultKind}'.")
         };
-    }
-
-    private static string FormatDetail(string template, Dictionary<string, string> values)
-    {
-        string text = template;
-        foreach (KeyValuePair<string, string> pair in values)
-        {
-            text = text.Replace("{" + pair.Key + "}", pair.Value, StringComparison.Ordinal);
-        }
-
-        if (text.Contains('{', StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Detail template still has unsubstituted placeholders: {text}");
-        }
-
-        return text;
-    }
-
-    private static int FindRole(GraphOpsNodeDriverContext ctx, string role)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, role, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void SpawnStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
-        {
-            return;
-        }
-
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        ctx.StageProxies = new Entity[actors.Length];
-        for (int i = 0; i < actors.Length; i++)
-        {
-            GraphOpsNodeActor actor = actors[i];
-            ctx.StageProxies[i] = ctx.Stage.Spawn(
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax);
-        }
-    }
-
-    private static void SyncStage(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Stage == null || ctx.StageProxies.Length == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < ctx.StageProxies.Length; i++)
-        {
-            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax);
-        }
     }
 }

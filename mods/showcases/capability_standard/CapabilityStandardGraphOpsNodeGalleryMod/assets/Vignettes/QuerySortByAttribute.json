@@ -4,29 +4,10 @@
   "title": "按生命排个序",
   "beat": "血最多的排前面。",
   "detailTemplate": "按生命从高到低排，最前面是{label}，生命{hp}。",
-  "assertDetailContains": ["按生命"],
+  "assertDetailContains": [
+    "按生命"
+  ],
   "featuredNodeId": "sortHp",
   "graphKind": "Query",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "指挥",
-      "x": 0,
-      "y": -2.2,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "soldier",
-      "role": "soldier",
-      "template": "Unit.Soldier",
-      "name": "士兵",
-      "x": -2.5,
-      "y": 1.2,
-      "health": 90,
-      "healthMax": 150
-    }
-  ]
+  "field": "query"
 }

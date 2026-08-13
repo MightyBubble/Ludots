@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -15,14 +16,13 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
     private string? _assetsRoot;
     private string? _op;
     private GraphOpsNodeVignette? _vignette;
-    private GraphControlFlowCompileResult _compiled;
     private IGraphOpsNodeDriver? _driver;
     private GraphOpsNodeDriverContext? _ctx;
     private GraphOpsStageVisuals? _stage;
-    private World? _world;
-    private GasGraphRuntimeApi? _api;
+    private GameEngine? _engine;
+    private GraphOpsNodeGalleryHost? _host;
     private float _accum;
-    private bool _visualsSpawned;
+    private bool _visualsBound;
 
     public GraphShowcaseMetrics Metrics { get; } = new();
     public bool IsBound => _op != null;
@@ -34,6 +34,11 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
         _driver ?? throw new InvalidOperationException("BindOp required before reading driver.");
     public GraphOpsNodeDriverContext Context =>
         _ctx ?? throw new InvalidOperationException("EnsureWorld required before reading driver context.");
+
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
 
     public void BindStageVisuals(GraphOpsStageVisuals stage)
     {
@@ -66,7 +71,6 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
         _op = GraphOpsNodeIds.RequireOpName(op);
         _assetsRoot = ResolveAssetsRoot();
         _vignette = GraphOpsNodeVignetteLoader.Load(_assetsRoot, _op);
-        _compiled = GraphOpsNodeGraphCompiler.Compile(_assetsRoot, _vignette);
         _driver = GraphOpsNodeDriverCatalog.Create(_vignette.Driver);
         Metrics.ShowcaseId = GraphOpsNodeIds.ShowcaseId(_op);
         Metrics.Detail = _vignette.Beat;
@@ -74,7 +78,7 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
 
     public void EnsureWorld()
     {
-        if (_world != null)
+        if (_host != null)
         {
             return;
         }
@@ -89,32 +93,37 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
             throw new InvalidOperationException($"Unsupported graphKind '{_vignette.GraphKind}'.");
         }
 
-        _world = World.Create();
-        _api = new GasGraphRuntimeApi(_world, spatialQueries: null, eventBus: null, effectRequests: null);
-        _ctx = new GraphOpsNodeDriverContext
-        {
-            AssetsRoot = _assetsRoot,
-            Vignette = _vignette,
-            Compiled = _compiled,
-            Kind = kind,
-            FeaturedDest = GraphOpsNodeGraphCompiler.RequireFeaturedDest(_compiled, _vignette),
-            SimWorld = _world,
-            Api = _api,
-            Metrics = Metrics,
-            Stage = _stage
-        };
+        string mapId = GraphOpsNodeIds.MapId(_op);
+        _host = _engine != null
+            ? GraphOpsNodeGalleryHost.FromEngine(_engine, _assetsRoot, mapId)
+            : GraphOpsNodeGalleryHost.CreateHeadless(_assetsRoot, mapId);
+
+        GraphControlFlowCompileResult compiled = GraphOpsNodeGraphCompiler.Compile(
+            _assetsRoot,
+            _vignette,
+            _host.Resolver,
+            _host.Collections);
+        byte featuredDest = GraphOpsNodeGraphCompiler.RequireFeaturedDest(compiled, _vignette);
+        _ctx = _host.BindContext(
+            _assetsRoot,
+            _vignette,
+            compiled,
+            kind,
+            featuredDest,
+            Metrics,
+            _stage);
         _driver.Seed(_ctx);
-        _visualsSpawned = _stage != null;
+        _visualsBound = _stage != null;
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
-        if (_stage != null && !_visualsSpawned)
+        if (_stage != null && !_visualsBound)
         {
             _ctx!.Stage = _stage;
             _driver!.Seed(_ctx);
-            _visualsSpawned = true;
+            _visualsBound = true;
         }
 
         _accum += dt;
@@ -149,8 +158,8 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
 
     public void Dispose()
     {
-        _world?.Dispose();
-        _world = null;
+        _host?.Dispose();
+        _host = null;
     }
 
     public static string ResolveAssetsRoot()

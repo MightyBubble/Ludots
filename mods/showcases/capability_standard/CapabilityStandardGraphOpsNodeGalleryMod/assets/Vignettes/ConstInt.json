@@ -4,7 +4,10 @@
   "title": "写死的整数",
   "beat": "这一刀的层数写死是 3，不读装备。",
   "detailTemplate": "这一刀的层数写死是 {layers}。",
-  "assertDetailContains": ["层数", "3"],
+  "assertDetailContains": [
+    "层数",
+    "3"
+  ],
   "featuredNodeId": "const3",
   "graphKind": "Effect",
   "actors": [

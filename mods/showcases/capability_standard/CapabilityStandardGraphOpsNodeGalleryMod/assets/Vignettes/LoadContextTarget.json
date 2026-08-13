@@ -4,7 +4,9 @@
   "title": "从这一击的情境里取出目标",
   "beat": "情境里的目标就是木桩，读出来再扣血。",
   "detailTemplate": "从这一击的情境里取出目标，木桩挨了这一刀。",
-  "assertDetailContains": ["情境"],
+  "assertDetailContains": [
+    "情境"
+  ],
   "featuredNodeId": "ctxTarget",
   "graphKind": "Effect",
   "actors": [

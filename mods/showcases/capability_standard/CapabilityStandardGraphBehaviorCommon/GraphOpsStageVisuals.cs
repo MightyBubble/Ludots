@@ -160,6 +160,103 @@ public sealed class GraphOpsStageVisuals
         return entity;
     }
 
+    public Entity BindMapEntity(
+        Entity entity,
+        string templateId,
+        string displayName,
+        float xMeters,
+        float yMeters,
+        float health,
+        float healthMax,
+        bool bindAsViewer)
+    {
+        if (!_world.IsAlive(entity))
+        {
+            throw new InvalidOperationException($"GraphOps HUD cannot bind dead map actor '{displayName}'.");
+        }
+
+        int templateKeyId = _templates.GetId(templateId);
+        if (templateKeyId <= 0)
+        {
+            throw new InvalidOperationException($"GraphOps HUD template '{templateId}' is not in EntityTemplateKeyRegistry.");
+        }
+
+        if (healthMax <= 0f)
+        {
+            throw new InvalidOperationException($"GraphOps HUD '{displayName}' health max must be positive.");
+        }
+
+        if (!_world.Has<EntityTemplateKeyRef>(entity))
+        {
+            _world.Add(entity, new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
+        }
+
+        if (!_world.Has<PresentationStableId>(entity))
+        {
+            _world.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
+        }
+
+        if (!_world.Has<Name>(entity))
+        {
+            _world.Add(entity, new Name { Value = displayName });
+        }
+        else
+        {
+            _world.Get<Name>(entity).Value = displayName;
+        }
+
+        Vector3 visual = WorldPlane2D.LogicCmToVisualMeters(xMeters * 100f, yMeters * 100f, heightMeters: 0.9f);
+        if (!_world.Has<WorldPositionCm>(entity))
+        {
+            _world.Add(entity, WorldPositionCm.FromCmFloat(xMeters * 100f, yMeters * 100f));
+        }
+
+        if (!_world.Has<VisualTransform>(entity))
+        {
+            _world.Add(entity, new VisualTransform
+            {
+                Position = visual,
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One
+            });
+        }
+
+        if (!_world.Has<CullState>(entity))
+        {
+            _world.Add(entity, new CullState { IsVisible = true, LOD = LODLevel.High });
+        }
+
+        if (!_world.Has<AttributeBuffer>(entity))
+        {
+            _world.Add(entity, new AttributeBuffer());
+        }
+
+        ref AttributeBuffer attrs = ref _world.Get<AttributeBuffer>(entity);
+        attrs.SetBase(_healthAttrId, healthMax);
+        attrs.SetCurrent(_healthAttrId, Math.Clamp(health, 0f, healthMax));
+
+        bool isViewer = bindAsViewer && (_viewer == Entity.Null || !_world.IsAlive(_viewer));
+        if (isViewer)
+        {
+            if (!_world.Has<PlayerOwner>(entity))
+            {
+                _world.Add(entity, new PlayerOwner { PlayerId = LocalViewerPlayerId });
+            }
+
+            BindViewer(entity);
+        }
+
+        _bootstrap.TryBootstrap(entity, templateId);
+        if (!_world.Has<PerformerRootBootstrapHandled>(entity))
+        {
+            throw new InvalidOperationException(
+                $"GraphOps HUD performer did not bind for template '{templateId}' ({displayName}).");
+        }
+
+        DiscloseHealth(entity);
+        return entity;
+    }
+
     public void SetHealth(Entity entity, float health, float healthMax = HealthCeiling)
     {
         if (!_world.IsAlive(entity))

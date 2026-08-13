@@ -4,11 +4,31 @@
   "title": "这个人能不能指挥那个",
   "beat": "队长能指挥队员显示管得着。",
   "detailTemplate": "队长对队员管得着。",
-  "assertDetailContains": ["管得着"],
+  "assertDetailContains": [
+    "管得着"
+  ],
   "featuredNodeId": "controls",
   "graphKind": "Validation",
   "actors": [
-    { "id": "caster", "role": "caster", "template": "GraphOps.Caster", "name": "队长", "x": -2, "y": 0, "health": 100, "healthMax": 100 },
-    { "id": "target", "role": "target", "template": "GraphOps.Ally", "name": "队员", "x": 2, "y": 0, "health": 100, "healthMax": 100 }
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "队长",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "队员",
+      "x": 2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
   ]
 }

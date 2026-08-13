@@ -4,7 +4,9 @@
   "title": "负面修正取绝对值",
   "beat": "修正是 -8，取绝对值变成 8 再叠上去。",
   "detailTemplate": "负面修正取绝对值后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["绝对值"],
+  "assertDetailContains": [
+    "绝对值"
+  ],
   "featuredNodeId": "absMod",
   "graphKind": "Effect",
   "actors": [

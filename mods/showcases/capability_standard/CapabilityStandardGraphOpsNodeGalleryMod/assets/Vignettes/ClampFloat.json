@@ -4,7 +4,9 @@
   "title": "伤害钳在上下限里",
   "beat": "算出来 90，但这一刀最多 40、最少 10，血条按钳住后的数掉。",
   "detailTemplate": "钳在上下限里后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["钳"],
+  "assertDetailContains": [
+    "钳"
+  ],
   "featuredNodeId": "clamped",
   "graphKind": "Effect",
   "actors": [

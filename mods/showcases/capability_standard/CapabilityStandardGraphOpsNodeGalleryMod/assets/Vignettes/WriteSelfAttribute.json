@@ -4,7 +4,9 @@
   "title": "给自己回一口",
   "beat": "施法者血从 60 写回 90，金块血条涨上去。",
   "detailTemplate": "给自己回一口，生命从 {casterBefore} 回到 {casterAfter}。",
-  "assertDetailContains": ["回"],
+  "assertDetailContains": [
+    "回"
+  ],
   "featuredNodeId": "healSelf",
   "graphKind": "Effect",
   "actors": [

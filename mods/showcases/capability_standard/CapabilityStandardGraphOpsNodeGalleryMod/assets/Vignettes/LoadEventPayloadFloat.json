@@ -4,11 +4,31 @@
   "title": "读出事件里的小数",
   "beat": "事件带来的小数载荷显示在字幕。",
   "detailTemplate": "事件里的小数是 {result}。",
-  "assertDetailContains": ["小数"],
+  "assertDetailContains": [
+    "小数"
+  ],
   "featuredNodeId": "payloadFloat",
   "graphKind": "Validation",
   "actors": [
-    { "id": "caster", "role": "caster", "template": "GraphOps.Caster", "name": "施法者", "x": -2, "y": 0, "health": 100, "healthMax": 100 },
-    { "id": "target", "role": "target", "template": "GraphOps.Target", "name": "木桩", "x": 4, "y": 0, "health": 100, "healthMax": 100 }
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
   ]
 }

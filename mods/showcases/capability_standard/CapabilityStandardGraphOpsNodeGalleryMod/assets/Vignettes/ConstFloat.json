@@ -4,7 +4,10 @@
   "title": "写死的一刀",
   "beat": "这一刀不读装备、不算距离，伤害就是写死的 42。目标血条直接变成这个数。",
   "detailTemplate": "这一刀写死是 {result} 点；血条从 {healthBefore} 变成 {healthAfter}。",
-  "assertDetailContains": ["写死", "42"],
+  "assertDetailContains": [
+    "写死",
+    "42"
+  ],
   "featuredNodeId": "fixed",
   "graphKind": "Effect",
   "actors": [

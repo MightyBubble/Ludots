@@ -4,29 +4,10 @@
   "title": "身上带着敌人标记的人",
   "beat": "有敌人标记的亮。",
   "detailTemplate": "身上带着敌人标记的有{count}人。",
-  "assertDetailContains": ["带着"],
+  "assertDetailContains": [
+    "带着"
+  ],
   "featuredNodeId": "tagAny",
   "graphKind": "Query",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "指挥",
-      "x": 0,
-      "y": -2.2,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "soldier",
-      "role": "soldier",
-      "template": "Unit.Soldier",
-      "name": "士兵",
-      "x": -2.5,
-      "y": 1.2,
-      "health": 90,
-      "healthMax": 150
-    }
-  ]
+  "field": "query"
 }

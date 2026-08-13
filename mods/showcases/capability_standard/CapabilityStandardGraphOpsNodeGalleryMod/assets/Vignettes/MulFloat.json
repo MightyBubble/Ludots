@@ -4,7 +4,9 @@
   "title": "伤害乘倍率",
   "beat": "基础伤害再乘 1.5 倍，血条按放大后的数往下掉。",
   "detailTemplate": "乘过倍率后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["倍率"],
+  "assertDetailContains": [
+    "倍率"
+  ],
   "featuredNodeId": "scaled",
   "graphKind": "Effect",
   "actors": [

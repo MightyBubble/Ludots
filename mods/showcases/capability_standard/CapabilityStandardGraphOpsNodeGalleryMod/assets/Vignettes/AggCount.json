@@ -9,36 +9,5 @@
   ],
   "featuredNodeId": "count",
   "graphKind": "Query",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "施法者",
-      "x": 0,
-      "y": 0,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "ally",
-      "role": "ally",
-      "template": "GraphOps.Ally",
-      "name": "友军",
-      "x": 0,
-      "y": 2.5,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "north",
-      "role": "enemy",
-      "template": "GraphOps.Target",
-      "name": "北面的人",
-      "x": 0,
-      "y": 4.5,
-      "health": 100,
-      "healthMax": 100
-    }
-  ]
+  "field": "spatial"
 }

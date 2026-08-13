@@ -4,7 +4,9 @@
   "title": "从技能配置读出阶位",
   "beat": "配置阶位 2。",
   "detailTemplate": "从技能配置读出阶位 {result}。",
-  "assertDetailContains": ["阶位"],
+  "assertDetailContains": [
+    "阶位"
+  ],
   "featuredNodeId": "cfgI",
   "graphKind": "Effect",
   "actors": [

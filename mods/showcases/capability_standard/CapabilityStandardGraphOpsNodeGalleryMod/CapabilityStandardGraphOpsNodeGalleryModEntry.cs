@@ -27,6 +27,7 @@ public sealed class CapabilityStandardGraphOpsNodeGalleryModEntry : IMod
             }
 
             runtime.BindFromStartupMapId(engine.MergedConfig?.StartupMapId);
+            runtime.AttachEngine(engine);
             engine.SetService(MetricsKey, runtime.Metrics);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             var debugDraw = new DebugDrawCommandBuffer();

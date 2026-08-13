@@ -4,7 +4,9 @@
   "title": "从记事板读出点名的人",
   "beat": "板上记着木桩，读出来锁定他。",
   "detailTemplate": "从记事板读出点名的人，锁定了{named}。",
-  "assertDetailContains": ["点名"],
+  "assertDetailContains": [
+    "点名"
+  ],
   "featuredNodeId": "readE",
   "graphKind": "Effect",
   "actors": [

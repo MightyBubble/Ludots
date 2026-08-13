@@ -4,7 +4,9 @@
   "title": "身上有没有敌人标记",
   "beat": "侦察兵带着敌人标记，检查为「有」。",
   "detailTemplate": "侦察兵带着敌人标记，检查为「{result}」。",
-  "assertDetailContains": ["标记"],
+  "assertDetailContains": [
+    "标记"
+  ],
   "featuredNodeId": "hasEnemy",
   "graphKind": "Effect",
   "actors": [

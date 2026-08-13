@@ -4,7 +4,9 @@
   "title": "从记事板读出层数",
   "beat": "板上层数 4。",
   "detailTemplate": "从记事板读出层数 {result}。",
-  "assertDetailContains": ["层数"],
+  "assertDetailContains": [
+    "层数"
+  ],
   "featuredNodeId": "readI",
   "graphKind": "Effect",
   "actors": [

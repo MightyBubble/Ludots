@@ -4,7 +4,10 @@
   "title": "两段伤害叠在一起",
   "beat": "左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。",
   "detailTemplate": "基础伤害加上额外伤害，这一刀一共 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
-  "assertDetailContains": ["加上", "一共"],
+  "assertDetailContains": [
+    "加上",
+    "一共"
+  ],
   "featuredNodeId": "sum",
   "graphKind": "Effect",
   "actors": [

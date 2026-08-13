@@ -4,29 +4,10 @@
   "title": "谁最残",
   "beat": "最残的人被点名。",
   "detailTemplate": "最残的是{label}，生命{hp}。",
-  "assertDetailContains": ["最残"],
+  "assertDetailContains": [
+    "最残"
+  ],
   "featuredNodeId": "minEnt",
   "graphKind": "Query",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "指挥",
-      "x": 0,
-      "y": -2.2,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "soldier",
-      "role": "soldier",
-      "template": "Unit.Soldier",
-      "name": "士兵",
-      "x": -2.5,
-      "y": 1.2,
-      "health": 90,
-      "healthMax": 150
-    }
-  ]
+  "field": "query"
 }

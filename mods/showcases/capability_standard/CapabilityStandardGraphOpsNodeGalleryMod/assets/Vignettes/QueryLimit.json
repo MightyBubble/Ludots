@@ -4,7 +4,9 @@
   "title": "只点最近的几个",
   "beat": "圈里很多人，只留下前 3 个。",
   "detailTemplate": "圈里很多人，只留下三个。",
-  "assertDetailContains": ["三个"],
+  "assertDetailContains": [
+    "三个"
+  ],
   "featuredNodeId": "limit",
   "graphKind": "Query",
   "actors": [

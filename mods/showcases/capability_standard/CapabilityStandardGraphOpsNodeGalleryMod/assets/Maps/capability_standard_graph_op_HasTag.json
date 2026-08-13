@@ -16,5 +16,46 @@
     "Yaw": 180,
     "FovYDeg": 50
   },
-  "Entities": []
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -200,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "scout",
+      "Template": "Unit.Scout",
+      "Overrides": {
+        "Name": {
+          "Value": "侦察兵"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 400,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    }
+  ]
 }

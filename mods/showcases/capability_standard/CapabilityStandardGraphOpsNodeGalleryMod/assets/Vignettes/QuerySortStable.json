@@ -4,7 +4,9 @@
   "title": "圈里的人排个稳定顺序",
   "beat": "同样距离时顺序不乱跳。",
   "detailTemplate": "名单顺序稳住了：{order}。",
-  "assertDetailContains": ["顺序"],
+  "assertDetailContains": [
+    "顺序"
+  ],
   "featuredNodeId": "sort",
   "graphKind": "Query",
   "actors": [
