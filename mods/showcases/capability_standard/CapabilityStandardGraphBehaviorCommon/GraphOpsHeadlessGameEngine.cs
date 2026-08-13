@@ -3,8 +3,10 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -88,13 +90,32 @@ public static class GraphOpsHeadlessGameEngine
             engine.UnloadMap(engine.CurrentMapSession.MapId.Value);
         }
 
+        ClearQueuedEffects(engine);
         engine.LoadMap(mapId);
         if (engine.CurrentMapSession == null)
         {
             throw new InvalidOperationException($"GameEngine.LoadMap('{mapId}') left CurrentMapSession null.");
         }
 
+        ClearSpatialPartition(engine);
         AdvanceUntilMapActorsAreSpatiallyIndexed(engine, mapId);
+    }
+
+    private static void ClearQueuedEffects(GameEngine engine)
+    {
+        EffectRequestQueue? queue = engine.GetService(CoreServiceKeys.EffectRequestQueue);
+        queue?.Clear();
+    }
+
+    private static void ClearSpatialPartition(GameEngine engine)
+    {
+        IBoard? board = engine.CurrentMapSession?.PrimaryBoard;
+        if (board == null)
+        {
+            throw new InvalidOperationException("LoadMap left CurrentMapSession.PrimaryBoard null.");
+        }
+
+        board.SpatialPartition.Clear();
     }
 
     private static void AdvanceUntilMapActorsAreSpatiallyIndexed(GameEngine engine, string mapId)

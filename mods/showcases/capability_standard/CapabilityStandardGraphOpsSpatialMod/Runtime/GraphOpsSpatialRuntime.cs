@@ -153,7 +153,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         {
             var coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
             _coords = coords;
-            _grid = new GridSpatialPartitionWorld(cellSize: 4);
+            _grid = new GridSpatialPartitionWorld(cellSize: 1);
             _spatial = new SpatialQueryService(new GridSpatialPartitionBackend(_grid, coords));
             _spatial.SetCoordinateConverter(coords);
         }
