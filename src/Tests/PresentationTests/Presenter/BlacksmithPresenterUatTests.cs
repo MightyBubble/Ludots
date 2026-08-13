@@ -140,6 +140,7 @@ namespace Ludots.Tests.Presentation
                 "src",
                 "Tests",
                 "PresentationTests",
+                "Presenter",
                 "BlacksmithPresenterUatTests.cs");
 
             string source = File.ReadAllText(sourcePath);
