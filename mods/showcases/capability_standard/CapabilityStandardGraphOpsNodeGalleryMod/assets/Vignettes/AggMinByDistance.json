@@ -1,0 +1,44 @@
+{
+  "op": "AggMinByDistance",
+  "driver": "spatial",
+  "title": "谁离我最近",
+  "beat": "最近的那个人闪出来。",
+  "detailTemplate": "最近的是{name}。",
+  "assertDetailContains": [
+    "最近"
+  ],
+  "featuredNodeId": "nearest",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军",
+      "x": 0,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "north",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北面的人",
+      "x": 0,
+      "y": 4.5,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

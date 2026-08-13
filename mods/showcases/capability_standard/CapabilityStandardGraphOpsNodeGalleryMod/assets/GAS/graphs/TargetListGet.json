@@ -1,0 +1,98 @@
+{
+  "id": "showcase.graph_op.TargetListGet",
+  "kind": "Effect",
+  "entry": "coneDir",
+  "nodes": [
+    {
+      "id": "coneDir",
+      "op": "ConstInt",
+      "intValue": 90
+    },
+    {
+      "id": "coneHalf",
+      "op": "ConstInt",
+      "intValue": 30
+    },
+    {
+      "id": "cone",
+      "op": "QueryCone",
+      "queryCapacityPolicy": "RequireComplete",
+      "rangeCm": 800
+    },
+    {
+      "id": "self",
+      "op": "LoadCaster"
+    },
+    {
+      "id": "notSelf",
+      "op": "QueryFilterNotEntity"
+    },
+    {
+      "id": "zero",
+      "op": "ConstInt",
+      "intValue": 0
+    },
+    {
+      "id": "get0",
+      "op": "TargetListGet"
+    }
+  ],
+  "controlEdges": [
+    {
+      "from": "coneDir",
+      "fromPort": "next",
+      "to": "coneHalf"
+    },
+    {
+      "from": "coneHalf",
+      "fromPort": "next",
+      "to": "cone"
+    },
+    {
+      "from": "cone",
+      "fromPort": "next",
+      "to": "self"
+    },
+    {
+      "from": "self",
+      "fromPort": "next",
+      "to": "notSelf"
+    },
+    {
+      "from": "notSelf",
+      "fromPort": "next",
+      "to": "zero"
+    },
+    {
+      "from": "zero",
+      "fromPort": "next",
+      "to": "get0"
+    }
+  ],
+  "valueEdges": [
+    {
+      "from": "coneDir",
+      "fromPort": "value",
+      "to": "cone",
+      "toPort": "a"
+    },
+    {
+      "from": "coneHalf",
+      "fromPort": "value",
+      "to": "cone",
+      "toPort": "b"
+    },
+    {
+      "from": "self",
+      "fromPort": "value",
+      "to": "notSelf",
+      "toPort": "source"
+    },
+    {
+      "from": "zero",
+      "fromPort": "value",
+      "to": "get0",
+      "toPort": "value"
+    }
+  ]
+}

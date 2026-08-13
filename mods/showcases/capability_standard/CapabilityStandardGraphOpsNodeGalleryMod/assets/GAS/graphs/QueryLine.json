@@ -1,0 +1,73 @@
+{
+  "id": "showcase.graph_op.QueryLine",
+  "kind": "Effect",
+  "entry": "lineDir",
+  "nodes": [
+    {
+      "id": "lineDir",
+      "op": "ConstInt",
+      "intValue": 45
+    },
+    {
+      "id": "lineLen",
+      "op": "ConstInt",
+      "intValue": 500
+    },
+    {
+      "id": "line",
+      "op": "QueryLine",
+      "queryCapacityPolicy": "RequireComplete",
+      "halfWidthCm": 25
+    },
+    {
+      "id": "self",
+      "op": "LoadCaster"
+    },
+    {
+      "id": "notSelf",
+      "op": "QueryFilterNotEntity"
+    }
+  ],
+  "controlEdges": [
+    {
+      "from": "lineDir",
+      "fromPort": "next",
+      "to": "lineLen"
+    },
+    {
+      "from": "lineLen",
+      "fromPort": "next",
+      "to": "line"
+    },
+    {
+      "from": "line",
+      "fromPort": "next",
+      "to": "self"
+    },
+    {
+      "from": "self",
+      "fromPort": "next",
+      "to": "notSelf"
+    }
+  ],
+  "valueEdges": [
+    {
+      "from": "lineDir",
+      "fromPort": "value",
+      "to": "line",
+      "toPort": "a"
+    },
+    {
+      "from": "lineLen",
+      "fromPort": "value",
+      "to": "line",
+      "toPort": "b"
+    },
+    {
+      "from": "self",
+      "fromPort": "value",
+      "to": "notSelf",
+      "toPort": "source"
+    }
+  ]
+}

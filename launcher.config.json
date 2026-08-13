@@ -967,6 +967,102 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQuerySortByAttributeEntryMod",
         "projectPath": "CapabilityStandardGraphOpQuerySortByAttributeEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AggCount",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggCountEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggCountEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggMinByDistance",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggMinByDistanceEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggMinByDistanceEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryCone",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryConeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryConeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterLayer",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterLayerEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterLayerEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterNotEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterNotEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterNotEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterRelationship",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterRelationshipEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterRelationshipEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryHexNeighbors",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexNeighborsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryHexNeighborsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryHexRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryHexRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryHexRing",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryHexRingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryHexRingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryLine",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryLineEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryLineEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryRectangle",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryRectangleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryRectangleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_TargetListGet",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTargetListGetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpTargetListGetEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

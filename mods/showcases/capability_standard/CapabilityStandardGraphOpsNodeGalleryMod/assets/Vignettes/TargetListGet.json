@@ -1,0 +1,44 @@
+{
+  "op": "TargetListGet",
+  "driver": "spatial",
+  "title": "点名单上的第一个",
+  "beat": "名单第一人被点名，血条或高亮在他身上。",
+  "detailTemplate": "点名第一个，是{name}。",
+  "assertDetailContains": [
+    "第一个"
+  ],
+  "featuredNodeId": "get0",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军",
+      "x": 0,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "north",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北面的人",
+      "x": 0,
+      "y": 4.5,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

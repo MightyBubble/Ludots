@@ -1,0 +1,44 @@
+{
+  "op": "QueryCone",
+  "driver": "spatial",
+  "title": "扇形里有谁",
+  "beat": "面前扇形扫过，扇里的人亮、扇外的人暗。",
+  "detailTemplate": "面前扇形扫过，圈到{count}人。",
+  "assertDetailContains": [
+    "扇"
+  ],
+  "featuredNodeId": "cone",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军",
+      "x": 0,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "north",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北面的人",
+      "x": 0,
+      "y": 4.5,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "op": "QueryRectangle",
+  "driver": "spatial",
+  "title": "矩形里有谁",
+  "beat": "身前一块矩形框人。",
+  "detailTemplate": "身前矩形框到{count}人。",
+  "assertDetailContains": [
+    "矩形"
+  ],
+  "featuredNodeId": "rect",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "ally",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军",
+      "x": 0,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "north",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北面的人",
+      "x": 0,
+      "y": 4.5,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

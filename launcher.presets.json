@@ -1096,6 +1096,114 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggCount_raylib",
+      "name": "Graph Op AggCount Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggCount"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggMinByDistance_raylib",
+      "name": "Graph Op AggMinByDistance Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggMinByDistance"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryCone_raylib",
+      "name": "Graph Op QueryCone Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryCone"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterLayer_raylib",
+      "name": "Graph Op QueryFilterLayer Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterLayer"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterNotEntity_raylib",
+      "name": "Graph Op QueryFilterNotEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterNotEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterRelationship_raylib",
+      "name": "Graph Op QueryFilterRelationship Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterRelationship"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryHexNeighbors_raylib",
+      "name": "Graph Op QueryHexNeighbors Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryHexNeighbors"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryHexRange_raylib",
+      "name": "Graph Op QueryHexRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryHexRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryHexRing_raylib",
+      "name": "Graph Op QueryHexRing Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryHexRing"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryLine_raylib",
+      "name": "Graph Op QueryLine Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryLine"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryRectangle_raylib",
+      "name": "Graph Op QueryRectangle Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryRectangle"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_TargetListGet_raylib",
+      "name": "Graph Op TargetListGet Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_TargetListGet"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

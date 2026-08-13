@@ -76,7 +76,7 @@ public sealed class GraphOpsNodeDriverContext
             bools[FeaturedDest] != 0,
             entities[FeaturedDest],
             state.ReturnInt,
-            targetList.Count);
+            state.TargetList.Count);
     }
 }
 
