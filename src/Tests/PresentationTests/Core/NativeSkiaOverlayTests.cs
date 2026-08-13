@@ -375,6 +375,28 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
+    public void RaylibSkiaOverlay_UsesNativeGlInterfaceInsteadOfWindowsWgl()
+    {
+        string adapterDir = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib");
+        string glContext = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGlContext.cs"));
+        string gpuOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGpuOverlaySurface.cs"));
+        string framebufferOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaFramebufferOverlaySurface.cs"));
+
+        Assert.That(
+            glContext,
+            Does.Contain("GRGlInterface.Create()"),
+            "Skia overlay must resolve WGL/GLX/EGL through Skia's native GL interface so Linux hosts can keep GPU HUD.");
+        Assert.That(gpuOverlay, Does.Not.Contain("opengl32.dll"));
+        Assert.That(framebufferOverlay, Does.Not.Contain("opengl32.dll"));
+        Assert.That(glContext, Does.Not.Contain("opengl32.dll"));
+    }
+
+    [Test]
     public void RaylibHostLoop_KeepsNativeDiagnosticHudOptIn()
     {
         string source = File.ReadAllText(Path.Combine(
