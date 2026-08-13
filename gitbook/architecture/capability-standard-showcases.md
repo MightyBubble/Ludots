@@ -100,8 +100,12 @@ Adapter authors should verify:
 - 剧本：`CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/{Op}.json`
 - 作者图：`assets/GAS/graphs/{Op}.json`（FrontDoor，禁止 C# 演戏填字幕）
 - 薄入口：`graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod`（只覆盖 `startupMapId`）
-- 录像：`artifacts/evidence/capability_standard_graph_op_{Op}/play.mp4`
+- 录像（Git LFS）：`artifacts/evidence/capability_standard_graph_op_{Op}/play.mp4`
+- 画廊海报：`artifacts/evidence/capability_standard_graph_op_{Op}/poster.png`
+- 玩家 Wiki：`gitbook/reference/graph-node-op-wiki/{Op}.md`（总览 `README.md`）
 - 生成器：`scripts/generate-graph-op-node-galleries.py`（launcher / registry / coverage / 地图 / 薄入口）
+- Wiki 生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 生成，缺录像失败关闭）
+- 门户发布：`scripts/build-site.py` 把上述媒体拷进 `_site/`，随 main 的 GitHub Pages 上线
 
 ```gherkin
 Feature: 每个图节点单独一场可看懂的短剧

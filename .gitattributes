@@ -1,7 +1,5 @@
 * text=auto
-
 .gitattributes text eol=lf
-
 *.cs text eol=lf
 *.csproj text eol=lf
 *.sln text eol=lf
@@ -13,4 +11,5 @@
 *.props text eol=lf
 *.targets text eol=lf
 *.config text eol=lf
-
+# GraphNodeOp per-op gallery player videos (GitHub Pages + Showcase 画廊)
+artifacts/evidence/capability_standard_graph_op_*/play.mp4 filter=lfs diff=lfs merge=lfs -text

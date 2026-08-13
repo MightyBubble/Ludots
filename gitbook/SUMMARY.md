@@ -79,5 +79,6 @@
   - [空间尺度配置查表](reference/spatial-scale-configuration.md)
   - [空间尺度交互图](reference/spatial-scale-explorer.html)
   - [玩家动作 UX 分镜图鉴](reference/player-action-ux/index.html)
+  - [Graph 节点画廊 Wiki](reference/graph-node-op-wiki/README.md)
   - [项目地图](reference/project-map.md)
   - [发布与访问](reference/publishing-and-access.md)

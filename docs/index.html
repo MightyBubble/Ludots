@@ -397,7 +397,17 @@
     container.querySelectorAll("img[src]").forEach(function (img) {
       var src = img.getAttribute("src");
       if (!src || /^(https?:|data:|\/)/i.test(src)) return;
+      // 仓库根证据（画廊录像海报）不要被改写到 gitbook/ 下
+      if (src.indexOf("artifacts/") === 0) return;
       img.setAttribute("src", "gitbook/" + resolvePath(docPath, src));
+    });
+    container.querySelectorAll("video[src], video[poster]").forEach(function (video) {
+      ["src", "poster"].forEach(function (attr) {
+        var val = video.getAttribute(attr);
+        if (!val || /^(https?:|data:|\/)/i.test(val)) return;
+        if (val.indexOf("artifacts/") === 0) return;
+        video.setAttribute(attr, "gitbook/" + resolvePath(docPath, val));
+      });
     });
   }
 

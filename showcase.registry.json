@@ -3249,13 +3249,14 @@
       ],
       "binding": "capability_standard_graph_op_AddFloat",
       "preset": "capability_standard_graph_op_AddFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AddFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AddFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AddFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ConstFloat",
@@ -3275,13 +3276,14 @@
       ],
       "binding": "capability_standard_graph_op_ConstFloat",
       "preset": "capability_standard_graph_op_ConstFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConstFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConstFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AbsFloat",
@@ -3301,13 +3303,14 @@
       ],
       "binding": "capability_standard_graph_op_AbsFloat",
       "preset": "capability_standard_graph_op_AbsFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AbsFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AbsFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AbsFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AbsFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ClampFloat",
@@ -3327,13 +3330,14 @@
       ],
       "binding": "capability_standard_graph_op_ClampFloat",
       "preset": "capability_standard_graph_op_ClampFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ClampFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ClampFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ClampFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_CompareGtFloat",
@@ -3353,13 +3357,14 @@
       ],
       "binding": "capability_standard_graph_op_CompareGtFloat",
       "preset": "capability_standard_graph_op_CompareGtFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/CompareGtFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_CompareGtFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_CompareGtFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_CompareGtFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ConstBool",
@@ -3379,13 +3384,14 @@
       ],
       "binding": "capability_standard_graph_op_ConstBool",
       "preset": "capability_standard_graph_op_ConstBool_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConstBool.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstBool",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConstBool/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConstBool/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_DivFloat",
@@ -3405,13 +3411,14 @@
       ],
       "binding": "capability_standard_graph_op_DivFloat",
       "preset": "capability_standard_graph_op_DivFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/DivFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_DivFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_DivFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_DivFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_MaxFloat",
@@ -3431,13 +3438,14 @@
       ],
       "binding": "capability_standard_graph_op_MaxFloat",
       "preset": "capability_standard_graph_op_MaxFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/MaxFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_MaxFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_MaxFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_MaxFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_MinFloat",
@@ -3457,13 +3465,14 @@
       ],
       "binding": "capability_standard_graph_op_MinFloat",
       "preset": "capability_standard_graph_op_MinFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/MinFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_MinFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_MinFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_MinFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_MulFloat",
@@ -3483,13 +3492,14 @@
       ],
       "binding": "capability_standard_graph_op_MulFloat",
       "preset": "capability_standard_graph_op_MulFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/MulFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_MulFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_MulFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_NegFloat",
@@ -3509,13 +3519,14 @@
       ],
       "binding": "capability_standard_graph_op_NegFloat",
       "preset": "capability_standard_graph_op_NegFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/NegFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_NegFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_NegFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_NegFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RandomFloat01",
@@ -3535,13 +3546,14 @@
       ],
       "binding": "capability_standard_graph_op_RandomFloat01",
       "preset": "capability_standard_graph_op_RandomFloat01_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RandomFloat01.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RandomFloat01",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RandomFloat01/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SubFloat",
@@ -3561,13 +3573,14 @@
       ],
       "binding": "capability_standard_graph_op_SubFloat",
       "preset": "capability_standard_graph_op_SubFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SubFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SubFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SubFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_BeginLifecycleTransaction",
@@ -3587,13 +3600,14 @@
       ],
       "binding": "capability_standard_graph_op_BeginLifecycleTransaction",
       "preset": "capability_standard_graph_op_BeginLifecycleTransaction_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/BeginLifecycleTransaction.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_InvokeBuiltin",
@@ -3613,13 +3627,14 @@
       ],
       "binding": "capability_standard_graph_op_InvokeBuiltin",
       "preset": "capability_standard_graph_op_InvokeBuiltin_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/InvokeBuiltin.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_InvokeBuiltin",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadConfigEffectId",
@@ -3639,13 +3654,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadConfigEffectId",
       "preset": "capability_standard_graph_op_LoadConfigEffectId_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadConfigEffectId.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadConfigFloat",
@@ -3665,13 +3681,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadConfigFloat",
       "preset": "capability_standard_graph_op_LoadConfigFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadConfigFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadConfigFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadConfigInt",
@@ -3691,13 +3708,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadConfigInt",
       "preset": "capability_standard_graph_op_LoadConfigInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadConfigInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadConfigInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadConfigInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadConfigInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadContextSource",
@@ -3717,13 +3735,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadContextSource",
       "preset": "capability_standard_graph_op_LoadContextSource_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadContextSource.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadContextSource",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadContextSource/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadContextSource/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadContextTargetContext",
@@ -3743,13 +3762,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadContextTargetContext",
       "preset": "capability_standard_graph_op_LoadContextTargetContext_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadContextTargetContext.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadContextTargetContext",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadContextTargetContext/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadContextTargetContext/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ReadBlackboardEntity",
@@ -3769,13 +3789,14 @@
       ],
       "binding": "capability_standard_graph_op_ReadBlackboardEntity",
       "preset": "capability_standard_graph_op_ReadBlackboardEntity_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ReadBlackboardEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ReadBlackboardFloat",
@@ -3795,13 +3816,14 @@
       ],
       "binding": "capability_standard_graph_op_ReadBlackboardFloat",
       "preset": "capability_standard_graph_op_ReadBlackboardFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ReadBlackboardFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ReadBlackboardInt",
@@ -3821,13 +3843,14 @@
       ],
       "binding": "capability_standard_graph_op_ReadBlackboardInt",
       "preset": "capability_standard_graph_op_ReadBlackboardInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ReadBlackboardInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_WriteBlackboardEntity",
@@ -3847,13 +3870,14 @@
       ],
       "binding": "capability_standard_graph_op_WriteBlackboardEntity",
       "preset": "capability_standard_graph_op_WriteBlackboardEntity_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WriteBlackboardEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_WriteBlackboardFloat",
@@ -3873,13 +3897,14 @@
       ],
       "binding": "capability_standard_graph_op_WriteBlackboardFloat",
       "preset": "capability_standard_graph_op_WriteBlackboardFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WriteBlackboardFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_WriteBlackboardInt",
@@ -3899,13 +3924,14 @@
       ],
       "binding": "capability_standard_graph_op_WriteBlackboardInt",
       "preset": "capability_standard_graph_op_WriteBlackboardInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WriteBlackboardInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AddInt",
@@ -3925,13 +3951,14 @@
       ],
       "binding": "capability_standard_graph_op_AddInt",
       "preset": "capability_standard_graph_op_AddInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AddInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AddInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AddInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AddInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ApplyEffectTemplate",
@@ -3951,13 +3978,14 @@
       ],
       "binding": "capability_standard_graph_op_ApplyEffectTemplate",
       "preset": "capability_standard_graph_op_ApplyEffectTemplate_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ApplyEffectTemplate.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_CompareEqEntity",
@@ -3977,13 +4005,14 @@
       ],
       "binding": "capability_standard_graph_op_CompareEqEntity",
       "preset": "capability_standard_graph_op_CompareEqEntity_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/CompareEqEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_CompareEqEntity",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_CompareEqEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_CompareEqEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_CompareEqInt",
@@ -4003,13 +4032,14 @@
       ],
       "binding": "capability_standard_graph_op_CompareEqInt",
       "preset": "capability_standard_graph_op_CompareEqInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/CompareEqInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_CompareEqInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_CompareEqInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_CompareEqInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_CompareLtInt",
@@ -4029,13 +4059,14 @@
       ],
       "binding": "capability_standard_graph_op_CompareLtInt",
       "preset": "capability_standard_graph_op_CompareLtInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/CompareLtInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_CompareLtInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_CompareLtInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ConstInt",
@@ -4055,13 +4086,14 @@
       ],
       "binding": "capability_standard_graph_op_ConstInt",
       "preset": "capability_standard_graph_op_ConstInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ConstInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ConstInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ConstInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadAttribute",
@@ -4081,13 +4113,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadAttribute",
       "preset": "capability_standard_graph_op_LoadAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadCaster",
@@ -4107,13 +4140,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadCaster",
       "preset": "capability_standard_graph_op_LoadCaster_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadCaster.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadCaster",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadCaster/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadContextTarget",
@@ -4133,13 +4167,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadContextTarget",
       "preset": "capability_standard_graph_op_LoadContextTarget_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadContextTarget.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadContextTarget",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadContextTarget/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadExplicitTarget",
@@ -4159,13 +4194,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadExplicitTarget",
       "preset": "capability_standard_graph_op_LoadExplicitTarget_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadExplicitTarget.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadSelfAttribute",
@@ -4185,13 +4221,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadSelfAttribute",
       "preset": "capability_standard_graph_op_LoadSelfAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadSelfAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ModifyAttributeAdd",
@@ -4211,13 +4248,14 @@
       ],
       "binding": "capability_standard_graph_op_ModifyAttributeAdd",
       "preset": "capability_standard_graph_op_ModifyAttributeAdd_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ModifyAttributeAdd.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RemoveEffectTemplate",
@@ -4237,13 +4275,14 @@
       ],
       "binding": "capability_standard_graph_op_RemoveEffectTemplate",
       "preset": "capability_standard_graph_op_RemoveEffectTemplate_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RemoveEffectTemplate.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SelectEntity",
@@ -4263,13 +4302,14 @@
       ],
       "binding": "capability_standard_graph_op_SelectEntity",
       "preset": "capability_standard_graph_op_SelectEntity_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SelectEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SelectEntity",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SelectEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SelectEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_WriteSelfAttribute",
@@ -4289,13 +4329,14 @@
       ],
       "binding": "capability_standard_graph_op_WriteSelfAttribute",
       "preset": "capability_standard_graph_op_WriteSelfAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WriteSelfAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_Call",
@@ -4315,13 +4356,14 @@
       ],
       "binding": "capability_standard_graph_op_Call",
       "preset": "capability_standard_graph_op_Call_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/Call.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_Call",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_Call/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_Call/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_HaltReturnInt",
@@ -4341,13 +4383,14 @@
       ],
       "binding": "capability_standard_graph_op_HaltReturnInt",
       "preset": "capability_standard_graph_op_HaltReturnInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/HaltReturnInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_HaltReturnInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_HaltReturnInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_InvokeScript",
@@ -4367,13 +4410,14 @@
       ],
       "binding": "capability_standard_graph_op_InvokeScript",
       "preset": "capability_standard_graph_op_InvokeScript_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/InvokeScript.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_InvokeScript",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_InvokeScript/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_InvokeScript/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_Jump",
@@ -4393,13 +4437,14 @@
       ],
       "binding": "capability_standard_graph_op_Jump",
       "preset": "capability_standard_graph_op_Jump_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/Jump.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_Jump",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_Jump/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_Jump/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_JumpIfFalse",
@@ -4419,13 +4464,14 @@
       ],
       "binding": "capability_standard_graph_op_JumpIfFalse",
       "preset": "capability_standard_graph_op_JumpIfFalse_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/JumpIfFalse.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_JumpIfFalse",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_JumpIfFalse/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_MoveInt",
@@ -4445,13 +4491,14 @@
       ],
       "binding": "capability_standard_graph_op_MoveInt",
       "preset": "capability_standard_graph_op_MoveInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/MoveInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_MoveInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_MoveInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_MoveInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_Return",
@@ -4471,13 +4518,14 @@
       ],
       "binding": "capability_standard_graph_op_Return",
       "preset": "capability_standard_graph_op_Return_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/Return.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_Return",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_Return/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_Return/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_Yield",
@@ -4497,13 +4545,14 @@
       ],
       "binding": "capability_standard_graph_op_Yield",
       "preset": "capability_standard_graph_op_Yield_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/Yield.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_Yield",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_Yield/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_Yield/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggAverageAttribute",
@@ -4523,13 +4572,14 @@
       ],
       "binding": "capability_standard_graph_op_AggAverageAttribute",
       "preset": "capability_standard_graph_op_AggAverageAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggAverageAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggAverageAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggMaxAttribute",
@@ -4549,13 +4599,14 @@
       ],
       "binding": "capability_standard_graph_op_AggMaxAttribute",
       "preset": "capability_standard_graph_op_AggMaxAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggMaxAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggMaxAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggMaxEntityByAttribute",
@@ -4575,13 +4626,14 @@
       ],
       "binding": "capability_standard_graph_op_AggMaxEntityByAttribute",
       "preset": "capability_standard_graph_op_AggMaxEntityByAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggMaxEntityByAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggMinAttribute",
@@ -4601,13 +4653,14 @@
       ],
       "binding": "capability_standard_graph_op_AggMinAttribute",
       "preset": "capability_standard_graph_op_AggMinAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggMinAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggMinAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggMinAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggMinAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggMinEntityByAttribute",
@@ -4627,13 +4680,14 @@
       ],
       "binding": "capability_standard_graph_op_AggMinEntityByAttribute",
       "preset": "capability_standard_graph_op_AggMinEntityByAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggMinEntityByAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggSumAttribute",
@@ -4653,13 +4707,14 @@
       ],
       "binding": "capability_standard_graph_op_AggSumAttribute",
       "preset": "capability_standard_graph_op_AggSumAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggSumAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggSumAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggSumAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggSumAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryAllMapEntities",
@@ -4679,13 +4734,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryAllMapEntities",
       "preset": "capability_standard_graph_op_QueryAllMapEntities_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryAllMapEntities.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryAllMapEntities",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryAllMapEntities/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryAllMapEntities/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterAttributeRange",
@@ -4705,13 +4761,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterAttributeRange",
       "preset": "capability_standard_graph_op_QueryFilterAttributeRange_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterAttributeRange.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterAttributeRange",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterAttributeRange/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterAttributeRange/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterTagAny",
@@ -4731,13 +4788,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterTagAny",
       "preset": "capability_standard_graph_op_QueryFilterTagAny_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterTagAny.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagAny",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagAny/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagAny/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterTagNone",
@@ -4757,13 +4815,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterTagNone",
       "preset": "capability_standard_graph_op_QueryFilterTagNone_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterTagNone.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagNone",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagNone/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterTagNone/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterTeam",
@@ -4783,13 +4842,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterTeam",
       "preset": "capability_standard_graph_op_QueryFilterTeam_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterTeam.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterTeam",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterTemplate",
@@ -4809,13 +4869,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterTemplate",
       "preset": "capability_standard_graph_op_QueryFilterTemplate_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterTemplate.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterTemplate/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFromCollection",
@@ -4835,13 +4896,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFromCollection",
       "preset": "capability_standard_graph_op_QueryFromCollection_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFromCollection.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFromCollection",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFromCollection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFromCollection/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QuerySortByAttribute",
@@ -4861,13 +4923,14 @@
       ],
       "binding": "capability_standard_graph_op_QuerySortByAttribute",
       "preset": "capability_standard_graph_op_QuerySortByAttribute_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QuerySortByAttribute.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggCount",
@@ -4887,13 +4950,14 @@
       ],
       "binding": "capability_standard_graph_op_AggCount",
       "preset": "capability_standard_graph_op_AggCount_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggCount.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggCount",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggCount/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggCount/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_AggMinByDistance",
@@ -4913,13 +4977,14 @@
       ],
       "binding": "capability_standard_graph_op_AggMinByDistance",
       "preset": "capability_standard_graph_op_AggMinByDistance_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/AggMinByDistance.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_AggMinByDistance",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_AggMinByDistance/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryCone",
@@ -4939,13 +5004,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryCone",
       "preset": "capability_standard_graph_op_QueryCone_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryCone.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryCone",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryCone/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryCone/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterLayer",
@@ -4965,13 +5031,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterLayer",
       "preset": "capability_standard_graph_op_QueryFilterLayer_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterLayer.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterLayer",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterNotEntity",
@@ -4991,13 +5058,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterNotEntity",
       "preset": "capability_standard_graph_op_QueryFilterNotEntity_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterNotEntity.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryFilterRelationship",
@@ -5017,13 +5085,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryFilterRelationship",
       "preset": "capability_standard_graph_op_QueryFilterRelationship_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryFilterRelationship.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryHexNeighbors",
@@ -5043,13 +5112,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryHexNeighbors",
       "preset": "capability_standard_graph_op_QueryHexNeighbors_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryHexNeighbors.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryHexRange",
@@ -5069,13 +5139,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryHexRange",
       "preset": "capability_standard_graph_op_QueryHexRange_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryHexRange.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryHexRange",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryHexRange/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryHexRange/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryHexRing",
@@ -5095,13 +5166,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryHexRing",
       "preset": "capability_standard_graph_op_QueryHexRing_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryHexRing.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryHexRing",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryHexRing/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryHexRing/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryLine",
@@ -5121,13 +5193,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryLine",
       "preset": "capability_standard_graph_op_QueryLine_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryLine.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryLine",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryLine/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryLine/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryRectangle",
@@ -5147,13 +5220,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryRectangle",
       "preset": "capability_standard_graph_op_QueryRectangle_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryRectangle.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryRectangle",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryRectangle/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryRectangle/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_TargetListGet",
@@ -5173,13 +5247,14 @@
       ],
       "binding": "capability_standard_graph_op_TargetListGet",
       "preset": "capability_standard_graph_op_TargetListGet_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/TargetListGet.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_TargetListGet",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_TargetListGet/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggAverageMetric",
@@ -5199,13 +5274,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggAverageMetric",
       "preset": "capability_standard_graph_op_RelationshipAggAverageMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggAverageMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggAverageMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggAverageMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggAverageMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric",
@@ -5225,13 +5301,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric",
       "preset": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggMaxEntityByMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggMaxMetric",
@@ -5251,13 +5328,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggMaxMetric",
       "preset": "capability_standard_graph_op_RelationshipAggMaxMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggMaxMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggMinEntityByMetric",
@@ -5277,13 +5355,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggMinEntityByMetric",
       "preset": "capability_standard_graph_op_RelationshipAggMinEntityByMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggMinEntityByMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinEntityByMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinEntityByMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinEntityByMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggMinMetric",
@@ -5303,13 +5382,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggMinMetric",
       "preset": "capability_standard_graph_op_RelationshipAggMinMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggMinMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggMinMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAggSumMetric",
@@ -5329,13 +5409,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAggSumMetric",
       "preset": "capability_standard_graph_op_RelationshipAggSumMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAggSumMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipFilterFlag",
@@ -5355,13 +5436,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipFilterFlag",
       "preset": "capability_standard_graph_op_RelationshipFilterFlag_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipFilterFlag.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipFilterMetricRange",
@@ -5381,13 +5463,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipFilterMetricRange",
       "preset": "capability_standard_graph_op_RelationshipFilterMetricRange_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipFilterMetricRange.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipGetMetric",
@@ -5407,13 +5490,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipGetMetric",
       "preset": "capability_standard_graph_op_RelationshipGetMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipGetMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipHasLink",
@@ -5433,13 +5517,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipHasLink",
       "preset": "capability_standard_graph_op_RelationshipHasLink_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipHasLink.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipHasLink",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipQueryBetweenPair",
@@ -5459,13 +5544,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipQueryBetweenPair",
       "preset": "capability_standard_graph_op_RelationshipQueryBetweenPair_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipQueryBetweenPair.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipQueryIncoming",
@@ -5485,13 +5571,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipQueryIncoming",
       "preset": "capability_standard_graph_op_RelationshipQueryIncoming_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipQueryIncoming.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipQueryMutual",
@@ -5511,13 +5598,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipQueryMutual",
       "preset": "capability_standard_graph_op_RelationshipQueryMutual_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipQueryMutual.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipQueryOutgoing",
@@ -5537,13 +5625,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipQueryOutgoing",
       "preset": "capability_standard_graph_op_RelationshipQueryOutgoing_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipQueryOutgoing.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipRemoveLink",
@@ -5563,13 +5652,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipRemoveLink",
       "preset": "capability_standard_graph_op_RelationshipRemoveLink_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipRemoveLink.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipSetFlag",
@@ -5589,13 +5679,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipSetFlag",
       "preset": "capability_standard_graph_op_RelationshipSetFlag_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipSetFlag.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipSortByMetric",
@@ -5615,13 +5706,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipSortByMetric",
       "preset": "capability_standard_graph_op_RelationshipSortByMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipSortByMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ApplyEffectDynamic",
@@ -5641,13 +5733,14 @@
       ],
       "binding": "capability_standard_graph_op_ApplyEffectDynamic",
       "preset": "capability_standard_graph_op_ApplyEffectDynamic_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ApplyEffectDynamic.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_FanOutApplyEffect",
@@ -5667,13 +5760,14 @@
       ],
       "binding": "capability_standard_graph_op_FanOutApplyEffect",
       "preset": "capability_standard_graph_op_FanOutApplyEffect_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/FanOutApplyEffect.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffect",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffect/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffect/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_FanOutApplyEffectDynamic",
@@ -5693,13 +5787,14 @@
       ],
       "binding": "capability_standard_graph_op_FanOutApplyEffectDynamic",
       "preset": "capability_standard_graph_op_FanOutApplyEffectDynamic_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/FanOutApplyEffectDynamic.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_HasTag",
@@ -5719,13 +5814,14 @@
       ],
       "binding": "capability_standard_graph_op_HasTag",
       "preset": "capability_standard_graph_op_HasTag_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/HasTag.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_HasTag",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_HasTag/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LookupTagDisplayToken",
@@ -5745,13 +5841,14 @@
       ],
       "binding": "capability_standard_graph_op_LookupTagDisplayToken",
       "preset": "capability_standard_graph_op_LookupTagDisplayToken_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LookupTagDisplayToken.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryLimit",
@@ -5771,13 +5868,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryLimit",
       "preset": "capability_standard_graph_op_QueryLimit_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryLimit.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryLimit",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryLimit/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryLimit/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QueryRadius",
@@ -5797,13 +5895,14 @@
       ],
       "binding": "capability_standard_graph_op_QueryRadius",
       "preset": "capability_standard_graph_op_QueryRadius_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QueryRadius.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QueryRadius",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QueryRadius/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QueryRadius/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_QuerySortStable",
@@ -5823,13 +5922,14 @@
       ],
       "binding": "capability_standard_graph_op_QuerySortStable",
       "preset": "capability_standard_graph_op_QuerySortStable_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/QuerySortStable.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_QuerySortStable",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_QuerySortStable/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipAddMetric",
@@ -5849,13 +5949,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipAddMetric",
       "preset": "capability_standard_graph_op_RelationshipAddMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipAddMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipEnsureLink",
@@ -5875,13 +5976,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipEnsureLink",
       "preset": "capability_standard_graph_op_RelationshipEnsureLink_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipEnsureLink.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipHasFlag",
@@ -5901,13 +6003,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipHasFlag",
       "preset": "capability_standard_graph_op_RelationshipHasFlag_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipHasFlag.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_RelationshipSetMetric",
@@ -5927,13 +6030,14 @@
       ],
       "binding": "capability_standard_graph_op_RelationshipSetMetric",
       "preset": "capability_standard_graph_op_RelationshipSetMetric_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/RelationshipSetMetric.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SelectTagInMask",
@@ -5953,13 +6057,14 @@
       ],
       "binding": "capability_standard_graph_op_SelectTagInMask",
       "preset": "capability_standard_graph_op_SelectTagInMask_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SelectTagInMask.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ClampTargetToRange",
@@ -5979,13 +6084,14 @@
       ],
       "binding": "capability_standard_graph_op_ClampTargetToRange",
       "preset": "capability_standard_graph_op_ClampTargetToRange_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ClampTargetToRange.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ClampTargetToRange",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ClampTargetToRange/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ClampTargetToRange/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ControlDomainControls",
@@ -6005,13 +6111,14 @@
       ],
       "binding": "capability_standard_graph_op_ControlDomainControls",
       "preset": "capability_standard_graph_op_ControlDomainControls_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ControlDomainControls.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ControlDomainControls",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ControlDomainControls/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_ControlDomainResolve",
@@ -6031,13 +6138,14 @@
       ],
       "binding": "capability_standard_graph_op_ControlDomainResolve",
       "preset": "capability_standard_graph_op_ControlDomainResolve_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ControlDomainResolve.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_ControlDomainResolve",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_FanOutDispatchEffect",
@@ -6057,13 +6165,14 @@
       ],
       "binding": "capability_standard_graph_op_FanOutDispatchEffect",
       "preset": "capability_standard_graph_op_FanOutDispatchEffect_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/FanOutDispatchEffect.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_FanOutDispatchEffectDynamic",
@@ -6083,13 +6192,14 @@
       ],
       "binding": "capability_standard_graph_op_FanOutDispatchEffectDynamic",
       "preset": "capability_standard_graph_op_FanOutDispatchEffectDynamic_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/FanOutDispatchEffectDynamic.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_IsPointInCircle",
@@ -6109,13 +6219,14 @@
       ],
       "binding": "capability_standard_graph_op_IsPointInCircle",
       "preset": "capability_standard_graph_op_IsPointInCircle_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/IsPointInCircle.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_IsPointInCircle",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_IsPointInCircle/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_IsPointInCircle/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_KnowledgeHasProjection",
@@ -6135,13 +6246,14 @@
       ],
       "binding": "capability_standard_graph_op_KnowledgeHasProjection",
       "preset": "capability_standard_graph_op_KnowledgeHasProjection_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/KnowledgeHasProjection.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadEventPayloadFloat",
@@ -6161,13 +6273,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadEventPayloadFloat",
       "preset": "capability_standard_graph_op_LoadEventPayloadFloat_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEventPayloadFloat.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadEventPayloadInt",
@@ -6187,13 +6300,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadEventPayloadInt",
       "preset": "capability_standard_graph_op_LoadEventPayloadInt_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadEventPayloadInt.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadInt",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadEventPayloadInt/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadTargetPosX",
@@ -6213,13 +6327,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadTargetPosX",
       "preset": "capability_standard_graph_op_LoadTargetPosX_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadTargetPosX.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosX",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadTargetPosY",
@@ -6239,13 +6354,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadTargetPosY",
       "preset": "capability_standard_graph_op_LoadTargetPosY_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadTargetPosY.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosY",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_LoadViewer",
@@ -6265,13 +6381,14 @@
       ],
       "binding": "capability_standard_graph_op_LoadViewer",
       "preset": "capability_standard_graph_op_LoadViewer_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/LoadViewer.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_LoadViewer",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_LoadViewer/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_LoadViewer/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SendEvent",
@@ -6291,13 +6408,14 @@
       ],
       "binding": "capability_standard_graph_op_SendEvent",
       "preset": "capability_standard_graph_op_SendEvent_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SendEvent.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SendEvent",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SendEvent/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SendEvent/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SnapToNearestGraphEdge",
@@ -6317,13 +6435,14 @@
       ],
       "binding": "capability_standard_graph_op_SnapToNearestGraphEdge",
       "preset": "capability_standard_graph_op_SnapToNearestGraphEdge_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SnapToNearestGraphEdge.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
       "id": "capability_standard_graph_op_SnapToNearestInCollection",
@@ -6343,13 +6462,14 @@
       ],
       "binding": "capability_standard_graph_op_SnapToNearestInCollection",
       "preset": "capability_standard_graph_op_SnapToNearestInCollection_raylib",
-      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SnapToNearestInCollection.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection",
-      "screenshot": null,
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4",
       "status": "active",
-      "notes": "Per-op player gallery. Recording follows vignette landing."
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

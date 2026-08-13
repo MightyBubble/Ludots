@@ -156,9 +156,17 @@ def record_one(
     if not play.is_file() or play.stat().st_size < 20_000:
         raise RuntimeError(f"play.mp4 missing or empty: {play}")
 
+    poster = out / "poster.png"
+    shutil.copy2(pngs[-1], poster)
+    if not poster.is_file() or poster.stat().st_size < 1_000:
+        raise RuntimeError(f"poster.png missing or empty: {poster}")
+
     dest = publish / f"{op}.mp4"
     shutil.copy2(play, dest)
-    print(f"  wrote {play} ({play.stat().st_size} bytes) and {dest}", flush=True)
+    print(
+        f"  wrote {play} ({play.stat().st_size} bytes), {poster.name}, and {dest}",
+        flush=True,
+    )
 
 
 def wait_for_pid(pid: int, timeout_s: float) -> None:

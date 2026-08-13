@@ -25,7 +25,7 @@ GALLERY_REL = "mods/showcases/capability_standard/CapabilityStandardGraphOpsNode
 ENTRY_ROOT_REL = "mods/showcases/capability_standard/graph_op_entries"
 COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
 ACCEPTANCE = "GraphOpsNodeGalleryAcceptanceTests"
-DOCS = "gitbook/architecture/capability-standard-showcases.md"
+WIKI_DOCS = "gitbook/reference/graph-node-op-wiki"
 
 MAP_TAGS = [
     "showcase",
@@ -287,6 +287,7 @@ def main() -> int:
                 "buildMode": "auto",
             },
         )
+        evidence = f"artifacts/evidence/{sid}"
         upsert_by_key(
             showcases,
             "id",
@@ -309,13 +310,14 @@ def main() -> int:
                 ],
                 "binding": sid,
                 "preset": f"{sid}_raylib",
-                "docsPath": DOCS,
+                "docsPath": f"{WIKI_DOCS}/{op}.md",
                 "readmePath": None,
                 "acceptanceTest": ACCEPTANCE,
-                "artifactDir": f"artifacts/evidence/{sid}",
-                "screenshot": None,
+                "artifactDir": evidence,
+                "screenshot": f"{evidence}/poster.png",
+                "video": f"{evidence}/play.mp4",
                 "status": "active",
-                "notes": "Per-op player gallery. Recording follows vignette landing.",
+                "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki.",
             },
         )
 
