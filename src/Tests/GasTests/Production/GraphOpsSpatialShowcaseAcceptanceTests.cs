@@ -3,6 +3,7 @@ using CapabilityStandardGraphOpsSpatialMod.Runtime;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
