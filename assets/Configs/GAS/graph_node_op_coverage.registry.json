@@ -559,7 +559,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_blackboard",
       "status": "covered"
     },
@@ -577,7 +577,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_blackboard",
       "status": "covered"
     },
@@ -939,7 +939,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -948,7 +948,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -957,7 +957,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -966,7 +966,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -975,7 +975,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -984,7 +984,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -1002,7 +1002,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -1011,7 +1011,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -1020,7 +1020,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -1029,7 +1029,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },
@@ -1038,7 +1038,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
       "showcaseId": "capability_standard_graph_ops_event",
       "status": "covered"
     },

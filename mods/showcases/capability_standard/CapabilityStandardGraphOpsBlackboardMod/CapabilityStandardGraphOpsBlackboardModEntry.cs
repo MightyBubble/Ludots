@@ -4,6 +4,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsBlackboardMod;
@@ -24,8 +25,10 @@ public sealed class CapabilityStandardGraphOpsBlackboardModEntry : IMod
       engine.SetService(MetricsKey, runtime.Metrics);
       var debugDraw = new DebugDrawCommandBuffer();
       engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+      ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+        ?? throw new InvalidOperationException("ScreenOverlayBuffer is required for blackboard player caption.");
       engine.RegisterSystem(new GraphOpsBlackboardSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-      engine.RegisterPresentationSystem(new GraphOpsBlackboardPresentationSystem(runtime, debugDraw));
+      engine.RegisterPresentationSystem(new GraphOpsBlackboardPresentationSystem(runtime, debugDraw, overlay));
       return Task.CompletedTask;
     });
     context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });

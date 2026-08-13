@@ -25,7 +25,7 @@
 
 - Handlers: 既有 GraphNodeOp，禁止新 opcode
 - Queues / Systems: 各 Mod Simulation/Presentation；DebugDrawCommandBuffer；ScreenOverlayBuffer
-- Resolvers / Registries: GraphProgramSymbolPatcher、GraphProgramAuthoringFrontDoor、GasGraphRuntimeApi、launcher `--record`
+- Resolvers / Registries: GraphProgramSymbolPatcher、GraphProgramAuthoringFrontDoor、GasGraphRuntimeApi、launcher screenshot env
 - Existing presets / graphs: 八个 GraphOps 画廊 + Ability Graph Sandbox
 
 ### 4. New Layer 0 ops (if any)
@@ -61,60 +61,14 @@ N/A
 2. **可见**：舞台上能看出角色/血条/圈人/水位等变化；字幕走 `GraphShowcaseStagePresenter.DrawPlayerCaption(ScreenOverlayBuffer, title, detail)`。
 3. **可玩**：有 launcher binding + raylib preset；新玩家能启动看完整一局，不是只编译图。
 4. **真实**：每个 covered op 必须出现在该 Showcase 的图里并被执行；禁止 C# 演戏填 Detail。
-5. **证据**：`artifacts/evidence/<showcaseId>/` 含 launcher 六件套截图 + `play.mp4`；registry `screenshot` 指向一张能看懂剧情的 PNG。
+5. **证据**：`artifacts/evidence/<showcaseId>/` 含截图序列 + `play.mp4`；registry `screenshot` 指向一张能看懂剧情的 PNG。
 
-禁止静默失败：图编译失败、符号未补丁、吸附永远 False、读配置全 0 → 测试必须红。
+禁止静默失败：图编译失败、符号未补丁、吸附永远失败、读配置全 0 → 测试必须红。
 
-### 10. Attr / Float 家族自审（本分支）
+### 10. Attr / Float 家族
 
-- **Task / Issue**: PR #919 playable gallery — `capability_standard_graph_ops_attr` + `capability_standard_graph_ops_float`
-- **Date**: 2026-08-13
-- **Agent / Author**: Cloud Agent
+Attr 把比较/选择接入轻击/全力；Float 把出手许可与负面修正翻正写进伤害句。属性名走 `attribute_constraints.json` 合并，启动器才能打图。
 
-#### 1. Core judgment
+### 11. Blackboard / Event 家族
 
-新变体主要交付物是（A/B/C/D）: **A** — 既有 Attr/Float graph 节点连线 + 玩家字幕；CompareLtInt 残血分支、ConstBool 出手许可
-
-结论: **PASS**
-
-一句话理由: 不新增 opcode / profile enum；Attr 把 CompareLtInt/CompareEqInt/CompareEqEntity/SelectEntity 接入轻击/全力与选人；Float 把 ConstBool 写入射程判定图并点名 Abs/Neg。
-
-#### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| ConstInt/AddInt/CompareLtInt/CompareEqInt/CompareEqEntity/SelectEntity/属性读写/效果模板 | 0 | Attr `graphs.json` + GasGraphOpHandlerTable |
-| ConstBool/ConstFloat/加减乘除/Abs/Neg/Clamp/Min/Max/Random/CompareGtFloat | 0 | Float FrontDoor JSON |
-| 玩家剧本与字幕 | 2 | GraphOpsAttr/Float Runtime Detail + DrawPlayerCaption |
-
-#### 3. Reuse list
-
-- Handlers: GasGraphOpHandlerTable（禁止新 opcode）
-- Queues / Systems: GraphOpsAttr/Float Simulation + Presentation；ScreenOverlayBuffer；EffectRequestQueue
-- Resolvers / Registries: GraphOpsAttrSymbolResolver、GraphProgramAuthoringFrontDoor、AttributeRegistry、EffectTemplateIdRegistry
-- Existing presets / graphs: `Graph.GraphOpsAttr.*`、`showcase.graph_ops_float.damage` / `range`
-
-#### 4. New Layer 0 ops
-
-N/A
-
-#### 5. Transaction boundary
-
-无跨帧 rollback；效果图单帧 halt；标记效果仅展示队列投递与移除请求。
-
-#### 6. Config SSOT
-
-行为配置落在: `CapabilityStandardGraphOpsAttrMod/assets/GAS/graphs.json` + Float FrontDoor JSON
-
-是否新增 JSON schema: **NO**
-
-#### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
-
-#### 8. Next variant test
-
-「下一个 Mod 变体」将修改: **graph 连线 / effect 步骤**
+空洞演示来自未 Patch 的符号下标、目标名单为空、吸附起点过远与英文 True/False。黑板 FrontDoor 后 `GraphProgramSymbolPatcher.Patch`；事件用既有 tag_rules 登记 `Event.DamageDealt`，扇出写目标名单，吸附改到够得着的落点。

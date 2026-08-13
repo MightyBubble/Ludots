@@ -32,10 +32,22 @@ public sealed class GraphOpsEventShowcaseAcceptanceTests
         Assert.Multiple(() =>
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain("发事件"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("读载荷"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("成立"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("控制域"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("知识投影"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("扇出派发"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("吸附"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("吸附成功"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("落点钳制"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("是否在圆内"));
+            Assert.That(runtime.Metrics.Detail, Does.Not.Contain("True"));
+            Assert.That(runtime.Metrics.Detail, Does.Not.Contain("False"));
+            Assert.That(runtime.Metrics.Detail, Does.Not.Contain("耗时"));
+            Assert.That(runtime.DispatchCount, Is.GreaterThan(0));
+            Assert.That(runtime.SnapCollectionOk, Is.True);
+            Assert.That(runtime.SnapEdgeOk, Is.True);
+            Assert.That(runtime.PayloadInt, Is.EqualTo(99));
+            Assert.That(runtime.PayloadFloat, Is.EqualTo(2.5f).Within(0.01f));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         });
     }

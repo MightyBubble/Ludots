@@ -1,11 +1,25 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsBlackboardMod.Runtime;
+
+internal sealed class GraphOpsBlackboardSymbolResolver : IGraphSymbolResolver
+{
+    public int ResolveTag(string name) => TagRegistry.Register(name);
+    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
+    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
+    public int ResolveRelationshipType(string name) => ConfigKeyRegistry.Register($"relationship.type.{name}");
+    public int ResolveRelationshipMetric(string name) => ConfigKeyRegistry.Register($"relationship.metric.{name}");
+    public int ResolveRelationshipFlag(string name) => ConfigKeyRegistry.Register($"relationship.flag.{name}");
+    public int ResolveRelationshipReason(string name) => ConfigKeyRegistry.Register($"relationship.reason.{name}");
+    public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
+    public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
+}
 
 internal static class GraphOpsBlackboardGraphAuthoring
 {
@@ -28,6 +42,14 @@ internal static class GraphOpsBlackboardGraphAuthoring
             string message = string.Join("; ", compiled.Diagnostics.Select(d => d.Message));
             throw new InvalidOperationException($"FrontDoor compile failed for '{graphId}': {message}");
         }
+
+        if (!compiled.Package.HasValue)
+        {
+            throw new InvalidOperationException($"FrontDoor compile for '{graphId}' produced no package.");
+        }
+
+        GraphProgramPackage package = compiled.Package.Value;
+        GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, new GraphOpsBlackboardSymbolResolver());
 
         GraphKindOperationPolicy.RequireAllowed(
             kind,

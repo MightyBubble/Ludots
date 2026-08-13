@@ -49,7 +49,8 @@ public static class GraphOpsEventGraphBootstrap
 {
     public static GraphProgramRegistry LoadModGraphs(
         string modAssetsRoot,
-        out TargetDispatchPresetRegistry targetDispatchPresets)
+        out TargetDispatchPresetRegistry targetDispatchPresets,
+        out EntityCollectionStore entityCollections)
     {
         if (string.IsNullOrWhiteSpace(modAssetsRoot))
         {
@@ -77,7 +78,7 @@ public static class GraphOpsEventGraphBootstrap
 
         var programs = new GraphProgramRegistry();
         var resolver = new GraphOpsEventSymbolResolver(targetDispatchPresets);
-        var entityCollections = new EntityCollectionStore(new StringIntRegistry());
+        entityCollections = new EntityCollectionStore(new StringIntRegistry());
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
 

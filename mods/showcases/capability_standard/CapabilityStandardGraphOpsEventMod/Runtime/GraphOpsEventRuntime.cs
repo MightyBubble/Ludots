@@ -20,7 +20,6 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.MultiLayerGraph;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Registry;
 
 namespace CapabilityStandardGraphOpsEventMod.Runtime;
 
@@ -48,12 +47,26 @@ public sealed class GraphOpsEventRuntime : IDisposable
     private int _placementGraphId;
     private byte _controlsReg;
     private byte _projectionReg;
+    private byte _payloadIntReg;
+    private byte _payloadFloatReg;
+    private byte _aimXReg;
+    private byte _aimYReg;
+    private byte _clampReg;
+    private byte _inCircleReg;
+    private byte _snapCollectionFlagsReg;
+    private byte _snapEdgeReg;
     private float _accum;
     private int _wave;
     private int _eventCount;
     private int _dispatchCount;
+    private int _payloadInt;
+    private float _payloadFloat;
+    private int _aimX;
+    private int _aimY;
     private bool _controlsOk;
     private bool _projectionOk;
+    private bool _clampOk;
+    private bool _inCircleOk;
     private bool _snapCollectionOk;
     private bool _snapEdgeOk;
     private int _snappedX;
@@ -74,30 +87,42 @@ public sealed class GraphOpsEventRuntime : IDisposable
     public bool ProjectionOk => _projectionOk;
     public bool SnapCollectionOk => _snapCollectionOk;
     public bool SnapEdgeOk => _snapEdgeOk;
+    public int PayloadInt => _payloadInt;
+    public float PayloadFloat => _payloadFloat;
+    public bool ClampOk => _clampOk;
+    public bool InCircleOk => _inCircleOk;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_event" };
 
-    public void Bind(GraphProgramRegistry programs, TargetDispatchPresetRegistry targetDispatchPresets)
+    public void Bind(
+        GraphProgramRegistry programs,
+        TargetDispatchPresetRegistry targetDispatchPresets,
+        EntityCollectionStore entityCollections)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
+        _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
         _ownsPrograms = false;
     }
 
     public void BindStandaloneFromModAssets()
     {
         string assetsRoot = GraphOpsEventGraphBootstrap.FindModAssetsRoot();
-        _programs = GraphOpsEventGraphBootstrap.LoadModGraphs(assetsRoot, out TargetDispatchPresetRegistry presets);
+        _programs = GraphOpsEventGraphBootstrap.LoadModGraphs(
+            assetsRoot,
+            out TargetDispatchPresetRegistry presets,
+            out EntityCollectionStore collections);
         _targetDispatchPresets = presets;
+        _entityCollections = collections;
         _ownsPrograms = true;
     }
 
     public void EnsureWorld()
     {
         if (_world != null) return;
-        if (_programs == null || _targetDispatchPresets == null)
+        if (_programs == null || _targetDispatchPresets == null || _entityCollections == null)
         {
             throw new InvalidOperationException(
-                "GraphOpsEventRuntime.Bind(Registry, Presets) or BindStandaloneFromModAssets() required.");
+                "GraphOpsEventRuntime.Bind(Registry, Presets, Collections) or BindStandaloneFromModAssets() required.");
         }
 
         _dispatchGraphId = RequireGraphId(GraphOpsEventGraphKeys.Dispatch);
@@ -124,7 +149,6 @@ public sealed class GraphOpsEventRuntime : IDisposable
 
         var knowledgeStore = new KnowledgeProjectionStore();
         var knowledgeResolver = new KnowledgeProjectionResolver(knowledgeStore);
-        _entityCollections = new EntityCollectionStore(new StringIntRegistry());
 
         _api = new GasGraphRuntimeApi(
             _world,
@@ -173,6 +197,7 @@ public sealed class GraphOpsEventRuntime : IDisposable
         _wave++;
 
         var sw = Stopwatch.StartNew();
+        _effectRequests!.Clear();
         RunPlacementGraph();
         RunDispatchGraph();
         _eventBus!.Update();
@@ -186,10 +211,11 @@ public sealed class GraphOpsEventRuntime : IDisposable
         Metrics.ThinkWaves++;
 
         Metrics.Detail =
-            $"发事件×{_eventCount}（控制域{_controlsOk}、知识投影{_projectionOk}）；" +
+            $"发事件×{_eventCount}；读载荷 int {_payloadInt} / float {_payloadFloat:F1}；" +
+            $"控制域{Established(_controlsOk)}、知识投影{Established(_projectionOk)}；" +
             $"扇出派发×{_dispatchCount}；" +
-            $"吸附到最近目标（集合{_snapCollectionOk}→({_snappedX},{_snappedY})，路网边{_snapEdgeOk}）；" +
-            $"耗时{Metrics.LastThinkMs:F3}ms";
+            $"落点({_aimX},{_aimY})钳制{Established(_clampOk)}；是否在圆内{Established(_inCircleOk)}；" +
+            $"集合{SnapPhrase(_snapCollectionOk)}、路网边{SnapPhrase(_snapEdgeOk)}→({_snappedX},{_snappedY})";
     }
 
     public void Dispose()
@@ -216,13 +242,26 @@ public sealed class GraphOpsEventRuntime : IDisposable
 
     private void ResolveControlRegisters()
     {
-        if (!_programs!.TryGetProgram(_dispatchGraphId, out ReadOnlySpan<GraphInstruction> program))
+        if (!_programs!.TryGetProgram(_dispatchGraphId, out ReadOnlySpan<GraphInstruction> dispatch))
         {
             throw new InvalidOperationException("Dispatch graph missing after EnsureWorld.");
         }
 
-        _controlsReg = FindBoolDest(program, GraphNodeOp.ControlDomainControls);
-        _projectionReg = FindBoolDest(program, GraphNodeOp.KnowledgeHasProjection);
+        if (!_programs.TryGetProgram(_placementGraphId, out ReadOnlySpan<GraphInstruction> placement))
+        {
+            throw new InvalidOperationException("Placement graph missing after EnsureWorld.");
+        }
+
+        _controlsReg = FindDest(dispatch, GraphNodeOp.ControlDomainControls);
+        _projectionReg = FindDest(dispatch, GraphNodeOp.KnowledgeHasProjection);
+        _payloadIntReg = FindDest(dispatch, GraphNodeOp.LoadEventPayloadInt, imm: 0);
+        _payloadFloatReg = FindDest(dispatch, GraphNodeOp.LoadEventPayloadFloat, imm: 3);
+        _aimXReg = FindDest(placement, GraphNodeOp.LoadTargetPosX);
+        _aimYReg = FindDest(placement, GraphNodeOp.LoadTargetPosY);
+        _clampReg = FindDest(placement, GraphNodeOp.ClampTargetToRange);
+        _inCircleReg = FindDest(placement, GraphNodeOp.IsPointInCircle);
+        _snapCollectionFlagsReg = FindFlags(placement, GraphNodeOp.SnapToNearestInCollection);
+        _snapEdgeReg = FindDest(placement, GraphNodeOp.SnapToNearestGraphEdge);
     }
 
     private void RunDispatchGraph()
@@ -239,7 +278,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
         Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
         targets[0] = _unit;
-        var targetList = new GraphTargetList(targets[..1]);
+        var targetList = new GraphTargetList(targets);
+        targetList.SetCount(1);
 
         var state = new GraphExecutionState
         {
@@ -251,7 +291,7 @@ public sealed class GraphOpsEventRuntime : IDisposable
             EventPayload = new GraphEventPayload
             {
                 PayloadA = DispatchTemplateId,
-                PayloadB = 0,
+                PayloadB = DispatchTemplateId,
                 FloatD = 2.5f,
             },
             Api = _api!,
@@ -268,6 +308,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
         _controlsOk = bools[_controlsReg] != 0;
         _projectionOk = bools[_projectionReg] != 0;
+        _payloadInt = ints[_payloadIntReg];
+        _payloadFloat = floats[_payloadFloatReg];
     }
 
     private void RunPlacementGraph()
@@ -282,7 +324,7 @@ public sealed class GraphOpsEventRuntime : IDisposable
         Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
         Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
-        var targetPos = new IntVector2(480, 120);
+        var targetPos = new IntVector2(36, 20);
 
         var state = new GraphExecutionState
         {
@@ -300,10 +342,14 @@ public sealed class GraphOpsEventRuntime : IDisposable
         };
 
         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+        _aimX = ints[_aimXReg];
+        _aimY = ints[_aimYReg];
+        _clampOk = bools[_clampReg] != 0;
+        _inCircleOk = bools[_inCircleReg] != 0;
+        _snapCollectionOk = bools[_snapCollectionFlagsReg] != 0;
+        _snapEdgeOk = bools[_snapEdgeReg] != 0;
         _snappedX = state.TargetPosCm.X;
         _snappedY = state.TargetPosCm.Y;
-        _snapCollectionOk = _snappedX == 12 && _snappedY == 8;
-        _snapEdgeOk = _snappedY == 0;
     }
 
     private static LoadedGraphRuntime BuildNavGraph()
@@ -338,16 +384,33 @@ public sealed class GraphOpsEventRuntime : IDisposable
             revision: 0);
     }
 
-    private static byte FindBoolDest(ReadOnlySpan<GraphInstruction> program, GraphNodeOp op)
+    private static byte FindDest(ReadOnlySpan<GraphInstruction> program, GraphNodeOp op, int? imm = null)
     {
-        for (int i = program.Length - 1; i >= 0; i--)
+        for (int i = 0; i < program.Length; i++)
         {
-            if (program[i].Op == (ushort)op)
+            if (program[i].Op == (ushort)op && (!imm.HasValue || program[i].Imm == imm.Value))
             {
                 return program[i].Dst;
             }
         }
 
-        throw new InvalidOperationException($"Program missing bool op {op}.");
+        throw new InvalidOperationException($"Program missing op {op}.");
     }
+
+    private static byte FindFlags(ReadOnlySpan<GraphInstruction> program, GraphNodeOp op)
+    {
+        for (int i = program.Length - 1; i >= 0; i--)
+        {
+            if (program[i].Op == (ushort)op)
+            {
+                return program[i].Flags;
+            }
+        }
+
+        throw new InvalidOperationException($"Program missing flags op {op}.");
+    }
+
+    private static string Established(bool ok) => ok ? "成立" : "未成立";
+
+    private static string SnapPhrase(bool ok) => ok ? "吸附成功" : "未吸上";
 }

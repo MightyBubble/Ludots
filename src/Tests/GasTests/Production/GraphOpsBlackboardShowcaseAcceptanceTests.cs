@@ -21,7 +21,13 @@ public sealed class GraphOpsBlackboardShowcaseAcceptanceTests
             Assert.That(runtime.Metrics.Detail, Does.Contain("黑板记事"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("读配置"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("生命周期"));
+            Assert.That(runtime.MemoPower, Is.EqualTo(12.5f).Within(0.01f));
+            Assert.That(runtime.MemoTier, Is.GreaterThanOrEqualTo(3));
+            Assert.That(runtime.MemoChainEffect, Is.EqualTo(842));
+            Assert.That(runtime.MemoPowerEcho, Is.EqualTo(runtime.MemoPower).Within(0.01f));
+            Assert.That(runtime.MemoTierEcho, Is.EqualTo(runtime.MemoTier));
             Assert.That(runtime.LifecycleStarts, Is.GreaterThan(0));
+            Assert.That(runtime.BuiltinSteps, Is.GreaterThan(0));
             Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(0));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         });
