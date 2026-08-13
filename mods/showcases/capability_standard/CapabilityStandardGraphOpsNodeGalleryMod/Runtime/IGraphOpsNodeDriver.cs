@@ -27,6 +27,8 @@ public sealed class GraphOpsNodeDriverContext
     public GraphOpsStageVisuals? Stage { get; set; }
     public Entity Caster { get; set; }
     public Entity Target { get; set; }
+    public Entity TargetContext { get; set; }
+    public IGraphRuntimeApi? RuntimeApiOverride { get; set; }
     public Entity[] SimActors { get; set; } = Array.Empty<Entity>();
     public Entity[] StageProxies { get; set; } = Array.Empty<Entity>();
     public float[] ActorHealth { get; set; } = Array.Empty<float>();
@@ -48,7 +50,8 @@ public sealed class GraphOpsNodeDriverContext
             World = SimWorld,
             Caster = Caster,
             ExplicitTarget = Target,
-            Api = Api,
+            TargetContext = TargetContext,
+            Api = RuntimeApiOverride ?? Api,
             F = floats,
             I = ints,
             B = bools,

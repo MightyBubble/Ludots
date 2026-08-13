@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.ConstBool",
+  "kind": "Validation",
+  "entry": "permit",
+  "nodes": [
+    { "id": "permit", "op": "ConstBool", "boolValue": true }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

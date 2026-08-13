@@ -1,0 +1,21 @@
+{
+  "id": "showcase.graph_op.ClampFloat",
+  "kind": "Effect",
+  "entry": "raw",
+  "nodes": [
+    { "id": "raw", "op": "ConstFloat", "floatValue": 90 },
+    { "id": "lo", "op": "ConstFloat", "floatValue": 10 },
+    { "id": "hi", "op": "ConstFloat", "floatValue": 40 },
+    { "id": "clamped", "op": "ClampFloat" }
+  ],
+  "controlEdges": [
+    { "from": "raw", "fromPort": "next", "to": "lo" },
+    { "from": "lo", "fromPort": "next", "to": "hi" },
+    { "from": "hi", "fromPort": "next", "to": "clamped" }
+  ],
+  "valueEdges": [
+    { "from": "raw", "fromPort": "value", "to": "clamped", "toPort": "value" },
+    { "from": "lo", "fromPort": "value", "to": "clamped", "toPort": "min" },
+    { "from": "hi", "fromPort": "value", "to": "clamped", "toPort": "max" }
+  ]
+}

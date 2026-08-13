@@ -1,0 +1,36 @@
+{
+  "op": "AbsFloat",
+  "driver": "linear",
+  "title": "负面修正取绝对值",
+  "beat": "修正是 -8，取绝对值变成 8 再叠上去。",
+  "detailTemplate": "负面修正取绝对值后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": ["绝对值"],
+  "featuredNodeId": "absMod",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "targetHealthSubtract"
+  }
+}

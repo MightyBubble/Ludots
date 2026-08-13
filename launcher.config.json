@@ -479,6 +479,94 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstFloatEntryMod",
         "projectPath": "CapabilityStandardGraphOpConstFloatEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AbsFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAbsFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAbsFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ClampFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpClampFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpClampFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_CompareGtFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompareGtFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompareGtFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstBool",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstBoolEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstBoolEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DivFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDivFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDivFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MaxFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMaxFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMaxFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MinFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMinFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMinFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MulFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMulFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMulFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_NegFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpNegFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpNegFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RandomFloat01",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRandomFloat01EntryMod",
+        "projectPath": "CapabilityStandardGraphOpRandomFloat01EntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SubFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSubFloatEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

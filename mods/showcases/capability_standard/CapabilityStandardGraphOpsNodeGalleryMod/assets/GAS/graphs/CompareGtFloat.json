@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.CompareGtFloat",
+  "kind": "Effect",
+  "entry": "damage",
+  "nodes": [
+    { "id": "damage", "op": "ConstFloat", "floatValue": 30 },
+    { "id": "threshold", "op": "ConstFloat", "floatValue": 15 },
+    { "id": "isCritical", "op": "CompareGtFloat" }
+  ],
+  "controlEdges": [
+    { "from": "damage", "fromPort": "next", "to": "threshold" },
+    { "from": "threshold", "fromPort": "next", "to": "isCritical" }
+  ],
+  "valueEdges": [
+    { "from": "damage", "fromPort": "value", "to": "isCritical", "toPort": "a" },
+    { "from": "threshold", "fromPort": "value", "to": "isCritical", "toPort": "b" }
+  ]
+}

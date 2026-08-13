@@ -547,6 +547,105 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AbsFloat_raylib",
+      "name": "Graph Op AbsFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AbsFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ClampFloat_raylib",
+      "name": "Graph Op ClampFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ClampFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompareGtFloat_raylib",
+      "name": "Graph Op CompareGtFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompareGtFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstBool_raylib",
+      "name": "Graph Op ConstBool Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstBool"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DivFloat_raylib",
+      "name": "Graph Op DivFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DivFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MaxFloat_raylib",
+      "name": "Graph Op MaxFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MaxFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MinFloat_raylib",
+      "name": "Graph Op MinFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MinFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MulFloat_raylib",
+      "name": "Graph Op MulFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MulFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_NegFloat_raylib",
+      "name": "Graph Op NegFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_NegFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RandomFloat01_raylib",
+      "name": "Graph Op RandomFloat01 Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RandomFloat01"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SubFloat_raylib",
+      "name": "Graph Op SubFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SubFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
