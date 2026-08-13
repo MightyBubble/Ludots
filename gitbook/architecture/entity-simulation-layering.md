@@ -6,7 +6,7 @@
 - 可裁剪、可降频、仍有行为逻辑的预算实体
 - 少量高价值 authority entity 与大量 crowd 的分层避障
 - 可切换 board 语义的 AOI / LOD
-- performer 与 gameplay entity 的职责分离
+- presenter 与 gameplay entity 的职责分离
 
 ## 1 当前代码基线
 
@@ -109,12 +109,12 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 ### 3.5 Core Minimap
 
 - Core minimap 属于 Presentation 基建，不属于业务 Mod
-- 正式逻辑信号源是 performer authoring 中显式声明的 `MinimapMarker` behavior
-- marker 位置唯一来自 performer world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
+- 正式逻辑信号源是 presenter authoring 中显式声明的 `MinimapMarker` behavior
+- marker 位置唯一来自 presenter world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
 - `Name`、`MapEntity`、`Team` 都不得作为 marker 存在性的推断入口
 - Visual heightmap、chunk streaming、camera culling、visual LOD 都不能 gate minimap 逻辑信号
 - `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
-- 256x256 大世界展示 authored performer marker；不做名称推断、战略热力图或缺信号 fallback
+- 256x256 大世界展示 authored presenter marker；不做名称推断、战略热力图或缺信号 fallback
 
 ## 4 仿真车道口径
 
@@ -203,7 +203,7 @@ AOI 的正式服务语义如下：
 
 - 一次性把所有 crowd 逻辑收敛进同一条通用 Physics2D 主线
 - 为了追求统一而移除所有 SoA 热路径缓存
-- 把 performer 升格为逻辑 entity
+- 把 presenter 升格为逻辑 entity
 - 把视觉裁剪逻辑直接当作仿真裁剪真相
 
 ## 8 现有挂靠点

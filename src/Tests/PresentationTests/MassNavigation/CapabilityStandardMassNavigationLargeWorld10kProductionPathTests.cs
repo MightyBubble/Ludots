@@ -29,7 +29,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -55,8 +55,8 @@ namespace Ludots.Tests.Presentation
         private const float MovementEpsilonCm = 1f;
         private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
         private const string MouseRightButtonPath = "<Mouse>/RightButton";
-        private const string LightCommandMarkerPerformerId = "mass_navigation_agent_command_marker_light";
-        private const string HeavyCommandMarkerPerformerId = "mass_navigation_agent_command_marker_heavy";
+        private const string LightCommandMarkerPresenterId = "mass_navigation_agent_command_marker_light";
+        private const string HeavyCommandMarkerPresenterId = "mass_navigation_agent_command_marker_heavy";
 
         private static readonly string[] ShowcaseMods =
         {
@@ -71,7 +71,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [TearDown]
@@ -79,7 +79,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [Test]
@@ -512,31 +512,31 @@ namespace Ludots.Tests.Presentation
 
                 Assert.That(engine.World.TryGet(entity, out VisualTransform visual), Is.True,
                     $"Agent {agentIndex.Value} is missing VisualTransform.");
-                Assert.That(engine.World.TryGet(entity, out PresentationOwnerHasPerformerPayload payload), Is.True,
-                    $"Agent {agentIndex.Value} is missing performer payload.");
+                Assert.That(engine.World.TryGet(entity, out PresentationOwnerHasPresenterPayload payload), Is.True,
+                    $"Agent {agentIndex.Value} is missing presenter payload.");
                 Assert.That(payload.RootCount, Is.EqualTo(1),
-                    $"Agent {agentIndex.Value} must have exactly one performer root.");
-                Assert.That(engine.World.IsAlive(payload.SingleRootPerformer), Is.True,
-                    $"Agent {agentIndex.Value} performer root is not alive.");
-                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerState performerState), Is.True,
-                    $"Agent {agentIndex.Value} performer root has no PerformerState.");
-                Assert.That(performerState.OwnerEntity, Is.EqualTo(entity),
-                    $"Agent {agentIndex.Value} performer root owner mismatch.");
-                Assert.That(performerState.StableId, Is.GreaterThan(0),
-                    $"Agent {agentIndex.Value} performer root has no stable id.");
-                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPlanePosition performerPosition), Is.True,
-                    $"Agent {agentIndex.Value} performer root has no plane position.");
+                    $"Agent {agentIndex.Value} must have exactly one presenter root.");
+                Assert.That(engine.World.IsAlive(payload.SingleRootPresenter), Is.True,
+                    $"Agent {agentIndex.Value} presenter root is not alive.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPresenter, out PresenterState presenterState), Is.True,
+                    $"Agent {agentIndex.Value} presenter root has no PresenterState.");
+                Assert.That(presenterState.OwnerEntity, Is.EqualTo(entity),
+                    $"Agent {agentIndex.Value} presenter root owner mismatch.");
+                Assert.That(presenterState.StableId, Is.GreaterThan(0),
+                    $"Agent {agentIndex.Value} presenter root has no stable id.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPresenter, out PresenterWorldPlanePosition presenterPosition), Is.True,
+                    $"Agent {agentIndex.Value} presenter root has no plane position.");
 
                 Vector2 solverCm = simulation.GetAgentWorldPositionCm(agentIndex.Value);
                 Vector2 ecsCm = worldPosition.Value.ToVector2();
                 Vector2 visualCm = WorldPlane2D.VisualMetersToLogicCm(in visual.Position);
-                Vector2 performerCm = performerPosition.ValueCm;
+                Vector2 presenterCm = presenterPosition.ValueCm;
                 Assert.That(Vector2.DistanceSquared(solverCm, ecsCm), Is.LessThanOrEqualTo(toleranceSq),
                     $"Agent {agentIndex.Value} solver/ECS anchor diverged: {solverCm} vs {ecsCm}.");
                 Assert.That(Vector2.DistanceSquared(ecsCm, visualCm), Is.LessThanOrEqualTo(toleranceSq),
                     $"Agent {agentIndex.Value} ECS/VisualTransform anchor diverged: {ecsCm} vs {visualCm}.");
-                Assert.That(Vector2.DistanceSquared(visualCm, performerCm), Is.LessThanOrEqualTo(toleranceSq),
-                    $"Agent {agentIndex.Value} VisualTransform/performer root anchor diverged: {visualCm} vs {performerCm}.");
+                Assert.That(Vector2.DistanceSquared(visualCm, presenterCm), Is.LessThanOrEqualTo(toleranceSq),
+                    $"Agent {agentIndex.Value} VisualTransform/presenter root anchor diverged: {visualCm} vs {presenterCm}.");
                 sampled++;
             });
 
@@ -879,18 +879,18 @@ namespace Ludots.Tests.Presentation
 
         private static int CountActiveCommandMarkers(GameEngine engine)
         {
-            var performers = RequireService(engine, CoreServiceKeys.PerformerEntityRuntime);
-            var definitions = RequireService(engine, CoreServiceKeys.PerformerDefinitionRegistry);
-            int lightMarkerId = definitions.GetId(LightCommandMarkerPerformerId);
-            int heavyMarkerId = definitions.GetId(HeavyCommandMarkerPerformerId);
+            var presenters = RequireService(engine, CoreServiceKeys.PresenterEntityRuntime);
+            var definitions = RequireService(engine, CoreServiceKeys.PresenterDefinitionRegistry);
+            int lightMarkerId = definitions.GetId(LightCommandMarkerPresenterId);
+            int heavyMarkerId = definitions.GetId(HeavyCommandMarkerPresenterId);
             if (lightMarkerId <= 0 || heavyMarkerId <= 0)
             {
-                throw new InvalidOperationException("MassNavigation command marker performer definitions are not registered.");
+                throw new InvalidOperationException("MassNavigation command marker presenter definitions are not registered.");
             }
 
             int count = 0;
-            var query = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in query, (ref PerformerState state) =>
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (ref PresenterState state) =>
             {
                 if (state.DefId == lightMarkerId ||
                     state.DefId == heavyMarkerId)

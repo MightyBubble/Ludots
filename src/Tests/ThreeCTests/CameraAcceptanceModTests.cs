@@ -84,7 +84,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient performer marker.");
+            Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient presenter marker.");
             var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
             bool foundCueMarker = false;
             foreach (ref readonly var primitive in primitives.GetSpan())
@@ -272,9 +272,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             Assert.That(barCount, Is.EqualTo(0),
-                "Camera acceptance should disable entity health bars at performer-config level so WorldHud bar items are not emitted.");
+                "Camera acceptance should disable entity health bars at presenter-config level so WorldHud bar items are not emitted.");
             Assert.That(textCount, Is.EqualTo(0),
-                "Camera acceptance should disable entity health numbers at performer-config level so WorldHud text items are not emitted.");
+                "Camera acceptance should disable entity health numbers at presenter-config level so WorldHud text items are not emitted.");
         }
 
         [Test]
@@ -1610,7 +1610,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(
                 WorldPlane2D.AngleDistanceRad(visualFacingRad, expectedFacingRad),
                 Is.LessThan(0.0001f),
-                "The owner VisualTransform must preserve the same facing before performer emission.");
+                "The owner VisualTransform must preserve the same facing before presenter emission.");
         }
 
         private static bool AllPositionsWithinRadius(List<WorldCmInt2> positions, in WorldCmInt2 center, int radiusCm)

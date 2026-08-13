@@ -7,7 +7,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -483,7 +483,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             if (kind == InstancedBatchSourceKind.PresentationEvent &&
-                eventKind is PresentationEventKind.PerformerCreated or PresentationEventKind.PerformerDestroyed &&
+                eventKind is PresentationEventKind.PresenterCreated or PresentationEventKind.PresenterDestroyed &&
                 keyId == -1)
             {
                 return false;

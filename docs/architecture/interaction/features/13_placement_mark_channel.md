@@ -215,4 +215,4 @@ Down + Unit target:
 |------|--------|
 | InterruptAny tag 检查 (channeling 丢失 → 中断) | ✅ 已有 |
 | Cursor direction 持续写入 Blackboard | P1 (复用 F1) |
-| Beam renderer (Performer) | P2 (表现层) |
+| Beam renderer (Presenter) | P2 (表现层) |

@@ -64,7 +64,7 @@ Normal Attack ability:
           }
         ]
       },
-      "performer": "roll_animation"
+      "presenter": "roll_animation"
     },
     {
       "id": "dodge_attack",
@@ -76,7 +76,7 @@ Normal Attack ability:
           { "type": "RemoveTag", "tag": "post_dodge" }
         ]
       },
-      "performer": "rolling_slash_animation"
+      "presenter": "rolling_slash_animation"
     },
     {
       "id": "normal_attack",
@@ -87,7 +87,7 @@ Normal Attack ability:
           { "type": "Damage", "amount": 50 }
         ]
       },
-      "performer": "standard_slash_animation"
+      "presenter": "standard_slash_animation"
     }
   ]
 }

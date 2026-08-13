@@ -1,0 +1,1609 @@
+[
+  {
+    "id": "blacksmith_showcase_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_building"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_building"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_mesh_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_mesh_benchmark_ism",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_mesh_benchmark_entity"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_hudbar_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_mesh_hudbar_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_mesh_benchmark_hudbar",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_mesh_hudbar_benchmark_entity"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_hudtext_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_mesh_hudtext_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_mesh_benchmark_hudtext",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_mesh_hudtext_benchmark_entity"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_dynamic_worker_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_dynamic_worker_entity"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_dynamic_worker_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_dynamic_worker_entity"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_minimap_marker_ball_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith_minimap_marker_ball_entity"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "blacksmith_minimap_marker_ball",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "blacksmith_minimap_marker_ball_entity"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_minimap_marker_ball",
+    "children": [
+      {
+        "definitionId": "blacksmith_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_durability_hud_text_benchmark",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            5.6,
+            0
+          ],
+          "localScale": [
+            6,
+            6,
+            6
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.24,
+            0.06,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "orientation",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            7,
+            5.6,
+            0
+          ],
+          "localScale": [
+            4.5,
+            0.45,
+            0.9
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [
+            1,
+            0.24,
+            0.06,
+            1
+          ],
+          "sizePx": 11,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PresenterForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 15
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_ism",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_dynamic_worker_actor",
+    "children": [
+      {
+        "definitionId": "blacksmith_dynamic_worker_tool_attachment",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "blacksmith.worker.locomotion",
+          "animationProfileId": "blacksmith.worker.profile",
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.worker.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_dynamic_worker_tool_attachment",
+    "behaviors": [
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            0.65,
+            -0.35
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_hudbar",
+    "children": [
+      {
+        "definitionId": "blacksmith_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attribute",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.ratio",
+          "mode": "AttributeRatio",
+          "thresholds": [
+            {
+              "threshold": 0,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 2
+            }
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "blacksmith.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_hudtext",
+    "children": [
+      {
+        "definitionId": "blacksmith_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_durability_hud_text_benchmark",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attribute",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.ratio",
+          "mode": "AttributeRatio",
+          "thresholds": [
+            {
+              "threshold": 0,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 2
+            }
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "blacksmith.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.durability.current",
+        "lane": "Float",
+        "floatValue": 100
+      },
+      {
+        "paramKey": "blacksmith.durability.base",
+        "lane": "Float",
+        "floatValue": 100
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attribute",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.ratio",
+          "mode": "AttributeRatio",
+          "thresholds": [
+            {
+              "threshold": 0,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "blacksmith.workshop.assetState",
+              "outputValue": 2
+            }
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_left_mesh",
+    "extends": "blacksmith_workshop_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            2,
+            0,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_right_mesh",
+    "extends": "blacksmith_workshop_base",
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": "blacksmith.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "blacksmith.building.ruined"
+            }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            -2,
+            0,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_chimney_mesh",
+    "children": [
+      {
+        "definitionId": "blacksmith_chimney_smoke_vfx",
+        "scopeTag": "working"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.furnace",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            0,
+            3
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_chimney_smoke_vfx",
+    "rules": [
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "blacksmith.smoke.billboard",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            2.2,
+            2.2
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_worker_route_spline",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "blacksmith.worker.patrol",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            3.6,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.88,
+            0.69,
+            0.17,
+            0.75
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            0.05,
+            -1.8
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_forge_decal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [
+            2.3,
+            1.2,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.55,
+            0.12,
+            0.32
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            0,
+            1.4
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "AlignToSurface",
+          "offset": 0.02,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_worker_actor",
+    "rules": [
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": false,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": false,
+        "animator": {
+          "animatorControllerId": "blacksmith.worker.locomotion",
+          "animationProfileId": "blacksmith.worker.profile",
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      },
+      {
+        "slot": "sound",
+        "kind": "Sound",
+        "activeByDefault": false,
+        "sound": {
+          "soundAssetId": "blacksmith.sound.anvil_hammering",
+          "loop": true,
+          "volume": 0.75
+        }
+      },
+      {
+        "slot": "spline",
+        "kind": "Spline",
+        "activeByDefault": false,
+        "spline": {
+          "splineAssetId": "blacksmith.worker.patrol",
+          "usage": "Patrol",
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "progressParamKey": "blacksmith.worker.route.progress",
+          "loop": true
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": false,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": false,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            0,
+            -2
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.worker.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 0.35
+      },
+      {
+        "paramKey": "blacksmith.worker.route.progress",
+        "lane": "Float",
+        "floatValue": 0
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_durability_hud_bar",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "blacksmith.durability.hud.ratio",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            96,
+            10,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.15,
+            0.88,
+            0.32,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.55,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.hud.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_durability_hud_bar_benchmark",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "blacksmith.durability.hud.ratio",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            72,
+            8,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.1,
+            1,
+            0.15,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.55,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.hud.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_durability_hud_text",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 16,
+          "valueParamKey": "blacksmith.durability.current",
+          "secondaryValueParamKey": "blacksmith.durability.base"
+        },
+        "style": {
+          "color": [
+            1,
+            0.96,
+            0.86,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.85,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.base",
+          "mode": "AttributeBase"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_durability_hud_text_benchmark",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 11,
+          "valueParamKey": "blacksmith.durability.current",
+          "secondaryValueParamKey": "blacksmith.durability.base"
+        },
+        "style": {
+          "color": [
+            1,
+            0.98,
+            0.92,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.85,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "blacksmith.durability.base",
+          "mode": "AttributeBase"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_root",
+    "children": [
+      {
+        "definitionId": "blacksmith_workshop_left_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_workshop_right_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_chimney_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_worker_route_spline",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_forge_decal",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_worker_actor",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_durability_hud_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_durability_hud_text",
+        "scopeTag": "structure"
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.region",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "blacksmith.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.working.visible",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "blacksmith.dayNight",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "blacksmith.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.durability.current",
+        "lane": "Float",
+        "floatValue": 100
+      },
+      {
+        "paramKey": "blacksmith.durability.base",
+        "lane": "Float",
+        "floatValue": 100
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "GlobalDayNight",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "blacksmith.dayNight",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "blacksmith.region",
+          "paramLane": "Float",
+          "valueSource": "EventKeyId"
+        }
+      },
+      {
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "blacksmith.workshop.assetState",
+          "paramLane": "Int",
+          "valueSource": "EventKeyId"
+        }
+      }
+    ]
+  }
+]

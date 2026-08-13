@@ -23,7 +23,7 @@
       "id": "blacksmith_test",
       "preset": "blacksmith_test_raylib",
       "binding": "blacksmith_test",
-      "testFilter": "BlacksmithPerformerUatTests",
+      "testFilter": "BlacksmithPresenterUatTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
     },

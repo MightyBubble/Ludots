@@ -43,7 +43,7 @@ Passed: 122/122
 ```
 
 ```text
-dotnet test src/Tests/PresentationTests/PresentationTests.csproj --no-restore --filter "FullyQualifiedName~CapabilityStandardMassNavigationLargeWorld10kProductionPathTests|FullyQualifiedName~FormationCapabilityShowcaseContractTests|FullyQualifiedName~MassNavigationFlowSolverStateConfigurationTests|FullyQualifiedName~MassNavigationPerformerContractTests|FullyQualifiedName~PerformerTreeLifecycleTests" --logger "trx;LogFileName=pr581-presentation-focus2.trx" -v:q -clp:ErrorsOnly
+dotnet test src/Tests/PresentationTests/PresentationTests.csproj --no-restore --filter "FullyQualifiedName~CapabilityStandardMassNavigationLargeWorld10kProductionPathTests|FullyQualifiedName~FormationCapabilityShowcaseContractTests|FullyQualifiedName~MassNavigationFlowSolverStateConfigurationTests|FullyQualifiedName~MassNavigationPresenterContractTests|FullyQualifiedName~PresenterTreeLifecycleTests" --logger "trx;LogFileName=pr581-presentation-focus2.trx" -v:q -clp:ErrorsOnly
 
 Passed: 118/118
 ```
@@ -236,7 +236,7 @@ Reason: the current environment can produce real Raylib/CEF framebuffer screensh
 
 | Item | Current status | Remaining work |
 |---|---|---|
-| A1 control-plane projection | Headless path, launcher binding, packaged CEF WebApp assets, DataPlane topic/command, O-key toggle, profile-owned Controls grant/revoke, standard artifacts, and CEF toggle/revoke screenshots are complete. The captured panel visibly shows Proxy Off -> Proxy On -> Proxy Off/revoke, command acknowledgements, owned/proxy/view counts, and ring shrink. | Keep marker performer topology graph-rule conversion as a separate follow-up if RFC owner still requires the final PROV-4b rule form. |
+| A1 control-plane projection | Headless path, launcher binding, packaged CEF WebApp assets, DataPlane topic/command, O-key toggle, profile-owned Controls grant/revoke, standard artifacts, and CEF toggle/revoke screenshots are complete. The captured panel visibly shows Proxy Off -> Proxy On -> Proxy Off/revoke, command acknowledgements, owned/proxy/view counts, and ring shrink. | Keep marker presenter topology graph-rule conversion as a separate follow-up if RFC owner still requires the final PROV-4b rule form. |
 | SHOW-3 referee projection | Headless referee projection evidence is complete, and GUI marker/palette evidence now shows `SHOW-3 Referee`: phase0=1, phase1=2, foreign excluded=1, then `P2 Revoked` with phase1=1/view=2. | None for GUI marker/palette UAT. |
 | A2 / SHOW-4 command panel aggregation | Headless/runtime aggregation evidence exists, and the latest WebUI/CEF War3-style 80/160/260 screenshots pass player readability: Template shows 3 hero sheets x 8 commands = 24 tiles with blue world rings; Family shows 8 catalog families such as Projectile with yellow world rings; Ability shows 21 distinct ability definitions with shared Fireball contributor labels and green world rings. | None for the current framebuffer/timeline UAT pass. |
 | A3 superweapon context | `SuperweaponContextShowcaseMod`, ability-owned interaction frame, target collection routing, confirm IMC path, standard headless artifacts, formal launcher binding `superweapon_context_showcase`, and a real Raylib world-space pending -> complete/restored timeline are complete. | Add video only if terminal closeout requires video instead of timeline PNGs. |
@@ -685,7 +685,7 @@ No matches.
 
 Known non-regression noise during broad local validation:
 
-- `dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "...|FullyQualifiedName~Minimap"` also selected `PerformerDynamicWorkerBenchmarkTests` minimap large-world benchmarks; those failed with 30k screen marker count `0`, outside this selection-boundary patch.
+- `dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "...|FullyQualifiedName~Minimap"` also selected `PresenterDynamicWorkerBenchmarkTests` minimap large-world benchmarks; those failed with 30k screen marker count `0`, outside this selection-boundary patch.
 - Broad `CameraAcceptanceModTests` / `CameraShowcaseModTests` include existing fixture failures around missing `LocalPlayerEntity`, unmounted UI panel, and inactive camera follow state. The core `CameraRuntimeConvergenceTests` and config parse test above pass after the follow-target enum rename.
 
 ```text
@@ -714,7 +714,7 @@ Workflow C source blockers rechecked on 2026-07-07:
 
 - C1 cannot delete embodied `PlayerOwner`/`Team` yet. Live consumers still include `src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs`, `src/Core/Gameplay/GAS/Systems/ProjectileRuntimeSystem.cs`, `src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs`, `src/Core/Gameplay/GAS/BuiltinHandlers.cs`, `src/Core/Gameplay/Lifecycle/LifecycleSnapshot.cs`, `src/Core/Gameplay/Lifecycle/EntityLifecycleAtomicOps.cs`, `src/Core/NodeLibraries/GASGraph/Host/GasGraphRuntimeApi.cs`, `src/Core/Gameplay/AI/Utility/UtilityAiRuntimeEvaluator.cs`, `src/Core/ParticipantVisibility/DynamicParticipantVisibilityPublisher.cs`, `mods/capabilities/participant_view/ParticipantViewCapabilityMod/Runtime/ParticipantViewProjection.cs`, `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs`, and the MassNavigation runtime/systems under `src/Core/MassNavigation/`.
 - C2 cannot retire `InteractionModeType` in PR581. Live consumers still include `src/Core/Input/Orders/InputOrderMapping.cs`, `src/Core/Input/Orders/InputOrderMappingSystem.cs`, `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs`, `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs`, `mods/CoreInputMod/ViewMode/ViewModeManager.cs`, `mods/EntityCommandPanelMod/Runtime/GasEntityCommandPanelSource.cs`, `mods/EntityCommandPanelMod/UI/EntityCommandPanelController.cs`, and `mods/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs`.
-- C3 graph visibility emit remains intentionally fail-fast, not wired. `src/Core/Presentation/Systems/PerformerEmitSystem.cs` still throws when `PerformerDefinition.VisibilityCondition.GraphProgramId > 0`; wiring it requires a per-viewer graph visibility contract. SHOW-3 marker/referee/palette visible UAT is already complete.
+- C3 graph visibility emit remains intentionally fail-fast, not wired. `src/Core/Presentation/Systems/PresenterEmitSystem.cs` still throws when `PresenterDefinition.VisibilityCondition.GraphProgramId > 0`; wiring it requires a per-viewer graph visibility contract. SHOW-3 marker/referee/palette visible UAT is already complete.
 - Formal Selection runtime/view/control-group services are retired. `GameEngine`, CoreInputMod, showcase code, minimap/camera/UI readers, and tests must use `EntityCollectionStore` / explicit collection keys without formal Selection fallback.
 
 Safe follow-up slices:

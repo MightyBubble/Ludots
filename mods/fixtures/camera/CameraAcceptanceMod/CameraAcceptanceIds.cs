@@ -90,7 +90,7 @@ namespace CameraAcceptanceMod
         {
             return mapId switch
             {
-                ProjectionMapId => "Projection and raycast acceptance. Use the primary pointer action on empty ground to spawn a random-scatter batch and a transient performer marker.",
+                ProjectionMapId => "Projection and raycast acceptance. Use the primary pointer action on empty ground to spawn a random-scatter batch and a transient presenter marker.",
                 HotpathMapId => "Presentation hotpath harness. Drive the local avatar through a 10k+ deterministic crowd while the virtual camera follows, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/terrain/reference guides/primitives/culling load in one reproducible scene.",
                 RtsMapId => "RTS/MOBA shared profile acceptance. Validate the shared follow camera stays bound to the local player while WASD moves the avatar entity.",
                 TpsMapId => "TPS behavior composition. Use WASD to move the local avatar, hold right mouse to aim/look, then use wheel zoom.",

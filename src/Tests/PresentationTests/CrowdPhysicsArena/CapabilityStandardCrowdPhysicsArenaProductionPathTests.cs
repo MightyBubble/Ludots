@@ -25,7 +25,7 @@ using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -62,7 +62,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [TearDown]
@@ -70,7 +70,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [Test]

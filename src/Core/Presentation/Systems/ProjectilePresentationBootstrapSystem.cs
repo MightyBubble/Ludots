@@ -10,7 +10,7 @@ namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
     /// Ensures projectile entities expose the minimal presentation contract
-    /// needed by performer observers.
+    /// needed by presenter observers.
     /// </summary>
     public sealed class ProjectilePresentationBootstrapSystem : BaseSystem<World, float>
     {

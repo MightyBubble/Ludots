@@ -35,7 +35,7 @@ OrderSubmitter 将点击位置写入 `SpatialBlackboardKey`。
 ```
 
 - 已有: `CreateUnit` handler, 需配置 wall entity template
-- Performer: `GroundOverlay` (Line, length, width, angle)
+- Presenter: `GroundOverlay` (Line, length, width, angle)
 
 ## 依赖组件
 

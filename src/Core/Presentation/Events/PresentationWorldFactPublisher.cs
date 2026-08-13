@@ -9,8 +9,8 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Presentation.Events
 {
     /// <summary>
-    /// Publishes world-space presentation facts into the existing performer rule pipeline.
-    /// It never writes performer commands or render buffers directly.
+    /// Publishes world-space presentation facts into the existing presenter rule pipeline.
+    /// It never writes presenter commands or render buffers directly.
     /// </summary>
     public readonly struct PresentationWorldFactPublisher
     {

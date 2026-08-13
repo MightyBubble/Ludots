@@ -25,10 +25,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private static readonly string[] RemovedAimVisualFieldNames =
         {
             "aimVisual",
-            "areaPerformerId",
-            "rangeCirclePerformerId",
-            "previewPerformerId",
-            "performerId",
+            "areaPresenterId",
+            "rangeCirclePresenterId",
+            "previewPresenterId",
+            "presenterId",
         };
 
         public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
@@ -100,7 +100,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["indicator"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Presenter rules.");
             }
 
             RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
@@ -605,7 +605,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         if (string.Equals(key, RemovedAimVisualFieldNames[i], StringComparison.Ordinal))
                         {
                             throw new InvalidOperationException(
-                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Performer event-condition-action rules.");
+                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Presenter event-condition-action rules.");
                         }
                     }
 

@@ -44,13 +44,13 @@ namespace Ludots.Core.Presentation.Systems
                 if (!_payloads.TryGet(request.SurfaceSource.ScopeId, out SurfacePayloadSnapshot payload))
                 {
                     throw new InvalidOperationException(
-                        $"SurfaceSource performer scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} is missing runtime payload registration.");
+                        $"SurfaceSource presenter scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} is missing runtime payload registration.");
                 }
 
                 if (payload.Kind != request.SurfaceSource.SurfaceKind)
                 {
                     throw new InvalidOperationException(
-                        $"SurfaceSource performer scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} has payload kind '{payload.Kind}' but authoring kind '{request.SurfaceSource.SurfaceKind}'.");
+                        $"SurfaceSource presenter scopeId={request.SurfaceSource.ScopeId} stableId={request.SurfaceSource.StableId} has payload kind '{payload.Kind}' but authoring kind '{request.SurfaceSource.SurfaceKind}'.");
                 }
 
                 _runtime.Upsert(in request.SurfaceSource, in payload, frame);

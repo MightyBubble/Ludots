@@ -66,27 +66,27 @@
       }
     },
     {
-      "name": "performer_blacksmith_showcase",
+      "name": "presenter_blacksmith_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
-        "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
+        "value": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
+        "projectPath": "PresenterBlacksmithShowcaseMod.csproj"
       }
     },
     {
-      "name": "performer_blacksmith_large_world",
+      "name": "presenter_blacksmith_large_world",
       "target": {
         "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
+        "value": "mods/showcases/presenter_blacksmith_large_world_entry/PresenterBlacksmithLargeWorldEntryMod",
+        "projectPath": "PresenterBlacksmithLargeWorldEntryMod.csproj"
       }
     },
     {
-      "name": "performer_blacksmith_large_world_nohud",
+      "name": "presenter_blacksmith_large_world_nohud",
       "target": {
         "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
+        "value": "mods/showcases/presenter_blacksmith_large_world_nohud_entry/PresenterBlacksmithLargeWorldNoHudEntryMod",
+        "projectPath": "PresenterBlacksmithLargeWorldNoHudEntryMod.csproj"
       }
     },
     {
@@ -98,11 +98,11 @@
       }
     },
     {
-      "name": "capability_standard_static_performer_30k",
+      "name": "capability_standard_static_presenter_30k",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
-        "projectPath": "CapabilityStandardStaticPerformer30kMod.csproj"
+        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPresenter30kMod",
+        "projectPath": "CapabilityStandardStaticPresenter30kMod.csproj"
       }
     },
     {

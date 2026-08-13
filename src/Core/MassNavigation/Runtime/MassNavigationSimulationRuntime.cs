@@ -8,7 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.MassNavigation.Runtime;
@@ -172,16 +172,16 @@ public sealed class MassNavigationSimulationRuntime
     public float SimStepMs => Telemetry.SimStepMs;
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
-    public float PerformerCommandMs => Telemetry.PerformerCommandMs;
+    public float PresenterCommandMs => Telemetry.PresenterCommandMs;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
     public float SimHzObserved => Telemetry.SimHzObserved;
-    public float PerformerHzObserved => Telemetry.PerformerHzObserved;
+    public float PresenterHzObserved => Telemetry.PresenterHzObserved;
     public float PanelHzObserved => Telemetry.PanelHzObserved;
     public int CrowdInViewCount => Telemetry.CrowdInViewCount;
     public int CrowdSubmittedCount => Telemetry.CrowdSubmittedCount;
     public int ObstacleSubmittedCount => Telemetry.ObstacleSubmittedCount;
-    public int PerformerDroppedCount => Telemetry.PerformerDroppedCount;
+    public int PresenterDroppedCount => Telemetry.PresenterDroppedCount;
     public int StreamingWindowUpdatesFrame => Telemetry.StreamingWindowUpdatesFrame;
     public int FocusBudgetUpdatesTotal => Telemetry.FocusBudgetUpdatesTotal;
     public int SolverWindowMovesTotal => Telemetry.SolverWindowMovesTotal;
@@ -398,7 +398,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveSimStep(double sampleMs) => Telemetry.ObserveSimStep(sampleMs);
     public void ObserveHardResolve(double sampleMs) => Telemetry.ObserveHardResolve(sampleMs);
     public void ObserveEntitySync(double sampleMs) => Telemetry.ObserveEntitySync(sampleMs);
-    public void ObservePerformerCommand(double sampleMs) => Telemetry.ObservePerformerCommand(sampleMs);
+    public void ObservePresenterCommand(double sampleMs) => Telemetry.ObservePresenterCommand(sampleMs);
 
     public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
     {
@@ -497,19 +497,19 @@ public sealed class MassNavigationSimulationRuntime
             PlayAreaMaxYCm: MassNavigationFlow.PlayAreaMaxYCm);
     }
 
-    public void ObservePerformerCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int performerDroppedCount)
+    public void ObservePresenterCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int presenterDroppedCount)
     {
-        Telemetry.ObservePerformerCoverage(
+        Telemetry.ObservePresenterCoverage(
             crowdInViewCount,
             crowdSubmittedCount,
             obstacleSubmittedCount,
-            performerDroppedCount);
+            presenterDroppedCount);
     }
 
     public void ObserveControlTick() => Telemetry.ObserveControlTick();
     public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
     public void ObserveSimTick() => Telemetry.ObserveSimTick();
-    public void ObservePerformerTick() => Telemetry.ObservePerformerTick();
+    public void ObservePresenterTick() => Telemetry.ObservePresenterTick();
     public void ObservePanelTick() => Telemetry.ObservePanelTick();
 
     public void MarkStructuralChange()
@@ -1178,7 +1178,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public static int ResolveAgentLocomotionSpeedParamKey()
     {
-        return PerformerParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
+        return PresenterParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
     }
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)

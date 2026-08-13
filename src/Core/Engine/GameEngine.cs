@@ -65,8 +65,8 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Vision.Config;
-// Indicators directory removed — unified into Performers
-using Ludots.Core.Presentation.Performers;
+// Indicators directory removed — unified into Presenters
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
@@ -1032,7 +1032,7 @@ namespace Ludots.Core.Engine
                 gasPresentationEvents,
                 presentationOwnerChanges);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
-            var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
+            var presenterCommandBuffer = new PresenterCommandBuffer(presentationConfig.PresenterCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -1044,7 +1044,7 @@ namespace Ludots.Core.Engine
             var animationClips = new AnimationClipRegistry();
             var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
-            var performerVisualStableIds = new PerformerVisualStableIdTable(
+            var presenterVisualStableIds = new PresenterVisualStableIdTable(
                 presentationStableIds,
                 presentationConfig.VisualSnapshotBufferCapacity);
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
@@ -1064,10 +1064,10 @@ namespace Ludots.Core.Engine
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
             var presentationTimingDiagnostics = new PresentationTimingDiagnostics();
-            var performerDefinitions = new PerformerDefinitionRegistry();
-            var performerRuntime = new PerformerEntityRuntime(World);
-            var performerAnimatorStates = new PerformerAnimatorStateBuffer(presentationConfig.PerformerInstanceCapacity);
-            performerRuntime.BindAnimatorStates(performerAnimatorStates);
+            var presenterDefinitions = new PresenterDefinitionRegistry();
+            var presenterRuntime = new PresenterEntityRuntime(World);
+            var presenterAnimatorStates = new PresenterAnimatorStateBuffer(presentationConfig.PresenterInstanceCapacity);
+            presenterRuntime.BindAnimatorStates(presenterAnimatorStates);
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
@@ -1093,8 +1093,8 @@ namespace Ludots.Core.Engine
                     PresentationEventKind.GlobalDayNight => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalRegionChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalWeather => TagRegistry.GetId(key),
-                    PresentationEventKind.PerformerCreated => key == "*" ? -1 : 0,
-                    PresentationEventKind.PerformerDestroyed => key == "*" ? -1 : 0,
+                    PresentationEventKind.PresenterCreated => key == "*" ? -1 : 0,
+                    PresentationEventKind.PresenterDestroyed => key == "*" ? -1 : 0,
                     _ => 0,
                 };
             }
@@ -1128,30 +1128,30 @@ namespace Ludots.Core.Engine
             {
                 AbilityPresentationTextValidator.RejectTokenizedPresentationWithoutLocaleCatalog(abilityDefinitions);
             }
-            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, gasGraphApi, GlobalContext);
+            var presenterRuleSystem = new PresenterRuleSystem(World, presentationEventStream, presenterCommandBuffer, presenterDefinitions, presenterRuntime, graphProgramRegistry, gasGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
                 presentationEventStream,
-                performerRuntime,
-                performerDefinitions,
+                presenterRuntime,
+                presenterDefinitions,
                 presentationStableIds);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
-            var performerRuntimeSystem = new PerformerRuntimeSystem(
+            var presenterRuntimeSystem = new PresenterRuntimeSystem(
                 World,
-                performerCommandBuffer,
+                presenterCommandBuffer,
                 presentationEventStream,
                 transientMarkerBuffer,
                 presentationRequestBuffer,
-                performerRuntime,
+                presenterRuntime,
                 presentationStableIds,
-                performerDefinitions,
-                performerAnimatorStates,
+                presenterDefinitions,
+                presenterAnimatorStates,
                 stableDrawCache,
-                performerVisualStableIds);
-            var performerBehaviorSystem = new PerformerBehaviorSystem(
+                presenterVisualStableIds);
+            var presenterBehaviorSystem = new PresenterBehaviorSystem(
                 World,
-                performerRuntime,
-                performerDefinitions,
+                presenterRuntime,
+                presenterDefinitions,
                 presentationEventStream,
                 presentationOwnerChanges,
                 soundRequestBuffer,
@@ -1161,21 +1161,21 @@ namespace Ludots.Core.Engine
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(
                 World,
                 animatorControllers,
-                performerRuntime,
-                performerDefinitions,
-                performerAnimatorStates,
+                presenterRuntime,
+                presenterDefinitions,
+                presenterAnimatorStates,
                 presentationTimingDiagnostics);
-            var performerEmitSystem = new PerformerEmitSystem(World, performerRuntime, performerDefinitions, presentationRequestBuffer, GlobalContext,
-                performerAnimatorStates,
+            var presenterEmitSystem = new PresenterEmitSystem(World, presenterRuntime, presenterDefinitions, presentationRequestBuffer, GlobalContext,
+                presenterAnimatorStates,
                 soundRequestBuffer,
                 presentationTimingDiagnostics,
                 stableDrawCache,
                 skinnedVisualBatchBuffer,
                 worldHudBuffer,
-                performerVisualStableIds);
+                presenterVisualStableIds);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
-            var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, performerCommandBuffer);
-            var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, performerDefinitions, performerCommandBuffer, performerRuntime);
+            var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, presenterCommandBuffer);
+            var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, presenterDefinitions, presenterCommandBuffer, presenterRuntime);
             var presentationRequestFlushSystem = new PresentationRequestFlushSystem(
                 World,
                 presentationRequestBuffer,
@@ -1191,9 +1191,9 @@ namespace Ludots.Core.Engine
                 skinnedVisualBatchBuffer,
                 presentationTimingDiagnostics,
                 presentationTargetGeneration);
-            new PerformerDefinitionConfigLoader(
+            new PresenterDefinitionConfigLoader(
                 ConfigPipeline,
-                performerDefinitions,
+                presenterDefinitions,
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
                 meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
@@ -1217,11 +1217,11 @@ namespace Ludots.Core.Engine
                 },
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
-            performerDefinitions.RebuildCompiledViews();
+            presenterDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
-                performerRuntime,
-                performerDefinitions,
+                presenterRuntime,
+                presenterDefinitions,
                 _spatialPartition,
                 WorldSizeSpec);
 
@@ -1537,7 +1537,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AuthoritativeGroundPointerOverride, authoritativeGroundPointerOverride);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
             SetService(CoreServiceKeys.PresentationOwnerChangeBuffer, presentationOwnerChanges);
-            SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
+            SetService(CoreServiceKeys.PresenterCommandBuffer, presenterCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
@@ -1550,7 +1550,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
-            SetService(CoreServiceKeys.PerformerVisualStableIdTable, performerVisualStableIds);
+            SetService(CoreServiceKeys.PresenterVisualStableIdTable, presenterVisualStableIds);
             SetService(CoreServiceKeys.PresentationStableDrawCache, stableDrawCache);
             SetService(CoreServiceKeys.PresentationTargetGeneration, presentationTargetGeneration);
             _primitiveDrawBuffer = primitiveDrawBuffer;
@@ -1593,9 +1593,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
             SetService(CoreServiceKeys.SoundRequestBuffer, soundRequestBuffer);
-            SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
-            SetService(CoreServiceKeys.PerformerEntityRuntime, performerRuntime);
-            SetService(CoreServiceKeys.PerformerAnimatorStateBuffer, performerAnimatorStates);
+            SetService(CoreServiceKeys.PresenterDefinitionRegistry, presenterDefinitions);
+            SetService(CoreServiceKeys.PresenterEntityRuntime, presenterRuntime);
+            SetService(CoreServiceKeys.PresenterAnimatorStateBuffer, presenterAnimatorStates);
             SetService(CoreServiceKeys.SurfaceSourcePayloadRegistry, surfacePayloads);
             SetService(CoreServiceKeys.SurfaceSourceRuntimeRegistry, surfaceRuntime);
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
@@ -1707,8 +1707,8 @@ namespace Ludots.Core.Engine
                 MapLoader.EntityTemplateKeys,
                 presentationStableIds,
                 tagOps,
-                performerRuntime,
-                performerDefinitions,
+                presenterRuntime,
+                presenterDefinitions,
                 componentAuthoringContext);
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
@@ -1726,8 +1726,8 @@ namespace Ludots.Core.Engine
                 presentationStableIds,
                 effectRequestQueue,
                 runtimeEntitySpawnReceiptQueue,
-                performerRuntime,
-                performerDefinitions,
+                presenterRuntime,
+                presenterDefinitions,
                 presentationEventStream,
                 _spatialPartition,
                 WorldSizeSpec,
@@ -1801,7 +1801,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
-            // and owner-change index consumed by performer owner bindings.
+            // and owner-change index consumed by presenter owner bindings.
             // Changed-bit components are cleared only after projection for the completed fixed step.
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
@@ -1836,31 +1836,31 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new EntityCollectionPresentationEventSystem(World, entityCollectionStore, presentationEventStream, GameSession));
             RegisterPresentationSystem(new InstancedBatchBehaviorSystem(
                 World,
-                performerDefinitions,
-                performerRuntime,
+                presenterDefinitions,
+                presenterRuntime,
                 instancedBatchAssets,
                 instancedBatchOperations,
                 presentationEventStream,
                 presentationOwnerChanges));
-            // PerformerRuleSystem reads events and produces commands.
-            RegisterPresentationSystem(performerRuleSystem);
-            // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
-            RegisterPresentationSystem(performerRuntimeSystem);
+            // PresenterRuleSystem reads events and produces commands.
+            RegisterPresentationSystem(presenterRuleSystem);
+            // PresenterRuntimeSystem consumes commands, manages instance lifecycle.
+            RegisterPresentationSystem(presenterRuntimeSystem);
             RegisterPresentationSystem(new InstancedBatchEmissionSystem(
                 World,
-                performerDefinitions,
+                presenterDefinitions,
                 instancedBatchAssets,
                 instancedBatchRequests,
                 instancedBatchSubmissionRuntime,
                 presentationEventStream));
-            // Entity-anchored performers follow owner VisualTransform before behavior/animator/emit reads them.
-            RegisterPresentationSystem(new PerformerEntityTransformSyncSystem(World, performerRuntime, performerDefinitions, presentationTimingDiagnostics));
-            // PerformerBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
-            RegisterPresentationSystem(performerBehaviorSystem);
+            // Entity-anchored presenters follow owner VisualTransform before behavior/animator/emit reads them.
+            RegisterPresentationSystem(new PresenterEntityTransformSyncSystem(World, presenterRuntime, presenterDefinitions, presentationTimingDiagnostics));
+            // PresenterBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
+            RegisterPresentationSystem(presenterBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);
-            RegisterPresentationSystem(new PerformerMinimapMarkerSystem(World, performerDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
-            // PerformerEmitSystem is the Wave 4 asset-binding emitter.
-            RegisterPresentationSystem(performerEmitSystem);
+            RegisterPresentationSystem(new PresenterMinimapMarkerSystem(World, presenterDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
+            // PresenterEmitSystem is the Wave 4 asset-binding emitter.
+            RegisterPresentationSystem(presenterEmitSystem);
             RegisterPresentationSystem(surfaceSourceFlushSystem);
             RegisterPresentationSystem(surfaceSourceLifecycleSystem);
             RegisterPresentationSystem(chunkSurfaceBakeSystem);

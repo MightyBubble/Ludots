@@ -34,7 +34,7 @@
 - Registry: `src/Core/Gameplay/GAS/EffectTemplateRegistry.cs` — 效果模板注册。
 - Pipeline: `src/Core/Input/Selection/*` — formal selection SSOT、selection view bridge、click / box select。
 - Pipeline: `src/Core/Input/Orders/InputOrderMappingSystem.cs` — 输入到 order 的交互模式主线。
-- Pipeline: `mods/CoreInputMod/Systems/AbilityAimPresentationProjectionSystem.cs` + `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs` + `src/Core/Presentation/Systems/PerformerRuleSystem.cs` — 通用技能瞄准表现链路，运行时只发布 `ability.aim.*` 事件，视觉由 performer rule 消费。
+- Pipeline: `mods/CoreInputMod/Systems/AbilityAimPresentationProjectionSystem.cs` + `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs` + `src/Core/Presentation/Systems/PresenterRuleSystem.cs` — 通用技能瞄准表现链路，运行时只发布 `ability.aim.*` 事件，视觉由 presenter rule 消费。
 - Pipeline: `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` — 能力激活、失败原因、timeline 执行。
 - Mod: `mods/EntityCommandPanelMod/` — 通用实体技能面板宿主。
 - Mod: `mods/CoreInputMod/` — selection、aim presentation、skill bar、view mode。
@@ -148,7 +148,7 @@
 - 提供 EZ / 盖伦 / 杰斯多实例与不同状态样本。
 - 通过 formal selection 驱动 focus command panel。
 - 通过 `viewmodes.json` 暴露三种施法模式。
-- 通过现有 `AbilityAimPresentationRuntime -> PresentationEventStream -> PerformerRuleSystem` 链路渲染所有瞄准预览。
+- 通过现有 `AbilityAimPresentationRuntime -> PresentationEventStream -> PresenterRuleSystem` 链路渲染所有瞄准预览。
 
 ### 提交四：验收
 
@@ -175,7 +175,7 @@
 ### 7.3 GAS 与指示器
 
 - 所有技能通过现有 GAS 主线执行。
-- 所有瞄准图形通过 `AbilityAimPresentationRuntime` 发布事件，并由 performer event-condition-action rules 输出。
+- 所有瞄准图形通过 `AbilityAimPresentationRuntime` 发布事件，并由 presenter event-condition-action rules 输出。
 - 不新增第二套 aim presentation / input stack。
 
 ## 8 相关文档

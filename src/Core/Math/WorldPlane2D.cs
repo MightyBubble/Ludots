@@ -278,29 +278,29 @@ namespace Ludots.Core.Mathematics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 ResolveVisualAssetPosition(
-            in Vector3 performerWorldPosition,
-            in Quaternion performerWorldRotation,
-            in Vector3 performerWorldScale,
+            in Vector3 presenterWorldPosition,
+            in Quaternion presenterWorldRotation,
+            in Vector3 presenterWorldScale,
             in Vector3 localOffset)
         {
             if (localOffset == Vector3.Zero)
             {
-                return performerWorldPosition;
+                return presenterWorldPosition;
             }
 
             return TransformVisualLocal(
-                performerWorldPosition,
-                performerWorldRotation,
-                NormalizeScale(performerWorldScale),
+                presenterWorldPosition,
+                presenterWorldRotation,
+                NormalizeScale(presenterWorldScale),
                 in localOffset);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion ResolveVisualAssetRotation(
-            in Quaternion performerWorldRotation,
+            in Quaternion presenterWorldRotation,
             in Quaternion localRotation)
         {
-            return ComposeVisualRotation(performerWorldRotation, localRotation);
+            return ComposeVisualRotation(presenterWorldRotation, localRotation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

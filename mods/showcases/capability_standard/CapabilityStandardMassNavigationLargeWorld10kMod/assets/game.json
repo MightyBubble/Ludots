@@ -16,11 +16,11 @@
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
   "presentation": {
-    "performerInstanceCapacity": 131072,
+    "presenterInstanceCapacity": 131072,
     "gasPresentationEventCapacity": 131072,
     "presentationEventStreamCapacity": 131072,
     "presentationOwnerChangeCapacity": 131072,
-    "performerCommandCapacity": 262144,
+    "presenterCommandCapacity": 262144,
     "primitiveDrawBufferCapacity": 131072,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,

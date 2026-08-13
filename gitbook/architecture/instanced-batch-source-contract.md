@@ -1,6 +1,6 @@
 # Instanced Batch 外部 Source Contract
 
-本文定义 performer-owned instanced batch 在 Core 层引用外部实例数据源的正式契约。
+本文定义 presenter-owned instanced batch 在 Core 层引用外部实例数据源的正式契约。
 
 ## 目标
 

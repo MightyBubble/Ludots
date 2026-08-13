@@ -54,7 +54,7 @@ namespace EntityQueryTacticsShowcaseMod.Triggers
 
             engine.RegisterSystem(new EntityQueryTacticsSelectionBindingSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterSystem(new EntityQueryTacticsSimulationSystem(engine, state), SystemGroup.PostMovement);
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new EntityQueryTacticsPresentationSystem(engine, state));
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new EntityQueryTacticsPresentationSystem(engine, state));
 
             _context.Log(config.Logs.SystemInstalled);
             return Task.CompletedTask;

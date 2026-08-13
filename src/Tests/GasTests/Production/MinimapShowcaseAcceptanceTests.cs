@@ -100,7 +100,7 @@ public sealed class MinimapShowcaseAcceptanceTests
         Assert.That(rts.MarkerCount, Is.EqualTo(20));
         Assert.That(rts.VisibleMarkerCount, Is.EqualTo(20));
         WriteSnapshotSvg(rts, Path.Combine(screensDir, "001_rts_marker_overview.svg"));
-        timeline.Add("[T+001] RTS preset draws all authored performer markers directly from the core marker buffer.");
+        timeline.Add("[T+001] RTS preset draws all authored presenter markers directly from the core marker buffer.");
         traces.Add(new
         {
             step = "001_rts_marker_overview",
@@ -458,7 +458,7 @@ public sealed class MinimapShowcaseAcceptanceTests
   <text x="760" y="248" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Markers: {{snapshot.VisibleMarkerCount}}/{{snapshot.MarkerCount}}</text>
   <text x="760" y="280" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Viewport: center=({{snapshot.CenterXcm:0}}, {{snapshot.CenterYcm:0}}) extent={{snapshot.HalfExtentCm:0}}</text>
   <text x="760" y="330" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Source</text>
-  <text x="760" y="360" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Authored performer marker buffer</text>
+  <text x="760" y="360" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Authored presenter marker buffer</text>
   <text x="760" y="390" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">No Name/Team/MapEntity scan</text>
   <text x="760" y="440" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Bounds</text>
   <text x="760" y="470" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">min=({{snapshot.MinWorldXcm:0}}, {{snapshot.MinWorldYcm:0}})</text>

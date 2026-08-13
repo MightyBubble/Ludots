@@ -142,9 +142,9 @@ namespace Ludots.Core.Presentation.Instancing
         public InstancedBatchOperation(
             InstancedBatchOperationKind kind,
             int batchAssetId,
-            int performerStableId,
+            int presenterStableId,
             Entity owner,
-            Entity performer,
+            Entity presenter,
             InstancedBatchAddress address,
             int customDataSlot,
             Vector4 value,
@@ -155,9 +155,9 @@ namespace Ludots.Core.Presentation.Instancing
         {
             Kind = kind;
             BatchAssetId = batchAssetId;
-            PerformerStableId = performerStableId;
+            PresenterStableId = presenterStableId;
             Owner = owner;
-            Performer = performer;
+            Presenter = presenter;
             Address = address;
             CustomDataSlot = customDataSlot;
             Value = value;
@@ -169,9 +169,9 @@ namespace Ludots.Core.Presentation.Instancing
 
         public InstancedBatchOperationKind Kind { get; }
         public int BatchAssetId { get; }
-        public int PerformerStableId { get; }
+        public int PresenterStableId { get; }
         public Entity Owner { get; }
-        public Entity Performer { get; }
+        public Entity Presenter { get; }
         public InstancedBatchAddress Address { get; }
         public int CustomDataSlot { get; }
         public Vector4 Value { get; }
@@ -233,8 +233,8 @@ namespace Ludots.Core.Presentation.Instancing
         {
             return existing.Kind == incoming.Kind &&
                    existing.BatchAssetId == incoming.BatchAssetId &&
-                   existing.PerformerStableId == incoming.PerformerStableId &&
-                   existing.Performer == incoming.Performer &&
+                   existing.PresenterStableId == incoming.PresenterStableId &&
+                   existing.Presenter == incoming.Presenter &&
                    existing.Address.Equals(incoming.Address) &&
                    existing.CustomDataSlot == incoming.CustomDataSlot &&
                    PayloadIdentityMatches(in existing, in incoming);

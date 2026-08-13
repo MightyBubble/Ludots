@@ -9,7 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -109,7 +109,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
             throw new InvalidOperationException($"Formation Capability obstacle overlay entity {entity.Id} requires BorderWidthCm > 0.");
         }
 
-        int stableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+        int stableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
             ownerStableId,
             FormationCapabilityShowcaseObstacleOverlayVisualSlots.ObstacleRing,
             AssetKind.GroundOverlay,

@@ -155,11 +155,11 @@ public sealed class MapLoadLifecycleOrderingTests
                   "startupMapId": "lifecycle_ordering",
                   "startupInputContexts": [],
                   "presentation": {
-                    "performerInstanceCapacity": 16,
+                    "presenterInstanceCapacity": 16,
                     "gasPresentationEventCapacity": 16,
                     "presentationEventStreamCapacity": 16,
                     "presentationOwnerChangeCapacity": 16,
-                    "performerCommandCapacity": 16,
+                    "presenterCommandCapacity": 16,
                     "primitiveDrawBufferCapacity": 16,
                     "visualSnapshotBufferCapacity": 16,
                     "visualProxyBufferCapacity": 16,

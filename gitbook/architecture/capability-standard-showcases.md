@@ -6,8 +6,8 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 
 | Scenario | Binding | Root Mod | Acceptance Focus |
 |----------|---------|----------|------------------|
-| Static Performer Crowd | `capability_standard_static_performer_30k` | `mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod` | 30K static performers, HUD bars, HUD text, GAS effect state changes |
-| Large World Mass Navigation | `capability_standard_mass_navigation_large_world_10k` | `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod` | 10K nav agents, large-world residency, performers, HUD bar/text, effect/minimap changes |
+| Static Presenter Crowd | `capability_standard_static_presenter_30k` | `mods/showcases/capability_standard/CapabilityStandardStaticPresenter30kMod` | 30K static presenters, HUD bars, HUD text, GAS effect state changes |
+| Large World Mass Navigation | `capability_standard_mass_navigation_large_world_10k` | `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod` | 10K nav agents, large-world residency, presenters, HUD bar/text, effect/minimap changes |
 | Formation Capability Showcase | `formation_capability_showcase` | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod` | Formation command, mass movement, selection, path preview, large battle presentation |
 | Participant Views | `capability_standard_participant_views` | `mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod` | Map-owned teams/players, local player binding, player/team view projection through entity collections |
 | Transport Network | `capability_standard_transport_network` | `mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod` | TransportNetwork authoring, deterministic NodeGraph bake, water-ready tags/capacity, SurfaceSpline ribbon derivation |
@@ -28,7 +28,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 Standard launch commands:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_static_performer_30k' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_static_presenter_30k' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_mass_navigation_large_world_10k' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$formation_capability_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_participant_views' --adapter raylib
@@ -49,7 +49,7 @@ Standard launch commands:
 Preset launch commands:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_static_performer_30k_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_static_presenter_30k_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mass_navigation_large_world_10k_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:formation_capability_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_participant_views_raylib'
@@ -71,7 +71,7 @@ Preset launch commands:
 
 - Root mods own scenario entry, productized config, and minimal scene glue.
 - Reusable logic stays in capability mods, for example `MassNavigationMod`, `ParticipantViewCapabilityMod`, and shared Physics2D runtime modules.
-- Standard root mod dependency closure must not include historical showcase entry mods such as `PerformerBlacksmithShowcaseMod`, `PerformerBlacksmithScatterHudTextBenchmarkEntryMod`, or `Physics2DPlaygroundMod`.
+- Standard root mod dependency closure must not include historical showcase entry mods such as `PresenterBlacksmithShowcaseMod`, `PresenterBlacksmithScatterHudTextBenchmarkEntryMod`, or `Physics2DPlaygroundMod`.
 - The Physics2D capability-standard root retires old `Physics2DPlaygroundMod` as formal entry; historical playgrounds are not acceptance SSOTs.
 - Historical showcase mods may remain local debugging material, but they are not adapter or core-mainline acceptance SSOTs.
 

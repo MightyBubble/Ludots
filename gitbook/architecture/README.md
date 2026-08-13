@@ -37,16 +37,16 @@
 - [MassNavigation 数值域与确定性边界](mass-navigation-numeric-domain.md)
 - [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)
-- [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
+- [Presenter-as-Actor 架构总览](presenter-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)
-- [Map Batch Performer Param Overrides](map-batch-performer-param-overrides.md)
+- [Map Batch Presenter Param Overrides](map-batch-presenter-param-overrides.md)
 - [Retained Static Incremental Projection](retained-static-incremental-projection.md)
-- [Performer 参数黑板与 Animator 统一](performer-param-blackboard.md)
-- [Performer Transform、Grounding 与 Attachment](performer-transform-and-attachment.md)
-- [Performer Raylib UAT 测试计划](performer-raylib-uat.md)
-- [Performer 现有基建收尾整合](performer-legacy-consolidation.md)
-- [Performer 开发看板](performer-development-kanban.md)
-- [Performer 编译式执行分层](performer-compiled-lanes.md)
+- [Presenter 参数黑板与 Animator 统一](presenter-param-blackboard.md)
+- [Presenter Transform、Grounding 与 Attachment](presenter-transform-and-attachment.md)
+- [Presenter Raylib UAT 测试计划](presenter-raylib-uat.md)
+- [Presenter 现有基建收尾整合](presenter-legacy-consolidation.md)
+- [Presenter 开发看板](presenter-development-kanban.md)
+- [Presenter 编译式执行分层](presenter-compiled-lanes.md)
 - [Browser Runtime Provider Adapter Guide](browser-runtime-provider-adapter-guide.md)
 - Browser UI Runtime：正式 contract 位于 `docs/architecture/browser_ui_runtime.md`，用于把真实 Web App 作为平台无关 browser surface 嵌入 Ludots UI；它不改变 native Markup 无 JS 的边界
 - WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
@@ -62,7 +62,7 @@
 - Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Narrative`、`Relationships` 等正式运行时能力
 - 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
-- Raylib 侧已补充一个“脱离 performer/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw
+- Raylib 侧已补充一个“脱离 presenter/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw
 - Retained presentation 的 content revision 与 adapter target/projection generation 是两条独立真相：content revision 只表示表现内容变化；adapter target unavailable -> ready 或 target 替换必须通过 Core-owned generation 触发 retained projection replay
 - 商业引擎 adapter（例如开发者仓库中的 UE5 adapter）的 host-bound map session 只能由 focused map SSOT 与显式 host binding 推导，禁止用菜单态、world 名、tag 或 view mode 充当 ownership 真相
 - prefab grounding、visual height 与 adapter parity 必须共用同一套 Core-owned contract，禁止把 grounding 语义下放给 adapter 或 showcase 私有 glue

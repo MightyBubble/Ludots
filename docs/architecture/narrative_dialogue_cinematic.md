@@ -372,7 +372,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 优先扩展方向：
 
 - 新的 condition kind：队伍成员、背包物品、地图标签、章节号
-- 新的 action kind：切 map、投递 UI inbox、派发 performer cue、注册 checkpoint
+- 新的 action kind：切 map、投递 UI inbox、派发 presenter cue、注册 checkpoint
 - 任务图谱层：在不破坏 Core QuestRuntimeService 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
 
 不建议的方向：

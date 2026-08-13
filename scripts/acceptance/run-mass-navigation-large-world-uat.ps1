@@ -161,7 +161,7 @@ function Test-MassNavigationSummaryContract {
         $failures.Add("visible crowd count is missing or zero")
     }
 
-    $pointNames = @("solver_world_cm", "ecs_world_cm", "visual_world_cm", "performer_world_cm")
+    $pointNames = @("solver_world_cm", "ecs_world_cm", "visual_world_cm", "presenter_world_cm")
     for ($sampleIndex = 0; $sampleIndex -lt $samples.Count; $sampleIndex++) {
         $sample = $samples[$sampleIndex]
         $validPoints = $true
@@ -183,8 +183,8 @@ function Test-MassNavigationSummaryContract {
             if ((Get-PointDistanceSquared $sample.ecs_world_cm $sample.visual_world_cm) -gt $toleranceSq) {
                 $failures.Add("anchor sample $sampleIndex ECS->visual distance exceeds 25cm")
             }
-            if ((Get-PointDistanceSquared $sample.visual_world_cm $sample.performer_world_cm) -gt $toleranceSq) {
-                $failures.Add("anchor sample $sampleIndex visual->performer distance exceeds 25cm")
+            if ((Get-PointDistanceSquared $sample.visual_world_cm $sample.presenter_world_cm) -gt $toleranceSq) {
+                $failures.Add("anchor sample $sampleIndex visual->presenter distance exceeds 25cm")
             }
         }
     }
@@ -279,7 +279,7 @@ function Write-SoakReport {
     $lines.Add("| Four dynamic teams | Scenario is not a hard-coded two-team demo | ``teams >= 4`` |")
     $lines.Add("| Formal order chain | The evidence harness fills CommandSource, then two shared moves reach every member through OrderQueue and formal OrderBuffer activation | command source and active move-order counts are positive; sampled units move after both logical commands; real box-drag/right-click gestures are covered by the production-path test |")
     $lines.Add("| Commanded movement | Units visibly respond to both logical commands instead of only accepting orders | ``first_command_moved_sample_count >= 8`` and ``second_command_moved_sample_count >= 8`` |")
-    $lines.Add("| Position chain | Models and HUD roots follow the same navigation result | 64 fixed solver/ECS/VisualTransform/performer-root samples stay within tolerance |")
+    $lines.Add("| Position chain | Models and HUD roots follow the same navigation result | 64 fixed solver/ECS/VisualTransform/presenter-root samples stay within tolerance |")
     $lines.Add("| World HUD emission | Every authored agent emits a bar and text item | world bar/text counts cover all agents |")
     $lines.Add("| Screen HUD projection | Visible world HUD reaches the host screen buffer | screen bar/text counts are positive and projection failures are zero |")
     $lines.Add("| Capacity | Large crowds do not disappear silently | WorldHud, ScreenHud and minimap drops are all zero |")

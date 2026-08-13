@@ -36,7 +36,7 @@ namespace SplineSurfaceUatMod.Triggers
 
             engine.GlobalContext[SplineSurfaceUatIds.InstalledKey] = true;
             engine.RegisterPresentationSystem(new SplineSurfaceUatPresentationSystem(engine, _runtime));
-            _context.Log("[SplineSurfaceUatMod] Performer-driven spline surface UAT presentation system registered.");
+            _context.Log("[SplineSurfaceUatMod] Presenter-driven spline surface UAT presentation system registered.");
             return Task.CompletedTask;
         }
     }

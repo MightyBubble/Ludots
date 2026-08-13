@@ -56,28 +56,28 @@
       "buildMode": "auto"
     },
     {
-      "id": "performer_blacksmith_showcase_raylib",
-      "name": "Performer Blacksmith Showcase Raylib",
+      "id": "presenter_blacksmith_showcase_raylib",
+      "name": "Presenter Blacksmith Showcase Raylib",
       "selectors": [
-        "$performer_blacksmith_showcase"
+        "$presenter_blacksmith_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "performer_blacksmith_large_world_raylib",
-      "name": "Performer Blacksmith Large World Raylib",
+      "id": "presenter_blacksmith_large_world_raylib",
+      "name": "Presenter Blacksmith Large World Raylib",
       "selectors": [
-        "$performer_blacksmith_large_world"
+        "$presenter_blacksmith_large_world"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "performer_blacksmith_large_world_nohud_raylib",
-      "name": "Performer Blacksmith Large World No HUD/GAS Raylib",
+      "id": "presenter_blacksmith_large_world_nohud_raylib",
+      "name": "Presenter Blacksmith Large World No HUD/GAS Raylib",
       "selectors": [
-        "$performer_blacksmith_large_world_nohud"
+        "$presenter_blacksmith_large_world_nohud"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -92,10 +92,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_static_performer_30k_raylib",
-      "name": "Capability Standard Static Performer 30K Raylib",
+      "id": "capability_standard_static_presenter_30k_raylib",
+      "name": "Capability Standard Static Presenter 30K Raylib",
       "selectors": [
-        "$capability_standard_static_performer_30k"
+        "$capability_standard_static_presenter_30k"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -204,7 +204,7 @@
       "id": "browser_minimap_composited_overlay_cef_raylib",
       "name": "Browser Minimap Composited Overlay CEF Raylib",
       "selectors": [
-        "$performer_blacksmith_large_world_nohud",
+        "$presenter_blacksmith_large_world_nohud",
         "$browser_minimap_composited_overlay_showcase"
       ],
       "adapterId": "raylib",
