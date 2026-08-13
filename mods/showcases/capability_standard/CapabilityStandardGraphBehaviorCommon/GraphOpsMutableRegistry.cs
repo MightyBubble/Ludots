@@ -2,7 +2,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace CapabilityStandardGraphBehaviorCommon;
 
-internal static class GraphOpsMutableRegistry
+public static class GraphOpsMutableRegistry
 {
     public static int Tag(string name)
     {
