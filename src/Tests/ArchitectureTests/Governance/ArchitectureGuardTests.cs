@@ -637,9 +637,11 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 "GroundOverlayBuffer",
                 "RoadSplineBuffer",
+                "SplineRibbonBuffer",
                 "WorldHudBatchBuffer",
                 "new GroundOverlayItem",
                 "new RoadSplineItem",
+                "new SplineRibbonItem",
                 "new WorldHudItem",
                 ".TryAddLine(",
                 ".TryAdd(new GroundOverlayItem",
@@ -658,6 +660,40 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Assert.Fail(
                     "Epic #322 showcase presentation systems must publish semantic world facts and let PresenterRuleSystem/presenter emit own render buffers:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void PresentationSplineRibbon_HasNoRoadSplineArchitectureTypes()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Adapters"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "src", "Apps"),
+                Path.Combine(repoRoot, "src", "Tools"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] forbidden =
+            {
+                "RoadSplineBuffer",
+                "RoadSplineRequest",
+                "RoadSplineCapture",
+                "new RoadSplineItem",
+                "PresentationRequestKind.RoadSpline",
+                "RemoveRoadSpline",
+                "FromRoadSpline",
+                "roadSplineCapacity"
+            };
+
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, directories, forbidden);
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Visible spline ribbons use SplineRibbon types. RoadSpline architecture names must not reappear:\n" +
                     string.Join("\n", hits));
             }
         }

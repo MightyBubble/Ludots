@@ -36,7 +36,7 @@ namespace Ludots.Tests.Presentation
                     drawBuffer,
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     snapshotBuffer,
                     proxyBuffer,
                     skinnedBatchBuffer);
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Presentation
                     new PrimitiveDrawBuffer(),
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     new PrimitiveDrawBuffer(),
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());
@@ -129,7 +129,7 @@ namespace Ludots.Tests.Presentation
                     new PrimitiveDrawBuffer(),
                     new GroundOverlayBuffer(),
                     new WorldHudBatchBuffer(),
-                    new RoadSplineBuffer(),
+                    new SplineRibbonBuffer(),
                     snapshotBuffer,
                     proxyBuffer,
                     new SkinnedVisualBatchBuffer());

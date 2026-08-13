@@ -44,7 +44,7 @@ namespace Ludots.Tests.Presentation
         private PrimitiveDrawBuffer _primitives;
         private WorldHudBatchBuffer _hud;
         private GroundOverlayBuffer _overlays;
-        private RoadSplineBuffer _roadSplines;
+        private SplineRibbonBuffer _splineRibbons;
         private PresentationRequestBuffer _requests;
         private SoundRequestBuffer _soundRequests;
         private PresentationOwnerChangeBuffer _ownerChanges;
@@ -76,7 +76,7 @@ namespace Ludots.Tests.Presentation
             _primitives = new PrimitiveDrawBuffer();
             _hud = new WorldHudBatchBuffer();
             _overlays = new GroundOverlayBuffer();
-            _roadSplines = new RoadSplineBuffer();
+            _splineRibbons = new SplineRibbonBuffer();
             _requests = new PresentationRequestBuffer();
             _soundRequests = new SoundRequestBuffer();
             _ownerChanges = new PresentationOwnerChangeBuffer(64);
@@ -145,7 +145,7 @@ namespace Ludots.Tests.Presentation
                 _primitives,
                 _overlays,
                 _hud,
-                _roadSplines,
+                _splineRibbons,
                 new PrimitiveDrawBuffer(4096),
                 new PresentationVisualProxyBuffer(4096),
                 new SkinnedVisualBatchBuffer(1024));
@@ -172,7 +172,7 @@ namespace Ludots.Tests.Presentation
             _hud.Clear();
             _primitives.Clear();
             _overlays.Clear();
-            _roadSplines.Clear();
+            _splineRibbons.Clear();
             _entityLifecycle.Update(dt);
             _projection.Update(dt);
             _ruleSystem.Update(dt);

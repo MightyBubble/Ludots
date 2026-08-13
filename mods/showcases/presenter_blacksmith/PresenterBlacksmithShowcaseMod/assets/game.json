@@ -18,7 +18,7 @@
     "skinnedVisualBatchCapacity": 65536,
     "presentationRequestCapacity": 2097152,
     "groundOverlayCapacity": 65536,
-    "roadSplineCapacity": 65536,
+    "splineRibbonCapacity": 65536,
     "worldHudCapacity": 1048576,
     "screenHudCapacity": 1048576,
     "minimapMarkerCapacity": 1048576,

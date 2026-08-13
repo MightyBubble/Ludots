@@ -12,7 +12,7 @@
     "skinnedVisualBatchCapacity": 65536,
     "presentationRequestCapacity": 2097152,
     "groundOverlayCapacity": 1,
-    "roadSplineCapacity": 1,
+    "splineRibbonCapacity": 1,
     "worldHudCapacity": 1048576,
     "screenHudCapacity": 1048576,
     "runtimeEntitySpawnQueueCapacity": 524288

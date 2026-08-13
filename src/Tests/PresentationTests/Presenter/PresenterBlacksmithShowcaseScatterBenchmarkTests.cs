@@ -87,7 +87,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(result.VisibleChimneyPrimitives, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: visible chimney primitive count mismatch.");
                 Assert.That(result.WorldHudBarCount, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: world HUD bar count mismatch.");
                 Assert.That(result.WorldHudTextCount, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: world HUD text count mismatch.");
-                Assert.That(result.RoadSplineCount, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: road spline count mismatch.");
+                Assert.That(result.SplineRibbonCount, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: road spline count mismatch.");
                 Assert.That(result.GroundOverlayCount, Is.EqualTo(expectedVisibleOwners), $"{result.Name}: decal count mismatch.");
                 if (!result.ExpectFullVisibility)
                 {
@@ -417,7 +417,7 @@ namespace Ludots.Tests.Presentation
                 out int visibleChimneyPrimitives,
                 out int worldHudBarCount,
                 out int worldHudTextCount,
-                out int roadSplineCount,
+                out int splineRibbonCount,
                 out int groundOverlayCount);
 
             PresenterBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, WarmupFrames);
@@ -516,7 +516,7 @@ namespace Ludots.Tests.Presentation
                 visibleChimneyPrimitives,
                 worldHudBarCount,
                 worldHudTextCount,
-                roadSplineCount,
+                splineRibbonCount,
                 groundOverlayCount,
                 eventStream.DroppedTotal,
                 commandBuffer.DroppedTotal,
@@ -594,7 +594,7 @@ namespace Ludots.Tests.Presentation
                     out int visibleChimneyPrimitives,
                     out int worldHudBarCount,
                     out int worldHudTextCount,
-                    out int roadSplineCount,
+                    out int splineRibbonCount,
                     out int groundOverlayCount);
 
                 var signatureBuilder = new HashCode();
@@ -614,7 +614,7 @@ namespace Ludots.Tests.Presentation
                 signatureBuilder.Add(visibleChimneyPrimitives);
                 signatureBuilder.Add(worldHudBarCount);
                 signatureBuilder.Add(worldHudTextCount);
-                signatureBuilder.Add(roadSplineCount);
+                signatureBuilder.Add(splineRibbonCount);
                 signatureBuilder.Add(groundOverlayCount);
                 int signature = signatureBuilder.ToHashCode();
 
@@ -659,7 +659,7 @@ namespace Ludots.Tests.Presentation
             out int visibleChimneyPrimitives,
             out int worldHudBarCount,
             out int worldHudTextCount,
-            out int roadSplineCount,
+            out int splineRibbonCount,
             out int groundOverlayCount)
         {
             var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
@@ -672,8 +672,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
                 ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
-            var roadSplines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
-                ?? throw new InvalidOperationException("RoadSplineBuffer missing.");
+            var splineRibbons = engine.GetService(CoreServiceKeys.SplineRibbonBuffer)
+                ?? throw new InvalidOperationException("SplineRibbonBuffer missing.");
             var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
                 ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
 
@@ -771,7 +771,7 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            roadSplineCount = roadSplines.Count;
+            splineRibbonCount = splineRibbons.Count;
             groundOverlayCount = overlays.Count;
         }
 
@@ -860,7 +860,7 @@ namespace Ludots.Tests.Presentation
                 sb.AppendLine($"- blacksmith entities: `{result.BlacksmithEntities}`");
                 sb.AppendLine($"- visible blacksmith entities: `{result.VisibleBlacksmithEntities}`");
                 sb.AppendLine($"- presenters: root `{result.RootPresenterCount}` | left `{result.WorkshopLeftPresenterCount}` | right `{result.WorkshopRightPresenterCount}` | chimney `{result.ChimneyPresenterCount}` | route `{result.RouteSplinePresenterCount}` | decal `{result.DecalPresenterCount}` | worker `{result.WorkerPresenterCount}` | bar `{result.BarPresenterCount}` | text `{result.TextPresenterCount}`");
-                sb.AppendLine($"- presentation: workshop primitives `{result.VisibleWorkshopPrimitives}` | chimney primitives `{result.VisibleChimneyPrimitives}` | HUD bars `{result.WorldHudBarCount}` | HUD text `{result.WorldHudTextCount}` | splines `{result.RoadSplineCount}` | overlays `{result.GroundOverlayCount}`");
+                sb.AppendLine($"- presentation: workshop primitives `{result.VisibleWorkshopPrimitives}` | chimney primitives `{result.VisibleChimneyPrimitives}` | HUD bars `{result.WorldHudBarCount}` | HUD text `{result.WorldHudTextCount}` | splines `{result.SplineRibbonCount}` | overlays `{result.GroundOverlayCount}`");
                 sb.AppendLine($"- drops: events `{result.PresentationEventDrops}` | commands `{result.PresenterCommandDrops}` | primitives `{result.PrimitiveDrops}` | world HUD `{result.WorldHudDrops}` | screen HUD `{result.ScreenHudDrops}` | skinned `{result.SkinnedDrops}`");
                 sb.AppendLine($"- avg tick: `{result.AverageTickMs:F4} ms`");
                 sb.AppendLine($"- p95 tick: `{result.P95TickMs:F4} ms`");
@@ -910,7 +910,7 @@ namespace Ludots.Tests.Presentation
                     sb.Append("\"visible_chimneys\":").Append(result.VisibleChimneyPrimitives).Append(",");
                     sb.Append("\"world_hud_bars\":").Append(result.WorldHudBarCount).Append(",");
                     sb.Append("\"world_hud_text\":").Append(result.WorldHudTextCount).Append(",");
-                    sb.Append("\"road_splines\":").Append(result.RoadSplineCount).Append(",");
+                    sb.Append("\"spline_ribbons\":").Append(result.SplineRibbonCount).Append(",");
                     sb.Append("\"ground_overlays\":").Append(result.GroundOverlayCount).Append(",");
                     sb.Append("\"camera_culling_ms\":").Append(result.CameraCullingMs[frame].ToString("F4", CultureInfo.InvariantCulture)).Append(",");
                     sb.Append("\"world_hud_projection_ms\":").Append(result.HudProjectionMs[frame].ToString("F4", CultureInfo.InvariantCulture)).Append(",");
@@ -1027,7 +1027,7 @@ namespace Ludots.Tests.Presentation
                 int visibleChimneyPrimitives,
                 int worldHudBarCount,
                 int worldHudTextCount,
-                int roadSplineCount,
+                int splineRibbonCount,
                 int groundOverlayCount,
                 int presentationEventDrops,
                 int presenterCommandDrops,
@@ -1085,7 +1085,7 @@ namespace Ludots.Tests.Presentation
                 VisibleChimneyPrimitives = visibleChimneyPrimitives;
                 WorldHudBarCount = worldHudBarCount;
                 WorldHudTextCount = worldHudTextCount;
-                RoadSplineCount = roadSplineCount;
+                SplineRibbonCount = splineRibbonCount;
                 GroundOverlayCount = groundOverlayCount;
                 PresentationEventDrops = presentationEventDrops;
                 PresenterCommandDrops = presenterCommandDrops;
@@ -1144,7 +1144,7 @@ namespace Ludots.Tests.Presentation
             public int VisibleChimneyPrimitives { get; }
             public int WorldHudBarCount { get; }
             public int WorldHudTextCount { get; }
-            public int RoadSplineCount { get; }
+            public int SplineRibbonCount { get; }
             public int GroundOverlayCount { get; }
             public int PresentationEventDrops { get; }
             public int PresenterCommandDrops { get; }

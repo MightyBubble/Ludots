@@ -42,7 +42,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
         private const int PrimitiveCountPerBlacksmith = 3;
         private const int WorldHudCountPerBlacksmith = 2;
         private const int ScreenHudCountPerBlacksmith = 2;
-        private const int RoadSplineCountPerBlacksmith = 1;
+        private const int SplineRibbonCountPerBlacksmith = 1;
         private const int GroundOverlayCountPerBlacksmith = 1;
         private const int SkinnedCountPerBlacksmith = 1;
         private const int ShowcaseLocalPlayerId = 1;
@@ -1203,8 +1203,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 renderMetrics.WorldHudTextCurrentRange > 0.5f
                     ? $"PASS random drift: world HUD range bar {renderMetrics.WorldHudBarValueRange:F2}, text {renderMetrics.WorldHudTextCurrentRange:F1}."
                     : "WAIT random drift: durability effect has not fanned out across the crowd yet.",
-                renderMetrics.RoadSplineCount >= (_destroyed ? 0 : 1)
-                    ? $"PASS spline route: {renderMetrics.RoadSplineCount} spline request(s) visible."
+                renderMetrics.SplineRibbonCount >= (_destroyed ? 0 : 1)
+                    ? $"PASS spline route: {renderMetrics.SplineRibbonCount} spline request(s) visible."
                     : "WARN spline route: worker route spline missing.",
                 renderMetrics.GroundOverlayCount >= (_destroyed ? 0 : 1)
                     ? $"PASS forge decal: {renderMetrics.GroundOverlayCount} ground overlay request(s) visible."
@@ -1223,7 +1223,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 $"Blacksmith entities: {totalBlacksmiths} total | extras {scatterExtras}",
                 $"Presenters: owned {presenterMetrics.RootOwnedCount} | active buffer {presenterMetrics.BufferActiveCount}",
                 $"Meshes: workshops {renderMetrics.VisibleWorkshopCount} | chimney {renderMetrics.VisibleChimneyCount} | smoke {renderMetrics.VisibleSmokeCount} | worker skinned {renderMetrics.VisibleWorkerCount}",
-                $"Presentation: spline {renderMetrics.RoadSplineCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
+                $"Presentation: spline {renderMetrics.SplineRibbonCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
                 $"HUD truth: bar {renderMetrics.PrimaryHudBarValue:F2} | text current {renderMetrics.PrimaryHudTextCurrent:F0} | text base {renderMetrics.PrimaryHudTextBase:F0} | crowd range {renderMetrics.WorldHudBarValueRange:F2}/{renderMetrics.WorldHudTextCurrentRange:F1}",
                 $"Drops: evt {capacityMetrics.PresentationEventDrops} | worldHud {capacityMetrics.WorldHudDrops} | screenHud {capacityMetrics.ScreenHudDrops} | prim {capacityMetrics.PrimitiveDrops} | skinned {capacityMetrics.SkinnedDrops}",
                 $"State: region {_regionIndex} ({regionLabel}) | durability {durabilityRatio:F2} | working {(_isWorking ? 1 : 0)} | night {(_isNight ? 1 : 0)}",
@@ -1336,7 +1336,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             GroundOverlayBuffer? overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
-            RoadSplineBuffer? splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            SplineRibbonBuffer? splines = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
             PresenterEntityRuntime? presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
             PresenterDefinitionRegistry? definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
@@ -1485,7 +1485,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             var skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-            var roadSplines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            var splineRibbons = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
 
@@ -1507,8 +1507,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 SkinnedCapacity: skinned?.Capacity ?? runtimeConfig.SkinnedVisualBatchCapacity,
                 SkinnedCount: skinned?.Count ?? 0,
                 SkinnedDrops: skinned?.DroppedSinceClear ?? 0,
-                RoadSplineCapacity: roadSplines?.Capacity ?? runtimeConfig.RoadSplineCapacity,
-                RoadSplineCount: roadSplines?.Count ?? 0,
+                SplineRibbonCapacity: splineRibbons?.Capacity ?? runtimeConfig.SplineRibbonCapacity,
+                SplineRibbonCount: splineRibbons?.Count ?? 0,
                 GroundOverlayCapacity: overlays?.Capacity ?? runtimeConfig.GroundOverlayCapacity,
                 GroundOverlayCount: overlays?.Count ?? 0,
                 SpawnQueueCapacity: spawnQueue?.Capacity ?? runtimeConfig.RuntimeEntitySpawnQueueCapacity,
@@ -1878,7 +1878,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
         {
             int scatterUiMax = ComputeScatterCapacityMax(metrics, _activeEngine != null && UsesCleanHudTextScatter(_activeEngine));
 
-            return $"Capacity: presenters {metrics.PresenterActive}/{metrics.PresenterCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.RoadSplineCount}/{metrics.RoadSplineCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalBlacksmiths}";
+            return $"Capacity: presenters {metrics.PresenterActive}/{metrics.PresenterCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.SplineRibbonCount}/{metrics.SplineRibbonCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalBlacksmiths}";
         }
 
         private static int ComputeScatterCapacityMax(in CapacityMetrics metrics, bool cleanHudTextScatter)
@@ -1887,7 +1887,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             int primitivePerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextPrimitiveCountPerBlacksmith : PrimitiveCountPerBlacksmith;
             int worldHudPerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextWorldHudCountPerBlacksmith : WorldHudCountPerBlacksmith;
             int screenHudPerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextScreenHudCountPerBlacksmith : ScreenHudCountPerBlacksmith;
-            int roadSplinePerBlacksmith = cleanHudTextScatter ? 0 : RoadSplineCountPerBlacksmith;
+            int splineRibbonPerBlacksmith = cleanHudTextScatter ? 0 : SplineRibbonCountPerBlacksmith;
             int overlayPerBlacksmith = cleanHudTextScatter ? 0 : GroundOverlayCountPerBlacksmith;
             int skinnedPerBlacksmith = cleanHudTextScatter ? 0 : SkinnedCountPerBlacksmith;
 
@@ -1895,7 +1895,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             int primitiveBound = ResolveCapacityBound(metrics.PrimitiveCapacity, primitivePerBlacksmith);
             int worldHudBound = ResolveCapacityBound(metrics.WorldHudCapacity, worldHudPerBlacksmith);
             int screenHudBound = ResolveCapacityBound(metrics.ScreenHudCapacity, screenHudPerBlacksmith);
-            int roadSplineBound = ResolveCapacityBound(metrics.RoadSplineCapacity, roadSplinePerBlacksmith);
+            int splineRibbonBound = ResolveCapacityBound(metrics.SplineRibbonCapacity, splineRibbonPerBlacksmith);
             int overlayBound = ResolveCapacityBound(metrics.GroundOverlayCapacity, overlayPerBlacksmith);
             int skinnedBound = ResolveCapacityBound(metrics.SkinnedCapacity, skinnedPerBlacksmith);
             int spawnQueueBound = metrics.SpawnQueueCapacity > 0
@@ -1906,7 +1906,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             lowestBound = Math.Min(lowestBound, primitiveBound);
             lowestBound = Math.Min(lowestBound, worldHudBound);
             lowestBound = Math.Min(lowestBound, screenHudBound);
-            lowestBound = Math.Min(lowestBound, roadSplineBound);
+            lowestBound = Math.Min(lowestBound, splineRibbonBound);
             lowestBound = Math.Min(lowestBound, overlayBound);
             lowestBound = Math.Min(lowestBound, skinnedBound);
             lowestBound = Math.Min(lowestBound, spawnQueueBound);
@@ -2157,7 +2157,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             int VisibleChimneyCount,
             int VisibleSmokeCount,
             int VisibleWorkerCount,
-            int RoadSplineCount,
+            int SplineRibbonCount,
             int GroundOverlayCount,
             int WorldHudBarCount,
             int WorldHudTextCount,
@@ -2191,8 +2191,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             int SkinnedCapacity,
             int SkinnedCount,
             int SkinnedDrops,
-            int RoadSplineCapacity,
-            int RoadSplineCount,
+            int SplineRibbonCapacity,
+            int SplineRibbonCount,
             int GroundOverlayCapacity,
             int GroundOverlayCount,
             int SpawnQueueCapacity,

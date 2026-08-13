@@ -656,7 +656,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 skinnedBatchBuffer);
@@ -856,7 +856,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 groundOverlays,
                 worldHud,
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 skinnedBatchBuffer);
@@ -1660,7 +1660,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 skinnedBatchBuffer);
@@ -1817,7 +1817,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());
@@ -2066,7 +2066,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());
@@ -2262,7 +2262,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 skinnedBatchBuffer);
@@ -2301,7 +2301,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());
@@ -2372,7 +2372,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 new SkinnedVisualBatchBuffer(),
@@ -2466,7 +2466,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 proxyBuffer,
                 new SkinnedVisualBatchBuffer());
@@ -2551,7 +2551,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());
@@ -2654,7 +2654,7 @@ namespace Ludots.Tests.Presentation
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
-                new RoadSplineBuffer(),
+                new SplineRibbonBuffer(),
                 snapshotBuffer,
                 new PresentationVisualProxyBuffer(),
                 new SkinnedVisualBatchBuffer());

@@ -26,7 +26,7 @@
     "visualProxyBufferCapacity": 131072,
     "presentationRequestCapacity": 262144,
     "groundOverlayCapacity": 65536,
-    "roadSplineCapacity": 65536,
+    "splineRibbonCapacity": 65536,
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "skinnedVisualBatchCapacity": 131072,

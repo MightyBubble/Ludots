@@ -16,7 +16,7 @@
     "globalFieldVisualCellCapacity": 262144,
     "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 65536,
-    "roadSplineCapacity": 65536,
+    "splineRibbonCapacity": 65536,
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "minimapMarkerCapacity": 131072,

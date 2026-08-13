@@ -908,7 +908,7 @@ namespace Ludots.Tests.Presentation
                         Assert.That(request.VisualProxy.Animator.GetControllerId(), Is.EqualTo(7));
                     }
                 }
-                else if (request.Kind == PresentationRequestKind.RoadSpline)
+                else if (request.Kind == PresentationRequestKind.SplineRibbon)
                 {
                     splineCount++;
                 }

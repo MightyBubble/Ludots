@@ -589,7 +589,7 @@ namespace Ludots.Core.Presentation.Systems
                     _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
                     break;
                 case AssetKind.Spline:
-                    _requests.Add(PresentationRequest.RemoveRoadSpline(state.OwnerEntity, stableId));
+                    _requests.Add(PresentationRequest.RemoveSplineRibbon(state.OwnerEntity, stableId));
                     break;
                 case AssetKind.GroundOverlay:
                     _requests.Add(PresentationRequest.RemoveGroundOverlay(state.OwnerEntity, stableId));

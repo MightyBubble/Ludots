@@ -271,7 +271,7 @@ public struct SplineConfig
 
 ```
 1. Spline behavior 读取样条控制点
-2. 发射 RoadSplineRequest 到 adapter（复用现有 RoadSplineRequest）
+2. 发射 SplineRibbonRequest 到 adapter（复用现有 SplineRibbonRequest）
 3. 宽度和颜色由 param 驱动
 ```
 

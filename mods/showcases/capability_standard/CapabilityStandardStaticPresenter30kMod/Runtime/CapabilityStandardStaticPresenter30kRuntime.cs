@@ -40,7 +40,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
         private const int PrimitiveCountPerCapabilityStaticPresenter = 3;
         private const int WorldHudCountPerCapabilityStaticPresenter = 2;
         private const int ScreenHudCountPerCapabilityStaticPresenter = 2;
-        private const int RoadSplineCountPerCapabilityStaticPresenter = 1;
+        private const int SplineRibbonCountPerCapabilityStaticPresenter = 1;
         private const int GroundOverlayCountPerCapabilityStaticPresenter = 1;
         private const int SkinnedCountPerCapabilityStaticPresenter = 1;
         private const string AutoScatterTotalEnvKey = "LUDOTS_CAPABILITY_STANDARD_STATIC_PRESENTER_30K_AUTO_SCATTER_TOTAL";
@@ -1017,8 +1017,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                 renderMetrics.WorldHudTextCurrentRange > 0.5f
                     ? $"PASS random drift: world HUD range bar {renderMetrics.WorldHudBarValueRange:F2}, text {renderMetrics.WorldHudTextCurrentRange:F1}."
                     : "WAIT random drift: durability effect has not fanned out across the crowd yet.",
-                renderMetrics.RoadSplineCount >= (_destroyed ? 0 : 1)
-                    ? $"PASS spline route: {renderMetrics.RoadSplineCount} spline request(s) visible."
+                renderMetrics.SplineRibbonCount >= (_destroyed ? 0 : 1)
+                    ? $"PASS spline route: {renderMetrics.SplineRibbonCount} spline request(s) visible."
                     : "WARN spline route: worker route spline missing.",
                 renderMetrics.GroundOverlayCount >= (_destroyed ? 0 : 1)
                     ? $"PASS forge decal: {renderMetrics.GroundOverlayCount} ground overlay request(s) visible."
@@ -1037,7 +1037,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                 $"CapabilityStaticPresenter entities: {totalCapabilityStaticPresenters} total | extras {scatterExtras}",
                 $"Presenters: owned {presenterMetrics.RootOwnedCount} | active buffer {presenterMetrics.BufferActiveCount}",
                 $"Meshes: workshops {renderMetrics.VisibleWorkshopCount} | chimney {renderMetrics.VisibleChimneyCount} | smoke {renderMetrics.VisibleSmokeCount} | worker skinned {renderMetrics.VisibleWorkerCount}",
-                $"Presentation: spline {renderMetrics.RoadSplineCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
+                $"Presentation: spline {renderMetrics.SplineRibbonCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
                 $"HUD truth: bar {renderMetrics.PrimaryHudBarValue:F2} | text current {renderMetrics.PrimaryHudTextCurrent:F0} | text base {renderMetrics.PrimaryHudTextBase:F0} | crowd range {renderMetrics.WorldHudBarValueRange:F2}/{renderMetrics.WorldHudTextCurrentRange:F1}",
                 $"Drops: evt {capacityMetrics.PresentationEventDrops} | worldHud {capacityMetrics.WorldHudDrops} | screenHud {capacityMetrics.ScreenHudDrops} | prim {capacityMetrics.PrimitiveDrops} | skinned {capacityMetrics.SkinnedDrops}",
                 $"State: region {_regionIndex} ({regionLabel}) | durability {durabilityRatio:F2} | working {(_isWorking ? 1 : 0)} | night {(_isNight ? 1 : 0)}",
@@ -1150,7 +1150,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             GroundOverlayBuffer? overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
-            RoadSplineBuffer? splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            SplineRibbonBuffer? splines = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
             PresenterEntityRuntime? presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
             PresenterDefinitionRegistry? definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
@@ -1299,7 +1299,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             var skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-            var roadSplines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            var splineRibbons = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
 
@@ -1321,8 +1321,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
                 SkinnedCapacity: skinned?.Capacity ?? runtimeConfig.SkinnedVisualBatchCapacity,
                 SkinnedCount: skinned?.Count ?? 0,
                 SkinnedDrops: skinned?.DroppedSinceClear ?? 0,
-                RoadSplineCapacity: roadSplines?.Capacity ?? runtimeConfig.RoadSplineCapacity,
-                RoadSplineCount: roadSplines?.Count ?? 0,
+                SplineRibbonCapacity: splineRibbons?.Capacity ?? runtimeConfig.SplineRibbonCapacity,
+                SplineRibbonCount: splineRibbons?.Count ?? 0,
                 GroundOverlayCapacity: overlays?.Capacity ?? runtimeConfig.GroundOverlayCapacity,
                 GroundOverlayCount: overlays?.Count ?? 0,
                 SpawnQueueCapacity: spawnQueue?.Capacity ?? runtimeConfig.RuntimeEntitySpawnQueueCapacity,
@@ -1681,7 +1681,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
         {
             int scatterUiMax = ComputeScatterCapacityMax(metrics, _activeEngine != null && UsesCleanHudTextScatter(_activeEngine));
 
-            return $"Capacity: presenters {metrics.PresenterActive}/{metrics.PresenterCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.RoadSplineCount}/{metrics.RoadSplineCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalCapabilityStaticPresenters}";
+            return $"Capacity: presenters {metrics.PresenterActive}/{metrics.PresenterCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.SplineRibbonCount}/{metrics.SplineRibbonCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalCapabilityStaticPresenters}";
         }
 
         private static int ComputeScatterCapacityMax(in CapacityMetrics metrics, bool cleanHudTextScatter)
@@ -1690,7 +1690,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             int primitivePerCapabilityStaticPresenter = cleanHudTextScatter ? BenchmarkHudTextPrimitiveCountPerCapabilityStaticPresenter : PrimitiveCountPerCapabilityStaticPresenter;
             int worldHudPerCapabilityStaticPresenter = cleanHudTextScatter ? BenchmarkHudTextWorldHudCountPerCapabilityStaticPresenter : WorldHudCountPerCapabilityStaticPresenter;
             int screenHudPerCapabilityStaticPresenter = cleanHudTextScatter ? BenchmarkHudTextScreenHudCountPerCapabilityStaticPresenter : ScreenHudCountPerCapabilityStaticPresenter;
-            int roadSplinePerCapabilityStaticPresenter = cleanHudTextScatter ? 0 : RoadSplineCountPerCapabilityStaticPresenter;
+            int splineRibbonPerCapabilityStaticPresenter = cleanHudTextScatter ? 0 : SplineRibbonCountPerCapabilityStaticPresenter;
             int overlayPerCapabilityStaticPresenter = cleanHudTextScatter ? 0 : GroundOverlayCountPerCapabilityStaticPresenter;
             int skinnedPerCapabilityStaticPresenter = cleanHudTextScatter ? 0 : SkinnedCountPerCapabilityStaticPresenter;
 
@@ -1698,7 +1698,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             int primitiveBound = ResolveCapacityBound(metrics.PrimitiveCapacity, primitivePerCapabilityStaticPresenter);
             int worldHudBound = ResolveCapacityBound(metrics.WorldHudCapacity, worldHudPerCapabilityStaticPresenter);
             int screenHudBound = ResolveCapacityBound(metrics.ScreenHudCapacity, screenHudPerCapabilityStaticPresenter);
-            int roadSplineBound = ResolveCapacityBound(metrics.RoadSplineCapacity, roadSplinePerCapabilityStaticPresenter);
+            int splineRibbonBound = ResolveCapacityBound(metrics.SplineRibbonCapacity, splineRibbonPerCapabilityStaticPresenter);
             int overlayBound = ResolveCapacityBound(metrics.GroundOverlayCapacity, overlayPerCapabilityStaticPresenter);
             int skinnedBound = ResolveCapacityBound(metrics.SkinnedCapacity, skinnedPerCapabilityStaticPresenter);
             int spawnQueueBound = metrics.SpawnQueueCapacity > 0
@@ -1709,7 +1709,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             lowestBound = Math.Min(lowestBound, primitiveBound);
             lowestBound = Math.Min(lowestBound, worldHudBound);
             lowestBound = Math.Min(lowestBound, screenHudBound);
-            lowestBound = Math.Min(lowestBound, roadSplineBound);
+            lowestBound = Math.Min(lowestBound, splineRibbonBound);
             lowestBound = Math.Min(lowestBound, overlayBound);
             lowestBound = Math.Min(lowestBound, skinnedBound);
             lowestBound = Math.Min(lowestBound, spawnQueueBound);
@@ -1958,7 +1958,7 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             int VisibleChimneyCount,
             int VisibleSmokeCount,
             int VisibleWorkerCount,
-            int RoadSplineCount,
+            int SplineRibbonCount,
             int GroundOverlayCount,
             int WorldHudBarCount,
             int WorldHudTextCount,
@@ -1992,8 +1992,8 @@ namespace CapabilityStandardStaticPresenter30kMod.Runtime
             int SkinnedCapacity,
             int SkinnedCount,
             int SkinnedDrops,
-            int RoadSplineCapacity,
-            int RoadSplineCount,
+            int SplineRibbonCapacity,
+            int SplineRibbonCount,
             int GroundOverlayCapacity,
             int GroundOverlayCount,
             int SpawnQueueCapacity,

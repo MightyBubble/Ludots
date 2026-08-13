@@ -311,7 +311,7 @@ namespace Ludots.Tests.Presentation
             private readonly PrimitiveDrawBuffer _primitives;
             private readonly GroundOverlayBuffer _groundOverlays;
             private readonly WorldHudBatchBuffer _worldHud;
-            private readonly RoadSplineBuffer _roadSplines;
+            private readonly SplineRibbonBuffer _splineRibbons;
             private readonly PrimitiveDrawBuffer _snapshotBuffer;
             private readonly PresentationVisualProxyBuffer _proxyBuffer;
             private readonly SkinnedVisualBatchBuffer _skinnedBatchBuffer;
@@ -349,7 +349,7 @@ namespace Ludots.Tests.Presentation
                 PrimitiveDrawBuffer primitives,
                 GroundOverlayBuffer groundOverlays,
                 WorldHudBatchBuffer worldHud,
-                RoadSplineBuffer roadSplines,
+                SplineRibbonBuffer splineRibbons,
                 PrimitiveDrawBuffer snapshotBuffer,
                 PresentationVisualProxyBuffer proxyBuffer,
                 SkinnedVisualBatchBuffer skinnedBatchBuffer,
@@ -383,7 +383,7 @@ namespace Ludots.Tests.Presentation
                 _primitives = primitives;
                 _groundOverlays = groundOverlays;
                 _worldHud = worldHud;
-                _roadSplines = roadSplines;
+                _splineRibbons = splineRibbons;
                 _snapshotBuffer = snapshotBuffer;
                 _proxyBuffer = proxyBuffer;
                 _skinnedBatchBuffer = skinnedBatchBuffer;
@@ -489,7 +489,7 @@ namespace Ludots.Tests.Presentation
                 var primitives = new PrimitiveDrawBuffer(512);
                 var groundOverlays = new GroundOverlayBuffer(128);
                 var worldHud = new WorldHudBatchBuffer(128);
-                var roadSplines = new RoadSplineBuffer(128);
+                var splineRibbons = new SplineRibbonBuffer(128);
                 var snapshotBuffer = new PrimitiveDrawBuffer(512);
                 var proxyBuffer = new PresentationVisualProxyBuffer(512);
                 var skinnedBatchBuffer = new SkinnedVisualBatchBuffer(128);
@@ -537,7 +537,7 @@ namespace Ludots.Tests.Presentation
                     primitives,
                     groundOverlays,
                     worldHud,
-                    roadSplines,
+                    splineRibbons,
                     snapshotBuffer,
                     proxyBuffer,
                     skinnedBatchBuffer);
@@ -566,7 +566,7 @@ namespace Ludots.Tests.Presentation
                     primitives,
                     groundOverlays,
                     worldHud,
-                    roadSplines,
+                    splineRibbons,
                     snapshotBuffer,
                     proxyBuffer,
                     skinnedBatchBuffer,

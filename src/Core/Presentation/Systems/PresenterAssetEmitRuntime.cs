@@ -439,7 +439,7 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 p1 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP1, Vector3.Lerp(p0, p3, 1f / 3f));
             Vector3 p2 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP2, Vector3.Lerp(p0, p3, 2f / 3f));
 
-            _requests.Add(PresentationRequest.FromRoadSpline(state.OwnerEntity, new RoadSplineRequest
+            _requests.Add(PresentationRequest.FromSplineRibbon(state.OwnerEntity, new SplineRibbonRequest
             {
                 StableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
                 P0 = p0,
@@ -450,7 +450,6 @@ namespace Ludots.Core.Presentation.Systems
                 FillColor = fillColor,
                 BorderColor = borderColor,
                 BorderWidth = borderWidth,
-                Style = 0,
             }, lod));
         }
 

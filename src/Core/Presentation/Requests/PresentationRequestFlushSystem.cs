@@ -19,7 +19,7 @@ namespace Ludots.Core.Presentation.Requests
         private readonly PrimitiveDrawBuffer _snapshotBuffer;
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly WorldHudBatchBuffer _worldHud;
-        private readonly RoadSplineBuffer _roadSplines;
+        private readonly SplineRibbonBuffer _splineRibbons;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private int _lastProjectedRevision = -1;
         private int _lastProjectedNonStaticRevision = -1;
@@ -35,7 +35,7 @@ namespace Ludots.Core.Presentation.Requests
             PrimitiveDrawBuffer primitives,
             GroundOverlayBuffer groundOverlays,
             WorldHudBatchBuffer worldHud,
-            RoadSplineBuffer roadSplines,
+            SplineRibbonBuffer splineRibbons,
             PrimitiveDrawBuffer snapshotBuffer,
             PresentationVisualProxyBuffer proxyBuffer,
             SkinnedVisualBatchBuffer skinnedBatchBuffer,
@@ -57,7 +57,7 @@ namespace Ludots.Core.Presentation.Requests
                 skinnedBatchBuffer ?? throw new ArgumentNullException(nameof(skinnedBatchBuffer)));
             _groundOverlays = groundOverlays ?? throw new ArgumentNullException(nameof(groundOverlays));
             _worldHud = worldHud ?? throw new ArgumentNullException(nameof(worldHud));
-            _roadSplines = roadSplines ?? throw new ArgumentNullException(nameof(roadSplines));
+            _splineRibbons = splineRibbons ?? throw new ArgumentNullException(nameof(splineRibbons));
         }
 
         public override void Update(in float dt)
@@ -104,8 +104,8 @@ namespace Ludots.Core.Presentation.Requests
 
                         break;
 
-                    case PresentationRequestKind.RoadSpline:
-                        EmitRoadSpline(in request.RoadSpline);
+                    case PresentationRequestKind.SplineRibbon:
+                        EmitSplineRibbon(in request.SplineRibbon);
                         break;
 
                     case PresentationRequestKind.SurfaceSource:
@@ -129,8 +129,8 @@ namespace Ludots.Core.Presentation.Requests
                         _worldHud.Remove(request.StableId);
                         break;
 
-                    case PresentationRequestKind.RemoveRoadSpline:
-                        _roadSplines.Remove(request.StableId);
+                    case PresentationRequestKind.RemoveSplineRibbon:
+                        _splineRibbons.Remove(request.StableId);
                         break;
 
                     default:
@@ -250,9 +250,9 @@ namespace Ludots.Core.Presentation.Requests
                    proxy.RenderPath.IsSkinnedLane();
         }
 
-        private void EmitRoadSpline(in RoadSplineRequest spline)
+        private void EmitSplineRibbon(in SplineRibbonRequest spline)
         {
-            if (!_roadSplines.TryAdd(
+            if (!_splineRibbons.TryAdd(
                     spline.StableId,
                     spline.P0,
                     spline.P1,
@@ -261,11 +261,10 @@ namespace Ludots.Core.Presentation.Requests
                     spline.Width,
                     spline.FillColor,
                     spline.BorderColor,
-                    spline.BorderWidth,
-                    spline.Style))
+                    spline.BorderWidth))
             {
                 throw new InvalidOperationException(
-                    $"RoadSplineBuffer overflowed while flushing PresentationRequest stableId={spline.StableId}.");
+                    $"SplineRibbonBuffer overflowed while flushing PresentationRequest stableId={spline.StableId}.");
             }
         }
     }

@@ -1423,13 +1423,13 @@ public static class LauncherEvidenceRecorder
             activeChunkKeys = board.LoadedChunksSource.ActiveChunkKeys.OrderBy(key => key).ToArray();
         }
 
-        RoadSplineBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.RoadSplineBuffer);
-        var splines = new List<RoadSplineCapture>(roads?.Count ?? 0);
+        SplineRibbonBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
+        var splines = new List<SplineRibbonCapture>(roads?.Count ?? 0);
         if (roads != null)
         {
             for (int index = 0; index < roads.Count; index++)
             {
-                splines.Add(new RoadSplineCapture(
+                splines.Add(new SplineRibbonCapture(
                     roads.StableIds[index],
                     new Vector3(roads.P0X[index], roads.P0Y[index], roads.P0Z[index]),
                     new Vector3(roads.P1X[index], roads.P1Y[index], roads.P1Z[index]),
@@ -1456,7 +1456,7 @@ public static class LauncherEvidenceRecorder
             ChunkSizeCm: chunkSizeCm,
             ActiveChunkKeys: activeChunkKeys,
             ActiveChunkSignature: string.Join(",", activeChunkKeys),
-            RoadSplineCount: roads?.Count ?? 0,
+            SplineRibbonCount: roads?.Count ?? 0,
             NamedEntities: namedEntities,
             CommandActorNames: commandActorNames,
             CueMarkerPresent: cueMarkerPresent,
@@ -1532,7 +1532,7 @@ public static class LauncherEvidenceRecorder
             $"Road command still reports error 2: '{accepted.StatusLine}'.", failures);
         AddAcceptanceCheck(accepted.CueMarkerPresent,
             "Right-click should emit a visible cue marker at the road command target.", failures);
-        AddAcceptanceCheck(accepted.RoadSplineCount > 0,
+        AddAcceptanceCheck(accepted.SplineRibbonCount > 0,
             "Road spline buffer should contain visible showcase road segments.", failures);
         AddAcceptanceCheck(moved.ControlledActorWorldCm.X - accepted.ControlledActorWorldCm.X >= RoadMovementMinimumCm,
             $"{accepted.ControlledActorName} should begin moving along the road after acceptance, but only advanced {moved.ControlledActorWorldCm.X - accepted.ControlledActorWorldCm.X:F0}cm.", failures);
@@ -1551,7 +1551,7 @@ public static class LauncherEvidenceRecorder
             $"status:{accepted.StatusLine}",
             $"blue:{MathF.Round(accepted.ControlledActorWorldCm.X):F0}->{MathF.Round(moved.ControlledActorWorldCm.X):F0}",
             $"chunks:{start.ActiveChunkSignature}->{shifted.ActiveChunkSignature}",
-            $"roads:{accepted.RoadSplineCount}",
+            $"roads:{accepted.SplineRibbonCount}",
             $"cue:{(accepted.CueMarkerPresent ? 1 : 0)}"
         });
 
@@ -1608,7 +1608,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | commandActors={string.Join(", ", snapshot.CommandActorNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | commandActors={string.Join(", ", snapshot.CommandActorNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.SplineRibbonCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -1627,7 +1627,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `SplineRibbonBuffer`, `LoadedChunksSource`");
         return sb.ToString();
     }
 
@@ -1655,7 +1655,7 @@ public static class LauncherEvidenceRecorder
                 blue_south_y = Math.Round(snapshot.BlueSouthWorldCm.Y, 2),
                 loaded_chunks = snapshot.LoadedChunkCount,
                 loaded_nodes = snapshot.LoadedNodeCount,
-                road_splines = snapshot.RoadSplineCount,
+                spline_ribbons = snapshot.SplineRibbonCount,
                 cue_marker = snapshot.CueMarkerPresent,
                 camera_target_x = Math.Round(snapshot.CameraTargetCm.X, 2),
                 camera_target_y = Math.Round(snapshot.CameraTargetCm.Y, 2),
@@ -1698,7 +1698,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` commandActors=`{string.Join(", ", snapshot.CommandActorNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` commandActors=`{string.Join(", ", snapshot.CommandActorNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.SplineRibbonCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
         }
 
         return sb.ToString();
@@ -1760,7 +1760,7 @@ public static class LauncherEvidenceRecorder
             }
         }
 
-        foreach (RoadSplineCapture spline in snapshot.Splines)
+        foreach (SplineRibbonCapture spline in snapshot.Splines)
         {
             using var pathBuilder = new SKPath();
             SKPoint p0 = ToScreen(new Vector2(spline.P0.X * 100f, spline.P0.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
@@ -1803,7 +1803,7 @@ public static class LauncherEvidenceRecorder
         canvas.DrawText($"CommandActors={string.Join(", ", snapshot.CommandActorNames)}", 24, 92, minorTextPaint);
         canvas.DrawText($"Controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)}  Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 120, minorTextPaint);
         canvas.DrawText($"BlueVanguard={FormatPoint(snapshot.BlueVanguardWorldCm)}  North={FormatPoint(snapshot.BlueNorthWorldCm)}  South={FormatPoint(snapshot.BlueSouthWorldCm)}", 24, 148, minorTextPaint);
-        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 176, minorTextPaint);
+        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  SplineRibbons={snapshot.SplineRibbonCount}  Tick={snapshot.TickMs:F3}ms", 24, 176, minorTextPaint);
 
         using SKImage image = surface.Snapshot();
         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -2043,7 +2043,7 @@ public static class LauncherEvidenceRecorder
         timeline.Add(snapshot);
         string fileName = $"{step}.png";
         WriteChunkSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.RoadSplineCount, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SplineRibbonCount, 0f, 0f));
     }
 
     private static ChunkSnapshot SampleChunkSnapshot(RecordingRuntime runtime, string step, double tickMs)
@@ -2060,13 +2060,13 @@ public static class LauncherEvidenceRecorder
             activeChunkKeys = board.LoadedChunksSource.ActiveChunkKeys.OrderBy(key => key).ToArray();
         }
 
-        RoadSplineBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.RoadSplineBuffer);
-        var splines = new List<RoadSplineCapture>(roads?.Count ?? 0);
+        SplineRibbonBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
+        var splines = new List<SplineRibbonCapture>(roads?.Count ?? 0);
         if (roads != null)
         {
             for (int index = 0; index < roads.Count; index++)
             {
-                splines.Add(new RoadSplineCapture(
+                splines.Add(new SplineRibbonCapture(
                     roads.StableIds[index],
                     new Vector3(roads.P0X[index], roads.P0Y[index], roads.P0Z[index]),
                     new Vector3(roads.P1X[index], roads.P1Y[index], roads.P1Z[index]),
@@ -2090,7 +2090,7 @@ public static class LauncherEvidenceRecorder
             ChunkSizeCm: chunkSizeCm,
             ActiveChunkKeys: activeChunkKeys,
             ActiveChunkSignature: string.Join(",", activeChunkKeys),
-            RoadSplineCount: roads?.Count ?? 0,
+            SplineRibbonCount: roads?.Count ?? 0,
             StatusLine: statusLine,
             OverlayLines: overlayLines,
             Splines: splines);
@@ -2120,7 +2120,7 @@ public static class LauncherEvidenceRecorder
         var failures = new List<string>();
         AddAcceptanceCheck(start.LoadedChunkCount > 0 && start.LoadedNodeCount > 0,
             "Chunk showcase should start with a populated central window.", failures);
-        AddAcceptanceCheck(start.RoadSplineCount > 0,
+        AddAcceptanceCheck(start.SplineRibbonCount > 0,
             "Chunk showcase should render at least one road spline batch in the initial window.", failures);
         AddAcceptanceCheck(!string.Equals(eastGate.ActiveChunkSignature, start.ActiveChunkSignature, StringComparison.Ordinal),
             "Focusing East Gate should shift the loaded chunk signature away from the center window.", failures);
@@ -2138,7 +2138,7 @@ public static class LauncherEvidenceRecorder
             $"east:{eastGate.ActiveChunkSignature}",
             $"red:{redCapital.ActiveChunkSignature}",
             $"reset:{reset.ActiveChunkSignature}",
-            $"splines:{start.RoadSplineCount}->{redCapital.RoadSplineCount}"
+            $"splines:{start.SplineRibbonCount}->{redCapital.SplineRibbonCount}"
         });
 
         bool success = failures.Count == 0;
@@ -2178,7 +2178,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (ChunkSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [T+{snapshot.Tick:000}] ChunkShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | camera={FormatPoint(snapshot.CameraTargetCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | tick={snapshot.TickMs:F3}ms");
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] ChunkShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | camera={FormatPoint(snapshot.CameraTargetCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.SplineRibbonCount} | tick={snapshot.TickMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -2216,7 +2216,7 @@ public static class LauncherEvidenceRecorder
                 camera = new { x = Math.Round(snapshot.CameraTargetCm.X, 2), y = Math.Round(snapshot.CameraTargetCm.Y, 2) },
                 chunk_count = snapshot.LoadedChunkCount,
                 node_count = snapshot.LoadedNodeCount,
-                road_spline_count = snapshot.RoadSplineCount,
+                spline_ribbon_count = snapshot.SplineRibbonCount,
                 chunk_signature = snapshot.ActiveChunkSignature,
                 status = snapshot.StatusLine
             }));
@@ -2252,7 +2252,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         foreach (ChunkSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` chunks={snapshot.LoadedChunkCount} nodes={snapshot.LoadedNodeCount} roads={snapshot.RoadSplineCount} camera=`{FormatPoint(snapshot.CameraTargetCm)}`");
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` chunks={snapshot.LoadedChunkCount} nodes={snapshot.LoadedNodeCount} roads={snapshot.SplineRibbonCount} camera=`{FormatPoint(snapshot.CameraTargetCm)}`");
         }
 
         return sb.ToString();
@@ -2310,7 +2310,7 @@ public static class LauncherEvidenceRecorder
             }
         }
 
-        foreach (RoadSplineCapture spline in snapshot.Splines)
+        foreach (SplineRibbonCapture spline in snapshot.Splines)
         {
             using var pathBuilder = new SKPath();
             SKPoint p0 = ToScreen(new Vector2(spline.P0.X * 100f, spline.P0.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
@@ -2332,7 +2332,7 @@ public static class LauncherEvidenceRecorder
         canvas.DrawText($"Chunk Streaming Showcase | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, labelPaint);
         canvas.DrawText($"Status={snapshot.StatusLine}", 24, 64, minorTextPaint);
         canvas.DrawText($"Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 92, minorTextPaint);
-        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 120, minorTextPaint);
+        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  SplineRibbons={snapshot.SplineRibbonCount}  Tick={snapshot.TickMs:F3}ms", 24, 120, minorTextPaint);
 
         using SKImage image = surface.Snapshot();
         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -4296,7 +4296,7 @@ public static class LauncherEvidenceRecorder
         int FinalTick,
         string NormalizedSignature);
 
-    private readonly record struct RoadSplineCapture(
+    private readonly record struct SplineRibbonCapture(
         int StableId,
         Vector3 P0,
         Vector3 P1,
@@ -4315,7 +4315,7 @@ public static class LauncherEvidenceRecorder
         int ChunkSizeCm,
         IReadOnlyList<long> ActiveChunkKeys,
         string ActiveChunkSignature,
-        int RoadSplineCount,
+        int SplineRibbonCount,
         IReadOnlyDictionary<string, Vector2> NamedEntities,
         IReadOnlyList<string> CommandActorNames,
         bool CueMarkerPresent,
@@ -4327,7 +4327,7 @@ public static class LauncherEvidenceRecorder
         Vector2 BlueSouthWorldCm,
         string StatusLine,
         IReadOnlyList<string> OverlayLines,
-        IReadOnlyList<RoadSplineCapture> Splines);
+        IReadOnlyList<SplineRibbonCapture> Splines);
 
     private sealed record RoadAcceptanceResult(
         bool Success,
@@ -4355,10 +4355,10 @@ public static class LauncherEvidenceRecorder
         int ChunkSizeCm,
         IReadOnlyList<long> ActiveChunkKeys,
         string ActiveChunkSignature,
-        int RoadSplineCount,
+        int SplineRibbonCount,
         string StatusLine,
         IReadOnlyList<string> OverlayLines,
-        IReadOnlyList<RoadSplineCapture> Splines);
+        IReadOnlyList<SplineRibbonCapture> Splines);
 
     private sealed record ChunkAcceptanceResult(
         bool Success,
