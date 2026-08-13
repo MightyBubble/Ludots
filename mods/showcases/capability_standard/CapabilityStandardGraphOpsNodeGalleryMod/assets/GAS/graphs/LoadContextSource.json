@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.LoadContextSource",
+  "kind": "Effect",
+  "entry": "src",
+  "nodes": [
+    { "id": "src", "op": "LoadContextSource" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

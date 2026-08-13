@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.BeginLifecycleTransaction",
+  "kind": "Effect",
+  "entry": "beginTx",
+  "nodes": [
+    { "id": "beginTx", "op": "BeginLifecycleTransaction" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

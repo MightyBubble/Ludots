@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.LoadConfigFloat",
+  "kind": "Effect",
+  "entry": "cfgF",
+  "nodes": [
+    { "id": "cfgF", "op": "LoadConfigFloat", "configKey": "showcase.config.power" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

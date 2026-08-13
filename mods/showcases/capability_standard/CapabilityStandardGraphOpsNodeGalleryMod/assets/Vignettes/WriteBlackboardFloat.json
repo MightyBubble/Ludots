@@ -1,0 +1,32 @@
+{
+  "op": "WriteBlackboardFloat",
+  "driver": "blackboard",
+  "title": "把威力写到记事板",
+  "beat": "算完 35 写上去，下一眼能读到。",
+  "detailTemplate": "记下威力 {result}。",
+  "assertDetailContains": ["记下"],
+  "featuredNodeId": "writeF",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

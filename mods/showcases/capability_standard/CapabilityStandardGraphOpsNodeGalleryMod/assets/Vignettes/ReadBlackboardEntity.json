@@ -1,0 +1,32 @@
+{
+  "op": "ReadBlackboardEntity",
+  "driver": "blackboard",
+  "title": "从记事板读出点名的人",
+  "beat": "板上记着木桩，读出来锁定他。",
+  "detailTemplate": "从记事板读出点名的人，锁定了{named}。",
+  "assertDetailContains": ["点名"],
+  "featuredNodeId": "readE",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

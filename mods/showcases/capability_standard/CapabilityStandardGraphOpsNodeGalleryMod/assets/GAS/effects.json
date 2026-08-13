@@ -1,0 +1,29 @@
+[
+  {
+    "id": "Effect.GraphOp.DispatchStub",
+    "tags": ["Effect.GraphOp"],
+    "presetType": "ApplyForce2D",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
+      "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" },
+      "_ep.forceXAttribute": { "type": "Int", "value": 0 },
+      "_ep.forceYAttribute": { "type": "Int", "value": 0 }
+    }
+  },
+  {
+    "id": "Effect.GraphOpsAttr.Mark",
+    "tags": [
+      "Effect.GraphOpsAttr.Mark"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    }
+  }
+]

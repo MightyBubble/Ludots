@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.LoadConfigEffectId",
+  "kind": "Effect",
+  "entry": "cfgFx",
+  "nodes": [
+    { "id": "cfgFx", "op": "LoadConfigEffectId", "configKey": "showcase.config.chainEffect" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

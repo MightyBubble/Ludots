@@ -1,0 +1,42 @@
+{
+  "op": "InvokeBuiltin",
+  "driver": "blackboard",
+  "title": "跑一个内置步骤",
+  "beat": "事务里调用内置步骤，玩家看到一次生成清理的可见变化。",
+  "detailTemplate": "内置步骤清掉了印记。",
+  "assertDetailContains": ["内置"],
+  "featuredNodeId": "invoke",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "mark",
+      "role": "mark",
+      "template": "GraphOps.Ally",
+      "name": "印记",
+      "x": 1,
+      "y": 1.6,
+      "health": 40,
+      "healthMax": 40
+    }
+  ]
+}

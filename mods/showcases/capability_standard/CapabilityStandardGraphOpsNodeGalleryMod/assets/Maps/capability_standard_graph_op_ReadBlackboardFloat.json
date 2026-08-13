@@ -1,0 +1,20 @@
+{
+  "Id": "capability_standard_graph_op_ReadBlackboardFloat",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

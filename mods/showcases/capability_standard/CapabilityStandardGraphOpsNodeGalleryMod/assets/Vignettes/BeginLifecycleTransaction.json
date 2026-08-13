@@ -1,0 +1,32 @@
+{
+  "op": "BeginLifecycleTransaction",
+  "driver": "blackboard",
+  "title": "开一笔生命周期事务",
+  "beat": "先开账再做事，字幕说事务已开。",
+  "detailTemplate": "生命周期事务已开，可以接着做事。",
+  "assertDetailContains": ["事务"],
+  "featuredNodeId": "beginTx",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

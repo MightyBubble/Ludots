@@ -567,6 +567,110 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSubFloatEntryMod",
         "projectPath": "CapabilityStandardGraphOpSubFloatEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_BeginLifecycleTransaction",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpBeginLifecycleTransactionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpBeginLifecycleTransactionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_InvokeBuiltin",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeBuiltinEntryMod",
+        "projectPath": "CapabilityStandardGraphOpInvokeBuiltinEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadConfigEffectId",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigEffectIdEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadConfigEffectIdEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadConfigFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadConfigFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadConfigInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadConfigIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadContextSource",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadContextSourceEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadContextSourceEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadContextTargetContext",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadContextTargetContextEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadContextTargetContextEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadBlackboardEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadBlackboardEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadBlackboardEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadBlackboardFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadBlackboardFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadBlackboardFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadBlackboardInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadBlackboardIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadBlackboardIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteBlackboardEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteBlackboardEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteBlackboardEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteBlackboardFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteBlackboardFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteBlackboardFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteBlackboardInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteBlackboardIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteBlackboardIntEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

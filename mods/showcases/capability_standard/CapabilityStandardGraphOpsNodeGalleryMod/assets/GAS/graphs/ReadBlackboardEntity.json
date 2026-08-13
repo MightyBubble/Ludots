@@ -1,0 +1,15 @@
+{
+  "id": "showcase.graph_op.ReadBlackboardEntity",
+  "kind": "Effect",
+  "entry": "src",
+  "nodes": [
+    { "id": "src", "op": "LoadContextSource" },
+    { "id": "readE", "op": "ReadBlackboardEntity", "blackboardKey": "showcase.bb.named" }
+  ],
+  "controlEdges": [
+    { "from": "src", "fromPort": "next", "to": "readE" }
+  ],
+  "valueEdges": [
+    { "from": "src", "fromPort": "value", "to": "readE", "toPort": "source" }
+  ]
+}

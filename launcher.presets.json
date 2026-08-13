@@ -646,6 +646,123 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_BeginLifecycleTransaction_raylib",
+      "name": "Graph Op BeginLifecycleTransaction Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_BeginLifecycleTransaction"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_InvokeBuiltin_raylib",
+      "name": "Graph Op InvokeBuiltin Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_InvokeBuiltin"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadConfigEffectId_raylib",
+      "name": "Graph Op LoadConfigEffectId Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadConfigEffectId"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadConfigFloat_raylib",
+      "name": "Graph Op LoadConfigFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadConfigFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadConfigInt_raylib",
+      "name": "Graph Op LoadConfigInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadConfigInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadContextSource_raylib",
+      "name": "Graph Op LoadContextSource Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadContextSource"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadContextTargetContext_raylib",
+      "name": "Graph Op LoadContextTargetContext Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadContextTargetContext"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadBlackboardEntity_raylib",
+      "name": "Graph Op ReadBlackboardEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadBlackboardEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadBlackboardFloat_raylib",
+      "name": "Graph Op ReadBlackboardFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadBlackboardFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadBlackboardInt_raylib",
+      "name": "Graph Op ReadBlackboardInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadBlackboardInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteBlackboardEntity_raylib",
+      "name": "Graph Op WriteBlackboardEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteBlackboardEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteBlackboardFloat_raylib",
+      "name": "Graph Op WriteBlackboardFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteBlackboardFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteBlackboardInt_raylib",
+      "name": "Graph Op WriteBlackboardInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteBlackboardInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

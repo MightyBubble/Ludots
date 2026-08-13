@@ -1,4 +1,5 @@
 [
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
+  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" }
 ]

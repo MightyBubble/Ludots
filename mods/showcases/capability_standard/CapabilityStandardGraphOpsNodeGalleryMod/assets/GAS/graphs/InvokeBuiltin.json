@@ -1,0 +1,13 @@
+{
+  "id": "showcase.graph_op.InvokeBuiltin",
+  "kind": "Effect",
+  "entry": "beginTx",
+  "nodes": [
+    { "id": "beginTx", "op": "BeginLifecycleTransaction" },
+    { "id": "invoke", "op": "InvokeBuiltin", "builtinHandler": "ClearActiveEffects" }
+  ],
+  "controlEdges": [
+    { "from": "beginTx", "fromPort": "next", "to": "invoke" }
+  ],
+  "valueEdges": []
+}

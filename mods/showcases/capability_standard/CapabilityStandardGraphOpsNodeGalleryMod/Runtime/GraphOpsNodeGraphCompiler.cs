@@ -37,6 +37,18 @@ public static class GraphOpsNodeGraphCompiler
             throw new InvalidOperationException($"FrontDoor compile failed for '{graphId}': {message}");
         }
 
+        if (!compiled.Package.HasValue)
+        {
+            throw new InvalidOperationException($"FrontDoor compile for '{graphId}' produced no package.");
+        }
+
+        GraphProgramPackage package = compiled.Package.Value;
+        GraphProgramSymbolPatcher.Patch(
+            package.Symbols,
+            package.Program,
+            new GraphOpsNodeGallerySymbolResolver(),
+            GraphOpsNodeGallerySymbolResolver.Collections);
+
         GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
         _ = RequireFeaturedDest(compiled, vignette);
         return compiled;
