@@ -1,0 +1,15 @@
+{
+  "id": "showcase.graph_op.QueryFilterTemplate",
+  "kind": "Query",
+  "entry": "all",
+  "nodes": [
+    { "id": "all", "op": "QueryAllMapEntities" },
+    { "id": "tmpl", "op": "QueryFilterTemplate", "template": "Unit.Scout" }
+  ],
+  "controlEdges": [
+    { "from": "all", "fromPort": "next", "to": "tmpl" }
+  ],
+  "valueEdges": [
+    { "from": "all", "fromPort": "list", "to": "tmpl", "toPort": "list" }
+  ]
+}

@@ -970,6 +970,132 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggAverageAttribute_raylib",
+      "name": "Graph Op AggAverageAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggAverageAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggMaxAttribute_raylib",
+      "name": "Graph Op AggMaxAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggMaxAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggMaxEntityByAttribute_raylib",
+      "name": "Graph Op AggMaxEntityByAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggMaxEntityByAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggMinAttribute_raylib",
+      "name": "Graph Op AggMinAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggMinAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggMinEntityByAttribute_raylib",
+      "name": "Graph Op AggMinEntityByAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggMinEntityByAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AggSumAttribute_raylib",
+      "name": "Graph Op AggSumAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AggSumAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryAllMapEntities_raylib",
+      "name": "Graph Op QueryAllMapEntities Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryAllMapEntities"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterAttributeRange_raylib",
+      "name": "Graph Op QueryFilterAttributeRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterAttributeRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterTagAny_raylib",
+      "name": "Graph Op QueryFilterTagAny Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterTagAny"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterTagNone_raylib",
+      "name": "Graph Op QueryFilterTagNone Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterTagNone"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterTeam_raylib",
+      "name": "Graph Op QueryFilterTeam Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterTeam"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFilterTemplate_raylib",
+      "name": "Graph Op QueryFilterTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFilterTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QueryFromCollection_raylib",
+      "name": "Graph Op QueryFromCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QueryFromCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_QuerySortByAttribute_raylib",
+      "name": "Graph Op QuerySortByAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_QuerySortByAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

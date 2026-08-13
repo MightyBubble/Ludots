@@ -1,0 +1,32 @@
+{
+  "op": "QueryFilterTemplate",
+  "driver": "query",
+  "title": "只留下侦察兵",
+  "beat": "士兵暗、侦察兵亮。",
+  "detailTemplate": "侦察兵亮了{count}个，士兵都暗下去了。",
+  "assertDetailContains": ["侦察兵"],
+  "featuredNodeId": "tmpl",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "scout",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4.4,
+      "y": 1.2,
+      "health": 80,
+      "healthMax": 150
+    }
+  ]
+}

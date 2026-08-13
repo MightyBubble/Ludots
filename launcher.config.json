@@ -855,6 +855,118 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
         "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AggAverageAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggAverageAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggAverageAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggMaxAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggMaxAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggMaxAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggMaxEntityByAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggMaxEntityByAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggMaxEntityByAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggMinAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggMinAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggMinAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggMinEntityByAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggMinEntityByAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggMinEntityByAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_AggSumAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAggSumAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAggSumAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryAllMapEntities",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryAllMapEntitiesEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryAllMapEntitiesEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterAttributeRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterAttributeRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterAttributeRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterTagAny",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterTagAnyEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterTagAnyEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterTagNone",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterTagNoneEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterTagNoneEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterTeam",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterTeamEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterTeamEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFilterTemplate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFilterTemplateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFilterTemplateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QueryFromCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQueryFromCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQueryFromCollectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_QuerySortByAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQuerySortByAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpQuerySortByAttributeEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

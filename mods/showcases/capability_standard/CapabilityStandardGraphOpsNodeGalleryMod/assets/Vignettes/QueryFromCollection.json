@@ -1,0 +1,32 @@
+{
+  "op": "QueryFromCollection",
+  "driver": "query",
+  "title": "只看花名册上的人",
+  "beat": "小队花名册里的人亮，册外的不亮。",
+  "detailTemplate": "小队花名册里亮了{count}人，册外的没有点名。",
+  "assertDetailContains": ["花名册"],
+  "featuredNodeId": "fromCol",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "soldier",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "士兵",
+      "x": -2.5,
+      "y": 1.2,
+      "health": 90,
+      "healthMax": 150
+    }
+  ]
+}

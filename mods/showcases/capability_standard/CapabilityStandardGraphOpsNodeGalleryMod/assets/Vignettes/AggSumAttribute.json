@@ -1,0 +1,32 @@
+{
+  "op": "AggSumAttribute",
+  "driver": "query",
+  "title": "把生命加总",
+  "beat": "字幕报生命总和。",
+  "detailTemplate": "把生命加总，总和是{sum}。",
+  "assertDetailContains": ["总和"],
+  "featuredNodeId": "sum",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "soldier",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "士兵",
+      "x": -2.5,
+      "y": 1.2,
+      "health": 90,
+      "healthMax": 150
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "showcase.graph_op.QueryFilterAttributeRange",
+  "kind": "Query",
+  "entry": "all",
+  "nodes": [
+    { "id": "all", "op": "QueryAllMapEntities" },
+    { "id": "minHp", "op": "ConstFloat", "floatValue": 0 },
+    { "id": "maxHp", "op": "ConstFloat", "floatValue": 40 },
+    { "id": "hpRange", "op": "QueryFilterAttributeRange", "attribute": "Health" }
+  ],
+  "controlEdges": [
+    { "from": "all", "fromPort": "next", "to": "minHp" },
+    { "from": "minHp", "fromPort": "next", "to": "maxHp" },
+    { "from": "maxHp", "fromPort": "next", "to": "hpRange" }
+  ],
+  "valueEdges": [
+    { "from": "all", "fromPort": "list", "to": "hpRange", "toPort": "list" },
+    { "from": "minHp", "fromPort": "value", "to": "hpRange", "toPort": "min" },
+    { "from": "maxHp", "fromPort": "value", "to": "hpRange", "toPort": "max" }
+  ]
+}

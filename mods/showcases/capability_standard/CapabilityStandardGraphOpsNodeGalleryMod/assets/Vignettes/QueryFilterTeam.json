@@ -1,0 +1,32 @@
+{
+  "op": "QueryFilterTeam",
+  "driver": "query",
+  "title": "只留下敌对阵营",
+  "beat": "友军被滤掉，敌人亮。",
+  "detailTemplate": "友军被滤掉后，敌对阵营还剩{count}人。",
+  "assertDetailContains": ["敌对阵营"],
+  "featuredNodeId": "team",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "soldier",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "士兵",
+      "x": -2.5,
+      "y": 1.2,
+      "health": 90,
+      "healthMax": 150
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpAggAverageAttributeEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp AggAverageAttribute player gallery.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpAggAverageAttributeEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

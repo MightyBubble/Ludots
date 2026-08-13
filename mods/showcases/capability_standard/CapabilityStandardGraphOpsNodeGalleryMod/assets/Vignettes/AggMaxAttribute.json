@@ -1,0 +1,32 @@
+{
+  "op": "AggMaxAttribute",
+  "driver": "query",
+  "title": "最高生命是多少",
+  "beat": "最高值+对应人高亮。",
+  "detailTemplate": "最高生命是{max}，对应{label}。",
+  "assertDetailContains": ["最高生命"],
+  "featuredNodeId": "max",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "指挥",
+      "x": 0,
+      "y": -2.2,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "soldier",
+      "role": "soldier",
+      "template": "Unit.Soldier",
+      "name": "士兵",
+      "x": -2.5,
+      "y": 1.2,
+      "health": 90,
+      "healthMax": 150
+    }
+  ]
+}

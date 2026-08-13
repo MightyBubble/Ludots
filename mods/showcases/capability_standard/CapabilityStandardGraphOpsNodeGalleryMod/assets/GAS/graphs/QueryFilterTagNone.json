@@ -1,0 +1,15 @@
+{
+  "id": "showcase.graph_op.QueryFilterTagNone",
+  "kind": "Query",
+  "entry": "all",
+  "nodes": [
+    { "id": "all", "op": "QueryAllMapEntities" },
+    { "id": "tagNone", "op": "QueryFilterTagNone", "tag": "Dead" }
+  ],
+  "controlEdges": [
+    { "from": "all", "fromPort": "next", "to": "tagNone" }
+  ],
+  "valueEdges": [
+    { "from": "all", "fromPort": "list", "to": "tagNone", "toPort": "list" }
+  ]
+}
