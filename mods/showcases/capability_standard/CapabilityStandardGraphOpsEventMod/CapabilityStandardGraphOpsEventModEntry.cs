@@ -25,11 +25,12 @@ public sealed class CapabilityStandardGraphOpsEventModEntry : IMod
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
-            string assetsRoot = GraphOpsEventGraphBootstrap.FindModAssetsRoot();
-            GraphProgramRegistry programs = GraphOpsEventGraphBootstrap.LoadModGraphs(
-                assetsRoot,
-                out TargetDispatchPresetRegistry presets,
-                out EntityCollectionStore collections);
+            GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+                ?? throw new InvalidOperationException("GraphProgramRegistry is required for event player graphs.");
+            TargetDispatchPresetRegistry presets = engine.GetService(CoreServiceKeys.TargetDispatchPresetRegistry)
+                ?? throw new InvalidOperationException("TargetDispatchPresetRegistry is required for event fan-out.");
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is required for event snap collections.");
             runtime.Bind(programs, presets, collections);
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
