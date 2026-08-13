@@ -35,9 +35,22 @@ namespace Ludots.Tests.Presentation
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_CameraAcceptancePresenterTree", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_tempRoot, "Core");
             Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Presentation"));
             File.WriteAllText(
                 Path.Combine(_coreRoot, "Configs", "config_catalog.json"),
                 File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "config_catalog.json")));
+            File.Copy(
+                Path.Combine(
+                    _repoRoot,
+                    "mods",
+                    "fixtures",
+                    "camera",
+                    "CameraAcceptanceMod",
+                    "assets",
+                    "Presentation",
+                    "presenters.json"),
+                Path.Combine(_coreRoot, "Configs", "Presentation", "presenters.json"),
+                overwrite: true);
             TagRegistry.Clear();
             PresenterScopeTagRegistry.Clear();
             AttributeRegistry.Clear();
@@ -69,9 +82,6 @@ namespace Ludots.Tests.Presentation
             modLoader.LoadMods(RepoModPaths.ResolveExplicit(_repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
-                "SharedThreeCProfilesMod",
-                "CameraAcceptanceMod",
             }));
 
             var pipeline = new ConfigPipeline(vfs, modLoader);
