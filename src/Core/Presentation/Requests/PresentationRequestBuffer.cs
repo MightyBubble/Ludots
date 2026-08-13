@@ -100,25 +100,27 @@ namespace Ludots.Core.Presentation.Requests
                 return ReadOnlySpan<PresentationRequest>.Empty;
             }
 
-            EnsureSpanScratch();
+            if (_spanScratch == null || _spanScratch.Length < _opCount)
+            {
+                _spanScratch = new PresentationRequest[_opCount];
+            }
+
             for (int i = 0; i < _opCount; i++)
             {
-                _spanScratch![i] = Reconstruct(i);
+                _spanScratch[i] = Reconstruct(i);
             }
 
             return _spanScratch.AsSpan(0, _opCount);
         }
 
-        public ref readonly PresentationRequest Get(int index)
+        public PresentationRequest Get(int index)
         {
             if ((uint)index >= (uint)_opCount)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            EnsureSpanScratch();
-            _spanScratch![index] = Reconstruct(index);
-            return ref _spanScratch[index];
+            return Reconstruct(index);
         }
 
         public void Clear()
@@ -269,16 +271,6 @@ namespace Ludots.Core.Presentation.Requests
                 throw new InvalidOperationException(
                     $"PresentationRequestBuffer overflowed while adding kind={kind}, stableId={stableId}.");
             }
-        }
-
-        private void EnsureSpanScratch()
-        {
-            if (_spanScratch != null && _spanScratch.Length >= _opCount)
-            {
-                return;
-            }
-
-            _spanScratch = new PresentationRequest[_ops.Length];
         }
 
         private PresentationRequest Reconstruct(int opIndex)
