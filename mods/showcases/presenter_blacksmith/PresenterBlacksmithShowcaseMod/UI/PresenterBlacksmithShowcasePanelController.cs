@@ -43,7 +43,8 @@ namespace PresenterBlacksmithShowcaseMod.UI
                 return false;
             }
 
-            if (!_hasLastState || !StateEquals(in _lastState, in state))
+            bool stateChanged = !_hasLastState || !StateEquals(in _lastState, in state);
+            if (stateChanged)
             {
                 PresenterBlacksmithShowcasePanelState snapshot = state;
                 page.SetState(_ => snapshot);
@@ -51,10 +52,14 @@ namespace PresenterBlacksmithShowcaseMod.UI
                 _hasLastState = true;
             }
 
-            surfaceHost.PublishReactivePage(
-                ref _lease,
-                new UiSurfaceLeaseRequest("Showcase.PresenterBlacksmith.Panel", UiSurfaceSegment.Overlay, priority: 40),
-                page);
+            if (!_lease.IsValid || !surfaceHost.Revalidate(_lease))
+            {
+                surfaceHost.PublishReactivePage(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("Showcase.PresenterBlacksmith.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                    page);
+            }
+
             return true;
         }
 

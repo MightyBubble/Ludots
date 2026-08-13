@@ -214,7 +214,10 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             if (_changeFlashTimer > 0f)
             {
                 _changeFlashTimer = MathF.Max(0f, _changeFlashTimer - 0.016f);
-                _panelDirty = true;
+                if (_changeFlashTimer <= 0f)
+                {
+                    MarkPanelDirty();
+                }
             }
 
             RefreshPanel(engine);
