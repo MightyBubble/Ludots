@@ -3,8 +3,8 @@
     "virtualCameraId": "Camera.Profile.Tactical",
     "targetXCm": 0,
     "targetYCm": 0,
-    "distanceCm": 4200,
-    "pitch": 52,
+    "distanceCm": 2800,
+    "pitch": 72,
     "yaw": 180,
     "fovYDeg": 50
   },
