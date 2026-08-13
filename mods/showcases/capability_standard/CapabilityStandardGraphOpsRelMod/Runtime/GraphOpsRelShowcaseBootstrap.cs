@@ -36,7 +36,7 @@ public static class GraphOpsRelShowcaseBootstrap
             new TargetDispatchPresetRegistry());
 
         LoadGraphs(programs, Path.Combine(modAssets, "GAS", "graphs.json"), resolver);
-        RegisterFuncLib(functions, programs, Path.Combine(modAssets, "GAS", "func_lib.json"));
+        RegisterFuncLib(functions, programs, Path.Combine(modAssets, "Gallery", "func_lib.json"));
 
         return new GraphOpsRelShowcaseBundle
         {
