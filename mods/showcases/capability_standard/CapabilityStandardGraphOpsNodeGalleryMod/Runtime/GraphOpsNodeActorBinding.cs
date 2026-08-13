@@ -7,7 +7,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
-internal static class GraphOpsNodeActorBinding
+public static class GraphOpsNodeActorBinding
 {
     public static int HealthAttributeId()
     {
@@ -124,23 +124,48 @@ internal static class GraphOpsNodeActorBinding
         return -1;
     }
 
-    public static void WriteHealth(World world, Entity entity, float health, float healthMax)
+    public static int IndexOfId(GraphOpsNodeVignette vignette, string id)
     {
+        GraphOpsNodeActor[] actors = vignette.Actors;
+        for (int i = 0; i < actors.Length; i++)
+        {
+            if (string.Equals(actors[i].Id, id, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        throw new InvalidOperationException($"Vignette '{vignette.Op}' has no actor '{id}'.");
+    }
+
+    public static TagOps RequireTagOps(GraphOpsNodeDriverContext ctx)
+    {
+        return ctx.TagOps
+            ?? throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' requires TagOps.");
+    }
+
+    public static void WriteHealth(World world, Entity entity, float health, float healthMax, TagOps tagOps)
+    {
+        ArgumentNullException.ThrowIfNull(tagOps);
         int healthId = HealthAttributeId();
         if (!world.Has<AttributeBuffer>(entity))
         {
             world.Add(entity, new AttributeBuffer());
         }
 
+        if (!world.Has<DirtyFlags>(entity))
+        {
+            world.Add(entity, new DirtyFlags());
+        }
+
         float ceiling = healthMax > 0f ? healthMax : health;
         if (ceiling <= 0f)
         {
-            ceiling = 1f;
+            throw new InvalidOperationException("Gallery actor health max must be positive.");
         }
 
-        ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(healthId, ceiling);
-        attrs.SetCurrent(healthId, health);
+        AttributeMutationOps.SetBase(world, entity, healthId, ceiling, tagOps);
+        AttributeMutationOps.SetCurrent(world, entity, healthId, Math.Clamp(health, 0f, ceiling), tagOps);
     }
 
     public static float ReadHealth(World world, Entity entity)
@@ -197,6 +222,14 @@ internal static class GraphOpsNodeActorBinding
 
     public static void SyncHud(GraphOpsNodeDriverContext ctx)
     {
+        TagOps tagOps = RequireTagOps(ctx);
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
+            float healthMax = actor.HealthMax > 0f ? actor.HealthMax : actor.Health;
+            WriteHealth(ctx.SimWorld, ctx.SimActors[i], ctx.ActorHealth[i], healthMax, tagOps);
+        }
+
         if (ctx.Stage == null || ctx.StageProxies.Length == 0)
         {
             return;
@@ -219,6 +252,7 @@ internal static class GraphOpsNodeActorBinding
 
     public static void RestoreVignetteHealth(GraphOpsNodeDriverContext ctx)
     {
+        TagOps tagOps = RequireTagOps(ctx);
         GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
         for (int i = 0; i < actors.Length; i++)
         {
@@ -226,7 +260,8 @@ internal static class GraphOpsNodeActorBinding
                 ctx.SimWorld,
                 ctx.SimActors[i],
                 actors[i].Health,
-                actors[i].HealthMax > 0f ? actors[i].HealthMax : actors[i].Health);
+                actors[i].HealthMax > 0f ? actors[i].HealthMax : actors[i].Health,
+                tagOps);
             ctx.ActorHealth[i] = ReadHealth(ctx.SimWorld, ctx.SimActors[i]);
         }
     }

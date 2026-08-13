@@ -202,7 +202,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
                         ctx.SimWorld,
                         ctx.SimActors[markIndex],
                         0f,
-                        ctx.Vignette.Actors[markIndex].HealthMax);
+                        ctx.Vignette.Actors[markIndex].HealthMax,
+                        GraphOpsNodeActorBinding.RequireTagOps(ctx));
                 }
 
                 break;
@@ -267,7 +268,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             ctx.SimWorld,
             ctx.SimActors[targetIndex],
             next,
-            ctx.Vignette.Actors[targetIndex].HealthMax);
+            ctx.Vignette.Actors[targetIndex].HealthMax,
+            GraphOpsNodeActorBinding.RequireTagOps(ctx));
         ctx.ActorHealth[targetIndex] = next;
     }
 
@@ -282,7 +284,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             ctx.SimWorld,
             ctx.SimActors[targetIndex],
             value,
-            ctx.Vignette.Actors[targetIndex].HealthMax);
+            ctx.Vignette.Actors[targetIndex].HealthMax,
+            GraphOpsNodeActorBinding.RequireTagOps(ctx));
         ctx.ActorHealth[targetIndex] = value;
     }
 

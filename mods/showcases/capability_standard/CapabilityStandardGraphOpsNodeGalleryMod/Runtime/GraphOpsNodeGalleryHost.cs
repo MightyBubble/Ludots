@@ -146,7 +146,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
                 World,
                 actors[i],
                 vignette.Actors[i].Health,
-                vignette.Actors[i].HealthMax);
+                vignette.Actors[i].HealthMax,
+                TagOps);
             ctx.ActorHealth[i] = GraphOpsNodeActorBinding.ReadHealth(World, actors[i]);
         }
 

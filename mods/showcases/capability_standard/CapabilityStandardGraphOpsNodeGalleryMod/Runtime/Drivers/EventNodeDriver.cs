@@ -485,7 +485,8 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             ctx.SimWorld,
             ctx.SimActors[targetIndex],
             next,
-            ctx.Vignette.Actors[targetIndex].HealthMax);
+            ctx.Vignette.Actors[targetIndex].HealthMax,
+            GraphOpsNodeActorBinding.RequireTagOps(ctx));
         ctx.ActorHealth[targetIndex] = next;
     }
 

@@ -37,6 +37,7 @@ public sealed class GraphOpsStageVisuals
     private readonly PresentationStableIdAllocator _stableIds;
     private readonly PerformerEntitySpawnBootstrap _bootstrap;
     private readonly KnowledgeProjectionStore _knowledge;
+    private readonly TagOps _tagOps;
     private readonly int _healthAttrId;
     private Entity _viewer;
 
@@ -47,6 +48,7 @@ public sealed class GraphOpsStageVisuals
         PresentationStableIdAllocator stableIds,
         PerformerEntitySpawnBootstrap bootstrap,
         KnowledgeProjectionStore knowledge,
+        TagOps tagOps,
         int healthAttrId)
     {
         _engine = engine;
@@ -55,6 +57,7 @@ public sealed class GraphOpsStageVisuals
         _stableIds = stableIds;
         _bootstrap = bootstrap;
         _knowledge = knowledge;
+        _tagOps = tagOps;
         _healthAttrId = healthAttrId;
     }
 
@@ -80,6 +83,8 @@ public sealed class GraphOpsStageVisuals
             ?? throw new InvalidOperationException("GraphOps HUD requires RenderDebugState.");
         renderDebug.DrawWorldHudBars = true;
         renderDebug.DrawWorldHudText = true;
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("GraphOps HUD requires TagOps.");
 
         int healthId = AttributeRegistry.GetId("Health");
         if (healthId < 0)
@@ -94,7 +99,7 @@ public sealed class GraphOpsStageVisuals
             performers,
             definitions,
             definitions.BootstrapRegistry);
-        return new GraphOpsStageVisuals(engine, engine.World, templates, stableIds, bootstrap, knowledge, healthId);
+        return new GraphOpsStageVisuals(engine, engine.World, templates, stableIds, bootstrap, knowledge, tagOps, healthId);
     }
 
     public Entity Spawn(string templateId, string displayName, float xMeters, float yMeters, float health, float healthMax = HealthCeiling)
@@ -141,9 +146,7 @@ public sealed class GraphOpsStageVisuals
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
-        ref AttributeBuffer attrs = ref _world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(_healthAttrId, healthMax);
-        attrs.SetCurrent(_healthAttrId, Math.Clamp(health, 0f, healthMax));
+        WriteHealth(entity, health, healthMax);
         _bootstrap.TryBootstrap(entity, templateId);
         if (!_world.Has<PerformerRootBootstrapHandled>(entity))
         {
@@ -231,9 +234,7 @@ public sealed class GraphOpsStageVisuals
             _world.Add(entity, new AttributeBuffer());
         }
 
-        ref AttributeBuffer attrs = ref _world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(_healthAttrId, healthMax);
-        attrs.SetCurrent(_healthAttrId, Math.Clamp(health, 0f, healthMax));
+        WriteHealth(entity, health, healthMax);
 
         bool isViewer = bindAsViewer && (_viewer == Entity.Null || !_world.IsAlive(_viewer));
         if (isViewer)
@@ -264,10 +265,29 @@ public sealed class GraphOpsStageVisuals
             throw new InvalidOperationException("GraphOps HUD SetHealth target is not alive.");
         }
 
-        ref AttributeBuffer attrs = ref _world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(_healthAttrId, healthMax);
-        attrs.SetCurrent(_healthAttrId, Math.Clamp(health, 0f, healthMax));
+        WriteHealth(entity, health, healthMax);
         DiscloseHealth(entity);
+    }
+
+    private void WriteHealth(Entity entity, float health, float healthMax)
+    {
+        if (healthMax <= 0f)
+        {
+            throw new InvalidOperationException("GraphOps HUD health max must be positive.");
+        }
+
+        if (!_world.Has<AttributeBuffer>(entity))
+        {
+            _world.Add(entity, new AttributeBuffer());
+        }
+
+        if (!_world.Has<DirtyFlags>(entity))
+        {
+            _world.Add(entity, new DirtyFlags());
+        }
+
+        AttributeMutationOps.SetBase(_world, entity, _healthAttrId, healthMax, _tagOps);
+        AttributeMutationOps.SetCurrent(_world, entity, _healthAttrId, Math.Clamp(health, 0f, healthMax), _tagOps);
     }
 
     public void SetPosition(Entity entity, float xMeters, float yMeters)

@@ -75,6 +75,15 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         Assert.That(driver.LastTargetCount, Is.EqualTo(6));
         Assert.That(runtime.Metrics.Detail, Does.Contain("6"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("没亮"));
+        AssertWorldHealth(runtime, "caster", 100f);
+        AssertWorldHealth(runtime, "east", 100f);
+        AssertWorldHealth(runtime, "northeast", 100f);
+        AssertWorldHealth(runtime, "northwest", 100f);
+        AssertWorldHealth(runtime, "west", 100f);
+        AssertWorldHealth(runtime, "southwest", 100f);
+        AssertWorldHealth(runtime, "southeast", 100f);
+        AssertWorldHealth(runtime, "outer", 0f);
+        AssertActorHealthMatchesWorld(runtime);
     }
 
     [Test]
@@ -84,6 +93,14 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(int.Parse(runtime.Context.CaptionValues["count"]), Is.EqualTo(5));
         Assert.That(runtime.Metrics.Detail, Does.Contain("没亮"));
+        AssertWorldHealth(runtime, "caster", 100f);
+        AssertWorldHealth(runtime, "ring1a", 100f);
+        AssertWorldHealth(runtime, "ring1b", 100f);
+        AssertWorldHealth(runtime, "ring2a", 100f);
+        AssertWorldHealth(runtime, "ring2b", 100f);
+        AssertWorldHealth(runtime, "ring2c", 100f);
+        AssertWorldHealth(runtime, "outer", 0f);
+        AssertActorHealthMatchesWorld(runtime);
     }
 
     [Test]
@@ -93,6 +110,14 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(int.Parse(runtime.Context.CaptionValues["count"]), Is.EqualTo(3));
         Assert.That(runtime.Metrics.Detail, Does.Contain("里外"));
+        AssertWorldHealth(runtime, "caster", 100f);
+        AssertWorldHealth(runtime, "ringEast", 100f);
+        AssertWorldHealth(runtime, "ringSouth", 100f);
+        AssertWorldHealth(runtime, "ringWest", 100f);
+        AssertWorldHealth(runtime, "innerEast", 0f);
+        AssertWorldHealth(runtime, "innerSouth", 0f);
+        AssertWorldHealth(runtime, "outer", 0f);
+        AssertActorHealthMatchesWorld(runtime);
     }
 
     [Test]
@@ -125,6 +150,7 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
             AssertBannedPlayerCopy(runtime.Metrics.Detail, op);
             Assert.That(runtime.Metrics.Detail, Does.Not.Contain(op), op);
             Assert.That(driver.LastTargetCount, Is.GreaterThan(0), op);
+            AssertActorHealthMatchesWorld(runtime);
             foreach (string phrase in runtime.Vignette.AssertDetailContains)
             {
                 Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), op);
@@ -139,6 +165,29 @@ public sealed class GraphOpsNodeGallerySpatialAcceptanceTests
         runtime.EnsureWorld();
         runtime.Tick(0.35f);
         return runtime;
+    }
+
+    private static void AssertWorldHealth(GraphOpsNodeGalleryRuntime runtime, string actorId, float expected)
+    {
+        int index = GraphOpsNodeActorBinding.IndexOfId(runtime.Vignette, actorId);
+        float world = GraphOpsNodeActorBinding.ReadHealth(
+            runtime.Context.SimWorld,
+            runtime.Context.SimActors[index]);
+        Assert.That(runtime.Context.ActorHealth[index], Is.EqualTo(expected).Within(0.01f), actorId);
+        Assert.That(world, Is.EqualTo(expected).Within(0.01f), actorId);
+    }
+
+    private static void AssertActorHealthMatchesWorld(GraphOpsNodeGalleryRuntime runtime)
+    {
+        GraphOpsNodeDriverContext ctx = runtime.Context;
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            float world = GraphOpsNodeActorBinding.ReadHealth(ctx.SimWorld, ctx.SimActors[i]);
+            Assert.That(
+                world,
+                Is.EqualTo(ctx.ActorHealth[i]).Within(0.01f),
+                ctx.Vignette.Actors[i].Id);
+        }
     }
 
     private static void AssertBannedPlayerCopy(string detail, string op = "")

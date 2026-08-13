@@ -85,6 +85,7 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
     {
         using GraphOpsNodeGalleryRuntime runtime = Play(op);
         AssertBannedEnglish(runtime.Metrics.Detail);
+        AssertActorHealthMatchesWorld(runtime);
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
@@ -98,6 +99,19 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
         runtime.EnsureWorld();
         runtime.Tick(0.35f);
         return runtime;
+    }
+
+    private static void AssertActorHealthMatchesWorld(GraphOpsNodeGalleryRuntime runtime)
+    {
+        GraphOpsNodeDriverContext ctx = runtime.Context;
+        for (int i = 0; i < ctx.SimActors.Length; i++)
+        {
+            float world = GraphOpsNodeActorBinding.ReadHealth(ctx.SimWorld, ctx.SimActors[i]);
+            Assert.That(
+                world,
+                Is.EqualTo(ctx.ActorHealth[i]).Within(0.01f),
+                $"{runtime.Op}:{ctx.Vignette.Actors[i].Id}");
+        }
     }
 
     private static void AssertBannedEnglish(string detail)

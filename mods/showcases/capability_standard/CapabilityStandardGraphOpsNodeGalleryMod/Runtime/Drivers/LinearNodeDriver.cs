@@ -85,7 +85,12 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         }
 
         GraphOpsNodeActor actor = ctx.Vignette.Actors[targetIndex];
-        GraphOpsNodeActorBinding.WriteHealth(ctx.SimWorld, ctx.SimActors[targetIndex], next, actor.HealthMax);
+        GraphOpsNodeActorBinding.WriteHealth(
+            ctx.SimWorld,
+            ctx.SimActors[targetIndex],
+            next,
+            actor.HealthMax,
+            GraphOpsNodeActorBinding.RequireTagOps(ctx));
         ctx.ActorHealth[targetIndex] = next;
     }
 
