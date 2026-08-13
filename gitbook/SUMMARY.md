@@ -44,6 +44,7 @@
   - [Presenter 参数黑板与 Animator 统一](architecture/presenter-param-blackboard.md)
   - [Presenter Transform、Grounding 与 Attachment](architecture/presenter-transform-and-attachment.md)
   - [Presenter Raylib UAT 测试计划](architecture/presenter-raylib-uat.md)
+  - [热带岛字段对照验收](architecture/presenter-field-gallery-uat.md)
   - [Presenter 现有基建收尾整合](architecture/presenter-legacy-consolidation.md)
   - [Presenter 开发看板](architecture/presenter-development-kanban.md)
   - [Presenter 编译式执行分层](architecture/presenter-compiled-lanes.md)

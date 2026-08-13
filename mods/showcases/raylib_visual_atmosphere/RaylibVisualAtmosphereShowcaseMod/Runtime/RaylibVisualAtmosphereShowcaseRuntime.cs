@@ -90,7 +90,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             if (decals <= 0)
             {
                 throw new InvalidOperationException(
-                    "Raylib visual atmosphere island requires textured Decal beach placements to spawn.");
+                    "Raylib visual atmosphere island requires beach field-gallery placements to spawn.");
             }
 
             _decalsSpawned = true;
@@ -184,6 +184,12 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
                 => CaptureShot.WaterReflect,
             "07" or "07_beach_decals" or "beach_decals" or "decals"
                 => CaptureShot.BeachDecals,
+            "08" or "08_decal_fields" or "decal_fields"
+                => CaptureShot.DecalFields,
+            "09" or "09_spline_ribbons" or "spline_ribbons" or "ribbons"
+                => CaptureShot.SplineRibbons,
+            "10" or "10_cue_flashes" or "cue_flashes" or "cues"
+                => CaptureShot.CueFlashes,
             "cam_aerial__tod_dawn" or "cam_aerial__tod_afternoon" or "cam_aerial__tod_dusk"
                 => CaptureShot.AerialTimed,
             "cam_orbit_ne__tod_morning" or "cam_orbit_ne__tod_midday"
@@ -201,7 +207,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
                 => CaptureShot.WaterReflect,
             "composition" or "playable" => CaptureShot.Composition,
             _ => throw new InvalidOperationException(
-                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..07, cam_* matrix ids, or composition."),
+                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..10, cam_* matrix ids, or composition."),
         };
     }
 
@@ -220,6 +226,9 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             CaptureShot.DistanceFog => "raylib_visual_atmosphere.camera.fog",
             CaptureShot.WaterReflect => "raylib_visual_atmosphere.camera.water",
             CaptureShot.BeachDecals => "raylib_visual_atmosphere.camera.beach_decals",
+            CaptureShot.DecalFields => "raylib_visual_atmosphere.camera.decal_fields",
+            CaptureShot.SplineRibbons => "raylib_visual_atmosphere.camera.spline_ribbons",
+            CaptureShot.CueFlashes => "raylib_visual_atmosphere.camera.cue_flashes",
             _ => throw new InvalidOperationException($"Unhandled capture shot '{shot}'."),
         };
     }
@@ -238,5 +247,8 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         DistanceFog,
         WaterReflect,
         BeachDecals,
+        DecalFields,
+        SplineRibbons,
+        CueFlashes,
     }
 }

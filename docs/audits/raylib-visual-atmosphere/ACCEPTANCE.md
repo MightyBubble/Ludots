@@ -17,7 +17,10 @@ Evidence lands in:
 | `03_cutout_vegetation.png` | Billboard vegetation with alpha cutout (no solid quad) |
 | `04_blend_modes.png` | AlphaBlend vs Additive VFX distinguishable |
 | `05_distance_fog.png` | Atmospheric distance fog (not FoW overlay) |
-| `06_water_reflect.png` | Planar reflection/refraction water silhouette |
+| `07_beach_decals.png` | 故事脚印/焦痕/血迹/裂痕贴在近景沙滩上 |
+| `08_decal_fields.png` | 对照区：大小、厚度、染色、朝向各改一个字段 |
+| `09_spline_ribbons.png` | 岸边细/宽/描边弯带 |
+| `10_cue_flashes.png` | 小绿 / 大黄击中闪光（叶子网格，不是 Prefab） |
 
 ## Host
 
@@ -33,7 +36,7 @@ dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli
 
 Optional capture framing (also used by the acceptance script):
 
-- `LUDOTS_ATMOSPHERE_SHOT=01_sky_day|02_sky_night|03_cutout_vegetation|04_blend_modes|05_distance_fog|06_water_reflect`
+- `LUDOTS_ATMOSPHERE_SHOT=01_sky_day|02_sky_night|03_cutout_vegetation|04_blend_modes|05_distance_fog|06_water_reflect|07_beach_decals|08_decal_fields|09_spline_ribbons|10_cue_flashes`
 - `LUDOTS_DAY_PHASE=0.42` (day) / `0.92` (night)
 
 ## Recapture

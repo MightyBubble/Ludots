@@ -7,9 +7,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_tree"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_tree_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -20,7 +22,7 @@
           "key": "raylib_visual_atmosphere_tree"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -34,9 +36,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_bush"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_bush_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -47,7 +51,7 @@
           "key": "raylib_visual_atmosphere_bush"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -61,9 +65,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_vfx_blend"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_vfx_blend_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -74,7 +80,7 @@
           "key": "raylib_visual_atmosphere_vfx_blend"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -88,9 +94,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_vfx_additive"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_vfx_additive_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -101,7 +109,7 @@
           "key": "raylib_visual_atmosphere_vfx_additive"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -115,9 +123,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_decal_footprints"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_decal_footprints_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -128,7 +138,7 @@
           "key": "raylib_visual_atmosphere_decal_footprints"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -142,9 +152,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_decal_scorch"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_decal_scorch_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -155,7 +167,7 @@
           "key": "raylib_visual_atmosphere_decal_scorch"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -169,9 +181,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_decal_blood"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_decal_blood_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -182,7 +196,7 @@
           "key": "raylib_visual_atmosphere_decal_blood"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -196,9 +210,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_decal_cracks"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_decal_cracks_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -209,7 +225,7 @@
           "key": "raylib_visual_atmosphere_decal_cracks"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -228,7 +244,11 @@
           "materialId": "raylib_visual_atmosphere.palm_cutout",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localScale": [6.5, 6.5, 6.5]
+          "localScale": [
+            6.5,
+            6.5,
+            6.5
+          ]
         }
       }
     ]
@@ -246,7 +266,11 @@
           "materialId": "raylib_visual_atmosphere.bush_cutout",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localScale": [4.2, 4.2, 4.2]
+          "localScale": [
+            4.2,
+            4.2,
+            4.2
+          ]
         }
       }
     ]
@@ -264,11 +288,24 @@
           "materialId": "raylib_visual_atmosphere.vfx_alphablend",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0, 3.5, 0],
-          "localScale": [5.5, 5.5, 5.5]
+          "localOffset": [
+            0,
+            3.5,
+            0
+          ],
+          "localScale": [
+            5.5,
+            5.5,
+            5.5
+          ]
         },
         "style": {
-          "color": [0.35, 0.85, 1.0, 0.88]
+          "color": [
+            0.35,
+            0.85,
+            1.0,
+            0.88
+          ]
         }
       }
     ]
@@ -286,11 +323,24 @@
           "materialId": "raylib_visual_atmosphere.vfx_additive",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0, 3.8, 0],
-          "localScale": [6.2, 6.2, 6.2]
+          "localOffset": [
+            0,
+            3.8,
+            0
+          ],
+          "localScale": [
+            6.2,
+            6.2,
+            6.2
+          ]
         },
         "style": {
-          "color": [1.0, 0.35, 0.05, 1.0]
+          "color": [
+            1.0,
+            0.35,
+            0.05,
+            1.0
+          ]
         }
       }
     ]
@@ -308,10 +358,19 @@
           "materialId": "raylib_visual_atmosphere.decal_footprints",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [3.8, 1.0, 3.8]
+          "localScale": [
+            3.8,
+            1.0,
+            3.8
+          ]
         },
         "style": {
-          "color": [1.0, 1.0, 1.0, 1.0]
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
         }
       },
       {
@@ -339,10 +398,19 @@
           "materialId": "raylib_visual_atmosphere.decal_scorch",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [5.5, 1.0, 5.5]
+          "localScale": [
+            5.5,
+            1.0,
+            5.5
+          ]
         },
         "style": {
-          "color": [1.0, 1.0, 1.0, 1.0]
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
         }
       },
       {
@@ -370,10 +438,19 @@
           "materialId": "raylib_visual_atmosphere.decal_blood",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [4.5, 1.0, 4.5]
+          "localScale": [
+            4.5,
+            1.0,
+            4.5
+          ]
         },
         "style": {
-          "color": [1.0, 1.0, 1.0, 1.0]
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
         }
       },
       {
@@ -401,10 +478,19 @@
           "materialId": "raylib_visual_atmosphere.decal_cracks",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [6.0, 1.0, 6.0]
+          "localScale": [
+            6.0,
+            1.0,
+            6.0
+          ]
         },
         "style": {
-          "color": [1.0, 1.0, 1.0, 1.0]
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
         }
       },
       {
@@ -427,9 +513,11 @@
           "kind": "EntitySpawned",
           "key": "raylib_visual_atmosphere_rock"
         },
-        "condition": { "inline": "None" },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_visual_atmosphere_rock_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -440,7 +528,7 @@
           "key": "raylib_visual_atmosphere_rock"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -459,8 +547,1086 @@
           "materialId": "raylib_visual_atmosphere.rock",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localOffset": [0, 0.6, 0],
-          "localScale": [2.8, 1.35, 2.2]
+          "localOffset": [
+            0,
+            0.6,
+            0
+          ],
+          "localScale": [
+            2.8,
+            1.35,
+            2.2
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_small_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_size_small"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_size_small_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_size_small"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_small_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_footprints",
+          "materialId": "raylib_visual_atmosphere.decal_footprints",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.6,
+            1.0,
+            1.6
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_large_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_size_large"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_size_large_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_size_large"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_large_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_footprints",
+          "materialId": "raylib_visual_atmosphere.decal_footprints",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            7.2,
+            1.0,
+            7.2
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thin_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_thickness_thin"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_thickness_thin_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_thickness_thin"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thin_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_scorch",
+          "materialId": "raylib_visual_atmosphere.decal_scorch",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            4.4,
+            0.28,
+            4.4
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thick_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_thickness_thick"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_thickness_thick_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_thickness_thick"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thick_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_scorch",
+          "materialId": "raylib_visual_atmosphere.decal_scorch",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            4.4,
+            3.2,
+            4.4
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_white_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_tint_white"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_tint_white_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_tint_white"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_white_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_footprints",
+          "materialId": "raylib_visual_atmosphere.decal_footprints",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            4.0,
+            1.0,
+            4.0
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_red_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_tint_red"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_tint_red_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_tint_red"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_red_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_footprints",
+          "materialId": "raylib_visual_atmosphere.decal_footprints",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            4.0,
+            1.0,
+            4.0
+          ]
+        },
+        "style": {
+          "color": [
+            1.0,
+            0.12,
+            0.08,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_along_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_yaw_along"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_yaw_along_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_yaw_along"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_along_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_cracks",
+          "materialId": "raylib_visual_atmosphere.decal_cracks",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            5.2,
+            1.0,
+            5.2
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_across_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_decal_yaw_across"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_decal_yaw_across_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_decal_yaw_across"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_across_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.decal_cracks",
+          "materialId": "raylib_visual_atmosphere.decal_cracks",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            5.2,
+            1.0,
+            5.2
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.06,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_small_green_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_cue_small_green"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_cue_small_green_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_cue_small_green"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_small_green_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cue_marker",
+          "materialId": "raylib_visual_atmosphere.rock",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            0.28,
+            0.28,
+            0.28
+          ],
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ]
+        },
+        "style": {
+          "color": [
+            0.2,
+            1.0,
+            0.25,
+            1.0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_large_yellow_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_cue_large_yellow"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_cue_large_yellow_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_cue_large_yellow"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_large_yellow_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cue_marker",
+          "materialId": "raylib_visual_atmosphere.rock",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.15,
+            1.15,
+            1.15
+          ],
+          "localOffset": [
+            0,
+            0.35,
+            0
+          ]
+        },
+        "style": {
+          "color": [
+            1.0,
+            0.88,
+            0.18,
+            1.0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_narrow_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_ribbon_narrow"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_ribbon_narrow_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_ribbon_narrow"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_narrow_actor",
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.48
+      },
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.82,
+          0.62,
+          0.28,
+          0.92
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          0.45,
+          0.32,
+          0.12,
+          0.0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.0
+      },
+      {
+        "paramKey": "worldSpline.p0",
+        "lane": "Vector",
+        "vectorValue": [
+          148.0,
+          2.8,
+          -132.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p1",
+        "lane": "Vector",
+        "vectorValue": [
+          152.0,
+          2.8,
+          -129.5,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p2",
+        "lane": "Vector",
+        "vectorValue": [
+          156.0,
+          2.8,
+          -127.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p3",
+        "lane": "Vector",
+        "vectorValue": [
+          160.0,
+          2.8,
+          -124.0,
+          0
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [
+            0.48,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.82,
+            0.62,
+            0.28,
+            0.92
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_wide_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_ribbon_wide"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_ribbon_wide_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_ribbon_wide"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_wide_actor",
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 3.15
+      },
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.55,
+          0.38,
+          0.18,
+          0.88
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          0.28,
+          0.18,
+          0.08,
+          0.0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.0
+      },
+      {
+        "paramKey": "worldSpline.p0",
+        "lane": "Vector",
+        "vectorValue": [
+          148.0,
+          2.8,
+          -124.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p1",
+        "lane": "Vector",
+        "vectorValue": [
+          152.0,
+          2.8,
+          -121.5,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p2",
+        "lane": "Vector",
+        "vectorValue": [
+          156.0,
+          2.8,
+          -119.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p3",
+        "lane": "Vector",
+        "vectorValue": [
+          160.0,
+          2.8,
+          -116.0,
+          0
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [
+            3.15,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.55,
+            0.38,
+            0.18,
+            0.88
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_bordered_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_ribbon_bordered"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "raylib_visual_atmosphere_ribbon_bordered_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_ribbon_bordered"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_bordered_actor",
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 1.55
+      },
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.12,
+          0.62,
+          0.78,
+          0.82
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          0.02,
+          0.12,
+          0.22,
+          0.98
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "worldSpline.p0",
+        "lane": "Vector",
+        "vectorValue": [
+          147.0,
+          2.8,
+          -140.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p1",
+        "lane": "Vector",
+        "vectorValue": [
+          151.5,
+          2.8,
+          -136.0,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p2",
+        "lane": "Vector",
+        "vectorValue": [
+          156.0,
+          2.8,
+          -138.5,
+          0
+        ]
+      },
+      {
+        "paramKey": "worldSpline.p3",
+        "lane": "Vector",
+        "vectorValue": [
+          161.0,
+          2.8,
+          -132.0,
+          0
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [
+            1.55,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.12,
+            0.62,
+            0.78,
+            0.82
+          ]
         }
       }
     ]
