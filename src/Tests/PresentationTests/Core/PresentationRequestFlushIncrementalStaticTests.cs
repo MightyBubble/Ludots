@@ -30,7 +30,6 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     drawBuffer,
@@ -80,7 +79,6 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     new PrimitiveDrawBuffer(),
@@ -123,7 +121,6 @@ namespace Ludots.Tests.Presentation
                 using var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    new PrefabRegistry(),
                     new MeshAssetRegistry(),
                     stableDrawCache,
                     new PrimitiveDrawBuffer(),

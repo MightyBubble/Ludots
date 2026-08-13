@@ -101,7 +101,7 @@ namespace Ludots.Tests.Presentation
             _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PresenterBehaviorSystem(_world, _instances, _defs, _presEvents, _ownerChanges, _soundRequests);
             _emitSystem = new PresenterEmitSystem(_world, _instances, _defs, _requests, _globals);
-            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _splineRibbons, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            _flush = new PresentationRequestFlushSystem(_world, _requests, new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _splineRibbons, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
         }
 
         [TearDown]
@@ -694,8 +694,7 @@ namespace Ludots.Tests.Presentation
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
-            var prefabs = new PrefabRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
             var materialAssets = new PresentationMaterialRegistry();
             var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
             var templateRegistry = new DataRegistry<EntityTemplate>(pipeline);

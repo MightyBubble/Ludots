@@ -12,7 +12,6 @@ namespace Ludots.Core.Presentation.Requests
     public sealed class PresentationRequestFlushSystem : BaseSystem<World, float>
     {
         private readonly PresentationRequestBuffer _requests;
-        private readonly PrefabRegistry _prefabs;
         private readonly StableDrawCache _stableDrawCache;
         private readonly PresentationTargetGeneration? _targetGeneration;
         private readonly PresentationVisualProxyEmitter _visualProxyEmitter;
@@ -29,7 +28,6 @@ namespace Ludots.Core.Presentation.Requests
         public PresentationRequestFlushSystem(
             World world,
             PresentationRequestBuffer requests,
-            PrefabRegistry prefabs,
             MeshAssetRegistry meshes,
             StableDrawCache stableDrawCache,
             PrimitiveDrawBuffer primitives,
@@ -44,7 +42,6 @@ namespace Ludots.Core.Presentation.Requests
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
-            _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _ = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _stableDrawCache = stableDrawCache ?? throw new ArgumentNullException(nameof(stableDrawCache));
             _targetGeneration = targetGeneration;
@@ -81,10 +78,6 @@ namespace Ludots.Core.Presentation.Requests
                 {
                     case PresentationRequestKind.VisualProxy:
                         EmitVisualProxy(request.VisualProxy);
-                        break;
-
-                    case PresentationRequestKind.Prefab:
-                        EmitPrefab(in request);
                         break;
 
                     case PresentationRequestKind.GroundOverlay:
@@ -184,30 +177,6 @@ namespace Ludots.Core.Presentation.Requests
             _stableDrawCache.ClearStaticMeshDeltas();
         }
 
-        private void EmitPrefab(in PresentationRequest request)
-        {
-            if (!_prefabs.TryGet(request.PrefabId, out PrefabDefinition prefab))
-            {
-                throw new InvalidOperationException($"Presentation prefab request references unknown prefabId={request.PrefabId}.");
-            }
-
-            EmitVisualProxy(new PresentationVisualProxy
-            {
-                ProxyKind = PresentationVisualProxyKind.Presenter,
-                MeshAssetId = prefab.MeshAssetId,
-                Position = request.Position,
-                Rotation = request.Rotation,
-                Scale = request.Scale * prefab.BaseScale,
-                Color = request.Color,
-                StableId = request.StableId,
-                RenderPath = VisualRenderPath.StaticMesh,
-                Mobility = VisualMobility.Movable,
-                Flags = VisualRuntimeFlags.Visible,
-                Visibility = request.LOD == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
-                LOD = request.LOD,
-            });
-        }
-
         private void EmitVisualProxy(in PresentationVisualProxy proxy)
         {
             if (IsTransientVisualProxy(in proxy))
@@ -238,7 +207,6 @@ namespace Ludots.Core.Presentation.Requests
             return request.Kind switch
             {
                 PresentationRequestKind.ClearTransientVisualProjection => true,
-                PresentationRequestKind.Prefab => true,
                 PresentationRequestKind.VisualProxy => IsTransientVisualProxy(in request.VisualProxy),
                 _ => false,
             };

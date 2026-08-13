@@ -11,6 +11,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
+using System.Reflection;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using System.Linq;
@@ -21,27 +22,15 @@ namespace Ludots.Tests.Architecture
     public sealed class PresentationBehaviorAndPrefabConfigContractTests
     {
         [Test]
-        public void MeshAssetConfigLoader_WhenPrefabPartKindMissing_ThrowsExplicitly()
+        public void MeshAssetConfigLoader_WhenTypeIsPrefab_ThrowsTellingAuthorsToUsePresenter()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
             File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
 [
-  { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" }
-]
-""");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "prefabs.json"), """
-[
-  {
-    "id": "prefab.bad",
-    "parts": [
-      {
-        "meshAssetId": "cube"
-      }
-    ]
-  }
+  { "id": "legacy.composite", "type": "Prefab", "parts": [ { "kind": "Mesh", "meshAssetId": "cube" } ] }
 ]
 """);
 
@@ -50,68 +39,33 @@ namespace Ludots.Tests.Architecture
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
-            var prefabs = new PrefabRegistry();
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("must declare an explicit kind"));
+                new MeshAssetConfigLoader(pipeline, meshes).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("type Prefab"));
+            Assert.That(ex.Message, Does.Contain("Presenter"));
         }
 
         [Test]
-        public void PresentationBehaviorConfigLoader_LoadsStatesThroughCoreConfigContract()
+        public void GameEngine_DoesNotRegisterPrefabOrPresentationBehaviorServices()
         {
-            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationBehaviorConfig", Guid.NewGuid().ToString("N"));
-            string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            WriteCatalog(
-                core,
-                "Presentation/mesh_assets.json", "ArrayById", "id",
-                "Presentation/prefabs.json", "ArrayById", "id",
-                "Presentation/presentation_behaviors.json", "ArrayById", "id");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
-[
-  { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" },
-  { "id": "prefab.crop.stage0", "type": "Prefab", "parts": [ { "kind": "Mesh", "meshAssetId": "cube" } ] }
-]
-""");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "presentation_behaviors.json"), """
-[
-  {
-    "id": "behavior.crop",
-    "states": [
-      { "stateId": "Growing", "prefabAssetId": "prefab.crop.stage0" }
-    ]
-  }
-]
-""");
+            Assert.That(
+                typeof(CoreServiceKeys).GetField("PresentationPrefabRegistry", BindingFlags.Public | BindingFlags.Static),
+                Is.Null);
+            Assert.That(
+                typeof(CoreServiceKeys).GetField("PresentationBehaviorRegistry", BindingFlags.Public | BindingFlags.Static),
+                Is.Null);
 
-            var vfs = new VirtualFileSystem();
-            vfs.Mount("Core", core);
-            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
-            var catalog = ConfigCatalogLoader.Load(pipeline);
-            var meshes = new MeshAssetRegistry();
-            var prefabs = new PrefabRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
-
-            var behaviors = new PresentationBehaviorRegistry();
-            new PresentationBehaviorConfigLoader(pipeline, behaviors, meshes).Load(catalog);
-
-            int behaviorId = behaviors.GetId("behavior.crop");
-            Assert.That(behaviorId, Is.GreaterThan(0));
-            Assert.That(behaviors.TryGet(behaviorId, out var behavior), Is.True);
-            Assert.That(behavior.States, Has.Length.EqualTo(1));
-            Assert.That(behavior.States[0].StateId, Is.EqualTo("Growing"));
-            Assert.That(behavior.States[0].PrefabAssetId, Is.EqualTo(meshes.GetId("prefab.crop.stage0")));
-        }
-
-        [Test]
-        public void GameEngine_RegistersPresentationBehaviorServices()
-        {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
 
-            Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorRegistry), Is.Not.Null);
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
+                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+            int cueMeshId = meshes.GetId("cue_marker");
+            Assert.That(cueMeshId, Is.GreaterThan(0), "cue_marker must stay registered as a leaf mesh.");
+            Assert.That(meshes.TryGetDescriptor(cueMeshId, out MeshAssetDescriptor cue), Is.True);
+            Assert.That(cue.Type, Is.EqualTo(MeshAssetType.Primitive));
         }
 
         [Test]
@@ -1146,81 +1100,34 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void LudotsCoreCueMarkerPrefab_RemainsSharedMeshOnlyContract()
+        public void LudotsCoreCueMarker_IsLeafMeshNotPrefab()
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
 
-            var prefabs = engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) as PrefabRegistry
-                ?? throw new InvalidOperationException("PresentationPrefabRegistry missing.");
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
 
-            int cuePrefabId = prefabs.GetId("cue_marker");
-            Assert.That(cuePrefabId, Is.GreaterThan(0), "cue_marker prefab must stay registered in LudotsCoreMod.");
-            Assert.That(prefabs.TryGet(cuePrefabId, out PrefabDefinition cuePrefab), Is.True);
             int cueMeshAssetId = meshes.GetId("cue_marker");
-            Assert.That(cueMeshAssetId, Is.GreaterThan(0), "cue_marker mesh asset must resolve to the prefab contract asset.");
-
-            var output = new PrefabFinalizedVisualBuffer();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                cueMeshAssetId,
-                stableId: 7,
-                position: default,
-                rotation: System.Numerics.Quaternion.Identity,
-                scale: System.Numerics.Vector3.One * cuePrefab.BaseScale,
-                color: System.Numerics.Vector4.One,
-                output);
-
-            PrefabVisualPartKind[] kinds = output.GetSpan().ToArray().Select(static visual => visual.Kind).ToArray();
-            Assert.That(kinds, Is.EqualTo(new[] { PrefabVisualPartKind.Mesh }));
+            Assert.That(cueMeshAssetId, Is.GreaterThan(0), "cue_marker mesh asset must stay registered in LudotsCoreMod.");
+            Assert.That(meshes.TryGetDescriptor(cueMeshAssetId, out MeshAssetDescriptor cue), Is.True);
+            Assert.That(cue.Type, Is.EqualTo(MeshAssetType.Primitive));
+            Assert.That(
+                File.Exists(Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Presentation", "prefabs.json")),
+                Is.False);
         }
 
         [Test]
-        public void CameraAcceptanceProjectionCueFixturePrefab_UsesFullMultiPartVisualContract()
+        public void CameraAcceptanceMod_DoesNotShipPrefabConfig()
         {
             string repoRoot = FindRepoRoot();
-            using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(
-                new List<string>
-                {
-                    Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                    Path.Combine(repoRoot, "mods", "CoreInputMod"),
-                    Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
-                    Path.Combine(repoRoot, "mods", "capabilities", "camera", "SharedThreeCProfilesMod"),
-                    Path.Combine(repoRoot, "mods", "fixtures", "camera", "CameraAcceptanceMod"),
-                },
-                Path.Combine(repoRoot, "assets"));
-
-            var prefabs = engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) as PrefabRegistry
-                ?? throw new InvalidOperationException("PresentationPrefabRegistry missing.");
-            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
-                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
-
-            int fixturePrefabId = prefabs.GetId("camera_acceptance_projection_cue_fixture_prefab");
-            Assert.That(fixturePrefabId, Is.GreaterThan(0), "camera_acceptance_projection_cue_fixture_prefab must stay registered in CameraAcceptanceMod.");
-            Assert.That(prefabs.TryGet(fixturePrefabId, out PrefabDefinition fixturePrefab), Is.True);
-            int fixtureMeshAssetId = meshes.GetId("camera_acceptance_projection_cue_fixture_prefab");
-            Assert.That(fixtureMeshAssetId, Is.GreaterThan(0), "camera_acceptance_projection_cue_fixture_prefab mesh asset must resolve to the prefab contract asset.");
-
-            var output = new PrefabFinalizedVisualBuffer();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                fixtureMeshAssetId,
-                stableId: 9,
-                position: default,
-                rotation: System.Numerics.Quaternion.Identity,
-                scale: System.Numerics.Vector3.One * fixturePrefab.BaseScale,
-                color: System.Numerics.Vector4.One,
-                output);
-
-            PrefabVisualPartKind[] kinds = output.GetSpan().ToArray().Select(static visual => visual.Kind).ToArray();
-            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Mesh));
-            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Decal));
-            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Vfx));
-            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Surface));
+            Assert.That(
+                File.Exists(Path.Combine(repoRoot, "mods", "fixtures", "camera", "CameraAcceptanceMod", "assets", "Presentation", "prefabs.json")),
+                Is.False);
+            Assert.That(
+                File.Exists(Path.Combine(repoRoot, "mods", "showcases", "raylib_client_parity", "RaylibClientParityShowcaseMod", "assets", "Presentation", "prefabs.json")),
+                Is.False);
         }
 
         private static string FindRepoRoot()

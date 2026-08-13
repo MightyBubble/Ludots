@@ -150,7 +150,7 @@ namespace Ludots.Tests.Presentation
             int runtimeEnd = source.IndexOf(");", runtimeStart, StringComparison.Ordinal);
             Assert.That(runtimeEnd, Is.GreaterThan(runtimeStart));
             string runtimeConstruction = source.Substring(runtimeStart, runtimeEnd - runtimeStart);
-            Assert.That(runtimeConstruction, Does.Not.Contain(nameof(PrefabRegistry)));
+            Assert.That(runtimeConstruction, Does.Not.Contain("PrefabRegistry"));
         }
 
         [Test]
@@ -421,8 +421,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(blacksmithTemplateKeyId, Is.GreaterThan(0));
 
                 var meshAssets = new MeshAssetRegistry();
-                var presentationPrefabs = new PrefabRegistry();
-                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshAssets).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
                 RegisterFixtureAssets(meshAssets, materialAssets);
 
@@ -532,7 +531,6 @@ namespace Ludots.Tests.Presentation
                 var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,
-                    presentationPrefabs,
                     meshAssets,
                     stableDrawCache,
                     primitives,

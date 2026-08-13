@@ -139,7 +139,6 @@ namespace Ludots.Tests.Presentation
             _flush = new PresentationRequestFlushSystem(
                 _world,
                 _requests,
-                new PrefabRegistry(),
                 new MeshAssetRegistry(),
                 new StableDrawCache(4096),
                 _primitives,
@@ -751,8 +750,7 @@ namespace Ludots.Tests.Presentation
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
-            var prefabs = new PrefabRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
             var materialAssets = new PresentationMaterialRegistry();
             var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
             var templateRegistry = new DataRegistry<EntityTemplate>(pipeline);

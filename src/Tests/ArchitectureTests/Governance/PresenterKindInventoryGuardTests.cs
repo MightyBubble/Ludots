@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
@@ -87,12 +89,11 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void PresentationRequestKind_AllowlistMatchesEpicInventory()
         {
-            // Prefab is doomed: P2 (#927) deletes PresentationRequestKind.Prefab from this allowlist.
             // RoadSpline / RemoveRoadSpline are doomed: P4 (#929) renames them to the generic spline ribbon contract.
+            // Prefab was deleted from this allowlist; do not reintroduce it.
             string[] expected =
             {
                 nameof(PresentationRequestKind.VisualProxy),
-                nameof(PresentationRequestKind.Prefab),
                 nameof(PresentationRequestKind.GroundOverlay),
                 nameof(PresentationRequestKind.WorldHud),
                 nameof(PresentationRequestKind.RoadSpline),
@@ -107,9 +108,8 @@ namespace Ludots.Tests.Architecture.Governance
             AssertKindAllowlist(
                 typeof(PresentationRequestKind),
                 expected,
-                "PresentationRequestKind allowlist is frozen by Epic #924 P0. Adding a kind requires updating that Epic inventory first.");
+                "PresentationRequestKind allowlist is frozen by Epic #924. Adding a kind requires updating that Epic inventory first.");
             Assert.That((byte)PresentationRequestKind.VisualProxy, Is.EqualTo(1));
-            Assert.That((byte)PresentationRequestKind.Prefab, Is.EqualTo(2));
             Assert.That((byte)PresentationRequestKind.GroundOverlay, Is.EqualTo(3));
             Assert.That((byte)PresentationRequestKind.WorldHud, Is.EqualTo(4));
             Assert.That((byte)PresentationRequestKind.RoadSpline, Is.EqualTo(5));
@@ -137,6 +137,8 @@ namespace Ludots.Tests.Architecture.Governance
                 "TryAddAnchoredPrefab(",
                 "PresentationRequest.FromPrefab(",
                 "PrefabFinalizationPipeline.FinalizeVisuals(",
+                "FinalizeVisuals(",
+                "PresentationRequestKind.Prefab",
             };
 
             var hits = new List<string>();
@@ -150,12 +152,6 @@ namespace Ludots.Tests.Architecture.Governance
                 foreach (string file in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
                 {
                     string relative = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-                    if (relative.Contains("/Prefab", StringComparison.Ordinal) ||
-                        Path.GetFileName(file).StartsWith("Prefab", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
                     string[] lines = File.ReadAllLines(file);
                     for (int i = 0; i < lines.Length; i++)
                     {
@@ -176,6 +172,82 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Assert.Fail("Production presentation path still uses Prefab bypass:\n" + string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void PrefabStackTypes_MustNotExist()
+        {
+            Assembly core = typeof(MeshAssetRegistry).Assembly;
+            string[] forbiddenTypeNames =
+            {
+                "Ludots.Core.Presentation.Assets.PrefabRegistry",
+                "Ludots.Core.Presentation.Assets.PrefabFinalizationPipeline",
+                "Ludots.Core.Presentation.Assets.PrefabPart",
+                "Ludots.Core.Presentation.Assets.PrefabDefinition",
+                "Ludots.Core.Presentation.Assets.PrefabFinalizedVisual",
+                "Ludots.Core.Presentation.Assets.WellKnownPrefabKeys",
+                "Ludots.Core.Presentation.Assets.PresentationBehaviorRegistry",
+                "Ludots.Core.Presentation.Primitives.WellKnownPrefabKeys",
+            };
+
+            var hits = new List<string>();
+            for (int i = 0; i < forbiddenTypeNames.Length; i++)
+            {
+                Type? type = core.GetType(forbiddenTypeNames[i], throwOnError: false);
+                if (type != null)
+                {
+                    hits.Add(forbiddenTypeNames[i]);
+                }
+            }
+
+            string[] requestKinds = Enum.GetNames(typeof(PresentationRequestKind));
+            if (requestKinds.Contains("Prefab", StringComparer.Ordinal))
+            {
+                hits.Add("PresentationRequestKind.Prefab");
+            }
+
+            string[] meshTypes = Enum.GetNames(typeof(MeshAssetType));
+            if (meshTypes.Contains("Prefab", StringComparer.Ordinal))
+            {
+                hits.Add("MeshAssetType.Prefab");
+            }
+
+            FieldInfo? prefabRegistryKey = typeof(Ludots.Core.Scripting.CoreServiceKeys).GetField(
+                "PresentationPrefabRegistry",
+                BindingFlags.Public | BindingFlags.Static);
+            if (prefabRegistryKey != null)
+            {
+                hits.Add("CoreServiceKeys.PresentationPrefabRegistry");
+            }
+
+            Assert.That(hits, Is.Empty, "Prefab stack types must not exist:\n" + string.Join("\n", hits));
+        }
+
+        [Test]
+        public void BusinessPrefabJson_MustNotExist()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "mods"),
+                Path.Combine(repoRoot, "assets"),
+            };
+
+            var hits = new List<string>();
+            foreach (string dir in directories)
+            {
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "prefabs.json", SearchOption.AllDirectories))
+                {
+                    hits.Add(Path.GetRelativePath(repoRoot, file).Replace('\\', '/'));
+                }
+            }
+
+            Assert.That(hits, Is.Empty, "Business prefabs.json must not exist:\n" + string.Join("\n", hits));
         }
 
         private static void AssertKindAllowlist(Type enumType, string[] expected, string failMessage)

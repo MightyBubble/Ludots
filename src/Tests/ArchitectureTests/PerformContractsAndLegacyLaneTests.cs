@@ -88,32 +88,12 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PrefabPart_RemainsStaticAssetOnlyContract()
+        public void PrefabStack_MustNotExist()
         {
-            FieldInfo[] fields = typeof(PrefabPart).GetFields(BindingFlags.Instance | BindingFlags.Public);
-
-            string[] offendingNames =
-                fields.Where(static field =>
-                        field.Name.Contains("Behavior", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Animator", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Command", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Request", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Viewer", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Visibility", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Audience", StringComparison.OrdinalIgnoreCase) ||
-                        field.Name.Contains("Phase", StringComparison.OrdinalIgnoreCase))
-                    .Select(static field => field.Name)
-                    .ToArray();
-
-            string[] offendingTypes =
-                fields.Where(static field =>
-                        field.FieldType.Namespace != null &&
-                        field.FieldType.Namespace.StartsWith("Ludots.Core.Presentation.Perform", StringComparison.Ordinal))
-                    .Select(static field => $"{field.Name}:{field.FieldType.FullName}")
-                    .ToArray();
-
-            Assert.That(offendingNames, Is.Empty, "PrefabPart must stay an asset-only contract.");
-            Assert.That(offendingTypes, Is.Empty, "PrefabPart must not depend on perform orchestration contracts.");
+            Assembly assembly = typeof(MeshAssetRegistry).Assembly;
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Assets.PrefabPart"), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Assets.PrefabRegistry"), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Assets.PrefabFinalizationPipeline"), Is.Null);
         }
 
         [Test]
