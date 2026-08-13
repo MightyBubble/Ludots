@@ -60,8 +60,9 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         using var runtime = TickOp("InvokeBuiltin");
         AssertBannedPlayerCopy(runtime);
         Assert.That(runtime.Metrics.Detail, Does.Contain("内置"));
-        Assert.That(runtime.Context.ActorHealth[2], Is.EqualTo(100f).Within(0.01f));
-        Assert.That(runtime.Context.ActorHudLit[2], Is.False);
+        int mark = GraphOpsNodeActorBinding.IndexOfId(runtime.Vignette, "mark");
+        Assert.That(runtime.Context.ActorHealth[mark], Is.EqualTo(40f).Within(0.01f));
+        Assert.That(runtime.Context.ActorHudLit[mark], Is.False);
     }
 
     [TestCase("ReadBlackboardInt", "层数")]

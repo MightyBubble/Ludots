@@ -758,7 +758,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryAllMapEntities",
       "status": "covered"
     },
@@ -767,7 +767,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFromCollection",
       "status": "covered"
     },
@@ -776,7 +776,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFilterTeam",
       "status": "covered"
     },
@@ -785,7 +785,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFilterTemplate",
       "status": "covered"
     },
@@ -794,7 +794,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFilterAttributeRange",
       "status": "covered"
     },
@@ -803,7 +803,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFilterTagAny",
       "status": "covered"
     },
@@ -812,7 +812,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QueryFilterTagNone",
       "status": "covered"
     },
@@ -821,7 +821,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_QuerySortByAttribute",
       "status": "covered"
     },
@@ -830,7 +830,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggSumAttribute",
       "status": "covered"
     },
@@ -839,7 +839,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggAverageAttribute",
       "status": "covered"
     },
@@ -848,7 +848,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggMaxAttribute",
       "status": "covered"
     },
@@ -857,7 +857,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggMinAttribute",
       "status": "covered"
     },
@@ -866,7 +866,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggMaxEntityByAttribute",
       "status": "covered"
     },
@@ -875,7 +875,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount;FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "unitTestFilter": "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId;GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption;GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
       "showcaseId": "capability_standard_graph_op_AggMinEntityByAttribute",
       "status": "covered"
     },

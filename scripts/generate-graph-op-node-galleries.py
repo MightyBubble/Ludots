@@ -141,6 +141,10 @@ def coverage_filters(driver: str, existing: str) -> str:
         parts.append(family)
     for token in (existing or "").split(";"):
         token = token.strip()
+        if token.startswith("FullyQualifiedName~"):
+            token = token.split("~", 1)[1].strip()
+        if "." not in token:
+            continue
         if token and token not in parts:
             parts.append(token)
     return ";".join(parts)
