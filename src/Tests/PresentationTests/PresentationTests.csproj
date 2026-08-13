@@ -48,7 +48,6 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\CapabilityStandardCrowdPhysicsArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\FormationCapabilityShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\RaylibIsmBenchmarkShowcaseMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\raylib_visual_atmosphere\RaylibVisualAtmosphereShowcaseMod\RaylibVisualAtmosphereShowcaseMod.csproj" />
   </ItemGroup>
 
   <ItemGroup>
