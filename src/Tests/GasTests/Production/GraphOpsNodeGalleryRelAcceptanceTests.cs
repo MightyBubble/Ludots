@@ -51,6 +51,19 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
     }
 
     [Test]
+    public void RemoveLink_SecondThinkStillBreaksALink()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipRemoveLink");
+        runtime.Tick(0.35f);
+        int before = int.Parse(runtime.Context.CaptionValues["linksBefore"]);
+        int after = int.Parse(runtime.Context.CaptionValues["linksAfter"]);
+        Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(2));
+        Assert.That(after, Is.LessThan(before));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("拆掉"));
+        AssertBannedEnglish(runtime.Metrics.Detail);
+    }
+
+    [Test]
     public void GetMetric_CaptionContainsNumber()
     {
         using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipGetMetric");

@@ -49,6 +49,24 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
         Assert.That(runtime.Metrics.Detail, Does.Contain("看得见"));
     }
 
+    [Test]
+    public void LoadViewer_ReadsTheAudience()
+    {
+        using var runtime = BindAndTick("LoadViewer");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("从观众自己看"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("自己这侧"));
+    }
+
+    [Test]
+    public void SnapToNearestGraphEdge_SnapsOntoTheRoad()
+    {
+        using var runtime = BindAndTick("SnapToNearestGraphEdge");
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("吸到路上最近的边"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("路边"));
+    }
+
     private static GraphOpsNodeGalleryRuntime BindAndTick(string op)
     {
         var runtime = new GraphOpsNodeGalleryRuntime();

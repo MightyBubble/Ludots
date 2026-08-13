@@ -164,28 +164,34 @@ internal static class GraphOpsNodeActorBinding
 
     public static void BindHud(GraphOpsNodeDriverContext ctx)
     {
-        if (ctx.Stage == null || ctx.StageProxies.Length > 0)
+        if (ctx.Stage == null || HudAlreadyBound(ctx))
         {
             return;
         }
 
         GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
         ctx.StageProxies = new Entity[actors.Length];
-        bool viewerBound = false;
+        int viewerIndex = FindRole(ctx.Vignette, "viewer");
+        if (viewerIndex < 0)
+        {
+            viewerIndex = FindRole(ctx.Vignette, "caster");
+        }
+
+        if (viewerIndex < 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' HUD needs a viewer or caster actor before anyone else's health can be shown.");
+        }
+
+        BindHudActor(ctx, viewerIndex, bindAsViewer: true);
         for (int i = 0; i < actors.Length; i++)
         {
-            GraphOpsNodeActor actor = actors[i];
-            bool bindViewer = !viewerBound && string.Equals(actor.Role, "caster", StringComparison.Ordinal);
-            ctx.StageProxies[i] = ctx.Stage.BindMapEntity(
-                ctx.SimActors[i],
-                actor.Template,
-                actor.Name,
-                actor.X,
-                actor.Y,
-                ctx.ActorHealth[i],
-                actor.HealthMax > 0f ? actor.HealthMax : actor.Health,
-                bindViewer);
-            viewerBound |= bindViewer;
+            if (i == viewerIndex)
+            {
+                continue;
+            }
+
+            BindHudActor(ctx, i, bindAsViewer: false);
         }
     }
 
@@ -198,10 +204,65 @@ internal static class GraphOpsNodeActorBinding
 
         for (int i = 0; i < ctx.StageProxies.Length; i++)
         {
+            Entity proxy = ctx.StageProxies[i];
+            if (!ctx.SimWorld.IsAlive(proxy))
+            {
+                throw new InvalidOperationException(
+                    $"Gallery '{ctx.Vignette.Op}' HUD proxy for '{ctx.Vignette.Actors[i].Name}' is not alive.");
+            }
+
             GraphOpsNodeActor actor = ctx.Vignette.Actors[i];
-            ctx.Stage.SetPosition(ctx.StageProxies[i], actor.X, actor.Y);
-            ctx.Stage.SetHealth(ctx.StageProxies[i], ctx.ActorHealth[i], actor.HealthMax > 0f ? actor.HealthMax : actor.Health);
+            ctx.Stage.SetPosition(proxy, actor.X, actor.Y);
+            ctx.Stage.SetHealth(proxy, ctx.ActorHealth[i], actor.HealthMax > 0f ? actor.HealthMax : actor.Health);
         }
+    }
+
+    public static void RestoreVignetteHealth(GraphOpsNodeDriverContext ctx)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < actors.Length; i++)
+        {
+            WriteHealth(
+                ctx.SimWorld,
+                ctx.SimActors[i],
+                actors[i].Health,
+                actors[i].HealthMax > 0f ? actors[i].HealthMax : actors[i].Health);
+            ctx.ActorHealth[i] = ReadHealth(ctx.SimWorld, ctx.SimActors[i]);
+        }
+    }
+
+    private static void BindHudActor(GraphOpsNodeDriverContext ctx, int index, bool bindAsViewer)
+    {
+        GraphOpsNodeActor actor = ctx.Vignette.Actors[index];
+        ctx.StageProxies[index] = ctx.Stage!.BindMapEntity(
+            ctx.SimActors[index],
+            actor.Template,
+            actor.Name,
+            actor.X,
+            actor.Y,
+            ctx.ActorHealth[index],
+            actor.HealthMax > 0f ? actor.HealthMax : actor.Health,
+            bindAsViewer);
+    }
+
+    private static bool HudAlreadyBound(GraphOpsNodeDriverContext ctx)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        if (ctx.StageProxies.Length != actors.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < actors.Length; i++)
+        {
+            Entity proxy = ctx.StageProxies[i];
+            if (!ctx.SimWorld.IsAlive(proxy) || !proxy.Equals(ctx.SimActors[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static string FormatDetail(string template, Dictionary<string, string> values)

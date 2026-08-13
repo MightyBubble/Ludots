@@ -174,6 +174,13 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             ?? throw new InvalidOperationException("Node gallery requires engine SpatialQueries.");
         Coords = engine.SpatialCoords
             ?? throw new InvalidOperationException("Node gallery requires engine SpatialCoords.");
+        if (SpatialQueries is not SpatialQueryService spatialQueries)
+        {
+            throw new InvalidOperationException(
+                $"Node gallery requires engine SpatialQueries to be {nameof(SpatialQueryService)} so hex queries can bind the live coordinate converter.");
+        }
+
+        spatialQueries.SetCoordinateConverter(Coords);
         EventBus = engine.EventBus
             ?? throw new InvalidOperationException("Node gallery requires engine EventBus.");
         EffectRequests = RequireEngineService(engine, CoreServiceKeys.EffectRequestQueue);

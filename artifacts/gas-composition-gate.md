@@ -1,33 +1,33 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: GraphOps per-op galleries — retire dual-world / C# spawn / fake config / fake lifecycle API; people, effects, and graphs go through MapLoader + EffectTemplateLoader + production GasGraphRuntimeApi
+- **Task / Issue**: GraphOps per-op galleries — playable recordings on the production path
 - **Date**: 2026-08-13
-- **Agent / Author**: Cloud Agent
+- **Agent / Author**: Cursor Grok 4.6
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**
+新变体主要交付物是（A/B/C/D）: A（现有 graph op 组合，gallery host 接到引擎生产服务）
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 不新增 opcode / profile DSL；把画廊从「代码里再造一套人」收回 `MapLoader` + 生产 `GasGraphRuntimeApi`，HUD 只绑地图已有实体。
+一句话理由: 不新增 opcode / preset / profile；修的是画廊宿主怎么把已有节点接到地图实体、坐标系、路网和 HUD 观众上。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 人从地图进出 | 3 | `MapLoader.LoadTemplates` / `LoadEntitiesAndIndex` |
-| 图执行 | 2 | `GasGraphRuntimeApi`（引擎生产服务或同型装配） |
-| 配置威力/阶位 | 2 | `assets/GAS/effects.json` `Effect.GraphOps.Config` + `SetConfigContext` |
-| 花名册 / 关系 / 标签 | 2 | `EntityCollectionStore` / `RelationshipRuntime` / `TagOps`，数据在 vignette |
-| HUD 血条 | 3 | 对地图实体 disclose，不再 `Stage.Spawn` 第二套人 |
+| 扣血 / 回血 | 0 | 已有 ModifyAttributeAdd / WriteSelfAttribute |
+| 拆朋友链 | 0 | 已有 RelationshipRemoveLink |
+| 六边形查询 | 0 | 已有 QueryHex* + 引擎 SpatialQueryService |
+| 吸到路边 | 0 | 已有 SnapToNearestGraphEdge + LoadedGraphRuntime |
+| 观众知识 | 0 | 已有 KnowledgeHasProjection / LoadViewer |
 
 ### 3. Reuse list
 
-- Handlers: `GasGraphOpHandlerTable`（已有 120 op）
-- Queues / Systems: `MapLoader`, `SpatialPartitionUpdateSystem`, `EffectRequestQueue`, `GameplayEventBus`, `EffectTemplateLoader`, `BuiltinHandlers.RegisterAll`
-- Resolvers / Registries: `EntityTemplateKeyRegistry`, `Relationship*Registry`, `TargetDispatchPresetRegistry`, `EntityCollectionStore`, `EffectTemplateRegistry`, `TagDisplayTableRegistry`
-- Existing presets / graphs: per-op FrontDoor graphs; lifecycle galleries use `Effect.GraphOps.Lifecycle` DeployConsumeSource + `BeginBuiltinInvocation`
+- Handlers: GasGraphOpHandlerTable, BuiltinHandlers
+- Queues / Systems: engine EffectRequestQueue, SpatialQueryService, GasGraphRuntimeApi
+- Resolvers / Registries: engine EffectTemplateRegistry, Relationship* registries, AttributeRegistry
+- Existing presets / graphs: `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/*.json`
 
 ### 4. New Layer 0 ops (if any)
 
@@ -35,24 +35,21 @@ N/A
 
 ### 5. Transaction boundary
 
-无跨帧 Effect transaction。地图加载失败、缺 InstanceId、图未 Halt 均 fail-close。
+必须原子 rollback 的步骤: 无。画廊只执行已有 graph；不新开 lifecycle transaction。
 
 ### 6. Config SSOT
 
-行为配置落在: gallery `assets/GAS/graphs/{Op}.json` + `assets/GAS/effects.json` + vignette/map Entities
+行为配置落在: graph / vignette / field JSON（`assets/GAS/graphs/`、`assets/Vignettes/`）
 
-是否新增 JSON schema: **NO** — vignette 只补齐已有演员字段（team/tags/collections/links），地图仍是 `EntitySpawnData`
+是否新增 JSON schema: NO
 
 ### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线（删掉 `World.Create` 演员；HUD 不再当出生点）
+- [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
 - [x] 未添加「说不清的」默认 fallback
-- [x] 角色绑定用地图活人，不把 Arch `default(Entity)` 当成 `Entity.Null` 而漏绑目标
-- [x] 卸标记走 `GameplayEffectFactory` + 已加载的 effect 模板，不再 `World.Create` 半成品效果实体
-- [x] 图作为效果阶段执行时，父效果 RootId 从 `EffectRequestQueue.AllocateRootId` 拿，与 Publish 同一计数器
 
 ### 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线 / vignette 演员与地图**
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤

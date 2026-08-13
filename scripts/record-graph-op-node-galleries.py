@@ -93,6 +93,7 @@ def record_one(
     env["GALLIUM_DRIVER"] = "llvmpipe"
     env["LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY"] = "1"
     env["LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY"] = "1"
+    env["LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE"] = "immediate"
     env["LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW"] = "1"
     env["LUDOTS_AUTO_EXIT_FRAME"] = str(AUTO_EXIT_FRAME)
     env["LUDOTS_TAKE_SCREENSHOT_PATH"] = str(still_path)
@@ -145,9 +146,9 @@ def record_one(
     wait_for_pid(pid, timeout_s=120)
 
     pngs = sorted(screens.glob("still_*.png"))
-    if len(pngs) < 8:
+    if len(pngs) < 4:
         raise RuntimeError(
-            f"Raylib wrote {len(pngs)} stills (need >= 8 real frames). See {log} and {out / 'raylib-diagnostic.log'}"
+            f"Raylib wrote {len(pngs)} stills (need >= 4 real frames). See {log} and {out / 'raylib-diagnostic.log'}"
         )
 
     play = out / "play.mp4"

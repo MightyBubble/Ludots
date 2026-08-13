@@ -50,6 +50,7 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             EnsureMarkOnTarget(ctx);
         }
 
+        GraphOpsNodeActorBinding.RestoreVignetteHealth(ctx);
         ctx.EffectRequests.Clear();
         int casterIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");

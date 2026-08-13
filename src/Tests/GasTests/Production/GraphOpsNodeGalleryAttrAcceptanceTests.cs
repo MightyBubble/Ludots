@@ -43,6 +43,35 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
     }
 
     [Test]
+    public void WriteSelfAttribute_SecondThinkStillHealsFromOpening()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("WriteSelfAttribute");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(2));
+        Assert.That(runtime.Context.ActorHealth[0], Is.EqualTo(90f).Within(0.01f));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("回"));
+    }
+
+    [Test]
+    public void ModifyAttributeAdd_SecondThinkStillDropsFromOpening()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ModifyAttributeAdd");
+        runtime.EnsureWorld();
+        float opening = runtime.Vignette.Actors[1].Health;
+        runtime.Tick(0.35f);
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(2));
+        Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(opening - 25f).Within(0.01f));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("扣"));
+    }
+
+    [Test]
     public void LoadAttribute_CaptionContainsNumber()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

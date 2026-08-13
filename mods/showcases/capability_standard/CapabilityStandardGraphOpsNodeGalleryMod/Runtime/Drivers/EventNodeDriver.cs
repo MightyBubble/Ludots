@@ -54,10 +54,11 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 $"Event gallery requires '{DispatchStubEffect}' loaded through EffectTemplateLoader.");
         }
 
-        if (ctx.OwnsSimulationWorld)
+        if (string.Equals(ctx.Vignette.Op, "SnapToNearestGraphEdge", StringComparison.Ordinal))
         {
             ctx.Api.BindLoadedGraphRuntime(BuildNavGraph());
         }
+
         BindViewer(ctx);
         SeedOwnershipAndKnowledge(ctx);
         ctx.TargetPosCm = SeedTargetPos(ctx);

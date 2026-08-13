@@ -30,6 +30,7 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
         CollectFriends(ctx);
         _linked = new byte[_friends.Length];
         _lit = new bool[_friends.Length];
+        ReseedLinks(ctx);
         RefreshLinkedFlags(ctx);
         ctx.Target = _friends[0];
         ctx.Metrics.AgentCount = ctx.SimActors.Length;
@@ -50,6 +51,8 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Unknown rel op '{ctx.Vignette.Op}'.");
         }
 
+        ReseedLinks(ctx);
+        RefreshLinkedFlags(ctx);
         int linksBefore = CountLinkedFriends(ctx);
         ctx.Target = op is GraphNodeOp.RelationshipRemoveLink or GraphNodeOp.RelationshipSetFlag
             ? RequireWeakestLinkedFriend(ctx)
@@ -108,6 +111,53 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
         }
 
         _friends = friends.ToArray();
+    }
+
+    private void ReseedLinks(GraphOpsNodeDriverContext ctx)
+    {
+        GraphOpsNodeLink[] links = ctx.Vignette.Links;
+        if (links.Length == 0)
+        {
+            throw new InvalidOperationException($"Rel vignette {ctx.Vignette.Op} has no links to seed.");
+        }
+
+        for (int i = 0; i < links.Length; i++)
+        {
+            GraphOpsNodeLink link = links[i];
+            Entity from = RequireActor(ctx, link.From);
+            Entity to = RequireActor(ctx, link.To);
+            int typeId = ctx.RelationshipTypes!.Register(link.Type);
+            ctx.Relationships!.EnsureLink(from, to, typeId);
+            if (!string.IsNullOrWhiteSpace(link.Metric))
+            {
+                int metricId = ctx.RelationshipMetrics!.Register(link.Metric, -100, 100, 0);
+                ctx.Relationships.SetMetric(from, to, typeId, metricId, link.MetricValue, reasonId: 0);
+            }
+
+            if (link.Flags == null)
+            {
+                continue;
+            }
+
+            for (int f = 0; f < link.Flags.Length; f++)
+            {
+                int flagId = ctx.RelationshipFlags!.Register(link.Flags[f]);
+                ctx.Relationships.SetFlag(from, to, typeId, flagId, true);
+            }
+        }
+    }
+
+    private static Entity RequireActor(GraphOpsNodeDriverContext ctx, string id)
+    {
+        for (int i = 0; i < ctx.Vignette.Actors.Length; i++)
+        {
+            if (string.Equals(ctx.Vignette.Actors[i].Id, id, StringComparison.Ordinal))
+            {
+                return ctx.SimActors[i];
+            }
+        }
+
+        throw new InvalidOperationException($"Rel vignette {ctx.Vignette.Op} unknown actor '{id}'.");
     }
 
     private void FillCaption(
