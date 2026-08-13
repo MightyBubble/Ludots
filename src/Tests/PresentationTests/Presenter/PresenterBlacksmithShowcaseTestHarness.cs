@@ -49,6 +49,7 @@ namespace Ludots.Tests.Presentation
             AttributeRegistry.Clear();
             Ludots.Core.Gameplay.GAS.Registry.TagRegistry.Clear();
             Ludots.Core.Presentation.Presenters.PresenterScopeTagRegistry.Clear();
+            Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Clear();
         }
 
         internal static void LoadMap(GameEngine engine, string mapId, int frames = 8)

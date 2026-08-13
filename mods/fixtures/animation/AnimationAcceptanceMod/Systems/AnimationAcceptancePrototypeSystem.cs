@@ -5,6 +5,7 @@ using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
@@ -255,29 +256,29 @@ namespace AnimationAcceptanceMod.Systems
             slot.OverlayNormalizedTime01 = slot.IdleOverlayClock01;
         }
 
-        private static AnimatorBuiltinClipState CreateLocomotionClip(float normalizedTime01, float speed)
+        private static AnimationChannelState CreateLocomotionClip(float normalizedTime01, float speed)
         {
             float weight = Math.Clamp(speed, 0f, 1f);
-            return AnimatorBuiltinClipState.Create(
-                AnimatorBuiltinClipId.LocomotionCycle,
+            return AnimationChannelState.Create(
+                AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
                 normalizedTime01,
                 weight,
                 speed);
         }
 
-        private static AnimatorBuiltinClipState CreateAimClip(float aimYawRad, float weight01)
+        private static AnimationChannelState CreateAimClip(float aimYawRad, float weight01)
         {
-            return AnimatorBuiltinClipState.Create(
-                AnimatorBuiltinClipId.AimYawOffset,
+            return AnimationChannelState.Create(
+                AnimationChannelRegistry.Register(AnimationChannelRegistry.AimYaw),
                 normalizedTime01: 0f,
                 weight01,
                 scalar0: aimYawRad);
         }
 
-        private static AnimatorBuiltinClipState CreateRecoilClip(float normalizedTime01, float weight01)
+        private static AnimationChannelState CreateRecoilClip(float normalizedTime01, float weight01)
         {
-            return AnimatorBuiltinClipState.Create(
-                AnimatorBuiltinClipId.RecoilPulse,
+            return AnimationChannelState.Create(
+                AnimationChannelRegistry.Register(AnimationChannelRegistry.Recoil),
                 normalizedTime01,
                 weight01);
         }

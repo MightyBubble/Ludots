@@ -663,6 +663,52 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void AnimationProfile_DoesNotKeepBuiltinClipEnumOrProfileBindings()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] forbiddenTypes =
+            {
+                "AnimatorBuiltinClipId",
+                "AnimatorBuiltinClipState",
+                "AnimationBuiltinClipBinding",
+                "TryResolveBuiltinClipId",
+            };
+
+            var hits = new List<string>();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "mods"),
+            };
+            for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+            {
+                foreach (string file in Directory.GetFiles(roots[rootIndex], "*.cs", SearchOption.AllDirectories))
+                {
+                    if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                        file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbiddenTypes, hits);
+                }
+            }
+
+            foreach (string file in Directory.GetFiles(Path.Combine(repoRoot, "mods"), "animation_profiles.json", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, ["\"builtinClips\"", "\"builtin_clips\""], hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Animation profiles keep packed-state clip bindings only. Overlay uses named channels, not builtin clip enums:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue200_KnowledgeHotPaths_DoNotUseLinqOrIteratorBlocks()
         {
             var repoRoot = FindRepoRoot();

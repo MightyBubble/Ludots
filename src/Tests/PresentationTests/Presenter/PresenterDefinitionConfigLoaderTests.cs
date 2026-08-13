@@ -1262,6 +1262,68 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_ChildOverrides_ParsesTransformAndParams_AndRejectsLegacyParamOverrides()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "root_with_overrides",
+                    "children": [
+                      {
+                        "definitionId": "child_marker",
+                        "scopeTag": "structure",
+                        "overrides": {
+                          "transform": {
+                            "localPosition": [1.5, 0.25, -2],
+                            "localRotation": [0, 90, 0],
+                            "localScale": [2, 2, 2]
+                          },
+                          "params": [
+                            { "paramKey": "marker.tint", "lane": "Float", "floatValue": 0.4 }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+            loader.Load(catalog);
+
+            PresenterDefinition root = registry.Get(registry.GetId("root_with_overrides"));
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            Assert.That(root.Children[0].TransformOverride.HasOverride, Is.True);
+            Assert.That(root.Children[0].TransformOverride.LocalPosition.X, Is.EqualTo(1.5f).Within(0.001f));
+            Assert.That(root.Children[0].TransformOverride.LocalScale.X, Is.EqualTo(2f).Within(0.001f));
+            Assert.That(root.Children[0].ParamOverrides.Length, Is.EqualTo(1));
+            Assert.That(root.Children[0].ParamOverrides[0].FloatValue, Is.EqualTo(0.4f).Within(0.001f));
+
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "legacy_child",
+                    "children": [
+                      { "definitionId": "child_marker", "paramOverrides": [] }
+                    ]
+                  }
+                ]
+                """);
+            registry = new PresenterDefinitionRegistry();
+            (_, _, pipeline, catalog) = BuildPipeline();
+            loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+            InvalidOperationException legacyEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(legacyEx.Message, Does.Contain("overrides.params"));
+        }
+
+        [Test]
         public void Load_RejectsDuplicateBehaviorSlots()
         {
             WriteCatalog();

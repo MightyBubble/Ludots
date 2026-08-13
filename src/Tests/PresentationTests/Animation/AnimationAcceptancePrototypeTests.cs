@@ -41,6 +41,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(profileRegistry, Is.Not.Null);
             Assert.That(clipRegistry, Is.Not.Null);
 
+            int locomotionId = AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion);
+            int aimYawId = AnimationChannelRegistry.Register(AnimationChannelRegistry.AimYaw);
+            int recoilId = AnimationChannelRegistry.Register(AnimationChannelRegistry.Recoil);
+
             int tankCount = 0;
             int humanoidCount = 0;
             int staticCount = 0;
@@ -54,22 +58,27 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.StableId, Is.GreaterThan(0));
                     Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
                     Assert.That(item.AnimationProfileId, Is.GreaterThan(0));
-                    Assert.That(item.AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
-                    Assert.That(item.AnimationOverlay.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.AimYawOffset));
-                    Assert.That(item.AnimationOverlay.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.RecoilPulse));
+                    Assert.That(item.AnimationOverlay.BaseClip.ChannelId, Is.EqualTo(locomotionId));
+                    Assert.That(item.AnimationOverlay.LayerClip.ChannelId, Is.EqualTo(aimYawId));
+                    Assert.That(item.AnimationOverlay.OverlayClip.ChannelId, Is.EqualTo(recoilId));
 
                     Assert.That(
                         profileRegistry!.TryResolveStateClipId(item.AnimationProfileId, item.Animator.GetPrimaryStateIndex(), out int stateClipAssetId),
                         Is.True);
-                    Assert.That(
-                        profileRegistry.TryResolveBuiltinClipId(item.AnimationProfileId, item.AnimationOverlay.BaseClip.ClipId, out int baseClipAssetId),
-                        Is.True);
-                    Assert.That(
-                        profileRegistry.TryResolveBuiltinClipId(item.AnimationProfileId, item.AnimationOverlay.LayerClip.ClipId, out int layerClipAssetId),
-                        Is.True);
-                    Assert.That(
-                        profileRegistry.TryResolveBuiltinClipId(item.AnimationProfileId, item.AnimationOverlay.OverlayClip.ClipId, out int overlayClipAssetId),
-                        Is.True);
+
+                    bool isTank = item.Animator.GetPrimaryStateIndex() is >= 31 and <= 33;
+                    int baseClipAssetId = clipRegistry!.GetId(isTank
+                        ? AnimationAcceptanceIds.TankLocomotionClipKey
+                        : AnimationAcceptanceIds.HumanoidLocomotionClipKey);
+                    int layerClipAssetId = clipRegistry.GetId(isTank
+                        ? AnimationAcceptanceIds.TankAimClipKey
+                        : AnimationAcceptanceIds.HumanoidAimClipKey);
+                    int overlayClipAssetId = clipRegistry.GetId(isTank
+                        ? AnimationAcceptanceIds.TankRecoilClipKey
+                        : AnimationAcceptanceIds.HumanoidRecoilClipKey);
+                    Assert.That(baseClipAssetId, Is.GreaterThan(0));
+                    Assert.That(layerClipAssetId, Is.GreaterThan(0));
+                    Assert.That(overlayClipAssetId, Is.GreaterThan(0));
 
                     Assert.That(
                         clipRegistry!.TryResolveLocator(stateClipAssetId, AnimationAcceptanceIds.RaylibBackendId, out var stateRaylibLocator),
@@ -122,19 +131,19 @@ namespace Ludots.Tests.Presentation
                         state_clip_asset = clipRegistry.GetName(stateClipAssetId),
                         state_raylib_asset = stateRaylibLocator.AssetRef,
                         state_ue5_asset = stateUe5Locator.AssetRef,
-                        base_clip = item.AnimationOverlay.BaseClip.ClipId.ToString(),
+                        base_clip = AnimationChannelRegistry.GetName(item.AnimationOverlay.BaseClip.ChannelId),
                         base_clip_asset = clipRegistry.GetName(baseClipAssetId),
                         base_raylib_asset = baseRaylibLocator.AssetRef,
                         base_ue5_asset = baseUe5Locator.AssetRef,
                         base_time = item.AnimationOverlay.BaseClip.NormalizedTime01,
                         base_weight = item.AnimationOverlay.BaseClip.Weight01,
-                        layer_clip = item.AnimationOverlay.LayerClip.ClipId.ToString(),
+                        layer_clip = AnimationChannelRegistry.GetName(item.AnimationOverlay.LayerClip.ChannelId),
                         layer_clip_asset = clipRegistry.GetName(layerClipAssetId),
                         layer_raylib_asset = layerRaylibLocator.AssetRef,
                         layer_ue5_asset = layerUe5Locator.AssetRef,
                         layer_weight = item.AnimationOverlay.LayerClip.Weight01,
                         layer_scalar0 = item.AnimationOverlay.LayerClip.Scalar0,
-                        overlay_clip = item.AnimationOverlay.OverlayClip.ClipId.ToString(),
+                        overlay_clip = AnimationChannelRegistry.GetName(item.AnimationOverlay.OverlayClip.ChannelId),
                         overlay_clip_asset = clipRegistry.GetName(overlayClipAssetId),
                         overlay_raylib_asset = overlayRaylibLocator.AssetRef,
                         overlay_ue5_asset = overlayUe5Locator.AssetRef,
@@ -241,11 +250,12 @@ namespace Ludots.Tests.Presentation
                     A[start animation acceptance map] --> B[tick prototype driver system]
                     B --> C[tank base locomotion updates packed state]
                     B --> D[humanoid base locomotion updates packed state]
-                    C --> E[tank profile resolves state + builtin clip assets]
-                    D --> F[humanoid profile resolves state + builtin clip assets]
+                    C --> E[tank profile resolves packed state clip assets]
+                    D --> F[humanoid profile resolves packed state clip assets]
                     E --> G[snapshot emits skinned tank prototype item]
                     F --> H[snapshot emits skinned humanoid prototype item]
                     A --> I[static baseline remains on static lane]
+                    B --> M[named overlay channels locomotion / aim_yaw / recoil]
                     E --> J{clip locator exists for raylib and ue5}
                     F --> K{clip locator exists for raylib and ue5}
                     J -->|no| L[fail acceptance]

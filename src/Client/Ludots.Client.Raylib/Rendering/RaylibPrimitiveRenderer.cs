@@ -722,12 +722,10 @@ namespace Ludots.Client.Raylib.Rendering
 
             return new AnimationOverlayRequest
             {
-                BaseClip = new AnimatorBuiltinClipState
-                {
-                    ClipId = AnimatorBuiltinClipId.LocomotionCycle,
-                    NormalizedTime01 = animator.GetNormalizedTime01(),
-                    Weight01 = 1f,
-                },
+                BaseClip = AnimationChannelState.Create(
+                    AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
+                    animator.GetNormalizedTime01(),
+                    weight01: 1f),
             };
         }
 
@@ -1361,10 +1359,10 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
             float treadBob = MathF.Sin(locomotionPhase * MathF.Tau) * unit * (0.03f + locomotionWeight * 0.08f);
             float turretYaw = baseYaw + aimYaw;
             float recoil = recoilPulse * unit * 0.35f;
@@ -1415,13 +1413,13 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
             float lowerPhase = locomotionPhase * MathF.Tau;
             float stride = MathF.Sin(lowerPhase) * unit * (0.08f + locomotionWeight * 0.34f);
-            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * aimWeight;
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
+            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * aimWeight;
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
             float chestLift = recoilPulse * unit * 0.08f;
 
             Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);
@@ -1491,29 +1489,35 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static float ResolveClipTime01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipTime01(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.NormalizedTime01 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.NormalizedTime01 : 0f;
         }
 
-        private static float ResolveClipWeight01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipWeight01(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.Weight01 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.Weight01 : 0f;
         }
 
-        private static float ResolveClipScalar0(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipScalar0(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.Scalar0 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.Scalar0 : 0f;
         }
 
-        private static float ResolvePulse(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolvePulse(in AnimationChannelState clip, string channelName)
         {
-            if (clip.ClipId != expectedId || clip.Weight01 <= 0.001f)
+            if (!MatchesChannel(clip, channelName) || clip.Weight01 <= 0.001f)
             {
                 return 0f;
             }
 
             return MathF.Sin(clip.NormalizedTime01 * MathF.PI) * clip.Weight01;
+        }
+
+        private static bool MatchesChannel(in AnimationChannelState clip, string channelName)
+        {
+            int expectedId = AnimationChannelRegistry.Register(channelName);
+            return expectedId > 0 && clip.ChannelId == expectedId;
         }
 
         private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)

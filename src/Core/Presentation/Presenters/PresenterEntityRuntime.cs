@@ -2146,6 +2146,10 @@ namespace Ludots.Core.Presentation.Presenters
                 SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
                 SetParamDefault(childDefinition, childEntity);
                 ApplyParamOverrides(childEntity, child.ParamOverrides);
+                if (child.TransformOverride.HasOverride)
+                {
+                    _world.Add(childEntity, child.TransformOverride);
+                }
                 InitializeTransform(childEntity, childDefinition);
                 if (childDefinition.RequiresBootstrapProcessing && !_world.Has<PresenterBootstrapPending>(childEntity))
                 {
@@ -2359,6 +2363,7 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 ref readonly ChildPresenterRef child = ref children[i];
                 if ((child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
+                    child.TransformOverride.HasOverride ||
                     !definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition) ||
                     RequiresDeferredBootstrapAfterBatchCreate(childDefinition) ||
                     (childDefinition.Children != null && childDefinition.Children.Length != 0))

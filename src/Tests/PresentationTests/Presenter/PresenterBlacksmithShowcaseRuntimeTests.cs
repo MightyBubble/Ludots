@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -179,6 +181,59 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountPresentersByDef(engine, workerId), Is.EqualTo(1), "Worker presenter should exist as a steady child.");
             Assert.That(CountPresentersByDef(engine, barId), Is.EqualTo(1));
             Assert.That(CountPresentersByDef(engine, textId), Is.EqualTo(1));
+            Assert.That(
+                CountPresentersByDef(engine, ResolvePresenterDefId(engine, PresenterBlacksmithShowcaseIds.FieldMarkerDefinitionId)),
+                Is.EqualTo(2),
+                "The same field-marker definition should spawn twice with different instance overrides.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_ChildTransformOverride_SameDefinitionTwoPoses()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 12);
+
+            var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            PresenterDefinition root = definitions.Get(definitions.GetId(PresenterBlacksmithShowcaseIds.RootDefinitionId));
+            int markerDefId = definitions.GetId(PresenterBlacksmithShowcaseIds.FieldMarkerDefinitionId);
+            var authored = new List<ChildPresenterRef>();
+            for (int i = 0; i < root.Children.Length; i++)
+            {
+                if (root.Children[i].DefinitionId == markerDefId)
+                {
+                    authored.Add(root.Children[i]);
+                }
+            }
+
+            Assert.That(authored.Count, Is.EqualTo(2));
+            Assert.That(authored[0].TransformOverride.HasOverride, Is.True);
+            Assert.That(authored[1].TransformOverride.HasOverride, Is.True);
+            Assert.That(authored[0].TransformOverride.LocalScale.X, Is.Not.EqualTo(authored[1].TransformOverride.LocalScale.X).Within(0.01f));
+
+            var markers = new List<Entity>();
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (Entity entity, ref PresenterState state) =>
+            {
+                if (state.DefId == markerDefId)
+                {
+                    markers.Add(entity);
+                }
+            });
+
+            Assert.That(markers.Count, Is.EqualTo(2));
+            Vector3 left = engine.World.Get<PresenterWorldPosition>(markers[0]).Value;
+            Vector3 right = engine.World.Get<PresenterWorldPosition>(markers[1]).Value;
+            Vector3 leftScale = engine.World.Get<PresenterWorldScale>(markers[0]).Value;
+            Vector3 rightScale = engine.World.Get<PresenterWorldScale>(markers[1]).Value;
+            if (left.X > right.X)
+            {
+                (left, right) = (right, left);
+                (leftScale, rightScale) = (rightScale, leftScale);
+            }
+
+            Assert.That(right.X - left.X, Is.GreaterThan(6f), "The two field markers should stand on opposite sides of the smithy.");
+            Assert.That(rightScale.X, Is.GreaterThan(leftScale.X * 1.5f), "The right marker should read larger than the left marker.");
         }
 
         [Test]

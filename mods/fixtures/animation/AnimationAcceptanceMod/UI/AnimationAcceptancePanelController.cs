@@ -582,18 +582,19 @@ namespace AnimationAcceptanceMod.UI
             return stateIndex < 0 ? "None" : $"[{stateIndex}] Unknown";
         }
 
-        private static string BuildClipLine(string slotLabel, AnimatorBuiltinClipState clip)
+        private static string BuildClipLine(string slotLabel, AnimationChannelState clip)
         {
             if (!clip.IsActive)
             {
                 return $"{slotLabel} = None";
             }
 
-            string scalar0 = clip.ClipId == AnimatorBuiltinClipId.AimYawOffset
+            string channelName = AnimationChannelRegistry.GetName(clip.ChannelId);
+            string scalar0 = clip.ChannelId == AnimationChannelRegistry.Register(AnimationChannelRegistry.AimYaw)
                 ? $"{ToDegrees(clip.Scalar0):0.0} deg"
                 : $"{clip.Scalar0:0.00}";
 
-            return $"{slotLabel} = {clip.ClipId}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
+            return $"{slotLabel} = {channelName}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
         }
 
         private static string[] BuildFeedbackLines(AnimatorFeedbackBuffer feedback, string[] stateLabels)

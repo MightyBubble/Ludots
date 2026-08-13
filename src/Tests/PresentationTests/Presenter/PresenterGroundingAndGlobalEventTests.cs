@@ -61,6 +61,51 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ResolveTransform_InheritParent_ComposesChildInstanceOverride()
+        {
+            var parent = new PresenterTransformSnapshot
+            {
+                WorldPosition = new Vector3(10f, 2f, 20f),
+                WorldRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f),
+                WorldScale = new Vector3(2f, 2f, 2f),
+                TransformSource = TransformSource.EntityTransform,
+            };
+
+            var child = new PresenterTransformSnapshot
+            {
+                TransformSource = TransformSource.InheritParent,
+            };
+
+            var asset = new AssetBindingConfig
+            {
+                LocalOffset = new Vector3(1f, 0f, 0f),
+                LocalRotation = Quaternion.Identity,
+                LocalScale = new Vector3(0.5f, 0.5f, 0.5f),
+            };
+
+            var instanceOverride = new PresenterInstanceTransformOverride
+            {
+                LocalPosition = new Vector3(1f, 0f, 0f),
+                LocalRotation = Quaternion.Identity,
+                LocalScale = new Vector3(2f, 2f, 2f),
+                HasOverride = true,
+            };
+
+            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
+                child,
+                parent,
+                hasParent: true,
+                ownerTransform: default,
+                hasOwnerTransform: false,
+                asset,
+                instanceOverride);
+
+            Assert.That(resolved.Position.X, Is.EqualTo(10f).Within(0.001f));
+            Assert.That(resolved.Position.Z, Is.EqualTo(16f).Within(0.001f));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
+        }
+
+        [Test]
         public void ResolveTransform_EntityTransform_ComposesOwnerTransformAndAssetLocalTransform()
         {
             var instance = new PresenterTransformSnapshot

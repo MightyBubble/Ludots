@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -1147,7 +1148,10 @@ namespace Ludots.Tests.Presentation
             Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9903, Entity.Null, definition);
             animatorStates.Ensure(presenter, 3101);
             ref AnimationOverlayRequest overlay = ref animatorStates.GetOverlay(presenter);
-            overlay.BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.25f, 0.5f);
+            overlay.BaseClip = AnimationChannelState.Create(
+                AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
+                0.25f,
+                0.5f);
 
             using var system = new PresenterEmitSystem(
                 world,
@@ -1165,7 +1169,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(cache.Count, Is.EqualTo(0), "Movable skinned animator output must not enter static stable cache.");
 
             requests.Clear();
-            overlay.BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.75f, 1f);
+            overlay.BaseClip = AnimationChannelState.Create(
+                AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
+                0.75f,
+                1f);
             system.Update(0.016f);
 
             Assert.That(requests.Count, Is.EqualTo(1));

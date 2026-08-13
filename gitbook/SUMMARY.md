@@ -43,6 +43,7 @@
   - [Presenter-as-Actor 架构总览](architecture/presenter-as-actor-architecture.md)
   - [Presenter 参数黑板与 Animator 统一](architecture/presenter-param-blackboard.md)
   - [Presenter Transform、Grounding 与 Attachment](architecture/presenter-transform-and-attachment.md)
+  - [Presenter 配置分叉验收](architecture/presenter-config-fork-uat.md)
   - [Presenter Raylib UAT 测试计划](architecture/presenter-raylib-uat.md)
   - [Presenter 现有基建收尾整合](architecture/presenter-legacy-consolidation.md)
   - [Presenter 开发看板](architecture/presenter-development-kanban.md)

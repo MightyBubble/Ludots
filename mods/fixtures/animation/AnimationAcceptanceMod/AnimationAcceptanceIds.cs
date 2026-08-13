@@ -13,5 +13,11 @@ namespace AnimationAcceptanceMod
         public const string HumanoidProfileKey = "acceptance.profile.humanoid.layered";
         public const string RaylibBackendId = "raylib";
         public const string Ue5BackendId = "ue5";
+        public const string TankLocomotionClipKey = "acceptance.clip.tank.builtin.locomotion_cycle";
+        public const string TankAimClipKey = "acceptance.clip.tank.builtin.aim_yaw_offset";
+        public const string TankRecoilClipKey = "acceptance.clip.tank.builtin.recoil_pulse";
+        public const string HumanoidLocomotionClipKey = "acceptance.clip.humanoid.builtin.locomotion_cycle";
+        public const string HumanoidAimClipKey = "acceptance.clip.humanoid.builtin.aim_yaw_offset";
+        public const string HumanoidRecoilClipKey = "acceptance.clip.humanoid.builtin.recoil_pulse";
     }
 }

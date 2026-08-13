@@ -40,6 +40,7 @@ namespace PresenterBlacksmithShowcaseMod
         public const string WorkerDefinitionId = "blacksmith_worker_actor";
         public const string DurabilityBarDefinitionId = "blacksmith_durability_hud_bar";
         public const string DurabilityTextDefinitionId = "blacksmith_durability_hud_text";
+        public const string FieldMarkerDefinitionId = "blacksmith_field_marker";
 
         public const string ParamRegionKey = "blacksmith.region";
         public const string ParamDurabilityKey = "blacksmith.durability.ratio";

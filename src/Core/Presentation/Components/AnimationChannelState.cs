@@ -2,26 +2,26 @@ using System;
 
 namespace Ludots.Core.Presentation.Components
 {
-    public struct AnimatorBuiltinClipState
+    public struct AnimationChannelState
     {
-        public AnimatorBuiltinClipId ClipId;
+        public int ChannelId;
         public float NormalizedTime01;
         public float Weight01;
         public float Scalar0;
         public float Scalar1;
 
-        public readonly bool IsActive => ClipId != AnimatorBuiltinClipId.None && Weight01 > 0.001f;
+        public readonly bool IsActive => ChannelId > 0 && Weight01 > 0.001f;
 
-        public static AnimatorBuiltinClipState Create(
-            AnimatorBuiltinClipId clipId,
+        public static AnimationChannelState Create(
+            int channelId,
             float normalizedTime01,
             float weight01,
             float scalar0 = 0f,
             float scalar1 = 0f)
         {
-            return new AnimatorBuiltinClipState
+            return new AnimationChannelState
             {
-                ClipId = clipId,
+                ChannelId = channelId,
                 NormalizedTime01 = Clamp01(normalizedTime01),
                 Weight01 = Clamp01(weight01),
                 Scalar0 = scalar0,
