@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -14,6 +15,8 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
+using Ludots.UI;
+using Ludots.UI.Runtime;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 
@@ -179,6 +182,54 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountPresentersByDef(engine, workerId), Is.EqualTo(1), "Worker presenter should exist as a steady child.");
             Assert.That(CountPresentersByDef(engine, barId), Is.EqualTo(1));
             Assert.That(CountPresentersByDef(engine, textId), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BlacksmithShowcase_InteractiveMap_KeepsSkiaUatPanelDrawable()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 4);
+
+            IBenchmarkSceneController controller = engine.GetService(CoreServiceKeys.BenchmarkSceneController)
+                ?? throw new InvalidOperationException("BenchmarkSceneController missing.");
+            Assert.That(
+                controller.SuppressHostDiagnosticUi,
+                Is.False,
+                "Interactive blacksmith UAT is mouse-only: Working/Day/Destroy live on the Skia panel, so the host must keep drawing it.");
+        }
+
+        [Test]
+        public void BlacksmithShowcase_InteractiveMap_MountsPlayerControlStrip_WithoutEngineerDump()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            UIRoot uiRoot = PresenterBlacksmithShowcaseTestHarness.InstallHeadlessUi(engine);
+            PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+
+            UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Interactive blacksmith map must mount the player control strip.");
+            scene.Layout(uiRoot.Width, uiRoot.Height);
+
+            Assert.That(
+                scene.FindByElementId("presenter-blacksmith-showcase-panel"),
+                Is.Not.Null,
+                "The playable shop must show the left control strip.");
+
+            var labels = new List<string>();
+            foreach (UiNode node in scene.EnumerateVisualNodes())
+            {
+                if (!string.IsNullOrWhiteSpace(node.TextContent))
+                {
+                    labels.Add(node.TextContent);
+                }
+            }
+
+            string panelText = string.Join('\n', labels);
+            Assert.That(panelText, Does.Contain("Start work"));
+            Assert.That(panelText, Does.Contain("Make it night"));
+            Assert.That(panelText, Does.Contain("Tear down shop"));
+            Assert.That(panelText, Does.Contain("Rebuild shop"));
+            Assert.That(panelText, Does.Not.Contain("Scatter Benchmark"));
+            Assert.That(panelText, Does.Not.Contain("Diagnostics"));
+            Assert.That(panelText, Does.Not.Contain("Presenter Tree"));
         }
 
         [Test]

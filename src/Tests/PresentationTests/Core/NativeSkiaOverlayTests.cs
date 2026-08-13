@@ -358,12 +358,42 @@ public sealed class NativeSkiaOverlayTests
             "TopMost direct overlay must stay disabled while UnderUi HUD exists; otherwise minimap is drawn under world HUD.");
         Assert.That(
             source,
-            Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay"),
-            "UnderUi and TopMost may share a direct GPU path only when the compositor draws TopMost after the HUD.");
+            Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && _useGpuDirectUnderlay"),
+            "UnderUi and TopMost may share a direct GPU path when the compositor draws TopMost after the HUD.");
+        Assert.That(
+            source,
+            Does.Not.Contain("hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay"),
+            "A mounted Skia panel must not kick world HUD off the GPU underlay path.");
+        Assert.That(
+            source,
+            Does.Contain("drawCompositeTexture"),
+            "Skia UI must blit after GPU UnderUi HUD and before TopMost minimap so the UAT panel can stay mounted without rasterizing world HUD every frame.");
         Assert.That(
             source,
             Does.Contain("_framebufferTopOverlaySurface.Render("),
             "TopMost minimap must still render after direct UnderUi HUD so it occludes HUD bars/text.");
+    }
+
+    [Test]
+    public void RaylibSkiaOverlay_UsesNativeGlInterfaceInsteadOfWindowsWgl()
+    {
+        string adapterDir = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib");
+        string glContext = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGlContext.cs"));
+        string gpuOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaGpuOverlaySurface.cs"));
+        string framebufferOverlay = File.ReadAllText(Path.Combine(adapterDir, "RaylibSkiaFramebufferOverlaySurface.cs"));
+
+        Assert.That(
+            glContext,
+            Does.Contain("GRGlInterface.Create()"),
+            "Skia overlay must resolve WGL/GLX/EGL through Skia's native GL interface so Linux hosts can keep GPU HUD.");
+        Assert.That(gpuOverlay, Does.Not.Contain("opengl32.dll"));
+        Assert.That(framebufferOverlay, Does.Not.Contain("opengl32.dll"));
+        Assert.That(glContext, Does.Not.Contain("opengl32.dll"));
     }
 
     [Test]

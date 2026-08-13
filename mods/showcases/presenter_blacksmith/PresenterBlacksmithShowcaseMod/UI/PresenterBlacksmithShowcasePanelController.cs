@@ -43,7 +43,8 @@ namespace PresenterBlacksmithShowcaseMod.UI
                 return false;
             }
 
-            if (!_hasLastState || !StateEquals(in _lastState, in state))
+            bool stateChanged = !_hasLastState || !StateEquals(in _lastState, in state);
+            if (stateChanged)
             {
                 PresenterBlacksmithShowcasePanelState snapshot = state;
                 page.SetState(_ => snapshot);
@@ -51,10 +52,14 @@ namespace PresenterBlacksmithShowcaseMod.UI
                 _hasLastState = true;
             }
 
-            surfaceHost.PublishReactivePage(
-                ref _lease,
-                new UiSurfaceLeaseRequest("Showcase.PresenterBlacksmith.Panel", UiSurfaceSegment.Overlay, priority: 40),
-                page);
+            if (!_lease.IsValid || !surfaceHost.Revalidate(_lease))
+            {
+                surfaceHost.PublishReactivePage(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("Showcase.PresenterBlacksmith.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                    page);
+            }
+
             return true;
         }
 
@@ -105,6 +110,74 @@ namespace PresenterBlacksmithShowcaseMod.UI
         }
 
         private UiElementBuilder BuildPanel(PresenterBlacksmithShowcasePanelState state)
+        {
+            return state.PlayerControlsOnly
+                ? BuildPlayerControlsPanel(state)
+                : BuildEngineerPanel(state);
+        }
+
+        private UiElementBuilder BuildPlayerControlsPanel(PresenterBlacksmithShowcasePanelState state)
+        {
+            var children = new List<UiElementBuilder>
+            {
+                Ui.Text(state.Title)
+                    .FontSize(20f)
+                    .Bold()
+                    .Color("#F6DA84"),
+                Ui.Text(state.Subtitle)
+                    .FontSize(12f)
+                    .Color("#B9CAD9")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        ActionButton(
+                            state.WorkingActive ? "Stop work" : "Start work",
+                            state.WorkingActive,
+                            "#2A6048",
+                            "#162432",
+                            _ => Execute(runtime => runtime.ToggleWorking())),
+                        ActionButton(
+                            state.NightActive ? "Make it day" : "Make it night",
+                            state.NightActive,
+                            "#6A4A1D",
+                            "#162432",
+                            _ => Execute(runtime => runtime.ToggleDayNight())))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        ActionButton(
+                            "Tear down shop",
+                            state.RootDestroyed,
+                            "#6A2C28",
+                            "#162432",
+                            _ => Execute(runtime => runtime.DestroyBuilding())),
+                        ActionButton(
+                            "Rebuild shop",
+                            !state.RootDestroyed,
+                            "#295C45",
+                            "#162432",
+                            _ => Execute(runtime => runtime.RespawnBuilding())))
+                    .Wrap()
+                    .Gap(8f)
+            };
+
+            if (!string.IsNullOrWhiteSpace(state.LastChange))
+            {
+                children.Add(BuildMetricCard(state.LastChange, "#2E2A12", "#F6DA84"));
+            }
+
+            return Ui.Card(children.ToArray())
+                .Id("presenter-blacksmith-showcase-panel")
+                .Width(state.PanelWidth)
+                .Padding(16f)
+                .Gap(10f)
+                .Radius(18f)
+                .Background("#09131C")
+                .Border(1f, ParseColor("#2E526D"))
+                .Absolute(state.PanelLeft, state.PanelTop)
+                .ZIndex(40);
+        }
+
+        private UiElementBuilder BuildEngineerPanel(PresenterBlacksmithShowcasePanelState state)
         {
             return Ui.Card(
                     BuildHeader(state),
@@ -429,7 +502,8 @@ namespace PresenterBlacksmithShowcaseMod.UI
                    string.Equals(left.CapacitySummary, right.CapacitySummary, StringComparison.Ordinal) &&
                    SequenceEqual(left.ChecklistLines, right.ChecklistLines) &&
                    SequenceEqual(left.DiagnosticLines, right.DiagnosticLines) &&
-                   SequenceEqual(left.PresenterLines, right.PresenterLines);
+                   SequenceEqual(left.PresenterLines, right.PresenterLines) &&
+                   left.PlayerControlsOnly == right.PlayerControlsOnly;
         }
 
         private static bool SequenceEqual(string[]? left, string[]? right)

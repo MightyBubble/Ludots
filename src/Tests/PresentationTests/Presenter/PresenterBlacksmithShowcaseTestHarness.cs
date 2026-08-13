@@ -12,6 +12,9 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
+using Ludots.UI;
+using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using PresenterBlacksmithShowcaseMod.Runtime;
@@ -172,6 +175,22 @@ namespace Ludots.Tests.Presentation
             engine.GlobalContext["Tests.PresenterBlacksmith.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
                 engine.GetService(CoreServiceKeys.PresentationFrameSetup));
+        }
+
+        internal static UIRoot InstallHeadlessUi(GameEngine engine, float width = 1280f, float height = 720f)
+        {
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(width, height);
+
+            var textMeasurer = new SkiaTextMeasurer();
+            var imageSizeProvider = new SkiaImageSizeProvider();
+            var surfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
+
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, textMeasurer);
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, imageSizeProvider);
+            engine.SetService(CoreServiceKeys.UiSurfaceHost, surfaceHost);
+            return uiRoot;
         }
 
         private static void UpdateHeadlessCamera(GameEngine engine)

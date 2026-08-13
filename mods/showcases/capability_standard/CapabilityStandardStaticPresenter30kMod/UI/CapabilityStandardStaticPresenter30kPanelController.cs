@@ -43,7 +43,8 @@ namespace CapabilityStandardStaticPresenter30kMod.UI
                 return false;
             }
 
-            if (!_hasLastState || !StateEquals(in _lastState, in state))
+            bool stateChanged = !_hasLastState || !StateEquals(in _lastState, in state);
+            if (stateChanged)
             {
                 CapabilityStandardStaticPresenter30kPanelState snapshot = state;
                 page.SetState(_ => snapshot);
@@ -51,10 +52,14 @@ namespace CapabilityStandardStaticPresenter30kMod.UI
                 _hasLastState = true;
             }
 
-            surfaceHost.PublishReactivePage(
-                ref _lease,
-                new UiSurfaceLeaseRequest("Showcase.CapabilityStandardStaticPresenter30k.Panel", UiSurfaceSegment.Overlay, priority: 40),
-                page);
+            if (!_lease.IsValid || !surfaceHost.Revalidate(_lease))
+            {
+                surfaceHost.PublishReactivePage(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("Showcase.CapabilityStandardStaticPresenter30k.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                    page);
+            }
+
             return true;
         }
 
