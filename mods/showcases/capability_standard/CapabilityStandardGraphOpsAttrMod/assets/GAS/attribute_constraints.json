@@ -1,0 +1,5 @@
+{
+  "DamageBonus": { "min": 0 },
+  "StrikeTally": { "min": 0 },
+  "LastHitPower": { "min": 0 }
+}
