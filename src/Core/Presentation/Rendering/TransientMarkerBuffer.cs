@@ -29,7 +29,7 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             if (_count >= _buffer.Length) return false;
-            if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
+            RequirePositiveLifetime(lifetimeSeconds);
             _buffer[_count++] = new TransientMarker
             {
                 StableId = AllocateStableId(),
@@ -53,7 +53,7 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             if (_count >= _buffer.Length) return false;
-            if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
+            RequirePositiveLifetime(lifetimeSeconds);
             _buffer[_count++] = new TransientMarker
             {
                 StableId = AllocateStableId(),
@@ -114,6 +114,15 @@ namespace Ludots.Core.Presentation.Rendering
                 }));
 
                 i++;
+            }
+        }
+
+        private static void RequirePositiveLifetime(float lifetimeSeconds)
+        {
+            if (lifetimeSeconds <= 0f || !float.IsFinite(lifetimeSeconds))
+            {
+                throw new InvalidOperationException(
+                    $"Transient mesh marker lifetimeSeconds must be > 0, got {lifetimeSeconds}.");
             }
         }
 

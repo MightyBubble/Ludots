@@ -280,13 +280,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
-                {
-                    LastImmediateSkippedCount++;
-                    continue;
-                }
-
-                if (TryDrawDecalItem(in item, scaleMul))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: false))
                 {
                     continue;
                 }
@@ -330,13 +324,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
-                {
-                    LastImmediateSkippedCount++;
-                    continue;
-                }
-
-                if (TryDrawDecalItem(in item, scaleMul))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
                 }
@@ -391,12 +379,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
-                {
-                    continue;
-                }
-
-                if (TryDrawDecalItem(in item, scaleMul))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
                 }
@@ -418,6 +401,74 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushInstancedBatches();
+        }
+
+        private bool TryDrawTypedPresenterChild(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            bool instancedPrimitives)
+        {
+            if (TryDrawDecalItem(in item, scaleMul))
+            {
+                return true;
+            }
+
+            if (item.AssetKind == AssetKind.VFX)
+            {
+                LastVfxVisualCount++;
+                TotalVfxVisualCount++;
+                DrawLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    item.MaterialId,
+                    instancedPrimitives,
+                    countAsMesh: false);
+                return true;
+            }
+
+            if (item.AssetKind == AssetKind.Surface)
+            {
+                if (item.MeshAssetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} Surface stableId={item.StableId} requires a mesh asset. Author a Presenter Surface child instead of skipping the draw.");
+                }
+
+                LastSurfaceVisualCount++;
+                TotalSurfaceVisualCount++;
+                DrawLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    item.MaterialId,
+                    instancedPrimitives: false,
+                    countAsMesh: false);
+                DrawWireBox(
+                    item.Position,
+                    item.Scale * scaleMul,
+                    WorldPlane2D.NormalizeOrIdentity(item.Rotation),
+                    MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                return true;
+            }
+
+            if (item.RenderPath.IsSurfaceLane())
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} renderPath Surface stableId={item.StableId} assetKind={item.AssetKind} is not drawable. Author AssetKind.Surface Presenter children.");
+            }
+
+            return false;
         }
 
         private bool TryDrawDecalItem(in PrimitiveDrawItem item, float scaleMul)
@@ -445,13 +496,6 @@ namespace Ludots.Client.Raylib.Rendering
         {
             DrawLeafAsset(meshAssetId, position, rotation, scale, color, camera, meshes, materialId, instancedPrimitives: true);
         }
-
-
-        private static bool IsHostSurfaceLane(in PrimitiveDrawItem item)
-        {
-            return item.AssetKind == AssetKind.Surface || item.RenderPath.IsSurfaceLane();
-        }
-
 
         private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId = 0)
         {
@@ -695,7 +739,8 @@ namespace Ludots.Client.Raylib.Rendering
             Camera3D camera,
             MeshAssetRegistry meshes,
             int materialId,
-            bool instancedPrimitives)
+            bool instancedPrimitives,
+            bool countAsMesh = true)
         {
             if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
             {
@@ -706,7 +751,11 @@ namespace Ludots.Client.Raylib.Rendering
             switch (descriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    CountMeshVisual();
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
                     if (instancedPrimitives)
                     {
                         SubmitPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color, materialId);
@@ -718,15 +767,27 @@ namespace Ludots.Client.Raylib.Rendering
 
                     return;
                 case MeshAssetType.Model:
-                    CountMeshVisual();
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
                     DrawModel(meshAssetId, descriptor, position, rotation, scale, color, materialId);
                     return;
                 case MeshAssetType.Billboard:
-                    CountMeshVisual();
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
                     DrawBillboard(meshAssetId, descriptor, position, scale, color, camera, materialId);
                     return;
                 case MeshAssetType.ProceduralMesh:
-                    CountMeshVisual();
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
                     DrawProceduralMesh(meshAssetId, in descriptor, position, rotation, scale, materialId);
                     return;
                 default:

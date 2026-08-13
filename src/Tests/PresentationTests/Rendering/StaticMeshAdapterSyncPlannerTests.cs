@@ -83,6 +83,26 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sync_IgnoresVfxAssetKind_EvenWhenRenderPathLooksStatic()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    606,
+                    VisualRenderPath.StaticMesh,
+                    meshAssetId: 16,
+                    materialId: 6,
+                    assetKind: AssetKind.VFX),
+            });
+
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.TryGetBinding(606, out _), Is.False);
+        }
+
+        [Test]
         public void Sync_CustomDataChange_EmitsUpdate_WithoutChangingLaneSlot()
         {
             var planner = new StaticMeshAdapterSyncPlanner();

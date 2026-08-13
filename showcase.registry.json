@@ -2559,7 +2559,7 @@
         "decal",
         "spline"
       ],
-      "notes": "截图合同仍见 docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md（01-10）。"
+      "notes": "01-07 仍是 GPU 截图合同（docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md）。08-10 构图机位保留，P0–P2 合同是 RaylibVisualAtmosphereFieldUatTests 发射载荷，不是本包 GPU 截图。"
     },
     {
       "id": "terrain_benchmark",

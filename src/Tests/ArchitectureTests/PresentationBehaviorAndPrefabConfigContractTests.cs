@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using System.Reflection;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using System.Linq;
@@ -1113,6 +1114,22 @@ namespace Ludots.Tests.Architecture
             Assert.That(cueMeshAssetId, Is.GreaterThan(0), "cue_marker mesh asset must stay registered in LudotsCoreMod.");
             Assert.That(meshes.TryGetDescriptor(cueMeshAssetId, out MeshAssetDescriptor cue), Is.True);
             Assert.That(cue.Type, Is.EqualTo(MeshAssetType.Primitive));
+
+            var presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) as PresenterDefinitionRegistry
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            CueMarkerAuthoredVisual authored = CueMarkerAuthoredVisual.Resolve(meshes, presenters);
+            Assert.That(authored.MeshAssetId, Is.EqualTo(cueMeshAssetId));
+            Assert.That(authored.Scale, Is.EqualTo(new System.Numerics.Vector3(0.2f, 0.2f, 0.2f)));
+            Assert.That(authored.AnchorOffset.Y, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(authored.LifetimeSeconds, Is.EqualTo(0.35f).Within(0.001f));
+
+            var constructorMeshes = new MeshAssetRegistry();
+            Assert.That(
+                constructorMeshes.GetId(WellKnownMeshKeys.CueMarker),
+                Is.EqualTo(0),
+                "cue_marker must not be dual-registered in MeshAssetRegistry constructor; mesh_assets.json is the mesh SSOT.");
+            Assert.That(constructorMeshes.GetId(WellKnownMeshKeys.Cube), Is.GreaterThan(0));
+
             Assert.That(
                 File.Exists(Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Presentation", "prefabs.json")),
                 Is.False);
@@ -1128,6 +1145,23 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 File.Exists(Path.Combine(repoRoot, "mods", "showcases", "raylib_client_parity", "RaylibClientParityShowcaseMod", "assets", "Presentation", "prefabs.json")),
                 Is.False);
+
+            string presentersPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "fixtures",
+                "camera",
+                "CameraAcceptanceMod",
+                "assets",
+                "Presentation",
+                "presenters.json");
+            Assert.That(File.Exists(presentersPath), Is.True);
+            string json = File.ReadAllText(presentersPath);
+            Assert.That(json, Does.Contain("camera_acceptance_projection_cue_fixture"));
+            Assert.That(json, Does.Contain("\"assetKind\": \"Mesh\""));
+            Assert.That(json, Does.Contain("\"assetKind\": \"Decal\""));
+            Assert.That(json, Does.Contain("\"assetKind\": \"VFX\""));
+            Assert.That(json, Does.Contain("\"assetKind\": \"Surface\""));
         }
 
         private static string FindRepoRoot()

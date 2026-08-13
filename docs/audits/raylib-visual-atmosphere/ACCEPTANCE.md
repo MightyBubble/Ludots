@@ -19,9 +19,9 @@ Evidence lands in:
 | `05_distance_fog.png` | Atmospheric distance fog (not FoW overlay) |
 | `06_water_reflect.png` | Planar reflection/refraction water silhouette |
 | `07_beach_decals.png` | 故事脚印/焦痕/血迹/裂痕贴在近景沙滩上 |
-| `08_decal_fields.png` | 对照区：大小、厚度、染色、朝向各改一个字段 |
-| `09_spline_ribbons.png` | 岸边细/宽/描边弯带 |
-| `10_cue_flashes.png` | 小绿 / 大黄击中闪光（叶子网格，不是 Prefab） |
+| `08_decal_fields.png` | P0–P2 不把此机位当 GPU 合同。对照区大小/厚度/染色/朝向由 `RaylibVisualAtmosphereFieldUatTests` 锁发射载荷；投影视觉尺寸见 P3/#933 |
+| `09_spline_ribbons.png` | P0–P2 不把此机位当 GPU 合同。岸边细/宽/描边弯带由发射载荷 UAT 锁住；去路名见 P4/#931 |
+| `10_cue_flashes.png` | P0–P2 不把此机位当 GPU 合同。小绿 / 大黄击中闪光由发射载荷 UAT 锁住（叶子网格，不是 Prefab） |
 
 ## Host
 

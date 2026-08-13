@@ -500,5 +500,36 @@
         }
       }
     ]
+  },
+  {
+    "id": "cue_marker",
+    "lifecycle": {
+      "durationSeconds": 0.35
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.2,
+        0
+      ]
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cue_marker",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      }
+    ]
   }
 ]

@@ -128,7 +128,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void CueFlashGallery_UsesLeafCueMesh_AndScaleColorLifetimeAreAuthored()
+        public void CueFlashGallery_UsesLeafCueMesh_AndScaleColorAreAuthored()
         {
             using var fixture = AtmosphereFieldFixture.Create(_repoRoot, _coreRoot);
             int cueMeshId = fixture.Meshes.GetId("cue_marker");
@@ -143,43 +143,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(small.Color.Y, Is.EqualTo(1f).Within(0.001f));
             Assert.That(large.Color.X, Is.EqualTo(1f).Within(0.001f));
             Assert.That(large.Color.Y, Is.EqualTo(0.88f).Within(0.001f));
+        }
 
-            string galleryPath = Path.Combine(
-                _repoRoot,
-                "mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod/assets/Presentation/cue_field_gallery.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(galleryPath));
-            JsonElement markers = document.RootElement.GetProperty("markers");
-            float shortLife = 0f;
-            float longLife = 0f;
-            foreach (JsonElement marker in markers.EnumerateArray())
-            {
-                string id = marker.GetProperty("id").GetString() ?? string.Empty;
-                float life = marker.GetProperty("lifetimeSeconds").GetSingle();
-                if (id == "cue_small_green")
-                {
-                    shortLife = life;
-                }
-
-                if (id == "cue_large_yellow")
-                {
-                    longLife = life;
-                }
-            }
-
-            Assert.That(shortLife, Is.EqualTo(0.35f).Within(0.001f));
-            Assert.That(longLife, Is.EqualTo(1.4f).Within(0.001f));
-
+        [Test]
+        public void TransientMarkerBuffer_LifetimeMustBeAuthoredPositive()
+        {
             var buffer = new TransientMarkerBuffer(8);
-            var requests = new PresentationRequestBuffer(8);
-            using var world = World.Create();
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
             Assert.That(
-                buffer.TryAddMesh(cueMeshId, Vector3.Zero, new Vector3(0.28f), new Vector4(0.2f, 1f, 0.25f, 1f), shortLife),
-                Is.True);
-            buffer.TickAndRequest(requests, shortLife - 0.05f, world);
-            Assert.That(requests.Count, Is.EqualTo(1));
-            requests.Clear();
-            buffer.TickAndRequest(requests, 0.1f, world);
-            Assert.That(buffer.Count, Is.EqualTo(0));
+                () => buffer.TryAddMesh(cubeId, Vector3.Zero, Vector3.One, Vector4.One, 0f),
+                Throws.InvalidOperationException.With.Message.Contains("lifetimeSeconds"));
+            Assert.That(
+                () => buffer.TryAddAnchoredMesh(cubeId, Vector3.One, Vector4.One, -0.2f, Entity.Null, Vector3.Zero),
+                Throws.InvalidOperationException.With.Message.Contains("lifetimeSeconds"));
         }
 
         [Test]
