@@ -1,0 +1,15 @@
+{
+  "op": "LoadViewer",
+  "driver": "event",
+  "title": "从观众自己看",
+  "beat": "镜头和观众实体被读出，字幕说从自己这侧看。",
+  "detailTemplate": "从{result}看。",
+  "assertDetailContains": ["自己这侧"],
+  "featuredNodeId": "viewer",
+  "graphKind": "Validation",
+  "actors": [
+    { "id": "viewer", "role": "viewer", "template": "GraphOps.Caster", "name": "观众", "x": -2, "y": 0, "health": 100, "healthMax": 100 },
+    { "id": "caster", "role": "caster", "template": "GraphOps.Ally", "name": "施法者", "x": 0, "y": 0, "health": 100, "healthMax": 100 },
+    { "id": "target", "role": "target", "template": "GraphOps.Target", "name": "木桩", "x": 4, "y": 0, "health": 100, "healthMax": 100 }
+  ]
+}

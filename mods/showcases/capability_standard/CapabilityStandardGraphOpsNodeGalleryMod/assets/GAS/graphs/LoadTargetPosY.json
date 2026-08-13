@@ -1,0 +1,10 @@
+{
+  "id": "showcase.graph_op.LoadTargetPosY",
+  "kind": "Validation",
+  "entry": "posY",
+  "nodes": [
+    { "id": "posY", "op": "LoadTargetPosY" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

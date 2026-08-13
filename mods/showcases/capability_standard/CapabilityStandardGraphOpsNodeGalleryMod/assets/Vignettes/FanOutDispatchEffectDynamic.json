@@ -1,0 +1,16 @@
+{
+  "op": "FanOutDispatchEffectDynamic",
+  "driver": "event",
+  "title": "模板号读出来再派发",
+  "beat": "先从事件里读出模板号，再按这个号把效果扇出给圈里的人。",
+  "detailTemplate": "模板号读出来再派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": ["读出来再派"],
+  "featuredNodeId": "fanDyn",
+  "graphKind": "Effect",
+  "actors": [
+    { "id": "caster", "role": "caster", "template": "GraphOps.Caster", "name": "施法者", "x": 0, "y": 0, "health": 100, "healthMax": 100 },
+    { "id": "target", "role": "target", "template": "GraphOps.Target", "name": "木桩", "x": 2, "y": 0, "health": 100, "healthMax": 100 },
+    { "id": "allyA", "role": "ally", "template": "GraphOps.Ally", "name": "圈里甲", "x": -1, "y": 1.7, "health": 100, "healthMax": 100 },
+    { "id": "allyB", "role": "ally", "template": "GraphOps.Ally", "name": "圈里乙", "x": -1, "y": -1.7, "health": 100, "healthMax": 100 }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.ClampTargetToRange",
+  "kind": "Validation",
+  "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "range", "op": "ConstFloat", "floatValue": 500 },
+    { "id": "clamp", "op": "ClampTargetToRange", "validOutput": "inRange" }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "range" },
+    { "from": "range", "fromPort": "next", "to": "clamp" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "clamp", "toPort": "a" },
+    { "from": "range", "fromPort": "value", "to": "clamp", "toPort": "b" }
+  ]
+}

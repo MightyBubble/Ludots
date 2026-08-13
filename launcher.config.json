@@ -1303,6 +1303,126 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectTagInMaskEntryMod",
         "projectPath": "CapabilityStandardGraphOpSelectTagInMaskEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ClampTargetToRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpClampTargetToRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpClampTargetToRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ControlDomainControls",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpControlDomainControlsEntryMod",
+        "projectPath": "CapabilityStandardGraphOpControlDomainControlsEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ControlDomainResolve",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpControlDomainResolveEntryMod",
+        "projectPath": "CapabilityStandardGraphOpControlDomainResolveEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FanOutDispatchEffect",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFanOutDispatchEffectEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFanOutDispatchEffectEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_FanOutDispatchEffectDynamic",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpFanOutDispatchEffectDynamicEntryMod",
+        "projectPath": "CapabilityStandardGraphOpFanOutDispatchEffectDynamicEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_IsPointInCircle",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpIsPointInCircleEntryMod",
+        "projectPath": "CapabilityStandardGraphOpIsPointInCircleEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_KnowledgeHasProjection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpKnowledgeHasProjectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpKnowledgeHasProjectionEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEventPayloadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEventPayloadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEventPayloadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadEventPayloadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadEventPayloadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadEventPayloadIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadTargetPosX",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTargetPosXEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadTargetPosXEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadTargetPosY",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadTargetPosYEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadTargetPosYEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadViewer",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadViewerEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadViewerEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SendEvent",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSendEventEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSendEventEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SnapToNearestGraphEdge",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSnapToNearestGraphEdgeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSnapToNearestGraphEdgeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SnapToNearestInCollection",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSnapToNearestInCollectionEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSnapToNearestInCollectionEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

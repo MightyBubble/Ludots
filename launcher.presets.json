@@ -1474,6 +1474,141 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ClampTargetToRange_raylib",
+      "name": "Graph Op ClampTargetToRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ClampTargetToRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ControlDomainControls_raylib",
+      "name": "Graph Op ControlDomainControls Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ControlDomainControls"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ControlDomainResolve_raylib",
+      "name": "Graph Op ControlDomainResolve Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ControlDomainResolve"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FanOutDispatchEffect_raylib",
+      "name": "Graph Op FanOutDispatchEffect Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FanOutDispatchEffect"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_FanOutDispatchEffectDynamic_raylib",
+      "name": "Graph Op FanOutDispatchEffectDynamic Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_FanOutDispatchEffectDynamic"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_IsPointInCircle_raylib",
+      "name": "Graph Op IsPointInCircle Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_IsPointInCircle"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_KnowledgeHasProjection_raylib",
+      "name": "Graph Op KnowledgeHasProjection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_KnowledgeHasProjection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEventPayloadFloat_raylib",
+      "name": "Graph Op LoadEventPayloadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEventPayloadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadEventPayloadInt_raylib",
+      "name": "Graph Op LoadEventPayloadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadEventPayloadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadTargetPosX_raylib",
+      "name": "Graph Op LoadTargetPosX Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadTargetPosX"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadTargetPosY_raylib",
+      "name": "Graph Op LoadTargetPosY Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadTargetPosY"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadViewer_raylib",
+      "name": "Graph Op LoadViewer Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadViewer"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SendEvent_raylib",
+      "name": "Graph Op SendEvent Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SendEvent"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SnapToNearestGraphEdge_raylib",
+      "name": "Graph Op SnapToNearestGraphEdge Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SnapToNearestGraphEdge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SnapToNearestInCollection_raylib",
+      "name": "Graph Op SnapToNearestInCollection Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SnapToNearestInCollection"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

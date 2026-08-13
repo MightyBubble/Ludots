@@ -1,0 +1,15 @@
+{
+  "id": "showcase.graph_op.FanOutDispatchEffect",
+  "kind": "Effect",
+  "entry": "fanDispatch",
+  "nodes": [
+    {
+      "id": "fanDispatch",
+      "op": "FanOutDispatchEffect",
+      "effectTemplate": "Effect.GraphOp.DispatchStub",
+      "payloadPreset": "TargetToResolved"
+    }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}

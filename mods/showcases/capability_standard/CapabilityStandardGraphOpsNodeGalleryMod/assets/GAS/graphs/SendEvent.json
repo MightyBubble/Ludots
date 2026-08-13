@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.SendEvent",
+  "kind": "Effect",
+  "entry": "target",
+  "nodes": [
+    { "id": "target", "op": "LoadExplicitTarget" },
+    { "id": "magnitude", "op": "ConstFloat", "floatValue": 18 },
+    { "id": "send", "op": "SendEvent", "tag": "Event.DamageDealt" }
+  ],
+  "controlEdges": [
+    { "from": "target", "fromPort": "next", "to": "magnitude" },
+    { "from": "magnitude", "fromPort": "next", "to": "send" }
+  ],
+  "valueEdges": [
+    { "from": "target", "fromPort": "value", "to": "send", "toPort": "target" },
+    { "from": "magnitude", "fromPort": "value", "to": "send", "toPort": "value" }
+  ]
+}

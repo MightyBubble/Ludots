@@ -1,0 +1,23 @@
+{
+  "id": "showcase.graph_op.SnapToNearestInCollection",
+  "kind": "Validation",
+  "entry": "caster",
+  "nodes": [
+    { "id": "caster", "op": "LoadCaster" },
+    { "id": "radius", "op": "ConstFloat", "floatValue": 200 },
+    {
+      "id": "snapCol",
+      "op": "SnapToNearestInCollection",
+      "collectionKey": "showcase.graph_op.snap",
+      "validOutput": "snapValid"
+    }
+  ],
+  "controlEdges": [
+    { "from": "caster", "fromPort": "next", "to": "radius" },
+    { "from": "radius", "fromPort": "next", "to": "snapCol" }
+  ],
+  "valueEdges": [
+    { "from": "caster", "fromPort": "value", "to": "snapCol", "toPort": "source" },
+    { "from": "radius", "fromPort": "value", "to": "snapCol", "toPort": "value" }
+  ]
+}
