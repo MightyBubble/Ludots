@@ -37,7 +37,7 @@
   {
     "id": "Effect.GraphOps.Lifecycle",
     "tags": ["Effect.GraphOps.Lifecycle"],
-    "presetType": "DeployConsumeSource",
+    "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "configParams": {

@@ -1,63 +1,206 @@
 #!/usr/bin/env python3
-"""Record one play.mp4 per GraphNodeOp gallery, sequentially on one DISPLAY.
+"""Record one real play.mp4 per GraphNodeOp gallery from the Raylib window.
 
-Do not parallelize: Raylib/Xvfb SIGSEGV when two captures share one display.
-If capture cannot start, write visual.capture.blocked and continue the rest.
+Launch the production gallery binding. Dump Raylib framebuffer stills.
+Stitch those stills into play.mp4. Do not invent videos. Do not use launcher
+--record: that path has no GraphOps scenario and would write a fake bundle.
+
+Sequential only: two Raylib captures on one DISPLAY SIGSEGV.
 """
 from __future__ import annotations
 
 import argparse
-import json
 import os
+import re
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 PREFIX = "capability_standard_graph_op_"
+CLI_PROJECT = "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj"
+CLI_DLL = "src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll"
+AUTO_EXIT_FRAME = 120
+# One still every 8 frames from first caption beat through auto-exit.
+STILL_FRAMES = list(range(24, AUTO_EXIT_FRAME + 1, 8))
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default=str(Path(__file__).resolve().parent.parent))
     parser.add_argument("--op", action="append", help="Record only these ops. Repeatable.")
+    parser.add_argument("--build", default="auto", choices=("auto", "always", "never"))
+    parser.add_argument(
+        "--publish-dir",
+        default="/opt/cursor/artifacts/graph-op-galleries",
+        help="Copy finished play.mp4 here for the cloud artifact viewer.",
+    )
     args = parser.parse_args()
     repo = Path(args.repo).resolve()
-    vignette_dir = repo / "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes"
-    ops = args.op or sorted(p.stem for p in vignette_dir.glob("*.json"))
-    launcher = repo / "scripts" / "run-mod-launcher.cmd"
-    failed = []
-    for op in ops:
+    vignette_dir = (
+        repo
+        / "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes"
+    )
+    ops = args.op or sorted(
+        p.stem for p in vignette_dir.glob("*.json") if not p.name.startswith("_")
+    )
+    if not ops:
+        print("No vignettes to record.", file=sys.stderr)
+        return 1
+
+    publish = Path(args.publish_dir)
+    publish.mkdir(parents=True, exist_ok=True)
+
+    failed: list[str] = []
+    build_mode = args.build
+    for index, op in enumerate(ops):
         sid = PREFIX + op
         out = repo / "artifacts" / "evidence" / sid
-        out.mkdir(parents=True, exist_ok=True)
-        env = os.environ.copy()
-        env["LUDOTS_TAKE_SCREENSHOT_FRAMES"] = "30,90,150"
-        env["LUDOTS_AUTO_EXIT_FRAME"] = "180"
-        cmd = [
-            "bash",
-            str(repo / "scripts" / "run-mod-launcher.sh") if (repo / "scripts" / "run-mod-launcher.sh").exists() else str(launcher),
-            "cli",
-            "launch",
-            f"${sid}",
-            "--adapter",
-            "raylib",
-            "--record",
-            str(out),
-        ]
-        if not (repo / "scripts" / "run-mod-launcher.sh").exists():
-            cmd = ["cmd.exe", "/c", str(launcher), "cli", "launch", f"${sid}", "--adapter", "raylib", "--record", str(out)]
-        print("Recording", sid, flush=True)
-        proc = subprocess.run(cmd, cwd=repo, env=env)
-        if proc.returncode != 0:
-            blocked = {
-                "kind": "visual.capture.blocked",
-                "subject": sid,
-                "blocker": f"launcher exit {proc.returncode}",
-            }
-            (out / "manifest.json").write_text(json.dumps(blocked, indent=2) + "\n", encoding="utf-8")
+        print(f"[{index + 1}/{len(ops)}] Recording {sid}", flush=True)
+        try:
+            record_one(repo, sid, op, out, publish, build_mode)
+        except Exception as exc:
+            print(f"FAILED {sid}: {exc}", file=sys.stderr, flush=True)
             failed.append(sid)
-    print(f"Recorded {len(ops) - len(failed)}/{len(ops)}; blocked {len(failed)}")
-    return 1 if failed else 0
+        else:
+            if build_mode == "auto":
+                build_mode = "never"
+
+    print(f"Recorded {len(ops) - len(failed)}/{len(ops)}; failed {len(failed)}")
+    if failed:
+        print("Failed:", ", ".join(failed), file=sys.stderr)
+        return 1
+    return 0
+
+
+def record_one(
+    repo: Path,
+    sid: str,
+    op: str,
+    out: Path,
+    publish: Path,
+    build_mode: str,
+) -> None:
+    if out.exists():
+        shutil.rmtree(out)
+    screens = out / "screens"
+    screens.mkdir(parents=True)
+    still_path = screens / "still.png"
+    env = os.environ.copy()
+    env["DISPLAY"] = ":99"
+    env["LIBGL_ALWAYS_SOFTWARE"] = "1"
+    env["GALLIUM_DRIVER"] = "llvmpipe"
+    env["LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY"] = "1"
+    env["LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY"] = "1"
+    env["LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW"] = "1"
+    env["LUDOTS_AUTO_EXIT_FRAME"] = str(AUTO_EXIT_FRAME)
+    env["LUDOTS_TAKE_SCREENSHOT_PATH"] = str(still_path)
+    env["LUDOTS_TAKE_SCREENSHOT_FRAMES"] = ",".join(str(frame) for frame in STILL_FRAMES)
+    env["LUDOTS_RAYLIB_DIAGNOSTIC_PATH"] = str(out / "raylib-diagnostic.log")
+    env["LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT"] = "0"
+
+    cli_dll = repo / CLI_DLL
+    if not cli_dll.is_file():
+        raise RuntimeError(f"Launcher CLI is not built: {cli_dll}")
+    cmd = [
+        "dotnet",
+        "exec",
+        "--roll-forward",
+        "Major",
+        str(cli_dll),
+        "launch",
+        sid,
+        "--adapter",
+        "raylib",
+        "--build",
+        build_mode,
+    ]
+    log = out / "launch.log"
+    with log.open("w", encoding="utf-8") as stream:
+        stream.write(f"$ {' '.join(cmd)}\n")
+        stream.flush()
+        proc = subprocess.Popen(
+            cmd,
+            cwd=repo,
+            env=env,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        try:
+            cli_exit = proc.wait(timeout=180)
+        except subprocess.TimeoutExpired as exc:
+            proc.kill()
+            raise RuntimeError(f"launcher CLI hung; see {log}") from exc
+
+    text = log.read_text(encoding="utf-8")
+    if cli_exit != 0:
+        raise RuntimeError(f"launcher exit {cli_exit}; see {log}")
+
+    pid_match = re.search(r"^pid=(\d+)\s*$", text, re.MULTILINE)
+    if pid_match is None:
+        raise RuntimeError(f"launcher did not print pid=; see {log}")
+    pid = int(pid_match.group(1))
+    wait_for_pid(pid, timeout_s=120)
+
+    pngs = sorted(screens.glob("still_*.png"))
+    if len(pngs) < 8:
+        raise RuntimeError(
+            f"Raylib wrote {len(pngs)} stills (need >= 8 real frames). See {log} and {out / 'raylib-diagnostic.log'}"
+        )
+
+    play = out / "play.mp4"
+    stitch_stills(pngs, play)
+    if not play.is_file() or play.stat().st_size < 20_000:
+        raise RuntimeError(f"play.mp4 missing or empty: {play}")
+
+    dest = publish / f"{op}.mp4"
+    shutil.copy2(play, dest)
+    print(f"  wrote {play} ({play.stat().st_size} bytes) and {dest}", flush=True)
+
+
+def wait_for_pid(pid: int, timeout_s: float) -> None:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        except PermissionError:
+            time.sleep(0.2)
+            continue
+        time.sleep(0.2)
+    raise RuntimeError(f"gallery process {pid} did not exit within {timeout_s}s")
+
+
+def stitch_stills(pngs: list[Path], play: Path) -> None:
+    list_file = play.parent / "frames.concat.txt"
+    lines: list[str] = []
+    for png in pngs:
+        lines.append(f"file '{png.as_posix()}'")
+        lines.append("duration 0.12")
+    lines.append(f"file '{pngs[-1].as_posix()}'")
+    list_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(list_file),
+        "-vf",
+        "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+        "-pix_fmt",
+        "yuv420p",
+        "-an",
+        str(play),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed: {proc.stderr[-2000:]}")
 
 
 if __name__ == "__main__":
