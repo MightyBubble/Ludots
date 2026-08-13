@@ -48,6 +48,110 @@
       "xCm": 16900,
       "yCm": -12100,
       "yawDeg": 80
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_size_small",
+      "xCm": 17600,
+      "yCm": -11800,
+      "yawDeg": 50,
+      "field": "localScale.xz",
+      "note": "small"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_size_large",
+      "xCm": 18600,
+      "yCm": -11800,
+      "yawDeg": 50,
+      "field": "localScale.xz",
+      "note": "large"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_thickness_thin",
+      "xCm": 17600,
+      "yCm": -11000,
+      "yawDeg": 18,
+      "field": "localScale.y",
+      "note": "thin"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_thickness_thick",
+      "xCm": 18600,
+      "yCm": -11000,
+      "yawDeg": 18,
+      "field": "localScale.y",
+      "note": "thick"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_tint_white",
+      "xCm": 19600,
+      "yCm": -11800,
+      "yawDeg": 50,
+      "field": "style.color",
+      "note": "white"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_tint_red",
+      "xCm": 20400,
+      "yCm": -11800,
+      "yawDeg": 50,
+      "field": "style.color",
+      "note": "red"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_yaw_along",
+      "xCm": 19600,
+      "yCm": -11000,
+      "yawDeg": 10,
+      "field": "yawDeg",
+      "note": "along"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_decal_yaw_across",
+      "xCm": 20400,
+      "yCm": -11000,
+      "yawDeg": 100,
+      "field": "yawDeg",
+      "note": "across"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_cue_small_green",
+      "xCm": 18800,
+      "yCm": -10200,
+      "yawDeg": 0,
+      "field": "localScale,style.color",
+      "note": "small green flash"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_cue_large_yellow",
+      "xCm": 19800,
+      "yCm": -10200,
+      "yawDeg": 0,
+      "field": "localScale,style.color",
+      "note": "large yellow flash"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_ribbon_narrow",
+      "xCm": 14800,
+      "yCm": -13200,
+      "yawDeg": 40,
+      "field": "worldSpline.width",
+      "note": "narrow"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_ribbon_wide",
+      "xCm": 14800,
+      "yCm": -12400,
+      "yawDeg": 40,
+      "field": "worldSpline.width",
+      "note": "wide"
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_ribbon_bordered",
+      "xCm": 14700,
+      "yCm": -14000,
+      "yawDeg": 25,
+      "field": "worldSpline.fill,border,p0-p3",
+      "note": "bordered curve"
     }
   ]
 }
