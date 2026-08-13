@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Assets
 
             RegisterPrimitive(WellKnownMeshKeys.Cube, PrimitiveMeshKind.Cube);
             RegisterPrimitive(WellKnownMeshKeys.Sphere, PrimitiveMeshKind.Sphere);
+            RegisterPrimitive(WellKnownMeshKeys.CueMarker, PrimitiveMeshKind.Cube);
         }
 
         private void RegisterPrimitive(string key, PrimitiveMeshKind kind)

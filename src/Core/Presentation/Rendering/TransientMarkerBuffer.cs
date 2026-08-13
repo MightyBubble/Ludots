@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Requests;
 
@@ -24,12 +23,16 @@ namespace Ludots.Core.Presentation.Rendering
 
         public bool TryAddMesh(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, float lifetimeSeconds)
         {
+            if (meshAssetId <= 0)
+            {
+                throw new InvalidOperationException("Transient mesh marker requires a registered meshAssetId.");
+            }
+
             if (_count >= _buffer.Length) return false;
             if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
             _buffer[_count++] = new TransientMarker
             {
                 StableId = AllocateStableId(),
-                Kind = TransientMarkerKind.Mesh,
                 MeshAssetId = meshAssetId,
                 Position = position,
                 Scale = scale,
@@ -44,53 +47,17 @@ namespace Ludots.Core.Presentation.Rendering
 
         public bool TryAddAnchoredMesh(int meshAssetId, Vector3 scale, Vector4 color, float lifetimeSeconds, Entity anchor, Vector3 anchorOffset)
         {
+            if (meshAssetId <= 0)
+            {
+                throw new InvalidOperationException("Transient anchored mesh marker requires a registered meshAssetId.");
+            }
+
             if (_count >= _buffer.Length) return false;
             if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
             _buffer[_count++] = new TransientMarker
             {
                 StableId = AllocateStableId(),
-                Kind = TransientMarkerKind.Mesh,
                 MeshAssetId = meshAssetId,
-                Position = anchorOffset,
-                Scale = scale,
-                Color = color,
-                Lifetime = lifetimeSeconds,
-                TimeLeft = lifetimeSeconds,
-                Anchor = anchor,
-                AnchorOffset = anchorOffset,
-            };
-            return true;
-        }
-
-        public bool TryAddPrefab(int prefabId, Vector3 position, Vector3 scale, Vector4 color, float lifetimeSeconds)
-        {
-            if (_count >= _buffer.Length) return false;
-            if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
-            _buffer[_count++] = new TransientMarker
-            {
-                StableId = AllocateStableId(),
-                Kind = TransientMarkerKind.Prefab,
-                PrefabId = prefabId,
-                Position = position,
-                Scale = scale,
-                Color = color,
-                Lifetime = lifetimeSeconds,
-                TimeLeft = lifetimeSeconds,
-                Anchor = default,
-                AnchorOffset = default,
-            };
-            return true;
-        }
-
-        public bool TryAddAnchoredPrefab(int prefabId, Vector3 scale, Vector4 color, float lifetimeSeconds, Entity anchor, Vector3 anchorOffset)
-        {
-            if (_count >= _buffer.Length) return false;
-            if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
-            _buffer[_count++] = new TransientMarker
-            {
-                StableId = AllocateStableId(),
-                Kind = TransientMarkerKind.Prefab,
-                PrefabId = prefabId,
                 Position = anchorOffset,
                 Scale = scale,
                 Color = color,
@@ -130,22 +97,6 @@ namespace Ludots.Core.Presentation.Rendering
                 Vector4 color = marker.Color;
                 color.W *= alpha;
 
-                if (marker.Kind == TransientMarkerKind.Prefab)
-                {
-                    requests.Add(PresentationRequest.FromPrefab(
-                        marker.Anchor,
-                        marker.PrefabId,
-                        marker.StableId,
-                        position,
-                        Quaternion.Identity,
-                        marker.Scale,
-                        color,
-                        LODLevel.High,
-                        PrefabFinalizationContext.Empty));
-                    i++;
-                    continue;
-                }
-
                 requests.Add(PresentationRequest.FromVisualProxy(marker.Anchor, new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Presenter,
@@ -174,9 +125,7 @@ namespace Ludots.Core.Presentation.Rendering
         public struct TransientMarker
         {
             public int StableId;
-            public TransientMarkerKind Kind;
             public int MeshAssetId;
-            public int PrefabId;
             public Vector3 Position;
             public Vector3 Scale;
             public Vector4 Color;
@@ -184,12 +133,6 @@ namespace Ludots.Core.Presentation.Rendering
             public float TimeLeft;
             public Entity Anchor;
             public Vector3 AnchorOffset;
-        }
-
-        public enum TransientMarkerKind : byte
-        {
-            Mesh = 0,
-            Prefab = 1,
         }
     }
 }

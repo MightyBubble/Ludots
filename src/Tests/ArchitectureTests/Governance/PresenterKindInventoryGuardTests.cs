@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Requests;
@@ -119,6 +121,63 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That((byte)PresentationRequestKind.ClearTransientVisualProjection, Is.EqualTo(11));
         }
 
+        [Test]
+        public void ProductionPresentationPath_MustNotCallPrefabBypass()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "mods"),
+            };
+            string[] forbidden =
+            {
+                "TryAddPrefab(",
+                "TryAddAnchoredPrefab(",
+                "PresentationRequest.FromPrefab(",
+                "PrefabFinalizationPipeline.FinalizeVisuals(",
+            };
+
+            var hits = new List<string>();
+            foreach (string dir in directories)
+            {
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                    if (relative.Contains("/Prefab", StringComparison.Ordinal) ||
+                        Path.GetFileName(file).StartsWith("Prefab", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string[] lines = File.ReadAllLines(file);
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string line = lines[i];
+                        for (int f = 0; f < forbidden.Length; f++)
+                        {
+                            if (line.Contains(forbidden[f], StringComparison.Ordinal))
+                            {
+                                hits.Add($"{relative}:{i + 1}: {line.Trim()}");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail("Production presentation path still uses Prefab bypass:\n" + string.Join("\n", hits));
+            }
+        }
+
         private static void AssertKindAllowlist(Type enumType, string[] expected, string failMessage)
         {
             string[] actual = Enum.GetNames(enumType);
@@ -134,6 +193,23 @@ namespace Ludots.Tests.Architecture.Governance
                 actual.Distinct(StringComparer.Ordinal).Count(),
                 Is.EqualTo(actual.Length),
                 $"{enumType.Name} must not duplicate names.");
+        }
+
+        private static string FindRepoRoot()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            for (int i = 0; i < 10 && dir != null; i++)
+            {
+                if (Directory.Exists(Path.Combine(dir.FullName, "src")) &&
+                    Directory.Exists(Path.Combine(dir.FullName, "assets")))
+                {
+                    return dir.FullName;
+                }
+
+                dir = dir.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
         }
     }
 }

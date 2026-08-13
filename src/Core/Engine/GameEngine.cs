@@ -1110,7 +1110,6 @@ namespace Ludots.Core.Engine
                 ResolveInstancedBatchGasEventKey,
                 ResolveInstancedBatchPresentationEventKey).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationBehaviorConfigLoader(ConfigPipeline, presentationBehaviors, meshAssets).Load(ConfigCatalog, ConfigConflictReport);
-            var presentationBehaviorResolver = new PresentationBehaviorResolver(presentationBehaviors, meshAssets);
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
@@ -1545,7 +1544,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);
             SetService(CoreServiceKeys.InstancedBatchOperationBuffer, instancedBatchOperations);
             SetService(CoreServiceKeys.PresentationBehaviorRegistry, presentationBehaviors);
-            SetService(CoreServiceKeys.PresentationBehaviorResolver, presentationBehaviorResolver);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
@@ -1828,7 +1826,7 @@ namespace Ludots.Core.Engine
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext, presentationTimingDiagnostics));
             RegisterPresentationSystem(presentationEntityLifecycleSystem);
-            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, presentationPrefabs));
+            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, meshAssets));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));

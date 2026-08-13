@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
@@ -8,7 +9,6 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Primitives;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
@@ -24,8 +24,8 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly RoadMoveOrderExpander _expander;
         private InputOrderMappingSystem? _mapping;
         private TransientMarkerBuffer? _transientMarkers;
-        private PrefabRegistry? _prefabs;
-        private int _cueMarkerPrefabId;
+        private MeshAssetRegistry? _meshes;
+        private int _cueMarkerMeshId;
         private bool _initialized;
 
         public RoadNetworkLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext context)
@@ -88,9 +88,9 @@ namespace RoadNetworkShowcaseMod.Systems
                                 markerObj is TransientMarkerBuffer transientMarkers
                 ? transientMarkers
                 : null;
-            _prefabs = _globals.TryGetValue(CoreServiceKeys.PresentationPrefabRegistry.Name, out var prefabObj) &&
-                       prefabObj is PrefabRegistry prefabs
-                ? prefabs
+            _meshes = _globals.TryGetValue(CoreServiceKeys.PresentationMeshAssetRegistry.Name, out var meshObj) &&
+                      meshObj is MeshAssetRegistry meshes
+                ? meshes
                 : null;
             if (_mapping == null)
             {
@@ -133,20 +133,16 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private void EmitSubmitCue(in Order order, bool accepted)
         {
-            if (_transientMarkers == null ||
-                !OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out var targetWorldCm))
+            if (!OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out var targetWorldCm))
             {
                 return;
             }
 
-            int prefabId = ResolveCueMarkerPrefabId();
-            if (prefabId <= 0)
-            {
-                return;
-            }
-
-            _transientMarkers.TryAddPrefab(
-                prefabId,
+            TransientMarkerBuffer markers = _transientMarkers
+                ?? throw new InvalidOperationException("Road network order cues require TransientMarkerBuffer.");
+            int meshId = ResolveCueMarkerMeshId();
+            if (!markers.TryAddMesh(
+                meshId,
                 new System.Numerics.Vector3(
                     WorldUnits.CmToM(targetWorldCm.X),
                     0.15f,
@@ -155,23 +151,26 @@ namespace RoadNetworkShowcaseMod.Systems
                 accepted
                     ? new System.Numerics.Vector4(0.28f, 0.94f, 0.60f, 1f)
                     : new System.Numerics.Vector4(1.0f, 0.52f, 0.18f, 1f),
-                accepted ? 0.75f : 0.90f);
+                accepted ? 0.75f : 0.90f))
+            {
+                throw new InvalidOperationException("TransientMarkerBuffer is full while emitting road-network order cue.");
+            }
         }
 
-        private int ResolveCueMarkerPrefabId()
+        private int ResolveCueMarkerMeshId()
         {
-            if (_cueMarkerPrefabId > 0)
+            if (_cueMarkerMeshId > 0)
             {
-                return _cueMarkerPrefabId;
+                return _cueMarkerMeshId;
             }
 
-            if (_prefabs == null)
+            if (_meshes == null)
             {
-                return 0;
+                throw new InvalidOperationException("Road network order cues require PresentationMeshAssetRegistry.");
             }
 
-            _cueMarkerPrefabId = _prefabs.GetId(WellKnownPrefabKeys.CueMarker);
-            return _cueMarkerPrefabId;
+            _cueMarkerMeshId = WellKnownMeshKeys.RequireCueMarkerId(_meshes);
+            return _cueMarkerMeshId;
         }
     }
 }

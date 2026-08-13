@@ -305,7 +305,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");
         public static readonly ServiceKey<InstancedBatchOperationBuffer> InstancedBatchOperationBuffer = new("InstancedBatchOperationBuffer");
         public static readonly ServiceKey<PresentationBehaviorRegistry> PresentationBehaviorRegistry = new("PresentationBehaviorRegistry");
-        public static readonly ServiceKey<PresentationBehaviorResolver> PresentationBehaviorResolver = new("PresentationBehaviorResolver");
         public static readonly ServiceKey<AnimatorControllerRegistry> AnimatorControllerRegistry = new("AnimatorControllerRegistry");
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");

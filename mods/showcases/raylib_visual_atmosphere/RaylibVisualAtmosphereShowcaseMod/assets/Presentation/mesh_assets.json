@@ -22,46 +22,18 @@
   },
   {
     "id": "raylib_visual_atmosphere.decal_footprints",
-    "type": "Prefab",
-    "parts": [
-      {
-        "kind": "Decal",
-        "size": [1, 1],
-        "alignToSurface": true
-      }
-    ]
+    "type": "Billboard"
   },
   {
     "id": "raylib_visual_atmosphere.decal_scorch",
-    "type": "Prefab",
-    "parts": [
-      {
-        "kind": "Decal",
-        "size": [1, 1],
-        "alignToSurface": true
-      }
-    ]
+    "type": "Billboard"
   },
   {
     "id": "raylib_visual_atmosphere.decal_blood",
-    "type": "Prefab",
-    "parts": [
-      {
-        "kind": "Decal",
-        "size": [1, 1],
-        "alignToSurface": true
-      }
-    ]
+    "type": "Billboard"
   },
   {
     "id": "raylib_visual_atmosphere.decal_cracks",
-    "type": "Prefab",
-    "parts": [
-      {
-        "kind": "Decal",
-        "size": [1, 1],
-        "alignToSurface": true
-      }
-    ]
+    "type": "Billboard"
   }
 ]

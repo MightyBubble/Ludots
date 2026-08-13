@@ -6,27 +6,35 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Primitives;
 using Ludots.Core.Presentation.Rendering;
- 
+
 namespace Ludots.Core.Presentation.Systems
 {
     public sealed class ResponseChainDirectorSystem : BaseSystem<World, float>
     {
+        private static readonly Vector3 CueMarkerScale = new(0.2f, 0.2f, 0.2f);
+        private static readonly Vector3 CueMarkerAnchorOffset = new(0f, 0.2f, 0f);
+
         private readonly OrderRequestQueue _orderRequests;
         private readonly ResponseChainTelemetryBuffer _telemetry;
         private readonly ResponseChainUiState _ui;
         private readonly TransientMarkerBuffer _markers;
-        private readonly int _cueMarkerPrefabId;
- 
-        public ResponseChainDirectorSystem(World world, OrderRequestQueue orderRequests, ResponseChainTelemetryBuffer telemetry, ResponseChainUiState ui, TransientMarkerBuffer markers, PrefabRegistry prefabs)
+        private readonly int _cueMarkerMeshId;
+
+        public ResponseChainDirectorSystem(
+            World world,
+            OrderRequestQueue orderRequests,
+            ResponseChainTelemetryBuffer telemetry,
+            ResponseChainUiState ui,
+            TransientMarkerBuffer markers,
+            MeshAssetRegistry meshes)
             : base(world)
         {
             _orderRequests = orderRequests;
             _telemetry = telemetry;
             _ui = ui;
             _markers = markers;
-            _cueMarkerPrefabId = prefabs.GetId(WellKnownPrefabKeys.CueMarker);
+            _cueMarkerMeshId = WellKnownMeshKeys.RequireCueMarkerId(meshes);
         }
 
         public override void Update(in float dt)
@@ -41,7 +49,7 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     continue;
                 }
- 
+
                 Vector3 pos = default;
                 if (evt.Target != Entity.Null && World.IsAlive(evt.Target) && World.Has<VisualTransform>(evt.Target))
                 {
@@ -55,7 +63,7 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     continue;
                 }
- 
+
                 Vector4 color = new Vector4(1f, 1f, 1f, 1f);
                 if (evt.Outcome != ResponseChainResolveOutcome.None)
                 {
@@ -68,11 +76,11 @@ namespace Ludots.Core.Presentation.Systems
                         _ => new Vector4(1.0f, 0.3f, 0.3f, 1f)
                     };
                 }
- 
+
                 bool follow = evt.Target != Entity.Null && World.IsAlive(evt.Target) && World.Has<VisualTransform>(evt.Target);
                 bool added = follow
-                    ? _markers.TryAddAnchoredPrefab(_cueMarkerPrefabId, Vector3.One, color, 0.35f, evt.Target, new Vector3(0f, 0.2f, 0f))
-                    : _markers.TryAddPrefab(_cueMarkerPrefabId, pos, Vector3.One, color, 0.35f);
+                    ? _markers.TryAddAnchoredMesh(_cueMarkerMeshId, CueMarkerScale, color, 0.35f, evt.Target, CueMarkerAnchorOffset)
+                    : _markers.TryAddMesh(_cueMarkerMeshId, pos, CueMarkerScale, color, 0.35f);
                 if (!added)
                 {
                     throw new InvalidOperationException("TransientMarkerBuffer is full while emitting response-chain cue marker.");

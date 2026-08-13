@@ -39,8 +39,7 @@ namespace CameraAcceptanceMod.Runtime
 
         private CameraAcceptancePanelController? _panelController;
         private bool _commandSourceAcquiredCallbacksInstalled;
-        private const string ProjectionCueFixturePrefabKey = "camera_acceptance_projection_cue_fixture_prefab";
-        private int _cueMarkerPrefabId;
+        private int _cueMarkerMeshId;
         private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
@@ -493,12 +492,15 @@ namespace CameraAcceptanceMod.Runtime
                 throw new System.InvalidOperationException("TransientMarkerBuffer is required for projection verification.");
             }
 
-            markers.TryAddPrefab(
-                ResolveCueMarkerPrefabId(engine),
+            if (!markers.TryAddMesh(
+                ResolveCueMarkerMeshId(engine),
                 WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
                 new Vector3(0.45f),
                 new Vector4(0.15f, 0.88f, 1f, 1f),
-                0.45f);
+                0.45f))
+            {
+                throw new System.InvalidOperationException("TransientMarkerBuffer is full while emitting projection verification cue marker.");
+            }
         }
 
         private static void EnqueueProjectionSpawnBatch(GameEngine engine, in WorldCmInt2 worldCm)
@@ -569,25 +571,20 @@ namespace CameraAcceptanceMod.Runtime
             return (Hash(seed) & 0x00FFFFFFu) / 16777216f;
         }
 
-        private int ResolveCueMarkerPrefabId(GameEngine engine)
+        private int ResolveCueMarkerMeshId(GameEngine engine)
         {
-            if (_cueMarkerPrefabId != 0)
+            if (_cueMarkerMeshId != 0)
             {
-                return _cueMarkerPrefabId;
+                return _cueMarkerMeshId;
             }
 
-            if (engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) is not PrefabRegistry prefabs)
+            if (engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) is not MeshAssetRegistry meshes)
             {
-                throw new System.InvalidOperationException("PresentationPrefabRegistry is required for projection verification.");
+                throw new System.InvalidOperationException("PresentationMeshAssetRegistry is required for projection verification.");
             }
 
-            _cueMarkerPrefabId = prefabs.GetId(ProjectionCueFixturePrefabKey);
-            if (_cueMarkerPrefabId == 0)
-            {
-                throw new System.InvalidOperationException($"Prefab '{ProjectionCueFixturePrefabKey}' is required for projection verification.");
-            }
-
-            return _cueMarkerPrefabId;
+            _cueMarkerMeshId = WellKnownMeshKeys.RequireCueMarkerId(meshes);
+            return _cueMarkerMeshId;
         }
 
         private static string ResolveActiveBlendCameraId(GameEngine engine)

@@ -451,23 +451,94 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext, int materialId = 0)
         {
-            _prefabVisuals.Clear();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                meshAssetId,
-                stableId: 0,
-                position,
-                rotation,
-                scale,
-                color,
-                finalizationContext,
-                _prefabVisuals,
-                instanceMaterialOverrideId: materialId);
-
+            _ = finalizationContext;
+            CollectLeafVisuals(meshAssetId, position, rotation, scale, color, meshes, materialId);
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
                 SubmitFinalizedVisual(in visual, camera);
             }
+        }
+
+        private void CollectLeafVisuals(
+            int meshAssetId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 color,
+            MeshAssetRegistry meshes,
+            int materialId)
+        {
+            _prefabVisuals.Clear();
+            if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw unknown meshAssetId={meshAssetId}.");
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                case MeshAssetType.Model:
+                case MeshAssetType.Billboard:
+                    _prefabVisuals.Add(PrefabFinalizedVisual.Mesh(
+                        meshAssetId,
+                        descriptor,
+                        stableId: 0,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        materialId));
+                    return;
+                case MeshAssetType.ProceduralMesh:
+                {
+                    ProceduralMeshAssetData procedural = descriptor.ProceduralMeshData
+                        ?? throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} procedural meshAssetId={meshAssetId} is missing ProceduralMeshData.");
+                    _prefabVisuals.Add(PrefabFinalizedVisual.ProceduralMesh(
+                        meshAssetId,
+                        descriptor,
+                        stableId: 0,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        BuildProceduralMaterialBindings(meshAssetId, procedural, materialId),
+                        procedural.LocalBounds));
+                    return;
+                }
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite mesh type '{descriptor.Type}' for meshAssetId={meshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
+        private static PrefabMaterialBinding[] BuildProceduralMaterialBindings(
+            int meshAssetId,
+            ProceduralMeshAssetData procedural,
+            int instanceMaterialOverrideId)
+        {
+            if (procedural.SubmeshCount <= 0)
+            {
+                throw new InvalidOperationException($"Procedural mesh assetId={meshAssetId} must commit at least one submesh.");
+            }
+
+            if (instanceMaterialOverrideId > 0 && procedural.SubmeshCount > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Procedural mesh assetId={meshAssetId} uses {procedural.SubmeshCount} submeshes and cannot receive an instance material override.");
+            }
+
+            var bindings = new PrefabMaterialBinding[procedural.SubmeshCount];
+            for (int i = 0; i < procedural.SubmeshCount; i++)
+            {
+                int materialId = instanceMaterialOverrideId > 0
+                    ? instanceMaterialOverrideId
+                    : procedural.Submeshes[i].MaterialAssetId;
+                bindings[i] = new PrefabMaterialBinding(i, materialId);
+            }
+
+            return bindings;
         }
 
         private static bool IsHostSurfaceLane(in PrimitiveDrawItem item)
@@ -733,19 +804,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext, int materialId = 0)
         {
-            _prefabVisuals.Clear();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                meshAssetId,
-                stableId: 0,
-                position,
-                rotation,
-                scale,
-                color,
-                finalizationContext,
-                _prefabVisuals,
-                instanceMaterialOverrideId: materialId);
-
+            _ = finalizationContext;
+            CollectLeafVisuals(meshAssetId, position, rotation, scale, color, meshes, materialId);
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
                 DrawFinalizedVisual(in visual, camera);
@@ -2364,7 +2424,8 @@ namespace Ludots.Client.Raylib.Rendering
                 PrimitiveDrawItem item = items[i];
                 if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot draw unknown meshAssetId={item.MeshAssetId}.");
                 }
 
                 switch (descriptor.Type)
@@ -2383,9 +2444,12 @@ namespace Ludots.Client.Raylib.Rendering
                             item.Color,
                             default,
                             meshes,
-                            new PrefabFinalizationContext(null),
+                            PrefabFinalizationContext.Empty,
                             item.MaterialId);
                         break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses composite mesh type '{descriptor.Type}' for meshAssetId={item.MeshAssetId}. Author Presenter children instead of Prefab.");
                 }
             }
 
