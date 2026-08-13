@@ -695,6 +695,11 @@ namespace Ludots.Adapter.Raylib
                             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
+                            if (visualHeightmap != null)
+                            {
+                                visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                            }
+
                             primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),

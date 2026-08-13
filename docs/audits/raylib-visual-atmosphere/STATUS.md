@@ -23,6 +23,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | Full IBL / cascaded shadows | MASTER P2; heavy host work beyond current directional MR |
 | Depth-reconstruct / deferred Decals | No samplable main-scene depth texture yet; VH mesh clip projection is the shipped path |
 | Projected Decals on non-VH receivers | VertexMap / props not yet implementing `IRaylibReceiverMeshProjector` |
+| P3 player field-contrast shot | Contract tests only; camera 08 gallery evidence waits on the tropical-island field gallery PR |
 | Normal-mapped PBR | Meshes lack tangents; binder loads normal URI but shader skips without TBN |
 
 ## Evidence

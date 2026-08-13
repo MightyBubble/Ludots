@@ -686,23 +686,15 @@ namespace Ludots.Core.Presentation.Systems
             return materialId;
         }
 
-        private Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
+        internal Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
         {
-            if (asset.AssetKind == AssetKind.Decal)
+            float scaleParamMultiplier = 1f;
+            if (asset.ScaleParamKey >= 0)
             {
-                Vector3 decalScale = presenterWorldScale * asset.LocalScale;
-                if (asset.ScaleParamKey >= 0)
-                    decalScale *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
-                _ = ProjectedDecalVolume.FromVisualScale(decalScale);
-                return decalScale;
+                scaleParamMultiplier = RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
             }
 
-            Vector3 scale = presenterWorldScale;
-            scale = scale == Vector3.Zero ? Vector3.One : scale;
-            scale *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;
-            if (asset.ScaleParamKey >= 0)
-                scale *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
-            return scale;
+            return AssetBindingVisualScale.Resolve(in asset, presenterWorldScale, scaleParamMultiplier);
         }
 
         private static Quaternion ResolveRotation(in AssetBindingConfig asset, Quaternion presenterWorldRotation)

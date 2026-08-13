@@ -58,8 +58,11 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locDecalProjectWorldToDecal;
         private int _locDecalProjectAlphaCutoff;
         private int _locDecalProjectMinReceiverNDotUp;
-        private const int DecalProjectionHeightSampleSegments = 6;
+        private int _locDecalProjectReceiverDepthBias;
         private const float DecalMinReceiverNDotUp = 0.05f;
+        private const float DecalReceiverDepthBiasMeters = 0.04f;
+        private const float DecalAlphaBlendCutoff = 0.02f;
+        private const float DecalCutoutAlphaCutoff = DefaultVegetationAlphaCutoff;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
@@ -912,13 +915,17 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
             }
 
-            float yaw = ExtractYawRad(rotation);
-            FitDecalProjectorVolume(
+            if (!WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector is yaw-about-Y only; authored rotation is not a planar yaw.");
+            }
+
+            Vector3 projectorCenter = projector.FitYawedStampProjectorCenter(
                 position,
                 yaw,
-                volume,
-                stableId,
-                out Vector3 projectorCenter);
+                volume.StampSizeMeters,
+                stableId);
             if (!volume.TryBuildWorldToLocal(
                     projectorCenter,
                     yaw,
@@ -952,9 +959,10 @@ namespace Ludots.Client.Raylib.Rendering
 
             EnsureDecalProjectShader();
             float alphaCutoff = blendMode == MaterialBlendMode.Cutout
-                ? DefaultVegetationAlphaCutoff
-                : 0.02f;
+                ? DecalCutoutAlphaCutoff
+                : DecalAlphaBlendCutoff;
             float minReceiver = DecalMinReceiverNDotUp;
+            float receiverDepthBias = DecalReceiverDepthBiasMeters;
             Vector4 colDiffuse = Vector4.One;
             Vector4 tint = color;
             RaylibMatrix worldToDecalRay = RaylibMatrix.FromSystemNumerics(worldToDecal);
@@ -978,6 +986,11 @@ namespace Ludots.Client.Raylib.Rendering
                 _decalProjectShader,
                 _locDecalProjectMinReceiverNDotUp,
                 &minReceiver,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectReceiverDepthBias,
+                &receiverDepthBias,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
 
             bool blending = TryBeginAuthorBlendMode(blendMode);
@@ -1055,6 +1068,7 @@ namespace Ludots.Client.Raylib.Rendering
             _locDecalProjectWorldToDecal = Rl.GetShaderLocation(_decalProjectShader, "matWorldToDecal");
             _locDecalProjectAlphaCutoff = Rl.GetShaderLocation(_decalProjectShader, "alphaCutoff");
             _locDecalProjectMinReceiverNDotUp = Rl.GetShaderLocation(_decalProjectShader, "minReceiverNDotUp");
+            _locDecalProjectReceiverDepthBias = Rl.GetShaderLocation(_decalProjectShader, "receiverDepthBias");
             int locMap = Rl.GetShaderLocation(_decalProjectShader, "texture0");
             int locMvp = Rl.GetShaderLocation(_decalProjectShader, "mvp");
             int locMatModel = Rl.GetShaderLocation(_decalProjectShader, "matModel");
@@ -1065,6 +1079,7 @@ namespace Ludots.Client.Raylib.Rendering
                 _locDecalProjectWorldToDecal < 0 ||
                 _locDecalProjectAlphaCutoff < 0 ||
                 _locDecalProjectMinReceiverNDotUp < 0 ||
+                _locDecalProjectReceiverDepthBias < 0 ||
                 locMap < 0 ||
                 locMvp < 0 ||
                 locMatModel < 0 ||
@@ -1076,52 +1091,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             _decalProjectShaderReady = true;
-        }
-
-        private void FitDecalProjectorVolume(
-            in Vector3 position,
-            float yawRad,
-            in ProjectedDecalVolume volume,
-            int stableId,
-            out Vector3 projectorCenter)
-        {
-            projectorCenter = position;
-            if (_frameVisualHeightmap == null)
-            {
-                return;
-            }
-
-            Vector2 stamp = volume.StampSizeMeters;
-            float cos = MathF.Cos(yawRad);
-            float sin = MathF.Sin(yawRad);
-            float minHeightM = float.PositiveInfinity;
-            float maxHeightM = float.NegativeInfinity;
-            int samples = DecalProjectionHeightSampleSegments;
-            for (int y = 0; y <= samples; y++)
-            {
-                float v = (y / (float)samples) - 0.5f;
-                float localZ = v * stamp.Y;
-                for (int x = 0; x <= samples; x++)
-                {
-                    float u = (x / (float)samples) - 0.5f;
-                    float localX = u * stamp.X;
-                    float worldX = position.X + (localX * cos) - (localZ * sin);
-                    float worldZ = position.Z + (localX * sin) + (localZ * cos);
-                    float worldXCm = worldX * WorldUnits.CmPerMeter;
-                    float worldYCm = worldZ * WorldUnits.CmPerMeter;
-                    if (!_frameVisualHeightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
-                    {
-                        throw new InvalidOperationException(
-                            $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} cannot sample VisualHeightmap at ({worldXCm:F1},{worldYCm:F1}) while fitting projector volume.");
-                    }
-
-                    float heightM = WorldUnits.CmToM(heightCm);
-                    minHeightM = MathF.Min(minHeightM, heightM);
-                    maxHeightM = MathF.Max(maxHeightM, heightM);
-                }
-            }
-
-            projectorCenter = new Vector3(position.X, (minHeightM + maxHeightM) * 0.5f, position.Z);
         }
 
         private void DrawVfxVisual(in PrefabFinalizedVisual visual, Camera3D camera)

@@ -40,6 +40,7 @@ namespace Ludots.Core.Presentation.Rendering
             return new ProjectedDecalVolume(stampWidth, stampDepth, thickness);
         }
 
+        // Raylib stamps are a world-up box spun only about Y. Pitch/roll must fail at the adapter, not be silently dropped here.
         public bool TryBuildWorldToLocal(
             in Vector3 projectorCenter,
             float yawRad,

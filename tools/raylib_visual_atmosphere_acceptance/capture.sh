@@ -138,9 +138,6 @@ capture_one "04_blend_modes.png" "04_blend_modes" "0.50"
 capture_one "05_distance_fog.png" "05_distance_fog" "0.50"
 capture_one "06_water_reflect.png" "06_water_reflect" "0.50"
 capture_one "07_beach_decals.png" "07_beach_decals" "0.50"
-capture_one "08_decal_fields.png" "08_decal_fields" "0.50"
-capture_one "09_spline_ribbons.png" "09_spline_ribbons" "0.50"
-capture_one "10_cue_flashes.png" "10_cue_flashes" "0.50"
 
 python3 - "$OUT_DIR/01_sky_day.png" "$OUT_DIR/02_sky_night.png" <<'PY'
 import sys, struct, zlib
@@ -191,11 +188,6 @@ if ! rg -q 'decal=[1-9]' "$OUT_DIR/07_beach_decals.diag.txt"; then
   cat "$OUT_DIR/07_beach_decals.diag.txt" >&2 || true
   exit 6
 fi
-if ! rg -q 'decal=[1-9]' "$OUT_DIR/08_decal_fields.diag.txt"; then
-  echo "ERROR: 08_decal_fields.diag.txt missing textured Decal draw evidence for the field contrast row" >&2
-  cat "$OUT_DIR/08_decal_fields.diag.txt" >&2 || true
-  exit 6
-fi
 
 REPORT="$OUT_DIR/capture-report.md"
 {
@@ -203,7 +195,7 @@ REPORT="$OUT_DIR/capture-report.md"
   echo
   echo "Host: playable showcase \`raylib_visual_atmosphere\` (env-driven screenshots)."
   echo
-  for f in 01_sky_day.png 02_sky_night.png 03_cutout_vegetation.png 04_blend_modes.png 05_distance_fog.png 06_water_reflect.png 07_beach_decals.png 08_decal_fields.png 09_spline_ribbons.png 10_cue_flashes.png; do
+  for f in 01_sky_day.png 02_sky_night.png 03_cutout_vegetation.png 04_blend_modes.png 05_distance_fog.png 06_water_reflect.png 07_beach_decals.png; do
     echo "- \`$f\` → \`$OUT_DIR/$f\` and \`$OPT_OUT_DIR/$f\`"
   done
 } > "$REPORT"

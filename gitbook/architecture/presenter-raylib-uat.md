@@ -192,6 +192,7 @@ blacksmith_root
 |------|----------|----------|---------|
 | Decal + SnapToGround | `"grounding": "SnapToGround"` | 只负责落点高度 | 印上去是投影，不是把 quad 转到法线 |
 | 缺投影器 | 未调用 `BindReceiverMeshProjector` | 绘制失败 | 禁止静默改回平片 |
+| 投影器不能拟合 | 绑定了只会画、不会采样高度的接收面 | 绘制失败 | 禁止静默留在作者 Y / 单位方片 |
 
 ### 3.3 Scale → 投影盒
 
@@ -202,7 +203,19 @@ blacksmith_root
 | `Scale.X` / `Scale.Z` | 印记在接收面切向平面上的边长（米） |
 | `Scale.Y` | 投影盒厚度（米），用来挑重叠接收网格 |
 
-链路：`presenters.json` `localScale` → `VisualProxy.Scale` → `ProjectedDecalVolume`。片元着色器按印记 XZ 裁剪；Y 盖不切脊线。Raylib 先把高度图块接到 `IRaylibReceiverMeshProjector`；VertexMap / 道具接收面以后实现同一接口。
+链路：`presenters.json` `localScale` → `VisualProxy.Scale` → `ProjectedDecalVolume`。片元着色器按印记 XZ 裁剪；Y 盖不切脊线。Raylib 先把高度图块接到 `IRaylibReceiverMeshProjector`；投影盒 Y 必须走同一接口的 `FitYawedStampProjectorCenter`。未绑定投影器、投影器不能采样接收面、印记和接收面没有重叠、没有 host albedo → 失败响。禁止静默跳过 Y 拟合、禁止改回世界朝上的平片，也禁止把 GroundOverlay 冒充贴花。VertexMap / 道具接收面以后实现同一接口。
+
+玩家机位 `08` 的字段对照沙滩（大小/厚度并排）不在本页证明范围：本页只验收合同测试。热带岛对照区拍摄属于字段画廊 PR。
+
+Raylib 适配器常量（不是作者字段，测试不得钉死字面量）：
+
+| 常量 | 用途 |
+|------|------|
+| 印记高度采样分段 | 高度图投影器在偏航印记下采样接收面高度 |
+| `minReceiverNDotUp` | 片元丢掉朝下/悬崖面 |
+| `receiverDepthBias` | 沿法线微移，让重绘三角赢过不透明通道的深度测试 |
+| Cutout alpha | 与植被 cutout 共用阈值，直到贴花材质有自己的 cutoff 字段 |
+| 偏航 OBB | 投影盒只绕世界 Y 转；带俯仰/滚转的旋转失败响 |
 
 ---
 

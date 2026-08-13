@@ -63,10 +63,5 @@
         "alignToSurface": true
       }
     ]
-  },
-  {
-    "id": "cue_marker",
-    "type": "Primitive",
-    "primitiveKind": "Cube"
   }
 ]
