@@ -15,7 +15,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Client.Raylib.Rendering
 {
-    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable
+    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibTerrainMeshProjector
     {
         public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
         public const string BackendIdRaylib = "raylib";
@@ -311,6 +311,53 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EvictUnusedChunks(240);
+        }
+
+        public int DrawMeshesOverlappingAabbMeters(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ,
+            Material material)
+        {
+            if (!float.IsFinite(minX) || !float.IsFinite(minY) || !float.IsFinite(minZ) ||
+                !float.IsFinite(maxX) || !float.IsFinite(maxY) || !float.IsFinite(maxZ))
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} requires finite AABB bounds.");
+            }
+
+            if (minX > maxX || minY > maxY || minZ > maxZ)
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} AABB min must be <= max.");
+            }
+
+            EnsureInitialized();
+            if (_chunks.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap before drawing Decals.");
+            }
+
+            int drawn = 0;
+            RaylibMatrix identity = RaylibMatrix.Identity;
+            foreach (ChunkGpu gpu in _chunks.Values)
+            {
+                if (gpu.MaxX < minX || gpu.MinX > maxX ||
+                    gpu.MaxY < minY || gpu.MinY > maxY ||
+                    gpu.MaxZ < minZ || gpu.MinZ > maxZ)
+                {
+                    continue;
+                }
+
+                Rl.DrawMesh(gpu.Mesh, material, identity);
+                drawn++;
+            }
+
+            return drawn;
         }
 
         private void EnsureInitialized()
@@ -725,11 +772,18 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             long buildStart = Stopwatch.GetTimestamp();
+            ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
             ChunkGpu gpu = new()
             {
                 Mesh = CreateChunkMesh(in chunk),
                 Revision = chunk.Revision,
                 LastUsedFrame = _frameIndex,
+                MinX = chunk.Bounds.Left * 0.01f,
+                MaxX = chunk.Bounds.Right * 0.01f,
+                MinY = minHeightCm * 0.01f,
+                MaxY = maxHeightCm * 0.01f,
+                MinZ = chunk.Bounds.Top * 0.01f,
+                MaxZ = chunk.Bounds.Bottom * 0.01f,
             };
             BuiltChunkCountLastFrame++;
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
@@ -1067,6 +1121,12 @@ namespace Ludots.Client.Raylib.Rendering
             public Mesh Mesh;
             public int Revision;
             public int LastUsedFrame;
+            public float MinX;
+            public float MinY;
+            public float MinZ;
+            public float MaxX;
+            public float MaxY;
+            public float MaxZ;
 
             public void Dispose()
             {

@@ -78,6 +78,14 @@
       <Link>decal_unlit.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\decal_project.vs">
+      <Link>decal_project.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\decal_project.fs">
+      <Link>decal_project.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\..\Platforms\Desktop\vegetation_cutout.vs">
       <Link>vegetation_cutout.vs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
