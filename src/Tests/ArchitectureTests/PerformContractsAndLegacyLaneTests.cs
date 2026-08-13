@@ -150,6 +150,25 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void AnimationChannelRegistry_InternsExactNamedSlots()
+        {
+            AnimationChannelRegistry.Clear();
+
+            int locomotion = AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion);
+            int aimYaw = AnimationChannelRegistry.Register(AnimationChannelRegistry.AimYaw);
+            int recoil = AnimationChannelRegistry.Register(AnimationChannelRegistry.Recoil);
+
+            Assert.That(locomotion, Is.GreaterThan(0));
+            Assert.That(aimYaw, Is.GreaterThan(0));
+            Assert.That(recoil, Is.GreaterThan(0));
+            Assert.That(AnimationChannelRegistry.GetId(AnimationChannelRegistry.Locomotion), Is.EqualTo(locomotion));
+            Assert.That(AnimationChannelRegistry.GetName(aimYaw), Is.EqualTo(AnimationChannelRegistry.AimYaw));
+            Assert.That(
+                () => AnimationChannelRegistry.Register(" locomotion "),
+                Throws.ArgumentException);
+        }
+
+        [Test]
         public void TransformSourceContract_MatchesArchitectureValues()
         {
             Assert.That((byte)TransformSource.InheritParent, Is.EqualTo(0));

@@ -1427,15 +1427,143 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Presenter child[{i}] must be an object.");
                 }
 
+                if (obj["paramOverrides"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] uses removed field 'paramOverrides'. Author 'overrides.params'.");
+                }
+
+                if (obj["local_position"] != null || obj["local_rotation"] != null || obj["local_scale"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
+                }
+
                 children[i] = new ChildPresenterRef
                 {
                     DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"children[{i}].definitionId"),
                     ScopeTag = ParseScopeTag(obj["scopeTag"]),
-                    ParamOverrides = ParseParamDefaults(obj["paramOverrides"]),
+                    ParamOverrides = ParseChildParamOverrides(obj["overrides"], i),
+                    TransformOverride = ParseChildTransformOverride(obj["overrides"], i),
                 };
             }
 
             return children;
+        }
+
+        private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, int childIndex)
+        {
+            if (overridesNode == null)
+            {
+                return Array.Empty<ParamDefault>();
+            }
+
+            if (overridesNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+            }
+
+            RejectUnknownOverrideKeys(obj, childIndex);
+            return ParseParamDefaults(obj["params"]);
+        }
+
+        private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, int childIndex)
+        {
+            if (overridesNode == null)
+            {
+                return PresenterInstanceTransformOverride.Identity;
+            }
+
+            if (overridesNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+            }
+
+            RejectUnknownOverrideKeys(obj, childIndex);
+            JsonNode? transformNode = obj["transform"];
+            if (transformNode == null)
+            {
+                return PresenterInstanceTransformOverride.Identity;
+            }
+
+            if (transformNode is not JsonObject transform)
+            {
+                throw new InvalidOperationException($"children[{childIndex}].overrides.transform must be an object.");
+            }
+
+            foreach (var property in transform)
+            {
+                if (property.Key is not ("localPosition" or "localRotation" or "localScale"))
+                {
+                    throw new InvalidOperationException(
+                        $"children[{childIndex}].overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
+                }
+            }
+
+            if (transform["local_position"] != null || transform["local_rotation"] != null || transform["local_scale"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"children[{childIndex}].overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
+            }
+
+            Vector3 localPosition = ParseRequiredVector3(
+                transform["localPosition"],
+                $"children[{childIndex}].overrides.transform.localPosition",
+                Vector3.Zero,
+                required: false);
+            Vector3 eulerDegrees = ParseRequiredVector3(
+                transform["localRotation"],
+                $"children[{childIndex}].overrides.transform.localRotation",
+                Vector3.Zero,
+                required: false);
+            Vector3 localScale = ParseRequiredVector3(
+                transform["localScale"],
+                $"children[{childIndex}].overrides.transform.localScale",
+                Vector3.One,
+                required: false);
+
+            return new PresenterInstanceTransformOverride
+            {
+                LocalPosition = localPosition,
+                LocalRotation = PresenterInstanceTransformOverride.RotationFromEulerDegreesXyz(eulerDegrees),
+                LocalScale = localScale,
+                HasOverride = true,
+            };
+        }
+
+        private static void RejectUnknownOverrideKeys(JsonObject obj, int childIndex)
+        {
+            foreach (var property in obj)
+            {
+                if (property.Key is not ("transform" or "params"))
+                {
+                    throw new InvalidOperationException(
+                        $"children[{childIndex}].overrides field '{property.Key}' is unsupported. Expected transform and/or params.");
+                }
+            }
+        }
+
+        private static Vector3 ParseRequiredVector3(JsonNode? node, string context, Vector3 defaultValue, bool required)
+        {
+            if (node == null)
+            {
+                if (required)
+                {
+                    throw new InvalidOperationException($"{context} requires a 3-number array.");
+                }
+
+                return defaultValue;
+            }
+
+            if (node is not JsonArray arr || arr.Count != 3)
+            {
+                throw new InvalidOperationException($"{context} must be a 3-number array.");
+            }
+
+            return new Vector3(
+                arr[0]?.GetValue<float>() ?? throw new InvalidOperationException($"{context}[0] must be a number."),
+                arr[1]?.GetValue<float>() ?? throw new InvalidOperationException($"{context}[1] must be a number."),
+                arr[2]?.GetValue<float>() ?? throw new InvalidOperationException($"{context}[2] must be a number."));
         }
 
         private static void ValidateChildGraph(

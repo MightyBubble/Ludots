@@ -9,6 +9,7 @@ namespace Ludots.Core.Presentation.Presenters
         public int DefinitionId;
         public int ScopeTag;
         public ParamDefault[] ParamOverrides;
+        public PresenterInstanceTransformOverride TransformOverride;
     }
 
     public struct ParamDefault

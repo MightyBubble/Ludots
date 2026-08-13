@@ -19,7 +19,8 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasParent,
             in VisualTransform ownerTransform,
             bool hasOwnerTransform,
-            in AssetBindingConfig assetBinding)
+            in AssetBindingConfig assetBinding,
+            in PresenterInstanceTransformOverride instanceOverride = default)
         {
             Vector3 basePosition;
             Quaternion baseRotation;
@@ -39,6 +40,7 @@ namespace Ludots.Core.Presentation.Presenters
                         baseScale,
                         baseFacing,
                         assetBinding,
+                        instanceOverride,
                         inheritScale: true,
                         presenter.TransformSource);
 
@@ -53,17 +55,19 @@ namespace Ludots.Core.Presentation.Presenters
                         baseScale,
                         baseFacing,
                         assetBinding,
+                        instanceOverride,
                         inheritScale: true,
                         presenter.TransformSource);
 
                 case TransformSource.SplineDriven:
+                    ComposeLocals(assetBinding, instanceOverride, out Vector3 splineOffset, out Quaternion splineRotation, out Vector3 splineScale);
                     basePosition = presenter.WorldPosition;
                     baseRotation = WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
+                    baseScale = splineScale;
                     baseFacing = presenter.WorldFacing;
                     return CreateResolvedTransform(
-                        WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, Vector3.One, in assetBinding.LocalOffset),
-                        WorldPlane2D.ComposeVisualRotation(baseRotation, assetBinding.LocalRotation),
+                        WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, Vector3.One, in splineOffset),
+                        WorldPlane2D.ComposeVisualRotation(baseRotation, splineRotation),
                         baseScale,
                         baseFacing);
 
@@ -79,14 +83,19 @@ namespace Ludots.Core.Presentation.Presenters
                         baseScale,
                         baseFacing,
                         assetBinding,
+                        instanceOverride,
                         inheritScale: true,
                         presenter.TransformSource);
 
                 case TransformSource.WorldFixed:
-                    return CreateResolvedTransform(
-                        presenter.WorldPosition,
+                    ComposeLocals(assetBinding, instanceOverride, out Vector3 fixedOffset, out Quaternion fixedRotation, out Vector3 fixedScale);
+                    Quaternion worldRotation = WorldPlane2D.ComposeVisualRotation(
                         WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation),
-                        WorldPlane2D.NormalizeScale(assetBinding.LocalScale),
+                        fixedRotation);
+                    return CreateResolvedTransform(
+                        WorldPlane2D.TransformVisualLocal(presenter.WorldPosition, worldRotation, Vector3.One, in fixedOffset),
+                        worldRotation,
+                        fixedScale,
                         presenter.WorldFacing);
 
                 default:
@@ -174,22 +183,45 @@ namespace Ludots.Core.Presentation.Presenters
             in Vector3 baseScale,
             in PresenterWorldFacing baseFacing,
             in AssetBindingConfig assetBinding,
+            in PresenterInstanceTransformOverride instanceOverride,
             bool inheritScale,
             TransformSource transformSource)
         {
-            Vector3 localScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
+            ComposeLocals(assetBinding, instanceOverride, out Vector3 localOffset, out Quaternion localRotation, out Vector3 localScale);
             Vector3 resolvedScale = inheritScale ? baseScale * localScale : localScale;
             Vector3 parentScale = inheritScale ? baseScale : Vector3.One;
-            Vector3 position = WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, parentScale, in assetBinding.LocalOffset);
-            Quaternion rotation = WorldPlane2D.ComposeVisualRotation(baseRotation, assetBinding.LocalRotation);
+            Vector3 position = WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, parentScale, in localOffset);
+            Quaternion rotation = WorldPlane2D.ComposeVisualRotation(baseRotation, localRotation);
 
             if (transformSource == TransformSource.BoneAttached ||
                 transformSource == TransformSource.AttachedToParent)
             {
-                resolvedScale = WorldPlane2D.NormalizeScale(baseScale);
+                resolvedScale = WorldPlane2D.NormalizeScale(baseScale * (instanceOverride.HasOverride
+                    ? WorldPlane2D.NormalizeScale(instanceOverride.LocalScale)
+                    : Vector3.One));
             }
 
             return CreateResolvedTransform(position, rotation, resolvedScale, baseFacing);
+        }
+
+        private static void ComposeLocals(
+            in AssetBindingConfig assetBinding,
+            in PresenterInstanceTransformOverride instanceOverride,
+            out Vector3 localOffset,
+            out Quaternion localRotation,
+            out Vector3 localScale)
+        {
+            localOffset = assetBinding.LocalOffset;
+            localRotation = assetBinding.LocalRotation;
+            localScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
+            if (!instanceOverride.HasOverride)
+            {
+                return;
+            }
+
+            localOffset += instanceOverride.LocalPosition;
+            localRotation = instanceOverride.LocalRotation * localRotation;
+            localScale = WorldPlane2D.NormalizeScale(localScale * instanceOverride.LocalScale);
         }
 
         private static PresenterResolvedTransform CreateResolvedTransform(

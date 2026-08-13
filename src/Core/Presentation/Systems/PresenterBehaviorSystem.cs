@@ -1977,6 +1977,7 @@ namespace Ludots.Core.Presentation.Systems
             Chunk chunk)
         {
             AssetBindingConfig assetBinding = ResolvePrimaryAssetBinding(definition, states[0].BehaviorActiveMask);
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 PresenterTransformSnapshot presenterSnapshot = new PresenterTransformSnapshot
@@ -2021,7 +2022,8 @@ namespace Ludots.Core.Presentation.Systems
                     hasParent,
                     ownerTransform,
                     hasOwnerTransform,
-                    assetBinding);
+                    assetBinding,
+                    ReadInstanceOverride(Unsafe.Add(ref entityFirst, index)));
 
                 positions[index].Value = resolved.Position;
                 planePositions[index].ValueCm = WorldPlane2D.VisualMetersToLogicCm(in resolved.Position);
@@ -2305,7 +2307,8 @@ namespace Ludots.Core.Presentation.Systems
             presenterSnapshot.TransformSource = World.Has<PresenterTransformSource>(entity) ? World.Get<PresenterTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
-                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding);
+                presenterSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding,
+                ReadInstanceOverride(entity));
 
             if (World.Has<PresenterWorldPosition>(entity))
             {
@@ -2318,6 +2321,13 @@ namespace Ludots.Core.Presentation.Systems
                 World.Get<PresenterWorldFacing>(entity) = resolved.Facing;
             if (World.Has<PresenterWorldScale>(entity))
                 World.Get<PresenterWorldScale>(entity).Value = resolved.Scale;
+        }
+
+        private PresenterInstanceTransformOverride ReadInstanceOverride(Entity entity)
+        {
+            return World.Has<PresenterInstanceTransformOverride>(entity)
+                ? World.Get<PresenterInstanceTransformOverride>(entity)
+                : PresenterInstanceTransformOverride.Identity;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -64,8 +64,9 @@ public enum TransformSource : byte
    - BoneAttached: 从 Attachment behavior 读骨骼世界变换
    - WorldFixed: 使用创建时的固定坐标
 3. 叠加 AssetBindingConfig.LocalOffset/LocalRotation/LocalScale
-4. 应用 Grounding（如果启用）
-5. 写入 WorldPosition/WorldRotation/WorldScale
+4. 若该子实例配置了 `overrides.transform`，再叠加实例位姿（位置相加、旋转相乘、缩放相乘）
+5. 应用 Grounding（如果启用）
+6. 写入 WorldPosition/WorldRotation/WorldScale
 ```
 
 ### 3.3 缩放传播规则

@@ -129,6 +129,36 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void DestroyPresenterScope_NamedTags_ReleasesOnlyThatScope()
+        {
+            using var fixture = PresenterTreeFixture.Create();
+            int defId = fixture.Definitions.Register("scoped", new PresenterDefinition());
+            Entity sharedOwner = fixture.World.Create();
+            int structureId = PresenterScopeTagRegistry.Register("structure");
+            int workingId = PresenterScopeTagRegistry.Register("working");
+
+            fixture.Create(defId, sharedOwner, scopeTag: structureId);
+            fixture.Create(defId, sharedOwner, scopeTag: workingId);
+
+            fixture.Commands.TryAdd(new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.DestroyPresenterScope,
+                ScopeTag = workingId,
+            });
+            fixture.Runtime.Update(0.016f);
+
+            Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(1));
+            Entity survivor = Entity.Null;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            fixture.World.Query(in query, (Entity entity, ref PresenterState state) =>
+            {
+                survivor = entity;
+                Assert.That(state.ScopeId, Is.EqualTo(structureId));
+            });
+            Assert.That(survivor, Is.Not.EqualTo(Entity.Null));
+        }
+
+        [Test]
         public void RuleTriggeredCreatePresenter_WithParent_AttachesToRoot()
         {
             using var fixture = PresenterTreeFixture.Create();

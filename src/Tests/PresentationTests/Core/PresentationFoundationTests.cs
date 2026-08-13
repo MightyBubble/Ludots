@@ -498,9 +498,12 @@ namespace Ludots.Tests.Presentation
                 Is.EqualTo(controllerRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidControllerKey)));
 
             Assert.That(profileRegistry.TryResolveStateClipId(tankProfileId, 32, out int tankCruiseClipId), Is.True);
-            Assert.That(profileRegistry.TryResolveBuiltinClipId(tankProfileId, AnimatorBuiltinClipId.RecoilPulse, out int tankRecoilClipId), Is.True);
             Assert.That(profileRegistry.TryResolveStateClipId(humanoidProfileId, 43, out int humanoidRunClipId), Is.True);
-            Assert.That(profileRegistry.TryResolveBuiltinClipId(humanoidProfileId, AnimatorBuiltinClipId.AimYawOffset, out int humanoidAimClipId), Is.True);
+
+            int tankRecoilClipId = clipRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankRecoilClipKey);
+            int humanoidAimClipId = clipRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidAimClipKey);
+            Assert.That(tankRecoilClipId, Is.GreaterThan(0));
+            Assert.That(humanoidAimClipId, Is.GreaterThan(0));
 
             Assert.That(
                 clipRegistry!.TryResolveLocator(tankCruiseClipId, AnimationAcceptanceMod.AnimationAcceptanceIds.RaylibBackendId, out var tankCruiseRaylib),
@@ -526,6 +529,45 @@ namespace Ludots.Tests.Presentation
             Assert.That(presenterRegistry.TryGet(worldTextDefId, out var worldText), Is.True);
             Assert.That(healthBar.Behaviors.Length, Is.GreaterThan(0));
             Assert.That(worldText.Behaviors.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void AnimationProfileConfigLoader_RejectsRemovedBuiltinClipsField()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimationBuiltinClips", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+[
+  { "Path": "Presentation/animation_profiles.json", "Policy": "ArrayById", "IdField": "id" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animation_profiles.json"), """
+[
+  {
+    "id": "legacy.profile",
+    "animatorControllerId": "legacy.controller",
+    "stateClips": [],
+    "builtinClips": [
+      { "builtinClipId": "LocomotionCycle", "clipAssetId": "legacy.clip" }
+    ]
+  }
+]
+""");
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var profiles = new AnimationProfileRegistry();
+            var controllers = new AnimatorControllerRegistry();
+            var clips = new AnimationClipRegistry();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => new AnimationProfileConfigLoader(pipeline, profiles, controllers, clips).Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("builtinClips"));
+            Assert.That(ex.Message, Does.Contain("stateClips"));
         }
 
         [Test]
