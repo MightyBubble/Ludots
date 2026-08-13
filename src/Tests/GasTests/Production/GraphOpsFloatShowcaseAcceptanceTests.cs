@@ -12,7 +12,7 @@ public sealed class GraphOpsFloatShowcaseAcceptanceTests
     [Test]
     public void RegistryName_DelegatesToSeparatedSuite()
     {
-        var runtime = new GraphOpsFloatRuntime();
+        using var runtime = new GraphOpsFloatRuntime();
         runtime.EnsureWorld();
         var details = new List<string>();
         bool sawPermitOn = false;

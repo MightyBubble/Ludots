@@ -20,9 +20,11 @@ public sealed class CapabilityStandardGraphOpsFloatModEntry : IMod
         var runtime = new GraphOpsFloatRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsFloatMod GameStart requires GameEngine.");
             engine.SetService(MetricsKey, runtime.Metrics);
+            runtime.AttachEngine(engine);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

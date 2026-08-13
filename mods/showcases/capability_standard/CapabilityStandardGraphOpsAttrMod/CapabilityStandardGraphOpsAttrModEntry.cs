@@ -20,8 +20,10 @@ public sealed class CapabilityStandardGraphOpsAttrModEntry : IMod
         var runtime = new GraphOpsAttrRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsAttrMod GameStart requires GameEngine.");
+            runtime.AttachEngine(engine);
             runtime.Bind(engine.GetService(CoreServiceKeys.GraphProgramRegistry));
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);

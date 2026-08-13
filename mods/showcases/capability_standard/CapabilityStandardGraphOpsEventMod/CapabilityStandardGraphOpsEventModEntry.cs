@@ -23,8 +23,9 @@ public sealed class CapabilityStandardGraphOpsEventModEntry : IMod
         var runtime = new GraphOpsEventRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsEventMod GameStart requires GameEngine.");
             GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
                 ?? throw new InvalidOperationException("GraphProgramRegistry is required for event player graphs.");
             TargetDispatchPresetRegistry presets = engine.GetService(CoreServiceKeys.TargetDispatchPresetRegistry)
@@ -32,6 +33,7 @@ public sealed class CapabilityStandardGraphOpsEventModEntry : IMod
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is required for event snap collections.");
             runtime.Bind(programs, presets, collections);
+            runtime.AttachEngine(engine);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();

@@ -20,8 +20,10 @@ public sealed class CapabilityStandardGraphOpsRelModEntry : IMod
         var runtime = new GraphOpsRelRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsRelMod GameStart requires GameEngine.");
+            runtime.AttachEngine(engine);
             runtime.BindStandaloneFromModAssets();
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);

@@ -76,6 +76,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             });
         var tagDisplay = new TagDisplayTableRegistry();
         BindSandboxDisplayTable(tagDisplay, assetsRoot);
+        RegisterAuthoredCompileSymbols(assetsRoot);
         return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets, tagDisplay);
     }
 
@@ -130,15 +131,67 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
             });
     }
 
-    public int ResolveTag(string name) => TagRegistry.Register(name);
-    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
-    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
-    public int ResolveRelationshipType(string name) => _types.Register(name);
-    public int ResolveRelationshipMetric(string name) => _metrics.Register(name, -100, 100, 0);
-    public int ResolveRelationshipFlag(string name) => _flags.Register(name);
-    public int ResolveRelationshipReason(string name) => _reasons.Register(name);
+    public int ResolveTag(string name)
+    {
+        int id = TagRegistry.GetId(name);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown tag '{name}'. Register tags before compiling gallery graphs.");
+        }
+
+        return id;
+    }
+
+    public int ResolveAttribute(string name)
+    {
+        int id = AttributeRegistry.GetId(name);
+        if (id < 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown attribute '{name}'. Register attributes before compiling gallery graphs.");
+        }
+
+        return id;
+    }
+
+    public int ResolveEffectTemplate(string name)
+    {
+        int id = EffectTemplateIdRegistry.GetId(name);
+        if (id <= 0)
+        {
+            throw new InvalidOperationException($"Graph references unknown effect template '{name}'.");
+        }
+
+        return id;
+    }
+
+    public int ResolveRelationshipType(string name) => _types.GetId(name);
+    public int ResolveRelationshipMetric(string name) => _metrics.GetId(name);
+    public int ResolveRelationshipFlag(string name) => _flags.GetId(name);
+
+    public int ResolveRelationshipReason(string name)
+    {
+        if (!_reasons.TryGetId(name, out int id) || id <= 0)
+        {
+            throw new InvalidOperationException($"Graph references unknown relationship reason '{name}'.");
+        }
+
+        return id;
+    }
+
     public int ResolveTargetDispatchPreset(string name) => _dispatchPresets.GetId(name);
-    public int ResolveEntityTemplate(string name) => _templates.Register(name);
+
+    public int ResolveEntityTemplate(string name)
+    {
+        if (!_templates.TryGetId(name, out int id) || id <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Graph references unknown entity template '{name}'. Register templates before compiling gallery graphs.");
+        }
+
+        return id;
+    }
 
     public int ResolveTagDisplayTable(string name)
     {
@@ -149,5 +202,62 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         }
 
         return _tagDisplay.GetTableId(name);
+    }
+
+    internal static void RegisterAuthoredCompileSymbols(string assetsRoot)
+    {
+        _ = AttributeRegistry.Register("Health");
+        RegisterTagRules(Path.Combine(assetsRoot, "GAS", "tag_rules.json"));
+        RegisterEffectIds(Path.Combine(assetsRoot, "GAS", "effects.json"));
+    }
+
+    private static void RegisterTagRules(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("Gallery requires assets/GAS/tag_rules.json.", path);
+        }
+
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+        if (doc.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Tag rules '{path}' must be a JSON array.");
+        }
+
+        foreach (JsonElement entry in doc.RootElement.EnumerateArray())
+        {
+            string? id = entry.GetProperty("id").GetString();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"Tag rules '{path}' contains an entry without id.");
+            }
+
+            _ = TagRegistry.Register(id);
+        }
+    }
+
+    private static void RegisterEffectIds(string path)
+    {
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("Gallery requires assets/GAS/effects.json.", path);
+        }
+
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+        if (doc.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Effects '{path}' must be a JSON array.");
+        }
+
+        foreach (JsonElement entry in doc.RootElement.EnumerateArray())
+        {
+            string? id = entry.GetProperty("id").GetString();
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException($"Effects '{path}' contains an entry without id.");
+            }
+
+            _ = EffectTemplateIdRegistry.Register(id);
+        }
     }
 }

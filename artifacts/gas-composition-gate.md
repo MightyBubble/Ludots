@@ -1,33 +1,32 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: GraphOps per-op galleries — playable recordings on the production path
+- **Task / Issue**: Close leftover GraphOps gallery tails (headless host must use GameEngine, symbol resolve fail-closed, overlay reads authored graph, family runtimes must not `World.Create`)
 - **Date**: 2026-08-13
 - **Agent / Author**: Cursor Grok 4.6
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A（现有 graph op 组合，gallery host 接到引擎生产服务）
+新变体主要交付物是（A/B/C/D）: A
 
 结论: PASS
 
-一句话理由: 不新增 opcode / preset / profile；修的是画廊宿主怎么把已有节点接到地图实体、坐标系、路网和 HUD 观众上。
+一句话理由: 不新增 graph op / profile enum；把无头画廊和家族演示接到已有 GameEngine、MapLoader、GasGraphSymbolResolver 合同上。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 扣血 / 回血 | 0 | 已有 ModifyAttributeAdd / WriteSelfAttribute |
-| 拆朋友链 | 0 | 已有 RelationshipRemoveLink |
-| 六边形查询 | 0 | 已有 QueryHex* + 引擎 SpatialQueryService |
-| 吸到路边 | 0 | 已有 SnapToNearestGraphEdge + LoadedGraphRuntime |
-| 观众知识 | 0 | 已有 KnowledgeHasProjection / LoadViewer |
+| 无头画廊开图 | 2 | GameEngine.LoadMap + MapLoader.LoadEntitiesAndIndex |
+| 符号解析 | 0 | 已有 Tag/Attribute/Effect/Relationship registries GetId |
+| 空间圈人描边 | 2 | 已编译 graph 的 Imm / ConstInt |
+| 家族演示世界 | 2 | GameEngine.World + BindMapEntity |
 
 ### 3. Reuse list
 
-- Handlers: GasGraphOpHandlerTable, BuiltinHandlers
-- Queues / Systems: engine EffectRequestQueue, SpatialQueryService, GasGraphRuntimeApi
-- Resolvers / Registries: engine EffectTemplateRegistry, Relationship* registries, AttributeRegistry
-- Existing presets / graphs: `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/*.json`
+- Handlers: 无新 BuiltinHandler
+- Queues / Systems: GameEngine 已注册 SpatialPartitionUpdateSystem、EffectRequestQueue
+- Resolvers / Registries: GasGraphSymbolResolver 合同（GetId 失败即抛）
+- Existing presets / graphs: `assets/GAS/graphs/*.json`、`tag_rules.json`、`effects.json`
 
 ### 4. New Layer 0 ops (if any)
 
@@ -35,11 +34,11 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无。画廊只执行已有 graph；不新开 lifecycle transaction。
+无 lifecycle spawn/morph 事务；地图加载失败必须抛，禁止平行 World。
 
 ### 6. Config SSOT
 
-行为配置落在: graph / vignette / field JSON（`assets/GAS/graphs/`、`assets/Vignettes/`）
+行为配置落在: gallery `assets/GAS/graphs/`、`tag_rules.json`、`effects.json`、sandbox/catalog.json
 
 是否新增 JSON schema: NO
 

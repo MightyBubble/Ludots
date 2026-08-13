@@ -1,19 +1,22 @@
 using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsFloatMod.Runtime;
 
-public sealed class GraphOpsFloatRuntime
+public sealed class GraphOpsFloatRuntime : IDisposable
 {
     public const float OpeningHealth = 100f;
     public const float MaxRange = 45f;
 
     private readonly GraphShowcaseConfig _config = new();
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private Entity _casterProxy;
     private Entity _targetProxy;
     private bool _visualsSpawned;
@@ -49,6 +52,11 @@ public sealed class GraphOpsFloatRuntime
     public float TargetHealth { get; private set; }
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_float" };
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void BindStageVisuals(GraphOpsStageVisuals stage)
     {
         _stage = stage ?? throw new ArgumentNullException(nameof(stage));
@@ -58,7 +66,8 @@ public sealed class GraphOpsFloatRuntime
     {
         if (_world != null) return;
 
-        _world = World.Create();
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
         _api = new GasGraphRuntimeApi(_world, spatialQueries: null, eventBus: null, effectRequests: null);
         _caster = _world.Create();
         _target = _world.Create();
@@ -79,8 +88,24 @@ public sealed class GraphOpsFloatRuntime
             return;
         }
 
-        _casterProxy = _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, OpeningHealth, OpeningHealth);
-        _targetProxy = _stage.Spawn(GraphOpsVisualTemplates.Target, "目标", TargetX, TargetY, TargetHealth, OpeningHealth);
+        _casterProxy = _stage.BindMapEntity(
+            _caster,
+            GraphOpsVisualTemplates.Caster,
+            "施法者",
+            CasterX,
+            CasterY,
+            OpeningHealth,
+            OpeningHealth,
+            bindAsViewer: true);
+        _targetProxy = _stage.BindMapEntity(
+            _target,
+            GraphOpsVisualTemplates.Target,
+            "目标",
+            TargetX,
+            TargetY,
+            TargetHealth,
+            OpeningHealth,
+            bindAsViewer: false);
         _visualsSpawned = true;
     }
 
@@ -228,5 +253,12 @@ public sealed class GraphOpsFloatRuntime
         }
 
         throw new InvalidOperationException($"Program missing bool op {op}.");
+    }
+
+    public void Dispose()
+    {
+        _session?.Dispose();
+        _session = null;
+        _world = null;
     }
 }

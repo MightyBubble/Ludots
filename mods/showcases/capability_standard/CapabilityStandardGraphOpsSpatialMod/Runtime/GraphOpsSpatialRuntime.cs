@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -46,14 +47,15 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private GraphProgramRegistry? _programs;
     private GraphFunctionCatalog? _catalog;
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private bool _visualsSpawned;
     private World? _world;
     private int _hitCountKeyId;
     private int _nearestKeyId;
     private int _firstKeyId;
     private SpatialQueryService? _spatial;
-    private SpatialCoordinateConverter? _coords;
-    private GridSpatialPartitionWorld? _grid;
+    private ISpatialCoordinateConverter? _coords;
     private GasGraphRuntimeApi? _api;
     private EntitySetQueryRuntime? _entityQueries;
     private TagOps? _tagOps;
@@ -100,6 +102,11 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
     }
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void BindStageVisuals(GraphOpsStageVisuals stage)
     {
         _stage = stage ?? throw new ArgumentNullException(nameof(stage));
@@ -127,11 +134,17 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
         TeamManager.SetRelationship(CasterTeamId, EnemyTeamId, TeamRelationship.Hostile);
         TeamManager.SetRelationship(EnemyTeamId, CasterTeamId, TeamRelationship.Hostile);
 
-        _world = World.Create();
-        _coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
-        _grid = new GridSpatialPartitionWorld(cellSize: 4);
-        _spatial = new SpatialQueryService(new GridSpatialPartitionBackend(_grid, _coords));
-        _spatial.SetCoordinateConverter(_coords);
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
+        _coords = _session.Engine.SpatialCoords
+            ?? throw new InvalidOperationException("Spatial family runtime requires engine SpatialCoords.");
+        if (_session.Engine.SpatialQueries is not SpatialQueryService spatial)
+        {
+            throw new InvalidOperationException("Spatial family runtime requires engine SpatialQueryService.");
+        }
+
+        _spatial = spatial;
+        spatial.SetCoordinateConverter(_coords);
         _spatial.SetPositionProvider(entity =>
         {
             ref WorldPositionCm pos = ref _world!.Get<WorldPositionCm>(entity);
@@ -181,6 +194,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
         Metrics.AgentCount = targets;
         Metrics.Detail = "扇形、矩形、直线与六角圈人：排除自己，只打敌对层与敌对关系。";
+        _session.StartOwnedAndTick();
         SpawnStageVisuals();
     }
 
@@ -191,16 +205,26 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
             return;
         }
 
-        _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, 100f, 100f);
+        _stage.BindMapEntity(
+            _caster,
+            GraphOpsVisualTemplates.Caster,
+            "施法者",
+            CasterX,
+            CasterY,
+            100f,
+            100f,
+            bindAsViewer: true);
         for (int i = 0; i < _tx.Length; i++)
         {
-            _stage.Spawn(
+            _stage.BindMapEntity(
+                _targets[i],
                 GraphOpsVisualTemplates.Target,
                 $"敌军{i + 1}",
                 _tx[i],
                 _ty[i],
                 100f,
-                100f);
+                100f,
+                bindAsViewer: false);
         }
 
         _visualsSpawned = true;
@@ -262,7 +286,8 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
     public void Dispose()
     {
-        _world?.Dispose();
+        _session?.Dispose();
+        _session = null;
         _world = null;
     }
 
@@ -372,7 +397,6 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
             new EntityLayer(category: layerCategory, mask: uint.MaxValue),
             new BlackboardIntBuffer(),
             new BlackboardEntityBuffer());
-        AddToGrid(entity, xCm, yCm);
         return entity;
     }
 
@@ -385,11 +409,5 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
             _ty[presentationIndex] = worldCm.Y * 0.01f;
             _targets[presentationIndex] = entity;
         }
-    }
-
-    private void AddToGrid(Entity entity, int xCm, int yCm)
-    {
-        IntVector2 grid = _coords!.WorldToGrid(new WorldCmInt2(xCm, yCm));
-        _grid!.Add(entity, new IntRect(grid.X, grid.Y, grid.X + 1, grid.Y + 1));
     }
 }

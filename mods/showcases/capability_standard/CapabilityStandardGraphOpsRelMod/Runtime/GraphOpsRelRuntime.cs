@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -12,7 +13,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsRelMod.Runtime;
 
-public sealed class GraphOpsRelRuntime
+public sealed class GraphOpsRelRuntime : IDisposable
 {
     public const string QueryFriendRankName = "rel.query.friendRank";
     public const string QueryChainProbeName = "rel.query.chainProbe";
@@ -26,6 +27,8 @@ public sealed class GraphOpsRelRuntime
     private GraphProgramRegistry? _programs;
     private GraphOpsRelFunctionIndex? _functions;
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private Entity[] _friendProxies = Array.Empty<Entity>();
     private int[] _friendLoyalty = Array.Empty<int>();
     private bool _visualsSpawned;
@@ -87,6 +90,11 @@ public sealed class GraphOpsRelRuntime
         _functions = _bundle.Functions;
     }
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void Bind(GraphProgramRegistry programs, GraphOpsRelFunctionIndex functions)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
@@ -111,7 +119,8 @@ public sealed class GraphOpsRelRuntime
         _ = _functions.Require(QueryChainProbeName);
         _ = _functions.Require(EffectBreakLinkName);
 
-        _world = World.Create();
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
         var typeRegistry = _bundle?.Types ?? new RelationshipTypeRegistry();
         var metricRegistry = _bundle?.Metrics ?? new RelationshipMetricRegistry();
         var flagRegistry = _bundle?.Flags ?? new RelationshipFlagRegistry();
@@ -194,17 +203,19 @@ public sealed class GraphOpsRelRuntime
             return;
         }
 
-        _stage.Spawn(GraphOpsVisualTemplates.Caster, "自己", PlayerX, PlayerY, 100f, 100f);
+        _stage.BindMapEntity(_player, GraphOpsVisualTemplates.Caster, "自己", PlayerX, PlayerY, 100f, 100f, bindAsViewer: true);
         _friendProxies = new Entity[_friends.Length];
         for (int i = 0; i < _friends.Length; i++)
         {
-            _friendProxies[i] = _stage.Spawn(
+            _friendProxies[i] = _stage.BindMapEntity(
+                _friends[i],
                 GraphOpsVisualTemplates.Ally,
                 $"好友{i + 1}",
                 FriendX[i],
                 FriendY[i],
                 _friendLoyalty[i],
-                100f);
+                100f,
+                bindAsViewer: false);
         }
 
         _visualsSpawned = true;
@@ -504,6 +515,13 @@ public sealed class GraphOpsRelRuntime
 
             GraphProgramSymbolPatcher.Patch(registration.Symbols, registration.Program, resolver);
         }
+    }
+
+    public void Dispose()
+    {
+        _session?.Dispose();
+        _session = null;
+        _world = null;
     }
 }
 

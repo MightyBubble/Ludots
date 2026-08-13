@@ -20,8 +20,10 @@ public sealed class CapabilityStandardGraphOpsScriptModEntry : IMod
         var runtime = new GraphOpsScriptRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsScriptMod GameStart requires GameEngine.");
+            runtime.AttachEngine(engine);
             runtime.Bind(
                 engine.GetService(CoreServiceKeys.GraphProgramRegistry),
                 engine.GetService(CoreServiceKeys.GraphActionCatalog),

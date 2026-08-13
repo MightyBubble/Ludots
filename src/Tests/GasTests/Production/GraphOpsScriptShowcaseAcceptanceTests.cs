@@ -18,7 +18,7 @@ namespace Ludots.Tests.Gas.Production
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out GraphFunctionCatalog catalog,
                 out GraphActionCatalog actions);
-            var runtime = new GraphOpsScriptRuntime();
+            using var runtime = new GraphOpsScriptRuntime();
             runtime.Bind(programs, actions, catalog);
             runtime.EnsureWorld();
 
@@ -39,7 +39,7 @@ namespace Ludots.Tests.Gas.Production
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out GraphFunctionCatalog catalog,
                 out GraphActionCatalog actions);
-            var runtime = new GraphOpsScriptRuntime();
+            using var runtime = new GraphOpsScriptRuntime();
             runtime.Bind(programs, actions, catalog);
             runtime.EnsureWorld();
 
@@ -61,7 +61,7 @@ namespace Ludots.Tests.Gas.Production
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out GraphFunctionCatalog catalog,
                 out GraphActionCatalog actions);
-            var runtime = new GraphOpsScriptRuntime();
+            using var runtime = new GraphOpsScriptRuntime();
             runtime.Bind(programs, actions, catalog);
             runtime.EnsureWorld();
 
@@ -104,7 +104,7 @@ namespace Ludots.Tests.Gas.Production
                 Is.True,
                 "Drink-until-full graph must compile BranchBool into Jump/JumpIfFalse.");
 
-            var runtime = new GraphOpsScriptRuntime();
+            using var runtime = new GraphOpsScriptRuntime();
             runtime.Bind(programs, actions, catalog);
             runtime.EnsureWorld();
 

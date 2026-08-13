@@ -4,10 +4,6 @@
     "extends": "entity_health_bar",
     "visibility": { "inline": "None" },
     "maxVisibilityDistanceCm": 20000,
-    "bindings": [
-      { "paramKey": "worldBar.width", "source": "constant", "constantValue": 90 },
-      { "paramKey": "worldBar.height", "source": "constant", "constantValue": 12 }
-    ],
     "behaviors": [
       {
         "slot": "body",

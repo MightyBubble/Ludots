@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -37,6 +38,8 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     private readonly Entity[] _lastEntities = new Entity[GraphVmLimits.MaxEntityRegisters];
     private GraphProgramRegistry? _programs;
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private Entity _casterProxy;
     private Entity _targetProxy;
     private bool _visualsSpawned;
@@ -67,6 +70,11 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     public bool HitEnemy { get; private set; }
     public bool AllPhasesComplete => _phase == Phase.Complete;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_attr" };
+
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
 
     public void Bind(GraphProgramRegistry programs)
     {
@@ -113,7 +121,8 @@ public sealed class GraphOpsAttrRuntime : IDisposable
 
         _strikeTemplate = strikeProgram.ToArray();
 
-        _world = World.Create();
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
         _requests = new EffectRequestQueue();
         var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
         _api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null, effectRequests: _requests, tagOps: tagOps);
@@ -134,8 +143,24 @@ public sealed class GraphOpsAttrRuntime : IDisposable
             return;
         }
 
-        _casterProxy = _stage.Spawn(GraphOpsVisualTemplates.Caster, "施法者", CasterX, CasterY, CasterHealth, 100f);
-        _targetProxy = _stage.Spawn(GraphOpsVisualTemplates.Target, "目标", TargetX, TargetY, TargetHealth, OpeningHealth);
+        _casterProxy = _stage.BindMapEntity(
+            _caster,
+            GraphOpsVisualTemplates.Caster,
+            "施法者",
+            CasterX,
+            CasterY,
+            CasterHealth,
+            100f,
+            bindAsViewer: true);
+        _targetProxy = _stage.BindMapEntity(
+            _target,
+            GraphOpsVisualTemplates.Target,
+            "目标",
+            TargetX,
+            TargetY,
+            TargetHealth,
+            OpeningHealth,
+            bindAsViewer: false);
         _visualsSpawned = true;
     }
 
@@ -172,7 +197,8 @@ public sealed class GraphOpsAttrRuntime : IDisposable
 
     public void Dispose()
     {
-        _world?.Dispose();
+        _session?.Dispose();
+        _session = null;
         _world = null;
         if (_ownsPrograms)
         {

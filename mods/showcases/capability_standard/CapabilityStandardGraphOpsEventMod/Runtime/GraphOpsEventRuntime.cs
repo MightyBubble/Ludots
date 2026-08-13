@@ -30,6 +30,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private bool _visualsSpawned;
     private TargetDispatchPresetRegistry? _targetDispatchPresets;
     private World? _world;
@@ -118,6 +120,11 @@ public sealed class GraphOpsEventRuntime : IDisposable
         _ownsPrograms = true;
     }
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void BindStageVisuals(GraphOpsStageVisuals stage)
     {
         _stage = stage ?? throw new ArgumentNullException(nameof(stage));
@@ -136,7 +143,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
         _placementGraphId = RequireGraphId(GraphOpsEventGraphKeys.Placement);
         ResolveControlRegisters();
 
-        _world = World.Create();
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
         _eventBus = new GameplayEventBus();
         _effectRequests = new EffectRequestQueue();
 
@@ -202,10 +210,10 @@ public sealed class GraphOpsEventRuntime : IDisposable
             return;
         }
 
-        _stage.Spawn(GraphOpsVisualTemplates.Caster, "自己", PlayerRepX, PlayerRepY, 100f, 100f);
-        _stage.Spawn(GraphOpsVisualTemplates.Ally, "操控者", ControllerX, ControllerY, 100f, 100f);
-        _stage.Spawn(GraphOpsVisualTemplates.Target, "单位", UnitX, UnitY, 100f, 100f);
-        _stage.Spawn(GraphOpsVisualTemplates.Scout, "吸附点", SnapMarkerX, SnapMarkerY, 100f, 100f);
+        _stage.BindMapEntity(_playerRep, GraphOpsVisualTemplates.Caster, "自己", PlayerRepX, PlayerRepY, 100f, 100f, bindAsViewer: true);
+        _stage.BindMapEntity(_controller, GraphOpsVisualTemplates.Ally, "操控者", ControllerX, ControllerY, 100f, 100f, bindAsViewer: false);
+        _stage.BindMapEntity(_unit, GraphOpsVisualTemplates.Target, "单位", UnitX, UnitY, 100f, 100f, bindAsViewer: false);
+        _stage.BindMapEntity(_snapMarker, GraphOpsVisualTemplates.Scout, "吸附点", SnapMarkerX, SnapMarkerY, 100f, 100f, bindAsViewer: false);
         _visualsSpawned = true;
     }
 
@@ -243,7 +251,8 @@ public sealed class GraphOpsEventRuntime : IDisposable
 
     public void Dispose()
     {
-        _world?.Dispose();
+        _session?.Dispose();
+        _session = null;
         _world = null;
         if (_ownsPrograms)
         {

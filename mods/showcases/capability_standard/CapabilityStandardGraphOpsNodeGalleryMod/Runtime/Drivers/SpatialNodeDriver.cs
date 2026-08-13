@@ -2,6 +2,7 @@ using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Components;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -16,16 +17,6 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
     public const int EnemyTeamId = 2;
     public const uint CasterLayer = GraphOpsNodeGalleryHost.AllyLayer;
     public const uint EnemyLayer = GraphOpsNodeGalleryHost.EnemyLayer;
-    public const int ConeDirDeg = 90;
-    public const int ConeHalfDeg = 30;
-    public const int ConeRangeCm = 800;
-    public const int RectHalfWidthCm = 120;
-    public const int RectHalfHeightCm = 60;
-    public const int RectRotationDeg = 15;
-    public const int LineDirDeg = 45;
-    public const int LineLengthCm = 500;
-    public const int LineHalfWidthCm = 25;
-    public const int HexRadius = 2;
 
     private Entity[] _units = Array.Empty<Entity>();
     private byte[] _unitInRange = Array.Empty<byte>();
@@ -210,31 +201,31 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
         string op = ctx.Vignette.Op;
         if (UsesConeOverlay(op))
         {
-            DrawCone(debugDraw);
+            DrawCone(ctx, debugDraw);
             return;
         }
 
         if (string.Equals(op, nameof(GraphNodeOp.QueryRectangle), StringComparison.Ordinal))
         {
-            DrawRectangle(debugDraw);
+            DrawRectangle(ctx, debugDraw);
             return;
         }
 
         if (string.Equals(op, nameof(GraphNodeOp.QueryLine), StringComparison.Ordinal))
         {
-            DrawLine(debugDraw);
+            DrawLine(ctx, debugDraw);
             return;
         }
 
         if (string.Equals(op, nameof(GraphNodeOp.QueryHexRange), StringComparison.Ordinal))
         {
-            DrawHexCells(ctx, debugDraw, radius: HexRadius, ringOnly: false);
+            DrawHexCells(ctx, debugDraw, radius: RequireQueryImm(ctx, GraphNodeOp.QueryHexRange), ringOnly: false);
             return;
         }
 
         if (string.Equals(op, nameof(GraphNodeOp.QueryHexRing), StringComparison.Ordinal))
         {
-            DrawHexCells(ctx, debugDraw, radius: HexRadius, ringOnly: true);
+            DrawHexCells(ctx, debugDraw, radius: RequireQueryImm(ctx, GraphNodeOp.QueryHexRing), ringOnly: true);
             return;
         }
 
@@ -253,14 +244,17 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
             or nameof(GraphNodeOp.AggMinByDistance)
             or nameof(GraphNodeOp.TargetListGet);
 
-    private void DrawCone(DebugDrawCommandBuffer debugDraw)
+    private void DrawCone(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
+        GraphInstruction cone = RequireInstruction(ctx, GraphNodeOp.QueryCone);
+        int dirDeg = RequireConstInt(ctx, cone.A);
+        int halfDeg = RequireConstInt(ctx, cone.B);
+        float rangeM = cone.ImmF * 0.01f;
         const int segments = 10;
         var points = new Vector2[segments + 2];
         points[0] = new Vector2(_casterX, _casterY);
-        float rangeM = ConeRangeCm * 0.01f;
-        float start = (ConeDirDeg - ConeHalfDeg) * MathF.PI / 180f;
-        float step = (ConeHalfDeg * 2f) * MathF.PI / 180f / segments;
+        float start = (dirDeg - halfDeg) * MathF.PI / 180f;
+        float step = (halfDeg * 2f) * MathF.PI / 180f / segments;
         for (int i = 0; i <= segments; i++)
         {
             float a = start + step * i;
@@ -272,11 +266,12 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawPolyline(debugDraw, points, GraphShowcaseStagePresenter.SentryAlert, thickness: 0.1f);
     }
 
-    private void DrawRectangle(DebugDrawCommandBuffer debugDraw)
+    private void DrawRectangle(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        float hw = RectHalfWidthCm * 0.01f;
-        float hh = RectHalfHeightCm * 0.01f;
-        float rad = RectRotationDeg * MathF.PI / 180f;
+        GraphInstruction rect = RequireInstruction(ctx, GraphNodeOp.QueryRectangle);
+        float hw = RequireConstInt(ctx, rect.A) * 0.01f;
+        float hh = RequireConstInt(ctx, rect.B) * 0.01f;
+        float rad = rect.Imm * MathF.PI / 180f;
         float c = MathF.Cos(rad);
         float s = MathF.Sin(rad);
         var local = new Vector2[]
@@ -297,10 +292,12 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
         GraphShowcaseStagePresenter.DrawPolyline(debugDraw, world, GraphShowcaseStagePresenter.SentryAlert, thickness: 0.1f);
     }
 
-    private void DrawLine(DebugDrawCommandBuffer debugDraw)
+    private void DrawLine(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
-        float rad = LineDirDeg * MathF.PI / 180f;
-        float len = LineLengthCm * 0.01f;
+        GraphInstruction line = RequireInstruction(ctx, GraphNodeOp.QueryLine);
+        int dirDeg = RequireConstInt(ctx, line.A);
+        float len = RequireConstInt(ctx, line.B) * 0.01f;
+        float rad = dirDeg * MathF.PI / 180f;
         var points = new Vector2[]
         {
             new(_casterX, _casterY),
@@ -344,6 +341,57 @@ public sealed class SpatialNodeDriver : IGraphOpsNodeDriver
 
             GraphShowcaseStagePresenter.DrawPolyline(debugDraw, points, GraphShowcaseStagePresenter.SentryAlert, thickness: 0.18f);
         }
+    }
+
+    private static GraphInstruction RequireInstruction(GraphOpsNodeDriverContext ctx, GraphNodeOp op)
+    {
+        GraphInstruction found = default;
+        int count = 0;
+        GraphInstruction[] program = ctx.Compiled.Program;
+        for (int i = 0; i < program.Length; i++)
+        {
+            if (program[i].Op != (ushort)op)
+            {
+                continue;
+            }
+
+            found = program[i];
+            count++;
+        }
+
+        if (count != 1)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' overlay requires exactly one {op} instruction, found {count}.");
+        }
+
+        return found;
+    }
+
+    private static int RequireConstInt(GraphOpsNodeDriverContext ctx, byte register)
+    {
+        GraphInstruction[] program = ctx.Compiled.Program;
+        for (int i = 0; i < program.Length; i++)
+        {
+            if (program[i].Op == (ushort)GraphNodeOp.ConstInt && program[i].Dst == register)
+            {
+                return program[i].Imm;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Gallery '{ctx.Vignette.Op}' overlay missing ConstInt for register {register}.");
+    }
+
+    private static int RequireQueryImm(GraphOpsNodeDriverContext ctx, GraphNodeOp op)
+    {
+        int imm = RequireInstruction(ctx, op).Imm;
+        if (imm <= 0)
+        {
+            throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' {op} hexRadius must be positive.");
+        }
+
+        return imm;
     }
 
     private int IndexOfUnit(Entity entity)

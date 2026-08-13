@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -9,10 +10,12 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsBlackboardMod.Runtime;
 
-public sealed class GraphOpsBlackboardRuntime
+public sealed class GraphOpsBlackboardRuntime : IDisposable
 {
   private readonly GraphShowcaseConfig _config = new();
   private GraphOpsStageVisuals? _stage;
+  private GameEngine? _engine;
+  private GraphOpsEngineWorld? _session;
   private bool _visualsSpawned;
   private World? _world;
   private GasGraphRuntimeApi? _memoApi;
@@ -53,6 +56,11 @@ public sealed class GraphOpsBlackboardRuntime
   public int BuiltinSteps => _builtinSteps;
   public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_blackboard" };
 
+  public void AttachEngine(GameEngine engine)
+  {
+    _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+  }
+
   public void BindStageVisuals(GraphOpsStageVisuals stage)
   {
     _stage = stage ?? throw new ArgumentNullException(nameof(stage));
@@ -74,7 +82,8 @@ public sealed class GraphOpsBlackboardRuntime
     _tierEchoKey = ConfigKeyRegistry.GetId("showcase.bb.tierEcho");
     _chainEffectKey = ConfigKeyRegistry.GetId("showcase.config.chainEffect");
 
-    _world = World.Create();
+    _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+    _world = _session.World;
     _memoApi = new GasGraphRuntimeApi(_world, spatialQueries: null, eventBus: null, effectRequests: null);
     _lifecycleApi = new LifecycleShowcaseGraphApi();
 
@@ -101,8 +110,8 @@ public sealed class GraphOpsBlackboardRuntime
       return;
     }
 
-    _stage.Spawn(GraphOpsVisualTemplates.Caster, "记事员", ClerkX, ClerkY, 100f, 100f);
-    _stage.Spawn(GraphOpsVisualTemplates.Ally, "情境", ContextX, ContextY, 100f, 100f);
+    _stage.BindMapEntity(_clerk, GraphOpsVisualTemplates.Caster, "记事员", ClerkX, ClerkY, 100f, 100f, bindAsViewer: true);
+    _stage.BindMapEntity(_contextEntity, GraphOpsVisualTemplates.Ally, "情境", ContextX, ContextY, 100f, 100f, bindAsViewer: false);
     _visualsSpawned = true;
   }
 
@@ -223,5 +232,12 @@ public sealed class GraphOpsBlackboardRuntime
     _memoChainEffect = intBb.TryGet(_chainMemoKey, out int chain) ? chain : 0;
     _memoPowerEcho = floatBb.TryGet(_powerEchoKey, out float powerEcho) ? powerEcho : 0f;
     _memoTierEcho = intBb.TryGet(_tierEchoKey, out int tierEcho) ? tierEcho : 0;
+  }
+
+  public void Dispose()
+  {
+    _session?.Dispose();
+    _session = null;
+    _world = null;
   }
 }

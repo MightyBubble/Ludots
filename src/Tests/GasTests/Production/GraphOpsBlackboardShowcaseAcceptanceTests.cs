@@ -12,7 +12,7 @@ public sealed class GraphOpsBlackboardShowcaseAcceptanceTests
     [Test]
     public void RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable()
     {
-        var runtime = new GraphOpsBlackboardRuntime();
+        using var runtime = new GraphOpsBlackboardRuntime();
         runtime.EnsureWorld();
         for (int i = 0; i < 10; i++) runtime.Tick(0.2f);
 

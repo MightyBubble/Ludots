@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.Components;
@@ -27,6 +28,8 @@ public sealed class GraphOpsQueryRuntime : IDisposable
     private GraphOpsQueryShowcaseBundle? _bundle;
     private GraphProgramRegistry? _programs;
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
     private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
@@ -76,6 +79,11 @@ public sealed class GraphOpsQueryRuntime : IDisposable
     public int CompiledGraphs { get; private set; }
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_query" };
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void BindStandaloneFromModAssets()
     {
         _bundle = GraphOpsQueryCatalogBootstrap.LoadStandalone();
@@ -98,7 +106,8 @@ public sealed class GraphOpsQueryRuntime : IDisposable
                 "GraphOpsQueryRuntime.BindStandaloneFromModAssets() required before EnsureWorld.");
         }
 
-        _world = World.Create();
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _world = _session.World;
         var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
         var relationships = new RelationshipRuntime(
             _world,
@@ -161,7 +170,15 @@ public sealed class GraphOpsQueryRuntime : IDisposable
             return;
         }
 
-        _stage.Spawn(GraphOpsVisualTemplates.Caster, "指挥", CasterX, CasterY, 100f, 100f);
+        _stage.BindMapEntity(
+            _caster,
+            GraphOpsVisualTemplates.Caster,
+            "指挥",
+            CasterX,
+            CasterY,
+            100f,
+            100f,
+            bindAsViewer: true);
         for (int i = 0; i < _units.Length; i++)
         {
             bool scout = i == 9 || i == 11;
@@ -172,7 +189,7 @@ public sealed class GraphOpsQueryRuntime : IDisposable
                     ? GraphOpsVisualTemplates.Ally
                     : GraphOpsVisualTemplates.Soldier;
             string name = ally ? $"友军{i + 1}" : $"敌军{i + 1}";
-            _stage.Spawn(template, name, UnitX[i], UnitY[i], UnitHp[i]);
+            _stage.BindMapEntity(_units[i], template, name, UnitX[i], UnitY[i], UnitHp[i], 150f, bindAsViewer: false);
         }
 
         _visualsSpawned = true;
@@ -202,7 +219,8 @@ public sealed class GraphOpsQueryRuntime : IDisposable
 
     public void Dispose()
     {
-        _world?.Dispose();
+        _session?.Dispose();
+        _session = null;
         _world = null;
     }
 

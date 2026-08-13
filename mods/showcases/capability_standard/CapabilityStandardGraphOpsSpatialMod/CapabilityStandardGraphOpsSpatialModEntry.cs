@@ -21,9 +21,11 @@ public sealed class CapabilityStandardGraphOpsSpatialModEntry : IMod
         var runtime = new GraphOpsSpatialRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            GameEngine engine = ctx.GetEngine()
+                ?? throw new InvalidOperationException(
+                    "CapabilityStandardGraphOpsSpatialMod GameStart requires GameEngine.");
             GraphProgramRegistry programs = GraphOpsSpatialCatalogBootstrap.Load(out GraphFunctionCatalog catalog);
+            runtime.AttachEngine(engine);
             runtime.Bind(programs, catalog);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);

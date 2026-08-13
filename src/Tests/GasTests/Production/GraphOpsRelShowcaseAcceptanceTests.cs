@@ -12,7 +12,7 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            var runtime = new GraphOpsRelRuntime();
+            using var runtime = new GraphOpsRelRuntime();
             runtime.BindStandaloneFromModAssets();
             runtime.EnsureWorld();
             for (int i = 0; i < 12; i++) runtime.Tick(0.2f);
@@ -22,7 +22,7 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void GraphOpsRel_FriendChainRankAndUnlink_UnderBudget()
         {
-            var runtime = new GraphOpsRelRuntime();
+            using var runtime = new GraphOpsRelRuntime();
             runtime.BindStandaloneFromModAssets();
             runtime.EnsureWorld();
 

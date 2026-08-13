@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Association;
@@ -44,8 +43,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
 
     private World? _world;
     private bool _ownsWorld;
-    private SpatialPartitionUpdateSystem? _spatialPartition;
-    private ConfigPipeline? _pipeline;
     private DataRegistry<EntityTemplate>? _templateRegistry;
     private EffectTemplateRegistry _effectTemplates = null!;
     private BuiltinHandlerRegistry _builtinHandlers = null!;
@@ -83,15 +80,17 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
         host.FinishResolver();
+        GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
         host.LoadSandboxDisplayTable(assetsRoot);
         return host;
     }
 
     public static GraphOpsNodeGalleryHost CreateHeadless(string assetsRoot, string mapId)
     {
-        var host = new GraphOpsNodeGalleryHost();
-        host.BootstrapHeadless(assetsRoot, mapId);
-        return host;
+        string repoRoot = GraphOpsHeadlessGameEngine.FindRepoRoot(assetsRoot);
+        GameEngine engine = GraphOpsHeadlessGameEngine.SharedGallery(repoRoot);
+        GraphOpsHeadlessGameEngine.LoadExclusiveMap(engine, mapId);
+        return FromEngine(engine, assetsRoot, mapId);
     }
 
     public GraphOpsNodeDriverContext BindContext(
@@ -207,113 +206,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         int ownsType = RelationshipTypes.Register("Owns");
         Ownership = new OwnershipResolver(Relationships, ownsType);
         BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
-        EnsureHostileCasterAndEnemyTeams();
-    }
-
-    private void BootstrapHeadless(string assetsRoot, string mapId)
-    {
-        _world = World.Create();
-        _ownsWorld = true;
-        var vfs = new VirtualFileSystem();
-        vfs.Mount("Core", assetsRoot);
-        var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
-        _pipeline = new ConfigPipeline(vfs, modLoader);
-        ConfigCatalog catalog = ConfigCatalogLoader.Load(_pipeline);
-        var mapLoader = new MapLoader(World, new WorldMap(), _pipeline);
-        EffectRequests = new EffectRequestQueue();
-        mapLoader.SetEffectRequestQueue(EffectRequests);
-        mapLoader.LoadTemplates(catalog);
-        Templates = mapLoader.EntityTemplateKeys;
-        _templateRegistry = mapLoader.TemplateRegistry;
-
-        MapConfig map = LoadMapConfig(assetsRoot, mapId);
-        EntityIndex = mapLoader.LoadEntitiesAndIndex(map);
-
-        var extent = new WorldExtentSpec(
-            SpatialScaleDefaults.DefaultWorldWidthMacroTiles,
-            SpatialScaleDefaults.DefaultWorldHeightMacroTiles,
-            cellCm: 100);
-        WorldSizeSpec spec = extent.ToWorldSizeSpec();
-        var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-        var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
-        var coords = new SpatialCoordinateConverter(spec);
-        spatial.SetCoordinateConverter(coords);
-        World world = World;
-        spatial.SetPositionProvider(entity =>
-        {
-            if (!world.IsAlive(entity) || !world.Has<WorldPositionCm>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"Map entity {entity.Id} is missing WorldPositionCm; MapLoader must spawn people with positions.");
-            }
-
-            return world.Get<WorldPositionCm>(entity).Value.ToWorldCmInt2();
-        });
-        SpatialQueries = spatial;
-        Coords = coords;
-        _spatialPartition = new SpatialPartitionUpdateSystem(World, partition, spec);
-        _spatialPartition.Update(0f);
-
-        EventBus = new GameplayEventBus();
-        TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
-        RelationshipTypes = new RelationshipTypeRegistry();
-        RelationshipMetrics = new RelationshipMetricRegistry();
-        RelationshipFlags = new RelationshipFlagRegistry();
-        RelationshipReasons = new RelationshipReasonRegistry();
-        EnsureGalleryRelationshipCatalog();
-        Relationships = new RelationshipRuntime(
-            World,
-            RelationshipTypes,
-            RelationshipMetrics,
-            RelationshipFlags,
-            new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer(),
-            new RelationshipReverseIndex(World));
-        var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-        Collections = new EntityCollectionStore(collectionKeys);
-        RegisterCollectionKeys();
-        DispatchPresets = new TargetDispatchPresetRegistry();
-        EnsureDispatchPreset();
-        TagDisplay = new TagDisplayTableRegistry();
-        LoadSandboxDisplayTable(assetsRoot);
-        var entityQueries = new EntitySetQueryRuntime(World, TagOps, Relationships);
-        int ownsType = RelationshipTypes.Register("Owns");
-        int controlsType = RelationshipTypes.Register("Controls");
-        Ownership = new OwnershipResolver(Relationships, ownsType);
-        var controlDomains = new ControlDomainQuery(World, Relationships, Ownership, ownsType, controlsType);
-        Knowledge = new KnowledgeProjectionStore();
-        var knowledge = new KnowledgeProjectionResolver(Knowledge);
-        var clock = new DiscreteClock();
-        EffectParamKeys.Initialize();
-        _effectTemplates = new EffectTemplateRegistry();
-        var effectLoader = new EffectTemplateLoader(
-            _pipeline,
-            _effectTemplates,
-            targetDispatchPresets: DispatchPresets,
-            entityTemplateKeys: Templates,
-            relationshipTypes: RelationshipTypes);
-        effectLoader.Load(catalog);
-        BindLifecycleServices(new PresentationStableIdAllocator());
-        Api = GasGraphRuntimeApi.CreateProduction(new GasGraphRuntimeProductionServices(
-            World,
-            SpatialQueries,
-            Coords,
-            EventBus,
-            EffectRequests,
-            TagOps,
-            Relationships,
-            RelationshipTypes,
-            RelationshipMetrics,
-            RelationshipFlags,
-            RelationshipReasons,
-            DispatchPresets,
-            Collections,
-            entityQueries,
-            controlDomains,
-            knowledge,
-            clock,
-            TagDisplay));
-        FinishResolver();
         EnsureHostileCasterAndEnemyTeams();
     }
 
@@ -605,29 +497,5 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         }
 
         throw new InvalidOperationException($"Gallery '{vignette.Op}' unknown actor '{id}'.");
-    }
-
-    private static MapConfig LoadMapConfig(string assetsRoot, string mapId)
-    {
-        string path = Path.Combine(assetsRoot, "Maps", mapId + ".json");
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException($"Gallery map missing: {path}", path);
-        }
-
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        MapConfig? map = JsonSerializer.Deserialize<MapConfig>(File.ReadAllText(path), options);
-        if (map == null || string.IsNullOrWhiteSpace(map.Id))
-        {
-            throw new InvalidOperationException($"Map '{path}' deserialized to an empty MapConfig.");
-        }
-
-        if (map.Entities == null || map.Entities.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"Map '{map.Id}' has no Entities. Per-op galleries must spawn people through MapLoader.");
-        }
-
-        return map;
     }
 }

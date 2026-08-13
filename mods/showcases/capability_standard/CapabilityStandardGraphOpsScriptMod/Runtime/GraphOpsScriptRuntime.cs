@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -10,7 +11,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsScriptMod.Runtime;
 
-public sealed class GraphOpsScriptRuntime
+public sealed class GraphOpsScriptRuntime : IDisposable
 {
     private enum Phase
     {
@@ -45,6 +46,10 @@ public sealed class GraphOpsScriptRuntime
     };
 
     private GraphOpsStageVisuals? _stage;
+    private GameEngine? _engine;
+    private GraphOpsEngineWorld? _session;
+    private Entity _drinkEntity;
+    private Entity _patrolEntity;
     private Entity _patrolProxy;
     private bool _visualsSpawned;
     public int DrinkLimit { get; } = 5;
@@ -67,6 +72,11 @@ public sealed class GraphOpsScriptRuntime
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
     }
 
+    public void AttachEngine(GameEngine engine)
+    {
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+    }
+
     public void BindStageVisuals(GraphOpsStageVisuals stage)
     {
         _stage = stage ?? throw new ArgumentNullException(nameof(stage));
@@ -87,6 +97,9 @@ public sealed class GraphOpsScriptRuntime
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _patrolGraphId);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _invokeConstGraphId);
         _ = _catalog.Require(ConstFunctionName);
+        _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
+        _drinkEntity = _session.World.Create();
+        _patrolEntity = _session.World.Create();
         EnsureInvokeGraphPatched();
         Metrics.AgentCount = 1;
         Metrics.Detail = "先喝茶续杯，再巡逻推进，最后走常量管线。";
@@ -100,9 +113,25 @@ public sealed class GraphOpsScriptRuntime
             return;
         }
 
-        _stage.Spawn(GraphOpsVisualTemplates.Caster, "喝茶人", -6f, 0f, 100f, 100f);
+        _stage.BindMapEntity(
+            _drinkEntity,
+            GraphOpsVisualTemplates.Caster,
+            "喝茶人",
+            -6f,
+            0f,
+            100f,
+            100f,
+            bindAsViewer: true);
         Vector2 firstStop = PatrolStops[0];
-        _patrolProxy = _stage.Spawn(GraphOpsVisualTemplates.Scout, "巡逻", firstStop.X, firstStop.Y, 100f, 100f);
+        _patrolProxy = _stage.BindMapEntity(
+            _patrolEntity,
+            GraphOpsVisualTemplates.Scout,
+            "巡逻",
+            firstStop.X,
+            firstStop.Y,
+            100f,
+            100f,
+            bindAsViewer: false);
         _visualsSpawned = true;
     }
 
@@ -236,5 +265,11 @@ public sealed class GraphOpsScriptRuntime
         Array.Clear(_bools, 0, _bools.Length);
         Array.Clear(_callStack, 0, _callStack.Length);
         _started = true;
+    }
+
+    public void Dispose()
+    {
+        _session?.Dispose();
+        _session = null;
     }
 }
