@@ -27,7 +27,7 @@ Raylib 适配层的目标是**能力覆盖基准**，不是视觉效果基准。
 |-----------|----------------|-------------|---------|
 | Mesh | LoadModel 完整支持（GLTF/OBJ/GLB） | 内置 Cube/Sphere + Kenney CC0 低模建筑 | 位置/旋转/缩放/颜色/材质切换/动态 swap |
 | SkinnedMesh | LoadModelAnimations + UpdateModelAnimation（GLTF 骨骼动画有已知 bug，仅支持简单骨骼链） | 自造 2-3 骨骼 GLB（摆臂/点头级别） | 状态机→clip index→bone update 链路通，不验证蒙皮质量 |
-| Decal | 无原生投影贴花，无 RVT | 复用 GroundOverlay（地面 quad + 纹理），AlignToSurface 用法线旋转 quad | grounding 对齐 + scale param 链路 |
+| Decal | 投影盒裁剪，重绘重叠接收网格 | `AssetKind.Decal` → `VisualProxy.Scale` → 可插 `IRaylibReceiverMeshProjector`（先接高度图块） | 印记尺寸听作者；缺投影器/重叠网格/host albedo 失败响 |
 | VFX | 无粒子系统 | Billboard sprite + alpha fade 模拟（DrawBillboard + 逐帧 alpha 衰减） | 生命周期（创建/销毁）+ 位置跟随父 presenter + localOffset |
 | Sound | LoadSound / PlaySound / SetSoundVolume 完整支持 | CC0 音效文件 | loop/非 loop + volume param 绑定 + 随 presenter 销毁停止 |
 | Spline | 无原生样条渲染 | DrawLine3D 连线段 + 沿线段插值移动 | 巡逻逻辑 + waypoint 事件 + speed param + pingPong |
@@ -55,7 +55,7 @@ Raylib 的 GLTF 骨骼动画存在已知问题（bone transform 计算偏差，�
 | `test_cube_damaged.glb` | 耐久度阈值 mesh swap | 缺角立方体 |
 | `test_cube_ruined.glb` | 耐久度归零 mesh swap | 碎裂立方体 |
 | `test_skinned.glb` | SkinnedMesh + Animator 链路 | 3 骨骼摆臂模型，含 idle/walk 两个 animation clip |
-| `test_ground_quad.glb` | Decal 模拟 | 1m×1m 地面 quad，带 UV |
+| `test_ground_quad.glb` | 历史 grounding 夹具 | 1m×1m 地面 quad，带 UV；投影贴花不再走这条平片 |
 | `test_spline_path.json` | Spline 巡逻路线 | 4 个 waypoint 的闭合路径 |
 
 #### CC0 外部资产
@@ -98,7 +98,7 @@ blacksmith_root
 
 **VFX 模拟**：不实现粒子系统。用 `DrawBillboard` 绘制一个半透明 sprite。位置 = 父 presenter WorldPosition + localOffset，可见性由 presenter param/tag 驱动。这足以验证 VFX 的位置跟随 + behavior 开关链路。
 
-**Decal 模拟**：不实现投影贴花。用 `DrawMesh`（flat quad）+ grounding 系统计算的地面位置和法线。AlignToSurface 模式下 quad 法线对齐地形法线。这足以验证 grounding + scale param 链路。
+**Decal**：投影印在可插接收面上。作者 `localScale.x/z` 是印记边长（米），`localScale.y` 是投影盒厚度（米）。适配器按 `VisualProxy.Scale` 建裁剪盒、重绘重叠接收网格；片元只裁印记 XZ，不按薄盒 Y 盖切脊线。未绑定投影器、没有重叠网格、没有 host albedo → 失败响。禁止改回世界朝上的平片，也禁止把 GroundOverlay 冒充贴花。
 
 **Spline 模拟**：不实现样条曲线渲染。用 `DrawLine3D` 在相邻 waypoint 间画线段。巡逻移动用线性插值（非 Catmull-Rom），到达 waypoint 时触发事件。这足以验证巡逻逻辑 + waypoint 事件 + speed/pingPong 参数。
 
@@ -183,14 +183,39 @@ blacksmith_root
 
 | 用例 | 输入 | 预期输出 | 验收标准 |
 |------|------|---------|---------|
-| 地面贴花 | presenter(AssetBinding: Decal, Grounding: AlignToSurface) | 贴花贴合地面 | 贴花法线对齐地形，无浮空/穿地 |
-| 贴花缩放 | scaleParamKey 绑定 | 贴花大小随 param 变化 | 缩放中心正确 |
+| 地面贴花 | presenter(AssetBinding: Decal) + 已绑定接收网格投影器 | 贴花印在接收面上 | 跟着表面走，不是插进地里的薄板 |
+| 贴花缩放 | `"localScale": [3.8, 1.0, 3.8]` 或 scaleParamKey | 印记大小跟作者缩放一致 | X/Z 为印记米制边长，不得画成固定 1×1 |
 
 ### 3.2 Mod 作者配置 UAT
 
 | 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
-| Decal + SnapToGround | `"grounding": "AlignToSurface"` | 贴花对齐地面法线 | 与 SnapToGround 行为不同（有旋转对齐） |
+| Decal + SnapToGround | `"grounding": "SnapToGround"` | 只负责落点高度 | 印上去是投影，不是把 quad 转到法线 |
+| 缺投影器 | 未调用 `BindReceiverMeshProjector` | 绘制失败 | 禁止静默改回平片 |
+| 投影器不能拟合 | 绑定了只会画、不会采样高度的接收面 | 绘制失败 | 禁止静默留在作者 Y / 单位方片 |
+
+### 3.3 Scale → 投影盒
+
+`VisualProxy.Scale` 是贴花尺寸的唯一通道，不另开 payload 字段：
+
+| 分量 | 含义 |
+|------|------|
+| `Scale.X` / `Scale.Z` | 印记在接收面切向平面上的边长（米） |
+| `Scale.Y` | 投影盒厚度（米），用来挑重叠接收网格 |
+
+链路：`presenters.json` `localScale` → `VisualProxy.Scale` → `ProjectedDecalVolume`。片元着色器按印记 XZ 裁剪；Y 盖不切脊线。Raylib 先把高度图块接到 `IRaylibReceiverMeshProjector`；投影盒 Y 必须走同一接口的 `FitYawedStampProjectorCenter`。未绑定投影器、投影器不能采样接收面、印记和接收面没有重叠、没有 host albedo → 失败响。禁止静默跳过 Y 拟合、禁止改回世界朝上的平片，也禁止把 GroundOverlay 冒充贴花。VertexMap / 道具接收面以后实现同一接口。
+
+玩家机位 `08` 的字段对照沙滩（大小/厚度并排）不在本页证明范围：本页只验收合同测试。热带岛对照区拍摄属于字段画廊 PR。
+
+Raylib 适配器常量（不是作者字段，测试不得钉死字面量）：
+
+| 常量 | 用途 |
+|------|------|
+| 印记高度采样分段 | 高度图投影器在偏航印记下采样接收面高度 |
+| `minReceiverNDotUp` | 片元丢掉朝下/悬崖面 |
+| `receiverDepthBias` | 沿法线微移，让重绘三角赢过不透明通道的深度测试 |
+| Cutout alpha | 与植被 cutout 共用阈值，直到贴花材质有自己的 cutoff 字段 |
+| 偏航 OBB | 投影盒只绕世界 Y 转；带俯仰/滚转的旋转失败响 |
 
 ---
 

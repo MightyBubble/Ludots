@@ -64,3 +64,4 @@ The script:
 - Linux cloud: keep Skia GPU + framebuffer underlays disabled (same as Raylib parity showcase).
 - Reflective water uses VisualHeightmap terrain into reflection/refraction FBOs plus a Host ocean plane (`tropical_island.vhtm`); do not capture `06` if the water FBO pass is inactive.
 - Assets are procedural CC0 / in-repo Ludots content — no copy from `/tmp/RaylibErosionStandalone`.
+- P3 projected Decal contract is proven by `ProjectedDecalContractTests` (author scale → `VisualProxy` → `ProjectedDecalVolume` → fail-loud projector). Camera `08` field-contrast player shot is **not taken** on this branch; tropical-island field gallery belongs to the gallery PR.

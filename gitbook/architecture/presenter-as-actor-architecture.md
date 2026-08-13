@@ -130,7 +130,7 @@ public enum AssetKind : byte
     Mesh = 1, SkinnedMesh = 2, Decal = 3, VFX = 4, Sound = 5, Spline = 6,
     WorldHud = 7,    // 血条、名字板等世界空�?HUD
     WorldText = 8,   // 浮动战斗文字
-    GroundOverlay = 9, // 地面 quad / 低保真贴花降级通道
+    GroundOverlay = 9, // 圈/扇/线/环指示，不是贴花
 }
 ```
 

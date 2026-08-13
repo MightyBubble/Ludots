@@ -15,11 +15,12 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Client.Raylib.Rendering
 {
-    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibTerrainMeshProjector
+    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
         public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
         public const string BackendIdRaylib = "raylib";
         public const int TerrainAlbedoLayerCount = 4;
+        internal const int DecalStampHeightSampleSegments = 6;
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
@@ -43,6 +44,7 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locControlMap = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
+        private IVisualHeightmap? _stampHeightSampleSource;
         private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
         private Texture2D _controlMapTexture;
         private bool _ownsAlbedoTextures;
@@ -358,6 +360,60 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return drawn;
+        }
+
+        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        {
+            _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
+        }
+
+        public Vector3 FitYawedStampProjectorCenter(
+            in Vector3 stampCenter,
+            float yawRad,
+            in Vector2 stampSizeMeters,
+            int stableId)
+        {
+            IVisualHeightmap heightmap = _stampHeightSampleSource
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
+
+            if (!float.IsFinite(stampSizeMeters.X) || !float.IsFinite(stampSizeMeters.Y) ||
+                stampSizeMeters.X <= 0f || stampSizeMeters.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp size must be finite and positive, got {stampSizeMeters}.");
+            }
+
+            float cos = MathF.Cos(yawRad);
+            float sin = MathF.Sin(yawRad);
+            float minHeightM = float.PositiveInfinity;
+            float maxHeightM = float.NegativeInfinity;
+            int samples = DecalStampHeightSampleSegments;
+            for (int y = 0; y <= samples; y++)
+            {
+                float v = (y / (float)samples) - 0.5f;
+                float localZ = v * stampSizeMeters.Y;
+                for (int x = 0; x <= samples; x++)
+                {
+                    float u = (x / (float)samples) - 0.5f;
+                    float localX = u * stampSizeMeters.X;
+                    float worldX = stampCenter.X + (localX * cos) - (localZ * sin);
+                    float worldZ = stampCenter.Z + (localX * sin) + (localZ * cos);
+                    float worldXCm = worldX * WorldUnits.CmPerMeter;
+                    float worldYCm = worldZ * WorldUnits.CmPerMeter;
+                    if (!heightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp does not overlap sampleable receiver height at ({worldXCm:F1},{worldYCm:F1}).");
+                    }
+
+                    float heightM = WorldUnits.CmToM(heightCm);
+                    minHeightM = MathF.Min(minHeightM, heightM);
+                    maxHeightM = MathF.Max(maxHeightM, heightM);
+                }
+            }
+
+            return new Vector3(stampCenter.X, (minHeightM + maxHeightM) * 0.5f, stampCenter.Z);
         }
 
         private void EnsureInitialized()

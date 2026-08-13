@@ -591,14 +591,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private Vector3 ResolveAssetScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
         {
-            Vector3 resolved = presenterWorldScale == Vector3.Zero ? Vector3.One : presenterWorldScale;
-            resolved *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;
-            if (asset.ScaleParamKey >= 0)
-            {
-                resolved *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
-            }
-
-            return resolved;
+            return _assetEmitter.ResolveScale(entity, in asset, presenterWorldScale);
         }
 
         private static Quaternion ResolveAssetRotation(in AssetBindingConfig asset, Quaternion presenterWorldRotation)
