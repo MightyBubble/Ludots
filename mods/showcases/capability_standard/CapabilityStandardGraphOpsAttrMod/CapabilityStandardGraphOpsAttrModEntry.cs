@@ -4,6 +4,7 @@ using CapabilityStandardGraphOpsAttrMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsAttrMod;
@@ -25,8 +26,9 @@ public sealed class CapabilityStandardGraphOpsAttrModEntry : IMod
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+            ScreenOverlayBuffer? overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             engine.RegisterSystem(new GraphOpsAttrSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new GraphOpsAttrPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new GraphOpsAttrPresentationSystem(runtime, debugDraw, overlay));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });

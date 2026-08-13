@@ -7,7 +7,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_ValidationGraph_CompilesAndUsesClampAndCompare;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -16,7 +16,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -36,7 +36,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -45,7 +45,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -73,7 +73,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -172,7 +172,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -190,7 +190,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -199,7 +199,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -219,7 +219,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -248,7 +248,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -397,7 +397,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -433,7 +433,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -460,7 +460,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -568,7 +568,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -586,7 +586,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },
@@ -595,7 +595,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsAttrShowcaseAcceptanceTests.FrontDoor_AttrGraphs_EmitCompareSelectAndBranch",
       "showcaseId": "capability_standard_graph_ops_attr",
       "status": "covered"
     },

@@ -12,6 +12,7 @@ internal static class GraphOpsFloatGraphAuthoring
 {
     public const string EffectGraphId = "showcase.graph_ops_float.damage";
     public const string ValidationGraphId = "showcase.graph_ops_float.range";
+    public const string PermitNodeId = "permit";
     public const string FinalDamageNodeId = "finalDamage";
     public const string RangeValidNodeId = "rangeValid";
 
@@ -23,11 +24,11 @@ internal static class GraphOpsFloatGraphAuthoring
         return Compile(json, EffectGraphId);
     }
 
-    public static GraphControlFlowCompileResult CompileValidationGraph(float distance)
+    public static GraphControlFlowCompileResult CompileValidationGraph(float distance, bool permit = true)
     {
-        string json = ValidationGraphJsonTemplate.Replace(
-            DistancePlaceholder,
-            distance.ToString(CultureInfo.InvariantCulture));
+        string json = ValidationGraphJsonTemplate
+            .Replace(DistancePlaceholder, distance.ToString(CultureInfo.InvariantCulture))
+            .Replace(PermitPlaceholder, permit ? "true" : "false");
         return Compile(json, ValidationGraphId);
     }
 
@@ -91,6 +92,7 @@ internal static class GraphOpsFloatGraphAuthoring
     }
 
     private const string DistancePlaceholder = "__DISTANCE__";
+    private const string PermitPlaceholder = "__PERMIT__";
 
     private const string EffectGraphJsonTemplate = """
         {
@@ -174,8 +176,9 @@ internal static class GraphOpsFloatGraphAuthoring
     private const string ValidationGraphJsonTemplate = """
         {
           "kind": "Validation",
-          "entry": "caster",
+          "entry": "permit",
           "nodes": [
+            { "id": "permit", "op": "ConstBool", "boolValue": __PERMIT__ },
             { "id": "caster", "op": "LoadCaster" },
             { "id": "dist", "op": "ConstFloat", "floatValue": __DISTANCE__ },
             { "id": "minRange", "op": "ConstFloat", "floatValue": 5 },
@@ -184,6 +187,7 @@ internal static class GraphOpsFloatGraphAuthoring
             { "id": "rangeValid", "op": "CompareGtFloat" }
           ],
           "controlEdges": [
+            { "from": "permit", "fromPort": "next", "to": "caster" },
             { "from": "caster", "fromPort": "next", "to": "dist" },
             { "from": "dist", "fromPort": "next", "to": "minRange" },
             { "from": "minRange", "fromPort": "next", "to": "maxRange" },
@@ -194,8 +198,8 @@ internal static class GraphOpsFloatGraphAuthoring
             { "from": "dist", "fromPort": "value", "to": "snapped", "toPort": "value" },
             { "from": "minRange", "fromPort": "value", "to": "snapped", "toPort": "min" },
             { "from": "maxRange", "fromPort": "value", "to": "snapped", "toPort": "max" },
-            { "from": "snapped", "fromPort": "value", "to": "rangeValid", "toPort": "a" },
-            { "from": "minRange", "fromPort": "value", "to": "rangeValid", "toPort": "b" }
+            { "from": "maxRange", "fromPort": "value", "to": "rangeValid", "toPort": "a" },
+            { "from": "snapped", "fromPort": "value", "to": "rangeValid", "toPort": "b" }
           ]
         }
         """;

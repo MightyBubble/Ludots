@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -61,8 +60,8 @@ public static class GraphOpsAttrGraphBootstrap
             string id = element.GetProperty("id").GetString()
                 ?? throw new InvalidOperationException("Graph entry missing id.");
             JsonObject obj = JsonNode.Parse(element.GetRawText())!.AsObject();
-            var (pkg, _, diags) = GraphProgramAuthoringFrontDoor.CompileJsonObject(obj, id, options);
-            foreach (GraphDiagnostic diagnostic in diags)
+            GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, id, options);
+            foreach (GraphDiagnostic diagnostic in compiled.Diagnostics)
             {
                 if (diagnostic.Severity == GraphDiagnosticSeverity.Error)
                 {
@@ -70,7 +69,7 @@ public static class GraphOpsAttrGraphBootstrap
                 }
             }
 
-            if (!pkg.HasValue)
+            if (!compiled.Succeeded || !compiled.Package.HasValue)
             {
                 throw new InvalidOperationException($"Compile {id} produced no package.");
             }
@@ -81,10 +80,10 @@ public static class GraphOpsAttrGraphBootstrap
                 throw new InvalidOperationException($"Graph '{id}' has invalid kind '{kindText}'.");
             }
 
-            GraphProgramPackage package = pkg.Value;
+            GraphProgramPackage package = compiled.Package.Value;
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
             int graphId = GraphIdRegistry.Register(id);
-            programs.Register(graphId, package.Program, kind, GraphInstructionSourceMap.Empty, package.Symbols);
+            programs.Register(graphId, package.Program, kind, compiled.SourceMap, package.Symbols);
         }
 
         return programs;

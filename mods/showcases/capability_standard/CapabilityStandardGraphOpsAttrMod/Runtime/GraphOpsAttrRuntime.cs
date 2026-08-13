@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
@@ -13,16 +12,25 @@ namespace CapabilityStandardGraphOpsAttrMod.Runtime;
 
 public sealed class GraphOpsAttrRuntime : IDisposable
 {
+    public const float OpeningHealth = 80f;
+    public const int WoundLine = 70;
+    public const float FullHit = 13f;
+    public const float GlanceHit = 6f;
+
     private enum Phase
     {
         ReadHealth,
-        Strike,
+        StrikeFull,
+        StrikeGlance,
         ApplyMark,
         RemoveMark,
         Complete
     }
 
     private readonly GraphShowcaseConfig _config = new();
+    private readonly byte[] _lastBools = new byte[GraphVmLimits.MaxBoolRegisters];
+    private readonly int[] _lastInts = new int[GraphVmLimits.MaxIntRegisters];
+    private readonly Entity[] _lastEntities = new Entity[GraphVmLimits.MaxEntityRegisters];
     private GraphProgramRegistry? _programs;
     private World? _world;
     private GasGraphRuntimeApi? _api;
@@ -34,12 +42,21 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     private int _healthAttrId;
     private int _bonusAttrId;
     private int _tallyAttrId;
+    private int _lastHitAttrId;
     private int _markTemplateId;
     private bool _ownsPrograms;
+    private GraphInstruction[] _strikeTemplate = Array.Empty<GraphInstruction>();
+    private GraphInstructionSourceMap _strikeSourceMap = GraphInstructionSourceMap.Empty;
 
     public float TargetHealth { get; private set; }
+    public float CasterHealth { get; private set; }
     public float DamageBonus { get; private set; }
+    public float StrikeTally { get; private set; }
+    public float LastHitPower { get; private set; }
     public int PendingEffectRequests { get; private set; }
+    public bool TargetIsSelf { get; private set; }
+    public bool LastStrikeWasGlance { get; private set; }
+    public bool HitEnemy { get; private set; }
     public bool AllPhasesComplete => _phase == Phase.Complete;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_attr" };
 
@@ -66,12 +83,22 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         _healthAttrId = AttributeRegistry.Register("Health");
         _bonusAttrId = AttributeRegistry.Register("DamageBonus");
         _tallyAttrId = AttributeRegistry.Register("StrikeTally");
+        _lastHitAttrId = AttributeRegistry.Register("LastHitPower");
         _markTemplateId = EffectTemplateIdRegistry.Register(GraphOpsAttrGraphKeys.MarkEffect);
 
         RequireGraph(GraphOpsAttrGraphKeys.ReadHealth);
         RequireGraph(GraphOpsAttrGraphKeys.Strike);
         RequireGraph(GraphOpsAttrGraphKeys.ApplyMark);
         RequireGraph(GraphOpsAttrGraphKeys.RemoveMark);
+
+        int strikeId = GraphIdRegistry.GetId(GraphOpsAttrGraphKeys.Strike);
+        if (!_programs.TryGetProgram(strikeId, out ReadOnlySpan<GraphInstruction> strikeProgram) ||
+            !_programs.TryGetSourceMap(strikeId, out _strikeSourceMap))
+        {
+            throw new InvalidOperationException("Strike graph program or source map is missing.");
+        }
+
+        _strikeTemplate = strikeProgram.ToArray();
 
         _world = World.Create();
         _requests = new EffectRequestQueue();
@@ -119,23 +146,21 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         switch (_phase)
         {
             case Phase.ReadHealth:
-                ExecuteEffectGraph(GraphOpsAttrGraphKeys.ReadHealth);
-                TargetHealth = _world!.Get<AttributeBuffer>(_target).GetCurrent(_healthAttrId);
-                DamageBonus = _world.Get<AttributeBuffer>(_caster).GetCurrent(_bonusAttrId);
-                Metrics.Detail = $"读血量：目标还有 {TargetHealth:F0} 点血，施法者加伤 {DamageBonus:F0}。";
-                _phase = Phase.Strike;
+                ExecuteReadHealth();
+                _phase = Phase.StrikeFull;
                 break;
-            case Phase.Strike:
-                ExecuteEffectGraph(GraphOpsAttrGraphKeys.Strike);
-                TargetHealth = _world!.Get<AttributeBuffer>(_target).GetCurrent(_healthAttrId);
-                float tally = _world.Get<AttributeBuffer>(_caster).GetCurrent(_tallyAttrId);
-                Metrics.Detail = $"加伤：结算后目标剩 {TargetHealth:F0} 血，本轮伤害已记入 tally={tally:F0}。";
+            case Phase.StrikeFull:
+                ExecuteStrike();
+                _phase = Phase.StrikeGlance;
+                break;
+            case Phase.StrikeGlance:
+                ExecuteStrike();
                 _phase = Phase.ApplyMark;
                 break;
             case Phase.ApplyMark:
                 ExecuteEffectGraph(GraphOpsAttrGraphKeys.ApplyMark);
                 PendingEffectRequests = _requests!.Count;
-                Metrics.Detail = $"上效果：已向目标投递标记效果（队列 {PendingEffectRequests} 条）。";
+                Metrics.Detail = $"上效果：已向对面投递标记效果（队列 {PendingEffectRequests} 条）。";
                 _phase = Phase.RemoveMark;
                 break;
             case Phase.RemoveMark:
@@ -145,6 +170,42 @@ public sealed class GraphOpsAttrRuntime : IDisposable
                 _phase = Phase.Complete;
                 break;
         }
+    }
+
+    private void ExecuteReadHealth()
+    {
+        int graphId = GraphIdRegistry.GetId(GraphOpsAttrGraphKeys.ReadHealth);
+        if (!_programs!.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) ||
+            !_programs.TryGetSourceMap(graphId, out GraphInstructionSourceMap map))
+        {
+            throw new InvalidOperationException($"Graph '{GraphOpsAttrGraphKeys.ReadHealth}' is not registered with a source map.");
+        }
+
+        ExecuteGraph(program);
+        RefreshAttributes();
+        TargetIsSelf = ReadLastBool(program, map, "sameEntity", GraphNodeOp.CompareEqEntity);
+        string selfText = TargetIsSelf ? "目标就是自己" : "目标不是自己";
+        Metrics.Detail = $"读血量：目标还有 {TargetHealth:F0} 点血，施法者加伤 {DamageBonus:F0}；{selfText}。";
+    }
+
+    private void ExecuteStrike()
+    {
+        GraphInstruction[] program = (GraphInstruction[])_strikeTemplate.Clone();
+        PatchConstInt(program, _strikeSourceMap, "healthNow", (int)MathF.Floor(TargetHealth));
+        ExecuteGraph(program);
+        RefreshAttributes();
+
+        TargetIsSelf = ReadLastBool(program, _strikeSourceMap, "sameEntity", GraphNodeOp.CompareEqEntity);
+        HitEnemy = ReadLastEntity(program, _strikeSourceMap, "pickTarget", GraphNodeOp.SelectEntity) == _target;
+        LastStrikeWasGlance = ReadLastBool(program, _strikeSourceMap, "lowHp", GraphNodeOp.CompareLtInt);
+        bool stillOpening = ReadLastBool(program, _strikeSourceMap, "stillOpening", GraphNodeOp.CompareEqInt);
+        int combinedPower = ReadLastInt(program, _strikeSourceMap, "damageInt", GraphNodeOp.AddInt);
+        string hitStyle = LastStrikeWasGlance ? "已经残血，改打轻击6" : "血量还够，打全力13";
+        string openingText = stillOpening ? "还是开场满血80" : "不是开场满血80";
+        string selfText = TargetIsSelf ? "目标就是自己" : "目标不是自己";
+        string victimText = HitEnemy ? "选出对面挨打" : "选出自己挨打";
+        Metrics.Detail =
+            $"加伤：{hitStyle}；基础8加加伤5得到{combinedPower}；{openingText}；{selfText}，{victimText}；本轮出手次数记为 {StrikeTally:F0}。";
     }
 
     private void ExecuteEffectGraph(string graphKey)
@@ -158,6 +219,63 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         GraphExecutor.Execute(_world!, _caster, _target, default, program, _api!, GraphKind.Effect);
     }
 
+    private void ExecuteGraph(ReadOnlySpan<GraphInstruction> program)
+    {
+        GraphKindOperationPolicy.RequireAllowed(GraphKind.Effect, program, GasGraphOpHandlerTable.Instance);
+        Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+        Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
+        Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+        Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+        Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+        Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+        var targetList = new GraphTargetList(targets);
+
+        entities[0] = _caster;
+        entities[1] = _target;
+
+        var state = new GraphExecutionState
+        {
+            World = _world!,
+            Caster = _caster,
+            ExplicitTarget = _target,
+            Api = _api!,
+            F = floats,
+            I = ints,
+            B = bools,
+            E = entities,
+            Targets = targets,
+            TargetList = targetList,
+            CallStack = callStack,
+            Status = GraphExecutionStatus.Running
+        };
+
+        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+        bools.CopyTo(_lastBools);
+        ints.CopyTo(_lastInts);
+        entities.CopyTo(_lastEntities);
+    }
+
+    private bool ReadLastBool(
+        ReadOnlySpan<GraphInstruction> program,
+        GraphInstructionSourceMap map,
+        string nodeId,
+        GraphNodeOp op)
+        => _lastBools[RequireDest(program, map, nodeId, op)] != 0;
+
+    private int ReadLastInt(
+        ReadOnlySpan<GraphInstruction> program,
+        GraphInstructionSourceMap map,
+        string nodeId,
+        GraphNodeOp op)
+        => _lastInts[RequireDest(program, map, nodeId, op)];
+
+    private Entity ReadLastEntity(
+        ReadOnlySpan<GraphInstruction> program,
+        GraphInstructionSourceMap map,
+        string nodeId,
+        GraphNodeOp op)
+        => _lastEntities[RequireDest(program, map, nodeId, op)];
+
     private void SpawnActiveMarkForRemoval()
     {
         var mark = _world!.Create(
@@ -170,6 +288,15 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         }
     }
 
+    private void RefreshAttributes()
+    {
+        TargetHealth = _world!.Get<AttributeBuffer>(_target).GetCurrent(_healthAttrId);
+        CasterHealth = _world.Get<AttributeBuffer>(_caster).GetCurrent(_healthAttrId);
+        DamageBonus = _world.Get<AttributeBuffer>(_caster).GetCurrent(_bonusAttrId);
+        StrikeTally = _world.Get<AttributeBuffer>(_caster).GetCurrent(_tallyAttrId);
+        LastHitPower = _world.Get<AttributeBuffer>(_caster).GetCurrent(_lastHitAttrId);
+    }
+
     private void ResetCombatants()
     {
         ref var casterAttrs = ref _world!.Get<AttributeBuffer>(_caster);
@@ -180,10 +307,15 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         casterAttrs.SetCurrent(_bonusAttrId, 5f);
         casterAttrs.SetBase(_tallyAttrId, 0f);
         casterAttrs.SetCurrent(_tallyAttrId, 0f);
-        targetAttrs.SetBase(_healthAttrId, 80f);
-        targetAttrs.SetCurrent(_healthAttrId, 80f);
-        TargetHealth = 80f;
+        casterAttrs.SetBase(_lastHitAttrId, 0f);
+        casterAttrs.SetCurrent(_lastHitAttrId, 0f);
+        targetAttrs.SetBase(_healthAttrId, OpeningHealth);
+        targetAttrs.SetCurrent(_healthAttrId, OpeningHealth);
+        TargetHealth = OpeningHealth;
+        CasterHealth = 100f;
         DamageBonus = 5f;
+        StrikeTally = 0f;
+        LastHitPower = 0f;
         _requests!.Clear();
         PendingEffectRequests = 0;
     }
@@ -195,5 +327,54 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         {
             throw new InvalidOperationException($"Required graph '{graphKey}' is missing from registry.");
         }
+    }
+
+    private static void PatchConstInt(
+        GraphInstruction[] program,
+        GraphInstructionSourceMap map,
+        string nodeId,
+        int value)
+    {
+        for (int i = 0; i < program.Length; i++)
+        {
+            if (!map.TryGetSource(i, out GraphInstructionSource source) ||
+                !string.Equals(source.NodeId, nodeId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (program[i].Op != (ushort)GraphNodeOp.ConstInt)
+            {
+                continue;
+            }
+
+            program[i].Imm = value;
+            return;
+        }
+
+        throw new InvalidOperationException($"Strike graph missing ConstInt node '{nodeId}'.");
+    }
+
+    private static byte RequireDest(
+        ReadOnlySpan<GraphInstruction> program,
+        GraphInstructionSourceMap map,
+        string nodeId,
+        GraphNodeOp op)
+    {
+        for (int i = 0; i < program.Length; i++)
+        {
+            if (!map.TryGetSource(i, out GraphInstructionSource source) ||
+                !string.Equals(source.NodeId, nodeId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (program[i].Op == (ushort)op)
+            {
+                return program[i].Dst;
+            }
+        }
+
+        throw new InvalidOperationException($"Graph missing node '{nodeId}' ({op}).");
     }
 }

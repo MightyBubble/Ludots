@@ -1,19 +1,27 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardGraphOpsAttrMod.Runtime;
 
 internal sealed class GraphOpsAttrPresentationSystem : ISystem<float>
 {
+    public const string PlayerTitle = "属性/效果模板图节点";
+
     private readonly GraphOpsAttrRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly ScreenOverlayBuffer? _overlay;
     private readonly GraphShowcaseConfig _config = new();
 
-    public GraphOpsAttrPresentationSystem(GraphOpsAttrRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public GraphOpsAttrPresentationSystem(
+        GraphOpsAttrRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        ScreenOverlayBuffer? overlay)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _overlay = overlay;
     }
 
     public void Initialize() { }
@@ -28,7 +36,7 @@ internal sealed class GraphOpsAttrPresentationSystem : ISystem<float>
         GraphShowcaseStagePresenter.DrawActor(_debugDraw, 2.5f, 0f, 0.55f, GraphShowcaseStagePresenter.EnemyColor);
         GraphShowcaseStagePresenter.DrawAggroLine(_debugDraw, -2.5f, 0f, 2.5f, 0f);
 
-        float healthRatio = Math.Clamp(_runtime.TargetHealth / 80f, 0f, 1f);
+        float healthRatio = Math.Clamp(_runtime.TargetHealth / GraphOpsAttrRuntime.OpeningHealth, 0f, 1f);
         _debugDraw.Boxes.Add(new DebugDrawBox2D
         {
             Center = new System.Numerics.Vector2(2.5f, -1.4f),
@@ -55,5 +63,9 @@ internal sealed class GraphOpsAttrPresentationSystem : ISystem<float>
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        if (_overlay != null)
+        {
+            GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, PlayerTitle, _runtime.Metrics.Detail);
+        }
     }
 }
