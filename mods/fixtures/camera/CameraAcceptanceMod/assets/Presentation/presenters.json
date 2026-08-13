@@ -10,31 +10,7 @@
   {
     "id": "camera_acceptance_projection_cue_fixture",
     "lifecycle": {
-      "persistence": "Scoped"
-    },
-    "children": [
-      {
-        "definitionId": "camera_acceptance_projection_cue_mesh",
-        "scopeTag": "mesh"
-      },
-      {
-        "definitionId": "camera_acceptance_projection_cue_decal",
-        "scopeTag": "decal"
-      },
-      {
-        "definitionId": "camera_acceptance_projection_cue_vfx",
-        "scopeTag": "vfx"
-      },
-      {
-        "definitionId": "camera_acceptance_projection_cue_surface",
-        "scopeTag": "surface"
-      }
-    ]
-  },
-  {
-    "id": "camera_acceptance_projection_cue_mesh",
-    "lifecycle": {
-      "persistence": "Scoped"
+      "durationSeconds": 0.45
     },
     "behaviors": [
       {
@@ -60,6 +36,20 @@
             1
           ]
         }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "camera_acceptance_projection_cue_decal",
+        "scopeTag": "decal"
+      },
+      {
+        "definitionId": "camera_acceptance_projection_cue_vfx",
+        "scopeTag": "vfx"
+      },
+      {
+        "definitionId": "camera_acceptance_projection_cue_surface",
+        "scopeTag": "surface"
       }
     ]
   },

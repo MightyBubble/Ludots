@@ -178,6 +178,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(kinds, Does.Contain(AssetKind.VFX));
             Assert.That(kinds, Does.Contain(AssetKind.Surface));
 
+            string runtimePath = Path.Combine(
+                _repoRoot,
+                "mods",
+                "fixtures",
+                "camera",
+                "CameraAcceptanceMod",
+                "Runtime",
+                "CameraAcceptanceRuntime.cs");
+            string runtime = File.ReadAllText(runtimePath);
+            Assert.That(runtime, Does.Not.Contain("TryAddMesh("));
+            Assert.That(runtime, Does.Not.Contain("new Vector3(0.45f)"));
+            Assert.That(runtime, Does.Contain("CreatePresenter"));
+            Assert.That(runtime, Does.Contain("camera_acceptance_projection_cue_fixture"));
+
             modLoader.UnloadAll();
             world.Dispose();
         }

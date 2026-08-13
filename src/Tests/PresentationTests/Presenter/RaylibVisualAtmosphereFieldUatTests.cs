@@ -157,6 +157,17 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 () => buffer.TryAddAnchoredMesh(cubeId, Vector3.One, Vector4.One, -0.2f, Entity.Null, Vector3.Zero),
                 Throws.InvalidOperationException.With.Message.Contains("lifetimeSeconds"));
+            var world = World.Create();
+            try
+            {
+                Assert.That(
+                    () => buffer.TickAndRequest(new PresentationRequestBuffer(8), 0f, world),
+                    Throws.InvalidOperationException.With.Message.Contains("dt must be > 0"));
+            }
+            finally
+            {
+                world.Dispose();
+            }
         }
 
         [Test]

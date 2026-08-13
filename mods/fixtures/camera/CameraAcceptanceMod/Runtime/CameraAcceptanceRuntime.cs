@@ -15,8 +15,9 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -39,7 +40,6 @@ namespace CameraAcceptanceMod.Runtime
 
         private CameraAcceptancePanelController? _panelController;
         private bool _commandSourceAcquiredCallbacksInstalled;
-        private int _cueMarkerMeshId;
         private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
@@ -486,20 +486,39 @@ namespace CameraAcceptanceMod.Runtime
 
         private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markersObj) ||
-                markersObj is not TransientMarkerBuffer markers)
+            if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
-                throw new System.InvalidOperationException("TransientMarkerBuffer is required for projection verification.");
+                throw new System.InvalidOperationException("PresenterCommandBuffer is required for projection verification.");
             }
 
-            if (!markers.TryAddMesh(
-                ResolveCueMarkerMeshId(engine),
-                WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
-                new Vector3(0.45f),
-                new Vector4(0.15f, 0.88f, 1f, 1f),
-                0.45f))
+            if (engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry definitions)
             {
-                throw new System.InvalidOperationException("TransientMarkerBuffer is full while emitting projection verification cue marker.");
+                throw new System.InvalidOperationException("PresenterDefinitionRegistry is required for projection verification.");
+            }
+
+            int defId = definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId);
+            if (defId <= 0 || !definitions.TryGet(defId, out PresenterDefinition definition))
+            {
+                throw new System.InvalidOperationException(
+                    $"Presenter '{CameraAcceptanceIds.ProjectionCueFixturePresenterId}' is required for projection verification.");
+            }
+
+            if (definition.DefaultLifetime <= 0f || !float.IsFinite(definition.DefaultLifetime))
+            {
+                throw new System.InvalidOperationException(
+                    $"Presenter '{CameraAcceptanceIds.ProjectionCueFixturePresenterId}' lifecycle.durationSeconds must be > 0.");
+            }
+
+            if (!commands.TryAdd(new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.CreatePresenter,
+                PresenterDefinitionId = defId,
+                AnchorKind = PresentationAnchorKind.WorldPosition,
+                Position = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
+            }))
+            {
+                throw new System.InvalidOperationException(
+                    "PresenterCommandBuffer overflowed while emitting the projection verification cue presenter tree.");
             }
         }
 
@@ -569,22 +588,6 @@ namespace CameraAcceptanceMod.Runtime
         private static float Hash01(uint seed)
         {
             return (Hash(seed) & 0x00FFFFFFu) / 16777216f;
-        }
-
-        private int ResolveCueMarkerMeshId(GameEngine engine)
-        {
-            if (_cueMarkerMeshId != 0)
-            {
-                return _cueMarkerMeshId;
-            }
-
-            if (engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) is not MeshAssetRegistry meshes)
-            {
-                throw new System.InvalidOperationException("PresentationMeshAssetRegistry is required for projection verification.");
-            }
-
-            _cueMarkerMeshId = WellKnownMeshKeys.RequireCueMarkerId(meshes);
-            return _cueMarkerMeshId;
         }
 
         private static string ResolveActiveBlendCameraId(GameEngine engine)

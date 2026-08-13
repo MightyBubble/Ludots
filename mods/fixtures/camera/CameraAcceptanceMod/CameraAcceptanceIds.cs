@@ -74,6 +74,10 @@ namespace CameraAcceptanceMod
         public const string FocusDummyName = "CameraAcceptanceDummy";
         public const string AlarmDummyName = "CameraAcceptanceAlarmDummy";
         public const string ProjectionSpawnTemplateId = "moba_dummy";
+        public const string ProjectionCueFixturePresenterId = "camera_acceptance_projection_cue_fixture";
+        public const string ProjectionCueDecalPresenterId = "camera_acceptance_projection_cue_decal";
+        public const string ProjectionCueVfxPresenterId = "camera_acceptance_projection_cue_vfx";
+        public const string ProjectionCueSurfacePresenterId = "camera_acceptance_projection_cue_surface";
 
         public static bool IsAcceptanceMap(string? mapId)
         {

@@ -187,7 +187,7 @@ fi
 
 # Beach decals must draw textured Decal visuals (not GroundOverlay wire rings).
 if ! rg -q 'decal=[1-9]' "$OUT_DIR/07_beach_decals.diag.txt"; then
-  echo "ERROR: 07_beach_decals.diag.txt missing textured Decal draw evidence (prefab-visual-counts decal>0)" >&2
+  echo "ERROR: 07_beach_decals.diag.txt missing textured Decal draw evidence (typed-visual-counts decal>0)" >&2
   cat "$OUT_DIR/07_beach_decals.diag.txt" >&2 || true
   exit 6
 fi

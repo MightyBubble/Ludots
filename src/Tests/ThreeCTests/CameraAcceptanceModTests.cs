@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
@@ -97,6 +98,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
             Assert.That(foundCueMarker, Is.True, "Ground click should emit a transient cue marker at the raycast point.");
 
+            var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId)),
+                Is.EqualTo(1),
+                "Ground click must spawn the authored Mesh+Decal+VFX+Surface presenter tree, not a leaf mesh marker.");
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueDecalPresenterId)),
+                Is.EqualTo(1));
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueVfxPresenterId)),
+                Is.EqualTo(1));
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueSurfacePresenterId)),
+                Is.EqualTo(1));
+
             Tick(engine, 60);
             foundCueMarker = false;
             foreach (ref readonly var primitive in primitives.GetSpan())
@@ -108,6 +125,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             }
             Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId)),
+                Is.EqualTo(0),
+                "Authored cue presenter tree must expire with lifecycle.durationSeconds.");
         }
 
         [Test]
@@ -1495,6 +1516,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
             TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeRelease, maxFrames: 8);
         }
 
+        private static int CountPresentersWithDefinition(World world, int definitionId)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            world.Query(in query, (ref PresenterState state) =>
+            {
+                if (state.DefId == definitionId)
+                {
+                    count++;
+                }
+            });
+            return count;
+        }
+
         private static Entity FindEntityByName(World world, string name)
         {
             Entity result = Entity.Null;
@@ -2518,10 +2553,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
             string diagnosticText = File.ReadAllText(diagnosticPath);
             Match match = Regex.Match(
                 diagnosticText,
-                @"prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
+                @"typed-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
                 RegexOptions.CultureInvariant | RegexOptions.RightToLeft);
             Assert.That(match.Success, Is.True,
-                $"Expected Raylib diagnostic '{diagnosticPath}' to contain prefab visual counts for the screenshot frame.");
+                $"Expected Raylib diagnostic '{diagnosticPath}' to contain typed visual counts for the screenshot frame.");
 
             return new RaylibTypedVisualEvidenceStatus(
                 screenshotPath,

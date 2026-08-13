@@ -72,7 +72,11 @@ namespace Ludots.Core.Presentation.Rendering
         public void TickAndRequest(PresentationRequestBuffer requests, float dt, World world)
         {
             ArgumentNullException.ThrowIfNull(requests);
-            float delta = dt <= 0f ? 0.016666668f : dt;
+            float delta = dt;
+            if (delta <= 0f || !float.IsFinite(delta))
+            {
+                throw new InvalidOperationException($"TransientMarkerBuffer dt must be > 0, got {dt}.");
+            }
             for (int i = 0; i < _count;)
             {
                 ref var marker = ref _buffer[i];
