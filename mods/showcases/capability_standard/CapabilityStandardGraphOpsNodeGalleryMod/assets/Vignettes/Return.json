@@ -1,0 +1,32 @@
+{
+  "op": "Return",
+  "driver": "script",
+  "title": "办完事交回",
+  "beat": "子程序结束，人回到主线。",
+  "detailTemplate": "办完事交回主线。人在{place}。",
+  "assertDetailContains": ["交回"],
+  "featuredNodeId": "ret",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "stop",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "驿站",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

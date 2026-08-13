@@ -1,0 +1,15 @@
+{
+  "id": "showcase.graph_op.InvokeScript",
+  "kind": "Script",
+  "entry": "invoke",
+  "nodes": [
+    { "id": "invoke", "op": "InvokeScript", "graphId": 9001 },
+    { "id": "done", "op": "HaltReturnInt" }
+  ],
+  "controlEdges": [
+    { "from": "invoke", "fromPort": "next", "to": "done" }
+  ],
+  "valueEdges": [
+    { "from": "invoke", "fromPort": "value", "to": "done", "toPort": "value" }
+  ]
+}

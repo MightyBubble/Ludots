@@ -898,6 +898,78 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Call_raylib",
+      "name": "Graph Op Call Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Call"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_HaltReturnInt_raylib",
+      "name": "Graph Op HaltReturnInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_HaltReturnInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_InvokeScript_raylib",
+      "name": "Graph Op InvokeScript Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_InvokeScript"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Jump_raylib",
+      "name": "Graph Op Jump Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Jump"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_JumpIfFalse_raylib",
+      "name": "Graph Op JumpIfFalse Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_JumpIfFalse"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_MoveInt_raylib",
+      "name": "Graph Op MoveInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_MoveInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Return_raylib",
+      "name": "Graph Op Return Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Return"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_Yield_raylib",
+      "name": "Graph Op Yield Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_Yield"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

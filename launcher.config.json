@@ -791,6 +791,70 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteSelfAttributeEntryMod",
         "projectPath": "CapabilityStandardGraphOpWriteSelfAttributeEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_Call",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCallEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCallEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_HaltReturnInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHaltReturnIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpHaltReturnIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_InvokeScript",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeScriptEntryMod",
+        "projectPath": "CapabilityStandardGraphOpInvokeScriptEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_Jump",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpEntryMod",
+        "projectPath": "CapabilityStandardGraphOpJumpEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_JumpIfFalse",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpIfFalseEntryMod",
+        "projectPath": "CapabilityStandardGraphOpJumpIfFalseEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_MoveInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMoveIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpMoveIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_Return",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReturnEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReturnEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_Yield",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
+        "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

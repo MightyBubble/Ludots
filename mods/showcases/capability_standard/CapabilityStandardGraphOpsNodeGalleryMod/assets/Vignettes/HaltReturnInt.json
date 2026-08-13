@@ -1,0 +1,22 @@
+{
+  "op": "HaltReturnInt",
+  "driver": "script",
+  "title": "算出一个整数就收工",
+  "beat": "管线算出 7 就停，字幕报 7。",
+  "detailTemplate": "定数是七，管线算出 {result} 就收工。",
+  "assertDetailContains": ["7"],
+  "featuredNodeId": "halt",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}
