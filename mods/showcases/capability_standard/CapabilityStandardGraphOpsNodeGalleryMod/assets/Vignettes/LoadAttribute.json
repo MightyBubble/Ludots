@@ -1,0 +1,32 @@
+{
+  "op": "LoadAttribute",
+  "driver": "attr",
+  "title": "先看对方还有多少血",
+  "beat": "出手前先读木桩当前生命，字幕报出读到的数。",
+  "detailTemplate": "木桩还有 {hp} 点血。",
+  "assertDetailContains": ["还有"],
+  "featuredNodeId": "loadHp",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 80,
+      "healthMax": 100
+    }
+  ]
+}

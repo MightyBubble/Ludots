@@ -671,6 +671,126 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteBlackboardIntEntryMod",
         "projectPath": "CapabilityStandardGraphOpWriteBlackboardIntEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AddInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAddIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAddIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ApplyEffectTemplate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyEffectTemplateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpApplyEffectTemplateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_CompareEqEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompareEqEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompareEqEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_CompareEqInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompareEqIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompareEqIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_CompareLtInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCompareLtIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCompareLtIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadCaster",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadCasterEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadCasterEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadContextTarget",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadContextTargetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadContextTargetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadExplicitTarget",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadExplicitTargetEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadExplicitTargetEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_LoadSelfAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadSelfAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpLoadSelfAttributeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ModifyAttributeAdd",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpModifyAttributeAddEntryMod",
+        "projectPath": "CapabilityStandardGraphOpModifyAttributeAddEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RemoveEffectTemplate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRemoveEffectTemplateEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRemoveEffectTemplateEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_SelectEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpSelectEntityEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteSelfAttribute",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteSelfAttributeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteSelfAttributeEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

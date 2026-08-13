@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.AddInt",
+  "kind": "Effect",
+  "entry": "comboNow",
+  "nodes": [
+    { "id": "comboNow", "op": "ConstInt", "intValue": 2 },
+    { "id": "plusOne", "op": "ConstInt", "intValue": 1 },
+    { "id": "comboAdd", "op": "AddInt" }
+  ],
+  "controlEdges": [
+    { "from": "comboNow", "fromPort": "next", "to": "plusOne" },
+    { "from": "plusOne", "fromPort": "next", "to": "comboAdd" }
+  ],
+  "valueEdges": [
+    { "from": "comboNow", "fromPort": "value", "to": "comboAdd", "toPort": "a" },
+    { "from": "plusOne", "fromPort": "value", "to": "comboAdd", "toPort": "b" }
+  ]
+}

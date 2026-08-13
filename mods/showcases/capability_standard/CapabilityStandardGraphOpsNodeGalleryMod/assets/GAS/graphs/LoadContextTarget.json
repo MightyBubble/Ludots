@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.LoadContextTarget",
+  "kind": "Effect",
+  "entry": "ctxTarget",
+  "nodes": [
+    { "id": "ctxTarget", "op": "LoadContextTarget" },
+    { "id": "wound", "op": "ConstFloat", "floatValue": -12 },
+    { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" }
+  ],
+  "controlEdges": [
+    { "from": "ctxTarget", "fromPort": "next", "to": "wound" },
+    { "from": "wound", "fromPort": "next", "to": "hit" }
+  ],
+  "valueEdges": [
+    { "from": "ctxTarget", "fromPort": "value", "to": "hit", "toPort": "target" },
+    { "from": "wound", "fromPort": "value", "to": "hit", "toPort": "value" }
+  ]
+}

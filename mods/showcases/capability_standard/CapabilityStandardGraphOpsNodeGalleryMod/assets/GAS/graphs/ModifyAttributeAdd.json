@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.ModifyAttributeAdd",
+  "kind": "Effect",
+  "entry": "explicit",
+  "nodes": [
+    { "id": "explicit", "op": "LoadExplicitTarget" },
+    { "id": "wound", "op": "ConstFloat", "floatValue": -25 },
+    { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" }
+  ],
+  "controlEdges": [
+    { "from": "explicit", "fromPort": "next", "to": "wound" },
+    { "from": "wound", "fromPort": "next", "to": "hit" }
+  ],
+  "valueEdges": [
+    { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" },
+    { "from": "wound", "fromPort": "value", "to": "hit", "toPort": "value" }
+  ]
+}

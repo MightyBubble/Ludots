@@ -763,6 +763,141 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AddInt_raylib",
+      "name": "Graph Op AddInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AddInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ApplyEffectTemplate_raylib",
+      "name": "Graph Op ApplyEffectTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ApplyEffectTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompareEqEntity_raylib",
+      "name": "Graph Op CompareEqEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompareEqEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompareEqInt_raylib",
+      "name": "Graph Op CompareEqInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompareEqInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CompareLtInt_raylib",
+      "name": "Graph Op CompareLtInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CompareLtInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstInt_raylib",
+      "name": "Graph Op ConstInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadAttribute_raylib",
+      "name": "Graph Op LoadAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadCaster_raylib",
+      "name": "Graph Op LoadCaster Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadCaster"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadContextTarget_raylib",
+      "name": "Graph Op LoadContextTarget Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadContextTarget"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadExplicitTarget_raylib",
+      "name": "Graph Op LoadExplicitTarget Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadExplicitTarget"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_LoadSelfAttribute_raylib",
+      "name": "Graph Op LoadSelfAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_LoadSelfAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ModifyAttributeAdd_raylib",
+      "name": "Graph Op ModifyAttributeAdd Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ModifyAttributeAdd"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RemoveEffectTemplate_raylib",
+      "name": "Graph Op RemoveEffectTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RemoveEffectTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SelectEntity_raylib",
+      "name": "Graph Op SelectEntity Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SelectEntity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteSelfAttribute_raylib",
+      "name": "Graph Op WriteSelfAttribute Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteSelfAttribute"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1,0 +1,32 @@
+{
+  "op": "CompareEqEntity",
+  "driver": "attr",
+  "title": "打的是不是自己",
+  "beat": "点名目标和施法者不是同一人，这一刀打出去；若是自己就收手。",
+  "detailTemplate": "打的不是自己，这一刀打出去。",
+  "assertDetailContains": ["不是自己"],
+  "featuredNodeId": "notSelf",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}
