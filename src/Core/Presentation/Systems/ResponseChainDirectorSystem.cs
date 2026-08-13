@@ -45,13 +45,20 @@ namespace Ludots.Core.Presentation.Systems
             ConsumeUiStateTransitions();
             if (_telemetry.Count == 0) return;
 
-            CueMarkerAuthoredVisual cue = ResolveCue();
+            CueMarkerAuthoredVisual cue = default;
+            bool cueResolvedThisTick = false;
             for (int i = 0; i < _telemetry.Count; i++)
             {
                 var evt = _telemetry[i];
                 if (evt.Kind != ResponseChainTelemetryKind.ProposalResolved)
                 {
                     continue;
+                }
+
+                if (!cueResolvedThisTick)
+                {
+                    cue = ResolveCue();
+                    cueResolvedThisTick = true;
                 }
 
                 Vector3 pos = default;
