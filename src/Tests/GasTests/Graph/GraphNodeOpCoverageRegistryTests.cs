@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
@@ -14,6 +13,10 @@ namespace Ludots.Tests.GAS
     public sealed class GraphNodeOpCoverageRegistryTests
     {
         private const string RegistryRelativePath = "assets/Configs/GAS/graph_node_op_coverage.registry.json";
+        private const string GalleryMapsRelative =
+            "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Maps";
+        private const string EntryRootRelative =
+            "mods/showcases/capability_standard/graph_op_entries";
 
         [Test]
         public void Registry_ShowcaseId_MustBeUniquePerOp()
@@ -26,7 +29,7 @@ namespace Ludots.Tests.GAS
             {
                 string op = entry.GetProperty("op").GetString() ?? string.Empty;
                 string showcaseId = entry.GetProperty("showcaseId").GetString() ?? string.Empty;
-                Assert.That(showcaseId, Is.EqualTo("capability_standard_graph_op_" + op),
+                Assert.That(showcaseId, Is.EqualTo(GraphOpTestAttribution.PerOpShowcasePrefix + op),
                     $"Coverage showcaseId for {op} must be the per-op gallery, not a family aggregate.");
                 Assert.That(seen.Add(showcaseId), Is.True, $"Duplicate coverage showcaseId '{showcaseId}'.");
             }
@@ -71,60 +74,243 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CoveredEntries_RequireRegisteredGalleryAndGalleryTestFilters()
+        public void CoveredEntries_RequireMeasuredGalleryRefsThatExecuteTheOp()
         {
             string repoRoot = FindRepoRoot();
             HashSet<string> showcaseIds = LoadActiveOrExperimentalShowcaseIds(repoRoot);
-            HashSet<string> testMethods = LoadGasTestMethodNames(repoRoot);
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, RegistryRelativePath)));
+            List<CoverageEntry> entries = LoadCoverageEntries(repoRoot);
+            GraphOpTestAttribution attribution = GraphOpTestAttribution.Load(
+                repoRoot,
+                entries.Select(e => e.Op));
             var failures = new List<string>();
-            foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())
+            foreach (CoverageEntry entry in entries)
             {
-                string op = entry.GetProperty("op").GetString() ?? string.Empty;
-                string status = entry.GetProperty("status").GetString() ?? string.Empty;
-                string showcaseId = entry.GetProperty("showcaseId").GetString() ?? string.Empty;
-                string filter = entry.GetProperty("unitTestFilter").GetString() ?? string.Empty;
-                if (!string.Equals(status, "covered", StringComparison.Ordinal))
+                if (!string.Equals(entry.Status, "covered", StringComparison.Ordinal))
                 {
-                    failures.Add($"{op}: status is '{status}', expected covered.");
+                    failures.Add($"{entry.Op}: status is '{entry.Status}', expected covered.");
                     continue;
                 }
 
-                if (!showcaseIds.Contains(showcaseId))
+                if (!showcaseIds.Contains(entry.ShowcaseId))
                 {
-                    failures.Add($"{op}: showcaseId '{showcaseId}' is missing from showcase.registry.json.");
+                    failures.Add($"{entry.Op}: showcaseId '{entry.ShowcaseId}' is missing from showcase.registry.json.");
                 }
 
-                string[] tokens = filter.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                bool hasGalleryTest = false;
-                foreach (string token in tokens)
+                if (entry.UnitTestRefs.Count == 0)
+                {
+                    failures.Add($"{entry.Op}: unitTestRefs is empty.");
+                    continue;
+                }
+
+                bool hasSpecificGallery = false;
+                foreach (string token in entry.UnitTestRefs)
                 {
                     int dot = token.IndexOf('.');
-                    if (dot <= 0 || dot >= token.Length - 1)
+                    if (dot <= 0 || dot != token.LastIndexOf('.') || dot >= token.Length - 1)
                     {
-                        failures.Add($"{op}: unitTestFilter token '{token}' is not Class.Method.");
+                        failures.Add($"{entry.Op}: unitTestRefs token '{token}' is not Class.Method.");
                         continue;
                     }
 
+                    string className = token[..dot];
                     string method = token[(dot + 1)..];
-                    if (!testMethods.Contains(method))
+                    if (!attribution.HasMethod(className, method))
                     {
-                        failures.Add($"{op}: unitTestFilter '{token}' does not match a GasTests method.");
+                        failures.Add($"{entry.Op}: unitTestRefs '{token}' is not a GasTests (Class, Method) pair.");
+                        continue;
                     }
 
-                    if (token.StartsWith("GraphOpsNodeGallery", StringComparison.Ordinal))
+                    if (!attribution.Executes(className, method, entry.Op))
                     {
-                        hasGalleryTest = true;
+                        failures.Add($"{entry.Op}: unitTestRefs '{token}' does not execute this op.");
+                    }
+
+                    if (GraphOpTestAttribution.IsGallerySpecific(className, method))
+                    {
+                        hasSpecificGallery = true;
                     }
                 }
 
-                if (!hasGalleryTest)
+                if (!hasSpecificGallery)
                 {
-                    failures.Add($"{op}: covered filter has no GraphOpsNodeGallery* test.");
+                    failures.Add($"{entry.Op}: covered refs have no op-specific GraphOpsNodeGallery test.");
                 }
             }
 
             Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
+        }
+
+        [Test]
+        public void Attribution_RejectsTheKnownFamilyMispointers()
+        {
+            string repoRoot = FindRepoRoot();
+            List<CoverageEntry> entries = LoadCoverageEntries(repoRoot);
+            GraphOpTestAttribution attribution = GraphOpTestAttribution.Load(
+                repoRoot,
+                entries.Select(e => e.Op));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryFloatAcceptanceTests",
+                        "FloatFamilyOp_RendersPlayerCaption",
+                        "ConstFloat"),
+                    Is.False);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryFloatAcceptanceTests",
+                        "FloatFamilyOp_RendersPlayerCaption",
+                        "AddFloat"),
+                    Is.False);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryEventAcceptanceTests",
+                        "SnapToNearestInCollection_SucceedsWithPlayerCaption",
+                        "SendEvent"),
+                    Is.False);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryAcceptanceTests",
+                        "ConstFloat_SetsTargetHealthToAuthoredConstant",
+                        "ConstFloat"),
+                    Is.True);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryEventAcceptanceTests",
+                        "SendEvent_BroadcastsPlayerReadableHit",
+                        "SendEvent"),
+                    Is.True);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryAcceptanceTests",
+                        "ExistingVignettes_CompileWithFeaturedOp",
+                        "ConstFloat"),
+                    Is.True);
+                Assert.That(
+                    attribution.Executes(
+                        "GraphOpsNodeGalleryAcceptanceTests",
+                        "GeneratedMaps_SpawnEveryVignetteActor",
+                        "AddFloat"),
+                    Is.True);
+            });
+        }
+
+        [Test]
+        public void GeneratedPerOpArtifacts_HaveNoOrphans()
+        {
+            string repoRoot = FindRepoRoot();
+            var liveOps = new HashSet<string>(
+                LoadCoverageEntries(repoRoot).Select(e => e.Op),
+                StringComparer.Ordinal);
+            var failures = new List<string>();
+
+            string mapsDir = Path.Combine(repoRoot, GalleryMapsRelative);
+            if (Directory.Exists(mapsDir))
+            {
+                foreach (string map in Directory.GetFiles(mapsDir, "*.json"))
+                {
+                    string sid = Path.GetFileNameWithoutExtension(map);
+                    if (!GraphOpTestAttribution.IsPerOpShowcaseId(sid))
+                    {
+                        continue;
+                    }
+
+                    string op = sid[GraphOpTestAttribution.PerOpShowcasePrefix.Length..];
+                    if (!liveOps.Contains(op))
+                    {
+                        failures.Add($"orphan map {sid}");
+                    }
+                }
+            }
+
+            string entryRoot = Path.Combine(repoRoot, EntryRootRelative);
+            if (Directory.Exists(entryRoot))
+            {
+                foreach (string folder in Directory.GetDirectories(entryRoot))
+                {
+                    string name = Path.GetFileName(folder);
+                    const string prefix = "CapabilityStandardGraphOp";
+                    const string suffix = "EntryMod";
+                    if (!name.StartsWith(prefix, StringComparison.Ordinal) ||
+                        !name.EndsWith(suffix, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string op = name[prefix.Length..^suffix.Length];
+                    if (!liveOps.Contains(op))
+                    {
+                        failures.Add($"orphan entry mod {name}");
+                    }
+                }
+            }
+
+            using JsonDocument registry = JsonDocument.Parse(
+                File.ReadAllText(Path.Combine(repoRoot, "showcase.registry.json")));
+            foreach (JsonElement showcase in registry.RootElement.GetProperty("showcases").EnumerateArray())
+            {
+                string id = showcase.GetProperty("id").GetString() ?? string.Empty;
+                if (!GraphOpTestAttribution.IsPerOpShowcaseId(id))
+                {
+                    continue;
+                }
+
+                string op = id[GraphOpTestAttribution.PerOpShowcasePrefix.Length..];
+                if (!liveOps.Contains(op))
+                {
+                    failures.Add($"orphan showcase {id}");
+                }
+            }
+
+            using JsonDocument launcher = JsonDocument.Parse(
+                File.ReadAllText(Path.Combine(repoRoot, "launcher.config.json")));
+            foreach (JsonElement binding in launcher.RootElement.GetProperty("bindings").EnumerateArray())
+            {
+                string name = binding.GetProperty("name").GetString() ?? string.Empty;
+                if (!GraphOpTestAttribution.IsPerOpShowcaseId(name))
+                {
+                    continue;
+                }
+
+                string op = name[GraphOpTestAttribution.PerOpShowcasePrefix.Length..];
+                if (!liveOps.Contains(op))
+                {
+                    failures.Add($"orphan binding {name}");
+                }
+            }
+
+            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
+        }
+
+        private static List<CoverageEntry> LoadCoverageEntries(string repoRoot)
+        {
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, RegistryRelativePath)));
+            var entries = new List<CoverageEntry>();
+            foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())
+            {
+                var refs = new List<string>();
+                if (entry.TryGetProperty("unitTestRefs", out JsonElement refsEl) &&
+                    refsEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement item in refsEl.EnumerateArray())
+                    {
+                        string? token = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(token))
+                        {
+                            refs.Add(token);
+                        }
+                    }
+                }
+
+                entries.Add(new CoverageEntry(
+                    entry.GetProperty("op").GetString() ?? string.Empty,
+                    entry.GetProperty("status").GetString() ?? string.Empty,
+                    entry.GetProperty("showcaseId").GetString() ?? string.Empty,
+                    refs));
+            }
+
+            return entries;
         }
 
         private static HashSet<string> LoadActiveOrExperimentalShowcaseIds(string repoRoot)
@@ -147,22 +333,6 @@ namespace Ludots.Tests.GAS
             return ids;
         }
 
-        private static HashSet<string> LoadGasTestMethodNames(string repoRoot)
-        {
-            var methods = new HashSet<string>(StringComparer.Ordinal);
-            string testsRoot = Path.Combine(repoRoot, "src", "Tests", "GasTests");
-            var methodPattern = new Regex(@"public void ([A-Za-z0-9_]+)\s*\(", RegexOptions.Compiled);
-            foreach (string file in Directory.EnumerateFiles(testsRoot, "*Tests.cs", SearchOption.AllDirectories))
-            {
-                foreach (Match match in methodPattern.Matches(File.ReadAllText(file)))
-                {
-                    methods.Add(match.Groups[1].Value);
-                }
-            }
-
-            return methods;
-        }
-
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
@@ -174,5 +344,11 @@ namespace Ludots.Tests.GAS
             Assert.That(dir, Is.Not.Null, "Repository root not found from test output directory.");
             return dir!.FullName;
         }
+
+        private readonly record struct CoverageEntry(
+            string Op,
+            string Status,
+            string ShowcaseId,
+            List<string> UnitTestRefs);
     }
 }

@@ -9,7 +9,7 @@ Writes/upserts (do not hand-edit these outputs):
   - launcher.config.json bindings
   - launcher.presets.json raylib presets
   - showcase.registry.json entries + gallery csproj exemption
-  - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestFilter
+  - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestRefs
   - family capability_standard_graph_ops_* registry status=retired and player presets removed
 
 Subagents own vignettes, FrontDoor graphs, and family driver files only.
@@ -18,8 +18,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from graph_op_coverage_index import coverage_refs_for_op, index_gas_tests
 
 PREFIX = "capability_standard_graph_op_"
 GALLERY_REL = "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod"
@@ -27,19 +33,7 @@ ENTRY_ROOT_REL = "mods/showcases/capability_standard/graph_op_entries"
 COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
 ACCEPTANCE = "GraphOpsNodeGalleryAcceptanceTests"
 WIKI_DOCS = "gitbook/reference/graph-node-op-wiki"
-GALLERY_ID_TEST = "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId"
-GALLERY_TICK_TEST = "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption"
-DRIVER_FAMILY_TEST = {
-    "linear": "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-    "attr": "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-    "script": "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-    "sandbox": "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-    "spatial": "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-    "event": "GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption",
-    "blackboard": "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-    "rel": "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-    "query": "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-}
+FAMILY_PREFIX = "capability_standard_graph_ops_"
 FAMILY_SHOWCASE_IDS = (
     "capability_standard_graph_ops_attr",
     "capability_standard_graph_ops_float",
@@ -132,22 +126,6 @@ def collect_team_bindings(actors: list, template_teams: dict[str, int]) -> list[
         {"TeamId": team_id, "RepresentativeInstanceId": instance_id}
         for team_id, instance_id in sorted(representatives.items())
     ]
-
-
-def coverage_filters(driver: str, existing: str) -> str:
-    parts: list[str] = [GALLERY_ID_TEST, GALLERY_TICK_TEST]
-    family = DRIVER_FAMILY_TEST.get(driver)
-    if family:
-        parts.append(family)
-    for token in (existing or "").split(";"):
-        token = token.strip()
-        if token.startswith("FullyQualifiedName~"):
-            token = token.split("~", 1)[1].strip()
-        if "." not in token:
-            continue
-        if token and token not in parts:
-            parts.append(token)
-    return ";".join(parts)
 
 
 def write_map(
@@ -258,6 +236,68 @@ def upsert_by_key(items: list, key: str, value: str, entry: dict) -> None:
     items.append(entry)
 
 
+def is_per_op_showcase_id(sid: str) -> bool:
+    return sid.startswith(PREFIX) and not sid.startswith(FAMILY_PREFIX)
+
+
+def remove_orphan_per_op_artifacts(
+    repo: Path,
+    live_ops: set[str],
+    maps_dir: Path,
+    bindings: list,
+    preset_list: list,
+    showcases: list,
+) -> list[str]:
+    live_ids = {PREFIX + op for op in live_ops}
+    removed: list[str] = []
+
+    for path in list(maps_dir.glob("*.json")):
+        sid = path.stem
+        if is_per_op_showcase_id(sid) and sid not in live_ids:
+            path.unlink()
+            removed.append(str(path.relative_to(repo)))
+
+    entry_root = repo / ENTRY_ROOT_REL
+    if entry_root.is_dir():
+        for folder in list(entry_root.iterdir()):
+            name = folder.name
+            if not name.startswith("CapabilityStandardGraphOp") or not name.endswith("EntryMod"):
+                continue
+            op = name[len("CapabilityStandardGraphOp") : -len("EntryMod")]
+            if op not in live_ops:
+                shutil.rmtree(folder)
+                removed.append(str(folder.relative_to(repo)))
+
+    kept_bindings = []
+    for binding in bindings:
+        name = binding.get("name", "") if isinstance(binding, dict) else ""
+        if is_per_op_showcase_id(name) and name not in live_ids:
+            removed.append(f"launcher.binding:{name}")
+            continue
+        kept_bindings.append(binding)
+    bindings[:] = kept_bindings
+
+    kept_presets = []
+    for preset in preset_list:
+        preset_id = preset.get("id", "") if isinstance(preset, dict) else ""
+        sid = preset_id[: -len("_raylib")] if preset_id.endswith("_raylib") else ""
+        if is_per_op_showcase_id(sid) and sid not in live_ids:
+            removed.append(f"launcher.preset:{preset_id}")
+            continue
+        kept_presets.append(preset)
+    preset_list[:] = kept_presets
+
+    kept_showcases = []
+    for showcase in showcases:
+        sid = showcase.get("id", "") if isinstance(showcase, dict) else ""
+        if is_per_op_showcase_id(sid) and sid not in live_ids:
+            removed.append(f"showcase:{sid}")
+            continue
+        kept_showcases.append(showcase)
+    showcases[:] = kept_showcases
+    return removed
+
+
 def write_entry_mod(repo: Path, op: str, title: str) -> None:
     ns = f"CapabilityStandardGraphOp{op}EntryMod"
     folder = repo / ENTRY_ROOT_REL / ns
@@ -304,15 +344,23 @@ def main() -> int:
     if args.strict and missing:
         raise SystemExit("Missing vignettes:\n" + "\n".join(missing))
 
-    template_teams = load_template_teams(gallery / "assets" / "Entities" / "templates.json")
+    test_index = index_gas_tests(repo, ops)
+    coverage["description"] = (
+        "GraphNodeOp coverage SSOT. Each executable opcode must have status=covered, "
+        "a per-op showcaseId, and unitTestRefs: Class.Method pairs measured to execute that op."
+    )
     for entry in coverage["entries"]:
         op = entry["op"]
         entry["showcaseId"] = PREFIX + op
         vignette = vignettes.get(op)
         driver = vignette["driver"] if vignette else None
         if not driver:
-            raise SystemExit(f"Coverage op '{op}' has no vignette driver; cannot write gallery unitTestFilter.")
-        entry["unitTestFilter"] = coverage_filters(driver, entry.get("unitTestFilter", ""))
+            raise SystemExit(f"Coverage op '{op}' has no vignette driver; cannot write gallery unitTestRefs.")
+        existing = entry.get("unitTestRefs")
+        if existing is None:
+            existing = entry.get("unitTestFilter", "")
+        entry.pop("unitTestFilter", None)
+        entry["unitTestRefs"] = coverage_refs_for_op(op, existing, test_index)
         if entry.get("status") != "covered":
             raise SystemExit(f"Coverage op '{op}' status is {entry.get('status')!r}; generator only emits covered per-op galleries.")
     dump(coverage_path, coverage)
@@ -339,6 +387,7 @@ def main() -> int:
     showcases = registry.setdefault("showcases", [])
     bindings = launcher.setdefault("bindings", [])
     preset_list = presets.setdefault("presets", [])
+    template_teams = load_template_teams(gallery / "assets" / "Entities" / "templates.json")
 
     for op, vignette in vignettes.items():
         sid = PREFIX + op
@@ -422,14 +471,24 @@ def main() -> int:
         )
     presets["presets"] = [preset for preset in preset_list if preset.get("id") not in family_presets]
 
+    orphans = remove_orphan_per_op_artifacts(
+        repo,
+        set(vignettes),
+        maps_dir,
+        bindings,
+        presets["presets"],
+        showcases,
+    )
+
     dump(launcher_path, launcher)
     dump(presets_path, presets)
     dump(registry_path, registry)
 
     print(
         f"Generated {len(vignettes)} per-op galleries; "
-        f"coverage showcaseIds+filters updated for {len(ops)} ops; "
+        f"coverage showcaseIds+unitTestRefs updated for {len(ops)} ops; "
         f"retired {len(FAMILY_SHOWCASE_IDS)} family player entries; "
+        f"removed {len(orphans)} per-op orphans; "
         f"missing vignettes: {len(missing)}"
     )
     if missing:
