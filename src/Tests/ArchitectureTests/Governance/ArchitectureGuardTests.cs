@@ -7,6 +7,8 @@ using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Arch.Core;
+using Arch.System;
+using CoreInputMod.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
@@ -16,8 +18,13 @@ using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Systems;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture.Governance
@@ -974,6 +981,149 @@ namespace Ludots.Tests.Architecture.Governance
                     "Exchange runtime hot path should stay allocation-conscious and avoid LINQ/iterator patterns:\n" +
                     string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void SimulationPhaseSelectionAndInputSystems_MustNotReadVisualTransformOrCullState()
+        {
+            var hits = new List<string>();
+            Type[] types =
+            {
+                typeof(CommandSourceAcquisitionSystem),
+                typeof(CommandSourcePointerHitResolver),
+                typeof(CommandSourceEligibility),
+                typeof(SpatialBoundsUtility),
+                typeof(TabTargetCycleSystem),
+                typeof(LocalOrderSourceHelper),
+                typeof(AxisMoveOrderSystem),
+                typeof(GasInputResponseSystem),
+                typeof(AuthoritativeInputSnapshotSystem),
+                typeof(AuthoritativePointerButtonSnapshotSystem),
+                typeof(LocalPlayerEntityResolverSystem),
+                typeof(InputRuntimeSystem),
+            };
+
+            for (int i = 0; i < types.Length; i++)
+            {
+                AppendPresentationVisualReads(types[i], hits);
+            }
+
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourcePointerHitResolver.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
+            };
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                AppendForbiddenSourceTokens(repoRoot, files[fileIndex], new[] { "VisualTransform", "CullState" }, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Simulation-phase selection/input must use WorldPositionCm and Knowledge, not VisualTransform or CullState:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void SimulationPhaseGasSystems_MustNotReadVisualTransformOrCullState()
+        {
+            var hits = new List<string>();
+            foreach (Type type in typeof(AbilityExecSystem).Assembly.GetTypes())
+            {
+                if (type.Namespace == null ||
+                    !type.Namespace.StartsWith("Ludots.Core.Gameplay.GAS", StringComparison.Ordinal) ||
+                    !typeof(ISystem<float>).IsAssignableFrom(type) ||
+                    type.IsAbstract)
+                {
+                    continue;
+                }
+
+                AppendPresentationVisualReads(type, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "GAS simulation-phase systems must not read VisualTransform or CullState:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void CullStateIsVisible_RuntimeWriteOwnerIsCameraCullingSystem()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+            };
+            var hits = new List<string>();
+            for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+            {
+                foreach (string file in Directory.EnumerateFiles(roots[rootIndex], "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Equals("src/Core/Systems/CameraCullingSystem.cs", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string[] lines = File.ReadAllLines(file);
+                    for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                    {
+                        string trimmed = lines[lineIndex].Trim();
+                        if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                            trimmed.StartsWith("*", StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        if (trimmed.Contains("cull.IsVisible =", StringComparison.Ordinal) ||
+                            trimmed.Contains("cullState.IsVisible =", StringComparison.Ordinal))
+                        {
+                            hits.Add($"{relative}:{lineIndex + 1}: {trimmed}");
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "CullState.IsVisible runtime writes belong to CameraCullingSystem. Spawn may only construct a default hidden value:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void CrossLayerPresentationComponents_HaveDocumentedSingleWriteOwners()
+        {
+            var repoRoot = FindRepoRoot();
+            string layering = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "gitbook",
+                "architecture",
+                "entity-simulation-layering.md"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(layering, Does.Contain("### 5.1 跨层组件所有权"));
+                Assert.That(layering, Does.Contain("PresentationStableId"));
+                Assert.That(layering, Does.Contain("PresentationDestroyPending"));
+                Assert.That(layering, Does.Contain("CullState"));
+                Assert.That(layering, Does.Contain("write owner"));
+                Assert.That(layering, Does.Contain("CameraCullingSystem"));
+                Assert.That(layering, Does.Contain("WorldPositionCm"));
+                Assert.That(layering, Does.Contain("KnowledgeProjectionStore"));
+            });
         }
 
         [Test]
@@ -2172,6 +2322,117 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 return null;
             }
+        }
+
+        private static void AppendPresentationVisualReads(Type type, List<string> hits)
+        {
+            foreach (Type current in EnumerateTypeAndNested(type))
+            {
+                foreach (FieldInfo field in current.GetFields(
+                             BindingFlags.Instance |
+                             BindingFlags.Static |
+                             BindingFlags.Public |
+                             BindingFlags.NonPublic |
+                             BindingFlags.DeclaredOnly))
+                {
+                    if (ContainsPresentationVisual(field.FieldType))
+                    {
+                        hits.Add($"{current.FullName}.{field.Name} field {field.FieldType}");
+                    }
+                }
+
+                foreach (MethodInfo method in current.GetMethods(
+                             BindingFlags.Instance |
+                             BindingFlags.Static |
+                             BindingFlags.Public |
+                             BindingFlags.NonPublic |
+                             BindingFlags.DeclaredOnly))
+                {
+                    ParameterInfo[] parameters = method.GetParameters();
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        if (ContainsPresentationVisual(parameters[i].ParameterType))
+                        {
+                            hits.Add($"{current.FullName}.{method.Name} param {parameters[i].ParameterType}");
+                        }
+                    }
+
+                    if (method.IsAbstract)
+                    {
+                        continue;
+                    }
+
+                    foreach (MethodBase called in EnumerateCalledMethods(method))
+                    {
+                        if (called.IsGenericMethod)
+                        {
+                            Type[] genericArguments = called.GetGenericArguments();
+                            for (int i = 0; i < genericArguments.Length; i++)
+                            {
+                                if (genericArguments[i] == typeof(VisualTransform) ||
+                                    genericArguments[i] == typeof(CullState))
+                                {
+                                    hits.Add($"{current.FullName}.{method.Name} -> {called.DeclaringType?.FullName}.{called.Name}<{genericArguments[i].Name}>");
+                                }
+                            }
+                        }
+
+                        ParameterInfo[] calledParameters = called.GetParameters();
+                        for (int i = 0; i < calledParameters.Length; i++)
+                        {
+                            if (ContainsPresentationVisual(calledParameters[i].ParameterType))
+                            {
+                                hits.Add($"{current.FullName}.{method.Name} -> {called.DeclaringType?.FullName}.{called.Name}({calledParameters[i].ParameterType})");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<Type> EnumerateTypeAndNested(Type type)
+        {
+            yield return type;
+            Type[] nested = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
+            for (int i = 0; i < nested.Length; i++)
+            {
+                foreach (Type child in EnumerateTypeAndNested(nested[i]))
+                {
+                    yield return child;
+                }
+            }
+        }
+
+        private static bool ContainsPresentationVisual(Type type)
+        {
+            if (type == typeof(VisualTransform) || type == typeof(CullState))
+            {
+                return true;
+            }
+
+            if (type.IsByRef && type.HasElementType)
+            {
+                return ContainsPresentationVisual(type.GetElementType()!);
+            }
+
+            if (type.IsArray && type.HasElementType)
+            {
+                return ContainsPresentationVisual(type.GetElementType()!);
+            }
+
+            if (type.IsGenericType)
+            {
+                Type[] arguments = type.GetGenericArguments();
+                for (int i = 0; i < arguments.Length; i++)
+                {
+                    if (ContainsPresentationVisual(arguments[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         internal static Assembly[] CollectAttributeBufferWriteScanAssemblies()
