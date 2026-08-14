@@ -1,7 +1,7 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: Close leftover GraphOps gallery tails (headless host must use GameEngine, symbol resolve fail-closed, overlay reads authored graph, family runtimes must not `World.Create`)
-- **Date**: 2026-08-13
+- **Task / Issue**: S4 · 事务收尾：回滚必须不可失败（PR #942 修复计划）
+- **Date**: 2026-08-14
 - **Agent / Author**: Cursor Grok 4.6
 
 ### 1. Core judgment
@@ -10,23 +10,24 @@
 
 结论: PASS
 
-一句话理由: 不新增 graph op / profile enum；把无头画廊和家族演示接到已有 GameEngine、MapLoader、GasGraphSymbolResolver 合同上。
+一句话理由: 不新增 graph 节点 / profile enum / 平行管线；只补齐已有 `EffectPhaseSideEffectTransaction` 的回滚守卫、提交收尾、标签暂存，以及缺服务失败关闭。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 无头画廊开图 | 2 | GameEngine.LoadMap + MapLoader.LoadEntitiesAndIndex |
-| 符号解析 | 0 | 已有 Tag/Attribute/Effect/Relationship registries GetId |
-| 空间圈人描边 | 2 | 已编译 graph 的 Imm / ConstInt |
-| 家族演示世界 | 2 | 可玩路径 GameEngine.World + BindMapEntity；无头验收用一次性 World，禁止再启第二台 GameEngine |
+| 回滚路径 IsAlive/Has 守卫 | 1 | `EffectPhaseSideEffectTransaction.RollbackWorldWrites` |
+| 提交内销毁后移 | 1 | 同一事务 `Commit` 成功后再落地销毁 |
+| 标签授予进暂存 | 1 | `StageGrantedTagGrant`（对称 `StageGrantedTagRevoke`） |
+| 挂载可见中间态 | 1 | `EffectApplicationSystem` 切片语义，不再用补偿函数拼接 |
+| 缺服务失败关闭 | 0 | `StagePresentationEvent` / fan-out builtins 抛缺失服务名 |
 
 ### 3. Reuse list
 
-- Handlers: 无新 BuiltinHandler
-- Queues / Systems: GameEngine 已注册 SpatialPartitionUpdateSystem、EffectRequestQueue
-- Resolvers / Registries: GasGraphSymbolResolver 合同（GetId 失败即抛）
-- Existing presets / graphs: `assets/GAS/graphs/*.json`、`tag_rules.json`、`effects.json`
+- Handlers: 已有 `BuiltinHandlers.HandleSpatialQuery` / `HandleDispatchPayload` / `HandleReResolveAndDispatch`
+- Queues / Systems: `EffectPhaseSideEffectTransaction`、`EffectApplicationSystem`、`EffectLifetimeSystem`、`TagOps`、`DirtyEntityQueue`
+- Resolvers / Registries: 已有 `GetOrAddTagEntity` 暂存面；不新增 Registry
+- Existing presets / graphs: 无新 preset / graph
 
 ### 4. New Layer 0 ops (if any)
 
@@ -34,11 +35,11 @@ N/A
 
 ### 5. Transaction boundary
 
-无 lifecycle spawn/morph 事务；画廊无头开图失败必须抛。家族无头验收用一次性 World，禁止再启第二台 GameEngine 去清 GraphIdRegistry。
+必须原子 rollback 的步骤: 属性 / 标签 / 黑板 / 取消标记 / listener / relation / 外部队列检查点。回滚自身不得抛。`World.Destroy` 不在可失败提交窗口内执行。挂载（`ActiveEffectContainer`）是切片可见中间态，不属于一次阶段结算事务；切片中止仍由 `ResetSlice` 收回未 Committed 挂载。
 
 ### 6. Config SSOT
 
-行为配置落在: gallery `assets/GAS/graphs/`、`tag_rules.json`、`effects.json`、sandbox/catalog.json
+行为配置落在: 无新配置；沿用现有 effect template + 事务 API
 
 是否新增 JSON schema: NO
 

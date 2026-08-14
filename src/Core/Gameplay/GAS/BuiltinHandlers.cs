@@ -27,6 +27,12 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        public const string MissingHandlerRuntimeError = "GAS.BUILTIN.ERR.MissingHandlerRuntime";
+        public const string MissingSpatialQueriesError = "GAS.BUILTIN.ERR.MissingSpatialQueries";
+        public const string MissingFanOutBudgetError = "GAS.BUILTIN.ERR.MissingFanOutBudget";
+        public const string MissingFanOutCommandsError = "GAS.BUILTIN.ERR.MissingFanOutCommands";
+        public const string MissingResolverBufferError = "GAS.BUILTIN.ERR.MissingResolverBuffer";
+
         private static void RejectNonTransactionalPersistentSideEffect(string operation)
         {
             if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
@@ -34,6 +40,17 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException(
                     $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
             }
+        }
+
+        private static BuiltinHandlerExecutionContext RequireHandlerRuntime()
+        {
+            BuiltinHandlerExecutionContext? runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime == null)
+            {
+                throw new InvalidOperationException(MissingHandlerRuntimeError);
+            }
+
+            return runtime;
         }
 
         public static void RegisterAll(BuiltinHandlerRegistry registry)
@@ -131,10 +148,14 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -155,10 +176,18 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.FanOutBudget == null)
             {
-                return;
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = runtime.ResolvedCandidateCount;
@@ -192,10 +221,22 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.FanOutBudget == null)
+            {
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
