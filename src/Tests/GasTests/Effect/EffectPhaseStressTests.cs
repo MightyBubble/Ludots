@@ -24,7 +24,7 @@ namespace Ludots.Tests.GAS
         /// <summary>
         /// Stress test: execute Phase graphs for N effects × all 8 phases.
         /// Each phase runs a trivial 3-instruction graph (ConstFloat + AddFloat + WriteBlackboard).
-        /// Measures throughput in microseconds-per-phase-execution and total GC allocations.
+        /// Guards average phase cost under 50μs and keeps the measured window within the 64-byte alloc budget.
         /// </summary>
         [Test]
         public void PhaseExecutor_HighVolume_ReportsThroughputAndGc()
@@ -152,8 +152,10 @@ namespace Ludots.Tests.GAS
                     That(bb.TryGet(1, out _), Is.True, $"Entity {e} should have BB key=1");
                 }
 
-                // Performance guard: <10μs per phase execution on any modern hardware
-                That(perExecUs, Is.LessThan(50.0), "Phase execution should be < 50μs average");
+                That(perExecUs, Is.LessThan(50.0),
+                    $"Phase execution averaged {perExecUs:F3}μs; budget is 50μs.");
+                That(allocDelta, Is.LessThanOrEqualTo(64),
+                    $"Phase executor high-volume run allocated {allocDelta} bytes; zero-alloc budget is 64.");
                 That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0), "Total time should be < 30s");
 
                 Pass("Phase executor stress test complete");
@@ -299,10 +301,10 @@ namespace Ludots.Tests.GAS
                 var b = new byte[GraphVmLimits.MaxBoolRegisters];
                 var e = new Entity[GraphVmLimits.MaxEntityRegisters];
                 var targets = new Entity[GraphVmLimits.MaxTargets];
+                var callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
                 e[0] = caster;
 
-                // Warmup
                 for (int w = 0; w < 5; w++)
                 {
                     foreach (var ent in entities)
@@ -315,9 +317,9 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
-                        CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
-            CallStackCount = 0,
-        };
+                            CallStack = callStack,
+                            CallStackCount = 0,
+                        };
                         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                     }
                 }
@@ -343,9 +345,9 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
-                        CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
-            CallStackCount = 0,
-        };
+                            CallStack = callStack,
+                            CallStackCount = 0,
+                        };
                         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                     }
                 }
@@ -366,7 +368,10 @@ namespace Ludots.Tests.GAS
                 That(bb.TryGet(1, out float v), Is.True);
                 That(v, Is.EqualTo(42.5f).Within(1e-6f));
 
-                That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0));
+                That(alloc1 - alloc0, Is.LessThanOrEqualTo(64),
+                    $"Blackboard mass write/read allocated {alloc1 - alloc0} bytes; ZeroGc budget is 64.");
+                That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0),
+                    $"Blackboard mass write/read took {sw.Elapsed.TotalSeconds:F2}s; budget is 30s.");
 
                 Pass("BB stress test complete");
             }

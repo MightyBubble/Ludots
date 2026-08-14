@@ -13,6 +13,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("benchmark")]
     public class GraphPerfTests
     {
         [Test]
@@ -75,11 +76,15 @@ namespace Ludots.Tests.GAS
                 double totalUs = sw.Elapsed.TotalMilliseconds * 1000.0;
                 double perExecUs = totalUs / iterations;
 
+                long allocatedBytes = alloc1 - alloc0;
                 Console.WriteLine("[GraphPerf] GraphExecutor small program:");
                 Console.WriteLine($"  Iterations: {iterations}");
                 Console.WriteLine($"  TotalMs: {sw.Elapsed.TotalMilliseconds:F2}");
                 Console.WriteLine($"  PerExecUs: {perExecUs:F4}");
-                Console.WriteLine($"  AllocBytes(CurrentThread): {alloc1 - alloc0}");
+                Console.WriteLine($"  AllocBytes(CurrentThread): {allocatedBytes}");
+
+                Assert.That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                    $"GraphExecutor small program allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
             }
             finally
             {

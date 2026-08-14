@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Scripting;
@@ -22,25 +23,42 @@ namespace Ludots.Tests.Architecture.Governance
         private static readonly OpCode[] SingleByteOpCodes = BuildSingleByteOpCodeMap();
         private static readonly OpCode[] TwoByteOpCodes = BuildTwoByteOpCodeMap();
 
+        private static readonly string[] DesignedSystemGroupOrder =
+        {
+            nameof(SystemGroup.SchemaUpdate),
+            nameof(SystemGroup.InputCollection),
+            nameof(SystemGroup.PostMovement),
+            nameof(SystemGroup.AbilityActivation),
+            nameof(SystemGroup.EffectProcessing),
+            nameof(SystemGroup.RuntimeEntityBinding),
+            nameof(SystemGroup.AttributeCalculation),
+            nameof(SystemGroup.DeferredTriggerCollection),
+            nameof(SystemGroup.Cleanup),
+            nameof(SystemGroup.EventDispatch),
+            nameof(SystemGroup.ClearPresentationFlags)
+        };
+
         [Test]
         public void SystemGroup_MustMatchDesignDocument()
         {
-            var expected = new[]
-            {
-                nameof(SystemGroup.SchemaUpdate),
-                nameof(SystemGroup.InputCollection),
-                nameof(SystemGroup.PostMovement),
-                nameof(SystemGroup.AbilityActivation),
-                nameof(SystemGroup.EffectProcessing),
-                nameof(SystemGroup.RuntimeEntityBinding),
-                nameof(SystemGroup.AttributeCalculation),
-                nameof(SystemGroup.DeferredTriggerCollection),
-                nameof(SystemGroup.Cleanup),
-                nameof(SystemGroup.EventDispatch),
-                nameof(SystemGroup.ClearPresentationFlags)
-            };
+            Assert.That(
+                Enum.GetNames<SystemGroup>(),
+                Is.EqualTo(DesignedSystemGroupOrder),
+                "SystemGroup enum declaration order must match the designed phase order.");
+        }
 
-            Assert.That(Enum.GetNames<SystemGroup>(), Is.EquivalentTo(expected));
+        [Test]
+        public void SystemGroup_PhaseOrder_MustIncludeEveryEnumValueInDesignedOrder()
+        {
+            string[] phaseOrderNames = Array.ConvertAll(ReadRuntimePhaseOrder(), group => group.ToString());
+            Assert.That(
+                phaseOrderNames,
+                Is.EqualTo(DesignedSystemGroupOrder),
+                "PhaseOrderedCooperativeSimulation.PhaseOrder must list every SystemGroup in designed order.");
+            Assert.That(
+                phaseOrderNames,
+                Is.EqualTo(Enum.GetNames<SystemGroup>()),
+                "A SystemGroup present on the enum but missing from PhaseOrder would silently skip registered systems.");
         }
 
         [Test]
@@ -1894,6 +1912,17 @@ namespace Ludots.Tests.Architecture.Governance
             string ArtifactFolder,
             string AcceptanceTestName,
             bool PurePhysics);
+
+        private static SystemGroup[] ReadRuntimePhaseOrder()
+        {
+            FieldInfo? field = typeof(PhaseOrderedCooperativeSimulation).GetField(
+                "PhaseOrder",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, "PhaseOrderedCooperativeSimulation.PhaseOrder is the runtime order table.");
+            var order = field!.GetValue(null) as SystemGroup[];
+            Assert.That(order, Is.Not.Null, "PhaseOrderedCooperativeSimulation.PhaseOrder must be a SystemGroup array.");
+            return order!;
+        }
 
         private static string FindRepoRoot()
         {

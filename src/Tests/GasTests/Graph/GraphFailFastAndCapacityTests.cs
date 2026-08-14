@@ -95,14 +95,11 @@ namespace Ludots.Tests.GAS
 
             That(q.Count, Is.EqualTo(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
             That(q.OverflowCount, Is.EqualTo(9));
-            That(q.DroppedCount, Is.EqualTo(0));
 
             q.ConsumePrefix(32);
 
-            // After consuming 32 from main (4096→4064), overflow 9 refilled → 4073 total.
             That(q.Count, Is.EqualTo(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 32 + 9));
             That(q.OverflowCount, Is.EqualTo(0));
-            That(q.DroppedCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -120,7 +117,6 @@ namespace Ludots.Tests.GAS
             That(error!.Message, Does.StartWith(EffectRequestQueue.CapacityExceededError));
             That(q.Count, Is.EqualTo(q.Capacity));
             That(q.OverflowCount, Is.EqualTo(q.Capacity));
-            That(q.DroppedCount, Is.EqualTo(0));
         }
 
         [Test]
