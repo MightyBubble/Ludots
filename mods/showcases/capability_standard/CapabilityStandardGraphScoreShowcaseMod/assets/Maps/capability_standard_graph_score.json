@@ -1,0 +1,50 @@
+{
+  "Id": "capability_standard_graph_score",
+  "Tags": ["capability_standard_graph_score", "graph_score", "score"],
+  "DefaultCamera": {
+    "TargetXCm": 5000,
+    "TargetYCm": 5000,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 6400,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 32,
+      "HeightInMacroTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    { "InstanceId": "graph-score-caster", "Template": "graph_score_caster" },
+    { "InstanceId": "graph-score-full-dummy", "Template": "graph_score_full_dummy" },
+    { "InstanceId": "graph-score-wounded-dummy", "Template": "graph_score_wounded_dummy" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-score-caster" },
+    { "TeamId": 2, "RepresentativeInstanceId": "graph-score-full-dummy" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-score-caster" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "graph-score-full-dummy" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "GraphScore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "GraphScore.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "GraphScore.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "GraphScore.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "GraphScore.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "GraphScore.Participant", "Symmetric": false }
+    ]
+  }
+}

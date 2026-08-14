@@ -3184,6 +3184,30 @@
       "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
+      "id": "capability_standard_graph_score",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod",
+      "projectPath": "CapabilityStandardGraphScoreShowcaseMod.csproj",
+      "title": "残血的分更高",
+      "summary": "满血和残血同时站着。打分图按缺口打分，队友自动打分高的那个，字幕写出两个人的分。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "score"
+      ],
+      "binding": "capability_standard_graph_score",
+      "preset": "capability_standard_graph_score_raylib",
+      "docsPath": "gitbook/acceptance/graph-score-wounded-priority.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphScoreWoundedPriorityShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_score",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Official GraphKind.Score path via GraphExecutor.ExecuteScore; Utility GraphScore input selects the wounded dummy."
+    },
+    {
       "id": "capability_standard_script_flow_sandbox",
       "path": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
       "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj",

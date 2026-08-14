@@ -1,0 +1,11 @@
+[
+  {
+    "id": "Task.GraphScore.Strike",
+    "Kind": "SubmitOrder",
+    "OrderTypeKey": "castAbility",
+    "AbilityKey": "Ability.GraphScore.Strike",
+    "AbilitySlotIndex": 0,
+    "SubmitMode": 0,
+    "PlayerId": 0
+  }
+]

@@ -34,6 +34,7 @@
   - [实体仿真工作流拆分](architecture/entity-simulation-workstreams.md)
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [实时技能工作台 UAT](acceptance/live-skill-workbench-uat.md)
+  - [残血的分更高](acceptance/graph-score-wounded-priority.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)

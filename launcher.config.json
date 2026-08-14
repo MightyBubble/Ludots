@@ -401,6 +401,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_score",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod",
+        "projectPath": "CapabilityStandardGraphScoreShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_AddFloat",
       "target": {
         "type": "path",
