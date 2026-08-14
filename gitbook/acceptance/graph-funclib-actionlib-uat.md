@@ -4,7 +4,7 @@
 
 图复用库与可挂起动作的合同验收：FuncLib 纯函数无 Yield；ActionLib 供行为调度跨拍；Effect 可调 FuncLib 不可调 ActionLib；L1 Kind 前门与加载期失败关闭。
 
-对照：[图复用库合同](architecture/graph-funclib-actionlib-contract.md)。
+对照：[图复用库合同](../architecture/graph-funclib-actionlib-contract.md)。
 
 ## 2. 结构
 
