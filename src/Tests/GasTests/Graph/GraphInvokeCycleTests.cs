@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -128,11 +129,19 @@ namespace Ludots.Tests.Gas.Graph
                 CallStack = callStack
             };
 
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                GasGraphOpHandlerTable.Execute(ref state, root, GasGraphOpHandlerTable.Instance));
+            string? message = null;
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, root, GasGraphOpHandlerTable.Instance);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
 
-            Assert.That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.InvokeDepthExceeded"));
-            Assert.That(ex.Message, Does.Contain("MaxInvokeDepth"));
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("GAS.GRAPH.ERR.InvokeDepthExceeded"));
+            Assert.That(message, Does.Contain("MaxInvokeDepth"));
         }
 
         [Test]
@@ -183,10 +192,18 @@ namespace Ludots.Tests.Gas.Graph
                 TreeSteps = GraphVmLimits.MaxInstructionsPerExecution - 2
             };
 
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                GasGraphOpHandlerTable.Execute(ref state, root, GasGraphOpHandlerTable.Instance));
+            string? message = null;
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, root, GasGraphOpHandlerTable.Instance);
+            }
+            catch (InvalidOperationException ex)
+            {
+                message = ex.Message;
+            }
 
-            Assert.That(ex!.Message, Does.Contain("MaxInstructionsPerExecution"));
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("MaxInstructionsPerExecution"));
             Assert.That(state.TreeSteps, Is.LessThanOrEqualTo(GraphVmLimits.MaxInstructionsPerExecution));
         }
 
