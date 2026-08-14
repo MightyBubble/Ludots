@@ -171,6 +171,8 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - crowd SoA 位置只服务 `MassNavigation` 热路径
 - 同一个 entity 不能同时被 `FullPhysics2D` 与 `MassNavigation` 双写
 - `ForceInput2D` 和 MassNavigationFlow desired movement state 是派生输出，不是位置真相
+- 谁能被选中、谁能收指令只由模拟状态决定：位置用 `WorldPositionCm`，可选中性用 `CommandSourceSelectableTag`，玩法可见性用 `KnowledgeProjectionStore`。`CullState` 与 `VisualTransform` 不得参与选中或下单判定
+- InputCollection / AbilityActivation / EffectProcessing / AttributeCalculation 等模拟相系统不得读取 `VisualTransform` 或 `CullState`
 
 允许存在的重复数据只有两类：
 
@@ -180,6 +182,18 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 禁止存在的重复真相只有一类：
 
 - 没有明确 owner 的双向可写位置状态
+
+这些规则由 `ArchitectureGuardTests` 执行：模拟相选中/输入/GAS 系统不得读 `VisualTransform`/`CullState`；`CullState.IsVisible` 的运行时写入只属于 `CameraCullingSystem`。
+
+### 5.1 跨层组件所有权
+
+下列组件跨越模拟与表现，必须有唯一 write owner。partial-world 隔离不在本页范围。
+
+| 组件 | write owner | 读方 | 允许的非 owner 动作 |
+|------|-------------|------|---------------------|
+| `PresentationStableId` | 模拟侧分配器与 spawn/lifecycle（`PresentationStableIdAllocator`、`RuntimeEntitySpawnSystem`、`TemplateEntityBatchSpawner`、L0 lifecycle API） | 表现侧消费（performer / HUD / adapter） | 表现 bootstrap 只能在缺失时补挂已分配 id，不得另造第二套身份真相 |
+| `PresentationDestroyPending` | 模拟侧 lifecycle（spawn/projectile/L0 API 标记待销毁） | 表现侧消费并 finalize destroy；L0 可读以便 fail-closed 拒绝已 pending 的 lifecycle txn | 表现侧可 Remove 以完成销毁，不得把该标记当作玩法存活真相 |
+| `CullState` | `CameraCullingSystem` 写 `IsVisible` / 视觉 LOD | 仅表现侧（culling、performer visibility、HUD） | 模拟 spawn 可挂默认隐藏值；模拟相不得读取该组件做选中、下单或玩法可见性 |
 
 ## 6 AOI 服务语义
 

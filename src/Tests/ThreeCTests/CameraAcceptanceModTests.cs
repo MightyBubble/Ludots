@@ -28,6 +28,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
 using Ludots.Presentation.Skia;
@@ -700,7 +701,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraAcceptanceMod_ProjectionMap_BoxSelect_UsesVisualTransformHeightForScreenSpaceHitTesting()
+        public void CameraAcceptanceMod_ProjectionMap_BoxSelect_UsesSpatialBoundsHeightForScreenSpaceHitTesting()
         {
             using var engine = CreateEngine(AcceptanceMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
@@ -716,17 +717,21 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var sharedWorldCm = new WorldCmInt2(2600, 1600);
             ApplyEntityProjectionOverride(engine, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
             ApplyEntityProjectionOverride(engine, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+            ApplySimulationBoundsHeight(engine, hero, localCenterYCm: 0);
+            ApplySimulationBoundsHeight(engine, scout, localCenterYCm: 450);
 
-            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
-            Vector2 scoutScreen = ProjectEntity(engine, projector!, scout);
+            Vector2 heroScreen = ProjectEntityBySimulationPose(engine, projector!, hero);
+            Vector2 scoutScreen = ProjectEntityBySimulationPose(engine, projector!, scout);
             Assert.That(Vector2.Distance(heroScreen, scoutScreen), Is.GreaterThan(40f),
-                "Regression setup must create a visible screen-space separation from VisualTransform height alone.");
+                "Regression setup must create a visible screen-space separation from SpatialBounds height alone.");
 
             var backend = GetInputBackend(engine);
             Action<GameEngine> reapplyVisualOverrides = runtime =>
             {
                 ApplyEntityProjectionOverride(runtime, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
                 ApplyEntityProjectionOverride(runtime, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+                ApplySimulationBoundsHeight(runtime, hero, localCenterYCm: 0);
+                ApplySimulationBoundsHeight(runtime, scout, localCenterYCm: 450);
             };
 
             DragMouse(
@@ -1804,6 +1809,31 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             ref var visual = ref engine.World.Get<VisualTransform>(entity);
             visual.Position = visualPosition;
+        }
+
+        private static void ApplySimulationBoundsHeight(GameEngine engine, Entity entity, int localCenterYCm)
+        {
+            if (engine.World.Has<SpatialBounds>(entity))
+            {
+                ref var bounds = ref engine.World.Get<SpatialBounds>(entity);
+                bounds.LocalCenterYCm = localCenterYCm;
+                return;
+            }
+
+            engine.World.Add(entity, new SpatialBounds
+            {
+                Kind = SpatialBoundsKind.Point,
+                LocalCenterYCm = localCenterYCm,
+            });
+        }
+
+        private static Vector2 ProjectEntityBySimulationPose(GameEngine engine, IScreenProjector projector, Entity entity)
+        {
+            Assert.That(
+                SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect bounds),
+                Is.True,
+                $"Entity #{entity.Id} must project from WorldPositionCm.");
+            return new Vector2((bounds.MinX + bounds.MaxX) * 0.5f, (bounds.MinY + bounds.MaxY) * 0.5f);
         }
 
         private static void UpdateHeadlessCamera(GameEngine engine)
