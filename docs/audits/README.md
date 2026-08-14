@@ -26,6 +26,7 @@
 * [S 第一批架构审计（#944 / #946 / #943 / #945）](s_batch1_architecture_audit.md)
 * [S14 分层物理化设计（第一阶段 · 只出设计）](s14_layering_physicalization_design.md)
 * [S 第二批 + S9 架构审计（#951 / #952 / #950 / #948 / #953）](s_batch2_s9_architecture_audit.md)
+* [GAS + Graph 修复计划落地后审计需求（#942 全票合入）](s_plan_landed_audit_handoff.md)
 
 ## 2 使用边界
 
