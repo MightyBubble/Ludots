@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.Gameplay.Level;
 using Ludots.Core.GraphRuntime;
@@ -11,6 +12,7 @@ namespace Ludots.Tests.Gas.AI
     /// Headless stand-in for the four showcases' think-wave contract before full Raylib mods land.
     /// </summary>
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphBehaviorArenaAcceptanceTests
     {
@@ -20,12 +22,15 @@ namespace Ludots.Tests.Gas.AI
             const int agents = 10_000;
             const int waves = 25; // 5s / 0.2s
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
-            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
+            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
+                out _,
+                out GraphActionCatalog actions,
+                out GraphBehaviorCatalog behavior);
             BehaviorTreeDefinition bt = BehaviorTreeFactory.CreateAlwaysSuccessSequence("arena.bt", leafCount: 7);
-            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("arena.hfsm");
+            HfsmDefinition hfsm = behavior.RequireHfsm("hfsm.sentry");
             LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial(
                 "arena.level",
-                name => GraphRegistryScriptResolver.RequireActionId(actions, name));
+                GraphRegistryScriptResolver.RequireActionId(actions, "level.phaseAdvance"));
 
             var btWorld = new BehaviorTreeWorld(bt, agents);
             var hfsmWorld = new HfsmWorld(hfsm, agents);

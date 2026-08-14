@@ -91,7 +91,7 @@ public sealed class GraphOpsScriptRuntime : IDisposable
         }
 
         _drinkGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, DrinkActionName);
-        _patrolGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.Patrol);
+        _patrolGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.patrol");
         _invokeConstGraphId = GraphRegistryScriptResolver.RequireId(InvokeConstGraphKey);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _drinkGraphId);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _patrolGraphId);

@@ -4,6 +4,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using CapabilityStandardLevelBlueprintTrialMod.Runtime;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
@@ -11,24 +12,26 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphBehaviorSeparatedShowcaseAcceptanceTests
     {
         private GraphProgramRegistry _programs = null!;
         private GraphFunctionCatalog _catalog = null!;
         private GraphActionCatalog _actions = null!;
+        private GraphBehaviorCatalog _behavior = null!;
 
         [SetUp]
         public void SetUp()
         {
-            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _catalog, out _actions);
+            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _catalog, out _actions, out _behavior);
         }
 
         [Test]
         public void BehaviorTreeArena_PatrolVignette_ThinkWavesUnderBudget()
         {
             var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs, _actions);
+            runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
@@ -41,7 +44,7 @@ namespace Ludots.Tests.Gas.Production
         public void BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves()
         {
             var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs, _actions);
+            runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
             bool sawYield = false;
             for (int i = 0; i < 12; i++)
@@ -61,7 +64,7 @@ namespace Ludots.Tests.Gas.Production
         public void HfsmSentryArena_GateVignette_ThinkWavesUnderBudget()
         {
             var runtime = new HfsmSentryArenaRuntime();
-            runtime.Bind(_programs, _actions);
+            runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
@@ -113,7 +116,7 @@ namespace Ludots.Tests.Gas.Production
         public void GraphBehaviorIntegration_ShortPlay_UnderBudget()
         {
             var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs, _actions);
+            runtime.Bind(_programs, _actions, _behavior);
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 10);
             Drive(runtime.Tick, runtime.Metrics);

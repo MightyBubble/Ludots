@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
@@ -7,14 +8,16 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.AI
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class BehaviorTreeRuntimeTests
     {
         private GraphProgramRegistry? _programs;
         private GraphActionCatalog? _actions;
+        private GraphBehaviorCatalog? _behavior;
 
         private GraphProgramRegistry Programs
-            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _actions);
+            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _actions, out _behavior);
 
         private GraphActionCatalog Actions
         {
@@ -22,6 +25,15 @@ namespace Ludots.Tests.Gas.AI
             {
                 _ = Programs;
                 return _actions!;
+            }
+        }
+
+        private GraphBehaviorCatalog Behavior
+        {
+            get
+            {
+                _ = Programs;
+                return _behavior!;
             }
         }
 
@@ -81,9 +93,7 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void PatrolChaseAttack_RegistryMissing_Throws()
         {
-            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-                "bt.missing",
-                name => GraphRegistryScriptResolver.RequireActionId(Actions, name));
+            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
             Assert.Throws<InvalidOperationException>(() => world.TickAll(programs: null, 32, sensors: null));
@@ -93,9 +103,7 @@ namespace Ludots.Tests.Gas.AI
         public void PatrolChaseAttack_ScriptLeaves_FromRegistry()
         {
             _ = Programs; // ensure GraphIdRegistry is populated before sensor key resolve
-            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-                "bt.pca",
-                name => GraphRegistryScriptResolver.RequireActionId(Actions, name));
+            BehaviorTreeDefinition tree = Behavior.RequireTree("bt.patrolChaseAttack");
             var sensors = new ScriptedSensors(Actions);
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
@@ -117,7 +125,7 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent()
         {
-            int patrolId = Actions.Require(BehaviorTreeScriptKeys.Patrol);
+            int patrolId = Actions.Require("bt.patrol");
             var nodes = new[]
             {
                 new BehaviorTreeNode(
@@ -176,8 +184,8 @@ namespace Ludots.Tests.Gas.AI
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
-                _see = GraphRegistryScriptResolver.RequireActionId(actions, BehaviorTreeScriptKeys.SeeEnemy);
-                _range = GraphRegistryScriptResolver.RequireActionId(actions, BehaviorTreeScriptKeys.InAttackRange);
+                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy");
+                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange");
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)

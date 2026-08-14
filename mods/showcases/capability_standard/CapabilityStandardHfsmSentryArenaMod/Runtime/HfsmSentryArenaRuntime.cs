@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.GraphRuntime;
 
@@ -12,6 +12,7 @@ public sealed class HfsmSentryArenaRuntime
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
+    private GraphBehaviorCatalog? _behavior;
     private HfsmWorld? _world;
     private HfsmWorld? _crowd;
     private GraphProgramHfsmHost? _host;
@@ -32,20 +33,22 @@ public sealed class HfsmSentryArenaRuntime
     public bool IntruderAlive => _intruderAlive;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
 
-    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+        _behavior = behavior ?? throw new ArgumentNullException(nameof(behavior));
     }
 
     public void EnsureWorld()
     {
         if (_world != null) return;
-        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
+        if (_programs == null || _actions == null || _behavior == null)
+        {
+            throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
+        }
 
-        HfsmDefinition def = HfsmFactory.CreateSentryHierarchyWithScripts(
-            "showcase.hfsm.sentry",
-            name => GraphRegistryScriptResolver.RequireActionId(_actions, name));
+        HfsmDefinition def = _behavior.RequireHfsm("hfsm.sentry.scripted");
         _host = new GraphProgramHfsmHost(_programs);
         int n = _config.FeaturedAgentCount;
         _world = new HfsmWorld(def, n);
@@ -60,7 +63,7 @@ public sealed class HfsmSentryArenaRuntime
 
         if (_config.ShowCrowdBand && _config.CrowdBandCount > 0)
         {
-            _crowd = new HfsmWorld(HfsmFactory.CreateSentryHierarchy("showcase.hfsm.crowd"), _config.CrowdBandCount);
+            _crowd = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry"), _config.CrowdBandCount);
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -15,11 +16,17 @@ namespace Ludots.Tests.Gas.Graph
     internal static class GraphRegistryTestBootstrap
     {
         public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(out GraphFunctionCatalog catalog)
-            => LoadCoreScriptsFuncLibAndActionLib(out catalog, out _);
+            => LoadCoreScriptsFuncLibAndActionLib(out catalog, out _, out _);
 
         public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(
             out GraphFunctionCatalog catalog,
             out GraphActionCatalog actions)
+            => LoadCoreScriptsFuncLibAndActionLib(out catalog, out actions, out _);
+
+        public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(
+            out GraphFunctionCatalog catalog,
+            out GraphActionCatalog actions,
+            out GraphBehaviorCatalog behavior)
         {
             GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
@@ -36,11 +43,14 @@ namespace Ludots.Tests.Gas.Graph
             var configCatalog = new ConfigCatalog();
             configCatalog.Add(new ConfigCatalogEntry("GAS/func_lib.json", ConfigMergePolicy.ArrayById, "name"));
             configCatalog.Add(new ConfigCatalogEntry("GAS/action_lib.json", ConfigMergePolicy.ArrayById, "name"));
+            configCatalog.Add(new ConfigCatalogEntry("AI/behavior_trees.json", ConfigMergePolicy.ArrayById, "id"));
+            configCatalog.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById, "id"));
 
             LoadScriptGraphs(programs, repoRoot);
 
             new GraphFunctionCatalogLoader(pipeline, catalog, programs).Load(configCatalog);
             new GraphActionCatalogLoader(pipeline, actions, programs, catalog).Load(configCatalog);
+            behavior = new GraphBehaviorDefinitionLoader(pipeline, actions).Load(configCatalog);
 
             return programs;
         }

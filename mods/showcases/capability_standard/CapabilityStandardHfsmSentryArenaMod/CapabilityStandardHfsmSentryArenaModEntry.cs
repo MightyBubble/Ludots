@@ -24,7 +24,8 @@ public sealed class CapabilityStandardHfsmSentryArenaModEntry : IMod
             if (engine == null) return Task.CompletedTask;
             runtime.Bind(
                 engine.GetService(CoreServiceKeys.GraphProgramRegistry),
-                engine.GetService(CoreServiceKeys.GraphActionCatalog));
+                engine.GetService(CoreServiceKeys.GraphActionCatalog),
+                engine.AiRuntime.Behavior);
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

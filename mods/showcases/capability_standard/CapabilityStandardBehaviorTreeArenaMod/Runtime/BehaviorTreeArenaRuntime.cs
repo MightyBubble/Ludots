@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
@@ -12,6 +13,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
+    private GraphBehaviorCatalog? _behavior;
     private BehaviorTreeWorld? _world;
     private BehaviorTreeWorld? _crowd;
     private float _accum;
@@ -47,20 +49,22 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public int EnemyCount => _ex.Length;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
-    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+        _behavior = behavior ?? throw new ArgumentNullException(nameof(behavior));
     }
 
     public void EnsureWorld()
     {
         if (_world != null) return;
-        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
+        if (_programs == null || _actions == null || _behavior == null)
+        {
+            throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
+        }
 
-        BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-            "showcase.bt.patrol_chase_attack",
-            name => GraphRegistryScriptResolver.RequireActionId(_actions, name));
+        BehaviorTreeDefinition tree = _behavior.RequireTree("bt.patrolChaseAttack");
         int n = _config.FeaturedAgentCount;
         _world = new BehaviorTreeWorld(tree, n);
         _gx = new float[n];
@@ -95,8 +99,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }
 
-        _seeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.SeeEnemy);
-        _rangeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.InAttackRange);
+        _seeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy");
+        _rangeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange");
         Metrics.AgentCount = n;
         Metrics.Detail = "BT Script leaves from ActionLib";
     }

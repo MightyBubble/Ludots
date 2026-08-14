@@ -4,9 +4,10 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
 {
-    [TestFixture]
-    [Category("ci-gate")]
-    public sealed class ScriptFlowSandboxShowcaseAcceptanceTests
+        [TestFixture]
+        [NonParallelizable]
+        [Category("ci-gate")]
+        public sealed class ScriptFlowSandboxShowcaseAcceptanceTests
     {
         [Test]
         public void DrinkUntilFull_YieldsThenHaltsAtLimit()
