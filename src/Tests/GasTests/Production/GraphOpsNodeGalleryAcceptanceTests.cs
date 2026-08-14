@@ -117,7 +117,7 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
     }
 
     [Test]
-    public void RetiredFamilyAggregates_HaveNoPlayerLaunchBinding()
+    public void FamilyAggregates_DoNotExist()
     {
         string repoRoot = FindRepoRoot();
         using JsonDocument registry = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "showcase.registry.json")));
@@ -145,25 +145,28 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
             "capability_standard_graph_ops_event",
         };
 
-        var byId = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        var byId = new HashSet<string>(StringComparer.Ordinal);
         foreach (JsonElement showcase in registry.RootElement.GetProperty("showcases").EnumerateArray())
         {
             string? id = showcase.GetProperty("id").GetString();
             if (!string.IsNullOrWhiteSpace(id))
             {
-                byId[id] = showcase;
+                byId.Add(id);
             }
         }
 
         foreach (string id in familyIds)
         {
-            Assert.That(byId.ContainsKey(id), Is.True, $"Missing retired family showcase '{id}'.");
-            JsonElement entry = byId[id];
-            Assert.That(entry.GetProperty("status").GetString(), Is.EqualTo("retired"), id);
-            Assert.That(entry.GetProperty("binding").ValueKind, Is.EqualTo(JsonValueKind.Null), id);
-            Assert.That(entry.GetProperty("preset").ValueKind, Is.EqualTo(JsonValueKind.Null), id);
-            Assert.That(launcherNames, Does.Not.Contain(id), $"Retired family '{id}' still has a launcher binding.");
+            Assert.That(byId, Does.Not.Contain(id), $"Family aggregate '{id}' must be gone, not kept as a retired room.");
+            Assert.That(launcherNames, Does.Not.Contain(id), $"Family aggregate '{id}' must not have a launcher binding.");
         }
+
+        string familyRoot = Path.Combine(repoRoot, "mods", "showcases", "capability_standard");
+        string[] leftover = Directory.GetDirectories(familyRoot, "CapabilityStandardGraphOps*Mod")
+            .Select(static path => Path.GetFileName(path)!)
+            .Where(static name => !string.Equals(name, "CapabilityStandardGraphOpsNodeGalleryMod", StringComparison.Ordinal))
+            .ToArray();
+        Assert.That(leftover, Is.Empty, "Family aggregate mods must be deleted.");
     }
 
     [Test]

@@ -34,8 +34,6 @@
     <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsQueryMod\CapabilityStandardGraphOpsQueryMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsAttrMod\CapabilityStandardGraphOpsAttrMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
