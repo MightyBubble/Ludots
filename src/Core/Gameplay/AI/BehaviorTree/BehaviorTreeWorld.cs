@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private readonly BehaviorTreeStatus[] _status;
         private readonly int[] _lastScriptReturns;
         private readonly GraphExecutionCursor[] _scriptCursors;
+        private readonly int[] _scriptResumeGraphIds;
         private readonly int[] _scriptIntRegs;
         private readonly byte[] _scriptBoolRegs;
         private readonly int[] _scriptCallStacks;
@@ -39,6 +40,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             _status = new BehaviorTreeStatus[capacity];
             _lastScriptReturns = new int[capacity];
             _scriptCursors = new GraphExecutionCursor[capacity];
+            _scriptResumeGraphIds = new int[capacity];
             _scriptIntRegs = new int[capacity * GraphVmLimits.MaxIntRegisters];
             _scriptBoolRegs = new byte[capacity * GraphVmLimits.MaxBoolRegisters];
             _scriptCallStacks = new int[capacity * GraphVmLimits.MaxCallStackDepth];
@@ -67,6 +69,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         {
             RestartThinking(agent);
             _scriptCursors[agent].Reset();
+            _scriptResumeGraphIds[agent] = 0;
             int intBase = agent * GraphVmLimits.MaxIntRegisters;
             int boolBase = agent * GraphVmLimits.MaxBoolRegisters;
             Array.Clear(_scriptIntRegs, intBase, GraphVmLimits.MaxIntRegisters);
@@ -264,7 +267,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
 
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
-                    bool resume = cursor.IsSuspended;
+                    bool resume = cursor.IsSuspended && _scriptResumeGraphIds[agent] == node.GraphId;
                     if (!resume)
                     {
                         ints.Clear();
@@ -273,6 +276,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         sensors?.WriteSensors(agent, node.GraphId, ints, bools);
                         cursor.Reset();
                     }
+
+                    _scriptResumeGraphIds[agent] = node.GraphId;
 
                     GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
                         programs,
@@ -308,6 +313,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
                     _lastScriptReturns[agent] = result.ReturnInt;
                     cursor.Reset();
+                    _scriptResumeGraphIds[agent] = 0;
                     return BehaviorTreeStatus.Success;
                 }
                 default:

@@ -193,6 +193,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
                 // Main graph: read BB key=1 into F[1], add 20, write back to BB key=1
                 programs.Register(mainGraphId, new[]
@@ -202,6 +203,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 20f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
                 // Post graph: read BB key=1 into F[1], add 30, write back to BB key=1
                 programs.Register(postGraphId, new[]
@@ -211,6 +213,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 30f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
 
                 executor.ExecutePhase(world, api, caster, target, default, default,
@@ -252,6 +255,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
                 // Main: would write BB key=1 = 999.0 (should NOT run)
                 programs.Register(mainGraphId, new[]
@@ -259,6 +263,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 999f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
                 // Post: read BB key=1 into F[1], add 100, write back
                 programs.Register(postGraphId, new[]
@@ -268,6 +273,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 100f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
                 }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -376,6 +382,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigInt, Dst = 0, Imm = configKey },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = blackboardKey },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             }, GraphKind.Effect);
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, graphId);
@@ -450,6 +457,7 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 7f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             }, GraphKind.Validation);
 
             var behavior = new EffectPhaseGraphBindings();

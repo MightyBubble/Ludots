@@ -223,28 +223,25 @@ namespace Ludots.Tests.GAS.Graph
             Entity caster = world.Create();
             Entity target = world.Create();
 
-            Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, ReadOnlySpan<GraphInstruction>.Empty, null!),
-                Is.False);
+            Assert.Throws<InvalidOperationException>(() =>
+                GraphExecutor.ExecuteValidation(world, caster, target, default, ReadOnlySpan<GraphInstruction>.Empty, null!));
 
-            var rejectOnly = new GraphInstruction
+            var rejectOnly = new[]
             {
-                Op = (ushort)GraphNodeOp.ConstFloat,
-                Dst = 0,
-                ImmF = 9f
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 9f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
             Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, new[] { rejectOnly }, null!),
+                GraphExecutor.ExecuteValidation(world, caster, target, default, rejectOnly, null!),
                 Is.False);
 
-            var pass = new GraphInstruction
+            var pass = new[]
             {
-                Op = (ushort)GraphNodeOp.ConstBool,
-                Dst = 0,
-                Imm = 1
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
             Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, new[] { pass }, null!),
+                GraphExecutor.ExecuteValidation(world, caster, target, default, pass, null!),
                 Is.True);
         }
 
