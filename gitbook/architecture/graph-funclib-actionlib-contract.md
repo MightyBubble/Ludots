@@ -1,7 +1,7 @@
 # 图复用库合同补丁：FuncLib / ActionLib 与 Kind 表达力
 
-状态：修复中（Epic #915；分层墙未立完）。规则以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。玩家门、分层脚手架、还开着的票只认 [图能力收口现状](graph-capability-status.md)，本页 §3.6 不再当进度表。  
-关联：#861 作者 SSOT / FuncLib；L0/L1/L2 分层；效果生命周期（Duration/Period）。
+状态：修复中。规矩以本页 + [图怎么分层](graph-layering-flow-and-behavior.md) 为准。现在做成什么样了，只看 [图能力现在走到哪](graph-capability-status.md)。本页第三节那张对照表是当初为什么这样写规矩，不当进度表。  
+关联：作者只走一条边；效果持续和跳动写在效果壳上，不在图里装等待。
 
 ---
 
@@ -116,7 +116,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 
 ### 3.6 与提出补丁时的差异（不是进度表）
 
-进度只认 [图能力收口现状](graph-capability-status.md)。下表是补丁提出时相对旧代码的差异，用来解释合同为什么这样写。
+进度只认 [图能力现在走到哪](graph-capability-status.md)。下表是补丁提出时相对旧代码的差异，用来解释合同为什么这样写。
 
 | # | 提出时 | 补丁后 |
 |---|------|--------|

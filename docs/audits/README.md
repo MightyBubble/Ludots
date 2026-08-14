@@ -1,9 +1,9 @@
 # 审计记录
 
-本目录存放审计、验收、收敛和阶段性回顾。这里是**当时取证**，不是规范，也不是当前进度。
+本目录是当时记下的证据，不是现在怎样，也不是规矩。
 
-图能力收口现在走到哪、哪些票还开着，只认 [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)。  
-正式规则只认 `gitbook/`。本目录与 gitbook 打架时，改本目录，不准另写一份「也算现状」。
+图能力现在做成什么样了，先读 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。  
+规矩只认 `gitbook/`。这里和那边打架，改这里。
 
 ## 1 目录
 
@@ -38,7 +38,7 @@
 
 * 审计结论如需成为正式规则，必须回写 `gitbook/`。
 * 审计里的「现在怎样」如已过期，必须改掉正文，不准只加一句「去别处看」。
-* 当前进度只回写 [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)。
+* 现在怎样只回写 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。
 
 ## 3 相关文档
 

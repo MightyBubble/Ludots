@@ -2,7 +2,7 @@
 
 **给审计 / 接手 Agent。**  
 这是当时的独立架构审计请求。对象是已经 squash 进 `main` 的 [#942](https://github.com/MightyBubble/Ludots/pull/942) 计划全票。  
-结论当时写在 [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)。**当前进度只认** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)。禁止借本需求夹带实现修复，也不要再按本页开一轮新审计。
+结论当时写在 [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)。**当前进度只认** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。禁止借本需求夹带实现修复，也不要再按本页开一轮新审计。
 
 **事后更正（主干 `d1b8f5f4d7`）：** 八间家族房间已删除（#968），不是「S6 之后另开删房票」。分层 Wave 2–4 脚手架已合（#964），Wave 5–6 仍未做。「残血的分更高」已合（#963）。本页里「尚未开工 / 退役当玩家门」的句子已按现状改。
 

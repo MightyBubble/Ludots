@@ -1,7 +1,7 @@
 # main 图能力收口架构审计（#932 落地后 · 当时结论）
 
 **当时对象：** `origin/main` @ `82ddb3322a`（落地 PR [#932](https://github.com/MightyBubble/Ludots/pull/932)，已合）
-**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)
+**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)
 **审计需求：** PR [#939](https://github.com/MightyBubble/Ludots/pull/939) → `docs/audits/pr932_graph_landed_audit_handoff.md`
 **前序审计：** `docs/audits/pr911_funclib_actionlib_architecture_audit.md`（#914）、`docs/audits/pr911_audit_fix_checklist.md`
 **合同：** `gitbook/architecture/graph-funclib-actionlib-contract.md`（状态：修复中 / Epic #915）

@@ -1,7 +1,7 @@
 # S 第一批架构审计：#944 / #946 / #943 / #945
 
 **当时对象：** GAS + Graph VM 修复计划（[#942](https://github.com/MightyBubble/Ludots/pull/942) / [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)）的第一批四张票  
-**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)  
+**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)  
 **当时对照：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md) §S1 / §S2 / §S4 / §S5；审查正本 [`gas_graph_architecture_review.md`](gas_graph_architecture_review.md)  
 **基线：** `main` @ `82ddb3322`  
 **本审计 tip：** 见当时 PR；零生产代码改动

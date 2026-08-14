@@ -1,7 +1,7 @@
 # S14 分层墙第二波架构审计（契约程序集 / 登记表实例 / Mod 端口）
 
 **当时对象：** [#964](https://github.com/MightyBubble/Ludots/pull/964) @ `29b951470`（相对 `origin/main` @ `46fcd9dcda`）  
-**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)  
+**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)  
 **需求：** 独立审这一波实现 tip，不是把 #942 十五张票重审一遍  
 **设计正本：** [`s14_layering_physicalization_design.md`](s14_layering_physicalization_design.md) §3.1–§3.3、§3.6 Wave 2–4  
 **前序：** [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)（#962）。已关的票本轮只一行复验  
