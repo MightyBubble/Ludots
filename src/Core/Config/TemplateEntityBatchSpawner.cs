@@ -405,7 +405,7 @@ namespace Ludots.Core.Config
                         {
                             CellX = cellX,
                             CellY = cellY,
-                            Initialized = 1,
+                            State = SpatialMembershipState.Active,
                         };
                         _partition!.Add(entity, cellX, cellY);
                     }

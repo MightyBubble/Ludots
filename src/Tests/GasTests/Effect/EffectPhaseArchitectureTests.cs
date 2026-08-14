@@ -287,7 +287,6 @@ namespace Ludots.Tests.GAS
 
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
-
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
@@ -319,7 +318,6 @@ namespace Ludots.Tests.GAS
                 var caster = world.Create();
                 var target = world.Create();
                 var behavior = new EffectPhaseGraphBindings(); // empty
-
                 // Should not throw
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
@@ -345,12 +343,13 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 404);
-
+            var source = world.Create();
+            var target = world.Create();
             var ex = Throws<InvalidOperationException>(() => executor.ExecutePhase(
                 world,
                 api,
-                world.Create(),
-                world.Create(),
+                source,
+                target,
                 default,
                 default,
                 EffectPhaseId.OnApply,
@@ -358,6 +357,160 @@ namespace Ludots.Tests.GAS
                 EffectPresetType.None));
 
             That(ex!.Message, Does.Contain("graphId=404"));
+        }
+
+        [Test]
+        public void PhaseExecutor_CustomBuiltinSynchronousReentry_ThrowsBeforeNestedExecution()
+        {
+            using var world = World.Create();
+            const int graphId = 601;
+            const int templateId = 2401;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            }, GraphKind.Effect);
+
+            var templates = new EffectTemplateRegistry();
+            templates.Register(templateId, new EffectTemplateData());
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(graphId);
+            presetTypes.Register(in preset);
+
+            EffectPhaseExecutor executor = null!;
+            GasGraphRuntimeApi api = null!;
+            int invocationCount = 0;
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity _, ref EffectContext invocationContext, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    invocationCount++;
+                    executor.ExecuteGraph(
+                        world,
+                        api,
+                        invocationContext.Source,
+                        invocationContext.Target,
+                        invocationContext.TargetContext,
+                        default,
+                        graphProgramId: 0);
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+
+            executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            api = new GasGraphRuntimeApi(world);
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int rootId = 71;
+            EffectConfigParams mergedParams = default;
+            var behavior = new EffectPhaseGraphBindings();
+            var runtime = new BuiltinHandlerExecutionContext();
+
+            var error = Throws<InvalidOperationException>(() => executor.ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                Entity.Null,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: templateId,
+                in mergedParams,
+                runtime,
+                randomSeed: 0,
+                rootId: rootId));
+
+            That(error!.Message, Does.Contain("does not support reentrant execution"));
+            That(invocationCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PhaseExecutor_Exception_ReleasesReentryGuardForNextExecution()
+        {
+            using var world = World.Create();
+            const int templateId = 2402;
+            var templates = new EffectTemplateRegistry();
+            templates.Register(templateId, new EffectTemplateData());
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in preset);
+
+            bool throwOnFirstExecution = true;
+            int invocationCount = 0;
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity _, ref EffectContext _, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    invocationCount++;
+                    if (throwOnFirstExecution)
+                    {
+                        throwOnFirstExecution = false;
+                        throw new InvalidOperationException("synthetic phase failure");
+                    }
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var api = new GasGraphRuntimeApi(world);
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int rootId = 72;
+            var behavior = new EffectPhaseGraphBindings();
+
+            var firstError = Throws<InvalidOperationException>(() => executor.ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                Entity.Null,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: templateId,
+                mergedParams: default,
+                randomSeed: 0,
+                rootId: rootId));
+            That(firstError!.Message, Is.EqualTo("synthetic phase failure"));
+
+            DoesNotThrow(() => executor.ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                Entity.Null,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: templateId,
+                mergedParams: default,
+                randomSeed: 0,
+                rootId: rootId));
+            That(invocationCount, Is.EqualTo(2));
         }
 
         [Test]
@@ -462,7 +615,6 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, graphId);
-
             bool accepted = executor.ExecutePhaseWithValidationResult(
                 world,
                 api,

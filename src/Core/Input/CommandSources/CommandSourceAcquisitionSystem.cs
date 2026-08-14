@@ -6,6 +6,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -78,6 +79,12 @@ namespace Ludots.Core.Input.CommandSources
 
         public void Update(in float dt)
         {
+            bool hasOwner = TryGetCommandSourceOwner(out var owner);
+            if (hasOwner)
+            {
+                PruneDestroyedCommandSources(owner);
+            }
+
             if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
             {
                 return;
@@ -90,7 +97,6 @@ namespace Ludots.Core.Input.CommandSources
                 _suppressConfirmRelease = true;
             }
 
-            bool hasOwner = TryGetCommandSourceOwner(out var owner);
             Entity hovered = hasOwner
                 ? FindNearestEntity(owner, pointer.Pointer, _config.ClickPickRadiusPixels)
                 : Entity.Null;
@@ -174,12 +180,32 @@ namespace Ludots.Core.Input.CommandSources
                 return;
             }
 
-            Entity acquired = ResolveClickAcquisition(owner, hovered);
+            Entity gestureHovered = drag.CurrentScreen == pointer.Pointer
+                ? hovered
+                : FindNearestEntity(owner, drag.CurrentScreen, _config.ClickPickRadiusPixels);
+            Entity acquired = ResolveClickAcquisition(owner, gestureHovered);
             ApplyClickAcquisition(owner, acquired, acquisitionMode);
-            if (pointer.HasGroundPoint)
+            if (TryResolveGestureGroundWorldCm(in drag, in pointer, out WorldCmInt2 gestureWorldCm))
             {
-                OnEntityAcquired?.Invoke(pointer.GroundWorldCm, acquired);
+                OnEntityAcquired?.Invoke(gestureWorldCm, acquired);
             }
+        }
+
+        private bool TryResolveGestureGroundWorldCm(
+            in CommandSourceDragState drag,
+            in PointerInteractionSnapshot pointer,
+            out WorldCmInt2 worldCm)
+        {
+            if (drag.CurrentScreen == pointer.Pointer)
+            {
+                worldCm = pointer.GroundWorldCm;
+                return pointer.HasGroundPoint;
+            }
+
+            return AuthoritativeGroundPointerHelper.TryResolveFromScreen(
+                _globals,
+                drag.CurrentScreen,
+                out worldCm);
         }
 
         private bool IsAcquisitionSuppressed()
@@ -381,6 +407,28 @@ namespace Ludots.Core.Input.CommandSources
 
             EnsureCommandSourceScratchCapacity(view.Count);
             return _entityCollections.CopyEntities(handle, 0, _commandSourceScratch.AsSpan(0, view.Count));
+        }
+
+        private void PruneDestroyedCommandSources(Entity owner)
+        {
+            int count = CopyCurrentCommandSource(owner);
+            int aliveCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = _commandSourceScratch[i];
+                if (_world.IsAlive(entity))
+                {
+                    _commandSourceScratch[aliveCount++] = entity;
+                }
+            }
+
+            if (aliveCount != count)
+            {
+                PublishCommandSource(
+                    owner,
+                    _commandSourceScratch.AsSpan(0, aliveCount),
+                    CommandSourceAcquisitionMode.Replace);
+            }
         }
 
         private CommandSourceAcquisitionMode ResolveAcquisitionMode()

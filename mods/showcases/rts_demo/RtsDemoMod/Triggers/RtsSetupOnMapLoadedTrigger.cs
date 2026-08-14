@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
+using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
@@ -51,9 +52,19 @@ namespace RtsDemoMod.Triggers
                 }
             });
 
-            RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
-            EnsureLocalCommandSourceOwner(engine, world);
+            bool isAuthoritativeServer =
+                engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer;
+            if (!isAuthoritativeServer)
+            {
+                RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
+            }
+
             EnsurePlayerOwnership(world);
+            if (isAuthoritativeServer)
+            {
+                return Task.CompletedTask;
+            }
+
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
             EnsureDefaultCommandSource(engine, world);
             return Task.CompletedTask;
@@ -73,23 +84,11 @@ namespace RtsDemoMod.Triggers
             });
         }
 
-        private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
-        {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (world.IsAlive(owner))
-            {
-                return;
-            }
-
-            owner = world.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
-        }
-
         private static void EnsureDefaultCommandSource(GameEngine engine, World world)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity owner) ||
+                !world.IsAlive(owner) ||
+                RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
             {
                 return;
             }

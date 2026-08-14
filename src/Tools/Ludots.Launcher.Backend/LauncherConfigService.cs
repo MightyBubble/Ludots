@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ludots.Launcher.Backend;
 
@@ -8,6 +9,13 @@ public sealed class LauncherConfigService
     {
         PropertyNameCaseInsensitive = true,
         WriteIndented = true
+    };
+
+    private static readonly JsonSerializerOptions StrictPresetSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
     public LauncherConfigService(
@@ -58,8 +66,47 @@ public sealed class LauncherConfigService
 
     public LauncherPresetDocument LoadPresets()
     {
-        var document = ReadJsonFile<LauncherPresetDocument>(RepoPresetsPath);
+        if (!File.Exists(RepoPresetsPath))
+        {
+            return new LauncherPresetDocument();
+        }
+
+        LauncherPresetDocument document;
+        try
+        {
+            document = JsonSerializer.Deserialize<LauncherPresetDocument>(
+                    File.ReadAllText(RepoPresetsPath),
+                    StrictPresetSerializerOptions)
+                ?? throw new InvalidOperationException("Launcher preset document deserialized to null.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException(
+                $"Failed to parse launcher presets '{RepoPresetsPath}': {exception.Message}",
+                exception);
+        }
+
         document.Presets ??= new List<LauncherPresetDefinition>();
+        var presetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (LauncherPresetDefinition preset in document.Presets)
+        {
+            if (preset == null)
+            {
+                throw new InvalidOperationException($"Launcher presets '{RepoPresetsPath}' contains a null preset.");
+            }
+
+            if (string.IsNullOrWhiteSpace(preset.Id))
+            {
+                throw new InvalidOperationException($"Launcher presets '{RepoPresetsPath}' contains a preset without an id.");
+            }
+
+            if (!presetIds.Add(preset.Id))
+            {
+                throw new InvalidOperationException(
+                    $"Launcher presets '{RepoPresetsPath}' declares duplicate preset id '{preset.Id}'.");
+            }
+        }
+
         return document;
     }
 

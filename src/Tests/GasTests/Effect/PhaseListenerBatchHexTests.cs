@@ -546,9 +546,16 @@ namespace Ludots.Tests.GAS
                 attributeEntityCapacity: 2);
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
@@ -1497,8 +1504,15 @@ namespace Ludots.Tests.GAS
                 attributeEntityCapacity: 2);
             transaction.Begin();
             api.BeginEffectSideEffectTransaction(transaction);
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);
@@ -1697,12 +1711,33 @@ namespace Ludots.Tests.GAS
             var behavior = new EffectPhaseGraphBindings();
             int fireballHitTag = 10;
             int fireballHitTemplate = 42;
+            var victim1Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim1,
+                TargetContext = default,
+            };
+            var victim2Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim2,
+                TargetContext = default,
+            };
+            var victim3Context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = victim3,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, victim1, default, default,
+            executor.ExecutePhase(world, api, victim1Context.Source, victim1Context.Target, victim1Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim2, default, default,
+            executor.ExecutePhase(world, api, victim2Context.Source, victim2Context.Target, victim2Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, caster, victim3, default, default,
+            executor.ExecutePhase(world, api, victim3Context.Source, victim3Context.Target, victim3Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
             transaction.Commit();
             api.EndEffectSideEffectTransaction(transaction);

@@ -348,7 +348,15 @@ namespace Ludots.Core.Engine
                     }
 
                     _pendingMapLoads.Remove(pair.Key);
-                    CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                    try
+                    {
+                        CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                    }
+                    catch (Exception ex)
+                    {
+                        RecordNetworkStartupFailure(session.MapId, ex);
+                        throw;
+                    }
                 }
             }
 
@@ -416,6 +424,7 @@ namespace Ludots.Core.Engine
                 if (loadStatus.Failed)
                 {
                     Diagnostics.Log.Warn(in LogChannels.Engine, $"Map '{session.MapId.Value}' completed with failure: {loadStatus.ErrorMessage}");
+                    ThrowIfNetworkStartupMapLoadFailed(session.MapId, loadStatus.ErrorMessage);
                 }
 
                 return;
@@ -426,6 +435,7 @@ namespace Ludots.Core.Engine
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
             CaptureFocusedParticipantOverrides(session);
             session.TeamRelationships = TeamManager.CaptureSnapshot();
+            TryActivateNetworkRuntime();
         }
 
         private void SetSessionParticipants(MapSession session, ParticipantBindingResult participants)
@@ -538,6 +548,11 @@ namespace Ludots.Core.Engine
             if (markFailed)
             {
                 SetMapLoadStatus(mapId, MapLoadStatus.DeferredFailure(reason));
+            }
+
+            if (markFailed || _isRunning)
+            {
+                ThrowIfNetworkStartupMapLoadFailed(mapId, reason);
             }
         }
 

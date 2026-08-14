@@ -61,6 +61,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\tcg_demo\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\arpg_demo\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_showcase\RtsShowcaseMod\RtsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\RtsMultiplayerFrontlineMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ai_demo\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />

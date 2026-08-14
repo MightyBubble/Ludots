@@ -287,6 +287,13 @@ namespace Ludots.Core.Input.Orders
                     $"{source}.groupMoveTargetLayout.spacingCm must be greater than zero when mode is Grid.");
             }
 
+            if (settings.Assignment != GroupMoveTargetAssignmentMode.ActorOrder &&
+                settings.Assignment != GroupMoveTargetAssignmentMode.PreserveRelative)
+            {
+                throw new InvalidOperationException(
+                    $"{source}.groupMoveTargetLayout.assignment must explicitly be ActorOrder or PreserveRelative when mode is Grid.");
+            }
+
             for (int i = 0; i < settings.OrderTypeKeys.Count; i++)
             {
                 string key = settings.OrderTypeKeys[i];

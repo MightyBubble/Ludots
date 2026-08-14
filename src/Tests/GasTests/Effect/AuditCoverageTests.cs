@@ -80,8 +80,15 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                 effectTagId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
@@ -129,10 +136,17 @@ namespace Ludots.Tests.GAS
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
             // fail-fast: missing template must throw, not silently skip
             Assert.Throws<InvalidOperationException>(() =>
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                     effectTagId: 1, effectTemplateId: 999));
 
@@ -403,8 +417,15 @@ namespace Ludots.Tests.GAS
             var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
+            var context = new EffectContext
+            {
+                RootId = 0,
+                Source = caster,
+                Target = target,
+                TargetContext = default,
+            };
 
-            executor.ExecutePhase(world, api, caster, target, default, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
                 effectTagId: 1, effectTemplateId: 1,
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });

@@ -371,7 +371,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var builtinParams = mergedParams.Count > 0 ? mergedParams : tplData.ConfigParams;
                     _builtinHandlers.Invoke(
                         (BuiltinHandlerId)handler.HandlerId,
-                        world, default, ref context, in builtinParams, in tplData, builtinRuntime);
+                        world, Entity.Null, ref context, in builtinParams, in tplData, builtinRuntime);
                     break;
                 }
                 case PhaseHandlerKind.Graph:
@@ -793,6 +793,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _builtinHandlers,
                     _templates,
                     builtinRuntime,
+                    Entity.Null,
                     effectTemplateId,
                     new EffectContext { RootId = rootId, Source = caster, Target = target, TargetContext = targetContext },
                     in builtinParams);

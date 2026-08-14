@@ -450,11 +450,23 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
-            rule.Route = CompileRoute(profileId, definition.Route, ruleIndex);
+            CommandIntentTargetShape targetShape = definition.Route.TargetShape!.Value;
+            if (RequiresEntity(targetShape) && CanMatchGround(definition.Target))
+            {
+                throw new InvalidOperationException(
+                    $"Command intent profile '{profileId}' rule {ruleIndex} declares target shape '{targetShape}' " +
+                    "but its target predicate can match a ground hit.");
+            }
+
+            rule.Route = CompileRoute(profileId, definition.Route, ruleIndex, targetShape);
             return rule;
         }
 
-        private CommandIntentRoute CompileRoute(string profileId, CommandIntentRouteDefinition definition, int ruleIndex)
+        private CommandIntentRoute CompileRoute(
+            string profileId,
+            CommandIntentRouteDefinition definition,
+            int ruleIndex,
+            CommandIntentTargetShape targetShape)
         {
             if (!_orderTypes.TryGetId(definition.OrderTypeKey, out int orderTypeId))
             {
@@ -465,7 +477,12 @@ namespace Ludots.Core.Input.Interaction
             string slot = definition.Slot;
             if (string.IsNullOrWhiteSpace(slot))
             {
-                return new CommandIntentRoute(ruleIndex, orderTypeId, CommandIntentRouteKinds.None, 0);
+                return new CommandIntentRoute(
+                    ruleIndex,
+                    orderTypeId,
+                    CommandIntentRouteKinds.None,
+                    0,
+                    targetShape);
             }
 
             if (slot.StartsWith(ByAbilityTagSelectorPrefix, StringComparison.Ordinal))
@@ -481,7 +498,8 @@ namespace Ludots.Core.Input.Interaction
                     ruleIndex,
                     orderTypeId,
                     CommandIntentRouteKinds.ByAbilityTag,
-                    ResolveTagId(profileId, tagName));
+                    ResolveTagId(profileId, tagName),
+                    targetShape);
             }
 
             if (slot.StartsWith(ContextGroupSelectorPrefix, StringComparison.Ordinal))
@@ -505,13 +523,34 @@ namespace Ludots.Core.Input.Interaction
                     ruleIndex,
                     orderTypeId,
                     CommandIntentRouteKinds.ContextGroup,
-                    groupId);
+                    groupId,
+                    targetShape);
             }
 
             // DEC-14: semantic routing forbids bare slot indices (bySlotIndex / slotN / anything else).
             throw new InvalidOperationException(
                 $"Command intent profile '{profileId}' slot selector '{slot}' is not a semantic selector; " +
                 $"only '{ByAbilityTagSelectorPrefix}<tag>' and '{ContextGroupSelectorPrefix}<id>' are allowed.");
+        }
+
+        private static bool RequiresEntity(CommandIntentTargetShape targetShape) =>
+            targetShape is CommandIntentTargetShape.Entity or CommandIntentTargetShape.WorldPositionAndEntity;
+
+        private static bool CanMatchGround(CommandIntentTargetPredicateDefinition target)
+        {
+            if (target == null)
+            {
+                return true;
+            }
+
+            if (target.HasEntity == true)
+            {
+                return false;
+            }
+
+            return (target.AllTags == null || target.AllTags.Count == 0) &&
+                   (target.AnyTags == null || target.AnyTags.Count == 0) &&
+                   (target.Stance == null || target.Stance.Count == 0);
         }
 
         private static bool TryBuildMask(string profileId, List<string> tags, ref GameplayTagContainer mask)

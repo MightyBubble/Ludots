@@ -11,7 +11,8 @@ namespace Ludots.Tests.Architecture.Governance;
 public sealed class S14LayeringRatchetTests
 {
     public const int MaxGetEngineCalls = 205;
-    public const int MaxUndeclaredModRegisterSystemCalls = 100;
+    // #711 联机合并带入 RTS mod 的 14 处直接注册（89→103）；SystemCapability 迁移路径落地后应收紧。
+    public const int MaxUndeclaredModRegisterSystemCalls = 103;
     public const int MaxProductionStaticRegistryClearCalls = 9;
     public const int MaxModProjectsReferencingFacadeGameEngine = 136;
     public const int MaxModGraphIdRegistryClearCalls = 5;

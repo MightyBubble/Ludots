@@ -1,4 +1,4 @@
-﻿## GAS Composition Gate — Self Review
+﻿﻿## GAS Composition Gate — Self Review
 
 - **Task / Issue**: S13 · Script 方言拓宽 + L2 作者面（B19 / B20）
 - **Date**: 2026-08-14

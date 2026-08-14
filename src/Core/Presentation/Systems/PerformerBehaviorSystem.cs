@@ -312,6 +312,7 @@ namespace Ludots.Core.Presentation.Systems
                         definition.Behaviors,
                         chunk))
                 {
+                    PropagateBootstrapParentTransforms(chunk);
                     return true;
                 }
 
@@ -338,7 +339,23 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            PropagateBootstrapParentTransforms(chunk);
             return true;
+        }
+
+        private void PropagateBootstrapParentTransforms(Chunk chunk)
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (World.Has<PerformerChildren>(entity) &&
+                    World.Get<PerformerChildren>(entity).Count != 0)
+                {
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
+                }
+            }
         }
 
         private int ProcessOwnerChanges()
@@ -664,6 +681,7 @@ namespace Ludots.Core.Presentation.Systems
 
             Entity owner = state.OwnerEntity;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            PerformerTransformSnapshot previousTransform = CaptureWorldTransform(entity);
             ResolveDefaultTransformSource(entity, ref state);
             if (!tickDrivenOnly)
             {
@@ -680,7 +698,7 @@ namespace Ludots.Core.Presentation.Systems
                 HandleReusedSoundSlot(entity, in state, behaviors);
             }
 
-            ResolveTransform(entity, ref state, definition, behaviors);
+            ResolveTransform(entity, ref state, definition);
 
             uint currentSoundMask = 0u;
             if (tickDrivenOnly)
@@ -773,6 +791,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            PropagateTransformChange(entity, in previousTransform);
         }
 
         private void ProcessMaterialBehaviors(Entity entity, in PerformerState state, PerformerDefinition definition)
@@ -1452,6 +1471,7 @@ namespace Ludots.Core.Presentation.Systems
             BehaviorSlot[] behaviors,
             Chunk chunk)
         {
+            ref Entity entityFirst = ref chunk.Entity(0);
             for (int behaviorIndex = 0; behaviorIndex < tickBehaviorIndices.Length; behaviorIndex++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[behaviorIndex]];
@@ -1468,7 +1488,15 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
+                    if (positions[index].Value.Y == slot.Grounding.Offset)
+                    {
+                        continue;
+                    }
+
                     positions[index].Value.Y = slot.Grounding.Offset;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    _runtime.MarkTransformDrivenEmitDirty(entity);
+                    _runtime.PropagateParentDrivenTransforms(entity);
                 }
             }
         }
@@ -1592,6 +1620,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int behaviorIndex in tickBehaviorIndices)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
@@ -1650,8 +1679,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
         }
@@ -1754,8 +1792,17 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < count; i++)
                 {
                     int index = _groundingIndices[i];
+                    bool changed =
+                        positions[index].Value != _groundingPositions[i] ||
+                        rotations[index].Value != _groundingRotations[i];
                     positions[index].Value = _groundingPositions[i];
                     rotations[index].Value = _groundingRotations[i];
+                    if (changed)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        _runtime.MarkTransformDrivenEmitDirty(entity);
+                        _runtime.PropagateParentDrivenTransforms(entity);
+                    }
                 }
             }
 
@@ -1893,7 +1940,9 @@ namespace Ludots.Core.Presentation.Systems
                 rotations[index].Value = resolvedRotation;
                 facings[index] = resolvedFacing;
                 scales[index].Value = resolvedScale;
-                _runtime.MarkTransformDrivenEmitDirty(Unsafe.Add(ref entityFirst, index));
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                _runtime.MarkTransformDrivenEmitDirty(entity);
+                _runtime.PropagateParentDrivenTransforms(entity);
             }
         }
 
@@ -1976,7 +2025,9 @@ namespace Ludots.Core.Presentation.Systems
             PerformerDefinition definition,
             Chunk chunk)
         {
-            AssetBindingConfig assetBinding = ResolvePrimaryAssetBinding(definition, states[0].BehaviorActiveMask);
+            AssetBindingConfig assetBinding = PerformerGroundingUtility.ResolvePrimaryAssetBinding(
+                definition,
+                states[0].BehaviorActiveMask);
             foreach (int index in chunk)
             {
                 PerformerTransformSnapshot performerSnapshot = new PerformerTransformSnapshot
@@ -2029,35 +2080,6 @@ namespace Ludots.Core.Presentation.Systems
                 facings[index] = resolved.Facing;
                 scales[index].Value = resolved.Scale;
             }
-        }
-
-        private static AssetBindingConfig ResolvePrimaryAssetBinding(
-            PerformerDefinition definition,
-            uint activeBehaviorMask)
-        {
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
-                {
-                    return primarySlot.AssetBinding;
-                }
-            }
-
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (IsAssetOutputBehavior(slot.Kind) &&
-                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
-                {
-                    return slot.AssetBinding;
-                }
-            }
-
-            return new AssetBindingConfig { LocalScale = Vector3.One };
         }
 
         private static bool CanProcessBootstrapChunkFast(PerformerDefinition definition)
@@ -2245,43 +2267,11 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.ClearParamAndPropagateToAffectedChildren(entity, paramKey, lane);
         }
 
-        private void ResolveTransform(Entity entity, ref PerformerState state, PerformerDefinition definition, BehaviorSlot[] behaviors)
+        private void ResolveTransform(Entity entity, ref PerformerState state, PerformerDefinition definition)
         {
-            AssetBindingConfig assetBinding = new AssetBindingConfig { LocalScale = Vector3.One };
-            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
-            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
-            {
-                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (IsAssetOutputBehavior(primarySlot.Kind) &&
-                    IsBehaviorActive(state.BehaviorActiveMask, primarySlot.SlotIndex))
-                {
-                    assetBinding = primarySlot.AssetBinding;
-                }
-                else
-                {
-                    for (int i = 0; i < behaviors.Length; i++)
-                    {
-                        ref readonly BehaviorSlot slot = ref behaviors[i];
-                        if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                        {
-                            assetBinding = slot.AssetBinding;
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < behaviors.Length; i++)
-                {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        assetBinding = slot.AssetBinding;
-                        break;
-                    }
-                }
-            }
+            AssetBindingConfig assetBinding = PerformerGroundingUtility.ResolvePrimaryAssetBinding(
+                definition,
+                state.BehaviorActiveMask);
 
             Entity parentEntity = World.Has<PerformerParent>(entity) ? World.Get<PerformerParent>(entity).Parent : Entity.Null;
             bool hasParent = parentEntity != Entity.Null && World.IsAlive(parentEntity) && World.Has<PerformerState>(parentEntity);
@@ -2318,6 +2308,44 @@ namespace Ludots.Core.Presentation.Systems
                 World.Get<PerformerWorldFacing>(entity) = resolved.Facing;
             if (World.Has<PerformerWorldScale>(entity))
                 World.Get<PerformerWorldScale>(entity).Value = resolved.Scale;
+        }
+
+        private PerformerTransformSnapshot CaptureWorldTransform(Entity entity)
+        {
+            return new PerformerTransformSnapshot
+            {
+                WorldPosition = World.Has<PerformerWorldPosition>(entity)
+                    ? World.Get<PerformerWorldPosition>(entity).Value
+                    : Vector3.Zero,
+                WorldRotation = World.Has<PerformerWorldRotation>(entity)
+                    ? World.Get<PerformerWorldRotation>(entity).Value
+                    : Quaternion.Identity,
+                WorldScale = World.Has<PerformerWorldScale>(entity)
+                    ? World.Get<PerformerWorldScale>(entity).Value
+                    : Vector3.One,
+                WorldFacing = World.Has<PerformerWorldFacing>(entity)
+                    ? World.Get<PerformerWorldFacing>(entity)
+                    : default,
+                TransformSource = World.Has<PerformerTransformSource>(entity)
+                    ? World.Get<PerformerTransformSource>(entity).Value
+                    : TransformSource.WorldFixed,
+            };
+        }
+
+        private void PropagateTransformChange(Entity entity, in PerformerTransformSnapshot previous)
+        {
+            PerformerTransformSnapshot current = CaptureWorldTransform(entity);
+            if (current.WorldPosition == previous.WorldPosition &&
+                current.WorldRotation == previous.WorldRotation &&
+                current.WorldScale == previous.WorldScale &&
+                current.WorldFacing.AngleRad == previous.WorldFacing.AngleRad &&
+                current.WorldFacing.HasValue == previous.WorldFacing.HasValue)
+            {
+                return;
+            }
+
+            _runtime.MarkTransformDrivenEmitDirty(entity);
+            _runtime.PropagateParentDrivenTransforms(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2429,11 +2457,6 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
             return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
-        }
-
-        private static bool IsAssetOutputBehavior(BehaviorKind kind)
-        {
-            return kind is BehaviorKind.AssetBinding or BehaviorKind.WorldText;
         }
 
     }

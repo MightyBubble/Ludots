@@ -11,6 +11,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
+using Ludots.Core.Gameplay.ActionLoops;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -28,7 +29,9 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Networking.Replication;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Config
 {
@@ -59,6 +62,9 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
             Register<Ludots.Core.Gameplay.Components.PlayerIdentity>("PlayerIdentity");
+            Register("ReplicationSchemaRef", SetReplicationSchemaRef, null, Component<ReplicationSchemaRef>.ComponentType);
+            Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
+            Register<FogOccupantCm>("FogOccupantCm");
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
@@ -78,6 +84,7 @@ namespace Ludots.Core.Config
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
+            ActionLoopComponentAuthoring.Register();
             Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
@@ -89,7 +96,8 @@ namespace Ludots.Core.Config
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
-            Register<VisualTransform>("VisualTransform");
+            Register("VisualTransform", SetVisualTransform, null, Component<VisualTransform>.ComponentType);
+            Register("CullState", SetCullState, null, Component<CullState>.ComponentType);
             Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
             Register("PresentationStaticTransform", SetPresentationStaticTransform);
             Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
@@ -139,6 +147,86 @@ namespace Ludots.Core.Config
         public static void SetUtilityAiAuthoringCatalog(UtilityAiAuthoringCatalog authoring)
         {
             _utilityAiAuthoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
+        }
+
+        private static void SetReplicationSchemaRef(Entity entity, JsonNode data)
+        {
+            JsonObject obj = data as JsonObject
+                ?? throw new InvalidOperationException("ReplicationSchemaRef authoring must be an object.");
+            ValidateProperties(obj, "ReplicationSchemaRef", "SchemaId");
+            int schemaId = ReadIntProperty(obj, "SchemaId", "ReplicationSchemaRef");
+            if (schemaId <= 0)
+            {
+                throw new InvalidOperationException("ReplicationSchemaRef.SchemaId must be a positive integer.");
+            }
+
+            entity.Add(new ReplicationSchemaRef(schemaId));
+        }
+
+        private static void SetVisionEmitterCm(Entity entity, JsonNode data)
+        {
+            JsonObject obj = data as JsonObject
+                ?? throw new InvalidOperationException("VisionEmitterCm authoring must be an object.");
+            ValidateProperties(
+                obj,
+                "VisionEmitterCm",
+                "ScopeKeyId",
+                "LayerMask",
+                "Polarity",
+                "Aperture",
+                "AltitudeBand",
+                "Priority",
+                "TargetScopeSelectorId",
+                "UpdatePolicyId",
+                "DetectionStrength",
+                "TrueSightStrength");
+
+            JsonObject aperture = RequireProperty(obj, "Aperture", "VisionEmitterCm") as JsonObject
+                ?? throw new InvalidOperationException("VisionEmitterCm.Aperture must be an object.");
+            ValidateProperties(
+                aperture,
+                "VisionEmitterCm.Aperture",
+                "Kind",
+                "RangeCm",
+                "HalfAngleDeg",
+                "HalfWidthCm");
+
+            byte polarityValue = ReadByteProperty(obj, "Polarity", "VisionEmitterCm");
+            if (!Enum.IsDefined(typeof(VisionPolarity), (VisionPolarity)polarityValue))
+            {
+                throw new InvalidOperationException($"VisionEmitterCm.Polarity '{polarityValue}' is not supported.");
+            }
+
+            byte apertureKindValue = ReadByteProperty(aperture, "Kind", "VisionEmitterCm.Aperture");
+            if (!Enum.IsDefined(typeof(VisionApertureKind), (VisionApertureKind)apertureKindValue))
+            {
+                throw new InvalidOperationException($"VisionEmitterCm.Aperture.Kind '{apertureKindValue}' is not supported.");
+            }
+
+            int layerMaskValue = ReadIntProperty(obj, "LayerMask", "VisionEmitterCm");
+            if (layerMaskValue < 0)
+            {
+                throw new InvalidOperationException("VisionEmitterCm.LayerMask must be non-negative.");
+            }
+
+            var emitter = new VisionEmitterCm
+            {
+                ScopeKeyId = ReadIntProperty(obj, "ScopeKeyId", "VisionEmitterCm"),
+                LayerMask = (uint)layerMaskValue,
+                Polarity = (VisionPolarity)polarityValue,
+                Aperture = new VisionAperture(
+                    (VisionApertureKind)apertureKindValue,
+                    ReadIntProperty(aperture, "RangeCm", "VisionEmitterCm.Aperture"),
+                    ReadIntProperty(aperture, "HalfAngleDeg", "VisionEmitterCm.Aperture"),
+                    ReadIntProperty(aperture, "HalfWidthCm", "VisionEmitterCm.Aperture")),
+                AltitudeBand = ReadIntProperty(obj, "AltitudeBand", "VisionEmitterCm"),
+                Priority = ReadIntProperty(obj, "Priority", "VisionEmitterCm"),
+                TargetScopeSelectorId = ReadIntProperty(obj, "TargetScopeSelectorId", "VisionEmitterCm"),
+                UpdatePolicyId = ReadByteProperty(obj, "UpdatePolicyId", "VisionEmitterCm"),
+                DetectionStrength = ReadByteProperty(obj, "DetectionStrength", "VisionEmitterCm"),
+                TrueSightStrength = ReadByteProperty(obj, "TrueSightStrength", "VisionEmitterCm"),
+            };
+            entity.Add(emitter);
         }
 
         public static void Register(string name, ComponentSetter setter, string modId = null)
@@ -851,11 +939,63 @@ namespace Ludots.Core.Config
             int x = ReadIntProperty(valueObj, "X", "WorldPositionCm.Value");
             int y = ReadIntProperty(valueObj, "Y", "WorldPositionCm.Value");
             var fix64Pos = Fix64Vec2.FromInt(x, y);
-            entity.Add(new WorldPositionCm { Value = fix64Pos });
-            // Add the companion components required by interpolation, rendering, and culling.
-            entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
-            entity.Add(VisualTransform.Default);
-            entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
+            SetOrAdd(entity, new WorldPositionCm { Value = fix64Pos });
+            SetOrAdd(entity, new PreviousWorldPositionCm { Value = fix64Pos });
+            if (!entity.Has<VisualTransform>())
+            {
+                entity.Add(VisualTransform.Default);
+            }
+            if (!entity.Has<CullState>())
+            {
+                entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
+            }
+        }
+
+        private static void SetOrAdd<T>(Entity entity, in T component)
+        {
+            if (entity.Has<T>())
+            {
+                entity.Set(component);
+            }
+            else
+            {
+                entity.Add(component);
+            }
+        }
+
+        private static void SetVisualTransform(Entity entity, JsonNode data)
+        {
+            SetOrAddAuthoredComponent<VisualTransform>(entity, data, "VisualTransform");
+        }
+
+        private static void SetCullState(Entity entity, JsonNode data)
+        {
+            SetOrAddAuthoredComponent<CullState>(entity, data, "CullState");
+        }
+
+        private static void SetOrAddAuthoredComponent<T>(Entity entity, JsonNode data, string componentName)
+        {
+            T component;
+            try
+            {
+                component = data.Deserialize<T>(StrictJsonOptions.CreateExact(includeFields: true))
+                    ?? throw new InvalidOperationException($"Component '{componentName}' failed to deserialize.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Component '{componentName}' failed strict deserialization: {ex.Message}",
+                    ex);
+            }
+
+            if (entity.Has<T>())
+            {
+                entity.Set(component);
+            }
+            else
+            {
+                entity.Add(component);
+            }
         }
 
         private static void SetPresentationStaticTransform(Entity entity, JsonNode data)
@@ -1752,6 +1892,17 @@ namespace Ludots.Core.Config
             }
 
             throw new InvalidOperationException($"{context} requires explicit '{name}'.");
+        }
+
+        private static byte ReadByteProperty(JsonObject obj, string name, string context)
+        {
+            int value = ReadIntProperty(obj, name, context);
+            if ((uint)value > byte.MaxValue)
+            {
+                throw new InvalidOperationException($"{context}.{name} must be between 0 and {byte.MaxValue}.");
+            }
+
+            return (byte)value;
         }
 
         private static bool TryReadPointProperty(JsonObject obj, out WorldCmInt2 point, string name, string context)

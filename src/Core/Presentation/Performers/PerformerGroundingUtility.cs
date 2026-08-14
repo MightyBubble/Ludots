@@ -94,6 +94,40 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        internal static AssetBindingConfig ResolvePrimaryAssetBinding(
+            PerformerDefinition definition,
+            uint activeBehaviorMask)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
+            if ((uint)primaryAssetBehaviorIndex < (uint)behaviors.Length)
+            {
+                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
+                if (IsAssetOutputBehavior(primarySlot.Kind) &&
+                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
+                {
+                    return primarySlot.AssetBinding;
+                }
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (IsAssetOutputBehavior(slot.Kind) &&
+                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
+                {
+                    return slot.AssetBinding;
+                }
+            }
+
+            return new AssetBindingConfig { LocalScale = Vector3.One };
+        }
+
+        private static bool IsAssetOutputBehavior(BehaviorKind kind)
+        {
+            return kind is BehaviorKind.AssetBinding or BehaviorKind.WorldText;
+        }
+
         public static void ResolveBatch(
             Span<Vector3> positions,
             Span<GroundingMode> modes,
@@ -316,6 +350,11 @@ namespace Ludots.Core.Presentation.Performers
             return lengthSquared > 0.000001f
                 ? value / MathF.Sqrt(lengthSquared)
                 : axis;
+        }
+
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
+        {
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
     }
 

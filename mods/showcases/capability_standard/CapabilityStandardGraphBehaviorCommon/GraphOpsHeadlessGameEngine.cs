@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -54,8 +55,29 @@ public static class GraphOpsHeadlessGameEngine
         engine.InitializeWithConfigPipeline(
             ResolveModPaths(repoRoot, modIds),
             Path.Combine(repoRoot, "assets"));
+        engine.SetService(CoreServiceKeys.ViewController, new HeadlessViewController(1920f, 1080f));
         InstallNullInput(engine);
         return engine;
+    }
+
+    /// <summary>
+    /// Headless hosts still load maps with a DefaultCamera, so the local camera
+    /// runtime contract requires a view; a fixed 1920x1080 viewport satisfies it
+    /// without a windowing backend.
+    /// </summary>
+    private sealed class HeadlessViewController : IViewController
+    {
+        public HeadlessViewController(float width, float height)
+        {
+            Resolution = new Vector2(width, height);
+            AspectRatio = width / height;
+        }
+
+        public Vector2 Resolution { get; }
+
+        public float Fov { get; } = 60f;
+
+        public float AspectRatio { get; }
     }
 
     public static GameEngine SharedGallery(string repoRoot)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
@@ -160,7 +161,15 @@ namespace Ludots.Tests.GAS
             var cellMap = new FogCellMap();
             var resolver = new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap);
             var projector = new FogKnowledgeProjector(knowledge, cellMap);
-            var system = new VisionSystem(world, session, registry, fields, resolver, projector, knowledge);
+            var system = new VisionSystem(
+                world,
+                session,
+                registry,
+                fields,
+                resolver,
+                projector,
+                knowledge,
+                new PlayerOwnedEntityObserverResolver(new PlayerEntityLookup()));
 
             CreateEmitters(world, emitterCount, layerMask);
             CreateOccupants(world, occupantCount, layerMask);

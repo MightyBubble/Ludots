@@ -38,6 +38,7 @@ namespace Ludots.Tests.Architecture.Governance
         private static readonly string[] DesignedSystemGroupOrder =
         {
             nameof(SystemGroup.SchemaUpdate),
+            nameof(SystemGroup.LocalInput),
             nameof(SystemGroup.InputCollection),
             nameof(SystemGroup.PostMovement),
             nameof(SystemGroup.AbilityActivation),
@@ -94,7 +95,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void GasPresentationEvents_AreClearedOnlyByClearPresentationFlagsProjection()
+        public void GasPresentationEvents_AreClearedAtRoleSpecificPresentationBoundaries()
         {
             var repoRoot = FindRepoRoot();
             string engineSource = File.ReadAllText(Path.Combine(
@@ -110,6 +111,13 @@ namespace Ludots.Tests.Architecture.Governance
                 "Presentation",
                 "Systems",
                 "GameplayPresentationProjectionSystem.cs"));
+            string authoritativeCleanupSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Systems",
+                "AuthoritativeServerPresentationCleanupSystem.cs"));
 
             Assert.That(
                 engineSource,
@@ -118,10 +126,14 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That(
                 projectionSource,
                 Does.Contain("_gasEvents.Clear();"),
-                "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+                "Presentation consumers clear GAS events after projection.");
+            Assert.That(
+                authoritativeCleanupSource,
+                Does.Contain("_gasEvents.Clear();"),
+                "The authoritative server clears GAS presentation events at the logic-step boundary without projecting them.");
             Assert.That(
                 engineSource,
-                Does.Contain("RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);"),
+                Does.Contain("RegisterSystem(_authoritativeServerPresentationCleanupSystem, SystemGroup.ClearPresentationFlags);"),
                 "Gameplay changed-bit cleanup must stay in the fixed ClearPresentationFlags phase after projection.");
             Assert.That(
                 engineSource,
@@ -1161,6 +1173,7 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(ForceInput2DSink),
                 typeof(CameraBehaviorInputSink),
                 typeof(GasBenchmark),
+                typeof(Ludots.Core.Gameplay.ActionLoops.ResourceTransportSystem),
             };
 
             var writeNames = new HashSet<string>(StringComparer.Ordinal)

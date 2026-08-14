@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.Modding;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Scripting;
@@ -11,7 +12,7 @@ namespace MassNavigationMod;
 
 public sealed class MassNavigationModEntry : IMod
 {
-    private const string MovePlanOrderAdapterInstalledKey =
+    internal const string MovePlanOrderAdapterInstalledKey =
         "MassNavigationMod.MovePlanOrderAdapterInstalled";
 
     public void OnLoad(IModContext context)
@@ -26,10 +27,19 @@ public sealed class MassNavigationModEntry : IMod
     {
     }
 
-    private static Task InstallMovePlanOrderAdapterAsync(ScriptContext context)
+    internal static Task InstallMovePlanOrderAdapterAsync(ScriptContext context)
     {
         GameEngine engine = context.GetEngine()
             ?? throw new InvalidOperationException("MassNavigationMod requires a live GameEngine.");
+
+        // Non-navigation maps may still load MassNavigationMod for shared assets.
+        // Adapter install is gated by the MassNavigation map SSOT; applicable maps keep
+        // InsertSystemBeforeRequired strict and must not soften the missing-anchor contract.
+        if (!MassNavigationIds.IsCurrentNavigationMap(engine))
+        {
+            return Task.CompletedTask;
+        }
+
         if (engine.GlobalContext.ContainsKey(MovePlanOrderAdapterInstalledKey))
         {
             return Task.CompletedTask;

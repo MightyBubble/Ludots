@@ -6,6 +6,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -23,6 +24,11 @@ namespace Ludots.Core.Input.Orders
     /// Delegate for resolving the acting entity for an order.
     /// </summary>
     public delegate bool ActorProvider(out Entity entity);
+
+    /// <summary>
+    /// Delegate for resolving an actor's authoritative world-centimeter position.
+    /// </summary>
+    public delegate bool ActorWorldPositionProvider(Entity actor, out WorldCmInt2 worldCm);
 
     public delegate bool ActivationActorValidator(Entity actor, int playerId);
 
@@ -79,9 +85,10 @@ namespace Ludots.Core.Input.Orders
 
     public enum InputOrderActivationState : byte
     {
-        EnteredAiming = 0,
-        Submitted = 1,
-        Rejected = 2
+        None = 0,
+        EnteredAiming = 1,
+        Submitted = 2,
+        Rejected = 3
     }
 
     public readonly struct InputOrderActivationResult
@@ -90,23 +97,43 @@ namespace Ludots.Core.Input.Orders
             InputOrderActivationState state,
             Entity actor,
             int orderId,
+            Entity target,
             OrderSubmitResult rejection)
         {
             State = state;
             Actor = actor;
             OrderId = orderId;
+            Target = target;
             Rejection = rejection;
         }
 
         public InputOrderActivationState State { get; }
         public Entity Actor { get; }
         public int OrderId { get; }
+        /// <summary>
+        /// Entity target shared by the submitted order batch. <see cref="Entity.Null"/> means the
+        /// activation did not submit an entity target or the batch contained different targets.
+        /// Aiming and rejected results always report <see cref="Entity.Null"/>.
+        /// </summary>
+        public Entity Target { get; }
         public OrderSubmitResult Rejection { get; }
 
-        public static InputOrderActivationResult EnteredAiming(Entity actor) => new(InputOrderActivationState.EnteredAiming, actor, 0, default);
-        public static InputOrderActivationResult Submitted(Entity actor, int orderId) => new(InputOrderActivationState.Submitted, actor, orderId, default);
-        public static InputOrderActivationResult Rejected(Entity actor, OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, actor, 0, reason);
-        public static InputOrderActivationResult Rejected(Entity actor, int orderId, OrderSubmitResult reason) => new(InputOrderActivationState.Rejected, actor, orderId, reason);
+        public static InputOrderActivationResult EnteredAiming(Entity actor) =>
+            new(InputOrderActivationState.EnteredAiming, actor, 0, Entity.Null, default);
+        public static InputOrderActivationResult Submitted(Entity actor, int orderId, Entity target)
+        {
+            if (target == default)
+            {
+                throw new InvalidOperationException(
+                    "Submitted input activation target must use Entity.Null for no entity target, not default(Entity).");
+            }
+
+            return new InputOrderActivationResult(InputOrderActivationState.Submitted, actor, orderId, target, default);
+        }
+        public static InputOrderActivationResult Rejected(Entity actor, OrderSubmitResult reason) =>
+            new(InputOrderActivationState.Rejected, actor, 0, Entity.Null, reason);
+        public static InputOrderActivationResult Rejected(Entity actor, int orderId, OrderSubmitResult reason) =>
+            new(InputOrderActivationState.Rejected, actor, orderId, Entity.Null, reason);
     }
 
     /// <summary>
@@ -234,6 +261,7 @@ namespace Ludots.Core.Input.Orders
 
         private readonly IInputActionReader _input;
         private readonly InputOrderMappingConfig _config;
+        private int[] _groupMoveTargetLayoutOrderTypeIds = Array.Empty<int>();
         private readonly Dictionary<string, InputOrderMapping> _mappingsByActionId;
         private readonly Dictionary<string, InputOrderMapping> _userOverrides;
         private readonly MappingEntry[] _orderedMappings;
@@ -261,6 +289,7 @@ namespace Ludots.Core.Input.Orders
         private ContextScoredResolutionProvider? _contextScoredProvider;
         private SkillMappingOverrideProvider? _skillMappingOverrideProvider;
         private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
+        private ActorWorldPositionProvider? _actorWorldPositionProvider;
 
         // Pointer command intent routing. Production wiring injects these services; non-command
         // mappings continue through the direct order path.
@@ -289,14 +318,12 @@ namespace Ludots.Core.Input.Orders
 
         private readonly struct RoutedOrderSubmission
         {
-            public RoutedOrderSubmission(in Order order, string orderTypeKey)
+            public RoutedOrderSubmission(in Order order)
             {
                 Order = order;
-                OrderTypeKey = orderTypeKey;
             }
 
             public Order Order { get; }
-            public string OrderTypeKey { get; }
         }
 
         private readonly List<RoutedOrderSubmission> _routedOrdersScratch;
@@ -309,6 +336,16 @@ namespace Ludots.Core.Input.Orders
         private CommandIntentRoute[] _commandIntentRoutedRoutesScratch;
         private Entity[] _commandIntentDispatchActorsScratch;
         private Order[] _commandIntentOrdersScratch;
+        private readonly int[] _groupMoveTargetParticipantByOrderScratch;
+        private readonly Entity[] _groupMoveTargetParticipantsScratch;
+        private readonly WorldCmInt2[] _groupMoveTargetPositionsScratch;
+        private readonly int[] _groupMoveTargetSlotByParticipantScratch;
+        private readonly int[] _groupMoveTargetActorIndicesScratch;
+        private readonly int[] _groupMoveTargetSlotIndicesScratch;
+        private readonly Int128[] _groupMoveTargetActorForwardScratch;
+        private readonly Int128[] _groupMoveTargetActorLateralScratch;
+        private readonly Int128[] _groupMoveTargetSlotForwardScratch;
+        private readonly Int128[] _groupMoveTargetSlotLateralScratch;
 
         // Aiming state (AimCast mode)
         private bool _isAiming;
@@ -417,6 +454,16 @@ namespace Ludots.Core.Input.Orders
             _commandIntentRoutedRoutesScratch = new CommandIntentRoute[commandIntentScratchCapacity];
             _commandIntentDispatchActorsScratch = new Entity[commandIntentScratchCapacity];
             _commandIntentOrdersScratch = new Order[commandIntentScratchCapacity];
+            _groupMoveTargetParticipantByOrderScratch = new int[commandIntentScratchCapacity];
+            _groupMoveTargetParticipantsScratch = new Entity[commandIntentScratchCapacity];
+            _groupMoveTargetPositionsScratch = new WorldCmInt2[commandIntentScratchCapacity];
+            _groupMoveTargetSlotByParticipantScratch = new int[commandIntentScratchCapacity];
+            _groupMoveTargetActorIndicesScratch = new int[commandIntentScratchCapacity];
+            _groupMoveTargetSlotIndicesScratch = new int[commandIntentScratchCapacity];
+            _groupMoveTargetActorForwardScratch = new Int128[commandIntentScratchCapacity];
+            _groupMoveTargetActorLateralScratch = new Int128[commandIntentScratchCapacity];
+            _groupMoveTargetSlotForwardScratch = new Int128[commandIntentScratchCapacity];
+            _groupMoveTargetSlotLateralScratch = new Int128[commandIntentScratchCapacity];
             
             _mappingsByActionId = new Dictionary<string, InputOrderMapping>();
             _userOverrides = new Dictionary<string, InputOrderMapping>();
@@ -459,6 +506,7 @@ namespace Ludots.Core.Input.Orders
         {
             _orderTypeKeyResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
             ValidateAllOrderTypeKeys();
+            CompileGroupMoveTargetLayoutOrderTypeIds();
         }
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
@@ -481,6 +529,8 @@ namespace Ludots.Core.Input.Orders
         public void SetActorOrderRoutingResolver(ActorOrderRoutingResolver resolver) =>
             _actorOrderRoutingResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         public void SetSkillMappingOverrideProvider(SkillMappingOverrideProvider provider) => _skillMappingOverrideProvider = provider;
+        public void SetActorWorldPositionProvider(ActorWorldPositionProvider provider) =>
+            _actorWorldPositionProvider = provider ?? throw new ArgumentNullException(nameof(provider));
 
         public void SetCommandIntentRouting(
             World world,
@@ -1095,7 +1145,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildOrderWithOrderTypeSuffix(InputOrderMapping mapping, Entity actor, string orderTypeSuffix, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
             int orderTypeId = RequireOrderTypeId(mapping, orderTypeSuffix);
             var args = new OrderArgs();
@@ -1217,7 +1267,7 @@ namespace Ludots.Core.Input.Orders
 
         private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = RequireOrderTypeId(mapping);
@@ -1249,7 +1299,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, Entity actor, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer() || actor == default)
             {
                 return false;
@@ -1353,7 +1403,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = RequireOrderTypeId(mapping);
@@ -1394,7 +1444,7 @@ namespace Ludots.Core.Input.Orders
             OrderTargetType? TargetTypeOverride,
             out Order order)
         {
-            order = default;
+            order = new Order();
             if (!HasExplicitLocalPlayer() || actor == default)
             {
                 return false;
@@ -1540,7 +1590,7 @@ namespace Ludots.Core.Input.Orders
 
                 AddFixed(
                     _routedOrdersScratch,
-                    new RoutedOrderSubmission(in order, matchedCandidate.OrderTypeKey),
+                    new RoutedOrderSubmission(in order),
                     nameof(_routedOrdersScratch));
             }
 
@@ -1559,15 +1609,6 @@ namespace Ludots.Core.Input.Orders
                 }
             }
 
-            int layoutEligibleCount = 0;
-            for (int i = 0; i < _routedOrdersScratch.Count; i++)
-            {
-                if (IsGroupMoveTargetLayoutOrderType(_routedOrdersScratch[i].OrderTypeKey))
-                {
-                    layoutEligibleCount++;
-                }
-            }
-
             if (_routedOrdersScratch.Count > 1 && _orderBatchSubmitHandler == null)
             {
                 throw new InvalidOperationException(
@@ -1575,37 +1616,27 @@ namespace Ludots.Core.Input.Orders
             }
 
             EnsureOrderScratch(ref _commandIntentOrdersScratch, _routedOrdersScratch.Count);
-            int batchCount = 0;
-            int layoutIndex = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
-                Order order = _routedOrdersScratch[i].Order;
-                string orderTypeKey = _routedOrdersScratch[i].OrderTypeKey;
-                if (layoutEligibleCount > 1 &&
-                    !mapping.IsSkillMapping &&
-                    mapping.TargetType == OrderTargetType.Position &&
-                    _config.GroupMoveTargetLayout.Mode != GroupMoveTargetLayoutMode.None &&
-                    IsGroupMoveTargetLayoutOrderType(orderTypeKey))
-                {
-                    ApplyGroupMoveTargetLayout(mapping, orderTypeKey, layoutEligibleCount, layoutIndex, ref order);
-                    layoutIndex++;
-                }
-
-                if (_routedOrdersScratch.Count == 1)
-                {
-                    SubmitAuthorizedToHandler(in order);
-                }
-                else
-                {
-                    _commandIntentOrdersScratch[batchCount++] = order;
-                }
+                _commandIntentOrdersScratch[i] = _routedOrdersScratch[i].Order;
             }
 
-            if (batchCount > 0)
+            Span<Order> orders = _commandIntentOrdersScratch.AsSpan(0, _routedOrdersScratch.Count);
+            if (!TryApplyGroupMoveTargetLayout(mapping, orders))
+            {
+                RejectInputActivation(mapping, OrderSubmitResult.RejectedValidation);
+                return;
+            }
+
+            if (orders.Length == 1)
+            {
+                SubmitAuthorizedToHandler(in orders[0]);
+            }
+            else
             {
                 SubmitAtomicOrderBatch(
                     mapping,
-                    _commandIntentOrdersScratch.AsSpan(0, batchCount),
+                    orders,
                     "actorOrderRouting");
             }
         }
@@ -1736,7 +1767,6 @@ namespace Ludots.Core.Input.Orders
             }
 
             int activationPlayerId = CurrentActivationPlayerId;
-            int sourceDispatchCount = dispatchCount;
             if (!CanExpandDispatchedActors(dispatchCount))
             {
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
@@ -1774,77 +1804,53 @@ namespace Ludots.Core.Input.Orders
                 for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
                 {
                     CommandIntentRoute route = dispatchRoutes[dispatchIndex];
-                    var args = new OrderArgs();
-                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
-                    args.Spatial.Kind = OrderSpatialKind.WorldCm;
-                    args.Spatial.Mode = OrderCollectionMode.Single;
-                    args.Spatial.WorldCm = groundWorldCm;
-                    _commandIntentOrdersScratch[dispatchIndex] = new Order
-                    {
-                        OrderTypeId = route.OrderTypeId,
-                        PlayerId = activationPlayerId,
-                        Actor = dispatchActors[dispatchIndex],
-                        CommandSource = dispatchSources[dispatchIndex],
-                        Args = args,
-                        SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior),
-                    };
-                    int sourceIndex = IndexOfEntity(
-                        _commandIntentDispatchActorsScratch.AsSpan(0, sourceDispatchCount),
-                        dispatchSources[dispatchIndex]);
-                    if (sourceIndex < 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Command actor expansion source '{dispatchSources[dispatchIndex]}' was not present in the CastDispatch result.");
-                    }
-
-                    ApplyGroupMoveTargetLayout(
+                    _commandIntentOrdersScratch[dispatchIndex] = BuildCommandIntentOrder(
                         mapping,
-                        mapping.OrderTypeKey,
-                        sourceDispatchCount,
-                        sourceIndex,
-                        ref _commandIntentOrdersScratch[dispatchIndex]);
+                        dispatchActors[dispatchIndex],
+                        dispatchSources[dispatchIndex],
+                        in route,
+                        in targetFacts,
+                        groundWorldCm);
+                }
+
+                Span<Order> clusteredOrders = _commandIntentOrdersScratch.AsSpan(0, dispatchCount);
+                if (!TryApplyGroupMoveTargetLayout(mapping, clusteredOrders))
+                {
+                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
                 }
 
                 OrderSubmitResult result = SubmitClusteredOrderBatch(
                     mapping,
-                    _commandIntentOrdersScratch.AsSpan(0, dispatchCount),
+                    clusteredOrders,
                     "command intent clustered fan-out");
                 return result;
             }
 
+            EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
+            for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
+            {
+                Entity dispatchActor = dispatchActors[dispatchIndex];
+                CommandIntentRoute route = dispatchRoutes[dispatchIndex];
+                _commandIntentOrdersScratch[dispatchIndex] = BuildCommandIntentOrder(
+                    mapping,
+                    dispatchActor,
+                    Entity.Null,
+                    in route,
+                    in targetFacts,
+                    groundWorldCm);
+            }
+
+            Span<Order> dispatchOrders = _commandIntentOrdersScratch.AsSpan(0, dispatchCount);
+            if (!TryApplyGroupMoveTargetLayout(mapping, dispatchOrders))
+            {
+                return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
+            }
+
             if (routing.SharedOrderId && dispatchCount > 1)
             {
-                if (_orderBatchSubmitHandler == null)
-                {
-                    throw new InvalidOperationException(
-                        "Command intent dispatch profile requires shared order ids for a multi-actor fan-out, but no order batch submit handler is configured.");
-                }
-
-                EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
-                for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
-                {
-                    Entity dispatchActor = dispatchActors[dispatchIndex];
-                    CommandIntentRoute route = dispatchRoutes[dispatchIndex];
-
-                    var args = new OrderArgs();
-                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
-                    args.Spatial.Kind = OrderSpatialKind.WorldCm;
-                    args.Spatial.Mode = OrderCollectionMode.Single;
-                    args.Spatial.WorldCm = groundWorldCm;
-
-                    _commandIntentOrdersScratch[dispatchIndex] = new Order
-                    {
-                        OrderTypeId = route.OrderTypeId,
-                        PlayerId = activationPlayerId,
-                        Actor = dispatchActor,
-                        Args = args,
-                        SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
-                    };
-                }
-
                 OrderSubmitResult result = SubmitAtomicOrderBatch(
                     mapping,
-                    _commandIntentOrdersScratch.AsSpan(0, dispatchCount),
+                    dispatchOrders,
                     "command intent shared fan-out");
                 return result;
             }
@@ -1852,23 +1858,7 @@ namespace Ludots.Core.Input.Orders
             int sharedOrderId = 0;
             for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
             {
-                Entity dispatchActor = dispatchActors[dispatchIndex];
-                CommandIntentRoute route = dispatchRoutes[dispatchIndex];
-
-                var args = new OrderArgs();
-                ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
-                args.Spatial.Kind = OrderSpatialKind.WorldCm;
-                args.Spatial.Mode = OrderCollectionMode.Single;
-                args.Spatial.WorldCm = groundWorldCm;
-
-                var order = new Order
-                {
-                    OrderTypeId = route.OrderTypeId,
-                    PlayerId = activationPlayerId,
-                    Actor = dispatchActor,
-                    Args = args,
-                    SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
-                };
+                Order order = dispatchOrders[dispatchIndex];
 
                 if (routing.SharedOrderId)
                 {
@@ -1894,6 +1884,73 @@ namespace Ludots.Core.Input.Orders
                 }
             }
             return OrderSubmitResult.Activated;
+        }
+
+        private Order BuildCommandIntentOrder(
+            InputOrderMapping mapping,
+            Entity actor,
+            Entity commandSource,
+            in CommandIntentRoute route,
+            in CommandIntentTargetFacts targetFacts,
+            Vector3 groundWorldCm)
+        {
+            var args = new OrderArgs();
+            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            Entity target = Entity.Null;
+
+            switch (route.TargetShape)
+            {
+                case CommandIntentTargetShape.None:
+                    break;
+
+                case CommandIntentTargetShape.WorldPositionCm:
+                    SetSingleWorldPosition(ref args, groundWorldCm);
+                    break;
+
+                case CommandIntentTargetShape.Entity:
+                    target = RequireCommandIntentEntityTarget(in route, in targetFacts);
+                    break;
+
+                case CommandIntentTargetShape.WorldPositionAndEntity:
+                    SetSingleWorldPosition(ref args, groundWorldCm);
+                    target = RequireCommandIntentEntityTarget(in route, in targetFacts);
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Command intent route for order type {route.OrderTypeId} has unsupported target shape '{route.TargetShape}'.");
+            }
+
+            return new Order
+            {
+                OrderTypeId = route.OrderTypeId,
+                PlayerId = CurrentActivationPlayerId,
+                Actor = actor,
+                CommandSource = commandSource,
+                Target = target,
+                Args = args,
+                SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior),
+            };
+        }
+
+        private static void SetSingleWorldPosition(ref OrderArgs args, Vector3 worldCm)
+        {
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = worldCm;
+        }
+
+        private static Entity RequireCommandIntentEntityTarget(
+            in CommandIntentRoute route,
+            in CommandIntentTargetFacts targetFacts)
+        {
+            if (!targetFacts.HasEntity || targetFacts.Target == Entity.Null || targetFacts.Target == default)
+            {
+                throw new InvalidOperationException(
+                    $"Command intent route for order type {route.OrderTypeId} requires an entity target, but the frozen target facts contain only a ground hit.");
+            }
+
+            return targetFacts.Target;
         }
 
         private Entity ResolveActiveActorCollectionOwner()
@@ -2142,8 +2199,14 @@ namespace Ludots.Core.Input.Orders
                 return _aimingContext.Actor;
             }
 
-            if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
+            if (_actorProvider != null && _actorProvider(out var actor))
             {
+                if (actor == default)
+                {
+                    throw new InvalidOperationException(
+                        "Input actor provider returned true with an uninitialized actor; required entity references must not use default(Entity).");
+                }
+
                 return actor;
             }
 
@@ -2269,32 +2332,33 @@ namespace Ludots.Core.Input.Orders
             for (int i = 0; i < _collectionActorsScratch.Count; i++)
             {
                 Entity actor = _collectionActorsScratch[i];
-                if (actor != default && !TryAuthorizeActor(actor, order.PlayerId))
-                {
-                    return OrderSubmitResult.RejectedInvalidActor;
-                }
-            }
-
-            OrderSubmitResult aggregate = OrderSubmitResult.Queued;
-            for (int i = 0; i < _collectionActorsScratch.Count; i++)
-            {
-                Entity actor = _collectionActorsScratch[i];
                 if (actor == default)
                 {
                     continue;
                 }
 
+                if (!TryAuthorizeActor(actor, order.PlayerId))
+                {
+                    return OrderSubmitResult.RejectedInvalidActor;
+                }
+
                 var cloned = order;
                 cloned.Actor = actor;
-                ApplyGroupMoveTargetLayout(mapping, mapping.OrderTypeKey, _collectionActorsScratch.Count, i, ref cloned);
                 _commandIntentOrdersScratch[batchCount++] = cloned;
             }
 
+            OrderSubmitResult aggregate = OrderSubmitResult.Queued;
             if (batchCount > 0)
             {
+                Span<Order> orders = _commandIntentOrdersScratch.AsSpan(0, batchCount);
+                if (!TryApplyGroupMoveTargetLayout(mapping, orders))
+                {
+                    return RejectInputActivation(mapping, OrderSubmitResult.RejectedValidation);
+                }
+
                 aggregate = SubmitAtomicOrderBatch(
                     mapping,
-                    _commandIntentOrdersScratch.AsSpan(0, batchCount),
+                    orders,
                     "actorCollectionKey fan-out");
             }
 
@@ -2322,7 +2386,7 @@ namespace Ludots.Core.Input.Orders
             OrderSubmitResult result = _orderSubmitHandler!(in submitted);
             _lastSubmittedOrderId = submitted.OrderId;
             LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
-                ? InputOrderActivationResult.Submitted(submitted.Actor, submitted.OrderId)
+                ? InputOrderActivationResult.Submitted(submitted.Actor, submitted.OrderId, submitted.Target)
                 : InputOrderActivationResult.Rejected(submitted.Actor, submitted.OrderId, result);
             return result;
         }
@@ -2365,57 +2429,219 @@ namespace Ludots.Core.Input.Orders
         private OrderSubmitResult RecordBatchSubmissionResult(ReadOnlySpan<Order> orders, OrderSubmitResult result)
         {
             Entity actor = orders.IsEmpty ? Entity.Null : orders[0].Actor;
+            Entity target = ResolveSharedSubmittedTarget(orders);
             _lastSubmittedOrderId = orders.IsEmpty ? 0 : orders[0].OrderId;
             LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
-                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
+                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId, target)
                 : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
 
             return result;
         }
 
-        private void ApplyGroupMoveTargetLayout(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
+        private static Entity ResolveSharedSubmittedTarget(ReadOnlySpan<Order> orders)
         {
-            if (totalCount <= 1 ||
-                mapping.IsSkillMapping ||
-                mapping.TargetType != OrderTargetType.Position ||
-                !IsGroupMoveTargetLayoutOrderType(orderTypeKey) ||
-                _config.GroupMoveTargetLayout.Mode != GroupMoveTargetLayoutMode.Grid ||
-                order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
-                order.Args.Spatial.Mode != OrderCollectionMode.Single)
+            if (orders.IsEmpty)
             {
-                return;
+                return Entity.Null;
             }
 
-            order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
-                order.Args.Spatial.WorldCm,
-                index,
-                totalCount,
-                _config.GroupMoveTargetLayout.SpacingCm);
+            Entity target = orders[0].Target;
+            for (int i = 1; i < orders.Length; i++)
+            {
+                if (orders[i].Target != target)
+                {
+                    return Entity.Null;
+                }
+            }
+
+            return target;
         }
 
-        private bool IsGroupMoveTargetLayoutOrderType(string orderTypeKey)
+        private bool TryApplyGroupMoveTargetLayout(InputOrderMapping mapping, Span<Order> orders)
         {
-            if (_config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.None ||
-                string.IsNullOrWhiteSpace(orderTypeKey))
+            if (_config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.None || orders.Length <= 1)
+            {
+                return true;
+            }
+
+            if (orders.Length > _groupMoveTargetParticipantByOrderScratch.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Group move target layout requires capacity {orders.Length}, exceeding configured scratch capacity {_groupMoveTargetParticipantByOrderScratch.Length}.");
+            }
+
+            int participantCount = 0;
+            bool hasAnchor = false;
+            Vector3 anchorWorldCm = default;
+            Entity previousCommandSource = Entity.Null;
+            int previousCommandSourceParticipant = -1;
+            for (int orderIndex = 0; orderIndex < orders.Length; orderIndex++)
+            {
+                _groupMoveTargetParticipantByOrderScratch[orderIndex] = -1;
+                ref readonly Order order = ref orders[orderIndex];
+                Entity commandSource = order.CommandSource;
+                bool continuesCommandSource = commandSource != Entity.Null && commandSource == previousCommandSource;
+                if (commandSource != Entity.Null && !continuesCommandSource)
+                {
+                    previousCommandSource = commandSource;
+                    previousCommandSourceParticipant = -1;
+                }
+
+                if (!CanApplyGroupMoveTargetLayout(mapping, in order))
+                {
+                    continue;
+                }
+
+                if (!hasAnchor)
+                {
+                    anchorWorldCm = order.Args.Spatial.WorldCm;
+                    hasAnchor = true;
+                }
+                else if (order.Args.Spatial.WorldCm.X != anchorWorldCm.X ||
+                         order.Args.Spatial.WorldCm.Z != anchorWorldCm.Z)
+                {
+                    return false;
+                }
+
+                int participantIndex;
+                if (continuesCommandSource && previousCommandSourceParticipant >= 0)
+                {
+                    participantIndex = previousCommandSourceParticipant;
+                }
+                else
+                {
+                    participantIndex = participantCount++;
+                    Entity participant = commandSource != Entity.Null ? commandSource : order.Actor;
+                    if (participant == Entity.Null || participant == default)
+                    {
+                        return false;
+                    }
+
+                    _groupMoveTargetParticipantsScratch[participantIndex] = participant;
+                    if (commandSource != Entity.Null)
+                    {
+                        previousCommandSourceParticipant = participantIndex;
+                    }
+                }
+
+                _groupMoveTargetParticipantByOrderScratch[orderIndex] = participantIndex;
+            }
+
+            if (participantCount <= 1)
+            {
+                return true;
+            }
+
+            switch (_config.GroupMoveTargetLayout.Assignment)
+            {
+                case GroupMoveTargetAssignmentMode.ActorOrder:
+                    for (int participantIndex = 0; participantIndex < participantCount; participantIndex++)
+                    {
+                        _groupMoveTargetSlotByParticipantScratch[participantIndex] = participantIndex;
+                    }
+                    break;
+
+                case GroupMoveTargetAssignmentMode.PreserveRelative:
+                    if (_actorWorldPositionProvider == null)
+                    {
+                        return false;
+                    }
+
+                    for (int participantIndex = 0; participantIndex < participantCount; participantIndex++)
+                    {
+                        if (!_actorWorldPositionProvider(
+                                _groupMoveTargetParticipantsScratch[participantIndex],
+                                out _groupMoveTargetPositionsScratch[participantIndex]))
+                        {
+                            return false;
+                        }
+                    }
+
+                    if (!MoveTargetLayoutPlanner.TryComputePositionPreservingSlots(
+                            _groupMoveTargetPositionsScratch.AsSpan(0, participantCount),
+                            anchorWorldCm,
+                            _config.GroupMoveTargetLayout.SpacingCm,
+                            _groupMoveTargetSlotByParticipantScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetActorIndicesScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetSlotIndicesScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetActorForwardScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetActorLateralScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetSlotForwardScratch.AsSpan(0, participantCount),
+                            _groupMoveTargetSlotLateralScratch.AsSpan(0, participantCount)))
+                    {
+                        return false;
+                    }
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported group move target assignment '{_config.GroupMoveTargetLayout.Assignment}'.");
+            }
+
+            for (int orderIndex = 0; orderIndex < orders.Length; orderIndex++)
+            {
+                int participantIndex = _groupMoveTargetParticipantByOrderScratch[orderIndex];
+                if (participantIndex < 0)
+                {
+                    continue;
+                }
+
+                ref Order order = ref orders[orderIndex];
+                order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
+                    order.Args.Spatial.WorldCm,
+                    _groupMoveTargetSlotByParticipantScratch[participantIndex],
+                    participantCount,
+                    _config.GroupMoveTargetLayout.SpacingCm);
+            }
+
+            return true;
+        }
+
+        private bool CanApplyGroupMoveTargetLayout(InputOrderMapping mapping, in Order order)
+        {
+            return IsGroupMoveTargetLayoutOrderType(order.OrderTypeId) &&
+                !mapping.IsSkillMapping &&
+                _config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.Grid &&
+                order.Args.Spatial.Kind == OrderSpatialKind.WorldCm &&
+                order.Args.Spatial.Mode == OrderCollectionMode.Single;
+        }
+
+        private bool IsGroupMoveTargetLayoutOrderType(int orderTypeId)
+        {
+            if (_config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.None || orderTypeId <= 0)
             {
                 return false;
             }
 
-            List<string> keys = _config.GroupMoveTargetLayout.OrderTypeKeys;
-            if (keys == null || keys.Count == 0)
+            for (int i = 0; i < _groupMoveTargetLayoutOrderTypeIds.Length; i++)
             {
-                return false;
-            }
-
-            for (int i = 0; i < keys.Count; i++)
-            {
-                if (string.Equals(keys[i], orderTypeKey, StringComparison.Ordinal))
+                if (_groupMoveTargetLayoutOrderTypeIds[i] == orderTypeId)
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private void CompileGroupMoveTargetLayoutOrderTypeIds()
+        {
+            List<string> keys = _config.GroupMoveTargetLayout.OrderTypeKeys;
+            if (_config.GroupMoveTargetLayout.Mode == GroupMoveTargetLayoutMode.None ||
+                keys == null ||
+                keys.Count == 0)
+            {
+                _groupMoveTargetLayoutOrderTypeIds = Array.Empty<int>();
+                return;
+            }
+
+            var orderTypeIds = new int[keys.Count];
+            for (int i = 0; i < keys.Count; i++)
+            {
+                orderTypeIds[i] = _orderTypeKeyResolver!(keys[i]);
+            }
+
+            _groupMoveTargetLayoutOrderTypeIds = orderTypeIds;
         }
 
         private bool TryResolveHoveredEntity(out Entity entity)
@@ -2439,11 +2665,25 @@ namespace Ludots.Core.Input.Orders
         private bool TryResolveAutoTarget(Entity actor, InputOrderMapping mapping, out Entity target)
         {
             target = default;
-            return mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
-                   mapping.AutoTargetRangeCm > 0 &&
-                   _autoTargetProvider != null &&
-                   _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target) &&
-                   target != Entity.Null;
+            if (mapping.AutoTargetPolicy == AutoTargetPolicy.None ||
+                mapping.AutoTargetRangeCm <= 0 ||
+                _autoTargetProvider == null)
+            {
+                return false;
+            }
+
+            if (!_autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target))
+            {
+                return false;
+            }
+
+            if (target == default)
+            {
+                throw new InvalidOperationException(
+                    "Auto-target provider returned true with an uninitialized target; missing entity targets must use Entity.Null, not default(Entity).");
+            }
+
+            return target != Entity.Null;
         }
 
         private static void RequireValidConfiguredTargetResolver(InputOrderMapping mapping, OrderTargetType targetType)
@@ -2479,9 +2719,10 @@ namespace Ludots.Core.Input.Orders
             {
                 ModifierSubmitBehavior.IgnoreModifier => OrderSubmitMode.Immediate,
                 ModifierSubmitBehavior.QueueOnModifier => queueModifierHeld ? OrderSubmitMode.Queued : OrderSubmitMode.Immediate,
+                ModifierSubmitBehavior.PersistentQueueOnModifier => queueModifierHeld ? OrderSubmitMode.PersistentQueued : OrderSubmitMode.Immediate,
                 ModifierSubmitBehavior.AlwaysImmediate => OrderSubmitMode.Immediate,
                 ModifierSubmitBehavior.AlwaysQueued => OrderSubmitMode.Queued,
-                _ => OrderSubmitMode.Immediate
+                _ => throw new InvalidOperationException($"Unsupported modifier submit behavior '{behavior}'.")
             };
         }
         
@@ -2655,7 +2896,7 @@ namespace Ludots.Core.Input.Orders
 
             if (effectiveMapping.Trigger == InputTriggerType.Held && effectiveMapping.HeldPolicy == HeldPolicy.StartEnd)
             {
-                Entity heldActor = resolvedActor != default ? resolvedActor : _explicitActivationActor;
+                Entity heldActor = resolvedActor != Entity.Null ? resolvedActor : ResolvePrimaryActor(effectiveMapping);
                 return RecordRejectedActivation(
                     heldActor,
                     OrderSubmitResult.RejectedByRule);
@@ -2708,7 +2949,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             OrderSubmitResult result = SubmitOrder(effectiveMapping, in order);
-            return BuildActivationResult(order.Actor, result);
+            return BuildActivationResult(order.Actor, order.Target, result);
         }
 
         public InputOrderActivationResult ActivateMappedAction(
@@ -2772,10 +3013,11 @@ namespace Ludots.Core.Input.Orders
 
         private InputOrderActivationResult BuildActivationResult(
             Entity actor,
+            Entity target,
             OrderSubmitResult result)
         {
             LastActivationResult = OrderSubmitResultSemantics.IsAccepted(result)
-                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId)
+                ? InputOrderActivationResult.Submitted(actor, _lastSubmittedOrderId, target)
                 : InputOrderActivationResult.Rejected(actor, _lastSubmittedOrderId, result);
             return LastActivationResult;
         }

@@ -424,7 +424,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var request = new EffectRequest
             {
-                RootId = 0,
+                RootId = projectile.RootId,
                 Source = projectile.Source,
                 Target = target,
                 TargetContext = Entity.Null,

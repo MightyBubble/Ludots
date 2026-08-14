@@ -25,6 +25,7 @@ namespace Ludots.Core.Map
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
         public IVisualHeightmap? VisualHeightmap { get; set; }
+        public ResolvedTerrainPresentation? TerrainPresentation { get; set; }
         public StructureCollisionAsset? StructureCollisionAsset { get; set; }
         public StructureCollisionRuntimeState? StructureCollisionRuntimeState { get; set; }
         public IGroundSurfaceSampler? GroundSurfaceSampler { get; set; }

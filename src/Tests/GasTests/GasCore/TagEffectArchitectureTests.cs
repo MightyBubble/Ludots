@@ -21,6 +21,9 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -571,7 +574,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
 
-            var ctx = new EffectContext { Source = caster, Target = target };
+            var ctx = new EffectContext { RootId = 4311, Source = caster, Target = target };
             var tpl = new EffectTemplateData();
             tpl.Projectile = new ProjectileDescriptor
             {
@@ -588,10 +591,12 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
             That(queue.TryDequeue(out var request), Is.True);
             That(request.Kind, Is.EqualTo(RuntimeEntitySpawnKind.Assembly));
+            That(request.RootId, Is.EqualTo(4311));
             That(request.HasProjectileState, Is.EqualTo(1));
             That(request.HasWorldPosition, Is.EqualTo(1));
             That(request.Projectile.Speed, Is.EqualTo(Fix64.FromInt(500)));
             That(request.Projectile.ImpactEffectTemplateId, Is.EqualTo(42));
+            That(request.Projectile.RootId, Is.EqualTo(4311));
             That(request.WorldPositionCm, Is.EqualTo(Fix64Vec2.FromInt(1200, 800)));
         }
 
@@ -685,6 +690,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var projectile = world.Create(
                 new ProjectileState
                 {
+                    RootId = 4961,
                     Speed = Fix64.FromInt(400),
                     Range = (targetPoint - launchOrigin).Length().RoundToInt(),
                     ArcHeight = 0,
@@ -711,6 +717,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             That(requests.Count, Is.EqualTo(1));
 
             var request = requests[0];
+            That(request.RootId, Is.EqualTo(4961));
             That(request.TemplateId, Is.EqualTo(77));
             That(request.HasCallerParams, Is.True);
             That(request.CallerParams.TryGetFloat(EffectParamKeys.TargetOriginX, out float originX), Is.True);
@@ -745,6 +752,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 var projectile = world.Create(
                     new ProjectileState
                     {
+                        RootId = 5381,
                         Speed = Fix64.FromInt(1200),
                         Range = 900,
                         HitEffectTemplateId = 88,
@@ -771,6 +779,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
 
                 That(world.IsAlive(projectile), Is.False);
                 That(requests.Count, Is.EqualTo(1));
+                That(requests[0].RootId, Is.EqualTo(5381));
                 That(requests[0].TemplateId, Is.EqualTo(88));
                 That(requests[0].Target, Is.EqualTo(hostile));
             }
@@ -909,7 +918,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
 
-            var ctx = new EffectContext { Source = caster, Target = caster };
+            var ctx = new EffectContext { RootId = 5931, Source = caster, Target = caster };
             var tpl = new EffectTemplateData();
             tpl.UnitCreation = new UnitCreationDescriptor { UnitTypeId = 7, Count = 3, OffsetRadius = 100, OnSpawnEffectTemplateId = 55 };
 
@@ -921,12 +930,319 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             {
                 count++;
                 That(request.Kind, Is.EqualTo(RuntimeEntitySpawnKind.UnitType));
+                That(request.RootId, Is.EqualTo(5931));
                 That(request.UnitTypeId, Is.EqualTo(7));
                 That(request.OnSpawnEffectTemplateId, Is.EqualTo(55));
                 That(request.CopySourceTeam, Is.EqualTo(1));
                 That(request.WorldPositionCm, Is.Not.EqualTo(Fix64Vec2.Zero));
             }
             That(count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void BuiltinHandlers_CreateUnit_RepeatedEffectsFromSameSource_UseDistinctScatterOffsets()
+        {
+            using var world = World.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(1200, 3400));
+            var firstEffect = world.Create();
+            var secondEffect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 2);
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                SpawnRequests = queue,
+            };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var context = new EffectContext { Source = caster, Target = caster };
+            var template = new EffectTemplateData
+            {
+                UnitCreation = new UnitCreationDescriptor
+                {
+                    UnitTypeId = 7,
+                    Count = 1,
+                    OffsetRadius = 220,
+                },
+            };
+            var mergedParams = new EffectConfigParams();
+
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, firstEffect, ref context, in mergedParams, in template, runtime);
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, secondEffect, ref context, in mergedParams, in template, runtime);
+
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
+            That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void BuiltinHandlers_CreateUnit_SameEffectWithDistinctRoots_UsesDistinctScatterOffsets()
+        {
+            using var world = World.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(1200, 3400));
+            var effect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 2);
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                SpawnRequests = queue,
+            };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var firstContext = new EffectContext { RootId = 11, Source = caster, Target = caster };
+            var secondContext = new EffectContext { RootId = 12, Source = caster, Target = caster };
+            var template = new EffectTemplateData
+            {
+                UnitCreation = new UnitCreationDescriptor
+                {
+                    UnitTypeId = 7,
+                    Count = 1,
+                    OffsetRadius = 220,
+                },
+            };
+            var mergedParams = new EffectConfigParams();
+
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, effect, ref firstContext, in mergedParams, in template, runtime);
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, effect, ref secondContext, in mergedParams, in template, runtime);
+
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
+            That(queue.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
+            That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void BuiltinHandlers_CreateUnit_SameLogicalInputAcrossWorlds_UsesStableScatterOffset()
+        {
+            static RuntimeEntitySpawnRequest InvokeCreateUnit(World world)
+            {
+                var caster = world.Create(WorldPositionCm.FromCm(1200, 3400));
+                var effect = world.Create();
+                var queue = new RuntimeEntitySpawnQueue(capacity: 1);
+                var runtime = new BuiltinHandlerExecutionContext
+                {
+                    SpawnRequests = queue,
+                };
+                var registry = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(registry);
+                var context = new EffectContext { RootId = 19, Source = caster, Target = caster };
+                var template = new EffectTemplateData
+                {
+                    UnitCreation = new UnitCreationDescriptor
+                    {
+                        UnitTypeId = 7,
+                        Count = 1,
+                        OffsetRadius = 220,
+                    },
+                };
+                var mergedParams = new EffectConfigParams();
+
+                registry.Invoke(BuiltinHandlerId.CreateUnit, world, effect, ref context, in mergedParams, in template, runtime);
+                That(queue.TryDequeue(out RuntimeEntitySpawnRequest request), Is.True);
+                return request;
+            }
+
+            using var firstWorld = World.Create();
+            using var secondWorld = World.Create();
+
+            RuntimeEntitySpawnRequest first = InvokeCreateUnit(firstWorld);
+            RuntimeEntitySpawnRequest second = InvokeCreateUnit(secondWorld);
+
+            That(second.WorldPositionCm, Is.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void EffectApplicationSystem_CreateUnit_PropagatesDistinctRootIdentityToScatterPlacement()
+        {
+            using var world = World.Create();
+            var source = world.Create(WorldPositionCm.FromCm(1200, 3400));
+            var spawnRequests = new RuntimeEntitySpawnQueue(capacity: 2);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2302, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.CreateUnit,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                UnitCreation = new UnitCreationDescriptor
+                {
+                    UnitTypeId = 7,
+                    Count = 1,
+                    OffsetRadius = 220,
+                },
+            });
+
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.CreateUnit,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.CreateUnit);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "Test/effects.json");
+            var phaseExecutor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            using var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                templates: templates,
+                spawnRequests: spawnRequests,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            Entity firstEffect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 11,
+                source,
+                source,
+                durationTicks: 30,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Add(firstEffect, new EffectTemplateRef { TemplateId = 2302 });
+            Entity secondEffect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 12,
+                source,
+                source,
+                durationTicks: 30,
+                lifetimeKind: EffectLifetimeKind.After);
+            world.Add(secondEffect, new EffectTemplateRef { TemplateId = 2302 });
+
+            application.Update(0f);
+
+            That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest first), Is.True);
+            That(spawnRequests.TryDequeue(out RuntimeEntitySpawnRequest second), Is.True);
+            That(second.WorldPositionCm, Is.Not.EqualTo(first.WorldPositionCm));
+        }
+
+        [Test]
+        public void EffectPhaseExecutor_MainBuiltin_ReceivesOriginalEffectIdentityAndContext()
+        {
+            using var world = World.Create();
+            Entity receivedEffect = Entity.Null;
+            int receivedRootId = 0;
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2303, new EffectTemplateData { PresetType = EffectPresetType.None });
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity effectEntity, ref EffectContext context, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    receivedEffect = effectEntity;
+                    receivedRootId = context.RootId;
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            Entity effect = world.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            var context = new EffectContext { RootId = 73, Source = source, Target = target };
+            var behavior = new EffectPhaseGraphBindings();
+
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                context.Source,
+                context.Target,
+                context.TargetContext,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: 2303,
+                mergedParams: default,
+                rootId: context.RootId);
+
+            That(receivedEffect, Is.EqualTo(Entity.Null));
+            That(receivedRootId, Is.EqualTo(73));
+        }
+
+        [Test]
+        public void EffectPhaseExecutor_GraphBuiltin_ReceivesOriginalEffectIdentityAndContext()
+        {
+            using var world = World.Create();
+            Entity receivedEffect = Entity.Null;
+            int receivedRootId = 0;
+            var programs = new GraphProgramRegistry();
+            programs.Register(91, new[]
+            {
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            }, GraphKind.Effect);
+            var templates = new EffectTemplateRegistry();
+            templates.Register(2304, new EffectTemplateData { PresetType = EffectPresetType.None });
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.None };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(91);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            builtinHandlers.Register(
+                BuiltinHandlerId.ApplyModifiers,
+                (World _, Entity effectEntity, ref EffectContext context, in EffectConfigParams _, in EffectTemplateData _) =>
+                {
+                    receivedEffect = effectEntity;
+                    receivedRootId = context.RootId;
+                },
+                EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+            var executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var runtime = new BuiltinHandlerExecutionContext();
+            Entity effect = world.Create();
+            Entity source = world.Create();
+            Entity target = world.Create();
+            var context = new EffectContext { RootId = 89, Source = source, Target = target };
+            var behavior = new EffectPhaseGraphBindings();
+
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                context.Source,
+                context.Target,
+                context.TargetContext,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 0,
+                effectTemplateId: 2304,
+                mergedParams: default,
+                builtinRuntime: runtime,
+                rootId: context.RootId);
+
+            That(receivedEffect, Is.EqualTo(Entity.Null));
+            That(receivedRootId, Is.EqualTo(89));
         }
 
         [Test]
@@ -1005,6 +1321,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.UnitType,
+                RootId = 9611,
                 Source = source,
                 WorldPositionCm = Fix64Vec2.FromInt(420, 840),
                 UnitTypeId = unitTypeId,
@@ -1050,11 +1367,135 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(spawned).Value, Is.GreaterThan(0));
 
             That(effects.Count, Is.EqualTo(1));
+            That(effects[0].RootId, Is.EqualTo(9611));
             That(effects[0].Source, Is.EqualTo(source));
             That(effects[0].Target, Is.EqualTo(spawned));
             That(effects[0].TemplateId, Is.EqualTo(123));
 
             UnitTypeRegistry.Clear();
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_OnSpawnEffect_InheritsRootWithoutTeamRelationshipDependencies()
+        {
+            UnitTypeRegistry.Clear();
+            try
+            {
+                int unitTypeId = UnitTypeRegistry.Register("TestRootOnlySpawn");
+                using var world = World.Create();
+                Entity source = world.Create();
+                var requests = new RuntimeEntitySpawnQueue(capacity: 1);
+                var effects = new EffectRequestQueue();
+                var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+                var system = new RuntimeEntitySpawnSystem(
+                    world,
+                    requests,
+                    templates,
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                    effects);
+
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    RootId = 9731,
+                    Source = source,
+                    WorldPositionCm = Fix64Vec2.FromInt(120, 240),
+                    UnitTypeId = unitTypeId,
+                    OnSpawnEffectTemplateId = 123,
+                }), Is.True);
+
+                system.Update(0f);
+
+                That(effects.Count, Is.EqualTo(1));
+                That(effects[0].RootId, Is.EqualTo(9731));
+                That(effects[0].Source, Is.EqualTo(source));
+                That(effects[0].Target, Is.Not.EqualTo(Entity.Null));
+                That(world.IsAlive(effects[0].Target), Is.True);
+                That(world.Has<Team>(effects[0].Target), Is.False);
+            }
+            finally
+            {
+                UnitTypeRegistry.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_ConfiguredOnSpawnEffect_RequiresEffectRequestQueue()
+        {
+            UnitTypeRegistry.Clear();
+            try
+            {
+                int unitTypeId = UnitTypeRegistry.Register("TestMissingEffectQueue");
+                using var world = World.Create();
+                var source = world.Create();
+                var requests = new RuntimeEntitySpawnQueue(capacity: 1);
+                var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+                var system = new RuntimeEntitySpawnSystem(
+                    world,
+                    requests,
+                    templates,
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator());
+
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    RootId = 10291,
+                    Source = source,
+                    UnitTypeId = unitTypeId,
+                    OnSpawnEffectTemplateId = 123,
+                }), Is.True);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+                That(ex.Message, Does.Contain(nameof(EffectRequestQueue)));
+            }
+            finally
+            {
+                UnitTypeRegistry.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_OnSpawnEffect_PreservesRootWithoutRelationshipDomain()
+        {
+            UnitTypeRegistry.Clear();
+            try
+            {
+                int unitTypeId = UnitTypeRegistry.Register("TestRootCarrier");
+                using var world = World.Create();
+                var source = world.Create();
+                var spawnRequests = new RuntimeEntitySpawnQueue(capacity: 1);
+                var effectRequests = new EffectRequestQueue();
+                var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+                var system = new RuntimeEntitySpawnSystem(
+                    world,
+                    spawnRequests,
+                    templates,
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                    effectRequests);
+
+                That(spawnRequests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    RootId = 10391,
+                    Source = source,
+                    UnitTypeId = unitTypeId,
+                    OnSpawnEffectTemplateId = 123,
+                }), Is.True);
+
+                system.Update(0f);
+
+                That(effectRequests.Count, Is.EqualTo(1));
+                That(effectRequests[0].RootId, Is.EqualTo(10391));
+                That(effectRequests[0].Source, Is.EqualTo(source));
+                That(effectRequests[0].TemplateId, Is.EqualTo(123));
+            }
+            finally
+            {
+                UnitTypeRegistry.Clear();
+            }
         }
 
         [Test]
@@ -1522,6 +1963,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 HasWorldPosition = 1,
                 Projectile = new ProjectileState
                 {
+                    RootId = 11401,
                     Speed = Fix64.FromInt(333),
                     Range = 900,
                     ImpactEffectTemplateId = 12,
@@ -1537,6 +1979,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             world.Query(in query, (ref ProjectileState projectile, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref MapEntity map, ref Ludots.Core.Presentation.Components.PresentationStableId stableId) =>
             {
                 count++;
+                That(projectile.RootId, Is.EqualTo(11401));
                 That(projectile.Speed, Is.EqualTo(Fix64.FromInt(333)));
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));

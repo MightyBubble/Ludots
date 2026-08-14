@@ -309,6 +309,11 @@ public static class NavObstacleAuthoringCatalog
             target.VisualHeightmapAsset = source.VisualHeightmapAsset;
         }
 
+        if (source.TerrainPresentation != null)
+        {
+            target.TerrainPresentation = source.TerrainPresentation.Clone();
+        }
+
         if (source.Dependencies != null)
         {
             foreach (KeyValuePair<string, string> kvp in source.Dependencies)

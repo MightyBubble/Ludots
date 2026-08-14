@@ -17,8 +17,6 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
-using Ludots.UI;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -122,11 +120,7 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallDummyInput(engine);
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
-            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+            AcceptanceUiHostInstaller.Install(engine);
             engine.Start();
             return engine;
         }

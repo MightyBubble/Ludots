@@ -90,7 +90,14 @@ namespace Ludots.Tests.GAS
                 {
                     foreach (var t in targets)
                     {
-                        executor.ExecutePhase(world, api, caster, t, default, default,
+                        var context = new EffectContext
+                        {
+                            RootId = 0,
+                            Source = caster,
+                            Target = t,
+                            TargetContext = default,
+                        };
+                        executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                             EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
                     }
                 }

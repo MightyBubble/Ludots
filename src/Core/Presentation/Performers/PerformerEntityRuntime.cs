@@ -249,6 +249,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 DefId = defId,
                 StableId = stableId,
+                OwnerStableId = ResolveOwnerStableId(owner, parent),
                 ScopeId = scopeId,
                 OwnerEntity = owner,
                 AnchorKind = anchorKind,
@@ -303,6 +304,43 @@ namespace Ludots.Core.Presentation.Performers
             _structureVersion++;
             AddIndexes(entity, in state, definition);
             return entity;
+        }
+
+        private int ResolveOwnerStableId(Entity owner, Entity parent)
+        {
+            if (parent != Entity.Null)
+            {
+                if (!_world.IsAlive(parent) || !_world.Has<PerformerState>(parent))
+                {
+                    throw new InvalidOperationException(
+                        "Child performer creation requires an alive parent performer state.");
+                }
+
+                ref readonly PerformerState parentState = ref _world.Get<PerformerState>(parent);
+                if (parentState.OwnerEntity != owner)
+                {
+                    throw new InvalidOperationException(
+                        "Child performer owner must match its parent performer owner.");
+                }
+
+                return parentState.OwnerStableId;
+            }
+
+            if (owner == Entity.Null ||
+                !_world.IsAlive(owner) ||
+                !_world.Has<PresentationStableId>(owner))
+            {
+                return 0;
+            }
+
+            int ownerStableId = _world.Get<PresentationStableId>(owner).Value;
+            if (ownerStableId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer owner PresentationStableId must be positive. Got {ownerStableId}.");
+            }
+
+            return ownerStableId;
         }
 
         public int CreateEntityAnchoredRootBatch(
@@ -1427,7 +1465,9 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
-            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                entity,
+                needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
@@ -1488,7 +1528,9 @@ namespace Ludots.Core.Presentation.Performers
             bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
                 PerformerTransformRequiresTick(entity, depth: 0);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
-            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                entity,
+                needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
         }
 
@@ -1515,6 +1557,7 @@ namespace Ludots.Core.Presentation.Performers
             state.Version++;
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
+            RefreshOwnerPayloadMarker(entity);
             MarkStaticDirty(entity);
             return true;
         }
@@ -3045,6 +3088,7 @@ namespace Ludots.Core.Presentation.Performers
                     {
                         DefId = defId,
                         StableId = stableIds[ownerIndex],
+                        OwnerStableId = ResolveOwnerStableId(owner, parent),
                         ScopeId = scopeIds[ownerIndex],
                         OwnerEntity = owner,
                         AnchorKind = anchorKind,
@@ -3371,7 +3415,7 @@ namespace Ludots.Core.Presentation.Performers
                         Count = 1,
                         RootCount = 1,
                         SingleRootPerformer = performers[index],
-                        SingleRootTransformSync = CanUseOwnerPayloadTransformSync(performers[index]) ? (byte)1 : (byte)0,
+                        SingleRootTransformSync = _world.Has<PerfOwnerPayloadTransformSync>(performers[index]) ? (byte)1 : (byte)0,
                     };
                 }
 
@@ -3792,22 +3836,69 @@ namespace Ludots.Core.Presentation.Performers
                 return;
             }
 
+            bool hasSingleRoot = TryGetSingleRoot(in bucket, out Entity singleRoot);
+            bool singleRootTransformSync =
+                hasSingleRoot &&
+                _world.Has<PerfTransformSyncTick>(singleRoot) &&
+                CanUseOwnerPayloadTransformSync(singleRoot);
             var next = new PresentationOwnerHasPerformerPayload
             {
                 Count = bucket.Count,
-                RootCount = TryGetSingleRoot(in bucket, out Entity singleRoot) ? 1 : CountRoots(in bucket),
+                RootCount = hasSingleRoot ? 1 : CountRoots(in bucket),
                 SingleRootPerformer = singleRoot,
-                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(singleRoot) ? (byte)1 : (byte)0,
+                SingleRootTransformSync = singleRootTransformSync ? (byte)1 : (byte)0,
             };
 
             if (_world.Has<PresentationOwnerHasPerformerPayload>(owner))
             {
                 ref PresentationOwnerHasPerformerPayload marker = ref _world.Get<PresentationOwnerHasPerformerPayload>(owner);
                 marker = next;
+            }
+            else
+            {
+                _world.Add(owner, next);
+            }
+
+            ReconcileOwnerPayloadTransformSyncMarkers(
+                in bucket,
+                singleRootTransformSync ? singleRoot : Entity.Null);
+        }
+
+        private void RefreshOwnerPayloadMarker(Entity performer)
+        {
+            if (performer == Entity.Null ||
+                !_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer))
+            {
                 return;
             }
 
-            _world.Add(owner, next);
+            Entity owner = _world.Get<PerformerState>(performer).OwnerEntity;
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(
+                _byOwner,
+                new OwnerKey(owner));
+            if (!Unsafe.IsNullRef(ref bucket))
+            {
+                WriteOwnerPayloadMarker(owner, in bucket);
+            }
+        }
+
+        private void ReconcileOwnerPayloadTransformSyncMarkers(
+            in OwnerPerformerBucket bucket,
+            Entity fastRoot)
+        {
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Entity performer = bucket.GetAt(i);
+                if (!IsEntityAnchoredRootPerformer(performer))
+                {
+                    continue;
+                }
+
+                SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                    performer,
+                    performer == fastRoot);
+            }
         }
 
         private void RemoveOwnerPayloadMarker(Entity owner)
@@ -3845,6 +3936,22 @@ namespace Ludots.Core.Presentation.Performers
             return _definitions == null ||
                 (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
                  DefinitionCanUseOwnerPayloadTransformSync(definition, state.BehaviorActiveMask, depth: 0));
+        }
+
+        private bool CanUseCurrentOwnerPayloadTransformSync(Entity performer)
+        {
+            if (!CanUseOwnerPayloadTransformSync(performer))
+            {
+                return false;
+            }
+
+            Entity owner = _world.Get<PerformerState>(performer).OwnerEntity;
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(
+                _byOwner,
+                new OwnerKey(owner));
+            return !Unsafe.IsNullRef(ref bucket) &&
+                   TryGetSingleRoot(in bucket, out Entity singleRoot) &&
+                   singleRoot == performer;
         }
 
         private bool TryGetSingleRoot(in OwnerPerformerBucket bucket, out Entity root)
@@ -4314,6 +4421,264 @@ namespace Ludots.Core.Presentation.Performers
             if (_world.Has<PerformerState>(performer))
             {
                 EnsureRequestBackedEmitWorkScheduled(performer);
+            }
+        }
+
+        public void PropagateParentDrivenTransforms(Entity parent)
+        {
+            if (parent == Entity.Null ||
+                !_world.IsAlive(parent) ||
+                !_world.Has<PerformerChildren>(parent) ||
+                _world.Get<PerformerChildren>(parent).Count == 0)
+            {
+                return;
+            }
+
+            if (_definitions == null)
+            {
+                throw new InvalidOperationException(
+                    "Performer definitions must be bound before propagating parent-driven transforms.");
+            }
+
+            RequireWorldTransform(parent);
+            PropagateParentDrivenTransforms(
+                parent,
+                _world.Get<PerformerWorldPosition>(parent).Value,
+                _world.Get<PerformerWorldRotation>(parent).Value,
+                _world.Get<PerformerWorldFacing>(parent),
+                _world.Get<PerformerWorldScale>(parent).Value);
+        }
+
+        private void PropagateParentDrivenTransforms(
+            Entity parent,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            ref PerformerChildren children = ref _world.Get<PerformerChildren>(parent);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (!_world.IsAlive(child) ||
+                    !_world.Has<PerformerParent>(child) ||
+                    _world.Get<PerformerParent>(child).Parent != parent)
+                {
+                    continue;
+                }
+
+                if (!_world.Has<PerformerState>(child) ||
+                    !_world.Has<PerformerTransformSource>(child))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer child entity id={child.Id} is missing transform propagation state.");
+                }
+
+                RequireWorldTransform(child);
+                ref readonly PerformerState state = ref _world.Get<PerformerState>(child);
+                if (!_definitions!.TryGet(state.DefId, out PerformerDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer child definition id={state.DefId} is not registered during parent transform propagation.");
+                }
+
+                TransformSource source = _world.Get<PerformerTransformSource>(child).Value;
+                bool hasFastParentAttachment =
+                    (_world.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                     _world.Has<PerfHasAttachmentTick>(child)) &&
+                    definition.SupportsFastParentAttachmentTick &&
+                    (uint)definition.FastParentAttachmentBehaviorIndex < (uint)definition.Behaviors.Length &&
+                    definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex is >= 0 and < 32 &&
+                    (state.BehaviorActiveMask &
+                     (1u << definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex)) != 0;
+                bool changed = hasFastParentAttachment
+                    ? ApplyParentAttachmentTransform(
+                        child,
+                        in state,
+                        definition,
+                        in parentPosition,
+                        in parentRotation,
+                        in parentFacing,
+                        in parentScale)
+                    : source switch
+                    {
+                        TransformSource.InheritParent => ApplyInheritedParentTransform(
+                            child,
+                            in state,
+                            definition,
+                            in parentPosition,
+                            in parentRotation,
+                            in parentFacing,
+                            in parentScale),
+                        TransformSource.AttachedToParent => ApplyParentAttachmentTransform(
+                            child,
+                            in state,
+                            definition,
+                            in parentPosition,
+                            in parentRotation,
+                            in parentFacing,
+                            in parentScale),
+                        _ => false,
+                    };
+
+                if (!changed ||
+                    !_world.Has<PerformerChildren>(child) ||
+                    _world.Get<PerformerChildren>(child).Count == 0)
+                {
+                    continue;
+                }
+
+                PropagateParentDrivenTransforms(
+                    child,
+                    _world.Get<PerformerWorldPosition>(child).Value,
+                    _world.Get<PerformerWorldRotation>(child).Value,
+                    _world.Get<PerformerWorldFacing>(child),
+                    _world.Get<PerformerWorldScale>(child).Value);
+            }
+        }
+
+        private bool ApplyInheritedParentTransform(
+            Entity child,
+            in PerformerState state,
+            PerformerDefinition definition,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            ref PerformerWorldPosition position = ref _world.Get<PerformerWorldPosition>(child);
+            ref PerformerWorldPlanePosition planePosition = ref _world.Get<PerformerWorldPlanePosition>(child);
+            ref PerformerWorldRotation rotation = ref _world.Get<PerformerWorldRotation>(child);
+            ref PerformerWorldFacing facing = ref _world.Get<PerformerWorldFacing>(child);
+            ref PerformerWorldScale scale = ref _world.Get<PerformerWorldScale>(child);
+            PerformerTransformSnapshot performerSnapshot = new PerformerTransformSnapshot
+            {
+                WorldPosition = position.Value,
+                WorldRotation = rotation.Value,
+                WorldScale = scale.Value,
+                WorldFacing = facing,
+                TransformSource = TransformSource.InheritParent,
+            };
+            PerformerTransformSnapshot parentSnapshot = new PerformerTransformSnapshot
+            {
+                WorldPosition = parentPosition,
+                WorldRotation = parentRotation,
+                WorldScale = parentScale,
+                WorldFacing = parentFacing,
+            };
+            AssetBindingConfig assetBinding = PerformerGroundingUtility.ResolvePrimaryAssetBinding(
+                definition,
+                state.BehaviorActiveMask);
+            PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
+                performerSnapshot,
+                parentSnapshot,
+                true,
+                default,
+                false,
+                assetBinding);
+            return ApplyResolvedTransform(
+                child,
+                ref position,
+                ref planePosition,
+                ref rotation,
+                ref facing,
+                ref scale,
+                in resolved);
+        }
+
+        private bool ApplyParentAttachmentTransform(
+            Entity child,
+            in PerformerState state,
+            PerformerDefinition definition,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            if (!TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out AttachmentConfig config))
+            {
+                return false;
+            }
+
+            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
+            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+            Vector3 scaledOffset = config.InheritScale
+                ? normalizedParentScale * config.Offset
+                : config.Offset;
+            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            PerformerResolvedTransform resolved = new PerformerResolvedTransform
+            {
+                Position = nextPosition,
+                Rotation = WorldPlane2D.NormalizeOrIdentity(
+                    normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
+                Facing = parentFacing,
+                Scale = config.InheritScale ? normalizedParentScale : Vector3.One,
+            };
+            ref PerformerWorldPosition position = ref _world.Get<PerformerWorldPosition>(child);
+            ref PerformerWorldPlanePosition planePosition = ref _world.Get<PerformerWorldPlanePosition>(child);
+            ref PerformerWorldRotation rotation = ref _world.Get<PerformerWorldRotation>(child);
+            ref PerformerWorldFacing facing = ref _world.Get<PerformerWorldFacing>(child);
+            ref PerformerWorldScale scale = ref _world.Get<PerformerWorldScale>(child);
+            ref PerformerTransformSource source = ref _world.Get<PerformerTransformSource>(child);
+            bool sourceChanged = source.Value != TransformSource.AttachedToParent;
+            source.Value = TransformSource.AttachedToParent;
+            bool transformChanged = ApplyResolvedTransform(
+                child,
+                ref position,
+                ref planePosition,
+                ref rotation,
+                ref facing,
+                ref scale,
+                in resolved);
+            if (sourceChanged && !transformChanged)
+            {
+                MarkTransformDrivenEmitDirty(child);
+            }
+
+            return sourceChanged || transformChanged;
+        }
+
+        private bool ApplyResolvedTransform(
+            Entity performer,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldPlanePosition planePosition,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            in PerformerResolvedTransform resolved)
+        {
+            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolved.Position);
+            bool changed =
+                position.Value != resolved.Position ||
+                planePosition.ValueCm != nextPlanePosition ||
+                rotation.Value != resolved.Rotation ||
+                facing.AngleRad != resolved.Facing.AngleRad ||
+                facing.HasValue != resolved.Facing.HasValue ||
+                scale.Value != resolved.Scale;
+            if (!changed)
+            {
+                return false;
+            }
+
+            position.Value = resolved.Position;
+            planePosition.ValueCm = nextPlanePosition;
+            rotation.Value = resolved.Rotation;
+            facing = resolved.Facing;
+            scale.Value = resolved.Scale;
+            MarkTransformDrivenEmitDirty(performer);
+            return true;
+        }
+
+        private void RequireWorldTransform(Entity performer)
+        {
+            if (!_world.Has<PerformerWorldPosition>(performer) ||
+                !_world.Has<PerformerWorldPlanePosition>(performer) ||
+                !_world.Has<PerformerWorldRotation>(performer) ||
+                !_world.Has<PerformerWorldFacing>(performer) ||
+                !_world.Has<PerformerWorldScale>(performer))
+            {
+                throw new InvalidOperationException(
+                    $"Performer entity id={performer.Id} is missing its compiled world transform components.");
             }
         }
 

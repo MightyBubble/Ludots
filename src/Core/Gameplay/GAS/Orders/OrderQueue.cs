@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Arch.Core;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
@@ -6,11 +6,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public enum OrderSubmitMode : byte
     {
         Immediate = 0,
-        Queued = 1
+        Queued = 1,
+        PersistentQueued = 2
     }
 
     public struct Order
     {
+        public Order()
+        {
+            Target = Entity.Null;
+            TargetContext = Entity.Null;
+            CommandSource = Entity.Null;
+        }
+
         public int OrderId;
         public int OrderTypeId;
         public int PlayerId;
@@ -164,6 +172,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return OrderSubmitResult.Queued;
         }
 
+        /// <summary>
+        /// Atomically admits a fan-out batch whose rows represent one logical order. The queue owns
+        /// the shared id so producers cannot create ids that collide with other intake paths.
+        /// </summary>
         public OrderSubmitResult TryEnqueueSharedBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
@@ -309,35 +321,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryDequeueBatch(Span<Order> destination, out int count)
         {
-            count = 0;
-            if (_count == 0)
+            if (!TryPeekBatch(destination, out int batchSize))
             {
+                count = 0;
                 return false;
-            }
-
-            ref readonly Order first = ref _items[_head];
-            int batchSize = first.AdmissionBatchId > 0 ? first.AdmissionBatchSize : 1;
-            if (batchSize <= 0 || batchSize > _count || batchSize > destination.Length)
-            {
-                throw new InvalidOperationException(
-                    $"OrderQueue admission batch size {batchSize} is invalid for count {_count} and destination capacity {destination.Length}.");
-            }
-
-            int batchId = first.AdmissionBatchId;
-            for (int i = 0; i < batchSize; i++)
-            {
-                int sourceIndex = (_head + i) % _items.Length;
-                Order item = _items[sourceIndex];
-                if (batchId > 0 &&
-                    (item.AdmissionBatchId != batchId ||
-                     item.AdmissionBatchSize != batchSize ||
-                     item.AdmissionBatchIndex != i))
-                {
-                    throw new InvalidOperationException(
-                        $"OrderQueue admission batch {batchId} is not contiguous at row {i}.");
-                }
-
-                destination[i] = item;
             }
 
             _head = (_head + batchSize) % _items.Length;
@@ -380,6 +367,25 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             count = batchSize;
+            return true;
+        }
+
+        public bool TryPeekBatchSize(out int batchSize)
+        {
+            if (_count == 0)
+            {
+                batchSize = 0;
+                return false;
+            }
+
+            ref readonly Order first = ref _items[_head];
+            batchSize = first.AdmissionBatchId > 0 ? first.AdmissionBatchSize : 1;
+            if (batchSize <= 0 || batchSize > _count)
+            {
+                throw new InvalidOperationException(
+                    $"OrderQueue admission batch size {batchSize} is invalid for count {_count}.");
+            }
+
             return true;
         }
 
@@ -513,7 +519,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             in Order order,
             OrderSubmitResult result)
         {
-            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.GlobalIntake, result);
+            var outcome = new OrderAdmissionOutcome(in order, OrderAdmissionStage.GlobalIntake, result);
             _admissionResults.Commit(in reservation, in outcome);
         }
 

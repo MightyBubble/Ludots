@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 8,
+  "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
+  "adapterId": "raylib",
+  "buildMode": "auto",
+  "host": "127.0.0.1",
+  "port": 27777,
+  "connectionKey": "rts-frontline-local-uat",
+  "faultProfile": "normal",
+  "faultSeeds": {
+    "server": 70901,
+    "clientOne": 70902,
+    "clientTwo": 70903
+  },
+  "clientScreenshots": {
+    "clientOne": {
+      "path": "screens/client-a/frontline.png",
+      "milestones": [
+        "ready",
+        "advancing",
+        "engaging",
+        "completed"
+      ]
+    },
+    "clientTwo": {
+      "path": "screens/client-b/frontline.png",
+      "milestones": [
+        "ready",
+        "advancing",
+        "engaging",
+        "completed"
+      ]
+    }
+  },
+  "clientPresentation": {
+    "minimumVisibleEntities": 1,
+    "minimumActivePerformers": 1,
+    "minimumAuthoredPrimitives": 1,
+    "minimumSubmittedPrimitiveInstances": 1,
+    "minimumSubmittedPrimitiveBatches": 1,
+    "minimumPrefabVisuals": 1
+  },
+  "requiredFramebufferEvidence": [
+    {
+      "role": "commandCore",
+      "perspective": "all",
+      "milestones": ["ready"],
+      "presentationTemplate": "rts.frontline.core.base",
+      "acceptedColors": [
+        { "red": 31, "green": 41, "blue": 48 }
+      ],
+      "maximumChannelDifference": 28,
+      "minimumPixelsPerInstance": 8,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "harvesterCargo",
+      "perspective": "all",
+      "milestones": ["ready"],
+      "presentationTemplate": "rts.frontline.harvester.cargo",
+      "acceptedColors": [
+        { "red": 255, "green": 166, "blue": 31 }
+      ],
+      "maximumChannelDifference": 55,
+      "minimumPixelsPerInstance": 3,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.12
+    },
+    {
+      "role": "infantryBody",
+      "perspective": "all",
+      "milestones": ["ready", "completed"],
+      "presentationTemplate": "rts.frontline.infantry.body",
+      "acceptedColors": [
+        { "red": 209, "green": 224, "blue": 230 }
+      ],
+      "maximumChannelDifference": 48,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "battleInfantryBodies",
+      "perspective": "all",
+      "milestones": ["advancing", "engaging"],
+      "presentationTemplate": "rts.frontline.infantry.body",
+      "acceptedColors": [
+        { "red": 209, "green": 224, "blue": 230 }
+      ],
+      "maximumChannelDifference": 48,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 2,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "damagedCommandCore",
+      "perspective": "winner",
+      "milestones": ["engaging"],
+      "presentationTemplate": "rts.frontline.core.base",
+      "acceptedColors": [
+        { "red": 31, "green": 41, "blue": 48 }
+      ],
+      "maximumChannelDifference": 28,
+      "minimumPixelsPerInstance": 8,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "crystalField",
+      "perspective": "all",
+      "milestones": ["ready", "advancing"],
+      "presentationTemplate": "rts.frontline.crystal.center",
+      "acceptedColors": [
+        { "red": 20, "green": 224, "blue": 255 }
+      ],
+      "maximumChannelDifference": 52,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    }
+  ],
+  "requiredPresentationReceipts": [
+    {
+      "role": "core",
+      "milestones": ["ready"],
+      "template": "rts.frontline.core.base",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
+      "minimumShortEdgePx": 24,
+      "minimumAreaPx2": 700
+    },
+    {
+      "role": "harvester",
+      "milestones": ["ready"],
+      "template": "rts.frontline.harvester.chassis",
+      "minimumSubmitted": 2,
+      "minimumOnscreen": 2,
+      "minimumShortEdgePx": 16,
+      "minimumAreaPx2": 320
+    },
+    {
+      "role": "openingInfantry",
+      "milestones": ["ready"],
+      "template": "rts.frontline.infantry.body",
+      "minimumSubmitted": 2,
+      "minimumOnscreen": 2,
+      "minimumShortEdgePx": 14,
+      "minimumAreaPx2": 220
+    },
+    {
+      "role": "frontlineInfantry",
+      "milestones": ["advancing", "engaging"],
+      "template": "rts.frontline.infantry.body",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
+      "minimumShortEdgePx": 14,
+      "minimumAreaPx2": 220
+    },
+    {
+      "role": "crystal",
+      "milestones": ["ready", "advancing"],
+      "template": "rts.frontline.crystal.center",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
+      "minimumShortEdgePx": 18,
+      "minimumAreaPx2": 360
+    }
+  ],
+  "requiredWorldEvidence": [
+    {
+      "milestone": "advancing",
+      "perspective": "all",
+      "anchor": "meeting",
+      "positionToleranceCm": 7000,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "selectedInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [],
+      "stableEntityMotion": {
+        "template": "rts.frontline.infantry.body",
+        "minimumObservedMoveCm": 1000
+      },
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
+        "minimumInstances": 2,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
+        "maximumScreenOverlapRatio": 0.5
+      }
+    },
+    {
+      "milestone": "engaging",
+      "perspective": "loser",
+      "anchor": "meeting",
+      "positionToleranceCm": 1800,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "defendingInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        },
+        {
+          "role": "damagedEnemyInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "attackTarget",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [],
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
+        "minimumInstances": 2,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
+        "maximumScreenOverlapRatio": 0.5
+      },
+      "requireObservedDamage": true
+    },
+    {
+      "milestone": "engaging",
+      "perspective": "winner",
+      "anchor": "siege",
+      "positionToleranceCm": 3500,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "attackingInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 2,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        },
+        {
+          "role": "damagedEnemyCore",
+          "template": "rts.frontline.core.base",
+          "source": "attackTarget",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 24,
+          "minimumAreaPx2": 700
+        }
+      ],
+      "forbiddenRoles": [],
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
+        "minimumInstances": 2,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
+        "maximumScreenOverlapRatio": 0.5
+      },
+      "requireObservedDamage": true
+    },
+    {
+      "milestone": "completed",
+      "perspective": "all",
+      "anchor": "defeatedCore",
+      "positionToleranceCm": 2200,
+      "cameraToleranceCm": 25,
+      "requiredRoles": [
+        {
+          "role": "winningInfantryWitness",
+          "template": "rts.frontline.infantry.body",
+          "source": "completedWinnerInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [
+        {
+          "role": "defeatedCore",
+          "template": "rts.frontline.core.base",
+          "scope": "screen"
+        }
+      ],
+      "requireCompletedWorldState": true
+    }
+  ],
+  "clientInstanceIds": [
+    1,
+    2
+  ],
+  "interProcessDelayMilliseconds": 1000,
+  "credentialTimeoutSeconds": 60,
+  "runSeconds": 240,
+  "monitorIntervalMilliseconds": 250,
+  "artifactRoot": "artifacts/acceptance/rts-multiplayer-frontline-three-process",
+  "acceptancePlan": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod/assets/RtsMultiplayerFrontlineThreeProcessAcceptancePlan.json",
+  "launcherCliProject": "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj",
+  "dedicatedServerProject": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/Ludots.App.DedicatedServer.csproj",
+  "dedicatedServerAssembly": "src/Apps/DedicatedServer/Ludots.App.DedicatedServer/bin/Release/net8.0/Ludots.App.DedicatedServer.dll"
+}

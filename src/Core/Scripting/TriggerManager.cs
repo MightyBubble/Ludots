@@ -294,6 +294,7 @@ namespace Ludots.Core.Scripting
                 }
                 catch (Exception ex)
                 {
+                    RecordError(eventKey, GetEventHandlerName(handlers[i]), ex);
                     Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
                 }
             }
@@ -307,17 +308,26 @@ namespace Ludots.Core.Scripting
             var tasks = new Task[handlers.Count];
             for (int i = 0; i < handlers.Count; i++)
             {
-                try
-                {
-                    tasks[i] = handlers[i](context);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
-                    tasks[i] = Task.CompletedTask;
-                }
+                tasks[i] = FireEventHandlerAsync(handlers[i], eventKey, context);
             }
             return Task.WhenAll(tasks);
+        }
+
+        private async Task FireEventHandlerAsync(
+            Func<ScriptContext, Task> handler,
+            EventKey eventKey,
+            ScriptContext context)
+        {
+            try
+            {
+                await handler(context);
+            }
+            catch (Exception ex)
+            {
+                RecordError(eventKey, GetEventHandlerName(handler), ex);
+                Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex}");
+                throw;
+            }
         }
 
         // ────────────────────────────────────────────────────────────
@@ -330,6 +340,22 @@ namespace Ludots.Core.Scripting
             {
                 _errors.Clear();
             }
+        }
+
+        private void RecordError(EventKey eventKey, string triggerName, Exception exception)
+        {
+            lock (_errorsLock)
+            {
+                _errors.Add(new TriggerError(eventKey, triggerName, exception));
+            }
+        }
+
+        private static string GetEventHandlerName(Func<ScriptContext, Task> handler)
+        {
+            Type? declaringType = handler.Method.DeclaringType;
+            return declaringType == null
+                ? handler.Method.Name
+                : $"{declaringType.FullName}.{handler.Method.Name}";
         }
 
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
@@ -351,10 +377,7 @@ namespace Ludots.Core.Scripting
             }
             catch (Exception ex)
             {
-                lock (_errorsLock)
-                {
-                    _errors.Add(new TriggerError(eventKey, trigger.Name, ex));
-                }
+                RecordError(eventKey, trigger?.Name ?? string.Empty, ex);
                 Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;
             }

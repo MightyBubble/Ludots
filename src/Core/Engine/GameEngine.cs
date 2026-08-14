@@ -56,6 +56,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Diagnostics;
 using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
@@ -103,6 +104,10 @@ using Ludots.Core.Gameplay.Progression.Config;
 using Ludots.Core.Gameplay.Progression.Systems;
 using Ludots.Core.Persistence;
 using Ludots.Core.Vision;
+using Ludots.Core.Networking.Commands;
+using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.Replication;
+using Ludots.Core.Networking.Runtime;
 
 namespace Ludots.Core.Engine
 {
@@ -113,6 +118,12 @@ namespace Ludots.Core.Engine
         private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
 
         private bool _isRunning;
+        private bool _gameStartCompleted;
+        private bool _networkRuntimeActivationAttempted;
+        private bool _networkRuntimeActivating;
+        private bool _networkRuntimeReady;
+        private bool _networkStartupMapLoadObserved;
+        private Exception? _networkStartupFailure;
         private EffectTemplateLoader _effectTemplateLoader;
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
@@ -195,6 +206,7 @@ namespace Ludots.Core.Engine
         private Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups = new Dictionary<SystemGroup, List<ISystem<float>>>();
         private List<ISystem<float>> _presentationSystems = new List<ISystem<float>>();
         private ISystem<float> _inputRuntimeSystem;
+        private CameraRuntimeSystem _cameraRuntimeSystem;
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _primitiveDrawBuffer;
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _visualSnapshotBuffer;
         private Ludots.Core.Presentation.Rendering.PresentationVisualProxyBuffer _visualProxyBuffer;
@@ -205,6 +217,8 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
+        private GameplayPresentationProjectionSystem _gameplayPresentationProjectionSystem;
+        private AuthoritativeServerPresentationCleanupSystem _authoritativeServerPresentationCleanupSystem;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
@@ -229,6 +243,12 @@ namespace Ludots.Core.Engine
 
         public void RegisterSystem(ISystem<float> system, SystemGroup group)
         {
+            if (group == SystemGroup.LocalInput && system is ITimeSlicedSystem)
+            {
+                throw new InvalidOperationException(
+                    $"LocalInput system '{system.GetType().Name}' cannot be time-sliced because replicated clients execute local intent exactly once per visual frame.");
+            }
+
             if (!_systemGroups.ContainsKey(group))
             {
                 _systemGroups[group] = new List<ISystem<float>>();
@@ -992,6 +1012,38 @@ namespace Ludots.Core.Engine
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
+            NetworkRuntimeConfig? networkConfig = config.Networking;
+            networkConfig?.Validate();
+            if (networkConfig != null)
+            {
+                if (gasRuntimeCapacity.OrderQueueCapacity < networkConfig.MaxActorsPerCommandBatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Gas runtime order queue capacity {gasRuntimeCapacity.OrderQueueCapacity} is below maximum command actor count {networkConfig.MaxActorsPerCommandBatch}.");
+                }
+
+                int minimumCorrelationCapacity = checked(
+                    gasRuntimeCapacity.OrderQueueCapacity +
+                    (networkConfig.NetworkEntityCapacity * (OrderBuffer.MAX_QUEUED_ORDERS + 2)));
+                if (networkConfig.CommandCorrelationCapacity < minimumCorrelationCapacity)
+                {
+                    throw new InvalidOperationException(
+                        $"Networking command correlation capacity {networkConfig.CommandCorrelationCapacity} is below the " +
+                        $"declared waiting-order bound {minimumCorrelationCapacity}.");
+                }
+            }
+
+            NetworkCommandAdmissionResultBuffer? networkCommandAdmissionResults = networkConfig == null
+                ? null
+                : new NetworkCommandAdmissionResultBuffer(networkConfig.NetworkAdmissionResultCapacity);
+            NetworkCommandIngress? networkCommandIngress = null;
+            NetworkGameplayCommandGate? networkGameplayCommandGate = null;
+            NetworkCommandSchemaRegistry? networkCommandSchemas = null;
+            NetworkEntityTable? networkEntityTable = null;
+            if (networkConfig != null)
+            {
+                networkEntityTable = new NetworkEntityTable(networkConfig.NetworkEntityCapacity);
+            }
             var orderAdmissionResults = new OrderAdmissionResultBuffer(
                 gasRuntimeCapacity.OrderAdmissionResultCapacity,
                 gasRuntimeCapacity.OrderAdmissionRejectionCapacity);
@@ -1014,13 +1066,22 @@ namespace Ludots.Core.Engine
             var globalPresentationEvents = new GlobalPresentationEventBuffer();
             var presentationEventStream = new PresentationEventStream(presentationConfig.PresentationEventStreamCapacity);
             var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.PresentationOwnerChangeCapacity);
-            var gameplayPresentationProjectionSystem = new GameplayPresentationProjectionSystem(
+            _gameplayPresentationProjectionSystem = new GameplayPresentationProjectionSystem(
                 World,
                 EventBus,
                 presentationEventStream,
                 GameSession,
                 gasPresentationEvents,
-                presentationOwnerChanges);
+                presentationOwnerChanges,
+                enabled: true);
+            _authoritativeServerPresentationCleanupSystem = new AuthoritativeServerPresentationCleanupSystem(
+                World,
+                gasPresentationEvents,
+                globalPresentationEvents,
+                presentationEventStream,
+                presentationOwnerChanges,
+                clearPresentationFlagsSystem,
+                enabled: false);
             var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
@@ -1038,6 +1099,7 @@ namespace Ludots.Core.Engine
                 presentationStableIds,
                 presentationConfig.VisualSnapshotBufferCapacity);
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
+            var presentationFrameReceiptBuffer = new PresentationFrameReceiptBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(presentationConfig.VisualSnapshotBufferCapacity);
             var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
@@ -1295,6 +1357,49 @@ namespace Ludots.Core.Engine
             // to chainOrderQueue by ResponseChain*Systems, not through the dispatch system.
             // Using -1 prevents accidental match with default OrderTagId == 0.
             // ── OrderBuffer pipeline ──
+            if (networkConfig != null)
+            {
+                networkCommandSchemas = new NetworkCommandSchemaRegistry();
+                for (int i = 0; i < networkConfig.CommandSchemas.Count; i++)
+                {
+                    NetworkCommandSchemaConfig configuredSchema = networkConfig.CommandSchemas[i];
+                    int orderTypeId = RequireRegisteredOrderTypeId(orderTypeRegistry, configuredSchema.OrderTypeKey);
+                    var schema = new NetworkCommandSchema(
+                        orderTypeId,
+                        configuredSchema.TargetKind,
+                        configuredSchema.AllowArg0,
+                        configuredSchema.AllowArg1,
+                        configuredSchema.GetAllowedSubmitModeMask(),
+                        configuredSchema.RequiredTargetPositionAccess);
+                    networkCommandSchemas.Register(in schema);
+                }
+
+                networkCommandSchemas.Freeze();
+                var ingressConfig = new NetworkCommandIngressConfig(
+                    networkConfig.PlayerCapacity,
+                    networkConfig.SimulationTickRateHz,
+                    networkConfig.MaxCommandBatchesPerSecondPerPlayer,
+                    networkConfig.CommandBurstBatchCapacity,
+                    networkConfig.MaxActorsPerCommandBatch,
+                    networkConfig.CommandSequenceHistoryCapacity,
+                    networkConfig.MaxPastTargetTicks,
+                    networkConfig.MaxFutureTargetTicks,
+                    checked(networkConfig.PlayerCapacity * networkConfig.CommandBurstBatchCapacity),
+                    networkConfig.CommandCorrelationCapacity);
+                networkGameplayCommandGate = new NetworkGameplayCommandGate();
+                networkCommandIngress = new NetworkCommandIngress(
+                    in ingressConfig,
+                    World,
+                    networkEntityTable!,
+                    controlDomainQuery,
+                    knowledgeProjectionResolver,
+                    orderTypeRegistry,
+                    networkCommandSchemas,
+                    networkGameplayCommandGate,
+                    orderQueue,
+                    networkCommandAdmissionResults!);
+            }
+
             int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
             int cfgMoveTo = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "moveTo", "constants.orderTypeIds");
             int cfgAttackTarget = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "attackTarget", "constants.orderTypeIds");
@@ -1501,6 +1606,15 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue, runtimeEntitySpawnReceiptQueue);
             SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry, runtimeEntitySpawnReceiptChannels);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
+            if (networkConfig != null)
+            {
+                SetService(CoreServiceKeys.NetworkRuntimeConfig, networkConfig);
+                SetService(CoreServiceKeys.NetworkCommandIngress, networkCommandIngress!);
+                SetService(CoreServiceKeys.NetworkGameplayCommandGate, networkGameplayCommandGate);
+                SetService(CoreServiceKeys.NetworkCommandSchemaRegistry, networkCommandSchemas!);
+                SetService(CoreServiceKeys.NetworkCommandAdmissionResults, networkCommandAdmissionResults!);
+                SetService(CoreServiceKeys.NetworkEntityTable, networkEntityTable!);
+            }
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
             RebuildAiRuntime();
@@ -1572,6 +1686,7 @@ namespace Ludots.Core.Engine
             _roadSplineBuffer = roadSplineBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
+            SetService(CoreServiceKeys.PresentationFrameReceiptBuffer, presentationFrameReceiptBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
             SetService(CoreServiceKeys.PresentationVisualProxyBuffer, visualProxyBuffer);
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
@@ -1623,7 +1738,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             AttributeRegistry.Freeze();
-            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
+            _cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
@@ -1633,15 +1748,15 @@ namespace Ludots.Core.Engine
 
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
-            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
-            RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
-            RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.LocalInput);
+            RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.LocalInput);
+            RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.LocalInput);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
             RegisterSystem(
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
-                SystemGroup.InputCollection);
+                SystemGroup.LocalInput);
             RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
@@ -1655,6 +1770,9 @@ namespace Ludots.Core.Engine
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
+            SetService(
+                CoreServiceKeys.SpatialPartitionMembership,
+                (ISpatialPartitionMembership)_spatialPartitionUpdateSystem);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
             RegisterSystem(
@@ -1665,7 +1783,8 @@ namespace Ludots.Core.Engine
                     visionFogFieldStore,
                     visionResolver,
                     fogKnowledgeProjector,
-                    knowledgeProjectionStore),
+                    knowledgeProjectionStore,
+                    new PlayerOwnedEntityObserverResolver(playerEntityLookup)),
                 SystemGroup.PostMovement);
             RegisterSystem(
                 new UtilityAiDecisionSystem(
@@ -1790,7 +1909,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
-            RegisterSystem(cameraRuntimeSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(_cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
@@ -1806,24 +1925,28 @@ namespace Ludots.Core.Engine
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget, gasDiagnostics, orderAdmissionResults), SystemGroup.EventDispatch);
 
-            // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
-            // and owner-change index consumed by performer owner bindings.
-            // Changed-bit components are cleared only after projection for the completed fixed step.
-            RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
+            // Phase 7.1: Hosts with a presentation consumer project gameplay facts for performer owner bindings.
+            // Replicated clients clear changed bits at the presentation tail. Authoritative servers skip projection
+            // and close all presentation-only transients at this logic-step boundary.
+            RegisterSystem(_gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
-            RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
+            RegisterSystem(_authoritativeServerPresentationCleanupSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
-                presentationTimingDiagnostics);
+                presentationTimingDiagnostics,
+                OnFixedStepStarted);
 
             var responseChainUiState = new ResponseChainUiState();
             SetService(CoreServiceKeys.ResponseChainUiState, responseChainUiState);
 
             // PresentationFrameSetupSystem MUST be the first presentation system
             // It calculates InterpolationAlpha for all visual sync systems
-            var presentationFrameSetup = new PresentationFrameSetupSystem(World, Pacemaker);
+            var presentationFrameSetup = new PresentationFrameSetupSystem(
+                World,
+                Pacemaker,
+                ResolveExternalPresentationInterpolationSource);
             RegisterPresentationSystem(presentationFrameSetup);
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
 
@@ -1876,10 +1999,26 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ChunkDebugPanelPresentationSystem(this, chunkDebugPanelRuntime));
         }
 
+        private void OnFixedStepStarted(float fixedDt)
+        {
+            GameSession.BeginSimulationTick();
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                GetRequiredNetworkRuntime().BeforeAuthoritativeTick(
+                    checked((uint)GameSession.SimulationTicks.ExecutingTick));
+            }
+        }
+
         private void OnFixedStepCompleted(float fixedDt)
         {
             _physics2DController?.AfterPhysicsFixedTick();
             _gasController?.AfterFixedTick();
+            GameSession.CommitFixedUpdate();
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                GetRequiredNetworkRuntime().AfterAuthoritativeCommit(
+                    checked((uint)GameSession.SimulationTicks.CommittedTick));
+            }
         }
 
         private void ApplyBuiltInTimeFlowScales()
@@ -2069,6 +2208,30 @@ namespace Ludots.Core.Engine
 
         public void LoadMap(MapLoadRequest request)
         {
+            bool isNetworkStartupMapLoad = IsNetworkStartupMapLoad(request.MapId);
+            if (_networkStartupFailure != null && isNetworkStartupMapLoad)
+            {
+                ThrowNetworkStartupAlreadyFailed();
+            }
+
+            if (isNetworkStartupMapLoad)
+            {
+                _networkStartupMapLoadObserved = true;
+            }
+
+            try
+            {
+                LoadMapCore(request);
+            }
+            catch (Exception ex)
+            {
+                RecordNetworkStartupFailure(request.MapId, ex);
+                throw;
+            }
+        }
+
+        private void LoadMapCore(MapLoadRequest request)
+        {
             string mapId = request.MapIdValue;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Loading Map: {mapId}");
             var mid = request.MapId;
@@ -2154,6 +2317,7 @@ namespace Ludots.Core.Engine
             else
             {
                 Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load map {mapId}");
+                ThrowIfNetworkStartupMapLoadFailed(mid, $"Map configuration '{mapId}' could not be loaded.");
             }
         }
 
@@ -2386,6 +2550,15 @@ namespace Ludots.Core.Engine
 
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                GameSession.Camera.ResetVirtualCameras();
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Skipped DefaultCamera for map '{mapConfig?.Id ?? "<unknown>"}' because the authoritative server has no local presentation camera.");
+                return;
+            }
+
             if (ShouldSkipDefaultCameraOnLoad(mapConfig))
             {
                 Diagnostics.Log.Info(
@@ -2445,6 +2618,20 @@ namespace Ludots.Core.Engine
             }
 
             EnsureCameraRuntimeConfigured();
+            if (!GameSession.Camera.IsRuntimeConfigured)
+            {
+                if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.ReplicatedClient)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' requires local camera runtime services, but CoreServiceKeys.ViewController is not bound.");
+                }
+
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Skipped DefaultCamera activation for map '{mapConfig.Id}' because this host provides no local camera services.");
+                return;
+            }
+
             GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
 
             var state = GameSession.Camera.State;
@@ -2649,6 +2836,8 @@ namespace Ludots.Core.Engine
                     }
                 }
             }
+
+            session.TerrainPresentation = ResolvedTerrainPresentation.Resolve(session);
         }
 
         private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
@@ -3240,7 +3429,9 @@ namespace Ludots.Core.Engine
                 throw new InvalidOperationException("StartupMapId is required.");
             }
 
-            MapLaunchContext? launchContext = MergedConfig!.StartupLocalPlayerId > 0
+            MapLaunchContext? launchContext =
+                GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.Standalone &&
+                MergedConfig!.StartupLocalPlayerId > 0
                 ? MapLaunchContext.Create(MergedConfig.StartupLocalPlayerId)
                 : null;
             LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
@@ -3250,6 +3441,12 @@ namespace Ludots.Core.Engine
 
         public void Start()
         {
+            if (_networkStartupFailure != null)
+            {
+                ThrowNetworkStartupAlreadyFailed();
+            }
+
+            ValidateNetworkRuntimeBeforeStart();
             _isRunning = true;
             Time.TotalTime = 0;
             Time.FixedTotalTime = 0;
@@ -3257,14 +3454,237 @@ namespace Ludots.Core.Engine
             if (Pacemaker is RealtimePacemaker realtime) realtime.Reset();
 
             var ctx = CreateContext();
-
-            Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
-            CompleteLifecycleEvent(TriggerManager.FireEventAsync(GameEvents.GameStart, ctx));
+            try
+            {
+                Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
+                CompleteLifecycleEvent(TriggerManager.FireEventAsync(GameEvents.GameStart, ctx));
+                _gameStartCompleted = true;
+                TryActivateNetworkRuntime();
+            }
+            catch
+            {
+                _isRunning = false;
+                throw;
+            }
         }
 
         public void Stop()
         {
             _isRunning = false;
+        }
+
+        public void ConfigureNetworkRuntime(NetworkProcessRole role, INetworkRuntimePort runtime)
+        {
+            if (role == NetworkProcessRole.Standalone)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(role),
+                    "A network runtime requires an authoritative server or replicated client role.");
+            }
+
+            ArgumentNullException.ThrowIfNull(runtime);
+            if (runtime.Role != role)
+            {
+                throw new ArgumentException(
+                    $"Network runtime role {runtime.Role} does not match requested process role {role}.",
+                    nameof(runtime));
+            }
+
+            if (MergedConfig?.Networking == null)
+            {
+                throw new InvalidOperationException(
+                    "Cannot configure a network runtime without game.json networking configuration.");
+            }
+
+            if (TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort existing) &&
+                !ReferenceEquals(existing, runtime))
+            {
+                throw new InvalidOperationException(
+                    "A different network runtime is already configured for this engine.");
+            }
+
+            SetService(CoreServiceKeys.NetworkProcessRole, role);
+            SetService(CoreServiceKeys.NetworkRuntimePort, runtime);
+            bool authoritativeServer = role == NetworkProcessRole.AuthoritativeServer;
+            _gameplayPresentationProjectionSystem.SetEnabled(!authoritativeServer);
+            _authoritativeServerPresentationCleanupSystem.SetEnabled(authoritativeServer);
+        }
+
+        private void TryActivateNetworkRuntime()
+        {
+            NetworkProcessRole role = GetService(CoreServiceKeys.NetworkProcessRole);
+            if (role == NetworkProcessRole.Standalone || !_isRunning || !_gameStartCompleted || _networkRuntimeReady)
+            {
+                return;
+            }
+
+            if (_networkRuntimeActivating)
+            {
+                return;
+            }
+
+            if (_networkStartupFailure != null)
+            {
+                ThrowNetworkStartupAlreadyFailed();
+            }
+
+            string? startupMapIdValue = MergedConfig?.StartupMapId;
+            if (string.IsNullOrWhiteSpace(startupMapIdValue))
+            {
+                return;
+            }
+
+            var startupMapId = new MapId(startupMapIdValue);
+            MapSession? mapSession = MapSessions?.GetSession(startupMapId);
+            if (mapSession == null)
+            {
+                if (_networkStartupMapLoadObserved)
+                {
+                    var exception = new InvalidOperationException(
+                        $"Network startup map '{startupMapId.Value}' is no longer available before network runtime activation.");
+                    RecordNetworkStartupFailure(startupMapId, exception);
+                    throw exception;
+                }
+
+                return;
+            }
+
+            if (CurrentMapSession == null || CurrentMapSession.MapId != startupMapId)
+            {
+                var exception = new InvalidOperationException(
+                    $"Network startup map '{startupMapId.Value}' lost focus before network runtime activation.");
+                RecordNetworkStartupFailure(startupMapId, exception);
+                throw exception;
+            }
+
+            MapLoadStatus startupMapLoadStatus = GetMapLoadStatus(mapSession.MapId);
+            if (!startupMapLoadStatus.Succeeded)
+            {
+                if (startupMapLoadStatus.Failed)
+                {
+                    ThrowIfNetworkStartupMapLoadFailed(
+                        mapSession.MapId,
+                        startupMapLoadStatus.ErrorMessage);
+                }
+
+                return;
+            }
+
+            if (_networkRuntimeActivationAttempted)
+            {
+                throw new InvalidOperationException(
+                    "Network runtime activation already failed; the process cannot retry frozen schema composition.");
+            }
+
+            _networkRuntimeActivationAttempted = true;
+            _networkRuntimeActivating = true;
+            try
+            {
+                GetRequiredNetworkRuntime().Activate();
+                Diagnostics.Log.Info(in LogChannels.Engine, "Firing NetworkRuntimeReady event...");
+                CompleteLifecycleEvent(
+                    TriggerManager.FireEventAsync(
+                        GameEvents.NetworkRuntimeReady,
+                        CreateMapEventContext(mapSession)));
+                _networkRuntimeReady = true;
+            }
+            catch (Exception ex)
+            {
+                RecordNetworkStartupFailure(mapSession.MapId, ex);
+                throw;
+            }
+            finally
+            {
+                _networkRuntimeActivating = false;
+            }
+        }
+
+        private bool IsNetworkStartupMapLoad(MapId mapId)
+        {
+            return !_networkRuntimeReady &&
+                   GetService(CoreServiceKeys.NetworkProcessRole) != NetworkProcessRole.Standalone &&
+                   string.Equals(
+                       mapId.Value,
+                       MergedConfig?.StartupMapId,
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void RecordNetworkStartupFailure(MapId mapId, Exception exception)
+        {
+            if (!IsNetworkStartupMapLoad(mapId))
+            {
+                return;
+            }
+
+            _networkStartupFailure ??= exception;
+            _isRunning = false;
+        }
+
+        private void ThrowIfNetworkStartupMapLoadFailed(MapId mapId, string? errorMessage)
+        {
+            if (!IsNetworkStartupMapLoad(mapId))
+            {
+                return;
+            }
+
+            string detail = string.IsNullOrWhiteSpace(errorMessage)
+                ? "The map load completion gate returned a failure without an error message."
+                : errorMessage;
+            var exception = new InvalidOperationException(
+                $"Network startup map '{mapId.Value}' failed to load: {detail}");
+            RecordNetworkStartupFailure(mapId, exception);
+            throw exception;
+        }
+
+        private void ThrowNetworkStartupAlreadyFailed()
+        {
+            throw new InvalidOperationException(
+                "Network startup previously failed and cannot be restarted on the same engine instance.",
+                _networkStartupFailure);
+        }
+
+        private void ValidateNetworkRuntimeBeforeStart()
+        {
+            bool networkingConfigured = MergedConfig?.Networking != null;
+            bool hasRuntime = TryGetService(
+                CoreServiceKeys.NetworkRuntimePort,
+                out INetworkRuntimePort runtime);
+            NetworkProcessRole role = GetService(CoreServiceKeys.NetworkProcessRole);
+            if (!networkingConfigured)
+            {
+                if (hasRuntime || role != NetworkProcessRole.Standalone)
+                {
+                    throw new InvalidOperationException(
+                        "A network process role was configured without game.json networking configuration.");
+                }
+
+                return;
+            }
+
+            if (!hasRuntime || role == NetworkProcessRole.Standalone)
+            {
+                throw new InvalidOperationException(
+                    "game.json networking is configured, but the host did not install an explicit authoritative server or replicated client runtime.");
+            }
+
+            if (runtime.Role != role)
+            {
+                throw new InvalidOperationException(
+                    $"Configured network runtime role {runtime.Role} does not match engine process role {role}.");
+            }
+        }
+
+        private INetworkRuntimePort GetRequiredNetworkRuntime()
+        {
+            if (!TryGetService(
+                    CoreServiceKeys.NetworkRuntimePort,
+                    out INetworkRuntimePort runtime))
+            {
+                throw new InvalidOperationException(
+                    "The configured network process role has no runtime port.");
+            }
+
+            return runtime;
         }
 
         private void CompleteLifecycleEvent(System.Threading.Tasks.Task task)
@@ -3291,6 +3711,12 @@ namespace Ludots.Core.Engine
             }
 
             Stop();
+            if (TryGetService(CoreServiceKeys.NetworkRuntimePort, out INetworkRuntimePort networkRuntime))
+            {
+                networkRuntime.Dispose();
+                RemoveService(CoreServiceKeys.NetworkRuntimePort);
+            }
+
             if (_pendingMapLoads.Count > 0)
             {
                 var pendingMapIds = new List<MapId>(_pendingMapLoads.Keys);
@@ -3330,9 +3756,16 @@ namespace Ludots.Core.Engine
             }
 
             _engineServices?.LegacyStore.Clear();
+            _gameStartCompleted = false;
+            _networkRuntimeActivationAttempted = false;
+            _networkRuntimeActivating = false;
+            _networkRuntimeReady = false;
+            _networkStartupMapLoadObserved = false;
+            _networkStartupFailure = null;
             _systemGroups?.Clear();
             _presentationSystems?.Clear();
             _inputRuntimeSystem = null;
+            _cameraRuntimeSystem = null;
             _primitiveDrawBuffer = null;
             _visualSnapshotBuffer = null;
             _visualProxyBuffer = null;
@@ -3374,8 +3807,29 @@ namespace Ludots.Core.Engine
             _inputRuntimeSystem?.Update(dt);
             ProcessPendingMapLoads();
 
+            NetworkProcessRole networkRole = GetService(CoreServiceKeys.NetworkProcessRole);
+            INetworkRuntimePort? networkRuntime = null;
+            if (networkRole != NetworkProcessRole.Standalone)
+            {
+                if (!_networkRuntimeReady)
+                {
+                    presentationTiming?.ObserveTotalTick(
+                        (System.Diagnostics.Stopwatch.GetTimestamp() - tickStart) * 1000d /
+                        System.Diagnostics.Stopwatch.Frequency);
+                    return;
+                }
+
+                networkRuntime = GetRequiredNetworkRuntime();
+                networkRuntime.PumpTransport();
+            }
+
             // 1. Simulation Loop (GAS, Physics, AI) - Controlled by Pacemaker
-            if (!_simulationBudgetFused)
+            if (networkRole == NetworkProcessRole.ReplicatedClient)
+            {
+                networkRuntime!.PumpReplicatedClient(dt);
+                UpdateReplicatedClientLocalInput(dt);
+            }
+            else if (!_simulationBudgetFused)
             {
                 long simulationStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 int tickBefore = GameSession.CurrentTick;
@@ -3414,11 +3868,47 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            // 2. Visual Loop (Rendering, UI, Animation) - Always runs
+            if (networkRole == NetworkProcessRole.AuthoritativeServer)
+            {
+                presentationTiming?.ObserveTotalTick(
+                    (System.Diagnostics.Stopwatch.GetTimestamp() - tickStart) * 1000d /
+                    System.Diagnostics.Stopwatch.Frequency);
+                return;
+            }
+
+            // 2. Visual Loop (Rendering, UI, Animation) - standalone and replicated clients only.
             long presentationStart = System.Diagnostics.Stopwatch.GetTimestamp();
             Update(dt);
             presentationTiming?.ObservePresentation((System.Diagnostics.Stopwatch.GetTimestamp() - presentationStart) * 1000d / System.Diagnostics.Stopwatch.Frequency);
             presentationTiming?.ObserveTotalTick((System.Diagnostics.Stopwatch.GetTimestamp() - tickStart) * 1000d / System.Diagnostics.Stopwatch.Frequency);
+        }
+
+        private void UpdateReplicatedClientLocalInput(float dt)
+        {
+            if (!_systemGroups.TryGetValue(SystemGroup.LocalInput, out List<ISystem<float>>? systems))
+            {
+                throw new InvalidOperationException("Replicated client requires the LocalInput system group.");
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                systems[i].Update(dt);
+            }
+
+            _cameraRuntimeSystem?.Update(dt);
+        }
+
+        private IPresentationInterpolationSource? ResolveExternalPresentationInterpolationSource()
+        {
+            if (GetService(CoreServiceKeys.NetworkProcessRole) != NetworkProcessRole.ReplicatedClient)
+            {
+                return null;
+            }
+
+            INetworkRuntimePort runtime = GetRequiredNetworkRuntime();
+            return runtime as IPresentationInterpolationSource
+                ?? throw new InvalidOperationException(
+                    "Replicated client network runtime must provide the presentation interpolation clock.");
         }
 
         private void Update(float dt)

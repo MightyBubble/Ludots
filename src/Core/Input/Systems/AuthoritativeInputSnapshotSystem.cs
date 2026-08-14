@@ -5,7 +5,7 @@ using Ludots.Core.Input.Runtime;
 namespace Ludots.Core.Input.Systems
 {
     /// <summary>
-    /// Freezes one authoritative input snapshot at the start of each fixed-step InputCollection phase.
+    /// Freezes one input snapshot at the start of the local-input phase.
     /// </summary>
     public sealed class AuthoritativeInputSnapshotSystem : ISystem<float>
     {

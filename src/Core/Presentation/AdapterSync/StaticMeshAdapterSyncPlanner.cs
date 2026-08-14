@@ -341,6 +341,7 @@ namespace Ludots.Core.Presentation.AdapterSync
                 && a.Rotation.Equals(b.Rotation)
                 && a.Scale.Equals(b.Scale)
                 && a.Color.Equals(b.Color)
+                && a.OwnerStableId == b.OwnerStableId
                 && a.StableId == b.StableId
                 && a.MaterialId == b.MaterialId
                 && a.TemplateId == b.TemplateId

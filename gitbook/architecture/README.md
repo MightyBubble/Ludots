@@ -5,6 +5,7 @@
 ## 核心主题
 
 - [运行时总览](runtime-overview.md)
+- [服务器权威联机运行时](authoritative-multiplayer-runtime.md)
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [UI 面板作者形态（四种表面）](ui-panel-authoring-form.md)
 - [Mod 架构](mod-architecture.md)

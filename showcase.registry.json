@@ -1392,6 +1392,71 @@
       ]
     },
     {
+      "id": "rts_multiplayer_frontline_gameplay",
+      "path": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineMod",
+      "projectPath": "RtsMultiplayerFrontlineMod.csproj",
+      "title": "《双人前线》单机练习",
+      "summary": "复用《双人前线》正式玩法规则的本地练习入口，用于熟悉采集、生产、移动与战斗操作。",
+      "tier": "T2",
+      "category": "demo",
+      "binding": "rts_multiplayer_frontline",
+      "preset": "rts_multiplayer_frontline_raylib",
+      "docsPath": "gitbook/architecture/rts-multiplayer-showcase.md",
+      "readmePath": null,
+      "acceptanceTest": "RtsMultiplayerFrontlinePlayableAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "experimental",
+      "tags": [
+        "rts",
+        "practice"
+      ]
+    },
+    {
+      "id": "rts_multiplayer_frontline",
+      "path": "mods/showcases/rts_multiplayer_frontline/RtsMultiplayerFrontlineNetworkedMod",
+      "projectPath": "RtsMultiplayerFrontlineNetworkedMod.csproj",
+      "title": "《双人前线》双人 RTS",
+      "summary": "两名玩家通过独立客户端加入同一权威对局，完成采集、生产、推进、交战与胜负结算的最小 RTS Showcase。",
+      "tier": "T1",
+      "category": "demo",
+      "binding": "rts_multiplayer_frontline_networked",
+      "preset": "rts_multiplayer_frontline_networked_raylib",
+      "docsPath": "gitbook/architecture/rts-multiplayer-showcase.md",
+      "readmePath": "gitbook/architecture/rts-multiplayer-three-process-acceptance.md",
+      "acceptanceTest": "scripts/acceptance/run-rts-multiplayer-frontline-three-process.ps1",
+      "artifactDir": "artifacts/acceptance/rts-multiplayer-frontline-three-process",
+      "screenshot": null,
+      "status": "experimental",
+      "tags": [
+        "rts",
+        "multiplayer",
+        "server-authoritative"
+      ]
+    },
+    {
+      "id": "rts_multiplayer_frontline_three_process_uat",
+      "path": "mods/fixtures/rts_multiplayer_frontline_three_process/RtsMultiplayerFrontlineThreeProcessAcceptanceMod",
+      "projectPath": "RtsMultiplayerFrontlineThreeProcessAcceptanceMod.csproj",
+      "title": "《双人前线》三进程验收夹具",
+      "summary": "驱动一个独立权威服务器和两个独立客户端完成采集、训练、推进、交战与结算，并产出可见画面证据。",
+      "tier": "T2",
+      "category": "fixture",
+      "binding": "rts_multiplayer_frontline_three_process_uat",
+      "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
+      "docsPath": "gitbook/architecture/rts-multiplayer-three-process-acceptance.md",
+      "readmePath": null,
+      "acceptanceTest": "scripts/acceptance/run-rts-multiplayer-frontline-three-process.ps1",
+      "artifactDir": "artifacts/acceptance/rts-multiplayer-frontline-three-process",
+      "screenshot": null,
+      "status": "experimental",
+      "tags": [
+        "rts",
+        "multiplayer",
+        "uat"
+      ]
+    },
+    {
       "id": "rts_fourx_like",
       "path": "mods/showcases/rts_fourx_like/RtsFourXLikeShowcaseMod",
       "projectPath": "RtsFourXLikeShowcaseMod.csproj",

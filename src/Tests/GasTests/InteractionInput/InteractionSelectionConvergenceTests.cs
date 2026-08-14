@@ -22,6 +22,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
@@ -317,6 +318,7 @@ namespace Ludots.Tests.GAS
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -381,7 +383,8 @@ namespace Ludots.Tests.GAS
             That(orders[0].Actor, Is.EqualTo(first));
             That(orders[1].Actor, Is.EqualTo(second));
             That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(260f, 0f, 640f)));
-            That(orders[1].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(380f, 0f, 640f)));
+            // spacing 120 + 整数移动安全边距 1cm：右侧槽位向外让出 1cm，保持间距 > 120。
+            That(orders[1].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(381f, 0f, 640f)));
         }
 
         [Test]
@@ -703,6 +706,41 @@ namespace Ludots.Tests.GAS
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
             AssertCommandSource(globals, local, second);
+        }
+
+        [Test]
+        public void CommandSourceAcquisitionSystem_DestroyedMember_IsPrunedBeforeTheNextInputFrame()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var destroyed = world.Create();
+            var survivor = world.Create();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            CreateCommandSourceRuntime(world, globals);
+            SeedCommandSource(world, globals, local, destroyed, survivor);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+
+            world.Destroy(destroyed);
+            system.Update(0f);
+
+            AssertCommandSource(globals, local, survivor);
+            That(
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    world,
+                    globals,
+                    local,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity primary),
+                Is.True);
+            That(primary, Is.EqualTo(survivor));
         }
 
         [Test]
@@ -1134,6 +1172,79 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             AssertCommandSource(globals, local, entity);
+        }
+
+        [Test]
+        public void CommandSourceAcquisitionSystem_ConfirmReleaseBeforeCommandPress_UsesConfirmReleasePointer()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
+            var authoritativeInput = new FrozenInputActionReader();
+            var pointerButtonAccumulator = new AuthoritativePointerButtonAccumulator();
+            var pointerButtons = new AuthoritativePointerButtonSnapshot();
+            var local = world.Create();
+            var harvester = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                new CullState { IsVisible = true },
+                new CommandSourceSelectableTag());
+            _ = world.Create(
+                WorldPositionCm.FromCm(2600, 1600),
+                new VisualTransform { Position = new Vector3(26f, 0f, 16f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                new CullState { IsVisible = true },
+                new CommandSourceSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = pointerButtons,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            CreateCommandSourceRuntime(world, globals);
+            var inputRuntime = new InputRuntimeSystem(globals, authoritativeInputAccumulator, pointerButtonAccumulator);
+            var selectionSystem = CreateCommandSourceAcquisitionSystem(world, globals, local);
+            bool callbackInvoked = false;
+            WorldCmInt2 callbackWorldCm = default;
+            Entity callbackEntity = Entity.Null;
+            selectionSystem.OnEntityAcquired = (worldCm, entity) =>
+            {
+                callbackInvoked = true;
+                callbackWorldCm = worldCm;
+                callbackEntity = entity;
+            };
+
+            input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
+            input.InjectButtonPress(InteractionActionBindings.DefaultConfirmActionId);
+            inputRuntime.Update(0f);
+
+            input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
+            input.InjectButtonRelease(InteractionActionBindings.DefaultConfirmActionId);
+            inputRuntime.Update(0f);
+
+            input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
+            input.InjectButtonPress(InteractionActionBindings.DefaultCommandActionId);
+            inputRuntime.Update(0f);
+
+            authoritativeInputAccumulator.BuildTickSnapshot(authoritativeInput);
+            pointerButtonAccumulator.BuildTickSnapshot(pointerButtons);
+            selectionSystem.Update(0f);
+
+            AssertCommandSource(globals, local, harvester);
+            Assert.Multiple(() =>
+            {
+                That(callbackInvoked, Is.True);
+                That(callbackEntity, Is.EqualTo(harvester));
+                That(callbackWorldCm.X, Is.EqualTo(1600));
+                That(callbackWorldCm.Y, Is.EqualTo(1200));
+            });
         }
 
         [Test]

@@ -98,7 +98,8 @@ namespace Ludots.Core.ParticipantVisibility
                 relationshipMask,
                 tagMask,
                 spec.ExpiryTick,
-                spec.ConfidencePermille);
+                spec.ConfidencePermille,
+                spec.OwnerMatchPolicy);
         }
 
         private static Entity ResolveViewer(

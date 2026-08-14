@@ -9,6 +9,8 @@ namespace Ludots.Core.Vision
     {
         private readonly KnowledgeProjectionStore _knowledge;
         private readonly ConcealmentRule _concealment;
+        private FogProjectionPolicy _projectionPolicy = FogProjectionPolicy.Default;
+        private bool _projectionPolicyConfigured;
 
         public FogKnowledgeProjector(
             KnowledgeProjectionStore knowledge,
@@ -16,6 +18,41 @@ namespace Ludots.Core.Vision
         {
             _knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
             _concealment = new ConcealmentRule(concealment);
+        }
+
+        public bool IsProjectionPolicyConfigured => _projectionPolicyConfigured;
+
+        public FogProjectionPolicy ProjectionPolicy => _projectionPolicy;
+
+        public void ConfigureProjectionPolicy(in FogProjectionPolicy policy)
+        {
+            if (_projectionPolicyConfigured)
+            {
+                throw new InvalidOperationException("Fog knowledge projection policy was configured more than once.");
+            }
+
+            _projectionPolicy = policy;
+            _projectionPolicyConfigured = true;
+        }
+
+        public int Project(
+            Entity viewer,
+            Entity source,
+            WorldCmInt2 viewerPosition,
+            FogField field,
+            ReadOnlySpan<FogOccupant> occupants,
+            int currentTick,
+            byte detectionStrength = 0)
+        {
+            return Project(
+                viewer,
+                source,
+                viewerPosition,
+                field,
+                occupants,
+                in _projectionPolicy,
+                currentTick,
+                detectionStrength);
         }
 
         public int Project(
@@ -80,6 +117,12 @@ namespace Ludots.Core.Vision
                 else if (visibility == CellVisibility.Explored)
                 {
                     record = knownRecord;
+                }
+                else if (_knowledge.TryGet(viewer, occupant.Entity, currentTick, out KnowledgeDisclosureRecord previous) &&
+                         previous.Source == source &&
+                         previous.Presence == KnowledgePresence.LiveVisible)
+                {
+                    record = hiddenRecord;
                 }
                 else
                 {
