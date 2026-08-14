@@ -1,0 +1,26 @@
+diff --git a/mods/showcases/fourx_demo/FourXDemoMod/Triggers/FourXSetupOnMapLoadedTrigger.cs b/mods/showcases/fourx_demo/FourXDemoMod/Triggers/FourXSetupOnMapLoadedTrigger.cs
+index 6498b0e603..7f2c1d8f27 100644
+--- a/mods/showcases/fourx_demo/FourXDemoMod/Triggers/FourXSetupOnMapLoadedTrigger.cs
++++ b/mods/showcases/fourx_demo/FourXDemoMod/Triggers/FourXSetupOnMapLoadedTrigger.cs
+@@ -43,9 +43,7 @@ namespace FourXDemoMod.Triggers
+             EnsureTagComponents(world, entities.Governor);
+ 
+             int canColonize = TagRegistry.Register("Status.CanColonize");
+-            ref var tags = ref world.Get<GameplayTagContainer>(entities.Governor);
+-            ref var counts = ref world.Get<TagCountContainer>(entities.Governor);
+-            tagOps.AddTag(ref tags, ref counts, canColonize);
++            tagOps.AddTag(world, entities.Governor, canColonize);
+             SeedRelationshipEdges(engine, world, entities);
+ 
+             return Task.CompletedTask;
+@@ -62,9 +60,7 @@ namespace FourXDemoMod.Triggers
+ 
+         private static void EnsureTagComponents(World world, Entity e)
+         {
+-            if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
+-            if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
+-            if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
++            TagStateInstaller.EnsureInstalled(world, e);
+         }
+ 
+         private static (Entity Governor, Entity Site, Entity City, Entity Camp, Entity Caravan) FindFourXEntities(World world)

@@ -1,0 +1,48 @@
+diff --git a/src/Core/Gameplay/GAS/Orders/OrderTypeConfigLoader.cs b/src/Core/Gameplay/GAS/Orders/OrderTypeConfigLoader.cs
+index 61817c050c..049a1f953e 100644
+--- a/src/Core/Gameplay/GAS/Orders/OrderTypeConfigLoader.cs
++++ b/src/Core/Gameplay/GAS/Orders/OrderTypeConfigLoader.cs
+@@ -153,19 +153,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
+                 throw new InvalidOperationException($"Order type '{key}' in '{path}' must define a positive orderTypeId.");
+             }
+ 
++            int maxQueueSize = RequireQueueSize(json.MaxQueueSize, key, path, "maxQueueSize");
++            int queuedModeMaxSize = RequireQueueSize(json.QueuedModeMaxSize, key, path, "queuedModeMaxSize");
++
+             return new OrderTypeConfig
+             {
+                 Key = key,
+                 OrderTypeId = orderTypeId,
+                 Label = RequireString(json.Label, key, path, "label"),
+-                MaxQueueSize = RequireInt(json.MaxQueueSize, key, path, "maxQueueSize"),
++                MaxQueueSize = maxQueueSize,
+                 SameTypePolicy = ParseSameTypePolicy(RequireString(json.SameTypePolicy, key, path, "sameTypePolicy")),
+                 QueueFullPolicy = ParseQueueFullPolicy(RequireString(json.QueueFullPolicy, key, path, "queueFullPolicy")),
+                 Priority = RequireInt(json.Priority, key, path, "priority"),
+                 BufferWindowMs = RequireInt(json.BufferWindowMs, key, path, "bufferWindowMs"),
+                 PendingBufferWindowMs = RequireInt(json.PendingBufferWindowMs, key, path, "pendingBufferWindowMs"),
+                 CanInterruptSelf = RequireBool(json.CanInterruptSelf, key, path, "canInterruptSelf"),
+-                QueuedModeMaxSize = RequireInt(json.QueuedModeMaxSize, key, path, "queuedModeMaxSize"),
++                QueuedModeMaxSize = queuedModeMaxSize,
+                 AllowQueuedMode = RequireBool(json.AllowQueuedMode, key, path, "allowQueuedMode"),
+                 ClearQueueOnActivate = RequireBool(json.ClearQueueOnActivate, key, path, "clearQueueOnActivate"),
+                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
+@@ -229,6 +232,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
+             return value.Value;
+         }
+ 
++        private static int RequireQueueSize(int? value, string key, string path, string fieldName)
++        {
++            int size = RequireInt(value, key, path, fieldName);
++            if (size < 0 || size > Ludots.Core.Gameplay.GAS.Components.OrderBuffer.MAX_QUEUED_ORDERS)
++            {
++                throw new InvalidOperationException(
++                    $"Order type '{key}' in '{path}' has {fieldName}={size}; expected 0..{Ludots.Core.Gameplay.GAS.Components.OrderBuffer.MAX_QUEUED_ORDERS}.");
++            }
++
++            return size;
++        }
++
+         private static bool RequireBool(bool? value, string key, string path, string fieldName)
+         {
+             if (!value.HasValue)

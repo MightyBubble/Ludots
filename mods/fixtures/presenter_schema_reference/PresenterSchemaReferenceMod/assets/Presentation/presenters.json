@@ -1,0 +1,545 @@
+[
+  {
+    "id": "ref_base_definition",
+    "defaultColor": [
+      1,
+      0.8,
+      0.2,
+      1
+    ],
+    "defaultLifetime": 5,
+    "defaultFontSize": 18,
+    "positionOffset": [
+      0,
+      1.5,
+      0
+    ],
+    "positionYDriftPerSecond": 0.3,
+    "alphaFadeOverLifetime": true,
+    "visibility": {
+      "inline": "None"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "activationCondition": {
+          "inline": "None",
+          "graphProgramId": 0
+        },
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "ref_mesh_cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ],
+          "scaleParamKey": "presenter_schema_reference.asset.scale",
+          "colorParamKey": "presenter_schema_reference.asset.color",
+          "materialParamKey": "presenter_schema_reference.asset.material",
+          "assetSwapParamKey": "presenter_schema_reference.asset.swap",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "cube"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "sphere"
+            }
+          ],
+          "visibilityParamKey": "presenter_schema_reference.asset.visibility"
+        }
+      },
+      {
+        "slot": "attribute",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "presenter_schema_reference.attribute.health.ratio",
+          "mode": "AttributeRatio",
+          "thresholds": [
+            {
+              "threshold": 0.5,
+              "outputParamKey": "presenter_schema_reference.attribute.health.thresholdState",
+              "outputValue": 1
+            },
+            {
+              "threshold": 0,
+              "outputParamKey": "presenter_schema_reference.attribute.health.thresholdState",
+              "outputValue": 2
+            }
+          ]
+        }
+      },
+      {
+        "slot": "tag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "Tag.Burning",
+          "targetParamKey": "presenter_schema_reference.tag.burning.active",
+          "invertLogic": false
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "ref_anim_ctrl",
+          "animationProfileId": "ref_anim_profile",
+          "speedParamKey": "presenter_schema_reference.animator.speed",
+          "stateParamKey": "presenter_schema_reference.animator.state"
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "boneId": 1,
+          "offset": [
+            0,
+            0.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": true
+        }
+      },
+      {
+        "slot": "sound",
+        "kind": "Sound",
+        "activeByDefault": true,
+        "sound": {
+          "soundAssetId": "ref_sound_hit",
+          "loop": true,
+          "volume": 0.8,
+          "volumeParamKey": "presenter_schema_reference.sound.volume"
+        }
+      },
+      {
+        "slot": "material",
+        "kind": "Material",
+        "activeByDefault": true,
+        "material": {
+          "baseMaterialId": "ref_mat_stone",
+          "materialSwapParamKey": "presenter_schema_reference.material.swapState",
+          "swapTable": [
+            {
+              "paramValue": 1,
+              "materialId": "ref_mat_brick"
+            },
+            {
+              "paramValue": 2,
+              "materialId": "ref_mat_wood"
+            }
+          ]
+        }
+      },
+      {
+        "slot": "spline",
+        "kind": "Spline",
+        "activeByDefault": true,
+        "spline": {
+          "splineAssetId": "ref_spline_path",
+          "usage": "Patrol",
+          "widthParamKey": "presenter_schema_reference.spline.width",
+          "colorParamKey": "presenter_schema_reference.spline.color",
+          "speedParamKey": "presenter_schema_reference.spline.speed",
+          "progressParamKey": "presenter_schema_reference.spline.progress",
+          "loop": true,
+          "pingPong": false,
+          "waypointEventId": 42
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "presenter_schema_reference.asset.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "paramKey": "presenter_schema_reference.attribute.health.thresholdState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "presenter_schema_reference.animator.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "presenter_schema_reference.attribute.health.ratio",
+        "source": "attributeRatio",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "presenter_schema_reference.tag.burning.active",
+        "source": "constant",
+        "constantValue": 0
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": true
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "presenter_schema_reference.material.swapState",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": false
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "presenter_schema_reference.material.swapState",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_child_inherited",
+    "extends": "ref_base_definition",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "ref_mesh_sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            2,
+            0,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 0.5
+      }
+    ]
+  },
+  {
+    "id": "ref_skinned_mesh",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "ref_knight",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_decal",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "ref_decal_blood",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.01,
+            0
+          ],
+          "localScale": [
+            2,
+            2,
+            2
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_vfx",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "ref_vfx_smoke",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            3,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_sound_standalone",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Sound",
+          "assetId": "ref_sound_ambient",
+          "renderPath": "None",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_spline_visual",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "ref_spline_river",
+          "renderPath": "None",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_world_hud",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2.5,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_world_text",
+    "worldTextMode": "None",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "ref_text_damage",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ref_ground_overlay",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            5,
+            5,
+            1
+          ],
+          "colorParamKey": "presenter_schema_reference.groundOverlay.color"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter_schema_reference.groundOverlay.color",
+        "lane": "Vector",
+        "vectorValue": [
+          0.2,
+          0.8,
+          0.2,
+          0.5
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ref_composite_root",
+    "children": [
+      {
+        "definitionId": "ref_child_inherited",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ref_skinned_mesh",
+        "scopeTag": "character",
+        "paramOverrides": [
+          {
+            "paramKey": "presenter_schema_reference.asset.scale",
+            "lane": "Float",
+            "floatValue": 2
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": true
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ref_vfx",
+          "scopeSource": "Fixed",
+          "scopeTag": "working"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": false
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "Fixed",
+          "scopeTag": "working"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Burning",
+          "gained": true
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Burning",
+          "gained": false
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "presenter_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "presenter_schema_reference.material.swapState",
+        "lane": "Float",
+        "floatValue": 0
+      }
+    ]
+  }
+]

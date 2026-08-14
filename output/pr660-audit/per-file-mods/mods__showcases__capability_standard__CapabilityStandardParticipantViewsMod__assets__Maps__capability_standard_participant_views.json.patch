@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod/assets/Maps/capability_standard_participant_views.json b/mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod/assets/Maps/capability_standard_participant_views.json
+index ccbff952cc..428b9f9688 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod/assets/Maps/capability_standard_participant_views.json
++++ b/mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod/assets/Maps/capability_standard_participant_views.json
+@@ -213,7 +213,8 @@
+       "WidthInMacroTiles": 250,
+       "HeightInMacroTiles": 250,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 64
+     }
+   ],
+   "Entities": [

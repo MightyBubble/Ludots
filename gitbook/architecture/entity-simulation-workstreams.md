@@ -132,7 +132,7 @@
 
 - 单屏可展示大规模 crowd 移动与局部碰撞
 - 上层 Formation Showcase 可作为明确逐成员目标的一个消费者，但不能改变 Core 合同
-- 不把 performer 混入逻辑实体路径
+- 不把 presenter 混入逻辑实体路径
 
 ### 5.7 阶段成果
 

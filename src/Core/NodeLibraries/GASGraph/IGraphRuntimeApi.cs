@@ -296,6 +296,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph lifecycle transaction runtime is not available.");
         }
 
+        void BeginLifecycleConsumeSource()
+        {
+            throw new InvalidOperationException("Graph lifecycle transaction runtime is not available.");
+        }
+
         void InvokeBuiltin(int builtinHandlerId)
         {
             throw new InvalidOperationException("Graph builtin invocation runtime is not available.");

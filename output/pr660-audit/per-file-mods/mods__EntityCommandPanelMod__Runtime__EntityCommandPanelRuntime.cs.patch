@@ -1,0 +1,41 @@
+diff --git a/mods/EntityCommandPanelMod/Runtime/EntityCommandPanelRuntime.cs b/mods/EntityCommandPanelMod/Runtime/EntityCommandPanelRuntime.cs
+index c19374d353..2fce846deb 100644
+--- a/mods/EntityCommandPanelMod/Runtime/EntityCommandPanelRuntime.cs
++++ b/mods/EntityCommandPanelMod/Runtime/EntityCommandPanelRuntime.cs
+@@ -4,6 +4,7 @@ using Arch.Core;
+ using Ludots.Core.Components;
+ using Ludots.Core.Diagnostics;
+ using Ludots.Core.Engine;
++using Ludots.Core.Input.Orders;
+ using Ludots.Core.UI.EntityCommandPanels;
+ 
+ namespace EntityCommandPanelMod.Runtime
+@@ -28,6 +29,7 @@ namespace EntityCommandPanelMod.Runtime
+         private readonly uint[] _generations = new uint[MaxInstances];
+         private readonly uint[] _observedRevisions = new uint[MaxInstances];
+         private readonly Dictionary<string, int> _slotsByInstanceKey = new(StringComparer.Ordinal);
++        private InputOrderActivationResult _lastActivationResult;
+ 
+         private uint _revision = 1;
+ 
+@@ -42,6 +44,7 @@ namespace EntityCommandPanelMod.Runtime
+         }
+ 
+         internal uint Revision => _revision;
++        internal InputOrderActivationResult LastActivationResult => _lastActivationResult;
+ 
+         internal bool HasVisiblePanels
+         {
+@@ -271,6 +274,12 @@ namespace EntityCommandPanelMod.Runtime
+             return changed;
+         }
+ 
++        internal void RecordActivationResult(in InputOrderActivationResult result)
++        {
++            _lastActivationResult = result;
++            MarkDirty();
++        }
++
+         private bool ObserveSlot(int slot, bool force)
+         {
+             if (!_occupied[slot])

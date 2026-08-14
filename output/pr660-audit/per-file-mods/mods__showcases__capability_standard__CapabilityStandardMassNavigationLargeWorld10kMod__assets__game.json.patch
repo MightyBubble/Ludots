@@ -1,0 +1,17 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json b/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json
+index a969d9e539..06e22b0c13 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json
++++ b/mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/assets/game.json
+@@ -5,6 +5,12 @@
+   "targetFps": 0,
+   "worldWidthInMacroTiles": 250,
+   "worldHeightInMacroTiles": 250,
++  "gasRuntimeCapacity": {
++    "orderQueueCapacity": 16384,
++    "orderAdmissionResultCapacity": 32768,
++    "orderAdmissionRejectionCapacity": 16384,
++    "orderTerminalResultCapacity": 16384
++  },
+   "commandSource": {
+     "targetFilter": { "relationFilter": "Friendly" },
+     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]

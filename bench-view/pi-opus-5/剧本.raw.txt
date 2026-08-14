@@ -1,0 +1,1762 @@
+# 《回声塔》
+
+*Echo Tower*
+
+---
+
+## 一、世界与技术边界
+
+时间：近未来，约当下之后五到七年。
+
+地点：虚构的西非内陆国家**卡兰巴共和国**（Karamba），前殖民地，独立后经历三次政变。国土被**恩杜河**（Ndu）切成南北。北岸是政府控制的首都**博萨**（Bosa），南岸是矿区，实际由两支武装割据：
+
+- **卡兰巴人民保卫军（FDPK）**，简称"保卫军"，由前政府军上校**奥比·蒙加拉**领导，控制**塔卡拉**（Takala）钽矿与河渡口，对外自称"合法秩序"，有制服、有台账、有会计。
+- **南方青年阵线（JSF）**，简称"阵线"，成分复杂，实际是几个村庄自卫队加矿工帮派的联合，靠中间商卖矿石换弹药和柴油，在丛林中机动。
+
+第三方势力：中资**中盛矿业卡兰巴分公司**（在塔卡拉有一处已停产的选矿厂和一条数据专线）、法国背景的私营安保公司**Meridian**（受雇护送矿石车队）、联合国人道机构在**卡朗吉**（Kalangi）设有一处过境登记点，靠近**东部边境**通往邻国**吉杜**（Jidu）。
+
+技术边界（只许在现实上前进半步）：
+
+1. **离线小模型**：可装在一台改装安卓手机或掌上开发板上的语音合成/克隆模型。需要至少三十秒到几分钟的干净人声样本，需要充电，需要散热，出错率高，对方言和情绪无能。它不能理解语义意图,不会推理,只会照给定文本发声。
+2. **深度伪造语音**：可用于电话通信，尤其是对讲机、卫星电话这类低码率、有杂音的信道——因为杂音掩盖瑕疵。面对面绝不可行。
+3. **卫星通信**：手持卫星终端，按流量计费，需对准天空，云层与树冠会影响。可发短消息、低速数据、少量语音。终端有IMEI，会被记录。
+4. **数字身份与支付**：卡兰巴推行"一人一码"生物识别身份系统（KaramID），登记点采集虹膜与指纹。跨境难民登记依赖此系统与联合国名册对接。有存量数据、有离线同步延迟（最长七十二小时），有人工审核。
+5. **无人机**：民用四旋翼与固定翼侦察机改装挂载，续航二十到四十分钟，有热成像，怕雨，怕电磁干扰，怕鸟。
+6. **基站与网络**：全国四百多个基站，南岸只有九个，常断电。基站日志可查一部手机曾在哪里出现过。
+7. **柴油发电机、蓄电池、Starlink式终端、二手对讲机、加密即时通讯**——都是现实存在的东西。
+
+明确不存在：读心、通用人工智能、自主杀人机器人、量子破解、瞬时翻译神器（有翻译App，但慢、错、依赖网络）。
+
+**关于诈骗的处理原则**：主角的欺骗行为是他的人格底色和罪证，剧本呈现后果与代价，不呈现可复用的操作细节。所有"怎么做"的部分都被刻意留在画外或被打断。
+
+---
+
+## 二、人物表
+
+**陈默（Chen Mo），34岁**。中国人。曾在深圳做AI语音方向的算法工程师，被裁后进入缅北—东南亚一带的"园区"体系，为电信诈骗集团做语音克隆和对话流水线的技术支持。他不打电话，不直接骗人，他只是"把工具做好"——这是他多年来的自我辩解。他害过人：一个杭州的退休教师听了他做的"儿子的声音"，转走了全部养老金，后来自杀。陈默知道这件事，看过截图，然后接着上班。他的技术很实用：会调模型、会修硬件、会读日志、会在没有文档的情况下让一台破设备工作。他不会开枪，不会打架，体能一般。他现在的护照上是别人的名字。
+
+**恩戈玛·萨伊德（Ngoma Saïd），41岁**。阵线（JSF）的实际协调人之一，不是"酋长"也不是"军阀"，本职是塔卡拉镇的中学地理教师，2019年学校被烧后他把学生登记册改成了民兵名册。他冷静、务实、爱记录，随身带一本硬皮笔记本，上面是弹药数、伤员数、谁欠谁一只羊。他的目标非常具体：让塔卡拉的三百多户人在雨季前拿到过境登记，去邻国吉杜的营地待到打完，而不是死在这儿。他会算账、会谈判、会撒谎、会在必要时杀人，但他讨厌浪费。他讲卡兰巴语、法语、一点英语。
+
+**阿米娜·图雷（Amina Touré），29岁**。卡兰巴人。原是博萨大学的护士出身,现在是**KaramID**东部登记点的技术协调员——她管那台登记设备、那份离线名册、那条卡在七十二小时同步延迟里的数据。她不是圣人：她收过钱，帮人把名字提前排到前面，因为她弟弟需要透析费。但她有一条线：她不给死人和假人开身份，因为她见过冒名者拿走本该属于真孩子的口粮配额。她精通那套系统的每一个漏洞，也正因如此，她是全剧最难骗的人。她讲卡兰巴语、法语、英语。
+
+**奥比·蒙加拉（Obi Mongala）上校，52岁**。保卫军首领。西点式做派与殖民时代官僚气的混合体。他要的不是杀人，是**合法性**：他想让外部世界（矿业公司、邻国、某个愿意付钱的买家）承认他是"卡兰巴南方过渡当局"。因此他极度在意通信、录音、文件和"记录在案"。他发现陈默的技术能造出"声音"时，看到的不是玩具，是外交工具。他讲法语和英语，中文只会"你好"和"合同"。
+
+**李桦（Li Hua），38岁**。中盛矿业卡兰巴分公司留守的安全经理，实际是个被公司遗忘在停产厂区里的中年人，有酒，有一条还通的数据专线，有一堆没人看的报表。他不是坏人，也不是英雄；他想活着回国，想不担责任。他和陈默的关系是全剧最难受的部分：他们是同乡，说同一种语言，互相利用又互相识破。
+
+**卡迪（Kadi），16岁**。阵线里的少年，负责放无人机。他会飞、会修、会用手机学英语。他把陈默当老师，也把陈默当武器。他的目标是活到能去吉杜上学。他不是天使，他偷东西，他撒谎，他见过尸体不害怕。
+
+**穆萨（Moussa），50余岁**。塔卡拉渡口的船工，独眼，沉默，向双方都收钱。他的规则只有一条：船上不带枪。
+
+**塞尔日·迪亚洛（Serge Diallo）**，Meridian安保的现场负责人，法国—塞内加尔混血，专业、冷漠、按合同办事。他不参与政治，他只负责让矿石车队通过。
+
+**丹尼斯**（Denise Aloko），保卫军的报务员，20岁女兵，全剧唯一完整听过陈默"作品"的人，也是识破他的关键。
+
+---
+
+## 三、正文
+
+---
+
+# 第1集：《样本》
+
+---
+
+**1-1｜内景 · 卡朗吉—塔卡拉长途中巴车 · 白天**
+
+一辆二十年车龄的中巴，顶上绑着自行车、鸡笼、化肥袋。车内挤了三十多人。窗外是红土路和干季的灌木。
+
+陈默坐在最后一排靠窗位置，膝上抱着一个硬壳箱。他穿速干衣，戴渔夫帽，脸晒得发红。他手上有一部手机，屏幕亮着一份中文PDF——《中盛矿业选矿厂设备清单》。
+
+他手机上还有另一个界面：一个聊天窗口，头像是空白，最后一条消息是「到了发我」。
+
+前排一个抱孩子的女人递给他一小袋炸木薯，用法语说了句什么。
+
+**陈默**（普通话，笑，摆手）：不用不用，谢谢，我不饿。
+
+女人没听懂，又推了一次。他只好接下，尴尬地咬了一口。
+
+**陈默**（普通话，自言自语）：真硬。
+
+窗外远处三声闷响。全车瞬间安静。司机踩下油门。
+
+**一名男乘客**（法语）：那是塔卡拉方向。
+
+**陈默**（用手机翻译App，机械女声法语）：请问……我们……安全吗？
+
+没人回答他。抱孩子的女人把孩子的头按进自己怀里。
+
+---
+
+**1-2｜外景 · 中盛矿业塔卡拉选矿厂 · 傍晚**
+
+停产的厂区。皮带机上落着一层红土。围墙上刷着中文标语，已褪色："安全生产 效益第一"。
+
+铁门打开，李桦拿着手电走出来，穿一件洗到发白的POLO衫，趿拖鞋。
+
+**李桦**：你就是那个……修设备的？
+
+**陈默**：陈默。深圳过来的。
+
+**李桦**（打量他的硬壳箱）：公司说派个技术，我以为派个团队。
+
+**陈默**：预算紧。
+
+**李桦**（笑了一下，转身）：进来吧。这地方三个月没来外人了。上一个来的是个法国佬，卖净水片，卖完就跑了。
+
+**内景 · 厂区办公室 · 夜**
+
+一台老式空调在响。墙上贴着卡兰巴地图，用红蓝两色马克笔划了区域。桌上有个机架，几个交换机，一盏指示灯闪绿——**那条专线还活着**。
+
+李桦倒了两杯白酒在一次性纸杯里。
+
+**李桦**：喝。这儿没别的。
+
+**陈默**（喝了一口，呛住）
+
+**李桦**：你到底修什么设备？我们厂停了两年了。
+
+**陈默**（放下杯子，语气平顺）：公司要做资产评估，我来测一下电力和网络还能不能用。
+
+**李桦**：狗屁。
+
+沉默。空调声。
+
+**李桦**：我在这儿五年了，我知道谁来干什么。你箱子里那个东西——散热孔在侧面，风扇声那么大，那不是万用表。
+
+**陈默**（很久，笑了一下）：那是什么？
+
+**李桦**：那是我不想知道的东西。
+
+他把酒瓶推过来。
+
+**李桦**：小陈，我给你个建议。你用你那玩意儿干什么，跟我没关系。但你别用我这条线。这条线上有公司的日志。你在上面走一个包，将来出事，签字的人是我。
+
+**陈默**：明白。
+
+**李桦**：你不明白。你要是明白，你不会来。
+
+---
+
+**1-3｜内景 · 厂区宿舍 · 深夜**
+
+陈默一个人。他打开硬壳箱：一台改装的安卓开发板、一副高保真耳机、一个电容麦、几块移动电源、几根线。
+
+他插上耳机，播放一段音频——
+
+**音频（男声，普通话，中年，带杭州口音）**：……妈，我这边出了点事，你先别慌……
+
+陈默听着，脸上没有表情。他把音频拖回去，重播了同一句。
+
+他打开另一个文件夹。文件夹名是一串日期。里面是截图：一个转账记录，一段新闻标题的局部——"退休教师……跳楼身亡"。
+
+他看了三秒，关掉。
+
+他打开工作界面，敲了几行东西。屏幕上只显示进度条和几个参数名。他戴上耳机，听输出。
+
+**合成音（同一男声）**：……妈，我这边出了点事，你先别慌。
+
+他摘下耳机。他对着黑掉的窗玻璃里自己的倒影，用那个杭州口音说了一遍：
+
+**陈默**：妈，你先别慌。
+
+窗外，远处忽然亮起车灯，一排。柴油引擎声。
+
+---
+
+**1-4｜外景 · 厂区大门 · 深夜**
+
+四辆皮卡。车斗上架着重机枪，缠着布。士兵下车，动作有序，制服虽旧但统一。这不是散兵。
+
+李桦冲出来，双手举起，喊法语。
+
+一名军官走上前，是**丹尼斯**，年轻女兵，肩上挂着一部老式无线电，别着一支手枪。
+
+**丹尼斯**（法语）：中盛的中国人。几个？
+
+**李桦**（法语，磕磕巴巴）：两个。就两个。
+
+丹尼斯打了个手势。士兵进院。
+
+**内景 · 宿舍 · 同时**
+
+陈默听见脚步声，飞快合上硬壳箱，往床下塞。来不及。门被踹开，手电照在他脸上。
+
+他举起手。
+
+**陈默**（英语，声音发抖）：I'm engineer. Engineer. Company. 中盛。
+
+一名士兵拎起硬壳箱。丹尼斯走进来，打开箱子，看了很久。她拿起那副耳机，看了看，戴上，按了一下开发板上的播放键。
+
+耳机里传出声音。她听不懂中文。但她听得出——这是一个人在说话，很清楚，很近。
+
+她摘下耳机，看着陈默。
+
+**丹尼斯**（法语，然后换成英语）：This is a voice machine.
+
+**陈默**（愣住）：……What?
+
+**丹尼斯**（英语，慢，准确）：A machine. That makes voice. Yes or no.
+
+厂区外，李桦被推上皮卡，回头朝宿舍窗口喊：
+
+**李桦**（大喊，中文）：小陈！别说话！什么都别说！
+
+丹尼斯合上箱子，夹在腋下。
+
+**丹尼斯**（英语）：Colonel will want to meet you.
+
+**本集钩子**
+
+陈默被推上皮卡后座，手被塑料扎带反绑。皮卡驶离厂区时，他回头看见李桦被押进另一辆车。他低头，看见丹尼斯抱着那只硬壳箱，坐在他对面，手指无意识地摸着箱子的散热孔——像摸一只活物。
+
+而在他自己上衣内袋里，一部备用手机在震动。第七次。他动不了手，看不到屏幕。他只知道那是谁：那个头像空白的账号，在问他"到了发我"。
+
+---
+
+# 第2集：《合法性》
+
+---
+
+**2-1｜内景 · 保卫军司令部（原塔卡拉镇政府大楼） · 白天**
+
+会议室。长桌，铺着一块印花布当桌布。墙上挂着卡兰巴国旗和一面自制的旗帜。桌上摊着账本、地图、一台笔记本电脑、一部卫星电话。
+
+**蒙加拉上校**站在窗边，穿熨过的迷彩，戴金丝眼镜。他在读一份打印文件。
+
+陈默被带进来，手已解开，手腕有勒痕。
+
+**蒙加拉**（英语，口音标准）：Sit. Water?
+
+**陈默**：……Thank you.
+
+蒙加拉亲自倒水。这个动作让陈默更害怕。
+
+**蒙加拉**（英语）：Mr. Chen. You are not an engineer for Zhongsheng Mining. I called Zhongsheng Mining. On this phone. Ten minutes ago. They have no employee named Chen Mo in Karamba.
+
+（陈默不动。）
+
+**蒙加拉**：So. Who pays you?
+
+**陈默**（英语，慢）：A subcontractor. In Bangkok.
+
+**蒙加拉**：To do what?
+
+**陈默**：To test... audio equipment.
+
+蒙加拉笑了。他把硬壳箱推到桌上，打开。
+
+**蒙加拉**（英语）：Denise told me it is a voice machine. Denise is nineteen. She fixes radios. She is not wrong very often.
+
+他从文件里抽出一张纸，放到陈默面前。是一份打印的邮件截图，中文，标题：**《声纹样本采集与合成流程v3.2》**。发件人栏是一串乱码字母。
+
+**陈默**（喉咙动了一下）：……你们从哪儿拿到的。
+
+**蒙加拉**（换回英语）：From your laptop. In your bag. You did not lock it.
+
+沉默。
+
+**蒙加拉**：I am not police, Mr. Chen. I do not care who you steal from. In this country, everyone steals from someone. I care about one thing.
+
+他走到地图前，用指节敲了敲一处。
+
+**蒙加拉**：This is Kalangi crossing. In nine weeks, the rains come. When the rains come, the road closes, and I am a man in a forest. Before the rains, I must become a government. Not a big government. A small one. One that Jidu will talk to on the telephone.
+
+**陈默**：……我不懂政治。
+
+**蒙加拉**（英语，一字一字）：You do not need to understand politics. You need to understand that a government is a voice on a telephone that people believe.
+
+---
+
+**2-2｜外景 · 塔卡拉镇集市废墟 · 白天**
+
+市场的一半被烧过，一半还在营业。妇女在卖木薯、干鱼、二手手机壳。一个少年在树荫下用手机放非洲流行乐。
+
+**恩戈玛·萨伊德**穿一件旧衬衫，背着帆布包，蹲在一个摊位前挑辣椒。他和摊主用卡兰巴语聊天。
+
+**摊主**（卡兰巴语，字幕）：昨天他们抓了两个中国人。
+
+**恩戈玛**（卡兰巴语）：从矿上？
+
+**摊主**：从矿上。一个胖的，一个瘦的。瘦的抱着个箱子。
+
+恩戈玛付钱，站起来。他掏出硬皮笔记本，翻到一页，写了两行字。
+
+**恩戈玛**（卡兰巴语，对身边的**卡迪**）：去问穆萨。这几天有没有从北边来的人。
+
+**卡迪**（卡兰巴语）：老师，我们要那个中国人干什么？
+
+**恩戈玛**（合上笔记本）：不一定要。但蒙加拉想要的东西，我要先知道是什么。
+
+---
+
+**2-3｜内景 · 保卫军通信室 · 傍晚**
+
+一间小屋，塞满二手设备：三部对讲机基座、一台卫星终端、一台发电机在窗外轰响。丹尼斯坐在中间，戴耳机，手写记录本上密密麻麻。
+
+陈默被带进来，蒙加拉跟在后面。
+
+**蒙加拉**（英语）：Denise. Play it.
+
+丹尼斯按下一段录音。
+
+**录音（法语，中年男声，官腔）**：……根据《卡兰巴过渡安排》第四条，边境管理机构应当……
+
+**蒙加拉**（英语，对陈默）：This is Minister Bwana. Interior Ministry. Bosa. He speaks on state radio every Thursday. We have four years of him speaking.
+
+（陈默慢慢明白了。）
+
+**蒙加拉**：In eleven days, Jidu's border commissioner will make a telephone call. He will call Bosa, to ask if the men at Kalangi crossing are... authorized. Bosa will say no.
+
+**蒙加拉**（走到陈默面前）：I want Bosa to say yes.
+
+**陈默**（英语，很轻）：It won't work.
+
+**蒙加拉**：Why.
+
+**陈默**（他忽然进入了他最熟悉的状态——技术解释状态，语速变快）：Satellite phone, low bitrate, that helps, noise hides errors. But a real conversation—he will ask questions. Unscripted. The machine cannot answer. It reads text. It does not think. If your man reads the wrong answer, one second late, the commissioner hears it.
+
+**蒙加拉**（点头，像听下属汇报）：So we need to know the questions.
+
+**陈默**：……你怎么知道他会问什么。
+
+**蒙加拉**（微笑）：Because border officers always ask the same three questions. I was a border officer.
+
+他转向丹尼斯。
+
+**蒙加拉**（法语）：Denise，把过去两年所有从吉杜打进来的通话记录整理给他。
+
+**丹尼斯**（法语，犹豫）：上校，他是外人。
+
+**蒙加拉**（法语，温和）：他是工具。工具不需要忠诚，需要保管。
+
+---
+
+**2-4｜内景 · 关押房间（原镇政府档案室） · 夜**
+
+李桦坐在墙角，脸上有一片淤青。陈默被推进来，门锁上。
+
+**李桦**：他们打你了？
+
+**陈默**：没有。
+
+**李桦**（盯着他）：为什么没打你。
+
+（陈默不说话。）
+
+**李桦**（笑，笑得很难看）：因为你有用。
+
+他站起来，走近。
+
+**李桦**：小陈，我告诉你我为什么在这儿五年。因为我当年在国内做过一件事，签了一个字，赔进去八百万，公司让我来这儿"看厂"，实际就是流放。我认了。我每天喝酒，看报表，等公司哪天想起我。
+
+**李桦**：我认了，因为我知道我干了什么。你呢？
+
+**陈默**：我不知道你在说什么。
+
+**李桦**（很慢）：你箱子里那个东西，是干什么用的？
+
+（沉默。空调不在，只有窗外发电机。）
+
+**陈默**：……做语音。
+
+**李桦**：给谁做？
+
+**陈默**：客户。
+
+**李桦**：客户拿去干什么？
+
+**陈默**（终于抬头）：我不管客户拿去干什么。我只负责让它听起来像真的。
+
+李桦看了他很久，然后转身回墙角坐下。
+
+**李桦**：那你在这儿会活得比我久。
+
+**本集钩子**
+
+深夜。陈默摸出内袋里那部没被搜走的备用手机——因为它被他缝在腰带内衬里。信号一格。
+
+那个空白头像账号的未读消息，二十三条。他点开最后一条：
+
+「陈默。老板知道你在卡兰巴。你带走的模型权重是公司资产。我们已经把你护照上的名字给了当地一个人。他会来找你。」
+
+下一条：
+
+「你不用跑。你跑不了。你名字都不是你的。」
+
+陈默握着手机，手在抖。窗外，发电机忽然停了。整栋楼黑下来。黑暗里，走廊尽头传来一声枪响，然后是喊叫——**卡兰巴语，不是保卫军的口音**。
+
+---
+
+# 第3集：《渡口》
+
+---
+
+**3-1｜内景 · 镇政府大楼走廊 · 夜（接上集）**
+
+黑暗。手电光乱扫。枪声零散但很近。玻璃碎。
+
+关押室的门被撞开。是**卡迪**，戴矿工头灯，手里握着一把改装的老式步枪，枪对他来说太长了。
+
+**卡迪**（英语，硬邦邦）：Chinese. Which one is the machine man?
+
+李桦立刻指陈默。
+
+**李桦**（中文，急）：他！是他！
+
+**陈默**（转头看李桦）：……
+
+**李桦**（避开他的眼睛，中文）：小陈，我不想死在这儿。
+
+卡迪抓住陈默的胳膊往外拽。陈默被拖到门口时挣了一下。
+
+**陈默**（英语，喊）：The box! I need the box!
+
+**卡迪**（愣了半秒，然后）：Where.
+
+**陈默**：Radio room! Second floor!
+
+卡迪骂了一句卡兰巴语，改变方向。
+
+---
+
+**3-2｜内景 · 通信室 · 夜**
+
+丹尼斯正在拆卫星终端，动作极快，把核心部件塞进背包。她听见门口动静，抬头，直接开枪——子弹打在门框上。
+
+卡迪推陈默进门做掩护。陈默摔在地上，正好看见硬壳箱在桌下。
+
+**丹尼斯**（法语，喊）：不许动！
+
+**陈默**（趴在地上，举手，英语，声音发抖但清晰）：Denise! Listen! Listen to me!
+
+（丹尼斯枪口对着他。）
+
+**陈默**（英语，快）：The machine is useless without me. Useless. You take it, you have a plastic box. If they take me and you take the box, nobody has anything. Everybody loses.
+
+**丹尼斯**（英语）：Then I shoot you.
+
+**陈默**：Then the Colonel loses his voice on the telephone. In eleven days.
+
+（这句话击中了她。她犹豫了半秒。）
+
+半秒足够。卡迪从门后开了一枪，打在她肩上。她倒地，枪滑开。
+
+卡迪冲上去要补一枪。
+
+**陈默**（扑过去挡住枪管，喊）：No! No!
+
+**卡迪**（用力推他）：She will tell them!
+
+**陈默**（喘着）：She will tell them anyway! She saw your face! Take the box! Go!
+
+卡迪盯着他一秒，然后抓起硬壳箱，拽着他跑。
+
+地上的丹尼斯捂着肩膀，看着他们跑出去。她的眼睛记住了陈默的脸，和他刚才的动作。
+
+---
+
+**3-3｜外景 · 丛林小径 · 拂晓**
+
+一支十一人的队伍在快走。多数是十几二十岁的男孩，两个中年男人，一个女人。他们背弹药、水桶、一台发电机的定子。
+
+陈默走在中段，被绳子松松系在前面一个人的腰上。他的鞋在树根上打滑，第三次摔倒。
+
+**卡迪**（回头，卡兰巴语，对同伴）：这个人像袋米。
+
+（同伴们笑。）
+
+**恩戈玛**从队伍前头走回来。他递给陈默一个水壶。
+
+**恩戈玛**（英语，平静，教师式）：Drink. Small. Not big.
+
+陈默喝了一口，抬头看他。
+
+**恩戈玛**：My name is Ngoma Saïd. I was a teacher. Geography.
+
+**陈默**：……Chen Mo.
+
+**恩戈玛**：Is that your name? Or the name in your passport?
+
+（陈默停住。）
+
+**恩戈玛**（拿出陈默的护照，翻看）：This photo is you. This name — Wang Jian — I do not think this is you. The visa stamp is real. The passport is real. The man is not.
+
+**恩戈玛**（合上护照，放进自己口袋）：I keep this. Not to hurt you. Because a man who has no name will not run far.
+
+---
+
+**3-4｜外景 · 恩杜河渡口 · 白天**
+
+一条木船，一根拉索横过河面。**穆萨**（独眼船工）蹲在船头抽烟。
+
+恩戈玛和穆萨用卡兰巴语交谈，声音很低。
+
+**穆萨**（卡兰巴语）：五个。船只载五个。
+
+**恩戈玛**（卡兰巴语）：十一个。
+
+**穆萨**（指着水面）：水这个高度，五个。你想沉，我陪你。
+
+恩戈玛看了看队伍，做决定。
+
+**恩戈玛**（卡兰巴语，点人）：我，卡迪，中国人，两个伤员。剩下的走上游那条路，明天在雅巴集合。
+
+一名年长民兵抗议。恩戈玛只说了一句，他就闭嘴了。
+
+上船前，穆萨伸手拦住卡迪的枪。
+
+**穆萨**（卡兰巴语）：船上不带枪。
+
+**卡迪**（卡兰巴语）：这是我的枪。
+
+**穆萨**：那你留下陪你的枪。
+
+卡迪看恩戈玛。恩戈玛点头。卡迪把枪扔在岸上灌木里，做了个记号。
+
+船开到河中央。陈默坐在船舷，看着水。
+
+**恩戈玛**（英语，看着对岸）：Mr. Chen. What did the Colonel want from you?
+
+**陈默**（很久）：A telephone call.
+
+**恩戈玛**：To whom?
+
+**陈默**：Jidu. The border commissioner.
+
+恩戈玛拿出笔记本，写。
+
+**恩戈玛**（一边写，一边）：In eleven days. Yes. I heard. Do you know what happens if Jidu believes Mongala is the government?
+
+**陈默**：……他能过境。
+
+**恩戈玛**（停下笔，第一次直视他）：No. It means that when my three hundred families arrive at Kalangi, the list of who is a refugee and who is a criminal will be written by Mongala. Do you understand what a list is, Mr. Chen?
+
+**陈默**：……
+
+**恩戈玛**：A list is a machine that decides who eats.
+
+**本集钩子**
+
+船靠岸。众人扶伤员下船。陈默最后下，他脚一踩泥地，忽然一阵眩晕，一膝跪进水里。
+
+恩戈玛回头看他。陈默抬手擦脸，掌心一片汗，但他在发冷。
+
+**恩戈玛**（用手背碰他额头，皱眉，卡兰巴语，对卡迪）：他发烧了。
+
+**卡迪**（卡兰巴语）：疟疾？
+
+**恩戈玛**：可能。
+
+他站直，望向丛林深处，然后望向天空。
+
+天空里，一个黑点在飞。固定翼。低速。绕圈。
+
+**恩戈玛**（英语，冷静地）：Mr. Chen. Your Colonel has a drone. And now he knows where we crossed.
+
+---
+
+# 第4集：《雅巴的三天》
+
+---
+
+**4-1｜内景 · 雅巴村 · 一间土坯房 · 夜**
+
+一盏太阳能灯。陈默躺在草席上，浑身湿透，发抖。屋角有一个铁桶接雨水。
+
+一个五十岁的当地女人（**玛玛·法图**）给他喂一种苦水。他呕出来。她不生气，再喂。
+
+**卡迪**蹲在门口，手上摆开一台四旋翼无人机的残骸和一堆工具。他一边修一边偷看陈默。
+
+**卡迪**（英语，突然）：Machine man. You know electronics?
+
+**陈默**（含糊）：……what.
+
+**卡迪**（举起一块电路板）：This one. Falls down. Always falls down. Left side.
+
+陈默费力地撑起来，看了一眼。
+
+**陈默**（喘）：……motor. Or ESC. Not the board.
+
+**卡迪**：ESC?
+
+**陈默**（伸出手，卡迪把板子递过来。陈默用指甲刮了刮一处焊点）：Cold joint. Here. It works, then it gets hot, then it stops.
+
+**卡迪**（凑近看，看见了）：……Ah.
+
+（他看陈默的眼神变了。）
+
+**卡迪**：You are useful.
+
+**陈默**（躺回去，苦笑）：Everybody says that.
+
+---
+
+**4-2｜外景 · 雅巴村 中心空地 · 白天**
+
+村民围坐。恩戈玛站着，手里是笔记本。这不是军事会议，这是一次村庄决策会。有老人，有妇女，有小孩在跑。
+
+对话是卡兰巴语，字幕。
+
+**一位老人**：我们已经走过两次。第一次1998年，第二次2011年。这次我不走。
+
+**恩戈玛**：这次和那两次不同。这次卡朗吉要登记。要虹膜，要指纹。登记了才有配额，才有帐篷，才有药。不登记的，边境不让过。
+
+**一位妇女**：那我们去登记。
+
+**恩戈玛**：登记点在河北岸的路上。那条路现在是蒙加拉的。
+
+（人群一阵混乱的议论。）
+
+**同一位妇女**：那你说怎么办？你天天记本子，本子里有办法吗？
+
+**恩戈玛**（很平静地翻开笔记本）：本子里有三条路。第一条，走蒙加拉的路，交钱，交人。他要每二十个人里留一个男孩。
+
+（沉默。有妇女抓住自己儿子的手。）
+
+**恩戈玛**：第二条，绕东边的旧伐木道，走六天，没有水站，带着老人和孩子，我算过，我们会死掉三十到五十个。
+
+**恩戈玛**：第三条，我还在算。
+
+**老人**：算什么？
+
+**恩戈玛**（合上本子）：算能不能让登记点自己走过来。
+
+---
+
+**4-3｜内景 · 卡朗吉过境登记点 · 白天**
+
+一间预制板房。空调滴水。桌上一台笔记本、一台虹膜采集器、一个便携指纹仪、一台卫星终端、一叠纸质名册。
+
+**阿米娜·图雷**穿浅蓝制服，戴橡胶手套，正在给一个抱婴儿的女人做登记。她的动作熟练到近乎冷漠。
+
+**阿米娜**（法语）：看这里。不要眨眼。好。左手。
+
+（提示音。屏幕：**离线暂存 — 待同步 (43小时)**）
+
+女人走后，一个男人凑到窗口，压低声音塞钱。
+
+**男人**（法语）：图雷小姐，我兄弟明天到。能不能……
+
+**阿米娜**（把钱推回去，不看他）：今天不行。
+
+**男人**：为什么今天不行？上次——
+
+**阿米娜**（抬头，眼神冷）：因为上次之后来了个审计。
+
+（男人走了。她把手套摘下来，从抽屉深处拿出一部私人手机，看了一眼——屏幕上是一张医院账单的照片。她把手机放回去。）
+
+她的助手推门进来。
+
+**助手**（法语）：图雷小姐，卫星线上有个人一直在呼。
+
+**阿米娜**：谁？
+
+**助手**：他说他是塔卡拉的地理老师。
+
+（阿米娜停住。她认识这个说法。）
+
+**阿米娜**（法语，走向终端）：……恩戈玛。
+
+**内景 · 交叉剪辑 · 雅巴村，恩戈玛用一台手持卫星终端**
+
+**恩戈玛**（法语）：图雷小姐。三百四十二户。我要一个移动登记队，来河南岸。
+
+**阿米娜**（法语，笑了一声）：不可能。移动队需要军警护送，需要总部批准，需要一份安全评估。你以为我是谁？
+
+**恩戈玛**：我以为你是那个知道系统在哪儿能拐弯的人。
+
+**阿米娜**（沉默两秒）：恩戈玛，我不给死人开身份，也不给活人开假路。你要的东西不是拐弯，是撞墙。
+
+**恩戈玛**：那你告诉我墙在哪儿。
+
+**阿米娜**（很久，然后，语气变了）：……墙在总部的一份《安全通行确认》。要有一个被承认的当局，出一份书面保证，说这条路上不会有交火。
+
+（她自己听见自己说了什么，闭上眼。）
+
+**阿米娜**：我不该告诉你这个。
+
+**恩戈玛**（在雅巴，看着自己的笔记本，写下"当局 / 书面保证 / 语音确认"）：谢谢你，图雷小姐。
+
+---
+
+**4-4｜内景 · 雅巴村 土坯房 · 夜**
+
+陈默烧退了一点，能坐起来。恩戈玛端着一碗粥进来，坐在他旁边的木箱上。
+
+**恩戈玛**（英语）：Eat.
+
+（陈默吃。手抖，但吃。）
+
+**恩戈玛**：I need to ask you a question. Answer it badly and I will still not kill you, so you may as well answer it well.
+
+**陈默**：……ok.
+
+**恩戈玛**：The machine. Can it make a voice say something in French, on a satellite phone, and be believed by an office in another country?
+
+（陈默停下勺子。他非常清楚这个问题意味着什么。）
+
+**陈默**（英语，慢）：……Whose voice.
+
+**恩戈玛**：A minister.
+
+**陈默**（放下碗）：You want the same thing Mongala wants.
+
+**恩戈玛**（没有否认）：I want a road for three hundred families. He wants a country. It is not the same thing.
+
+**陈默**：To me it is exactly the same thing. It is one phone call.
+
+**恩戈玛**（很长的停顿。然后他做了一件事——他把陈默的护照拿出来，放在草席上）：Then let me make it different for you.
+
+**恩戈玛**：I have been asking about you. There is a man in Kalangi, a Nigerian, who is asking for a Chinese man travelling as "Wang Jian". He has a photograph of you. He says you stole from his employers.
+
+（陈默的脸白了。）
+
+**恩戈玛**：I did not tell him where you are. Not because I am kind. Because you are worth more here.
+
+他站起来，走到门口，回头。
+
+**恩戈玛**：Mr. Chen. You have made voices for people who used them to steal from mothers. Do not look surprised. I do not need to know the details. I only needed to see your face when I said "mothers."
+
+**本集钩子**
+
+恩戈玛走后，陈默一个人坐在黑暗里，护照在膝上。
+
+他打开腰带内衬，摸出备用手机，开机。信号半格。
+
+新消息，两条。
+
+第一条：「照片已发给当地的人。」
+
+第二条是一张图片。他点开——
+
+是一个中国的小区门口，一栋老楼，一个熟悉的单元门。图上有一行字：
+
+「你妈住三楼吧。」
+
+陈默的呼吸停了。他握着手机，一动不动。
+
+屋外，无人机的蜂鸣声掠过屋顶。这次很低。很近。
+
+---
+
+# 第5集：《两份稿子》
+
+---
+
+**5-1｜外景 · 雅巴村 · 拂晓**
+
+炮击。不是精确的，是覆盖性的——两发迫击炮打在村子边缘，第三发打进一间房子。
+
+尖叫。人跑。牲畜挣脱。
+
+**卡迪**在空地上手忙脚乱地放无人机，一边喊卡兰巴语。恩戈玛提着一个铁皮箱冲过来，抓住一个妇女的肩把她推向树林方向。
+
+**恩戈玛**（卡兰巴语，喊）：往河边！不要走大路！
+
+一发炮弹落在离陈默二十米处。他被气浪推倒，耳朵嗡鸣。他爬起来，看见硬壳箱倒在土里，箱盖开着，开发板半掉出来。
+
+他扑过去，趴在箱子上——用自己的身体压住那台机器。
+
+一只手抓住他后领往上拽。是恩戈玛。
+
+**恩戈玛**（英语，喊）：Run! Now!
+
+**陈默**（抱着箱子，喊）：I need the batteries! In the house!
+
+**恩戈玛**（看了他半秒，然后骂了一句卡兰巴语，转身跑向那间土坯房）
+
+他从燃烧的门口冲进去，三秒后出来，怀里抱着两块移动电源和陈默的耳机。他把东西塞给陈默。
+
+**恩戈玛**（喘着，英语）：Now you owe me. Not the machine. Me.
+
+---
+
+**5-2｜外景 · 河岸红树林 · 白天**
+
+七十多个村民、十几个民兵藏在树林里。伤员躺在防水布上。一个老人已经死了，用布盖着。
+
+无人机的声音在头顶盘旋两分钟，然后远去。
+
+恩戈玛蹲在一棵树下，摊开笔记本。手上有血。他记：**死亡3。重伤4。失踪11。**
+
+卡迪爬过来，把平板递给他。屏幕上是无人机刚录的画面——保卫军的车队，正在从北面推进，占据一条岔路口。
+
+**卡迪**（卡兰巴语）：老师，他们不是来追我们的。
+
+**恩戈玛**（看画面）：不是。
+
+**卡迪**：他们在占路。占去卡朗吉的路。
+
+**恩戈玛**（合上平板，闭眼三秒）：他要在打电话之前，先把路上的事实做成他说的样子。
+
+他起身，走向坐在树根上的陈默。陈默抱着硬壳箱，脸上有土和血。
+
+**恩戈玛**（英语，坐下）：Mr. Chen. Tell me exactly what you need. Time. Power. Sound.
+
+**陈默**（沙哑）：……你要那个电话。
+
+**恩戈玛**：I need a document. The document needs a phone call. The phone call needs a voice.
+
+**陈默**（看着他）：I'll tell you the truth about how this works, and then you decide.
+
+（他把开发板放在膝上，但不打开。他只是解释，语速平稳，像在讲课。）
+
+**陈默**（英语）：One. This is not magic. It needs a clean sample of the person's real voice. Minutes, not seconds. Clean means no music, no crowd.
+
+**恩戈玛**：State radio archive. Four years. Denise had it.
+
+**陈默**：Two. It reads text. It cannot answer a question. So whoever is on our side of the call must have every answer already written, and must read it, in order, without hesitating. If the other side asks something we did not predict, we are finished in one second.
+
+**恩戈玛**（写）：Three?
+
+**陈默**：Three. This is the part you will not like. It only works if the other person already expects the call. If they are surprised, they listen. If they are expecting it, they hear what they expect.
+
+**恩戈玛**（停笔，抬头）：So someone must tell Jidu the call is coming.
+
+**陈默**：Yes. Someone real. Someone they already trust.
+
+（两人都想到了同一个人。）
+
+**恩戈玛**：Amina Touré.
+
+**陈默**：Will she do it?
+
+**恩戈玛**（合上笔记本，第一次露出接近笑的表情）：No. She will refuse, and then she will find out what we are doing, and then she will try to stop us. That is who she is.
+
+**陈默**：Then why—
+
+**恩戈玛**：Because she is also the only person who can make the document real once the call is made. So we must not lie to her.
+
+（陈默盯着他。）
+
+**陈默**（英语，慢）：You want to run a fraud... and tell the target the truth.
+
+**恩戈玛**：I want to make one true thing happen using one false minute. You have spent years doing the opposite.
+
+---
+
+**5-3｜内景 · 保卫军司令部 · 通信室 · 夜**
+
+丹尼斯坐着，左肩缠绷带。她单手操作，把一段录音倒回去，重放。
+
+**录音（陈默的声音，英语，在通信室那一夜被自动录下）**：*"She will tell them anyway! She saw your face! Take the box! Go!"*
+
+她反复听这一句。三遍。
+
+蒙加拉进来。
+
+**蒙加拉**（法语）：肩膀怎么样。
+
+**丹尼斯**（法语）：能用。
+
+**蒙加拉**：他们抢走了机器和人。这不重要。重要的是他们为什么要抢。
+
+**丹尼斯**（转过椅子）：上校。那天晚上，那个中国人挡了枪。挡在我前面。
+
+**蒙加拉**：他救了你？
+
+**丹尼斯**（摇头）：不是。他挡在枪和我之间，是为了不让那个男孩杀我。但他喊的话是——"她已经看见你的脸了"。他在给那个男孩一个不杀我的理由。他在……说服。
+
+**蒙加拉**（明白了，慢慢点头）：他不是个懦夫。他是个说服机器。
+
+**丹尼斯**：他会对萨伊德做同样的事。
+
+**蒙加拉**（走到地图前）：不。萨伊德是老师。老师听不懂说服，老师只听懂账本。
+
+他用马克笔在卡朗吉画了个圈。
+
+**蒙加拉**（法语）：改计划。电话不等十一天。三天后打。丹尼斯，你去卡朗吉，用官方身份找图雷小姐，告诉她："内务部下周会有一通电话确认过境安排。"
+
+**丹尼斯**（愣）：可是我们还没有机器。
+
+**蒙加拉**（转身，平静）：我知道。但如果对面在等电话，而萨伊德手上有机器——那么萨伊德会替我打这通电话。他会为了他的三百户人，替我做出"内务部承认南方当局"这句话。
+
+（他摘下眼镜擦拭。）
+
+**蒙加拉**：一个人为了救人而撒的谎，比我为了权力撒的谎结实得多。
+
+---
+
+**5-4｜外景 · 废弃伐木站 · 夜**
+
+一个铁皮棚。发电机。一台笔记本、硬壳箱、耳机、一堆电池。这是临时工作点。
+
+陈默在干活。他不"炫技"——他在处理最枯燥的部分：从卡迪偷来的一台旧收音机录音卡上，一段一段筛掉有背景音乐的片段。屏幕上是波形和一堆被划掉的时间码。
+
+**卡迪**在旁边帮他扶手电，看得入迷。
+
+**卡迪**（英语）：How long?
+
+**陈默**：If the samples are good — one day. If bad — never.
+
+**卡迪**：Teach me.
+
+**陈默**（不看他）：No.
+
+**卡迪**：Why! I fix drone, I fix radio, I—
+
+**陈默**（放下耳机，转过来，忽然很用力）：Kadi. Listen. I made this for money. A woman in my country, sixty-eight years old, she heard her son's voice on the telephone. It was my voice machine. She sent all her money. Then she died. Not because of a gun. Because of a voice.
+
+（卡迪不说话。）
+
+**陈默**：You want me to teach you that?
+
+**卡迪**（很久，然后，倔强地）：Yes. Because if I do not know it, someone will do it to my mother.
+
+（陈默看着他，说不出话。）
+
+**本集钩子**
+
+恩戈玛走进棚子，把一张手写纸放在桌上。
+
+**恩戈玛**（英语）：The script. Every answer to every question. I wrote it as a lesson plan.
+
+陈默拿起来读。然后他停住。
+
+**陈默**（英语）：Ngoma. This sentence.
+
+（他指着一行。）
+
+**陈默**（读出来）：*"The Interior Ministry recognises the southern transitional authority as responsible for security on the Kalangi road."*
+
+**陈默**：You cannot say this.
+
+**恩戈玛**：Without it, Jidu will not accept the guarantee. Someone must be responsible for the road.
+
+**陈默**（放下纸）：If a minister's voice says this, on record, to another country — you have not opened a road. You have made Mongala a government.
+
+（棚子里只有发电机声。）
+
+**恩戈玛**（很久，很轻）：I know.
+
+（他看着自己的笔记本。）
+
+**恩戈玛**：I have counted it eleven times, Mr. Chen. Thirty to fifty dead on the east road. Or one sentence.
+
+他抬头。
+
+**恩戈玛**：You are the only person here who knows how to make a sentence that is almost true. So tell me. Is there a version of this sentence that opens the road and does not crown that man?
+
+---
+
+# 第6集：《三十七个字》
+
+---
+
+**6-1｜内景 · 废弃伐木站 · 白天**
+
+桌上摊着七八张纸，全是同一段话的不同写法，划改得一片狼藉。这是全剧最"文书"的一场戏，也是最紧张的一场。
+
+恩戈玛、陈默、卡迪。三个人像在批改一份考卷。
+
+**陈默**（英语，指纸）：Version four. "The Ministry authorises a humanitarian corridor on the Kalangi road for a period of ten days, under the responsibility of the Ministry's own delegate."
+
+**恩戈玛**：Jidu will ask: who is the delegate.
+
+**陈默**（停）：……That is the trap. Any name we invent, they can check in a database. Any real name, that person will deny it.
+
+**卡迪**（举手，像在课堂上）：Not a person. A number.
+
+（两人看他。）
+
+**卡迪**（英语，磕磕巴巴）：In the drone, when the pilot has no name, we give a number. Unit number.
+
+**恩戈玛**（慢慢坐直）：……A ministry file number.
+
+**陈默**：Does that exist?
+
+**恩戈玛**（翻笔记本，翻到很旧的一页）：In 2011 there was a corridor. It had a file number. I remember because my school was the shelter. The number was on the letter they nailed to the door.
+
+（他找到了。他写下一串数字。）
+
+**恩戈玛**：HC/2011/044.
+
+**陈默**（看着它）：It's fourteen years old.
+
+**恩戈玛**：It is real. It is in a filing cabinet in Bosa. It will take Jidu three weeks to find out it was closed. We need ten days.
+
+**陈默**（拿起笔，改写。他一边写一边念。这是他第一次把自己的技能用在"减少"上）：Then the sentence is: "The Ministry reactivates humanitarian corridor HC/2011/044 on the Kalangi road for ten days. Security along the corridor remains the responsibility of the Ministry. No local formation is authorised to represent the Ministry."
+
+（他放下笔。）
+
+**陈默**：Thirty-seven words. It opens the road. It says explicitly that Mongala is nobody.
+
+**恩戈玛**（读了三遍，然后合上眼）：It also means that when the road opens, Mongala will know we cut him out.
+
+**陈默**：Yes.
+
+**恩戈玛**（睁眼）：Then he will come for the corridor. On day one.
+
+**陈默**：Yes.
+
+（沉默。）
+
+**恩戈玛**（在笔记本上写下"十天"三个字，圈起来）：Ten days is enough to move three hundred families if nobody stops to bury anyone.
+
+---
+
+**6-2｜内景 · 卡朗吉登记点 · 白天**
+
+**丹尼斯**穿正规军服（保卫军的"正式"版本），站在窗口外，递上一份盖章文件。
+
+**阿米娜**（法语，不接）：这是什么章。
+
+**丹尼斯**（法语）：南方过渡当局。
+
+**阿米娜**：不存在这个东西。
+
+**丹尼斯**（平静）：下周内务部会有一通电话，确认卡朗吉路的过境安排。我们只是提前通知。
+
+**阿米娜**（终于抬眼，仔细看她）：你多大？
+
+**丹尼斯**：二十。
+
+**阿米娜**：你知道你在替谁说话吗？
+
+**丹尼斯**（第一次有一点动摇，但撑住）：我知道我在替谁修无线电。
+
+阿米娜看她走远。然后她转身，打开笔记本电脑。
+
+她做了一件很具体的事：调出**过去六个月所有从南岸打进这个终端的卫星呼叫记录**，导出成表。她用手指在屏幕上一行一行滑。她停在两行上。
+
+一行是恩戈玛那次通话。另一行，同一个终端ID，**三天前**，一次一分钟的呼叫，接通对象是——**吉杜边境管理处**。
+
+**阿米娜**（法语，自言自语）：……你们已经在准备了。
+
+她拿起卫星话机，拨号。
+
+**内景 · 交叉剪辑 · 伐木站**
+
+**恩戈玛**接起。
+
+**阿米娜**（法语，冷）：恩戈玛。你要伪造一通电话。
+
+**恩戈玛**（沉默两秒，然后，没有否认）：是。
+
+**阿米娜**：你知道我可以现在就打给吉杜，告诉他们不要接任何电话。
+
+**恩戈玛**：我知道。
+
+**阿米娜**：那你为什么不否认？
+
+**恩戈玛**：因为我要你做的事，比不否认更难。我要你在电话之后，把那份《安全通行确认》签下去。
+
+**阿米娜**（几乎笑出来）：你要我参与。
+
+**恩戈玛**：我要你决定。这两个不一样。
+
+（长久沉默。远处有孩子的哭声从话筒里传过去。）
+
+**阿米娜**（声音变了）：那是什么声音。
+
+**恩戈玛**：那是雅巴的一个女孩。她母亲昨天死了。她排在我名单第二百一十一位。
+
+**阿米娜**（很久）：……我要那份稿子。全文。我要看你们准备让部长说什么。
+
+**恩戈玛**：我发给你。
+
+**阿米娜**：还有一件事。让那个做机器的人接电话。
+
+---
+
+**6-3｜内景 · 伐木站 / 登记点 · 电话对切 · 傍晚**
+
+陈默拿起话机。他知道这一刻是全局最危险的一刻——他要说服一个比他专业的人。
+
+**阿米娜**（法语，然后换英语）：You are the Chinese technician.
+
+**陈默**：Yes.
+
+**阿米娜**：I have seen four fake voice cases this year. Two were men pretending to be dead husbands, to claim rations. I caught both. Do you know how?
+
+**陈默**：……How.
+
+**阿米娜**（平静）：Breath. Your machines breathe wrong. They breathe in the middle of a word, or they do not breathe at all.
+
+（陈默沉默了很久。这是一个专业人士对另一个专业人士的一击。）
+
+**陈默**（英语，慢，诚实）：You are right. That is the main failure. I cannot fully fix it. I can only make the channel bad enough that it does not matter.
+
+**阿米娜**：So you admit it is weak.
+
+**陈默**：I am telling you it is weak because if I tell you it is strong, you will not believe anything else I say.
+
+（她没说话。）
+
+**陈默**：Miss Touré. Ask me anything about how it works and I will answer. But do not ask me to promise it will work. It might fail. If it fails, Ngoma loses ten days and Mongala takes the road anyway.
+
+**阿米娜**（很久）：……Why are you helping him? He is holding your passport.
+
+**陈默**（他自己也停了一下，像第一次想这个问题）：Because for nine years I made voices and I never once saw the person on the other end of the line.
+
+**陈默**：Here I see them. They walk in front of me. Number two hundred and eleven walks in front of me.
+
+（电话另一端，阿米娜按住额头。）
+
+**阿米娜**（法语，非常轻，几乎是对自己说）：Merde.
+
+**阿米娜**（英语，恢复公事口气）：Understand this. I will not lie to Jidu. When they call me, I will tell them a corridor notification was received. That is true — it will be received. I will not say it is authentic. If they ask me to verify, I will say verification is not my function.
+
+**陈默**：That's enough.
+
+**阿米娜**：It is not enough. It is the exact size of the lie I am willing to be.
+
+---
+
+**6-4｜外景 · 伐木站 · 夜**
+
+准备就绪。发电机、天线对准、笔记本、开发板、耳机。恩戈玛穿着他那件旧衬衫，坐在麦克风前，手里是打印稿——**因为要"读"的不是机器，是他。他要读稿子，机器负责把他的声音换成部长的**。
+
+**陈默**（英语，检查线路）：Remember. Do not stop. Do not repeat. If he asks something not on the paper, say line nineteen.
+
+**恩戈玛**（看纸）：Line nineteen is "This line is not secure. Send it in writing."
+
+**陈默**：Yes. That is our only escape.
+
+（恩戈玛点头。他把手放在稿子上，忽然停住。）
+
+**恩戈玛**（英语，不看陈默）：Mr. Chen. When this is finished, I will give you your passport, and a place on the third truck.
+
+**陈默**：……Why the third.
+
+**恩戈玛**（终于看他）：Because the first two carry children.
+
+陈默点头。他戴上耳机。
+
+**陈默**：Ready.
+
+**本集钩子**
+
+拨号音。一次。两次。接通。
+
+**吉杜边境专员**（法语，从话筒）：喂？
+
+恩戈玛开口。屏幕上，波形跳动。从话筒另一端传出的，是**部长的声音**。
+
+**"部长"**（法语，官腔）：专员先生。内务部。关于卡朗吉路。
+
+（专员那边翻纸的声音。）
+
+**专员**（法语）：部长先生。我们收到通知。我想确认——重启的是2011年那条走廊？
+
+**恩戈玛**（读稿，机器转声）：正是。HC/2011/044。十天。
+
+**专员**（停顿）：好。那么最后一个问题，例行的。
+
+（陈默的手指悬在键盘上。恩戈玛的眼睛在稿子上疯狂扫。）
+
+**专员**（法语）：部长先生，上个月我们在阿布贾开会时，您答应给我送两箱的那个东西——您还记得是什么吗？
+
+（死一样的静。）
+
+（陈默看恩戈玛。恩戈玛看纸。纸上没有这一行。）
+
+---
+
+# 第7集：《第三辆卡车》
+
+---
+
+**7-1｜内景 · 伐木站 · 夜（接上集，零延迟）**
+
+三秒钟。发电机的噪音突然变得巨大。
+
+恩戈玛的嘴唇动了一下——他要说第十九行。
+
+陈默一把按住他的手臂，摇头。他从桌上抓过笔，在纸边缘飞快写了四个词，推到恩戈玛眼前。
+
+纸上：**"You test me. Good."**
+
+恩戈玛读。
+
+**"部长"**（法语，官腔，带一点被冒犯的威严）：专员先生。你在测试我。很好。
+
+（他停下。陈默又写：**"Ask him his mother's name."**）
+
+**"部长"**：那我也问你一个。你母亲的名字。
+
+（另一端沉默。然后是笑声——真的笑声。）
+
+**专员**（法语，笑）：好了好了，部长先生。您还是老样子。我这就把确认发给卡朗吉登记点。十天。
+
+**"部长"**：谢谢。
+
+挂断。
+
+（三个人一动不动。卡迪先反应过来，一拳砸在铁皮墙上，喊了一声。）
+
+**恩戈玛**（放下纸，手在抖，但声音平的）：Mr. Chen. How did you know.
+
+**陈默**（摘下耳机，靠在椅背上，忽然笑了，笑得难看）：I didn't know. I have done this before. Not this. But this.
+
+**恩戈玛**：Explain.
+
+**陈默**（英语，很轻）：When someone tests you, they already believe you. The test is how they say sorry for doubting. You never answer the question. You take offence. Offence is the proof.
+
+（恩戈玛看着他，很长时间。）
+
+**恩戈玛**（合上笔记本）：That is a terrible thing to know.
+
+**陈默**：Yes.
+
+---
+
+**7-2｜外景 · 卡朗吉路 · 走廊第一天 · 白天**
+
+一条红土路。人流。三百多户人——推车、驮篮、背孩子的女人、拉羊的老人。恩戈玛的民兵沿路走，但没有背枪（枪装在最后一辆卡车的木箱里，这是稿子里的条件）。
+
+一辆白色越野车停在路边，车顶插着旗。**阿米娜**站在车旁，手上是平板和虹膜采集器，另外三名工作人员在给排队的人登记。她没有笑，她在工作。
+
+她抬头，看见了远处走过来的恩戈玛。她走过去，把一份纸递给他。
+
+**阿米娜**（法语）：《安全通行确认》。我签了。
+
+**恩戈玛**（接过，看）：谢谢你。
+
+**阿米娜**（不接受这个）：不要谢我。我在上面加了一行。
+
+（恩戈玛读，皱眉。）
+
+**阿米娜**（法语，冷静）："本确认基于本站收到的通知，本站未独立核实其真实性。"
+
+**恩戈玛**：这会让它随时可以被推翻。
+
+**阿米娜**：对。这是给我自己留的。将来有人查，我不替你们背。
+
+（她转身要走，又停下。）
+
+**阿米娜**（法语）：恩戈玛。三百四十二户。我要在十天里全部录完。中间不要给我加人，不要给我塞名字，不要有一个人拿死人的身份过去。一次都不行。
+
+**恩戈玛**：一次都不会。
+
+**阿米娜**（看着他）：你会撒谎。我知道你会。但这件事上你别撒谎，因为这些人拿到的身份要用二十年。
+
+---
+
+**7-3｜内景 · 保卫军司令部 · 白天**
+
+**蒙加拉**在读一份传真——吉杜方面的走廊确认通知副本。他读得很慢。
+
+他读完，把纸轻轻放下。
+
+**蒙加拉**（法语，几乎温和）：丹尼斯。念第三段最后一句。
+
+**丹尼斯**（拿起纸，法语）："沿走廊安全由内务部负责。任何地方武装均未获授权代表内务部。"
+
+（蒙加拉摘下眼镜。他看着窗外。）
+
+**蒙加拉**（法语）：一个中学老师和一个骗子，用我的主意，把我从我自己的国家里删掉了。
+
+**丹尼斯**（小心）：上校，我们可以否认。可以向吉杜说明——
+
+**蒙加拉**（摇头）：说明什么？说明部长的电话是假的？那我要承认我知道它是假的，而我知道是因为我原本要打它。
+
+（他站起来，走到地图前。）
+
+**蒙加拉**（法语）：走廊十天。十天之后，那条路上就没有"内务部"了。只有我。
+
+**蒙加拉**：不阻断走廊。不打人流。让他们走。我们只做一件事。
+
+**丹尼斯**：什么？
+
+**蒙加拉**（用马克笔在卡朗吉背后一处画圈）：拿住那个中国人。
+
+（他转身。）
+
+**蒙加拉**：吉杜相信了一次那个声音。那个声音的主人在这片林子里。丹尼斯，那不是一个逃兵。那是一台**印钞机**。而萨伊德会在第十天把他放走，因为萨伊德是个信守账目的人。
+
+**蒙加拉**：我们在第十天，在他放走他的地方，等着。
+
+---
+
+**7-4｜外景 · 走廊 第八天 · 一处临时营地 · 夜**
+
+篝火。人们在煮东西。孩子睡在垫子上。有一种疲惫的、几乎正常的生活气息。
+
+陈默坐在一辆卡车的踏板上，脚上的伤口在渗血。**玛玛·法图**过来，粗暴但熟练地给他重新包上。
+
+**卡迪**过来坐下，递给他一小块烤木薯。
+
+**卡迪**（英语）：Two days. Then you go.
+
+**陈默**：Yes.
+
+**卡迪**（掏出手机，屏幕上是一个英语学习App的界面）：In Jidu camp, is there school?
+
+**陈默**：I think so.
+
+**卡迪**（很认真）：You said you will not teach me the voice machine.
+
+**陈默**：I said no.
+
+**卡迪**（点头，接受了）：Then teach me the other thing. The board. The cold joint. The battery. Those.
+
+（陈默看着他。然后他做了一件事：他从硬壳箱里拿出那块开发板，用刀撬开一块芯片旁的胶，把一小片东西抠出来，扔进火里。然后把板子递给卡迪。）
+
+**陈默**（英语）：Now it is a computer. Not a voice machine. Take it.
+
+**卡迪**（捧着）：What did you burn?
+
+**陈默**：The part that was my job for nine years.
+
+（他从口袋里拿出那部备用手机。屏幕上还有那张老楼照片。他看了很久。）
+
+**陈默**（对卡迪，英语，像自言自语）：Kadi. If someone has a photo of your mother's door, and you run — what do you do?
+
+**卡迪**（想了想，非常实际地）：You tell your mother to move.
+
+（陈默笑了。然后他忽然不笑了。）
+
+**陈默**：……I can't. If I call her, they know the number, they know the tower.
+
+**卡迪**（更实际地）：Then you tell someone else to tell her.
+
+（陈默定住。他抬头看着这个十六岁的孩子。）
+
+**本集钩子**
+
+第九天，深夜。
+
+陈默用恩戈玛的卫星终端，打了一个电话。不是给中国。是给**李桦**——那个还被扣在塔卡拉、有一条中盛公司专线的同乡。
+
+（通话画面：李桦在司令部一间小屋里，压低声音。）
+
+**李桦**（中文，急，怕）：小陈？你他妈还活着？
+
+**陈默**（中文）：李哥。我要你帮我做一件事。用你那条线，给国内发一封邮件。公司邮箱，走公司日志，签你的字。
+
+**李桦**（沉默）：……发给谁。
+
+**陈默**：发给杭州市公安局的一个举报邮箱。附件我一会儿传给你。
+
+**李桦**（声音变了）：附件是什么。
+
+**陈默**（很久）：是我这九年做的东西。全部。模型、参数、客户对接的记录、还有那个杭州老师的案子。我的名字在最上面。
+
+**李桦**（几乎是喊的低声）：你疯了？！你签这个你就完了！
+
+**陈默**：李哥，我签这个，他们就没有理由再去我妈家门口拍照了。因为拍了也没用了。
+
+（长久的静。）
+
+**李桦**（终于，声音发闷）：……小陈。
+
+**陈默**：什么。
+
+**李桦**（很轻）：这封邮件上我得署名。它会进公司日志。将来出事，签字的人是我。
+
+（陈默说不出话。）
+
+**李桦**（吸了口气，几乎自嘲）：算了。反正我已经赔过八百万了。
+
+传输进度条开始走。
+
+而在同一秒，画面切到保卫军通信室——**一盏指示灯亮起**。丹尼斯戴上耳机，皱眉，看着屏幕上跳出的一行：
+
+**未知终端 · 上行数据 · 位置：走廊 K-7 段**
+
+她抓起对讲机。
+
+**丹尼斯**（法语）：上校。他在第七段。他在用卫星。
+
+---
+
+# 第8集：《回声》
+
+---
+
+**8-1｜外景 · 走廊 第十天 · 卡朗吉登记点 外 · 拂晓**
+
+人流的尾部。最后几十户人在排队。阿米娜的团队在通宵工作，眼睛红着。
+
+**阿米娜**（法语，对助手，声音已经哑了）：三百三十九。三百四十。下一个。
+
+**恩戈玛**站在队尾，看着自己的笔记本。他划掉一行，又一行。
+
+他走到阿米娜旁边。
+
+**恩戈玛**（法语）：三百四十二户。差两户。
+
+**阿米娜**：谁？
+
+**恩戈玛**（合上本子，声音第一次露出疲惫）：一户在雅巴被炮打死了，全家。另一户，姓奥孔的，走东边旧路，第四天走散了。我记了名字，我记不到人。
+
+（阿米娜什么也没说。她在名册上翻到那一页，把那两行用笔框起来，写了两个字：**未到**。）
+
+**阿米娜**（法语）：这是我唯一能给他们的东西。不写"不存在"，写"未到"。
+
+远处传来引擎声。三辆车。不是保卫军的皮卡——是**Meridian**的装甲越野，车上有旗。
+
+**塞尔日·迪亚洛**下车，摘墨镜，走过来。他手上一份文件。
+
+**塞尔日**（法语，公事）：图雷小姐。我们受雇护送十四号矿石车队。走廊今天到期。我需要确认路况。
+
+**阿米娜**（法语）：走廊今天下午六点到期。
+
+**塞尔日**（点头，然后看恩戈玛，礼貌但没有温度）：萨伊德先生。我不管你和蒙加拉。我只提醒你，我们的合同里有一条：任何在车队路线上的武装冲突，我们有权先开火。请不要在下午六点之后还在这条路上。
+
+（他戴上墨镜走了。）
+
+**恩戈玛**（看着他的车走远，法语，对阿米娜）：这个人比蒙加拉危险。
+
+**阿米娜**：为什么？
+
+**恩戈玛**：因为他没有想要的东西。
+
+---
+
+**8-2｜外景 · 走廊 K-7段 · 上午**
+
+第三辆卡车。车斗上坐着二十几个人和行李。陈默坐在车尾边，抱着一个小包——里面只有护照、那部备用手机、一块电池。硬壳箱不在了。
+
+卡车忽然停下。
+
+前方三百米，路被两辆皮卡横着堵住。保卫军。**丹尼斯**站在路中间，穿制服，肩膀还缠着绷带。她手里是**扩音喇叭**。
+
+**丹尼斯**（法语，喇叭）：走廊有效。人流可以通过。我们不阻挡任何人。
+
+（人群不动。）
+
+**丹尼斯**（喇叭，然后换英语，慢，清楚）：We want one man. The Chinese. Chen Mo. He comes to us, everyone else walks. He does not come, we do not shoot — we sit here until six o'clock. Then the corridor ends. Then you are all on Colonel Mongala's road.
+
+（车斗上一阵骚动。人们开始看陈默。）
+
+（一个抱婴儿的女人往后挪了一点，离他远一些。）
+
+恩戈玛从前面走过来，站在车尾下面。他抬头看陈默。
+
+（长久的对视。）
+
+**陈默**（英语，先开口，声音很平）：Ngoma. How many are still behind us?
+
+**恩戈玛**：Fifty-one people. Nineteen children.
+
+**陈默**：And if we sit here until six?
+
+**恩戈玛**（没有粉饰）：Then fifty-one people are on his road.
+
+（陈默点头。他从车斗上跳下来。落地时伤脚一软，卡迪扶了他一把。）
+
+**卡迪**（英语，抓着他胳膊，急）：No. No no no. Teacher, tell him no—
+
+**恩戈玛**（没有阻止陈默。他做了另一件事——他从口袋里拿出陈默的护照，递给他）：Take it. Whatever happens, it is yours.
+
+**陈默**（看着护照，没有接）：Ngoma. That name is not mine. It never was.
+
+（他推回去。）
+
+**陈默**（英语）：Nine days ago I sent everything I did to the police in my country. My real name is on it. In about three weeks, "Chen Mo" will be a person with a file. That is the only real identity I have left.
+
+（他从包里拿出那部备用手机，塞进恩戈玛手里。）
+
+**陈默**：In Jidu camp there is internet. Send this photo — the building — to that address. Tell my mother to move. Do not tell her where I am. Tell her a colleague sent it.
+
+**恩戈玛**（握着手机）：Why not tell her yourself?
+
+**陈默**（笑了一下）：Because I have lied to her on the telephone for nine years. I don't want the last thing she hears from me to be another voice.
+
+---
+
+**8-3｜外景 · 路障 · 中午**
+
+陈默一个人走过那三百米。风。红土。远处人群在看。
+
+他在丹尼斯面前停下。
+
+**丹尼斯**（英语，低声，只有他能听见）：You should not have come.
+
+**陈默**：Then why did you ask.
+
+**丹尼斯**（很久）：Because he ordered me to.
+
+他被押上皮卡。皮卡驶向路边一处水泥建筑——原来的道路养护站，现在是保卫军的前哨。
+
+身后，路障的皮卡挪开。第三辆卡车启动。人流开始动。
+
+---
+
+**内景 · 养护站 · 中午**
+
+**蒙加拉**坐在一张桌子后，桌上摊着地图、一台卫星终端、一台笔记本电脑。他为陈默拉开椅子。
+
+**蒙加拉**（英语，几乎欣赏）：Sit, Mr. Chen. That was well done. Thirty-seven words. I have read them perhaps twenty times.
+
+**陈默**（坐下）：机器烧了。
+
+**蒙加拉**（微笑）：I do not need the machine. I need you. And you, unlike a machine, can be persuaded, fed, and paid.
+
+他把笔记本转过来。屏幕上是一份文件草稿——法语，标题是《南方过渡当局与吉杜共和国边境合作备忘录》。
+
+**蒙加拉**（英语）：One more telephone call. This time the voice belongs to a man in Bosa I will name later. After that, you may go anywhere. I will give you a real name. A Karamban name. A passport that is not stolen. Do you understand what I am offering? I am offering you the only thing you have never had.
+
+（陈默看着屏幕。很久。）
+
+**陈默**（英语，慢）：Colonel. Can I tell you what the machine actually does?
+
+**蒙加拉**：Please.
+
+**陈默**（他站起来，走到窗边。窗外能看见远处路上的人流在移动。）
+
+**陈默**：It takes a voice and puts it somewhere the person never was. That is all. It moves a voice into a place. For nine years I moved sons' voices into their mothers' telephones. I was very good at it.
+
+**陈默**：And every time it worked, the real son was still somewhere else. The machine never once brought anybody anywhere. It only made people believe someone had arrived.
+
+（他转过来。）
+
+**陈默**：You want to be a government. You already have guns, money, an accountant, a radio. What you do not have is anybody who arrived. You want me to move your voice into Jidu's telephone. Then Jidu will believe a government arrived. And you will still be a man in a forest before the rains.
+
+（蒙加拉的表情第一次变了——不是愤怒，是一种被看见的不适。）
+
+**蒙加拉**（法语，很轻）：……你在跟我讲道德？
+
+**陈默**（英语，摇头）：No. I am the last man on earth who can talk about morals. I am telling you a technical fact. This tool cannot make you real. I know, because I used it on myself for nine years, and look where I am standing.
+
+（沉默。窗外，远处，一声引擎。）
+
+**蒙加拉**（终于，缓慢地）：And if I put a gun to your head?
+
+**陈默**：Then I will read the script badly. On purpose. One hesitation. Half a second. The commissioner will hear it, and you will have burned the only voice you had. You do not get a second call, Colonel. Nobody ever gets a second call.
+
+（他坐回椅子上，双手放在桌上。）
+
+**陈默**：That is why you should not shoot me. Not because I am worth something. Because I am worth exactly one call, and you have already spent it.
+
+---
+
+**8-4｜外景 · 养护站外 · 下午 5:40**
+
+**丹尼斯**站在门外，听见了里面的对话（她一直站在门边）。
+
+她看了一眼手表。5:40。
+
+她走进屋，敬礼。
+
+**丹尼斯**（法语）：上校。Meridian的车队十分钟后进入本段。合同条款：他们有权先开火。我们的两辆车停在他们路线上。
+
+**蒙加拉**（不动）：挪开。
+
+**丹尼斯**（没有动）：上校，还有一件事。中国人的邮件，九天前从中盛的专线发出去了。收件方是中国的执法机构。我查了流量方向。
+
+（她把一张打印纸放在桌上。）
+
+**丹尼斯**（法语）：如果三周后有一份中国的卷宗上有他的名字，那么任何用他做的电话，将来都会被追溯。他不是印钞机，上校。他是一份证据。
+
+（蒙加拉看着那张纸。很久。）
+
+（他摘下眼镜。这个动作在全剧里第三次出现，这次没有擦。）
+
+**蒙加拉**（法语，几乎是自嘲）：一个骗子，用自首把自己变成了废品，好让我不能用他。
+
+（他把眼镜放在桌上。）
+
+**蒙加拉**（法语）：丹尼斯，挪车。让他走。
+
+**丹尼斯**：走去哪儿？
+
+**蒙加拉**（看着窗外）：Meridian的车队后面。如果他跑得够快。
+
+---
+
+**8-5｜外景 · 卡朗吉路 · 傍晚 5:52**
+
+陈默在跑。伤脚，一瘸一拐，但在跑。
+
+身后是养护站。前面是路。远处扬起尘土——Meridian的车队正在接近，六辆车，前面两辆是装甲的。
+
+他跑到路边，停下，举起双手。
+
+装甲车在他前面刹住。**塞尔日**从顶舱伸出身，端着枪。
+
+**塞尔日**（法语，然后英语）：Name.
+
+（陈默张开嘴。这是全剧最后一个"名字"问题。）
+
+（他喘着。他没有说"Wang Jian"。）
+
+**陈默**（英语）：Chen Mo. C-H-E-N. M-O. Chinese national. I am on a Chinese police file. You can check in three weeks.
+
+（塞尔日盯着他两秒。）
+
+**塞尔日**（法语，对车内）：查一下有没有中国公民的领事通报。
+
+（车内有人回话。塞尔日听。他的表情没变。）
+
+**塞尔日**（英语，对陈默）：There is a consular notice for a missing Chinese engineer at the Zhongsheng site. Photograph matches.
+
+（他放下枪，用拇指往后指了指第三辆车。）
+
+**塞尔日**（英语）：Get in. You are cargo. Do not talk to my men.
+
+（陈默爬上车。车门关上。）
+
+---
+
+**8-6｜外景 · 卡朗吉过境点 · 黄昏 6:20**
+
+铁栏杆。吉杜方向的旗。人流最后一批正在通过。
+
+**阿米娜**在关设备。屏幕上：**已同步 342 / 342 · 其中"未到" 2**。她合上笔记本电脑，长长呼出一口气，坐在台阶上，第一次露出人的疲惫。
+
+**恩戈玛**走过来，坐在她旁边台阶上。两人都不说话，看着人流。
+
+**恩戈玛**（法语，很久之后）：图雷小姐。将来他们要是来查这条走廊，你会怎么说？
+
+**阿米娜**（看着前方）：我会说，我收到一份通知，我在文件上写了我没有核实。我会说这是我的错误。
+
+**恩戈玛**：他们会罚你。
+
+**阿米娜**（点头）：会。也可能不会。总部离这儿很远，他们一年来一次。
+
+（她转头看他。）
+
+**阿米娜**：恩戈玛。我不是你的同伙。下次你打电话来，我还是会先说不。
+
+**恩戈玛**（合上笔记本，笑了一下）：我知道。这就是我为什么打给你。
+
+（远处，Meridian的车队经过过境点，不停车，向北去。陈默在第三辆车的后窗里。）
+
+（他看见了栏杆边的人。他看见恩戈玛。他抬手，隔着玻璃。）
+
+（恩戈玛没有挥手。他站起来，从口袋里拿出那部备用手机，看了一眼屏幕，然后把它举高，让陈默看见——**手机举着，屏幕朝外**。）
+
+（陈默看见了。他懂了：邮件会发出去。）
+
+（车开过去。）
+
+---
+
+**8-7｜内景 · 吉杜 · 边境镇 一间旅馆房间 · 夜**
+
+一张床，一个吊扇，一盏灯。
+
+陈默坐在床边，脚上的伤重新包过。桌上有一张纸和一支借来的笔。
+
+他在写字。不是代码，是中文，写得很慢很难看。
+
+（画面只给我们看开头几行：）
+
+**「杭州市公安局：**
+
+**我叫陈默，男，34岁，身份证号……**
+
+**从2016年到2025年，我为设在境外的电信网络诈骗团伙提供语音合成技术支持。以下是我记得的全部内容。我不申请任何减轻。有一位姓周的退休教师……」**
+
+（他停笔。手在抖。他把纸翻过去，从头开始，写得更慢。）
+
+（门外楼道有人放非洲流行乐。孩子在跑。有女人在喊某个名字。生活的声音。）
+
+---
+
+**8-8｜外景 · 吉杜 · 卡朗吉难民登记营地 · 同一夜**
+
+帐篷区。发电机的灯。
+
+**卡迪**蹲在一顶帐篷外，膝上是那块被抠掉一块的开发板。他插上电，屏幕亮起一行提示符。他试着敲了几个字符。报错。他又敲。
+
+**恩戈玛**走过来，蹲下看。
+
+**恩戈玛**（卡兰巴语）：能用？
+
+**卡迪**（卡兰巴语，倔）：能。它现在只是台电脑。
+
+**恩戈玛**（点头，站起来，看着一片帐篷）：明天早上八点，你去B区，帮我数人。
+
+**卡迪**：数什么？
+
+**恩戈玛**（掏出笔记本，翻开新的一页）：数还有多少人没有名字。
+
+（他在纸上写下第一行。）
+
+---
+
+**8-9｜内景 · 旅馆房间 · 深夜**
+
+陈默写完了。厚厚一叠纸。
+
+他把纸叠好，装进一个信封。他没有立刻封上。
+
+他从口袋里掏出一样东西——那副高保真耳机，只剩耳机了，机器没了。
+
+他把耳机戴上，插进旅馆桌上那台旧电视的耳机孔。电视里在放吉杜的地方新闻，一个女主播在讲当地降雨。
+
+他听了一会儿。
+
+（他忽然摘下耳机，对着空房间，用那个杭州口音，很轻地说：）
+
+**陈默**：妈，我这边出了点事。
+
+（他停住。）
+
+（然后他用自己的声音，说了下半句：）
+
+**陈默**：……这次是真的。
+
+（他关掉灯。）
+
+（黑暗里，窗外传来第一声雷。雨季来了。）
+
+（画面最后一帧：桌上那个未封口的信封。旁边，是那本护照，摊开着，照片上是他的脸，名字是别人的。）
+
+（**淡出。**）
+
+---
+
+**本集钩子（余味）**
+
+字幕：**十九天后。**
+
+黑屏。只有声音——
+
+一部手机的听筒音。呼叫音。接通。
+
+**一个女人的声音**（普通话，苍老，警惕）：喂？
+
+（长久的沉默。听筒里有雨声，很远，很杂。）
+
+**女人**（更警惕）：……谁啊？喂？谁啊？你说话。
+
+（沉默。）
+
+（然后是挂断声。）
+
+（黑屏上出现一行字：）
+
+**通话时长：00:11。呼出终端：卡兰巴 / 卡朗吉过境点公用卫星电话。**
+
+**（剧终）**
+
+---
+
+## 四、整剧主题落点
+
+（不足500字）
+
+这部剧讲的是一个人怎么从"搬运声音"变成"承担名字"。
+
+陈默九年的工作本质是**把声音移动到人不在的地方**。这让他成为一个高效的骗子，也让他自己变成了一个"到处都是声音、哪里都没有本人"的空心人：他用别人的护照，用别人的口音，用一个说得通的辩解（"我只负责工具"）活着。
+
+他的蜕变不是"变善良"，而是**接受不可撤销的因果**。全剧的转折点不是他救人，而是他做了三件有代价的、不可逆的事：一，他把那句"承认南方当局"改成三十七个字，主动放弃了自己手里最值钱的筹码；二，他把自己九年的犯罪材料实名发给国内执法机构——不是为了赎罪，是为了让自己**不再有可交易的价值**，从而保护母亲，也第一次让"陈默"这个名字有了确定的指向；三，他走过那三百米，不是因为勇敢，是因为他终于会算一笔账：五十一个人，十九个孩子。
+
+而他保留了骗子的技能。他救场的方式仍然是"看穿测试"，仍然是操纵人性。剧本不洗白这一点：他劝退蒙加拉，用的是骗术的语言。他的成长不是丢掉工具，而是第一次为工具的落点负责。
+
+另一条平行线是恩戈玛与阿米娜：一个用假电话换真道路的教师，一个明知有假却签字并写下"未核实"的公务员。他们都没有干净的手。剧本主张的不是清白，是**记账**——把代价写下来，把"未到"写进名册，把签字的人写在文件上。
+
+最后那通十一秒的沉默电话是余味：他终于自己拿起了话筒，却仍然说不出话。名字确认了，关系还没有。
+
+---
+
+## 五、技术真实性自检
+
+（不足500字）
+
+**语音克隆**：本剧设定它需要数分钟干净人声样本（国家电台四年存档提供），只朗读给定文本，不理解语义、不能即兴应答。所有成功都建立在**低码率卫星信道掩盖瑕疵**和**对方预期中的通话**这两个现实条件上。阿米娜指出"呼吸位置错误"是真实的鉴别方向。第6集专员的临场提问之所以能过关，靠的是社会工程（以被冒犯反制质疑），不是技术。剧中不出现任何可复用的操作步骤、参数、话术模板或工具名，"怎么做"的部分一律被打断或留在画外。
+
+**卫星通信**：终端计流量、有IMEI、上行数据会被观察到——这是第7集暴露位置的原因，也是现实中此类终端的可监测特征。
+
+**数字身份（KaramID）**：采用真实人道登记的痛点：生物识别采集、离线暂存与最长七十二小时同步延迟、名册与配额挂钩、"未到"而非"不存在"的标注实践、以及"安全通行确认"这类需要签字担责的纸质环节。系统被绕过的方式不是黑客攻击，而是**引用一个真实存在但已关闭的旧档号（HC/2011/044）**，利用纸质档案检索慢这一官僚现实——十天窗口正是"查证需要三周"的差值。
+
+**无人机**：民用改装，续航二三十分钟，怕雨，热成像有限；第3集只能发现渡河位置，不能识别人。第4集卡迪修的是冷焊点这类真实故障。
+
+**基站**：南岸仅九个基站、常断电，因此手机大部分时间无用，这解释了为什么全剧靠卫星和对讲机。
+
+**明确不存在**：读心、通用AI、自主武器、实时完美翻译（剧中翻译App慢且出错）、量子破解。开发板最后被抠掉的是承载克隆能力的模块，剩下的是一台普通计算机——这是硬件层面的可实现处理，不是象征。

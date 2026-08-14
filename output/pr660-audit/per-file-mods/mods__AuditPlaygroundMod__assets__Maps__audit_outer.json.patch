@@ -1,0 +1,14 @@
+diff --git a/mods/AuditPlaygroundMod/assets/Maps/audit_outer.json b/mods/AuditPlaygroundMod/assets/Maps/audit_outer.json
+index 5273e9aee6..f33813c7c0 100644
+--- a/mods/AuditPlaygroundMod/assets/Maps/audit_outer.json
++++ b/mods/AuditPlaygroundMod/assets/Maps/audit_outer.json
+@@ -5,7 +5,8 @@
+     {
+       "Name": "default",
+       "SpatialType": "Grid",
+-      "DataFile": "level_1.bin"
++      "DataFile": "level_1.bin",
++      "LoadedChunkCapacity": 256
+     }
+   ],
+   "TriggerTypes": [

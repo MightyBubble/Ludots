@@ -1,0 +1,47 @@
+{
+  "Id": "capability_standard_hfsm_showcase",
+  "Tags": ["showcase", "capability-standard", "hfsm", "any-state"],
+  "DefaultCamera": {
+    "TargetXCm": 250,
+    "TargetYCm": -50,
+    "DistanceCm": 5200,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 44
+  },
+  "Entities": [
+    {
+      "Template": "capability_standard_hfsm_actor",
+      "InstanceId": "hfsm-hero",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -320, "Y": -640 } } }
+    },
+    {
+      "Template": "capability_standard_hfsm_water_station",
+      "InstanceId": "hfsm-water-station",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1120, "Y": -260 } } }
+    },
+    {
+      "Template": "capability_standard_hfsm_track_center",
+      "InstanceId": "hfsm-track-center",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 650, "Y": 0 } } }
+    },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-00", "Overrides": { "WorldPositionCm": { "Value": { "X": 1500, "Y": 0 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-01", "Overrides": { "WorldPositionCm": { "Value": { "X": 1386, "Y": 425 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-02", "Overrides": { "WorldPositionCm": { "Value": { "X": 1075, "Y": 736 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-03", "Overrides": { "WorldPositionCm": { "Value": { "X": 650, "Y": 850 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-04", "Overrides": { "WorldPositionCm": { "Value": { "X": 225, "Y": 736 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-05", "Overrides": { "WorldPositionCm": { "Value": { "X": -86, "Y": 425 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-06", "Overrides": { "WorldPositionCm": { "Value": { "X": -200, "Y": 0 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-07", "Overrides": { "WorldPositionCm": { "Value": { "X": -86, "Y": -425 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-08", "Overrides": { "WorldPositionCm": { "Value": { "X": 225, "Y": -736 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-09", "Overrides": { "WorldPositionCm": { "Value": { "X": 650, "Y": -850 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-10", "Overrides": { "WorldPositionCm": { "Value": { "X": 1075, "Y": -736 } } } },
+    { "Template": "capability_standard_hfsm_track_marker", "InstanceId": "hfsm-track-11", "Overrides": { "WorldPositionCm": { "Value": { "X": 1386, "Y": -425 } } } }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "hfsm-hero" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "hfsm-hero" }
+  ]
+}

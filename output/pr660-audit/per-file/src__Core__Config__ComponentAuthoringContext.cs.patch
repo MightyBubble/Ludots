@@ -1,0 +1,13 @@
+diff --git a/src/Core/Config/ComponentAuthoringContext.cs b/src/Core/Config/ComponentAuthoringContext.cs
+index c2cb9d53f4..40f86d813e 100644
+--- a/src/Core/Config/ComponentAuthoringContext.cs
++++ b/src/Core/Config/ComponentAuthoringContext.cs
+@@ -49,6 +49,8 @@ namespace Ludots.Core.Config
+ 
+     public static class ComponentAuthoringServiceKeys
+     {
++        public const string AbilityDefinitionRegistry = "AbilityDefinitionRegistry";
++        public const string AbilityFormSetRegistry = "AbilityFormSetRegistry";
+         public const string Physics2DShapeStorage = "Physics2D.ShapeStorage";
+     }
+ }

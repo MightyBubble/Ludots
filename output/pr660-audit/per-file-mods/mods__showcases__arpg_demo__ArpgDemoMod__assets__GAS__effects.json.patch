@@ -1,0 +1,20 @@
+diff --git a/mods/showcases/arpg_demo/ArpgDemoMod/assets/GAS/effects.json b/mods/showcases/arpg_demo/ArpgDemoMod/assets/GAS/effects.json
+index 1704945c13..56dba48f6e 100644
+--- a/mods/showcases/arpg_demo/ArpgDemoMod/assets/GAS/effects.json
++++ b/mods/showcases/arpg_demo/ArpgDemoMod/assets/GAS/effects.json
+@@ -53,8 +53,13 @@
+       "range": 2000,
+       "arcHeight": 0,
+       "impactEffect": "Effect.Arpg.Poison",
+-      "travelMode": "Legacy",
+-      "impactPolicy": "Legacy"
++      "hitEffect": "Effect.Arpg.Poison",
++      "travelMode": "TrackTarget",
++      "impactPolicy": "DestroyOnFirstHit",
++      "collisionHalfWidth": 50,
++      "collisionRelationFilter": "Hostile",
++      "collisionExcludeSource": true,
++      "maxHitCount": 1
+     },
+     "configParams": {
+       "damage_base": {

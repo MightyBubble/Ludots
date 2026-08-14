@@ -1,0 +1,13 @@
+diff --git a/mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMovePlanSelectionSystem.cs b/mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMovePlanSelectionSystem.cs
+index 15e799e901..f4d1ab042b 100644
+--- a/mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMovePlanSelectionSystem.cs
++++ b/mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMovePlanSelectionSystem.cs
+@@ -99,7 +99,7 @@ namespace RoadNetworkShowcaseMod.Systems
+                     if (selection.Completed)
+                     {
+                         var arrival = new RoadRouteArrivalPolicy();
+-                        if (arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
++                        if (arrival.HasReachedFinalTarget(World, in activeOrder, position, execution.FinalArrivalRadiusCm))
+                         {
+                             orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
+                             orderRuntime.FailureReason = MovePlanFailureReason.None;

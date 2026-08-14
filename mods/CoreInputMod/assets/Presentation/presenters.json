@@ -1,0 +1,3727 @@
+[
+  {
+    "_comment": "Shared placement/build ghost: broad low cube footprint for RTS/MMO ability previews.",
+    "id": "core_input_preview_build_site",
+    "defaultColor": [
+      0.28,
+      0.82,
+      0.54,
+      0.32
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.35,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "Warp-in ghost: rounded sphere that reads as an energy silhouette.",
+    "id": "core_input_preview_warp_site",
+    "defaultColor": [
+      0.24,
+      0.78,
+      0.96,
+      0.34
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.55,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "Morph ghost: dense organic sphere for transformation-style abilities.",
+    "id": "core_input_preview_morph_site",
+    "defaultColor": [
+      0.58,
+      0.84,
+      0.22,
+      0.32
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.42,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.overlay_base",
+    "defaultColor": [
+      0.24,
+      0.76,
+      0.52,
+      0.24
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "lane": "Float",
+        "floatValue": 45
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.length",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.76
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.76
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.025
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.range",
+    "extends": "core_input.ability_aim.overlay_base",
+    "defaultColor": [
+      0.28,
+      0.52,
+      0.88,
+      0.16
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.angle",
+        "lane": "Float",
+        "floatValue": 45
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.length",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.88
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.16
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.52
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.88
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.48
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.025
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.area.circle",
+    "extends": "core_input.ability_aim.overlay_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.area.ring",
+    "extends": "core_input.ability_aim.overlay_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            0.5,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.area.cone",
+    "extends": "core_input.ability_aim.overlay_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Cone",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.area.line",
+    "extends": "core_input.ability_aim.overlay_base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.area.rectangle",
+    "extends": "core_input.ability_aim.area.line"
+  },
+  {
+    "id": "core_input.ability_aim.preview",
+    "defaultColor": [
+      1,
+      0.82,
+      0.28,
+      0.45
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.2,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "core_input.ability_aim.scale",
+        "lane": "Float",
+        "floatValue": 0.8
+      },
+      {
+        "paramKey": "core_input.ability_aim.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          0.82,
+          0.28,
+          0.45
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            0.18,
+            1
+          ],
+          "scaleParamKey": "core_input.ability_aim.scale",
+          "colorParamKey": "core_input.ability_aim.color"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.affected_target",
+    "defaultColor": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0.35,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "marker3d.scale",
+        "lane": "Float",
+        "floatValue": 0.45
+      },
+      {
+        "paramKey": "marker3d.color.r",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "bindings": [
+      {
+        "paramKey": "marker3d.color.r",
+        "source": "entityColorVector"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            0.12,
+            1
+          ],
+          "scaleParamKey": "marker3d.scale",
+          "colorParamKey": "marker3d.color.r"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.move_path.line",
+    "defaultColor": [
+      0.4,
+      0.64,
+      0.78,
+      0.18
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.length",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.width",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.rotation",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.4
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.64
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.5
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.7
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.45
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.025
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Line",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            0.18,
+            0.025
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.move_path.waypoint",
+    "defaultColor": [
+      0.38,
+      0.58,
+      0.72,
+      0.22
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      0,
+      0
+    ],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 0.26
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.38
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.58
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.5
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.7
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.55
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.035
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.26,
+            0.26,
+            0.035
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.move_path.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "MovePathBegun",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.length",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.rotation",
+          "paramLane": "Float",
+          "valueSource": "EventFloatC"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.12
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.72
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.94
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.8
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.4
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.64
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.78
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.18
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.5
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.7
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.82
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.45
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathEnded",
+          "key": "core_input.move_path.line"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.move_path.line",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathBegun",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.95
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.78
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.9
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.46
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.78
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.38
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.58
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.72
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.5
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.7
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.82
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathUpdated",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.55
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "MovePathEnded",
+          "key": "core_input.move_path.waypoint"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.move_path.waypoint",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core_input.ability_aim.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.28
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.88
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.16
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.28
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.88
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.16
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.range"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.range",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.area.circle"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.area.circle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.area.ring"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.area.ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.angle",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.rotation",
+          "paramLane": "Float",
+          "valueSource": "EventFloatC"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.area.cone"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.area.cone",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.length",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.rotation",
+          "paramLane": "Float",
+          "valueSource": "EventFloatC"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.area.line"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.area.line",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.length",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.rotation",
+          "paramLane": "Float",
+          "valueSource": "EventFloatC"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.76
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.52
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.24
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.fill.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.r",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.92
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.g",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.25
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.b",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.22
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.a",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.3
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.area.rectangle"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.area.rectangle",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimBegun",
+          "key": "ability.aim.preview"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.preview",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.preview"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.preview",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "core_input.ability_aim.scale",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.preview"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.preview",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "core_input.ability_aim.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            1,
+            0.82,
+            0.28,
+            0.45
+          ]
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimUpdated",
+          "key": "ability.aim.preview"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.preview",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "core_input.ability_aim.color",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0.92,
+            0.25,
+            0.22,
+            0.55
+          ]
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "AbilityAimEnded",
+          "key": "ability.aim.preview"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.preview",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ability.aim.affected"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "core_input.ability_aim.affected_target",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ability.aim.affected"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.affected_target",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "marker3d.scale",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.75
+        },
+        "condition": {
+          "inline": "EventMagnitudePositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ability.aim.affected"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "core_input.ability_aim.affected_target",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource",
+          "paramKey": "marker3d.scale",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0.45
+        },
+        "condition": {
+          "inline": "EventMagnitudeNonPositive"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ability.aim.affected"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "core_input.ability_aim.affected_target",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ]
+  }
+]

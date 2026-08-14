@@ -1,0 +1,75 @@
+diff --git a/src/Core/Navigation/GraphEcs/GraphPathfindingSystem.cs b/src/Core/Navigation/GraphEcs/GraphPathfindingSystem.cs
+index eef3b97875..f1e5676120 100644
+--- a/src/Core/Navigation/GraphEcs/GraphPathfindingSystem.cs
++++ b/src/Core/Navigation/GraphEcs/GraphPathfindingSystem.cs
+@@ -8,9 +8,12 @@ namespace Ludots.Core.Navigation.GraphEcs
+     {
+         private readonly NodeGraph _graph;
+         private readonly GraphRouteTable _routeTable;
+-        private readonly QueryDescription _query = new QueryDescription().WithAll<GraphPathRequest, GraphPathBuffer, GraphPathResultComponent>();
++        private static readonly QueryDescription Query = new QueryDescription().WithAll<GraphPathRequest, GraphPathBuffer, GraphPathResultComponent>();
+         private NodeGraphPathScratch _scratch;
+ 
++        public int BufferTooSmallCount { get; private set; }
++        public int LastRequiredNodeCount { get; private set; }
++
+         public GraphPathfindingSystem(World world, NodeGraph graph, GraphRouteTable routeTable = null) : base(world)
+         {
+             _graph = graph ?? throw new System.ArgumentNullException(nameof(graph));
+@@ -29,8 +32,13 @@ namespace Ludots.Core.Navigation.GraphEcs
+                 Policy = policy
+             };
+ 
+-            World.InlineEntityQuery<Job, GraphPathRequest, GraphPathBuffer, GraphPathResultComponent>(in _query, ref job);
++            World.InlineEntityQuery<Job, GraphPathRequest, GraphPathBuffer, GraphPathResultComponent>(in Query, ref job);
+             _scratch = job.Scratch;
++            BufferTooSmallCount += job.BufferTooSmallCount;
++            if (job.LastRequiredNodeCount > 0)
++            {
++                LastRequiredNodeCount = job.LastRequiredNodeCount;
++            }
+         }
+ 
+         private struct Job : IForEachWithEntity<GraphPathRequest, GraphPathBuffer, GraphPathResultComponent>
+@@ -39,10 +47,12 @@ namespace Ludots.Core.Navigation.GraphEcs
+             public GraphRouteTable RouteTable;
+             public NodeGraphPathScratch Scratch;
+             public DefaultTraversalPolicy Policy;
++            public int BufferTooSmallCount;
++            public int LastRequiredNodeCount;
+ 
+             public void Update(Entity entity, ref GraphPathRequest req, ref GraphPathBuffer buffer, ref GraphPathResultComponent result)
+             {
+-                if (buffer == null) buffer = new GraphPathBuffer();
++                Span<int> nodes = buffer.Nodes;
+ 
+                 GraphPathResult r;
+                 if (req.Mode == GraphPathMode.FastRouteTable)
+@@ -53,14 +63,18 @@ namespace Ludots.Core.Navigation.GraphEcs
+                     }
+                     else
+                     {
+-                        buffer.EnsureCapacity(RouteTable.NodeCount);
+-                        r = RouteTable.ReconstructPath(req.StartNodeId, req.GoalNodeId, buffer.Nodes);
++                        r = RouteTable.ReconstructPath(req.StartNodeId, req.GoalNodeId, nodes);
+                     }
+                 }
+                 else
+                 {
+-                    buffer.EnsureCapacity(Graph.NodeCount);
+-                    r = NodeGraphPathService.FindPathAStar(Graph, req.StartNodeId, req.GoalNodeId, buffer.Nodes, ref Scratch, ref Policy);
++                    r = NodeGraphPathService.FindPathAStar(Graph, req.StartNodeId, req.GoalNodeId, nodes, ref Scratch, ref Policy);
++                }
++
++                if (r.Status == GraphPathStatus.BufferTooSmall)
++                {
++                    BufferTooSmallCount++;
++                    LastRequiredNodeCount = r.RequiredNodeCount;
+                 }
+ 
+                 buffer.Count = r.Status == GraphPathStatus.Success ? r.NodeCount : 0;
+@@ -69,4 +83,3 @@ namespace Ludots.Core.Navigation.GraphEcs
+         }
+     }
+ }
+-

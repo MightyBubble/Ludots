@@ -1,0 +1,13 @@
+diff --git a/src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs b/src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs
+index 6856d413b2..c44a70205d 100644
+--- a/src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs
++++ b/src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs
+@@ -34,6 +34,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
+                 var definition = Compile(merged[i].Node, merged[i].Id);
+                 _registry.Register(formSetId, in definition);
+             }
++
++            AbilityFormSetIdRegistry.Freeze();
+         }
+ 
+         public static AbilityFormSetDefinition Compile(JsonObject node, string formSetName)

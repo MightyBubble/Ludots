@@ -1,0 +1,12 @@
+{
+  "name": "GraphComplexBtShowcaseMod",
+  "version": "1.0.0",
+  "description": "Standalone graph-driven complex behavior tree showcase with running async tasks.",
+  "main": "bin/net8.0/GraphComplexBtShowcaseMod.dll",
+  "priority": 136,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "behavior-tree", "task"]
+}

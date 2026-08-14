@@ -17,7 +17,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Config
@@ -30,8 +30,8 @@ namespace Ludots.Core.Config
         PresentationStableId = 1 << 1,
         PresentationLifecycleState = 1 << 2,
         SpatialCellRef = 1 << 3,
-        PerformerRootBootstrapHandled = 1 << 4,
-        PresentationOwnerHasPerformerPayload = 1 << 5,
+        PresenterRootBootstrapHandled = 1 << 4,
+        PresentationOwnerHasPresenterPayload = 1 << 5,
     }
 
     internal sealed class TemplateEntityBatchSpawner
@@ -179,14 +179,14 @@ namespace Ludots.Core.Config
                 signature += Component<SpatialCellRef>.Signature;
             }
 
-            if ((features & TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled) != 0)
+            if ((features & TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled) != 0)
             {
-                signature += Component<PerformerRootBootstrapHandled>.Signature;
+                signature += Component<PresenterRootBootstrapHandled>.Signature;
             }
 
-            if ((features & TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload) != 0)
+            if ((features & TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload) != 0)
             {
-                signature += Component<PresentationOwnerHasPerformerPayload>.Signature;
+                signature += Component<PresentationOwnerHasPresenterPayload>.Signature;
             }
 
             long createStart = Stopwatch.GetTimestamp();
@@ -229,8 +229,8 @@ namespace Ludots.Core.Config
             bool includeStableId = (features & TemplateBatchSpawnFeatures.PresentationStableId) != 0;
             bool includeLifecycleState = (features & TemplateBatchSpawnFeatures.PresentationLifecycleState) != 0;
             bool includeSpatialCellRef = (features & TemplateBatchSpawnFeatures.SpatialCellRef) != 0;
-            bool includeBootstrapHandled = (features & TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled) != 0;
-            bool includeOwnerPayload = (features & TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload) != 0;
+            bool includeBootstrapHandled = (features & TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled) != 0;
+            bool includeOwnerPayload = (features & TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload) != 0;
             bool includeDynamicHeightSampling = descriptor.HasDynamicHeightSampling;
             int batchIndex = 0;
             int chunkIndex = slot.ChunkIndex;
@@ -264,8 +264,8 @@ namespace Ludots.Core.Config
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
                 Span<SpatialCellRef> spatialRefs = includeSpatialCellRef ? chunk.GetSpan<SpatialCellRef>() : default;
-                Span<PerformerRootBootstrapHandled> bootstrapHandled = includeBootstrapHandled ? chunk.GetSpan<PerformerRootBootstrapHandled>() : default;
-                Span<PresentationOwnerHasPerformerPayload> ownerPayloads = includeOwnerPayload ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>() : default;
+                Span<PresenterRootBootstrapHandled> bootstrapHandled = includeBootstrapHandled ? chunk.GetSpan<PresenterRootBootstrapHandled>() : default;
+                Span<PresentationOwnerHasPresenterPayload> ownerPayloads = includeOwnerPayload ? chunk.GetSpan<PresentationOwnerHasPresenterPayload>() : default;
 
                 for (int offset = 0; offset < run; offset++)
                 {
@@ -401,11 +401,11 @@ namespace Ludots.Core.Config
 
                     if (includeOwnerPayload)
                     {
-                        ownerPayloads[componentIndex] = new PresentationOwnerHasPerformerPayload
+                        ownerPayloads[componentIndex] = new PresentationOwnerHasPresenterPayload
                         {
                             Count = 0,
                             RootCount = 0,
-                            SingleRootPerformer = Entity.Null,
+                            SingleRootPresenter = Entity.Null,
                             SingleRootTransformSync = 0,
                         };
                     }
@@ -446,7 +446,7 @@ namespace Ludots.Core.Config
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
                 bool hasPresentationStableId = false,
-                ParamDefault[]? performerParamOverrides = null)
+                ParamDefault[]? presenterParamOverrides = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -456,7 +456,7 @@ namespace Ludots.Core.Config
                 HasMapEntity = hasMapEntity;
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
-                PerformerParamOverrides = performerParamOverrides ?? Array.Empty<ParamDefault>();
+                PresenterParamOverrides = presenterParamOverrides ?? Array.Empty<ParamDefault>();
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -475,7 +475,7 @@ namespace Ludots.Core.Config
 
             public bool HasPresentationStableId { get; }
 
-            public ParamDefault[] PerformerParamOverrides { get; }
+            public ParamDefault[] PresenterParamOverrides { get; }
         }
 
         private readonly struct TemplateSpawnDescriptor

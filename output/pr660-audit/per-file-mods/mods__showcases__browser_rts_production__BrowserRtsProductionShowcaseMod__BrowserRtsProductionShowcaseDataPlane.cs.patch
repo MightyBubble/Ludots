@@ -1,0 +1,62 @@
+diff --git a/mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod/BrowserRtsProductionShowcaseDataPlane.cs b/mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod/BrowserRtsProductionShowcaseDataPlane.cs
+index fb12bc8da9..eac6d340d3 100644
+--- a/mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod/BrowserRtsProductionShowcaseDataPlane.cs
++++ b/mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod/BrowserRtsProductionShowcaseDataPlane.cs
+@@ -6,6 +6,7 @@ using Ludots.Core.EntityCollections;
+ using Ludots.Core.Gameplay.GAS;
+ using Ludots.Core.Gameplay.Components;
+ using Ludots.Core.Gameplay.GAS.Components;
++using Ludots.Core.Gameplay.GAS.Orders;
+ using Ludots.Core.Gameplay.GAS.Registry;
+ using Ludots.Core.Input.CommandSources;
+ using Ludots.Core.Input.Orders;
+@@ -504,14 +505,47 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
+             return WebUiCommandResult.Fail("input_mapping_missing", "ActiveInputOrderMapping is not ready for the selected command target.");
+         }
+ 
+-        if (!EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, groupIndex, slotIndex))
++        InputOrderActivationResult activation = EntityCommandPanelSourceDispatch.ActivateSlot(
++            source,
++            in context,
++            groupIndex,
++            slotIndex);
++        if (activation.State == InputOrderActivationState.Rejected)
+         {
+-            return WebUiCommandResult.Fail("ability_activation_failed", "The shared GAS command-panel source rejected this ability activation.");
++            return WebUiCommandResult.Fail(
++                MapActivationRejectionCode(activation.Rejection),
++                MapActivationRejectionMessage(activation.Rejection));
+         }
+ 
+         return WebUiCommandResult.Ok();
+     }
+ 
++    private static string MapActivationRejectionCode(OrderSubmitResult rejection)
++    {
++        return rejection switch
++        {
++            OrderSubmitResult.RejectedQueueFull => "ability_queue_full",
++            OrderSubmitResult.RejectedInvalidActor => "ability_invalid_actor",
++            OrderSubmitResult.RejectedInvalidOrderType => "ability_invalid_order_type",
++            OrderSubmitResult.RejectedByRule => "ability_rejected_by_rule",
++            OrderSubmitResult.RejectedValidation => "ability_validation_failed",
++            _ => "ability_activation_failed",
++        };
++    }
++
++    private static string MapActivationRejectionMessage(OrderSubmitResult rejection)
++    {
++        return rejection switch
++        {
++            OrderSubmitResult.RejectedQueueFull => "The order queue is full; this ability activation was rejected.",
++            OrderSubmitResult.RejectedInvalidActor => "The selected actor is not authorized for this ability activation.",
++            OrderSubmitResult.RejectedInvalidOrderType => "No mapped action is available for this command-panel slot.",
++            OrderSubmitResult.RejectedByRule => "A gameplay rule rejected this ability activation.",
++            OrderSubmitResult.RejectedValidation => "Ability activation failed validation before submission.",
++            _ => "The shared GAS command-panel source rejected this ability activation.",
++        };
++    }
++
+     private WebUiCommandResult SwitchParticipantView(WebUiCommandRequest request)
+     {
+         if (!request.Payload.TryGetProperty("participantId", out JsonElement participantElement) ||

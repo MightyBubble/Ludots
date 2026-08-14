@@ -1,0 +1,174 @@
+diff --git a/src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs b/src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs
+index b35a7ac8df..1842bfd04a 100644
+--- a/src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs
++++ b/src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs
+@@ -7,7 +7,6 @@ using Ludots.Core.Spatial;
+ using Ludots.Core.Mathematics;
+ using Ludots.Core.Mathematics.FixedPoint;
+ using System;
+-using System.Collections.Generic;
+ using System.Runtime.CompilerServices;
+ 
+ namespace Ludots.Core.Gameplay.GAS
+@@ -27,6 +26,54 @@ namespace Ludots.Core.Gameplay.GAS
+         public Entity ResolvedEntity;
+     }
+ 
++    public sealed class FanOutCommandBuffer
++    {
++        private readonly FanOutCommand[] _items;
++        private int _count;
++
++        public FanOutCommandBuffer(int capacity)
++        {
++            if (capacity <= 0)
++            {
++                throw new ArgumentOutOfRangeException(nameof(capacity));
++            }
++
++            _items = new FanOutCommand[capacity];
++        }
++
++        public int Capacity => _items.Length;
++        public int Count => _count;
++        public bool IsFull => _count == _items.Length;
++        public FanOutCommand this[int index] => _items[index];
++
++        [MethodImpl(MethodImplOptions.AggressiveInlining)]
++        public void Add(in FanOutCommand command)
++        {
++            if (_count == _items.Length)
++            {
++                throw new InvalidOperationException(
++                    $"{TargetResolverFanOutHelper.CommandCapacityExceededError}: capacity={_items.Length}.");
++            }
++
++            _items[_count++] = command;
++        }
++
++        public void Clear()
++        {
++            _count = 0;
++        }
++
++        public void Truncate(int count)
++        {
++            if ((uint)count > (uint)_count)
++            {
++                throw new ArgumentOutOfRangeException(nameof(count));
++            }
++
++            _count = count;
++        }
++    }
++
+     /// <summary>
+     /// Result of the OnResolve phase: candidates collected but not yet hit-validated.
+     /// </summary>
+@@ -45,6 +92,8 @@ namespace Ludots.Core.Gameplay.GAS
+     /// </summary>
+     public static class TargetResolverFanOutHelper
+     {
++        public const string CommandCapacityExceededError = "GAS.FAN_OUT.ERR.CommandCapacityExceeded";
++        public const string RootBudgetExceededError = "GAS.FAN_OUT.ERR.RootBudgetExceeded";
+ 
+         // ── OnResolve Phase: spatial query, returns raw candidates ──
+ 
+@@ -90,6 +139,9 @@ namespace Ludots.Core.Gameplay.GAS
+             if (preferSourceCenter && TryResolveQueryOrigin(world, in ctx, in mergedParams, out center))
+             {
+             }
++            else if (spatial.Origin == SpatialQueryOrigin.Source && TryResolveSourceQueryCenter(world, in ctx, out center))
++            {
++            }
+             else if (!preferSourceCenter && TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
+             {
+             }
+@@ -146,7 +198,7 @@ namespace Ludots.Core.Gameplay.GAS
+             Entity[] buffer,
+             int candidateCount,
+             RootBudgetTable budget,
+-            List<FanOutCommand> commands,
++            FanOutCommandBuffer commands,
+             ref int dropped)
+         {
+             EffectConfigParams mergedParams = default;
+@@ -163,7 +215,7 @@ namespace Ludots.Core.Gameplay.GAS
+             Entity[] buffer,
+             int candidateCount,
+             RootBudgetTable budget,
+-            List<FanOutCommand> commands,
++            FanOutCommandBuffer commands,
+             ref int dropped)
+         {
+             ref readonly var spatial = ref query.Spatial;
+@@ -173,7 +225,11 @@ namespace Ludots.Core.Gameplay.GAS
+             // Precompute center for Ring inner-radius check
+             if (spatial.Shape == SpatialShape.Ring && spatial.InnerRadiusCm > 0)
+             {
+-                if (TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
++                if (spatial.Origin == SpatialQueryOrigin.Source && TryResolveSourceQueryCenter(world, in ctx, out center))
++                {
++                    hasCenter = true;
++                }
++                else if (TryResolveTargetPoint(world, in ctx, in mergedParams, out center))
+                 {
+                     hasCenter = true;
+                 }
+@@ -230,11 +286,17 @@ namespace Ludots.Core.Gameplay.GAS
+                     if (!RelationshipFilterUtil.Passes(filter.RelationFilter, sourceTeamId, entityTeamId)) continue;
+                 }
+ 
++                if (commands.IsFull)
++                {
++                    throw new InvalidOperationException(
++                        $"{CommandCapacityExceededError}: capacity={commands.Capacity}, rootId={ctx.RootId}.");
++                }
++
+                 // Budget check
+                 if (!budget.TryConsume(ctx.RootId, GasConstants.MAX_CREATES_PER_ROOT))
+                 {
+-                    dropped++;
+-                    continue;
++                    throw new InvalidOperationException(
++                        $"{RootBudgetExceededError}: rootId={ctx.RootId}, perRootLimit={GasConstants.MAX_CREATES_PER_ROOT}, rootBudgetCapacity={budget.Capacity}.");
+                 }
+ 
+                 commands.Add(new FanOutCommand
+@@ -267,7 +329,7 @@ namespace Ludots.Core.Gameplay.GAS
+             in TargetDispatchDescriptor dispatch,
+             ISpatialQueryService spatialQueries,
+             RootBudgetTable budget,
+-            List<FanOutCommand> commands,
++            FanOutCommandBuffer commands,
+             Entity[] buffer,
+             ref int dropped)
+         {
+@@ -279,7 +341,7 @@ namespace Ludots.Core.Gameplay.GAS
+         /// <summary>
+         /// Publish all collected fan-out commands as EffectRequests.
+         /// </summary>
+-        public static void PublishFanOutCommands(List<FanOutCommand> commands, EffectRequestQueue queue)
++        public static void PublishFanOutCommands(FanOutCommandBuffer commands, EffectRequestQueue queue)
+         {
+             if (queue == null || commands.Count == 0) return;
+ 
+@@ -498,6 +560,18 @@ namespace Ludots.Core.Gameplay.GAS
+             return false;
+         }
+ 
++        private static bool TryResolveSourceQueryCenter(World world, in EffectContext ctx, out WorldCmInt2 point)
++        {
++            if (world.IsAlive(ctx.Source) && world.Has<WorldPositionCm>(ctx.Source))
++            {
++                point = world.Get<WorldPositionCm>(ctx.Source).Value.ToWorldCmInt2();
++                return true;
++            }
++
++            point = default;
++            return false;
++        }
++
+         private static bool TryResolveTargetPoint(World world, in EffectContext ctx, out WorldCmInt2 point)
+         {
+             EffectConfigParams mergedParams = default;

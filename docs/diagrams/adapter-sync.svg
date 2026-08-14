@@ -371,13 +371,13 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="244.8" y="637.073625" transform="rotate(-0 244.8 637.073625)">Collision/Transform</text>
    </g>
    <g id="text_15">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="738" y="217.150391" transform="rotate(-0 738 217.150391)">PerformerManager</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="738" y="217.150391" transform="rotate(-0 738 217.150391)">PresenterManager</text>
    </g>
    <g id="text_16">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="738" y="233.993156" transform="rotate(-0 738 233.993156)">Sync from World</text>
    </g>
    <g id="text_17">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="738" y="317.950391" transform="rotate(-0 738 317.950391)">PerformerFactory</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="738" y="317.950391" transform="rotate(-0 738 317.950391)">PresenterFactory</text>
    </g>
    <g id="text_18">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="738" y="334.614656" transform="rotate(-0 738 334.614656)">Create/Destroy</text>

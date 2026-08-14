@@ -1,0 +1,15 @@
+diff --git a/mods/showcases/rts_demo/RtsDemoMod/assets/game.json b/mods/showcases/rts_demo/RtsDemoMod/assets/game.json
+index a8fa7a9618..68bf07c6ab 100644
+--- a/mods/showcases/rts_demo/RtsDemoMod/assets/game.json
++++ b/mods/showcases/rts_demo/RtsDemoMod/assets/game.json
+@@ -1,4 +1,9 @@
+ {
+   "startupMapId": "rts_entry",
+-  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay"]
++  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay"],
++  "constants": {
++    "intValues": {
++      "rtsRelationEntityCapacity": 16384
++    }
++  }
+ }

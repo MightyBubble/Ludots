@@ -1,0 +1,13 @@
+{
+  "modName": "WoodChopSkillMod",
+  "version": "1.0.0",
+  "description": "A showcase mod demonstrating a simple 'Wood Chop' skill ability.",
+  "author": "AI Agent",
+  "dependencies": [
+    "LudotsCoreMod"
+  ],
+  "capabilities": [
+    "AbilityDefinitionRegistry",
+    "SystemFactoryRegistry"
+  ]
+}

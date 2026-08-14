@@ -29,7 +29,7 @@
             —— 无状态机：client 侧状态 = 栈上 frame，sim 侧状态 = exec 实体 tag（DEC-13）
 [L9 Disp]   CastDispatchProfile（selector/scorer/router，scorer 复用 UtilityAI）
 [L10 Order] OrderQueue（唯一 intake）→ OrderBuffer → AbilityExec / MassNav
-[L∥ Perf]   Performer 只读 collection revision + provenance + catalog → marker/相位
+[L∥ Perf]   Presenter 只读 collection revision + provenance + catalog → marker/相位
 ```
 
 ## 铁律
@@ -42,10 +42,10 @@
 6. Context frame 带 ownerToken，按 token 移除；push/pop 联动 IMC（inputContextId）。
 7. InputCast / Filter / Commit / Presentation 四轴正交；`InteractionModeType` 全部退役为 CastCommitProfile 数据。
 7a. **零施法状态机**：Input 层不得持有任何施法 FSM / `_isAiming` 类字段 / states-transitions schema；client 侧唯一交互状态 = InteractionContextStack 上的 frame，sim 侧唯一施法进度 = exec 实体上的 tag + attribute（DEC-13）。
-7b. **Performer 的 casting 表现只消费通用事件**：order 生命周期、ability exec / effect 生命周期、attribute / tag 变化、collection 成员与 revision、entity 生命周期——零 aim/cast 专用事件种类；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 退役（DEC-13）。
+7b. **Presenter 的 casting 表现只消费通用事件**：order 生命周期、ability exec / effect 生命周期、attribute / tag 变化、collection 成员与 revision、entity 生命周期——零 aim/cast 专用事件种类；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 退役（DEC-13）。
 7c. **Pointer 命令语义全部数据**：Core intent/route 路径零 "attack"/"garrison"/"move" 字面量；语义路由零裸 slot index（ability 一律 catalog tag / contextGroup 定位）；同 profile priority 冲突加载期 fail-fast（DEC-14）。
 7d. **L8 target 事实必经 viewer KnowledgeProjection**：fog/伪装按投影事实路由，禁读 sim 真值；路由产物只是 order 请求，合法性由 sim 侧 GAS targeting 终裁（DEC-14）。
-8. Performer 只读；裁判走 KnowledgeProjection grant，禁止 RefereeSelectionService。
+8. Presenter 只读；裁判走 KnowledgeProjection grant，禁止 RefereeSelectionService。
 9. 面板是投影不是控制器：PanelRouter 单向消费，UI 不得反打 input action。
 10. 聚合/排序/路由规则全部 catalog/profile；确定性：本地偏好与 context stack 不隐式进入 sim。
 11. **Association/Collection 层零业务语义**：掉线、心灵控制、演出接管等只是 trigger 数据（tag / 边增删）；基建 schema 与代码不识别任何场景词汇。
@@ -64,8 +64,8 @@
 - **DEC-9** Dispatch scorer 复用 `UtilityAiRuntimeEvaluator`（RFC-0060），禁止平行 scorer。
 - **DEC-10** 面板聚合 = ability catalog 字段（castFamily/alias）+ AggregationProfile + 玩家偏好覆盖；`groupBy` 是 catalog 字段取值路径表达式（如 `catalog.castFamily`），非封闭 enum。
 - **DEC-11** 新 profile 的"动词/种类"一律走注册表：interaction op（pushFrame/popFrame/submitOrder——基建原语，非施法语义）、dispatch 的 selector/scorer/router kind、payload value source 全部为 registry 注册项（对齐 graph op / SystemFactoryRegistry 先例），禁止新增 Core-only 封闭 enum 分派。"cancel" 不是 Core 概念，只是 mod 数据里某个 action 映射到 popFrame。
-- **DEC-12** Performer 基建核对结论：event→condition→command→behavior 四层已成立，`EntityCollectionMemberAdded/Removed` 事件已带 collection key/owner/member/roleId/revision，本 Epic 零新增事件种类；但需修四个执行侧硬点——graph condition 注入 viewer + payload 寄存器与拓扑谓词 ops（PROV-4b）、接线 VisibilityCondition graph Emit 路径（PROV-4c）、退役 `TeamColorResolver`/`PerformAudienceContext` 的 Team/PlayerOwner 硬编码（PROV-6b）；`PresentationEventKind`/`PerformerCommandKind`/`BehaviorKind` 等封闭 enum 列为已知边界，不阻塞本 Epic UAT、不在本 Epic 修。
-- **DEC-13** 零施法状态机（取代早期草案 CastFlowProfile FSM）：所谓"施法状态"拆解后只剩两个已有载体——client 侧 = InteractionContextStack 上的 frame（「瞄准中」就是 frame 在栈上，没有布尔/枚举），sim 侧 = exec 实体上的 tag + attribute（多段/打断/冲突/蓄力全部落在 GAS 已有仲裁：tag requirement、effect 打断、exec abort），不引入第三个状态概念，也因此不需要自建多层叠加/冲突/打断仲裁。蓄力量由 begin/commit 两条 order 之间的 sim tick 差在 exec 内累计（确定性，client 计时被禁止）。CastCommitProfile 只声明「激活时执行什么 op 序列 + frame 内 action→op 映射」。Performer 事件面收敛：casting 表现只消费 order / exec / effect 生命周期（现有 `CastCommitted`/`CastFailed`/`EffectApplied`/`EffectActivated`）+ `TagEffectiveChanged` + `AttributeValueChanged` + collection 事件；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 专用事件与 `AbilityAimPresentationRuntime`/`AbilityAimSessionState` 退役（`collection.ability.aim.*` 作为普通 collection key 保留为 mod 数据）。pre-order 的 client 瞄准预览与 post-order 的 sim 等待确认共用同一 frame 结构，只是 push 发起者不同（client op vs exec lifecycle）。
+- **DEC-12** Presenter 基建核对结论：event→condition→command→behavior 四层已成立，`EntityCollectionMemberAdded/Removed` 事件已带 collection key/owner/member/roleId/revision，本 Epic 零新增事件种类；但需修四个执行侧硬点——graph condition 注入 viewer + payload 寄存器与拓扑谓词 ops（PROV-4b）、接线 VisibilityCondition graph Emit 路径（PROV-4c）、退役 `TeamColorResolver`/`PerformAudienceContext` 的 Team/PlayerOwner 硬编码（PROV-6b）；`PresentationEventKind`/`PresenterCommandKind`/`BehaviorKind` 等封闭 enum 列为已知边界，不阻塞本 Epic UAT、不在本 Epic 修。
+- **DEC-13** 零施法状态机（取代早期草案 CastFlowProfile FSM）：所谓"施法状态"拆解后只剩两个已有载体——client 侧 = InteractionContextStack 上的 frame（「瞄准中」就是 frame 在栈上，没有布尔/枚举），sim 侧 = exec 实体上的 tag + attribute（多段/打断/冲突/蓄力全部落在 GAS 已有仲裁：tag requirement、effect 打断、exec abort），不引入第三个状态概念，也因此不需要自建多层叠加/冲突/打断仲裁。蓄力量由 begin/commit 两条 order 之间的 sim tick 差在 exec 内累计（确定性，client 计时被禁止）。CastCommitProfile 只声明「激活时执行什么 op 序列 + frame 内 action→op 映射」。Presenter 事件面收敛：casting 表现只消费 order / exec / effect 生命周期（现有 `CastCommitted`/`CastFailed`/`EffectApplied`/`EffectActivated`）+ `TagEffectiveChanged` + `AttributeValueChanged` + collection 事件；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 专用事件与 `AbilityAimPresentationRuntime`/`AbilityAimSessionState` 退役（`collection.ability.aim.*` 作为普通 collection key 保留为 mod 数据）。pre-order 的 client 瞄准预览与 post-order 的 sim 等待确认共用同一 frame 结构，只是 push 发起者不同（client op vs exec lifecycle）。
 - **DEC-14** Pointer Command Intent：`CommandIntentProfile` = pointer intent 的 per-actor 规则表（actor 谓词 × target 事实谓词 → route）。谓词是统一 condition DSL 的 shorthand（加载期 lower 到唯一 evaluator）；target 事实**必经 viewer KnowledgeProjection**（fog 门控复用 `CanTargetCommand`；伪装按投影事实路由且 target 归属域取投影所见域——tag/stance 级事实投影是新基建，由 INT-8 认领，未落地前伪装 UAT deferred；sim 侧 GAS targeting 终裁）；stance 谓词 = `GetStance(actor 所属域, target 所属域) ∈ 集合`（any-of，代理控制下按 actor 域）。唯一胜出 = 显式 priority 全序（同 priority 加载期 fail-fast），胜出即终局（route 解析失败不落穿）；动态评分显式委托 contextGroup（复用 `ContextScoredOrderResolver`，其候选查询补 knowledge 过滤）。语义路由一律 `byAbilityTag`（"攻击"= weapon catalog tag → 通常解析到 slot0，但那是数据事实非 Core 约定）。混合框选 = per-actor 路由 + 显式 `groupPolicy`（registry：independent / bySelector——复用 DSP selector，不引入 "leader" 概念；profile 顶层唯一）。与 frameActions 仲裁：精确匹配先拦截 → 栈顶 frame 自己的 commandIntentId → 无则不路由不冒泡（无 fallback）。与 Dispatch 两阶段单向：L8 分区 route groups（groupPolicy 生效）→ L9 组内 selector/scorer/router（cycle 状态 key = (frame, routeGroupKey)），dispatch 不回改路由。性能：rule 表预编译 tag bitset、actor 谓词按 archetype 缓存（与 DEC-2 同规格）。`actorOrderRouting` 是其 actor 侧子集，迁移后退役。
 - **DEC-15** 设备→intent 四层分层：物理绑定（`default_input.json`，已数据化）→ **ControlScheme**（IMC 组合 + 默认 preference 的命名 catalog，`scheme.sc2_classic` 右键指挥 / `scheme.ra_like` 左键 / `scheme.diablo_like` 左键攻击+WASD）→ frame action→op（DEC-13）→ CommandIntentProfile（DEC-14）。genre 差异纯数据；"移动"不是 Core 概念（move 只是 intent rule 的一条 route）。运行时重绑定：现状 `PlayerInputHandler` 无 rebind API、`Remap()`/`SaveUserPreferences` 零调用方——本 Epic 补 rebind API + per-player preference 持久化 + scheme 热切换（IMC push/pop；栈上非 default frame 保留）。WASD 直控 = 轴 intent → sim tick 节流 move order，必经 OrderQueue（禁止直写 WorldPositionCm，收口 Direction backlog）。
 
@@ -158,7 +158,7 @@ Feature: M3 代理控制是纯拓扑投影 [showcase]
 ```gherkin
 Feature: M4 Provenance marker（深绿/浅绿）[showcase]
   Scenario: 本地玩家看混合控制域 marker（relationKind 拓扑现算）
-    Given performer command marker catalog 已加载
+    Given presenter command marker catalog 已加载
     And 玩家1 的 ControlPlaneView 含 m01（住在 P1Rep 域）与 m99（住在 P2Rep 域）
     Then m01 渲染 palette.self.deep（深绿）ring   # viewer==域 → Owns
     And m99 渲染 palette.self.light（浅绿）ring   # viewer→域 走 Controls 边 → 现算为 proxy
@@ -219,7 +219,7 @@ Feature: M7 施法提交零状态机（frame + tag 承载全部"状态"）
   Scenario: 瞄准 = frame 在栈上，取消 = pop，无 "aim"/"cancel" Core 语义
     Given cast.commit.aim_confirm 已 push targeting frame
     Then 「瞄准中」没有任何布尔字段/枚举表达——它就是栈上的 frame 本身
-    And indicator 是 performer 监听 frame collection 成员事件渲染的
+    And indicator 是 presenter 监听 frame collection 成员事件渲染的
     When 玩家触发映射到 popFrame 的 action（mod 数据里叫什么都行）
     Then frame 弹出、indicator 随 collection 清空消失，sim 从未收到任何 order
 
@@ -277,7 +277,7 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | 除 OrderQueue 外零 SubmitOrder 调用 |
       | src/Core/MassNavigation 零 Input/Selection 引用 |
       | SelectionRuntime 零 command-intake 消费者 |
-      | Performer 规则零 PlayerOwner 读取 |
+      | Presenter 规则零 PlayerOwner 读取 |
       | Core 零 "rts"/"moba" 字面量分支 |
       | association/collection 基建零 "offline"/"mind_control"/"cinematic" 等业务场景字面量 |
       | 零 collection 跨域 copy/move API（不存在"归还"代码路径） |
@@ -288,7 +288,7 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | Core intent/route 路径零 "attack"/"garrison"/"move" 语义字面量；priority 冲突加载期 fail-fast |
       | intent 谓词求值路径全系统唯一；L8 target 事实零 sim 真值直读（必经 KnowledgeProjection） |
       | 语义路由零裸 bySlotIndex；生产路径零轴输入直写 WorldPositionCm（WASD 必经 OrderQueue） |
-      | Performer 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
+      | Presenter 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
       | InteractionModeType 已删除或仅存于迁移 shim 白名单 |
 ```
 
@@ -500,7 +500,7 @@ Feature: P9 控制方案与改键偏好
 **Phase 2 — Context Stack（继承 CTX-1..10）**
 - [ ] CTX-1b frame 增加 ownerToken + inputContextId；按 token 移除；lifecycle 回收钩子
 - [ ] CTX-7b CastCommitProfile + interaction op registry + loader（DEC-13：无 FSM schema）；InteractionModeType 退役映射表
-- [ ] CTX-7c 退役 AbilityAimBegun/Updated/Ended/SlotAdvanced 事件种类与 AbilityAimPresentationRuntime / AbilityAimSessionState；indicator 迁 performer 通用事件（tag / collection / attribute）
+- [ ] CTX-7c 退役 AbilityAimBegun/Updated/Ended/SlotAdvanced 事件种类与 AbilityAimPresentationRuntime / AbilityAimSessionState；indicator 迁 presenter 通用事件（tag / collection / attribute）
 - [ ] CTX-8b ClientCastPreference scope 链 schema + mod lock 语义
 
 **Phase 3 — Control Plane（继承 CTRL-1..10）**
@@ -510,11 +510,11 @@ Feature: P9 控制方案与改键偏好
 - [ ] CTRL-4c CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain
 - [ ] CTRL-4d ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图
 
-**Phase 4 — Provenance & Performer（继承 PROV-1..8）**
+**Phase 4 — Provenance & Presenter（继承 PROV-1..8）**
 - [ ] PROV-1b provenance 简化：controlDomain 由 collection 地址承载，写时仅存 writerDomain；relationKind 不入行、由 view 层拓扑现算
-- [ ] PROV-2b relationship revision → ControlPlaneView / Performer 重算钩子
-- [ ] PROV-4b Performer graph condition 上下文扩展：viewer 实体寄存器 + event payload 寄存器 + relationship/knowledge 拓扑谓词 graph ops（DEC-12）
-- [ ] PROV-4c 接线 `PerformerDefinition.VisibilityCondition` graphProgramId 的 Emit 路径（现状 throw）
+- [ ] PROV-2b relationship revision → ControlPlaneView / Presenter 重算钩子
+- [ ] PROV-4b Presenter graph condition 上下文扩展：viewer 实体寄存器 + event payload 寄存器 + relationship/knowledge 拓扑谓词 graph ops（DEC-12）
+- [ ] PROV-4c 接线 `PresenterDefinition.VisibilityCondition` graphProgramId 的 Emit 路径（现状 throw）
 - [ ] PROV-6b 退役 `TeamColorResolver` 硬编码色与 `PerformAudienceContext` 的 Team/PlayerOwner 直读，改 palette catalog + 拓扑求值
 
 **Phase 5 — Panel Router & 聚合（新增）**
@@ -575,5 +575,5 @@ Feature: P9 控制方案与改键偏好
 - 不实现 ParticipantView Mode enum，Core 不出现 genre 分支。
 - 不在本 Epic 实现联机传输层，只保证确定性契约（M10）。
 - 不为裁判实现 gameplay order 路径。
-- 不在本 Epic 开放 Performer 执行侧封闭 enum 的 mod 注册（`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` / `InlineConditionKind`）：已核查不阻塞本 Epic UAT（DEC-12），列为已知边界，若后续需要另立 RFC。
+- 不在本 Epic 开放 Presenter 执行侧封闭 enum 的 mod 注册（`PresentationEventKind` / `PresenterCommandKind` / `BehaviorKind` / `AssetKind` / `InlineConditionKind`）：已核查不阻塞本 Epic UAT（DEC-12），列为已知边界，若后续需要另立 RFC。
 - 不做同进程多 viewport 渲染（裁判作为独立 client anchor 已满足 M5/P8）。

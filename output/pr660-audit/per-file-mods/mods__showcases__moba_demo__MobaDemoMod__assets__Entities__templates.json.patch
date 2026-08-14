@@ -1,0 +1,20 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/assets/Entities/templates.json b/mods/showcases/moba_demo/MobaDemoMod/assets/Entities/templates.json
+index ebcc01ae0c..45408e5caf 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/assets/Entities/templates.json
++++ b/mods/showcases/moba_demo/MobaDemoMod/assets/Entities/templates.json
+@@ -3,13 +3,13 @@
+     "id": "moba_hero",
+     "components": {
+       "CommandSourceSelectableTag": {},
++      "TimedTagBuffer": {},
+       "AbilityStateBuffer": {
+         "abilityIds": [
+           "Ability.Moba.SkillQ",
+           "Ability.Moba.SkillW",
+           "Ability.Moba.SkillE",
+-          "Ability.Moba.SkillR",
+-          "Ability.Nav.Move"
++          "Ability.Moba.SkillR"
+         ]
+       }
+     }

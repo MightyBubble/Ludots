@@ -1,0 +1,63 @@
+diff --git a/src/Core/Gameplay/GAS/Benchmarks/GasBenchmark.cs b/src/Core/Gameplay/GAS/Benchmarks/GasBenchmark.cs
+index ec827e57dd..a5eb0316f5 100644
+--- a/src/Core/Gameplay/GAS/Benchmarks/GasBenchmark.cs
++++ b/src/Core/Gameplay/GAS/Benchmarks/GasBenchmark.cs
+@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
+ 
+         public static void Run()
+         {
++            const int entityCount = 100_000;
+             Console.WriteLine("Initializing GAS Benchmark (Abilities & Hooks)...");
+ 
+             // 1. Setup Registry
+@@ -38,6 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
+             var clock = new DiscreteClock();
+             var clocks = new GasClocks(clock);
+             var conditions = new GasConditionRegistry();
++            var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
+ 
+             var mods = new EffectModifiers();
+             mods.Add(healthId, ModifierOp.Add, 5.0f);
+@@ -54,17 +56,19 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
+             });
+             
+             // 3. Create Systems
+-            var appSystem = new EffectApplicationSystem(world, effectRequests);
+-            var durSystem = new EffectLifetimeSystem(world, clock, conditions, effectRequests);
+-            var aggSystem = new AttributeAggregatorSystem(world);
++            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
++            var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
++            var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
+ 
+             var proposalSystem = new EffectProposalProcessingSystem(
+                 world,
+                 effectRequests,
+-                null,
+-                effectTemplates,
+-                responseChainOrderTypes: BenchmarkResponseChainOrderTypes);
+-            var abilitySystem = new AbilitySystem(world, effectRequests);
++                fanOutCommandCapacity: 65536,
++                clock,
++                templates: effectTemplates,
++                responseChainOrderTypes: BenchmarkResponseChainOrderTypes,
++                tagOps: tagOps);
++            var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
+             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
+             
+             // 4. Create Global Ability Template (Flyweight)
+@@ -78,7 +82,6 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
+             }
+ 
+             // 5. Create Entities
+-            int entityCount = 100_000;
+             Console.WriteLine($"Creating {entityCount} entities with Abilities...");
+             var entities = new Entity[entityCount];
+             
+@@ -87,6 +90,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
+                 typeof(ActiveEffectContainer),
+                 typeof(GameplayTagContainer),
+                 typeof(TagCountContainer),
++                typeof(DirtyFlags),
+                 typeof(AbilityStateBuffer),
+                 typeof(ReactionBuffer)
+             };

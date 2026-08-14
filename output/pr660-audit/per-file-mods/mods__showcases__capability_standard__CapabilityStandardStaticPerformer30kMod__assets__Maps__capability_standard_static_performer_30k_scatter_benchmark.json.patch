@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_scatter_benchmark.json b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_scatter_benchmark.json
+index d6121878c3..db97e41581 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_scatter_benchmark.json
++++ b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_scatter_benchmark.json
+@@ -17,7 +17,8 @@
+       "SpatialType": "Grid",
+       "WidthInMacroTiles": 1,
+       "HeightInMacroTiles": 1,
+-      "GridCellSizeCm": 100
++      "GridCellSizeCm": 100,
++      "LoadedChunkCapacity": 16
+     }
+   ],
+   "DefaultCamera": {

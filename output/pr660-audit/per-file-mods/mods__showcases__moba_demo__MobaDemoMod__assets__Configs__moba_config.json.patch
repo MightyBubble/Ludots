@@ -1,0 +1,15 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/assets/Configs/moba_config.json b/mods/showcases/moba_demo/MobaDemoMod/assets/Configs/moba_config.json
+index 016ce05173..a286a614ba 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/assets/Configs/moba_config.json
++++ b/mods/showcases/moba_demo/MobaDemoMod/assets/Configs/moba_config.json
+@@ -11,10 +11,6 @@
+       "rangeCircleColor": [0.3, 0.7, 1.0, 0.2]
+     }
+   },
+-  "movement": {
+-    "speedCmPerSec": 600,
+-    "stopRadiusCm": 20
+-  },
+   "commands": {
+     "maxPerFrame": 128
+   },

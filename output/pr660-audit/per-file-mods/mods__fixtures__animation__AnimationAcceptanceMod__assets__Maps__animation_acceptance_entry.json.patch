@@ -1,0 +1,14 @@
+diff --git a/mods/fixtures/animation/AnimationAcceptanceMod/assets/Maps/animation_acceptance_entry.json b/mods/fixtures/animation/AnimationAcceptanceMod/assets/Maps/animation_acceptance_entry.json
+index d12d464bfa..a4d86cfeb3 100644
+--- a/mods/fixtures/animation/AnimationAcceptanceMod/assets/Maps/animation_acceptance_entry.json
++++ b/mods/fixtures/animation/AnimationAcceptanceMod/assets/Maps/animation_acceptance_entry.json
+@@ -7,7 +7,8 @@
+       "SpatialType": "Grid",
+       "WidthInMacroTiles": 1,
+       "HeightInMacroTiles": 1,
+-      "GridCellSizeCm": 100
++      "GridCellSizeCm": 100,
++      "LoadedChunkCapacity": 16
+     }
+   ],
+   "DefaultCamera": {

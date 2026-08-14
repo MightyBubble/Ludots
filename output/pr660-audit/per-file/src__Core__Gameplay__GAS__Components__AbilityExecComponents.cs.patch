@@ -1,0 +1,57 @@
+diff --git a/src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs b/src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs
+index 82dcc016be..54230d3313 100644
+--- a/src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs
++++ b/src/Core/Gameplay/GAS/Components/AbilityExecComponents.cs
+@@ -83,7 +83,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
+     /// <summary>
+     /// Declarative ability execution specification. 0GC unsafe struct with SoA layout.
+     /// Items are sorted by tick. Supports Clips, Signals, and Gates.
+-    /// Replaces the former AbilityTaskSpec.
++    /// Compact execution timeline authored by ability configuration.
+     /// </summary>
+     public unsafe struct AbilityExecSpec
+     {
+@@ -186,7 +186,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
+     /// <summary>
+     /// Runtime state of an ability execution. Attached to caster entities.
+     /// </summary>
+-    public unsafe struct AbilityExecInstance
++    public struct AbilityExecInstance
+     {
+         public int OrderId;
+         public int AbilitySlot;
+@@ -198,13 +198,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         public Fix64Vec2 TargetOriginPosCm;
+         public byte HasTargetOriginPos;
+ 
+-        /// <summary>Multi-target storage for TargetCollectionGate results.</summary>
+-        public int MultiTargetCount;
+-        public fixed int MultiTargetIds[64];
+-        public fixed int MultiTargetWorldIds[64];
+-        public fixed int MultiTargetVersions[64];
+-
+         public AbilityExecRunState State;
++        /// <summary>
++        /// Explicit order-terminal reason for Interrupted and Failed states.
++        /// None is valid only while running or after a successful finish.
++        /// </summary>
++        public OrderFailureReason TerminalFailureReason;
+         /// <summary>Elapsed ticks since execution start (relative to spec ticks).</summary>
+         public int CurrentTick;
+         /// <summary>The tick value at execution start (absolute clock value).</summary>
+@@ -224,15 +223,5 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// <summary>Progression Use requirement needs target context from a later input or target collection gate.</summary>
+         public byte PendingProgressionUseRequirement;
+         public int PendingProgressionRequirementId;
+-
+-        public void AddMultiTarget(Entity entity)
+-        {
+-            if (MultiTargetCount >= 64) return;
+-            int i = MultiTargetCount;
+-            fixed (int* ids = MultiTargetIds) ids[i] = entity.Id;
+-            fixed (int* wids = MultiTargetWorldIds) wids[i] = entity.WorldId;
+-            fixed (int* vers = MultiTargetVersions) vers[i] = entity.Version;
+-            MultiTargetCount++;
+-        }
+     }
+ }

@@ -90,12 +90,13 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Entity[] selected = SnapshotCommandSource();
         Entity primary = selected.Length > 0 ? selected[0] : Entity.Null;
 
-        var entities = BuildEntities(selected);
+        var entities = BuildEntities(selected, flavor);
         var factions = BuildFactions(entities);
         var commands = BuildCommandPanel(primary);
         var resources = BuildResourceChips();
         var production = BuildProductionQueue(commands);
         var buildables = BuildBuildables(commands);
+        var scenario = BuildScenario(flavor);
         var diagnostics = BuildDiagnostics(reason, mapId, entities, commands);
 
         return new BrowserRtsProductionSnapshot(
@@ -110,12 +111,13 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             commands,
             buildables,
             production,
+            scenario,
             BrowserRtsProductionTechTreeView.Empty,
             BrowserRtsProductionDiplomacyView.Empty,
             diagnostics);
     }
 
-    private BrowserRtsProductionEntityView[] BuildEntities(Entity[] selected)
+    private BrowserRtsProductionEntityView[] BuildEntities(Entity[] selected, string flavor)
     {
         var selectedSet = selected
             .Where(entity => entity != Entity.Null)
@@ -149,8 +151,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                 name.Value,
                 kind,
                 teamId,
-                TeamName(teamId),
-                TeamColor(teamId),
+                TeamName(teamId, flavor),
+                TeamColor(teamId, flavor),
                 MathF.Round(position.Value.X.ToFloat() / 100f, 2),
                 MathF.Round(position.Value.Y.ToFloat() / 100f, 2),
                 MathF.Round(health, 1),
@@ -162,7 +164,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return entities
             .OrderBy(entity => entity.TeamId)
             .ThenBy(entity => entity.Name, StringComparer.Ordinal)
-            .Take(80)
+            .Take(128)
             .ToArray();
     }
 
@@ -187,9 +189,9 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return teamIds
             .Select(teamId => new BrowserRtsProductionFactionView(
                 $"team-{teamId}",
-                TeamName(teamId),
+                TeamName(teamId, ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty)),
                 teamId,
-                TeamColor(teamId),
+                TeamColor(teamId, ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty)),
                 teamId == 1 ? "player" : "ai",
                 string.Equals($"team-{teamId}", _activeFactionId, StringComparison.Ordinal),
                 entities.Count(entity => entity.TeamId == teamId),
@@ -319,6 +321,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         {
             "red-alert-like" => ["Credits", "Power", "Ore"],
             "starcraft-like" => ["Minerals", "Gas", "Supply"],
+            "starcraft-full" => ["Minerals", "Gas", "Supply"],
             "empire-like" => ["Food", "Lumber", "Gold", "Stone"],
             "fourx-like" => ["Gold", "Science", "Production", "Food"],
             _ => ["Credits", "Minerals", "Lumber"]
@@ -328,9 +331,28 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             .Select(name =>
             {
                 float current = ReadTeamAttributeTotal(ResolveActiveTeamId(), name, out bool found);
-                return new BrowserRtsProductionResourceChipView(name, MathF.Round(current, 1), found ? "+0.0" : "");
+                string rate = ResolveResourceRate(flavor, name, found);
+                return new BrowserRtsProductionResourceChipView(name, MathF.Round(current, 1), rate);
             })
             .ToArray();
+    }
+
+    private string ResolveResourceRate(string flavor, string name, bool found)
+    {
+        if (!found)
+        {
+            return string.Empty;
+        }
+
+        if (flavor == "starcraft-full" &&
+            string.Equals(name, "Minerals", StringComparison.Ordinal) &&
+            TryReadGlobalInt("scf.scenario.miningWorkers", out int miningWorkers) &&
+            miningWorkers > 0)
+        {
+            return $"+{miningWorkers * 50}/s";
+        }
+
+        return "+0.0";
     }
 
     private static BrowserRtsProductionBuildableView[] BuildBuildables(BrowserRtsProductionCommandPanelView commands)
@@ -384,6 +406,11 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             messages.Add(aimingMessage);
         }
 
+        if (TryReadGlobalString("scf.scenario.lastEvent", out string scenarioEvent) && scenarioEvent.Length > 0)
+        {
+            messages.Add(scenarioEvent);
+        }
+
         return new BrowserRtsProductionDiagnosticsView(
             reason,
             _lastCommand,
@@ -393,6 +420,51 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             entities.Length,
             0,
             messages.ToArray());
+    }
+
+    private BrowserRtsProductionScenarioView BuildScenario(string flavor)
+    {
+        if (flavor != "starcraft-full")
+        {
+            return BrowserRtsProductionScenarioView.Empty;
+        }
+
+        string phase = TryReadGlobalString("scf.scenario.phase", out string resolvedPhase)
+            ? resolvedPhase
+            : "Opening";
+        string lastEvent = TryReadGlobalString("scf.scenario.lastEvent", out string resolvedEvent)
+            ? resolvedEvent
+            : "Opening: select SCV and start mineral harvesting.";
+        string enemyHqName = TryReadGlobalString("scf.scenario.enemyHqName", out string resolvedEnemyName)
+            ? resolvedEnemyName
+            : "Hatchery";
+        float enemyHqHealth = TryReadGlobalFloat("scf.scenario.enemyHqHealth", out float resolvedEnemyHealth)
+            ? resolvedEnemyHealth
+            : 0f;
+        float enemyHqMaxHealth = TryReadGlobalFloat("scf.scenario.enemyHqMaxHealth", out float resolvedEnemyMaxHealth)
+            ? resolvedEnemyMaxHealth
+            : 1f;
+        int miningWorkers = TryReadGlobalInt("scf.scenario.miningWorkers", out int resolvedMiningWorkers)
+            ? resolvedMiningWorkers
+            : 0;
+        int armyCount = TryReadGlobalInt("scf.scenario.armyCount", out int resolvedArmyCount)
+            ? resolvedArmyCount
+            : 0;
+        int enemyTeamAlive = TryReadGlobalInt("scf.scenario.enemyTeamAlive", out int resolvedEnemyTeamAlive)
+            ? resolvedEnemyTeamAlive
+            : 0;
+        bool victory = TryReadGlobalBool("scf.scenario.victory", out bool resolvedVictory) && resolvedVictory;
+
+        return new BrowserRtsProductionScenarioView(
+            phase,
+            lastEvent,
+            miningWorkers,
+            armyCount,
+            enemyHqName,
+            MathF.Round(MathF.Max(0f, enemyHqHealth), 1),
+            MathF.Round(MathF.Max(1f, enemyHqMaxHealth), 1),
+            enemyTeamAlive,
+            victory);
     }
 
     private bool TryBuildAimingMessage(BrowserRtsProductionCommandPanelView commands, out string message)
@@ -890,6 +962,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         {
             "rts_red_alert_like" => "red-alert-like",
             "rts_starcraft_like" => "starcraft-like",
+            "rts_starcraft_full" => "starcraft-full",
             "rts_empire_like" => "empire-like",
             "rts_fourx_like" => "fourx-like",
             _ => "shared"
@@ -923,7 +996,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         return "unit";
     }
 
-    private static string TeamName(int teamId)
+    private static string TeamName(int teamId, string flavor)
     {
         // WPK-4 debt: hardcoded team labels. Prefer profile/token-driven faction display.
         return teamId switch
@@ -935,7 +1008,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         };
     }
 
-    private static string TeamColor(int teamId)
+    private static string TeamColor(int teamId, string flavor)
     {
         // WPK-4 debt: hardcoded team colors. Prefer profile/token-driven faction display.
         return teamId switch
@@ -980,6 +1053,72 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
         found = hasValue;
         return total;
+    }
+
+    private bool TryReadGlobalString(string key, out string value)
+    {
+        if (_engine.GlobalContext.TryGetValue(key, out object? raw) && raw is string resolved)
+        {
+            value = resolved;
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
+    private bool TryReadGlobalInt(string key, out int value)
+    {
+        if (_engine.GlobalContext.TryGetValue(key, out object? raw))
+        {
+            if (raw is int resolved)
+            {
+                value = resolved;
+                return true;
+            }
+
+            if (raw is float asFloat)
+            {
+                value = (int)MathF.Round(asFloat);
+                return true;
+            }
+        }
+
+        value = 0;
+        return false;
+    }
+
+    private bool TryReadGlobalFloat(string key, out float value)
+    {
+        if (_engine.GlobalContext.TryGetValue(key, out object? raw))
+        {
+            if (raw is float resolved)
+            {
+                value = resolved;
+                return true;
+            }
+
+            if (raw is int asInt)
+            {
+                value = asInt;
+                return true;
+            }
+        }
+
+        value = 0f;
+        return false;
+    }
+
+    private bool TryReadGlobalBool(string key, out bool value)
+    {
+        if (_engine.GlobalContext.TryGetValue(key, out object? raw) && raw is bool resolved)
+        {
+            value = resolved;
+            return true;
+        }
+
+        value = false;
+        return false;
     }
 
     private static int ReadInt(JsonElement payload, string name, int defaultValue)
@@ -1052,6 +1191,7 @@ internal sealed record BrowserRtsProductionSnapshot(
     BrowserRtsProductionCommandPanelView Commands,
     BrowserRtsProductionBuildableView[] Buildables,
     BrowserRtsProductionQueueItemView[] ProductionQueue,
+    BrowserRtsProductionScenarioView Scenario,
     BrowserRtsProductionTechTreeView TechTree,
     BrowserRtsProductionDiplomacyView Diplomacy,
     BrowserRtsProductionDiagnosticsView Diagnostics);
@@ -1144,6 +1284,29 @@ internal sealed record BrowserRtsProductionBuildableView(
     string Requirement,
     int Cost,
     int BuildSeconds);
+
+internal sealed record BrowserRtsProductionScenarioView(
+    string Phase,
+    string LastEvent,
+    int MiningWorkers,
+    int ArmyCount,
+    string EnemyHqName,
+    float EnemyHqHealth,
+    float EnemyHqMaxHealth,
+    int EnemyTeamAlive,
+    bool Victory)
+{
+    public static BrowserRtsProductionScenarioView Empty { get; } = new(
+        string.Empty,
+        string.Empty,
+        0,
+        0,
+        string.Empty,
+        0f,
+        1f,
+        0,
+        false);
+}
 
 internal sealed record BrowserRtsProductionTechTreeView(
     BrowserRtsProductionTechNodeView[] Nodes,

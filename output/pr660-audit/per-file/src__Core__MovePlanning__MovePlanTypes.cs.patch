@@ -1,0 +1,13 @@
+diff --git a/src/Core/MovePlanning/MovePlanTypes.cs b/src/Core/MovePlanning/MovePlanTypes.cs
+index 429ca749e9..d08aafa716 100644
+--- a/src/Core/MovePlanning/MovePlanTypes.cs
++++ b/src/Core/MovePlanning/MovePlanTypes.cs
+@@ -132,7 +132,7 @@ public interface IMovePlanStore
+ 
+ public interface IMovePlanFinalTargetResolver
+ {
+-    bool TryResolveFinalTarget(in Order order, out Vector2 finalGoalWorldCm);
++    bool TryResolveFinalTarget(World world, in Order order, out Vector2 finalGoalWorldCm);
+ }
+ 
+ public interface IMovePlanExecutionSink

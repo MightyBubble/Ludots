@@ -1,0 +1,386 @@
+[
+  {
+    "id": "scf_terran_command_center_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.terran.scv"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.terran.marine"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_terran_barracks_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.terran.marine"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.terran.marauder"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.terran.reaper"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_terran_factory_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.terran.hellion"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.terran.siege.tank"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.terran.hellbat"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_terran_starport_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.terran.viking"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.terran.medivac"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.terran.banshee"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_terran_orbital_command_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.terran.scv"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.terran.marine"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.terran.marauder"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_hatchery_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.drone"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.zergling"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_spawning_pool_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.zergling"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.baneling"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_roach_warren_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.roach"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.ravager"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_hydra_den_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.hydralisk"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.lurker"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_spire_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.mutalisk"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.corruptor"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_infestation_pit_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.infestor"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.viper"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_ultra_cavern_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.ultralisk"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_zerg_hive_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.zerg.drone"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.zerg.queen"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_nexus_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.probe"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.zealot"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_gateway_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.zealot"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.stalker"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.protoss.sentry"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_robotics_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.immortal"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.colossus"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.protoss.observer"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_stargate_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.phoenix"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.voidray"
+          },
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Scf.Train.protoss.carrier"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_templar_archives_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.hightemplar"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.darktemplar"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_robo_bay_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.disruptor"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.warp.prism"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "scf_protoss_fleet_beacon_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Scf.Train.protoss.tempest"
+          },
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Scf.Train.protoss.mothership"
+          }
+        ]
+      }
+    ]
+  }
+]

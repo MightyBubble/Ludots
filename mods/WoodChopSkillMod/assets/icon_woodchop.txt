@@ -1,0 +1,4 @@
+# Placeholder Icon for Wood Chop Skill
+# This file represents the 'icon_woodchop.png' asset.
+# In a real scenario, this would be an actual PNG image.
+[Placeholder Image Data]

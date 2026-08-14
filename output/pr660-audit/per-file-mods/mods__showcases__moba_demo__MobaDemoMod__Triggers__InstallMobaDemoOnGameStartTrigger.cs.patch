@@ -1,0 +1,47 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/Triggers/InstallMobaDemoOnGameStartTrigger.cs b/mods/showcases/moba_demo/MobaDemoMod/Triggers/InstallMobaDemoOnGameStartTrigger.cs
+index 9b43b377a4..cda30ab1ca 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/Triggers/InstallMobaDemoOnGameStartTrigger.cs
++++ b/mods/showcases/moba_demo/MobaDemoMod/Triggers/InstallMobaDemoOnGameStartTrigger.cs
+@@ -6,16 +6,13 @@ using CoreInputMod.Triggers;
+ using CoreInputMod.ViewMode;
+ using Ludots.Core.Config;
+ using Ludots.Core.Engine;
+-using Ludots.Core.Gameplay.GAS;
+ using Ludots.Core.Gameplay.GAS.Orders;
+-using Ludots.Core.Gameplay.GAS.Registry;
+ using Ludots.Core.Mathematics;
+ using Ludots.Core.Modding;
+ using Ludots.Core.Presentation.Commands;
+ using Ludots.Core.Presentation.Performers;
+ using Ludots.Core.Presentation.Systems;
+ using Ludots.Core.Scripting;
+-using MobaDemoMod.GAS;
+ using MobaDemoMod.Systems;
+ 
+ namespace MobaDemoMod.Triggers
+@@ -51,9 +48,6 @@ namespace MobaDemoMod.Triggers
+             engine.GlobalContext[MobaConfigKey] = mobaConfig;
+             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
+ 
+-            var config = engine.GetService(CoreServiceKeys.GameConfig);
+-            _ = config.Constants.OrderTypeIds["stop"];
+-
+             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
+                 ordersObj is OrderQueue orders)
+             {
+@@ -63,15 +57,6 @@ namespace MobaDemoMod.Triggers
+ 
+             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Moba");
+ 
+-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
+-                registryObj is OrderTypeRegistry orderTypeRegistry)
+-            {
+-                int navMoveAbilityTagId = TagRegistry.Register(MobaDemoAbilityDefinitions.Move);
+-                engine.RegisterSystem(new StopOrderNavMoveCleanupSystem(engine.World, config.Constants.OrderTypeIds["stop"], navMoveAbilityTagId), SystemGroup.AbilityActivation);
+-                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry, config.Constants.OrderTypeIds["stop"]), SystemGroup.AbilityActivation);
+-                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
+-            }
+-
+             // Command-source acquisition feedback hooks are provided by CoreInputMod; MOBA injects only visual callbacks here.
+             PerformerCommandBuffer cmdBuffer = null;
+             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)

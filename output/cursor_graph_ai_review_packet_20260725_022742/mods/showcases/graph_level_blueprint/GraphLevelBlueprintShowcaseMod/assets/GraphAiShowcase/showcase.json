@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "showcaseId": "graph_level_blueprint",
+  "mode": "LevelBlueprint",
+  "mapId": "graph_level_blueprint_showcase",
+  "title": "Graph Level Blueprint",
+  "summary": "The yellow graph token opens the door, spawns patrol, secures the beacon, then unlocks the exit.",
+  "beatSeconds": 1.0,
+  "graphProgramId": "level_blueprint_opening",
+  "boundary": "Only the level-flow graph is running here; no squad FSM or behavior-tree task runner is active.",
+  "hotPath": {
+    "entityCount": 50000
+  },
+  "levelFlow": {
+    "cursorInstanceId": "graph-level-flow-cursor",
+    "steps": [
+      {
+        "instanceId": "graph-level-opening-room",
+        "targetInstanceId": "graph-level-door-gate",
+        "label": "1 door",
+        "actionLabel": "door gate slides open",
+        "targetActiveOffsetYCm": 320,
+        "targetCompleteOffsetYCm": 420,
+        "targetWobbleXCm": 40,
+        "targetWobbleXFrequency": 5.2
+      },
+      {
+        "instanceId": "graph-level-spawn-patrol",
+        "targetInstanceId": "graph-level-patrol-spawn-zone",
+        "label": "2 spawn",
+        "actionLabel": "patrol spawn rallies",
+        "targetActiveOffsetXCm": 120,
+        "targetActiveOffsetYCm": 140,
+        "targetCompleteOffsetYCm": 160,
+        "targetWobbleXCm": 180,
+        "targetWobbleYCm": 70,
+        "targetWobbleXFrequency": 3.8,
+        "targetWobbleYFrequency": 3.8
+      },
+      {
+        "instanceId": "graph-level-secure-objective",
+        "targetInstanceId": "graph-level-objective-beacon",
+        "label": "3 beacon",
+        "actionLabel": "objective beacon rises",
+        "targetActiveOffsetYCm": 260,
+        "targetCompleteOffsetYCm": 300,
+        "targetWobbleYCm": 120,
+        "targetWobbleYFrequency": 6.2
+      },
+      {
+        "instanceId": "graph-level-open-exit",
+        "targetInstanceId": "graph-level-exit-gate",
+        "label": "4 exit",
+        "actionLabel": "exit gate slides open",
+        "targetActiveOffsetXCm": 420,
+        "targetCompleteOffsetXCm": 520,
+        "targetWobbleYCm": 50,
+        "targetWobbleYFrequency": 5.0
+      }
+    ]
+  },
+  "outputs": {
+    "stateRegister": 10,
+    "intentRegister": 11,
+    "btNodeRegister": 12,
+    "taskIdRegister": 13,
+    "taskDurationRegister": 14
+  },
+  "stateLabels": {
+    "0": "Opening Room",
+    "1": "Spawn Patrol",
+    "2": "Secure Objective",
+    "3": "Open Exit"
+  },
+  "intentLabels": {
+    "0": "Load Room",
+    "1": "Spawn Patrol",
+    "2": "Mark Objective",
+    "3": "Unlock Exit"
+  },
+  "taskLabels": {
+    "0": "No Task"
+  },
+  "programs": [
+    {
+      "id": "level_blueprint_opening",
+      "instructions": [
+        { "op": "CompareGtIntImm", "dst": 0, "a": 0, "imm": 8 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 3 },
+        { "op": "ConstInt", "dst": 11, "imm": 3 },
+        { "op": "Jump", "imm": 12 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 0, "imm": 5 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 2 },
+        { "op": "Jump", "imm": 7 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 0, "imm": 2 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 1 },
+        { "op": "ConstInt", "dst": 11, "imm": 1 },
+        { "op": "Jump", "imm": 2 },
+        { "op": "ConstInt", "dst": 10, "imm": 0 },
+        { "op": "ConstInt", "dst": 11, "imm": 0 }
+      ]
+    }
+  ],
+  "actors": []
+}

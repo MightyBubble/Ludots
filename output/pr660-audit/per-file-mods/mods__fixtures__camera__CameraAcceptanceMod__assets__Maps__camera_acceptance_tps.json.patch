@@ -1,0 +1,14 @@
+diff --git a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_tps.json b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_tps.json
+index c6d12d5590..db08bc7472 100644
+--- a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_tps.json
++++ b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_tps.json
+@@ -11,7 +11,8 @@
+                        "SpatialType":  "Grid",
+                        "WidthInMacroTiles":  1,
+                        "HeightInMacroTiles":  1,
+-                       "GridCellSizeCm":  100
++                       "GridCellSizeCm":  100,
++                       "LoadedChunkCapacity":  16
+                    }
+                ],
+     "DefaultCamera":  {

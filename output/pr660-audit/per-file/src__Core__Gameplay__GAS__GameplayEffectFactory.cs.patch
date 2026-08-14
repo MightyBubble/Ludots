@@ -1,0 +1,79 @@
+diff --git a/src/Core/Gameplay/GAS/GameplayEffectFactory.cs b/src/Core/Gameplay/GAS/GameplayEffectFactory.cs
+index adc343cfdb..6d3bd3bc5b 100644
+--- a/src/Core/Gameplay/GAS/GameplayEffectFactory.cs
++++ b/src/Core/Gameplay/GAS/GameplayEffectFactory.cs
+@@ -1,3 +1,4 @@
++using System;
+ using Arch.Core;
+ using Arch.Buffer;
+ using Ludots.Core.Gameplay.GAS.Components;
+@@ -21,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+             public EffectCreateCommand(Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
+             {
++                RequireEntityLifetime(lifetimeKind);
+                 Source = source;
+                 Target = target;
+                 TargetContext = default;
+@@ -33,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+             public EffectCreateCommand(Entity source, Entity target, Entity targetContext, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
+             {
++                RequireEntityLifetime(lifetimeKind);
+                 Source = source;
+                 Target = target;
+                 TargetContext = targetContext;
+@@ -51,6 +54,7 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+         public static Entity CreateEffect(World world, int rootId, Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, Entity targetContext = default, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
+         {
++            RequireEntityLifetime(lifetimeKind);
+             var ge = new GameplayEffect 
+             { 
+                 LifetimeKind = lifetimeKind,
+@@ -87,6 +91,7 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+         public static Entity CreateEffect(CommandBuffer commandBuffer, int rootId, Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, Entity targetContext = default, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
+         {
++            RequireEntityLifetime(lifetimeKind);
+             var entity = commandBuffer.Create(GameplayEffectArchetype);
+             var ge = new GameplayEffect
+             {
+@@ -116,6 +121,7 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+         public static void CreateEffects(CommandBuffer commandBuffer, Span<Entity> output, Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0)
+         {
++            RequireEntityLifetime(lifetimeKind);
+             for (int i = 0; i < output.Length; i++)
+             {
+                 output[i] = CreateEffect(commandBuffer, source, target, durationTicks, lifetimeKind, periodTicks);
+@@ -145,10 +151,7 @@ namespace Ludots.Core.Gameplay.GAS
+                 world.Add(entity, new EffectPeriodicTick());
+             }
+ 
+-            if (effect.LifetimeKind != EffectLifetimeKind.Instant || effect.ExpireCondition.IsValid)
+-            {
+-                world.Add(entity, new EffectExpirationCheck());
+-            }
++            world.Add(entity, new EffectExpirationCheck());
+         }
+ 
+         private static void AddLifetimeMarkers(CommandBuffer commandBuffer, Entity entity, in GameplayEffect effect)
+@@ -159,9 +162,15 @@ namespace Ludots.Core.Gameplay.GAS
+                 commandBuffer.Add(entity, new EffectPeriodicTick());
+             }
+ 
+-            if (effect.LifetimeKind != EffectLifetimeKind.Instant || effect.ExpireCondition.IsValid)
++            commandBuffer.Add(entity, new EffectExpirationCheck());
++        }
++
++        private static void RequireEntityLifetime(EffectLifetimeKind lifetimeKind)
++        {
++            if (lifetimeKind == EffectLifetimeKind.Instant)
+             {
+-                commandBuffer.Add(entity, new EffectExpirationCheck());
++                throw new InvalidOperationException(
++                    "GAS.INSTANT.ERR.EntityMaterializationForbidden: submit instant effects through the proposal pipeline.");
+             }
+         }
+     }

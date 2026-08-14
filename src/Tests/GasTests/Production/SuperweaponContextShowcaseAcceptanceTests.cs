@@ -120,7 +120,7 @@ namespace Ludots.Tests.GAS.Production
                 commandSourceDuringAbility,
                 Is.EqualTo(commandSourceBeforeTargets),
                 "ability-frame target acquisition must not rewrite collection.command.source.");
-            AssertPerformerRules(repoRoot);
+            AssertPresenterRules(repoRoot);
 
             Assert.That(state.ConfirmInputObserved, Is.False);
             PressAndRelease(engine, backend, "<Keyboard>/enter");
@@ -203,9 +203,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(source, Does.Not.Contain("World.Remove<AbilityExecInstance>"));
         }
 
-        private static void AssertPerformerRules(string repoRoot)
+        private static void AssertPresenterRules(string repoRoot)
         {
-            string performerConfigPath = Path.Combine(
+            string presenterConfigPath = Path.Combine(
                 repoRoot,
                 "mods",
                 "showcases",
@@ -213,32 +213,32 @@ namespace Ludots.Tests.GAS.Production
                 "SuperweaponContextShowcaseMod",
                 "assets",
                 "Presentation",
-                "performers.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerConfigPath, Encoding.UTF8));
+                "presenters.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(presenterConfigPath, Encoding.UTF8));
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberAdded",
                 SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
-                "CreatePerformer",
-                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+                "CreatePresenter",
+                SuperweaponContextShowcaseIds.CasterMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberRemoved",
                 SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
-                "DestroyScopedPerformer",
-                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+                "DestroyScopedPresenter",
+                SuperweaponContextShowcaseIds.CasterMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberAdded",
                 SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
-                "CreatePerformer",
-                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+                "CreatePresenter",
+                SuperweaponContextShowcaseIds.TargetMarkerPresenterId), Is.True);
             Assert.That(HasCollectionRule(
                 document,
                 "EntityCollectionMemberRemoved",
                 SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
-                "DestroyScopedPerformer",
-                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+                "DestroyScopedPresenter",
+                SuperweaponContextShowcaseIds.TargetMarkerPresenterId), Is.True);
         }
 
         private static bool HasCollectionRule(
@@ -246,7 +246,7 @@ namespace Ludots.Tests.GAS.Production
             string eventKind,
             string collectionKey,
             string commandKind,
-            string performerDefinitionId)
+            string presenterDefinitionId)
         {
             foreach (JsonElement definition in document.RootElement.EnumerateArray())
             {
@@ -262,7 +262,7 @@ namespace Ludots.Tests.GAS.Production
                     if (string.Equals(evt.GetProperty("kind").GetString(), eventKind, StringComparison.Ordinal) &&
                         string.Equals(evt.GetProperty("key").GetString(), collectionKey, StringComparison.Ordinal) &&
                         string.Equals(command.GetProperty("kind").GetString(), commandKind, StringComparison.Ordinal) &&
-                        string.Equals(command.GetProperty("definitionId").GetString(), performerDefinitionId, StringComparison.Ordinal))
+                        string.Equals(command.GetProperty("definitionId").GetString(), presenterDefinitionId, StringComparison.Ordinal))
                     {
                         return true;
                     }

@@ -1,0 +1,13 @@
+diff --git a/src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs b/src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs
+index a94f114595..316a656ebd 100644
+--- a/src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs
++++ b/src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs
+@@ -86,7 +86,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
+                     break;
+                 case LifecycleOpId.CopyAttributeSlice:
+                     EntityLifecycleAtomicOps.CopyAttributeSlice(
+-                        world,
++                        services,
+                         state.Target,
+                         in state.Snapshot,
+                         state);

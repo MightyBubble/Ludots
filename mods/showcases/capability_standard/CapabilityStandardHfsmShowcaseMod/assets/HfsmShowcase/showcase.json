@@ -1,0 +1,666 @@
+{
+  "schemaVersion": 1,
+  "mapId": "capability_standard_hfsm_showcase",
+  "title": "HFSM: thirsty actor drinks, full actor runs",
+  "heroInstanceId": "hfsm-hero",
+  "waterStationInstanceId": "hfsm-water-station",
+  "trackCenterInstanceId": "hfsm-track-center",
+  "startPosition": { "x": -320, "y": -640 },
+  "waterPoint": { "x": -1120, "y": -260 },
+  "trackCenter": { "x": 650, "y": 0 },
+  "trackRadiusCm": 850,
+  "trackEntryAngleDeg": 220,
+  "moveSpeedCmPerSecond": 430,
+  "trackAngularSpeedDegPerSecond": 72,
+  "drinkRadiusCm": 35,
+  "startWater": 24,
+  "maxWater": 100,
+  "lowWaterThreshold": 35,
+  "drinkCompleteThreshold": 95,
+  "drinkWaterPerSecond": 38,
+  "runWaterDrainPerSecond": 10,
+  "startHealth": 100,
+  "shortcuts": {
+    "fatalDamage": "<Keyboard>/k",
+    "thirst": "<Keyboard>/t",
+    "reset": "<Keyboard>/r"
+  },
+  "states": [
+    {
+      "id": "Alive",
+      "label": "Alive",
+      "playerStory": "The actor can still react to water and movement rules."
+    },
+    {
+      "id": "Hydrate",
+      "parent": "Alive",
+      "label": "Hydrate",
+      "playerStory": "Water is low, so the parent state owns the drinking loop."
+    },
+    {
+      "id": "Exercise",
+      "parent": "Alive",
+      "label": "Exercise",
+      "playerStory": "Water is full enough, so the parent state owns the running loop."
+    },
+    {
+      "id": "GoDrink",
+      "parent": "Hydrate",
+      "label": "Go Drink",
+      "playerStory": "Water is low: the actor walks to the blue water station."
+    },
+    {
+      "id": "Drinking",
+      "parent": "Hydrate",
+      "label": "Drinking",
+      "playerStory": "The actor has arrived and stays still while water rises."
+    },
+    {
+      "id": "GoTrack",
+      "parent": "Exercise",
+      "label": "Go Track",
+      "playerStory": "Water is full: the actor leaves the station and walks to the track."
+    },
+    {
+      "id": "Running",
+      "parent": "Exercise",
+      "label": "Running",
+      "playerStory": "The actor runs laps and slowly spends water."
+    },
+    {
+      "id": "Dead",
+      "label": "Dead",
+      "playerStory": "Any State won: the actor dies exactly where it stood."
+    }
+  ],
+  "anyState": {
+    "condition": "HealthAtOrBelowZero",
+    "targetState": "Dead",
+    "playerStory": "No matter what child state is active, health zero jumps to Dead."
+  },
+  "graphDebug": {
+    "rootGraphId": "hfsm.root",
+    "rootTitle": "HFSM Editor Debug",
+    "nodes": [
+      {
+        "id": "AnyState",
+        "label": "Any State",
+        "kind": "anyState",
+        "description": "Health zero can interrupt every living child state.",
+        "x": -330,
+        "y": -40,
+        "outputPins": [{ "id": "override", "label": "health <= 0", "type": "Bool" }]
+      },
+      {
+        "id": "Alive",
+        "label": "Alive",
+        "kind": "group",
+        "description": "Parent state for water and movement decisions.",
+        "x": 0,
+        "y": -80,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "children", "label": "children", "type": "Flow" }]
+      },
+      {
+        "id": "Hydrate",
+        "label": "Hydrate",
+        "kind": "group",
+        "description": "Parent branch used while the actor needs water.",
+        "x": 320,
+        "y": -230,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "children", "label": "children", "type": "Flow" }]
+      },
+      {
+        "id": "Exercise",
+        "label": "Exercise",
+        "kind": "group",
+        "description": "Parent branch used while the actor has enough water to run.",
+        "x": 320,
+        "y": 70,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "children", "label": "children", "type": "Flow" }]
+      },
+      {
+        "id": "GoDrink",
+        "label": "Go Drink",
+        "kind": "state",
+        "implementationGraphId": "impl.GoDrink",
+        "description": "Walk to the water station until the arrival pin turns true.",
+        "x": 660,
+        "y": -310,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "arrived", "label": "arrived", "type": "Bool" }]
+      },
+      {
+        "id": "Drinking",
+        "label": "Drinking",
+        "kind": "state",
+        "implementationGraphId": "impl.Drinking",
+        "description": "Stay still and raise water until the full pin turns true.",
+        "x": 660,
+        "y": -120,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "full", "label": "water >= 95", "type": "Bool" }]
+      },
+      {
+        "id": "GoTrack",
+        "label": "Go Track",
+        "kind": "state",
+        "implementationGraphId": "impl.GoTrack",
+        "description": "Walk from the station to the track entry point.",
+        "x": 660,
+        "y": 60,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "arrived", "label": "arrived", "type": "Bool" }]
+      },
+      {
+        "id": "Running",
+        "label": "Running",
+        "kind": "state",
+        "implementationGraphId": "impl.Running",
+        "description": "Run laps while water drains; low water sends the actor back to drink.",
+        "x": 660,
+        "y": 250,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }],
+        "outputPins": [{ "id": "waterLow", "label": "water < 35", "type": "Bool" }]
+      },
+      {
+        "id": "Dead",
+        "label": "Dead",
+        "kind": "state",
+        "implementationGraphId": "impl.Dead",
+        "description": "Freeze movement in place after Any State wins.",
+        "x": 1020,
+        "y": -40,
+        "inputPins": [{ "id": "enter", "label": "enter", "type": "Flow" }]
+      }
+    ],
+    "edges": [
+      { "id": "any-dead", "from": "AnyState", "fromPin": "override", "to": "Dead", "toPin": "enter", "label": "health <= 0", "kind": "interrupt" },
+      { "id": "alive-hydrate", "from": "Alive", "fromPin": "children", "to": "Hydrate", "toPin": "enter", "label": "water low", "kind": "hierarchy" },
+      { "id": "alive-exercise", "from": "Alive", "fromPin": "children", "to": "Exercise", "toPin": "enter", "label": "water full", "kind": "hierarchy" },
+      { "id": "hydrate-go-drink", "from": "Hydrate", "fromPin": "children", "to": "GoDrink", "toPin": "enter", "label": "initial", "kind": "hierarchy" },
+      { "id": "go-drink-drinking", "from": "GoDrink", "fromPin": "arrived", "to": "Drinking", "toPin": "enter", "label": "arrived", "kind": "transition" },
+      { "id": "drinking-go-track", "from": "Drinking", "fromPin": "full", "to": "GoTrack", "toPin": "enter", "label": "water full", "kind": "transition" },
+      { "id": "exercise-go-track", "from": "Exercise", "fromPin": "children", "to": "GoTrack", "toPin": "enter", "label": "entry", "kind": "hierarchy" },
+      { "id": "go-track-running", "from": "GoTrack", "fromPin": "arrived", "to": "Running", "toPin": "enter", "label": "track reached", "kind": "transition" },
+      { "id": "running-go-drink", "from": "Running", "fromPin": "waterLow", "to": "GoDrink", "toPin": "enter", "label": "water low", "kind": "transition" }
+    ],
+    "implementations": [
+      {
+        "id": "impl.GoDrink",
+        "ownerStateId": "GoDrink",
+        "title": "Go Drink Implementation Graph",
+        "summary": "Read the actor, pass movement parameters, move toward the station, then emit the arrived transition.",
+        "nodes": [
+          {
+            "id": "goDrink.loadSelf",
+            "label": "LoadCaster",
+            "kind": "op",
+            "opCode": "LoadCaster",
+            "description": "Resolve the selected actor entity.",
+            "x": 0,
+            "y": 0,
+            "outputPins": [{ "id": "self", "label": "self", "type": "Entity" }]
+          },
+          {
+            "id": "goDrink.waterX",
+            "label": "ConstFloat",
+            "kind": "op",
+            "opCode": "ConstFloat",
+            "description": "Water station x position.",
+            "x": 0,
+            "y": 140,
+            "outputPins": [{ "id": "x", "label": "x", "type": "Float" }]
+          },
+          {
+            "id": "goDrink.waterY",
+            "label": "ConstFloat",
+            "kind": "op",
+            "opCode": "ConstFloat",
+            "description": "Water station y position.",
+            "x": 0,
+            "y": 280,
+            "outputPins": [{ "id": "y", "label": "y", "type": "Float" }]
+          },
+          {
+            "id": "goDrink.speed",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "Movement speed parameter.",
+            "x": 0,
+            "y": 420,
+            "outputPins": [{ "id": "speed", "label": "speed", "type": "Float" }]
+          },
+          {
+            "id": "goDrink.move",
+            "label": "Task.MoveTowards",
+            "kind": "task",
+            "opCode": "Task.MoveTowards",
+            "description": "Asynchronous movement task; output becomes true when the actor enters drink radius.",
+            "x": 330,
+            "y": 190,
+            "inputPins": [
+              { "id": "self", "label": "self", "type": "Entity" },
+              { "id": "x", "label": "targetX", "type": "Float" },
+              { "id": "y", "label": "targetY", "type": "Float" },
+              { "id": "speed", "label": "speed", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "arrived", "label": "arrived", "type": "Bool" }]
+          },
+          {
+            "id": "goDrink.transition",
+            "label": "StateTransition",
+            "kind": "op",
+            "opCode": "StateTransition",
+            "description": "If arrived, enter Drinking.",
+            "x": 700,
+            "y": 190,
+            "inputPins": [{ "id": "condition", "label": "condition", "type": "Bool" }]
+          }
+        ],
+        "edges": [
+          { "id": "goDrink.self-move", "from": "goDrink.loadSelf", "fromPin": "self", "to": "goDrink.move", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "goDrink.x-move", "from": "goDrink.waterX", "fromPin": "x", "to": "goDrink.move", "toPin": "x", "label": "target x", "kind": "data" },
+          { "id": "goDrink.y-move", "from": "goDrink.waterY", "fromPin": "y", "to": "goDrink.move", "toPin": "y", "label": "target y", "kind": "data" },
+          { "id": "goDrink.speed-move", "from": "goDrink.speed", "fromPin": "speed", "to": "goDrink.move", "toPin": "speed", "label": "speed", "kind": "data" },
+          { "id": "goDrink.move-transition", "from": "goDrink.move", "fromPin": "arrived", "to": "goDrink.transition", "toPin": "condition", "label": "arrived", "kind": "flow" }
+        ]
+      },
+      {
+        "id": "impl.Drinking",
+        "ownerStateId": "Drinking",
+        "title": "Drinking Implementation Graph",
+        "summary": "Read water, add drink rate, clamp to max, write water back, then test the transition threshold.",
+        "nodes": [
+          {
+            "id": "drinking.loadSelf",
+            "label": "LoadCaster",
+            "kind": "op",
+            "opCode": "LoadCaster",
+            "description": "Resolve the actor entity.",
+            "x": 0,
+            "y": 0,
+            "outputPins": [{ "id": "self", "label": "self", "type": "Entity" }]
+          },
+          {
+            "id": "drinking.readWater",
+            "label": "LoadSelfAttribute",
+            "kind": "op",
+            "opCode": "LoadSelfAttribute",
+            "description": "Read current Water.",
+            "x": 290,
+            "y": 0,
+            "inputPins": [{ "id": "self", "label": "self", "type": "Entity" }],
+            "outputPins": [{ "id": "water", "label": "water", "type": "Float" }]
+          },
+          {
+            "id": "drinking.rate",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "DrinkWaterPerSecond scaled by dt.",
+            "x": 290,
+            "y": 150,
+            "outputPins": [{ "id": "delta", "label": "delta", "type": "Float" }]
+          },
+          {
+            "id": "drinking.add",
+            "label": "AddFloat",
+            "kind": "op",
+            "opCode": "AddFloat",
+            "description": "water + drink delta.",
+            "x": 570,
+            "y": 70,
+            "inputPins": [
+              { "id": "a", "label": "water", "type": "Float" },
+              { "id": "b", "label": "delta", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "sum", "label": "sum", "type": "Float" }]
+          },
+          {
+            "id": "drinking.max",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "MaxWater.",
+            "x": 570,
+            "y": 220,
+            "outputPins": [{ "id": "max", "label": "max", "type": "Float" }]
+          },
+          {
+            "id": "drinking.clamp",
+            "label": "MinFloat",
+            "kind": "op",
+            "opCode": "MinFloat",
+            "description": "Clamp water to max.",
+            "x": 850,
+            "y": 110,
+            "inputPins": [
+              { "id": "value", "label": "value", "type": "Float" },
+              { "id": "max", "label": "max", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "water", "label": "water", "type": "Float" }]
+          },
+          {
+            "id": "drinking.write",
+            "label": "WriteSelfAttribute",
+            "kind": "op",
+            "opCode": "WriteSelfAttribute",
+            "description": "Write Water back to the actor.",
+            "x": 1130,
+            "y": 70,
+            "inputPins": [
+              { "id": "self", "label": "self", "type": "Entity" },
+              { "id": "water", "label": "water", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "done", "label": "done", "type": "Flow" }]
+          },
+          {
+            "id": "drinking.threshold",
+            "label": "CompareGtFloat",
+            "kind": "op",
+            "opCode": "CompareGtFloat",
+            "description": "Check if water reached drink-complete threshold.",
+            "x": 1130,
+            "y": 230,
+            "inputPins": [
+              { "id": "water", "label": "water", "type": "Float" },
+              { "id": "threshold", "label": "threshold", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "full", "label": "full", "type": "Bool" }]
+          },
+          {
+            "id": "drinking.fullValue",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "DrinkCompleteThreshold.",
+            "x": 850,
+            "y": 300,
+            "outputPins": [{ "id": "threshold", "label": "threshold", "type": "Float" }]
+          },
+          {
+            "id": "drinking.transition",
+            "label": "StateTransition",
+            "kind": "op",
+            "opCode": "StateTransition",
+            "description": "If full, enter Go Track.",
+            "x": 1410,
+            "y": 230,
+            "inputPins": [{ "id": "condition", "label": "condition", "type": "Bool" }]
+          }
+        ],
+        "edges": [
+          { "id": "drinking.self-read", "from": "drinking.loadSelf", "fromPin": "self", "to": "drinking.readWater", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "drinking.water-add", "from": "drinking.readWater", "fromPin": "water", "to": "drinking.add", "toPin": "a", "label": "water", "kind": "data" },
+          { "id": "drinking.rate-add", "from": "drinking.rate", "fromPin": "delta", "to": "drinking.add", "toPin": "b", "label": "delta", "kind": "data" },
+          { "id": "drinking.add-clamp", "from": "drinking.add", "fromPin": "sum", "to": "drinking.clamp", "toPin": "value", "label": "candidate", "kind": "data" },
+          { "id": "drinking.max-clamp", "from": "drinking.max", "fromPin": "max", "to": "drinking.clamp", "toPin": "max", "label": "max", "kind": "data" },
+          { "id": "drinking.self-write", "from": "drinking.loadSelf", "fromPin": "self", "to": "drinking.write", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "drinking.clamp-write", "from": "drinking.clamp", "fromPin": "water", "to": "drinking.write", "toPin": "water", "label": "water", "kind": "data" },
+          { "id": "drinking.clamp-threshold", "from": "drinking.clamp", "fromPin": "water", "to": "drinking.threshold", "toPin": "water", "label": "water", "kind": "data" },
+          { "id": "drinking.threshold-value", "from": "drinking.fullValue", "fromPin": "threshold", "to": "drinking.threshold", "toPin": "threshold", "label": "threshold", "kind": "data" },
+          { "id": "drinking.threshold-transition", "from": "drinking.threshold", "fromPin": "full", "to": "drinking.transition", "toPin": "condition", "label": "full", "kind": "flow" }
+        ]
+      },
+      {
+        "id": "impl.GoTrack",
+        "ownerStateId": "GoTrack",
+        "title": "Go Track Implementation Graph",
+        "summary": "Calculate the current track entry point, move there, then enter Running.",
+        "nodes": [
+          {
+            "id": "goTrack.loadSelf",
+            "label": "LoadCaster",
+            "kind": "op",
+            "opCode": "LoadCaster",
+            "description": "Resolve the actor entity.",
+            "x": 0,
+            "y": 0,
+            "outputPins": [{ "id": "self", "label": "self", "type": "Entity" }]
+          },
+          {
+            "id": "goTrack.entry",
+            "label": "Task.TrackEntryPoint",
+            "kind": "task",
+            "opCode": "Task.TrackEntryPoint",
+            "description": "Resolve the visible track entry point from config.",
+            "x": 300,
+            "y": 80,
+            "outputPins": [
+              { "id": "x", "label": "entryX", "type": "Float" },
+              { "id": "y", "label": "entryY", "type": "Float" }
+            ]
+          },
+          {
+            "id": "goTrack.speed",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "Movement speed parameter.",
+            "x": 300,
+            "y": 240,
+            "outputPins": [{ "id": "speed", "label": "speed", "type": "Float" }]
+          },
+          {
+            "id": "goTrack.move",
+            "label": "Task.MoveTowards",
+            "kind": "task",
+            "opCode": "Task.MoveTowards",
+            "description": "Move to the track entry.",
+            "x": 650,
+            "y": 120,
+            "inputPins": [
+              { "id": "self", "label": "self", "type": "Entity" },
+              { "id": "x", "label": "targetX", "type": "Float" },
+              { "id": "y", "label": "targetY", "type": "Float" },
+              { "id": "speed", "label": "speed", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "arrived", "label": "arrived", "type": "Bool" }]
+          },
+          {
+            "id": "goTrack.transition",
+            "label": "StateTransition",
+            "kind": "op",
+            "opCode": "StateTransition",
+            "description": "If arrived, enter Running.",
+            "x": 1010,
+            "y": 120,
+            "inputPins": [{ "id": "condition", "label": "condition", "type": "Bool" }]
+          }
+        ],
+        "edges": [
+          { "id": "goTrack.self-move", "from": "goTrack.loadSelf", "fromPin": "self", "to": "goTrack.move", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "goTrack.x-move", "from": "goTrack.entry", "fromPin": "x", "to": "goTrack.move", "toPin": "x", "label": "entry x", "kind": "data" },
+          { "id": "goTrack.y-move", "from": "goTrack.entry", "fromPin": "y", "to": "goTrack.move", "toPin": "y", "label": "entry y", "kind": "data" },
+          { "id": "goTrack.speed-move", "from": "goTrack.speed", "fromPin": "speed", "to": "goTrack.move", "toPin": "speed", "label": "speed", "kind": "data" },
+          { "id": "goTrack.move-transition", "from": "goTrack.move", "fromPin": "arrived", "to": "goTrack.transition", "toPin": "condition", "label": "arrived", "kind": "flow" }
+        ]
+      },
+      {
+        "id": "impl.Running",
+        "ownerStateId": "Running",
+        "title": "Running Implementation Graph",
+        "summary": "Run the circular task, drain water through float ops, then transition back when water is low.",
+        "nodes": [
+          {
+            "id": "running.loadSelf",
+            "label": "LoadCaster",
+            "kind": "op",
+            "opCode": "LoadCaster",
+            "description": "Resolve the actor entity.",
+            "x": 0,
+            "y": 0,
+            "outputPins": [{ "id": "self", "label": "self", "type": "Entity" }]
+          },
+          {
+            "id": "running.trackTask",
+            "label": "Task.RunTrackLap",
+            "kind": "task",
+            "opCode": "Task.RunTrackLap",
+            "description": "Advance the actor around the track.",
+            "x": 300,
+            "y": 0,
+            "inputPins": [{ "id": "self", "label": "self", "type": "Entity" }],
+            "outputPins": [{ "id": "lap", "label": "lap", "type": "Int" }]
+          },
+          {
+            "id": "running.readWater",
+            "label": "LoadSelfAttribute",
+            "kind": "op",
+            "opCode": "LoadSelfAttribute",
+            "description": "Read current Water.",
+            "x": 300,
+            "y": 170,
+            "inputPins": [{ "id": "self", "label": "self", "type": "Entity" }],
+            "outputPins": [{ "id": "water", "label": "water", "type": "Float" }]
+          },
+          {
+            "id": "running.drain",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "RunWaterDrainPerSecond scaled by dt.",
+            "x": 300,
+            "y": 330,
+            "outputPins": [{ "id": "drain", "label": "drain", "type": "Float" }]
+          },
+          {
+            "id": "running.subtract",
+            "label": "SubFloat",
+            "kind": "op",
+            "opCode": "SubFloat",
+            "description": "water - drain.",
+            "x": 620,
+            "y": 240,
+            "inputPins": [
+              { "id": "water", "label": "water", "type": "Float" },
+              { "id": "drain", "label": "drain", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "nextWater", "label": "nextWater", "type": "Float" }]
+          },
+          {
+            "id": "running.zero",
+            "label": "ConstFloat",
+            "kind": "op",
+            "opCode": "ConstFloat",
+            "description": "Zero floor for water.",
+            "x": 620,
+            "y": 400,
+            "outputPins": [{ "id": "zero", "label": "zero", "type": "Float" }]
+          },
+          {
+            "id": "running.max",
+            "label": "MaxFloat",
+            "kind": "op",
+            "opCode": "MaxFloat",
+            "description": "Clamp water to zero or above.",
+            "x": 930,
+            "y": 300,
+            "inputPins": [
+              { "id": "value", "label": "value", "type": "Float" },
+              { "id": "zero", "label": "zero", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "water", "label": "water", "type": "Float" }]
+          },
+          {
+            "id": "running.write",
+            "label": "WriteSelfAttribute",
+            "kind": "op",
+            "opCode": "WriteSelfAttribute",
+            "description": "Write Water back to the actor.",
+            "x": 1240,
+            "y": 240,
+            "inputPins": [
+              { "id": "self", "label": "self", "type": "Entity" },
+              { "id": "water", "label": "water", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "done", "label": "done", "type": "Flow" }]
+          },
+          {
+            "id": "running.lowThreshold",
+            "label": "LoadConfigFloat",
+            "kind": "op",
+            "opCode": "LoadConfigFloat",
+            "description": "LowWaterThreshold.",
+            "x": 930,
+            "y": 470,
+            "outputPins": [{ "id": "low", "label": "low", "type": "Float" }]
+          },
+          {
+            "id": "running.compareLow",
+            "label": "CompareGtFloat",
+            "kind": "op",
+            "opCode": "CompareGtFloat",
+            "description": "If low threshold is greater than water, the actor needs to drink again.",
+            "x": 1240,
+            "y": 430,
+            "inputPins": [
+              { "id": "low", "label": "low", "type": "Float" },
+              { "id": "water", "label": "water", "type": "Float" }
+            ],
+            "outputPins": [{ "id": "waterLow", "label": "waterLow", "type": "Bool" }]
+          },
+          {
+            "id": "running.transition",
+            "label": "StateTransition",
+            "kind": "op",
+            "opCode": "StateTransition",
+            "description": "If water is low, enter Go Drink.",
+            "x": 1560,
+            "y": 430,
+            "inputPins": [{ "id": "condition", "label": "condition", "type": "Bool" }]
+          }
+        ],
+        "edges": [
+          { "id": "running.self-track", "from": "running.loadSelf", "fromPin": "self", "to": "running.trackTask", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "running.self-read", "from": "running.loadSelf", "fromPin": "self", "to": "running.readWater", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "running.water-subtract", "from": "running.readWater", "fromPin": "water", "to": "running.subtract", "toPin": "water", "label": "water", "kind": "data" },
+          { "id": "running.drain-subtract", "from": "running.drain", "fromPin": "drain", "to": "running.subtract", "toPin": "drain", "label": "drain", "kind": "data" },
+          { "id": "running.subtract-max", "from": "running.subtract", "fromPin": "nextWater", "to": "running.max", "toPin": "value", "label": "candidate", "kind": "data" },
+          { "id": "running.zero-max", "from": "running.zero", "fromPin": "zero", "to": "running.max", "toPin": "zero", "label": "zero", "kind": "data" },
+          { "id": "running.self-write", "from": "running.loadSelf", "fromPin": "self", "to": "running.write", "toPin": "self", "label": "entity", "kind": "data" },
+          { "id": "running.max-write", "from": "running.max", "fromPin": "water", "to": "running.write", "toPin": "water", "label": "water", "kind": "data" },
+          { "id": "running.low-compare", "from": "running.lowThreshold", "fromPin": "low", "to": "running.compareLow", "toPin": "low", "label": "threshold", "kind": "data" },
+          { "id": "running.water-compare", "from": "running.max", "fromPin": "water", "to": "running.compareLow", "toPin": "water", "label": "water", "kind": "data" },
+          { "id": "running.compare-transition", "from": "running.compareLow", "fromPin": "waterLow", "to": "running.transition", "toPin": "condition", "label": "water low", "kind": "flow" }
+        ]
+      },
+      {
+        "id": "impl.Dead",
+        "ownerStateId": "Dead",
+        "title": "Dead Implementation Graph",
+        "summary": "Any State has selected Dead; the implementation freezes motion and stops further water transitions.",
+        "nodes": [
+          {
+            "id": "dead.loadSelf",
+            "label": "LoadCaster",
+            "kind": "op",
+            "opCode": "LoadCaster",
+            "description": "Resolve the actor entity.",
+            "x": 0,
+            "y": 0,
+            "outputPins": [{ "id": "self", "label": "self", "type": "Entity" }]
+          },
+          {
+            "id": "dead.freeze",
+            "label": "Task.FreezeMotion",
+            "kind": "task",
+            "opCode": "Task.FreezeMotion",
+            "description": "Keep previous and current position aligned.",
+            "x": 310,
+            "y": 0,
+            "inputPins": [{ "id": "self", "label": "self", "type": "Entity" }],
+            "outputPins": [{ "id": "done", "label": "done", "type": "Flow" }]
+          }
+        ],
+        "edges": [
+          { "id": "dead.self-freeze", "from": "dead.loadSelf", "fromPin": "self", "to": "dead.freeze", "toPin": "self", "label": "entity", "kind": "data" }
+        ]
+      }
+    ]
+  }
+}

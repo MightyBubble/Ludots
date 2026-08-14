@@ -1,0 +1,226 @@
+- main [ref=f1e2]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - heading "AI短剧 Skill 源码结构拆解" [level=1] [ref=f1e5]
+      - paragraph [ref=f1e6]: 只拆能看到的源码。每个候选按目录、入口、流程、产物、依赖和缺口拆开；没有公开 skill 源码的产品不硬拆。
+    - generic [ref=f1e7]: 检查日期：2026-08-12 检查位置：本机克隆仓库 公开源码：5 个；无源码产品：4 个
+  - generic [ref=f1e8]:
+    - complementary [ref=f1e9]:
+      - region "总体计数" [ref=f1e10]:
+        - generic [ref=f1e11]: 5 / 9
+        - paragraph [ref=f1e12]: 5 个候选有公开源码可拆；4 个只看到产品页或服务，不能拆源码。
+        - generic [ref=f1e13]:
+          - generic [ref=f1e14]:
+            - strong [ref=f1e15]: "2"
+            - text: 可执行脚本型
+          - generic [ref=f1e16]:
+            - strong [ref=f1e17]: "1"
+            - text: 多 skill 套件型
+          - generic [ref=f1e18]:
+            - strong [ref=f1e19]: "1"
+            - text: 网页应用型
+          - generic [ref=f1e20]:
+            - strong [ref=f1e21]: "1"
+            - text: 纯提示词包
+      - navigation "候选列表" [ref=f1e22]:
+        - generic [ref=f1e23]: 点一个看细拆
+        - button "worldwonderer 套件" [ref=f1e24] [cursor=pointer]:
+          - text: worldwonderer
+          - generic [ref=f1e25]: 套件
+        - button "0xsline 提示词" [ref=f1e26] [cursor=pointer]:
+          - text: 0xsline
+          - generic [ref=f1e27]: 提示词
+        - button "OnlyShot 脚本" [ref=f1e28] [cursor=pointer]:
+          - text: OnlyShot
+          - generic [ref=f1e29]: 脚本
+        - button "drama-director 双脚本" [ref=f1e30] [cursor=pointer]:
+          - text: drama-director
+          - generic [ref=f1e31]: 双脚本
+        - button "Huobao 网页应用" [ref=f1e32] [cursor=pointer]:
+          - text: Huobao
+          - generic [ref=f1e33]: 网页应用
+        - button "无公开源码 4 个" [ref=f1e34] [cursor=pointer]:
+          - text: 无公开源码
+          - generic [ref=f1e35]: 4 个
+    - generic [ref=f1e36]:
+      - article [ref=f1e37]:
+        - generic [ref=f1e38]:
+          - generic [ref=f1e39]:
+            - heading "worldwonderer/drama-skills" [level=2] [ref=f1e40]
+            - paragraph [ref=f1e41]: 多 skill 套件。强项是剧本、资产、分镜、提示词、审查和交付之间有清楚的文件边界。
+          - generic [ref=f1e42]: 源码可拆
+        - generic [ref=f1e43]:
+          - generic [ref=f1e44]:
+            - generic [ref=f1e45]: 源码
+            - link "GitHub" [ref=f1e47] [cursor=pointer]:
+              - /url: https://github.com/worldwonderer/drama-skills
+          - generic [ref=f1e48]:
+            - generic [ref=f1e49]: 提交
+            - code [ref=f1e51]: 25b2028
+          - generic [ref=f1e52]:
+            - generic [ref=f1e53]: 最后提交
+            - generic [ref=f1e54]: 2026-08-11
+          - generic [ref=f1e55]:
+            - generic [ref=f1e56]: 主要形态
+            - generic [ref=f1e57]: 文件型 skill 套件 + 本地 Dashboard
+        - generic [ref=f1e58]:
+          - generic [ref=f1e59]:
+            - strong [ref=f1e60]: 入口
+            - generic [ref=f1e61]:
+              - code [ref=f1e62]: short-drama/SKILL.md
+              - text: 负责建项目、看状态、路由、打包。
+          - generic [ref=f1e63]:
+            - strong [ref=f1e64]: 写作
+            - generic [ref=f1e65]:
+              - code [ref=f1e66]: short-drama-write
+              - text: 产出单集卡、节拍和剧本。
+          - generic [ref=f1e67]:
+            - strong [ref=f1e68]: 资产
+            - generic [ref=f1e69]:
+              - code [ref=f1e70]: short-drama-assets
+              - text: 拆人物、地点、道具和连续性。
+          - generic [ref=f1e71]:
+            - strong [ref=f1e72]: 分镜
+            - generic [ref=f1e73]:
+              - code [ref=f1e74]: short-drama-storyboard
+              - text: 做覆盖表、镜头和关键帧。
+          - generic [ref=f1e75]:
+            - strong [ref=f1e76]: 审查
+            - generic [ref=f1e77]:
+              - code [ref=f1e78]: short-drama-review
+              - text: 独立审查，再由入口打包。
+        - generic [ref=f1e79]:
+          - generic [ref=f1e80]:
+            - heading "源码目录" [level=3] [ref=f1e81]
+            - generic [ref=f1e82]: drama-skills/ ├─ skills/ │ ├─ short-drama/ │ │ ├─ SKILL.md │ │ ├─ suite-manifest.json │ │ ├─ scripts/project_tool.py │ │ ├─ scripts/dashboard_server.py │ │ └─ assets/dashboard/ │ ├─ short-drama-develop/ │ ├─ short-drama-write/ │ │ ├─ SKILL.md │ │ ├─ scripts/screenplay_index.py │ │ └─ assets/ │ ├─ short-drama-assets/ │ ├─ short-drama-image-prompts/ │ ├─ short-drama-storyboard/ │ │ ├─ SKILL.md │ │ ├─ scripts/storyboard_check.py │ │ └─ assets/ │ ├─ short-drama-video-prompts/ │ │ └─ scripts/container_check.py, motion_timing_check.py │ ├─ short-drama-review/ │ └─ short-drama-novel-analyze/ ├─ tests/ ├─ tools/ ├─ demo/ └─ docs/assets/dashboard-zh.png
+          - generic [ref=f1e83]:
+            - heading "关键文件怎么分工" [level=3] [ref=f1e84]
+            - list [ref=f1e85]:
+              - listitem [ref=f1e86]:
+                - code [ref=f1e87]: suite-manifest.json
+                - text: 记录套件清单和文件哈希，用来防混装。
+              - listitem [ref=f1e88]:
+                - code [ref=f1e89]: project_tool.py
+                - text: 管项目生命周期：初始化、状态、恢复、发布、接受、审查、打包、复验。
+              - listitem [ref=f1e90]:
+                - code [ref=f1e91]: screenplay_index.py
+                - text: 从剧本生成只读索引，保留行号、字节位置和哈希。
+              - listitem [ref=f1e92]:
+                - code [ref=f1e93]: storyboard_check.py
+                - text: 检查分镜时长账和关键帧边界。
+              - listitem [ref=f1e94]:
+                - code [ref=f1e95]: agents/openai.yaml
+                - text: 给 Codex/OpenAI 侧展示各 skill 的名称、说明和默认调用语句。
+        - generic [ref=f1e96]:
+          - heading "输入、处理、输出" [level=3] [ref=f1e97]
+          - table [ref=f1e99]:
+            - rowgroup [ref=f1e100]:
+              - row [ref=f1e101]:
+                - columnheader "阶段" [ref=f1e102]
+                - columnheader "吃什么" [ref=f1e103]
+                - columnheader "做什么" [ref=f1e104]
+                - columnheader "吐什么" [ref=f1e105]
+            - rowgroup [ref=f1e106]:
+              - row [ref=f1e107]:
+                - cell "项目入口" [ref=f1e108]
+                - cell "用户点子、小说、现成剧本或项目目录" [ref=f1e109]
+                - cell [ref=f1e110]:
+                  - text: 找
+                  - code [ref=f1e111]: short-drama.json
+                  - text: ，读
+                  - code [ref=f1e112]: .short-drama/state.json
+                  - text: ，判断下一步
+                - cell "项目骨架、状态摘要、Dashboard、交付包" [ref=f1e113]
+              - row [ref=f1e114]:
+                - cell "剧本" [ref=f1e115]
+                - cell "已接受的故事开发结果或单集要求" [ref=f1e116]
+                - cell "写单集卡、因果节拍、Markdown 剧本" [ref=f1e117]
+                - cell [ref=f1e118]:
+                  - code [ref=f1e119]: episode-card.json
+                  - text: 、
+                  - code [ref=f1e120]: beats.jsonl
+                  - text: 、
+                  - code [ref=f1e121]: screenplay.md
+                  - text: 、
+                  - code [ref=f1e122]: screenplay-index.jsonl
+              - row [ref=f1e123]:
+                - cell "分镜" [ref=f1e124]
+                - cell "已接受剧本、资产、视觉方向" [ref=f1e125]
+                - cell "做原文覆盖、镜头目的、空间和关键帧" [ref=f1e126]
+                - cell [ref=f1e127]:
+                  - code [ref=f1e128]: coverage.json
+                  - text: 、
+                  - code [ref=f1e129]: shots.jsonl
+                  - text: 、
+                  - code [ref=f1e130]: keyframes.jsonl
+                  - text: 、
+                  - code [ref=f1e131]: keyframe-prompts.md
+              - row [ref=f1e132]:
+                - cell "视频提示词" [ref=f1e133]
+                - cell "已接受镜头、关键帧、时长、连续性终点" [ref=f1e134]
+                - cell "把静态分镜翻成运动、表演、声音提示词" [ref=f1e135]
+                - cell [ref=f1e136]:
+                  - code [ref=f1e137]: video-prompts.md
+                  - text: 、运动容器记录、校验结果
+        - generic [ref=f1e138]:
+          - heading "依赖和校验" [level=3] [ref=f1e139]
+          - generic [ref=f1e140]:
+            - generic [ref=f1e141]: Python 3.10+
+            - generic [ref=f1e142]: 文本文件为主
+            - generic [ref=f1e143]: 本地 Dashboard
+            - generic [ref=f1e144]: 不调用图片/视频生成接口
+            - generic [ref=f1e145]: pytest 测试覆盖生命周期和结构检查
+          - generic [ref=f1e146]: 源码里有成体系的状态、接受、过期、独立审查和打包检查。它更像制作资料操作系统，不像“一句话直接出视频”的工具。
+        - generic [ref=f1e147]:
+          - heading "源码缺口" [level=3] [ref=f1e148]
+          - list [ref=f1e149]:
+            - listitem [ref=f1e150]: 不负责真正生图、生视频、生音频；这是项目边界，不是遗漏。
+            - listitem [ref=f1e151]: 文件和规则很多，上手成本高；需要先理解“接受”和“审查”的区别。
+            - listitem [ref=f1e152]: 必须同一套 skill 同级安装；混装版本会被阻断。
+      - generic [ref=f1e153]:
+        - heading "横向速览" [level=2] [ref=f1e154]
+        - table [ref=f1e156]:
+          - rowgroup [ref=f1e157]:
+            - row [ref=f1e158]:
+              - columnheader "候选" [ref=f1e159]
+              - columnheader "源码类型" [ref=f1e160]
+              - columnheader "剧本生成" [ref=f1e161]
+              - columnheader "分镜生成" [ref=f1e162]
+              - columnheader "媒体生成" [ref=f1e163]
+              - columnheader "最明显的短板" [ref=f1e164]
+          - rowgroup [ref=f1e165]:
+            - row [ref=f1e166]:
+              - cell "worldwonderer/drama-skills" [ref=f1e167]
+              - cell "多 skill 套件" [ref=f1e168]
+              - cell "强，分单集和故事开发" [ref=f1e169]
+              - cell "强，镜头和关键帧独立" [ref=f1e170]
+              - cell "不做，故意只出文本" [ref=f1e171]
+              - cell "规则多，上手重；不直接出片" [ref=f1e172]
+            - row [ref=f1e173]:
+              - cell "0xsline/short-drama" [ref=f1e174]
+              - cell "纯提示词包" [ref=f1e175]
+              - cell "能做长篇剧本流程" [ref=f1e176]
+              - cell "弱，只是剧本内镜头标记" [ref=f1e177]
+              - cell "不做" [ref=f1e178]
+              - cell "无脚本、无测试、无 schema" [ref=f1e179]
+            - row [ref=f1e180]:
+              - cell "OnlyShot" [ref=f1e181]
+              - cell "Skill + CLI 脚本" [ref=f1e182]
+              - cell "靠 Agent 按规则写" [ref=f1e183]
+              - cell "强，36 grid + 候选图" [ref=f1e184]
+              - cell "强，Dreamina 出图和视频段" [ref=f1e185]
+              - cell "最终剪辑手工；代码里有兼容和 fallback 路径" [ref=f1e186]
+            - row [ref=f1e187]:
+              - cell "drama-director" [ref=f1e188]
+              - cell "单 skill + 双脚本" [ref=f1e189]
+              - cell "弱，只压缩单段素材" [ref=f1e190]
+              - cell "中，一张 9 宫格图" [ref=f1e191]
+              - cell "强，一图一视频" [ref=f1e192]
+              - cell "无多集状态、无资产库、无测试" [ref=f1e193]
+            - row [ref=f1e194]:
+              - cell "Huobao Drama AI" [ref=f1e195]
+              - cell "完整网页应用" [ref=f1e196]
+              - cell "强，网页和 Agent 都有" [ref=f1e197]
+              - cell "强，数据库分镜记录" [ref=f1e198]
+              - cell "强，多供应商" [ref=f1e199]
+              - cell "太重；缺公开 data/skills 文件和测试脚本" [ref=f1e200]

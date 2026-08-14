@@ -1,0 +1,28 @@
+{
+  "Id": "capability_standard_static_presenter_30k_mesh_ism_benchmark",
+  "Tags": ["showcase", "presenter", "benchmark", "mesh", "ism"],
+  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
+  "Metadata": {
+    "capabilityStandardStaticPresenter30k": {
+      "meshBenchmarkTotal": 30000,
+      "meshBenchmarkScatterSeed": 48611,
+      "meshBenchmarkScatterMinRadiusCm": 750.0,
+      "meshBenchmarkScatterMaxRadiusCm": 1250.0,
+      "meshBenchmarkScatterJitterCm": 210.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

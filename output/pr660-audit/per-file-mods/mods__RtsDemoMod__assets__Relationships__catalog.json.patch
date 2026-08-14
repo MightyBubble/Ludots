@@ -1,0 +1,4 @@
+diff --git a/mods/RtsDemoMod/assets/Relationships/catalog.json b/mods/showcases/rts_demo/RtsDemoMod/assets/Relationships/catalog.json
+similarity index 100%
+rename from mods/RtsDemoMod/assets/Relationships/catalog.json
+rename to mods/showcases/rts_demo/RtsDemoMod/assets/Relationships/catalog.json

@@ -1,0 +1,33 @@
+{
+  "startupMapId": "capability_standard_hfsm_showcase",
+  "startupLocalPlayerId": 1,
+  "windowTitle": "Ludots Engine - Capability Standard HFSM",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  },
+  "presentation": {
+    "presenterInstanceCapacity": 256,
+    "gasPresentationEventCapacity": 256,
+    "presentationEventStreamCapacity": 256,
+    "presentationOwnerChangeCapacity": 256,
+    "presenterCommandCapacity": 256,
+    "primitiveDrawBufferCapacity": 512,
+    "visualSnapshotBufferCapacity": 512,
+    "visualProxyBufferCapacity": 512,
+    "presentationRequestCapacity": 512,
+    "groundOverlayCapacity": 128,
+    "roadSplineCapacity": 32,
+    "worldHudCapacity": 128,
+    "screenHudCapacity": 128,
+    "skinnedVisualBatchCapacity": 128,
+    "minimapMarkerCapacity": 64,
+    "runtimeEntitySpawnQueueCapacity": 64,
+    "runtimeEntitySpawnReceiptQueueCapacity": 64
+  }
+}

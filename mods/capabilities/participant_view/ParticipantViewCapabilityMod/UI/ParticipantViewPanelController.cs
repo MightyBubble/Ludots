@@ -222,7 +222,7 @@ internal sealed class ParticipantViewPanelController
                     .FontSize(12f)
                     .Bold()
                     .Color("#F4C77D"),
-                Ui.Text("Map-owned participant bindings resolve representative entities, then project formal selection views.")
+                Ui.Text("Map-owned participant bindings resolve representative entities, then project command-source collections.")
                     .FontSize(11f)
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),
@@ -462,7 +462,7 @@ internal sealed class ParticipantViewPanelController
             session,
             representative,
             title: $"Player View  P{playerId}",
-            summary: "Map player binding selects one representative entity. The runtime projects member entities owned by that player into LivePrimary.",
+            summary: "Map player binding selects one representative entity. The runtime projects member entities owned by that player into collection.command.source.",
             projectionHeader: $"PlayerId {playerId} -> representative -> member entities",
             members);
     }
@@ -480,7 +480,7 @@ internal sealed class ParticipantViewPanelController
             session,
             representative,
             title: $"Team View  T{teamId}",
-            summary: "Map team binding selects one representative entity. The runtime projects member entities carrying Team.Id into LivePrimary.",
+            summary: "Map team binding selects one representative entity. The runtime projects member entities carrying Team.Id into collection.command.source.",
             projectionHeader: $"TeamId {teamId} -> representative -> member entities",
             members);
     }

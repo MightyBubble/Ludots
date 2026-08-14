@@ -201,6 +201,7 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInfoPanelTargetKind.FixedEntity => target.FixedEntity,
             EntityInfoPanelTargetKind.GlobalEntityKey when globals.TryGetValue(target.Key, out object? value) && value is Entity resolved => resolved,
+            EntityInfoPanelTargetKind.CurrentCommandSource when TryResolveCurrentCommandSourcePrimary(world, globals, out Entity currentPrimary) => currentPrimary,
             _ => Entity.Null,
         };
 

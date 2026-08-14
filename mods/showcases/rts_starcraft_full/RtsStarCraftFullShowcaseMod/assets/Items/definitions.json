@@ -1,0 +1,182 @@
+[
+  {
+    "id": "itm_scf_terran_marinerange",
+    "displayName": "Terran MarineRange",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Terran",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Terran.MarineRange"
+    ]
+  },
+  {
+    "id": "itm_scf_terran_tankarmor",
+    "displayName": "Terran TankArmor",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Terran",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Terran.TankArmor"
+    ]
+  },
+  {
+    "id": "itm_scf_terran_medivacspeed",
+    "displayName": "Terran MedivacSpeed",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Terran",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Terran.MedivacSpeed"
+    ]
+  },
+  {
+    "id": "itm_scf_terran_stimpack",
+    "displayName": "Terran StimPack",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Terran",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Terran.StimPack"
+    ]
+  },
+  {
+    "id": "itm_scf_zerg_zerglingspeed",
+    "displayName": "Zerg ZerglingSpeed",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Zerg",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Zerg.ZerglingSpeed"
+    ]
+  },
+  {
+    "id": "itm_scf_zerg_roacharmor",
+    "displayName": "Zerg RoachArmor",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Zerg",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Zerg.RoachArmor"
+    ]
+  },
+  {
+    "id": "itm_scf_zerg_hydrarange",
+    "displayName": "Zerg HydraRange",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Zerg",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Zerg.HydraRange"
+    ]
+  },
+  {
+    "id": "itm_scf_zerg_metabolicboost",
+    "displayName": "Zerg MetabolicBoost",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Zerg",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Zerg.MetabolicBoost"
+    ]
+  },
+  {
+    "id": "itm_scf_protoss_zealotcharge",
+    "displayName": "Protoss ZealotCharge",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Protoss",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Protoss.ZealotCharge"
+    ]
+  },
+  {
+    "id": "itm_scf_protoss_stalkerblink",
+    "displayName": "Protoss StalkerBlink",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Protoss",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Protoss.StalkerBlink"
+    ]
+  },
+  {
+    "id": "itm_scf_protoss_shieldboost",
+    "displayName": "Protoss ShieldBoost",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Protoss",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Protoss.ShieldBoost"
+    ]
+  },
+  {
+    "id": "itm_scf_protoss_graviticdrive",
+    "displayName": "Protoss GraviticDrive",
+    "shape": "shape_scf_1x1",
+    "tags": [
+      "Race.Protoss",
+      "Item.Scf.Upgrade"
+    ],
+    "allowedNamedSlots": [
+      "upgrade"
+    ],
+    "equipEffects": [
+      "Effect.Scf.Item.Protoss.GraviticDrive"
+    ]
+  }
+]

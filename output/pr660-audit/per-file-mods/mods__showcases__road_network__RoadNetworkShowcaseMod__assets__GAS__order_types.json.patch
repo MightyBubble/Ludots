@@ -1,0 +1,13 @@
+diff --git a/mods/showcases/road_network/RoadNetworkShowcaseMod/assets/GAS/order_types.json b/mods/showcases/road_network/RoadNetworkShowcaseMod/assets/GAS/order_types.json
+index 8f64f33b47..0d0637dc50 100644
+--- a/mods/showcases/road_network/RoadNetworkShowcaseMod/assets/GAS/order_types.json
++++ b/mods/showcases/road_network/RoadNetworkShowcaseMod/assets/GAS/order_types.json
+@@ -14,7 +14,7 @@
+       "queuedModeMaxSize": 8,
+       "allowQueuedMode": true,
+       "clearQueueOnActivate": true,
+-      "spatialBlackboardKey": "Generic.TargetPosition",
++      "spatialBlackboardKey": "none",
+       "entityBlackboardKey": "none",
+       "intArg0BlackboardKey": "none",
+       "validationGraph": "none",

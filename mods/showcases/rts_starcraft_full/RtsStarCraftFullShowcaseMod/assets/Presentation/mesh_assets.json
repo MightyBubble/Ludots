@@ -1,0 +1,502 @@
+[
+  {
+    "id": "scf.prim.scf_terran_scv",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_command_center",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_supply_depot",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_barracks",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_factory",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_starport",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_refinery",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_engineering_bay",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_armory",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_bunker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_missile_turret",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_fusion_core",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_orbital_command",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_marine",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_marauder",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_reaper",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_ghost",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_firebat",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_medic",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_vulture",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_goliath",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_siege_tank",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_hellion",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_hellbat",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_thor",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_viking",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_medivac",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_banshee",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_battlecruiser",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_raven",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_cyclone",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_widow_mine",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_terran_liberator",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_terran_diamondback",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_drone",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_overlord",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_hatchery",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_spawning_pool",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_roach_warren",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_baneling_nest",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_hydra_den",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_spire",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_infestation_pit",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_ultra_cavern",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_evolution_chamber",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_extractor",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_nydus",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_hive",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_creep_tumor",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_zergling",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_baneling",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_roach",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_ravager",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_hydralisk",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_lurker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_mutalisk",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_zerg_corruptor",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_zerg_broodlord",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_zerg_swarm_host",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_viper",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_zerg_infestor",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_ultralisk",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_queen",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_spine_crawler",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_spore_crawler",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_nydus_worm",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_zerg_brutalisk",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_probe",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_nexus",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_pylon",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_gateway",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_cybernetics",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_robotics",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_stargate",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_forge",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_assimilator",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_twilight",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_templar_archives",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_robo_bay",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_fleet_beacon",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_photon_cannon",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_zealot",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_stalker",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_sentry",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_adept",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_hightemplar",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_darktemplar",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_archon",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_immortal",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_colossus",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_disruptor",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_phoenix",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_voidray",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_oracle",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_carrier",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_tempest",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_mothership",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_observer",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "scf.prim.scf_protoss_warp_prism",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "scf.prim.scf_protoss_corsair",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  }
+]

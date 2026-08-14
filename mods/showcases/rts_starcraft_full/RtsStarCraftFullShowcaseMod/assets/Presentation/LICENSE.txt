@@ -1,0 +1,13 @@
+CC0 Asset Notice — StarCraft Full RTS Showcase
+=============================================
+
+Visual primitives in this mod use engine-built cube/sphere presenters with
+race-themed colors. No third-party mesh assets are bundled.
+
+Billboard icons reference CC0-style placeholder art generated for this showcase.
+
+For external CC0 packs compatible with Ludots presenters, see:
+- Kenney.nl CC0 game assets (https://kenney.nl/assets)
+- KayKit CC0 game kit (https://github.com/KayKit-Game-Assets)
+
+Commercial use permitted. No attribution required for CC0 sources.

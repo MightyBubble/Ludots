@@ -316,7 +316,6 @@ public sealed partial class EntityInfoPanelService
     private bool SampleEntityCollectionInspector(int slot, World world, Dictionary<string, object> globals)
     {
         bool dirty = false;
-        Entity container = Entity.Null;
         Entity primary = Entity.Null;
         Entity owner = Entity.Null;
         EntityCollectionHandle collectionHandle = EntityCollectionHandle.Invalid;
@@ -329,7 +328,24 @@ public sealed partial class EntityInfoPanelService
         uint revision = 0;
 
         EntityInfoPanelTarget target = _targets[slot];
-        if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
+        if (target.Kind == EntityInfoPanelTargetKind.CurrentCommandSource &&
+            TryResolveCurrentCommandSource(world, globals, out EntityCollectionView commandSourceView, out collectionHandle))
+        {
+            owner = commandSourceView.Owner;
+            primary = commandSourceView.PrimaryEntity;
+            sourceKind = commandSourceView.SourceKind;
+            setKey = commandSourceView.Key;
+            count = commandSourceView.Count;
+            revision = commandSourceView.Revision;
+            sourceTitle = string.IsNullOrWhiteSpace(commandSourceView.Title)
+                ? commandSourceView.Key
+                : commandSourceView.Title;
+            sourceSummary = string.IsNullOrWhiteSpace(commandSourceView.Summary)
+                ? $"{commandSourceView.Key} | {commandSourceView.Count} entities"
+                : commandSourceView.Summary;
+            dirty |= SetString(_subtitles, slot, sourceSummary);
+        }
+        else if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
                  TryResolveEntityCollectionSource(world, globals, target, out EntityCollectionView collectionView, out collectionHandle))
         {
             owner = collectionView.Owner;
@@ -360,17 +376,10 @@ public sealed partial class EntityInfoPanelService
             dirty = true;
         }
 
-        bool sourceChanged = _entityCollectionContainers[slot] != container ||
-                             _entityCollectionHandles[slot] != collectionHandle ||
+        bool sourceChanged = _entityCollectionHandles[slot] != collectionHandle ||
                              _entityCollectionOwners[slot] != owner ||
                              _entityCollectionSourceKinds[slot] != sourceKind ||
                              _entityCollectionRevisions[slot] != revision;
-
-        if (_entityCollectionContainers[slot] != container)
-        {
-            _entityCollectionContainers[slot] = container;
-            dirty = true;
-        }
 
         if (_entityCollectionOwners[slot] != owner)
         {
@@ -415,6 +424,60 @@ public sealed partial class EntityInfoPanelService
         return dirty;
     }
 
+    private bool TryResolveCurrentCommandSource(
+        World world,
+        Dictionary<string, object> globals,
+        out EntityCollectionView view,
+        out EntityCollectionHandle handle)
+    {
+        view = default;
+        handle = EntityCollectionHandle.Invalid;
+        return TryResolveCurrentCommandSourceOwner(world, globals, out Entity owner) &&
+               globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) &&
+               storeObj is EntityCollectionStore collections &&
+               EntityCollectionContextRuntime.TryResolveCollection(
+                   collections,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out handle,
+                   out view);
+    }
+
+    private static bool TryResolveCurrentCommandSourcePrimary(
+        World world,
+        Dictionary<string, object> globals,
+        out Entity primary)
+    {
+        primary = Entity.Null;
+        return TryResolveCurrentCommandSourceOwner(world, globals, out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   world,
+                   globals,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out primary);
+    }
+
+    private static bool TryResolveCurrentCommandSourceOwner(
+        World world,
+        Dictionary<string, object> globals,
+        out Entity owner)
+    {
+        owner = Entity.Null;
+        if (world == null ||
+            globals == null ||
+            !globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) ||
+            ownerObj is not Entity local ||
+            local == Entity.Null ||
+            !world.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
+    }
+
     private bool TryResolveEntityCollectionSource(
         World world,
         Dictionary<string, object> globals,
@@ -439,16 +502,22 @@ public sealed partial class EntityInfoPanelService
 
     private static string ResolveMissingCollectionTitle(in EntityInfoPanelTarget target)
     {
-        return target.Kind == EntityInfoPanelTargetKind.EntityCollection
-            ? "Entity collection unavailable"
-            : "Target collection unavailable";
+        return target.Kind switch
+        {
+            EntityInfoPanelTargetKind.EntityCollection => "Entity collection unavailable",
+            EntityInfoPanelTargetKind.CurrentCommandSource => "Current command source",
+            _ => "Target collection unavailable",
+        };
     }
 
     private static string ResolveMissingCollectionSummary(in EntityInfoPanelTarget target)
     {
-        return target.Kind == EntityInfoPanelTargetKind.EntityCollection
-            ? $"Missing collection source '{target.Key}'."
-            : "No entity collection target configured.";
+        return target.Kind switch
+        {
+            EntityInfoPanelTargetKind.EntityCollection => $"Missing collection source '{target.Key}'.",
+            EntityInfoPanelTargetKind.CurrentCommandSource => "No active command source.",
+            _ => "No entity collection target configured.",
+        };
     }
 
     private bool RebuildEntityCollectionCategories(int slot, World world, Entity primary, int count)

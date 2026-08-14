@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_minimap_marker_large_world_showcase.json b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_minimap_marker_large_world_showcase.json
+index c7da009f1e..6877b3a7ea 100644
+--- a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_minimap_marker_large_world_showcase.json
++++ b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_minimap_marker_large_world_showcase.json
+@@ -24,7 +24,8 @@
+       "WidthInMacroTiles": 256,
+       "HeightInMacroTiles": 256,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 256
+     }
+   ],
+   "DefaultCamera": {

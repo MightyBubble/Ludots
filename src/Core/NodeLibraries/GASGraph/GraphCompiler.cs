@@ -480,6 +480,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.BeginLifecycleTransaction:
+                    case GraphNodeOp.BeginLifecycleConsumeSource:
                         break;
                     case GraphNodeOp.InvokeBuiltin:
                         ins.Imm = RequireSymbol(node.BuiltinHandler, "builtinHandler", node, symbolToIndex, symbols, cfg.Id, diagnostics);

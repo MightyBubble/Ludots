@@ -1,0 +1,20 @@
+diff --git a/mods/LudotsCoreMod/assets/Maps/nav_editor_grid.json b/mods/LudotsCoreMod/assets/Maps/nav_editor_grid.json
+index 9619afa793..1da36a4277 100644
+--- a/mods/LudotsCoreMod/assets/Maps/nav_editor_grid.json
++++ b/mods/LudotsCoreMod/assets/Maps/nav_editor_grid.json
+@@ -9,6 +9,7 @@
+       "HeightInMacroTiles": 1,
+       "GridCellSizeCm": 100,
+       "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 16,
+       "DataFile": "nav_editor_grid.bin",
+       "NavigationEnabled": true
+     },
+@@ -20,6 +21,7 @@
+       "GridCellSizeCm": 100,
+       "HexEdgeLengthCm": 100,
+       "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 256,
+       "DataFile": "nav_editor_grid_board_2.bin",
+       "NavigationEnabled": true
+     }

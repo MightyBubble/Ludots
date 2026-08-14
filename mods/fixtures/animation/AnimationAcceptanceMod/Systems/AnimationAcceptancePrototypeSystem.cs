@@ -7,7 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
 namespace AnimationAcceptanceMod.Systems
@@ -16,9 +16,9 @@ namespace AnimationAcceptanceMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly AnimationAcceptanceControlState _controls;
-        private readonly PerformerEntityRuntime _instances;
-        private readonly PerformerAnimatorStateBuffer _animatorStates;
-        private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PresenterEntityRuntime _instances;
+        private readonly PresenterAnimatorStateBuffer _animatorStates;
+        private readonly PresenterDefinitionRegistry _definitions;
 
         private float _elapsed;
         private bool _tankFireGate;
@@ -32,12 +32,12 @@ namespace AnimationAcceptanceMod.Systems
             _engine = engine;
             _controls = engine.GetService(AnimationAcceptanceServiceKeys.ControlState)
                 ?? throw new InvalidOperationException("Animation acceptance requires control state service.");
-            _instances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerEntityRuntime.");
-            _animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
-            _definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerDefinitionRegistry.");
+            _instances = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("Animation acceptance requires PresenterEntityRuntime.");
+            _animatorStates = engine.GetService(CoreServiceKeys.PresenterAnimatorStateBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PresenterAnimatorStateBuffer.");
+            _definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("Animation acceptance requires PresenterDefinitionRegistry.");
         }
 
         public override void Update(in float dt)
@@ -46,8 +46,8 @@ namespace AnimationAcceptanceMod.Systems
             _elapsed += scaledDt;
             ResolveDefinitionIds();
 
-            var query = new QueryDescription().WithAll<PerformerState>();
-            World.Query(in query, (Entity entity, ref PerformerState instance) =>
+            var query = new QueryDescription().WithAll<PresenterState>();
+            World.Query(in query, (Entity entity, ref PresenterState instance) =>
             {
                 if (!_animatorStates.IsAllocated(entity))
                 {
@@ -88,11 +88,11 @@ namespace AnimationAcceptanceMod.Systems
                 return;
             }
 
-            _tankDefinitionId = _definitions.GetId(AnimationAcceptanceIds.TankPerformerDefinitionId);
-            _humanoidDefinitionId = _definitions.GetId(AnimationAcceptanceIds.HumanoidPerformerDefinitionId);
+            _tankDefinitionId = _definitions.GetId(AnimationAcceptanceIds.TankPresenterDefinitionId);
+            _humanoidDefinitionId = _definitions.GetId(AnimationAcceptanceIds.HumanoidPresenterDefinitionId);
             if (_tankDefinitionId <= 0 || _humanoidDefinitionId <= 0)
             {
-                throw new InvalidOperationException("Animation acceptance performer definitions are missing.");
+                throw new InvalidOperationException("Animation acceptance presenter definitions are missing.");
             }
         }
 

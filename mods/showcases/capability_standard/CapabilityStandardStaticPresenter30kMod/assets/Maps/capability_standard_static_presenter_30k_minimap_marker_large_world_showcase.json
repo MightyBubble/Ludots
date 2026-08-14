@@ -1,0 +1,40 @@
+{
+  "Id": "capability_standard_static_presenter_30k_minimap_marker_large_world_showcase",
+  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_minimap_marker_large_world_relief.vhtm",
+  "Tags": ["showcase", "presenter", "minimap", "large-world"],
+  "Metadata": {
+    "capabilityStandardStaticPresenter30k": {
+      "minimapMarkerShowcaseTotal": 30000,
+      "minimapMarkerScatterPaddingCm": 64000.0,
+      "minimapMarkerScatterJitterCm": 4200.0,
+      "minimapMarkerVisibleClusterCount": 300,
+      "minimapMarkerVisibleClusterCenterXCm": -2099200.0,
+      "minimapMarkerVisibleClusterCenterYCm": 2508800.0,
+      "minimapMarkerVisibleClusterRadiusCm": 9000.0,
+      "minimapMarkerScatterSeed": 129135,
+      "minimapMarkerMovementPaddingCm": 64000.0,
+      "minimapMarkerMovementSpeedCmPerSecond": 1800.0,
+      "minimapMarkerMovementTurnPeriodSeconds": 7.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 256,
+      "HeightInMacroTiles": 256,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "PresenterCapabilityStaticPresenter.Camera.LargeWorldHeightmap",
+    "TargetXCm": -2099200,
+    "TargetYCm": 2508800,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 12000,
+    "FovYDeg": 55
+  },
+  "Entities": []
+}

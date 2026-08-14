@@ -1,0 +1,49 @@
+diff --git a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json
+index ddf991be41..0bd24f419d 100644
+--- a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json
++++ b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json
+@@ -10,7 +10,8 @@
+                        "SpatialType":  "Grid",
+                        "WidthInMacroTiles":  2,
+                        "HeightInMacroTiles":  2,
+-                       "GridCellSizeCm":  100
++                       "GridCellSizeCm":  100,
++                       "LoadedChunkCapacity":  64
+                    }
+                ],
+     "DefaultCamera":  {
+@@ -71,7 +72,22 @@
+                                                            },
+                                            "Team":  {
+                                                         "Id":  1
+-                                                    }
++                                            }
++                                       }
++                     },
++                     {
++                         "Template":  "moba_dummy",
++                         "InstanceId":  "camera-acceptance-crowd-team-rep",
++                         "Overrides":  {
++                                           "Name":  {
++                                                        "Value":  "CameraAcceptanceCrowdTeamRep"
++                                                    },
++                                           "WorldPositionCm":  {
++                                                                  "Value":  {
++                                                                                "X":  24000,
++                                                                                "Y":  24000
++                                                                            }
++                                                              }
+                                        }
+                      }
+                  ],
+@@ -79,6 +95,10 @@
+                   {
+                       "TeamId":  1,
+                       "RepresentativeInstanceId":  "camera-acceptance-local-player"
++                  },
++                  {
++                      "TeamId":  2,
++                      "RepresentativeInstanceId":  "camera-acceptance-crowd-team-rep"
+                   }
+               ],
+     "Players":  [

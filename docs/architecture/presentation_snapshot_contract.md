@@ -1,6 +1,6 @@
 # 表现层 visual snapshot contract
 
-本文定义 Core 提供给 adapter 的实体 visual frame snapshot contract。该 contract 以 `PresentationVisualSnapshotBuffer` 为唯一帧快照出口，覆盖 `transform / visibility / identity` 以及 static mesh / skinned mesh 分 lane 所需的运行时字段。Performer 一次性特效、HUD 与调试绘制仍走各自缓冲，不属于本文 contract。
+本文定义 Core 提供给 adapter 的实体 visual frame snapshot contract。该 contract 以 `PresentationVisualSnapshotBuffer` 为唯一帧快照出口，覆盖 `transform / visibility / identity` 以及 static mesh / skinned mesh 分 lane 所需的运行时字段。Presenter 一次性特效、HUD 与调试绘制仍走各自缓冲，不属于本文 contract。
 
 ## 1 架构边界
 
@@ -72,5 +72,5 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 ## 6 相关文档
 
 * adapter 分层：见 [adapter_pattern.md](adapter_pattern.md)
-* 表现系统与 Performer：见 [presentation_performer.md](presentation_performer.md)
+* 表现系统与 Presenter：见 [presentation_presenter.md](presentation_presenter.md)
 * RFC playable 设计稿：见 [../rfcs/RFC-0052-presentation-snapshot-playable-mods.md](../rfcs/RFC-0052-presentation-snapshot-playable-mods.md)

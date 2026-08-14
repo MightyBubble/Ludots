@@ -1,4 +1,4 @@
-# Performer 统一编排架构交叉复核摘要
+# Presenter 统一编排架构交叉复核摘要
 
 Status: Informational
 Last Updated: 2026-04-16
@@ -16,17 +16,17 @@ Last Updated: 2026-04-16
 两份复核结论高度一致：
 
 1. 用户目标方向是对的
-- `Performer` 应升级为唯一演出编排真相，而不是继续只负责附加表现。
+- `Presenter` 应升级为唯一演出编排真相，而不是继续只负责附加表现。
 
 2. 当前系统不是推倒重来
 - `PrefabPart`、`PrefabFinalizationPipeline`、`PresentationRequestFlushSystem` 的边界基本已经正确。
 
 3. 真正需要收束的是双主线
-- 一条是 `performer` 编排路径
+- 一条是 `presenter` 编排路径
 - 一条是 `entity visual` / `animator` 直通路径
 
 4. 真正难点不是命名，而是 ownership
-- 关键不在于把 `Performer*` 改名成 `Perform*`
+- 关键不在于把 `Presenter*` 改名成 `Perform*`
 - 关键在于把主模型、主动画、HUD、音效、指示器统一纳入同一生命周期与可见性模型
 
 ## 3. 当前系统里已经能复用的部分
@@ -41,14 +41,14 @@ Last Updated: 2026-04-16
 
 复核一致认为这部分已经满足“静态、引擎面、相对稳定资产封装层”的要求。
 
-### 3.2 现有 performer 主骨架
+### 3.2 现有 presenter 主骨架
 
 以下实现已具备被提升为统一编排层的潜力：
 
-- `src/Core/Presentation/Config/PerformerDefinitionConfigLoader.cs`
-- `src/Core/Presentation/Systems/PerformerRuleSystem.cs`
-- `src/Core/Presentation/Systems/PerformerRuntimeSystem.cs`
-- `src/Core/Presentation/Systems/PerformerEmitSystem.cs`
+- `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs`
+- `src/Core/Presentation/Systems/PresenterRuleSystem.cs`
+- `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs`
+- `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
 
 复核观点：
 
@@ -69,13 +69,13 @@ Last Updated: 2026-04-16
 
 ## 4. 当前最大不匹配
 
-### 4.1 主视觉仍绕过 performer
+### 4.1 主视觉仍绕过 presenter
 
 最关键的不匹配来自：
 
 - `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs`
 
-该系统直接读取 `VisualTransform`、`VisualRuntimeState`、`PresentationStableId` 并发出 request，导致主模型并不归属于 performer lifecycle。
+该系统直接读取 `VisualTransform`、`VisualRuntimeState`、`PresentationStableId` 并发出 request，导致主模型并不归属于 presenter lifecycle。
 
 ### 4.2 Animator 仍归 entity visual 所有
 
@@ -104,7 +104,7 @@ Last Updated: 2026-04-16
 
 交叉复核最终收敛到以下边界：
 
-### `Performer`
+### `Presenter`
 
 - 唯一 orchestration SSOT
 - 管理 scope、owner、anchor、stable identity、lifetime、behavior lifecycle
@@ -144,11 +144,11 @@ Last Updated: 2026-04-16
 
 交叉复核都强调了以下风险：
 
-1. `Performer` 变成 god object
-- 如果只是把所有逻辑塞进更大的 `PerformerEmitSystem` switch，会失去收敛意义。
+1. `Presenter` 变成 god object
+- 如果只是把所有逻辑塞进更大的 `PresenterEmitSystem` switch，会失去收敛意义。
 
-2. 把 visibility truth 错放到 performer
-- 相位、可见性、观战者、debug 差异的 truth 应由 entity / phase 上游层发起，performer 只消费这些输入。
+2. 把 visibility truth 错放到 presenter
+- 相位、可见性、观战者、debug 差异的 truth 应由 entity / phase 上游层发起，presenter 只消费这些输入。
 
 3. 可见性策略组合爆炸
 - 不能无限给 inline condition 枚举加分支，必须升级为 policy 契约。
@@ -176,12 +176,12 @@ Last Updated: 2026-04-16
 
 交叉复核给出的总体判断是：
 
-- 这套 performer-prefab-asset 体系的底层边界并不差
+- 这套 presenter-prefab-asset 体系的底层边界并不差
 - 问题不在 prefab 与 request
-- 问题在 orchestration truth 仍被拆成 performer 与 entity visual / animator 两套
+- 问题在 orchestration truth 仍被拆成 presenter 与 entity visual / animator 两套
 
 因此，最合理的统一方案不是推翻当前体系，而是：
 
 - 保留资产层与输出层
-- 升级 performer 为唯一演出编排层
+- 升级 presenter 为唯一演出编排层
 - 把主模型、动画、HUD、音效、指示器统一收编进 `PerformBehavior`

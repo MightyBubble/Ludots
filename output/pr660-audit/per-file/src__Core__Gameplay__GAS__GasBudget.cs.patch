@@ -1,0 +1,40 @@
+diff --git a/src/Core/Gameplay/GAS/GasBudget.cs b/src/Core/Gameplay/GAS/GasBudget.cs
+index db1fe88c74..fa1d335257 100644
+--- a/src/Core/Gameplay/GAS/GasBudget.cs
++++ b/src/Core/Gameplay/GAS/GasBudget.cs
+@@ -12,8 +12,9 @@ namespace Ludots.Core.Gameplay.GAS
+         public int ResponseStepBudgetFused;
+         public int ResponseQueueOverflowDropped;
+ 
+-        public int OnApplyCreatesDropped;
+-        public int DurationCallbackCreatesDropped;
++        public int EffectProposalFanOutDropped;
++        public int EffectApplicationFanOutDropped;
++        public int EffectLifetimeFanOutDropped;
+         public int TagCountOverflowDropped;
+         public int ActiveEffectContainerAttachDropped;
+         public int PhaseListenerRegistrationDropped;
+@@ -30,8 +31,9 @@ namespace Ludots.Core.Gameplay.GAS
+             ResponseDepthDropped = 0;
+             ResponseStepBudgetFused = 0;
+             ResponseQueueOverflowDropped = 0;
+-            OnApplyCreatesDropped = 0;
+-            DurationCallbackCreatesDropped = 0;
++            EffectProposalFanOutDropped = 0;
++            EffectApplicationFanOutDropped = 0;
++            EffectLifetimeFanOutDropped = 0;
+             TagCountOverflowDropped = 0;
+             ActiveEffectContainerAttachDropped = 0;
+             PhaseListenerRegistrationDropped = 0;
+@@ -44,8 +46,9 @@ namespace Ludots.Core.Gameplay.GAS
+             ResponseDepthDropped != 0 ||
+             ResponseStepBudgetFused != 0 ||
+             ResponseQueueOverflowDropped != 0 ||
+-            OnApplyCreatesDropped != 0 ||
+-            DurationCallbackCreatesDropped != 0 ||
++            EffectProposalFanOutDropped != 0 ||
++            EffectApplicationFanOutDropped != 0 ||
++            EffectLifetimeFanOutDropped != 0 ||
+             TagCountOverflowDropped != 0 ||
+             ActiveEffectContainerAttachDropped != 0 ||
+             PhaseListenerRegistrationDropped != 0 ||

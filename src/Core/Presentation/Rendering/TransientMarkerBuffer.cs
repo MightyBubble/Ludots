@@ -148,7 +148,7 @@ namespace Ludots.Core.Presentation.Rendering
 
                 requests.Add(PresentationRequest.FromVisualProxy(marker.Anchor, new PresentationVisualProxy
                 {
-                    ProxyKind = PresentationVisualProxyKind.Performer,
+                    ProxyKind = PresentationVisualProxyKind.Presenter,
                     MeshAssetId = marker.MeshAssetId,
                     Position = position,
                     Rotation = Quaternion.Identity,

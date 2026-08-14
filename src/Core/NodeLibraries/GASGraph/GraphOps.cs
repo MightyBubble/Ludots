@@ -144,6 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         IsPointInCircle = 405,
         SnapToNearestInCollection = 406,
         SnapToNearestGraphEdge = 407,
+        BeginLifecycleConsumeSource = 408,
 
         // ── Event evaluation context (410-412, RFC-0065 PROV-4b) ──
         LoadViewer           = 410,  // E[Dst] = state.Viewer (fixed register 2)

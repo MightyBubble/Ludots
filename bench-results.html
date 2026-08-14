@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI短剧完整剧本 Bench 结果</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --paper: #ffffff;
+      --ink: #202328;
+      --muted: #68717c;
+      --line: #d7dce3;
+      --soft: #eef2f5;
+      --accent: #245c63;
+      --accent-soft: #e4f0f0;
+      --good: #2c6b49;
+      --warn: #a85d21;
+      --bad: #9b3e3e;
+      --shadow: 0 10px 24px rgba(24, 32, 40, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 30px 0 54px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.12;
+      font-weight: 500;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 23px;
+      font-weight: 500;
+    }
+
+    h3 {
+      margin-bottom: 6px;
+      font-size: 19px;
+      font-weight: 500;
+    }
+
+    .lead {
+      max-width: 850px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .stamp {
+      min-width: 230px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .metric {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--accent);
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 500;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .notice {
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--warn);
+      border-radius: 8px;
+      background: #fff8ee;
+    }
+
+    .notice strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .notice p {
+      margin-bottom: 0;
+      color: #6d4b2e;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .table-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      color: var(--muted);
+      background: #fafbfc;
+      font-weight: 500;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .status.good { background: var(--good); }
+    .status.bad { background: var(--bad); }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .model {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .title {
+      margin-bottom: 0;
+      font-size: 23px;
+      font-weight: 500;
+    }
+
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 12px;
+    }
+
+    .fact {
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--soft);
+      font-size: 12px;
+    }
+
+    .card p {
+      margin-bottom: 12px;
+      color: #4f5862;
+      font-size: 14px;
+    }
+
+    .card p:last-of-type { margin-bottom: 14px; }
+
+    .card-link {
+      display: inline-block;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      font-size: 14px;
+    }
+
+    .callout {
+      margin-top: 14px;
+      padding: 12px;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      background: #f4f9f9;
+      color: #3f5558;
+      font-size: 14px;
+    }
+
+    .rank {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    .rank li { padding-left: 3px; }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 820px) {
+      header,
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .stamp {
+        min-width: 0;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      .page {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      .section {
+        padding: 14px;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .title {
+        font-size: 21px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>AI短剧完整剧本 Bench</h1>
+        <p class="lead">
+          同一命题、同一写作要求、独立目录。看模型能不能把人物、逃亡、战争、技术和成长写成一部真正能拍的 8 集剧本。
+        </p>
+      </div>
+      <div class="stamp">
+        命题：诈骗 AI 程序员误入非洲军阀混战<br>
+        风格：现实主义 / 轻近未来 / 技术惊悚<br>
+        生成日期：2026-08-12
+      </div>
+    </header>
+
+    <section class="summary" aria-label="结果概览">
+      <div class="metric"><strong>4</strong><span>份完整剧本</span></div>
+      <div class="metric"><strong>8</strong><span>每份目标集数</span></div>
+      <div class="metric"><strong>38,002</strong><span>最长稿字符数</span></div>
+      <div class="metric"><strong>1</strong><span>路由失败，未替代</span></div>
+    </section>
+
+    <section class="notice">
+      <strong>Luna 没有生成结果</strong>
+      <p>
+        `gpt-5.6-luna` 返回 503：`SETTLEMENT_PRICING_NOT_FOUND`。这不是剧本质量判断，也没有拿其他模型冒充 Luna。失败原文已放在
+        <a href="luna-gpt56/失败说明.txt">失败说明</a> 和 <a href="luna-gpt56/元数据.json">元数据</a>。
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>一眼比较</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>模型</th>
+              <th>剧名</th>
+              <th>长度</th>
+              <th>场景标记</th>
+              <th>初看特点</th>
+              <th>结果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>pi deepseek v4 flash</td>
+              <td>信号盲区</td>
+              <td>17,199 字符</td>
+              <td>27</td>
+              <td>节奏稳，技术和逃亡线绑得紧，人物转变清楚。</td>
+              <td><span class="status good">完整</span></td>
+            </tr>
+            <tr>
+              <td>pi opus 4.6</td>
+              <td>信号丢失</td>
+              <td>20,504 字符</td>
+              <td>40</td>
+              <td>现实战争质感最强，行动场面多，信息量大。</td>
+              <td><span class="status good">完整</span></td>
+            </tr>
+            <tr>
+              <td>pi opus 4.8</td>
+              <td>赝声</td>
+              <td>8,991 字符</td>
+              <td>25</td>
+              <td>最紧凑，身份真假和“声音反噬”最像 PKD；篇幅也最短。</td>
+              <td><span class="status good">完整</span></td>
+            </tr>
+            <tr>
+              <td>pi opus 5</td>
+              <td>回声塔</td>
+              <td>38,002 字符</td>
+              <td>42</td>
+              <td>最完整、最展开，政治关系和撤离路线写得最厚。</td>
+              <td><span class="status good">完整</span></td>
+            </tr>
+            <tr>
+              <td>gpt-5.6-luna</td>
+              <td>未生成</td>
+              <td>—</td>
+              <td>—</td>
+              <td>账户结算配置阻断请求。</td>
+              <td><span class="status bad">失败</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">长度和场景数按实际落盘文件统计；“初看特点”是对成稿的快速阅读结论，不是自动评分。</p>
+    </section>
+
+    <section class="section">
+      <h2>逐份打开</h2>
+      <div class="cards">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="model">pi deepseek v4 flash</div>
+              <h3 class="title">《信号盲区》</h3>
+            </div>
+            <span class="status good">8 集</span>
+          </div>
+          <div class="facts">
+            <span class="fact">17,199 字符</span>
+            <span class="fact">27 个场景标记</span>
+            <span class="fact">8 个集尾钩子</span>
+          </div>
+          <p>主角陈默从“写代码的不算骗子”走到用真名认罪。阿米娜、约书亚、索莱都有自己的利益和判断，逃亡线与声音伪造线咬合得比较好。</p>
+          <a class="card-link" href="pi-deepseek-v4-flash/剧本.md">打开完整剧本</a>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="model">pi opus 4.6</div>
+              <h3 class="title">《信号丢失》</h3>
+            </div>
+            <span class="status good">8 集</span>
+          </div>
+          <div class="facts">
+            <span class="fact">20,504 字符</span>
+            <span class="fact">40 个场景标记</span>
+            <span class="fact">8 个集尾钩子</span>
+          </div>
+          <p>更像一部传统技术惊悚剧：军阀、诊所、无人机、卫星终端和难民转运形成连续压力。人物不是靠一句顿悟改变，而是靠多次带代价的选择改变。</p>
+          <a class="card-link" href="pi-opus-4-6/剧本.md">打开完整剧本</a>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="model">pi opus 4.8</div>
+              <h3 class="title">《赝声》</h3>
+            </div>
+            <span class="status good">8 集</span>
+          </div>
+          <div class="facts">
+            <span class="fact">8,991 字符</span>
+            <span class="fact">25 个场景标记</span>
+            <span class="fact">8 个集尾钩子</span>
+          </div>
+          <p>篇幅最短，但“谁的声音是真的”这条线最集中。身份不确定、翻译出错、假声音广播和最后的实名认罪，PKD 味道最明显。</p>
+          <a class="card-link" href="pi-opus-4-8/剧本.md">打开完整剧本</a>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="model">pi opus 5</div>
+              <h3 class="title">《回声塔》</h3>
+            </div>
+            <span class="status good">8 集</span>
+          </div>
+          <div class="facts">
+            <span class="fact">38,002 字符</span>
+            <span class="fact">42 个场景标记</span>
+            <span class="fact">8 个集尾钩子</span>
+          </div>
+          <p>四份里展开最充分。它把矿区、停产选矿厂、边境名册、撤离车队和两套身份记录铺得最完整，适合继续往正式剧本打磨。</p>
+          <a class="card-link" href="pi-opus-5/剧本.md">打开完整剧本</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>先看哪份</h2>
+      <ol class="rank">
+        <li><strong>想看最完整的剧本：</strong>先看 <a href="pi-opus-5/剧本.md">Opus 5《回声塔》</a>。</li>
+        <li><strong>想看节奏和可拍性：</strong>看 <a href="pi-deepseek-v4-flash/剧本.md">DeepSeek《信号盲区》</a>。</li>
+        <li><strong>想看战争质感：</strong>看 <a href="pi-opus-4-6/剧本.md">Opus 4.6《信号丢失》</a>。</li>
+        <li><strong>想看 PKD 式真假身份：</strong>看 <a href="pi-opus-4-8/剧本.md">Opus 4.8《赝声》</a>。</li>
+      </ol>
+      <div class="callout">
+        这轮真正拉开差距的不是“会不会写诈骗”，而是能不能把诈骗者的罪责、当地人物的主动性、战区的物理压力和技术的不可靠性同时写住。
+      </div>
+    </section>
+  </main>
+</body>
+</html>

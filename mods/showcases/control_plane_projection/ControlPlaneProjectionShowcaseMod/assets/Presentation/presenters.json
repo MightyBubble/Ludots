@@ -1,0 +1,275 @@
+[
+  {
+    "id": "control_plane.visual.unit.p1",
+    "defaultColor": [0.28, 0.62, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.25, 1.25, 1.25]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "control_plane_projection_p1_unit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "control_plane.visual.unit.p1"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "control_plane_projection_p1_unit" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.unit.p2",
+    "defaultColor": [1.0, 0.62, 0.2, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.15, 1.15, 1.15]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "control_plane_projection_p2_unit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "control_plane.visual.unit.p2"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "control_plane_projection_p2_unit" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.owned_marker",
+    "defaultColor": [0.08, 0.52, 0.2, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.45, 1.45, 1.45]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.03, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.proxied_marker",
+    "defaultColor": [0.52, 0.92, 0.6, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.45, 1.45, 1.45]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.03, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.referee_phase0_marker",
+    "defaultColor": [0.95, 0.12, 0.14, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.72, 1.72, 1.72]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.05, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.referee_phase1_marker",
+    "defaultColor": [1.0, 0.54, 0.08, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.72, 1.72, 1.72]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.05, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.marker.rules",
+    "rules": [
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.owned" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "control_plane.visual.owned_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.owned" },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "control_plane.visual.owned_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.proxied" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "control_plane.visual.proxied_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.proxied" },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "control_plane.visual.proxied_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase0" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "control_plane.visual.referee_phase0_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase0" },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "control_plane.visual.referee_phase0_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase1" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "control_plane.visual.referee_phase1_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase1" },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "control_plane.visual.referee_phase1_marker",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  }
+]

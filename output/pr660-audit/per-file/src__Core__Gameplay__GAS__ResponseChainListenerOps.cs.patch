@@ -1,0 +1,71 @@
+diff --git a/src/Core/Gameplay/GAS/ResponseChainListenerOps.cs b/src/Core/Gameplay/GAS/ResponseChainListenerOps.cs
+new file mode 100644
+index 0000000000..f8a192a99c
+--- /dev/null
++++ b/src/Core/Gameplay/GAS/ResponseChainListenerOps.cs
+@@ -0,0 +1,65 @@
++using System;
++using Arch.Core;
++using Ludots.Core.Gameplay.GAS.Components;
++
++namespace Ludots.Core.Gameplay.GAS
++{
++    public static class ResponseChainListenerOps
++    {
++        public const string MissingQueueError = "GAS.RESPONSE_CHAIN.ERR.MissingEffectRequestQueue";
++        public const string DeadOwnerError = "GAS.RESPONSE_CHAIN.ERR.ListenerOwnerDead";
++        public const string AlreadyRegisteredError = "GAS.RESPONSE_CHAIN.ERR.ListenerAlreadyRegistered";
++        public const string MissingListenerError = "GAS.RESPONSE_CHAIN.ERR.ListenerNotRegistered";
++
++        public static void Add(
++            World world,
++            Entity owner,
++            in ResponseChainListener listener,
++            EffectRequestQueue queue)
++        {
++            RequireQueue(queue);
++            RequireAlive(world, owner);
++            if (world.Has<ResponseChainListener>(owner))
++            {
++                throw new InvalidOperationException($"{AlreadyRegisteredError}: entity={owner.Id}.");
++            }
++
++            world.Add(owner, listener);
++            queue.NotifyResponseChainListenersChanged();
++        }
++
++        public static void Remove(World world, Entity owner, EffectRequestQueue queue)
++        {
++            RequireQueue(queue);
++            RequireAlive(world, owner);
++            if (!world.Has<ResponseChainListener>(owner))
++            {
++                throw new InvalidOperationException($"{MissingListenerError}: entity={owner.Id}.");
++            }
++
++            world.Remove<ResponseChainListener>(owner);
++            queue.NotifyResponseChainListenersChanged();
++        }
++
++        private static void RequireQueue(EffectRequestQueue queue)
++        {
++            if (queue == null)
++            {
++                throw new InvalidOperationException(MissingQueueError);
++            }
++        }
++
++        private static void RequireAlive(World world, Entity owner)
++        {
++            if (world == null)
++            {
++                throw new ArgumentNullException(nameof(world));
++            }
++
++            if (!world.IsAlive(owner))
++            {
++                throw new InvalidOperationException($"{DeadOwnerError}: entity={owner.Id}.");
++            }
++        }
++    }
++}

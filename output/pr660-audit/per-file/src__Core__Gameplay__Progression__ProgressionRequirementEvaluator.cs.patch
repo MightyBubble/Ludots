@@ -1,0 +1,13 @@
+diff --git a/src/Core/Gameplay/Progression/ProgressionRequirementEvaluator.cs b/src/Core/Gameplay/Progression/ProgressionRequirementEvaluator.cs
+index 70cfbf5074..a92036f2eb 100644
+--- a/src/Core/Gameplay/Progression/ProgressionRequirementEvaluator.cs
++++ b/src/Core/Gameplay/Progression/ProgressionRequirementEvaluator.cs
+@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.Progression
+             _scopeResolver = scopeResolver ?? new ScopeResolver(world, scopeKeys);
+             _graphPrograms = graphPrograms;
+             _graphApi = graphApi;
+-            _tagOps = tagOps ?? new TagOps();
++            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+         }
+ 
+         public ScopeKeyRegistry ScopeKeys => _scopeKeys;

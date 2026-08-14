@@ -1,0 +1,35 @@
+diff --git a/src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs b/src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs
+index 99ccb75016..6d229867d7 100644
+--- a/src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs
++++ b/src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs
+@@ -52,16 +52,30 @@ namespace Ludots.Core.Gameplay.GAS
+         private static readonly Dictionary<string, int> _nameToId = new(StringComparer.OrdinalIgnoreCase);
+         private static readonly Dictionary<int, string> _idToName = new();
+         private static int _nextId = 1;
++        private static bool _frozen;
++
++        public static bool IsFrozen => _frozen;
++
++        public static void Freeze()
++        {
++            _frozen = true;
++        }
+ 
+         public static void Clear()
+         {
+             _nameToId.Clear();
+             _idToName.Clear();
+             _nextId = 1;
++            _frozen = false;
+         }
+ 
+         public static int Register(string name)
+         {
++            if (_frozen)
++            {
++                throw new InvalidOperationException("AbilityFormSetIdRegistry is frozen.");
++            }
++
+             if (string.IsNullOrWhiteSpace(name))
+             {
+                 throw new ArgumentException("Ability form set name is required.", nameof(name));

@@ -1,0 +1,12 @@
+diff --git a/src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs b/src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs
+index ba7334d80a..030e9a22a7 100644
+--- a/src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs
++++ b/src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs
+@@ -5,6 +5,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
+ {
+     public interface IAttributeSink
+     {
++        void ValidateBinding(byte channel, string bindingId, string relativePath);
+         void Apply(Arch.Core.World world, AttributeBindingEntry[] entries, int start, int count);
+     }
+ 

@@ -1,0 +1,4168 @@
+[
+  {
+    "id": "Effect.Scf.Shared.Construction.Terran",
+    "tags": [
+      "Effect.Scf.Construction"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Shared.Construction.Zerg",
+    "tags": [
+      "Effect.Scf.Construction"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Shared.Construction.Protoss",
+    "tags": [
+      "Effect.Scf.Construction"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 45,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Shared.SpawnBootstrap",
+    "tags": [
+      "Effect.Scf.Spawn"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "grantedTags": [
+      {
+        "tag": "Unit.Scf.Bootstrapped",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Mining.Tick",
+    "tags": [
+      "Effect.Scf.Mining"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Mining.Minerals",
+    "tags": [
+      "Effect.Scf.Mining"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 60,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Status.Scf.Mining",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Mining.Minerals"
+      },
+      "OnPeriod": {
+        "post": "Graph.Scf.Mining.Minerals"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.Assault.Signal",
+    "tags": [
+      "Effect.Scf.Assault"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AssaultSignal",
+        "op": "Add",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.scv",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -60
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.scv",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_scv",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.marine",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.marine",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_marine",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.marauder",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.marauder",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_marauder",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.reaper",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.reaper",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_reaper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.hellion",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.hellion",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_hellion",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.siege.tank",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.siege.tank",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_siege_tank",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.hellbat",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.hellbat",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_hellbat",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.viking",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.viking",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_viking",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.medivac",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.medivac",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_medivac",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.terran.banshee",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.terran.banshee",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_terran_banshee",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.bunker",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.bunker",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.bunker"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.missile.turret",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.missile.turret",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.missile.turret"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.marine",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.marine",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.marine"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.marauder",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.marauder",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.marauder"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.reaper",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.reaper",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.reaper"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.ghost",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.ghost",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.ghost"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.firebat",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.firebat",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 350
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.firebat"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.vulture",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.vulture",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.vulture"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.goliath",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.goliath",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.goliath"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.siege.tank",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -35
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.siege.tank",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.siege.tank"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.hellion",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.hellion",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.hellion"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.hellbat",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.hellbat",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 350
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.hellbat"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.thor",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -30
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.thor",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.thor"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.viking",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.viking",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.viking"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.banshee",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.banshee",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.banshee"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.battlecruiser",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.battlecruiser",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 650
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.battlecruiser"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.cyclone",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -11
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.cyclone",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.cyclone"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.widow.mine",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -40
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.widow.mine",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.widow.mine"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.liberator",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -18
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.liberator",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.liberator"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.terran.diamondback",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Terran.ArmorShred"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.terran.diamondback",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.terran.diamondback"
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.drone",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -45
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.drone",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_drone",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.zergling",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.zergling",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_zergling",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.baneling",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.baneling",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_baneling",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.roach",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.roach",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_roach",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.ravager",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.ravager",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_ravager",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.hydralisk",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.hydralisk",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_hydralisk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.lurker",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.lurker",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_lurker",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.mutalisk",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.mutalisk",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_mutalisk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.corruptor",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.corruptor",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_corruptor",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.infestor",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.infestor",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_infestor",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.viper",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.viper",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_viper",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.ultralisk",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.ultralisk",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_ultralisk",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.zerg.queen",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.zerg.queen",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_zerg_queen",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.zergling",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.zergling",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 350
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.zergling"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.baneling",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.baneling",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 300
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.baneling"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.roach",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -16
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.roach",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.roach"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.ravager",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -18
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.ravager",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.ravager"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.hydralisk",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.hydralisk",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.hydralisk"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.lurker",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.lurker",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 650
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.lurker"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.mutalisk",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -9
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.mutalisk",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.mutalisk"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.corruptor",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.corruptor",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.corruptor"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.broodlord",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.broodlord",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.broodlord"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.swarm.host",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.swarm.host",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.swarm.host"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.ultralisk",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -35
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.ultralisk",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 400
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.ultralisk"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.queen",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.queen",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.queen"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.spine.crawler",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.spine.crawler",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.spine.crawler"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.spore.crawler",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.spore.crawler",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 650
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.spore.crawler"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.zerg.brutalisk",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -28
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Zerg.RegenOnKill"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.zerg.brutalisk",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.zerg.brutalisk"
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.probe",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.probe",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_probe",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.zealot",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.zealot",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_zealot",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.stalker",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.stalker",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_stalker",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.sentry",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.sentry",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_sentry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.immortal",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.immortal",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_immortal",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.colossus",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.colossus",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_colossus",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.observer",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.observer",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_observer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.phoenix",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.phoenix",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_phoenix",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.voidray",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.voidray",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_voidray",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.carrier",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.carrier",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_carrier",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.hightemplar",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.hightemplar",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_hightemplar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.darktemplar",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.darktemplar",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_darktemplar",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.disruptor",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.disruptor",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_disruptor",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.warp.prism",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.warp.prism",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_warp_prism",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.tempest",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.tempest",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_tempest",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Cost.Train.protoss.mothership",
+    "tags": [
+      "Effect.Scf.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Train.protoss.mothership",
+    "tags": [
+      "Effect.Scf.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "scf_protoss_mothership",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.photon.cannon",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -20
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.photon.cannon",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.photon.cannon"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.zealot",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.zealot",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 350
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.zealot"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.stalker",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -10
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.stalker",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.stalker"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.sentry",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.sentry",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.sentry"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.adept",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -7
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -7
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.adept",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.adept"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.darktemplar",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.darktemplar",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 350
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.darktemplar"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.archon",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -25
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -25
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.archon",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.archon"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.immortal",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -20
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.immortal",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.immortal"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.colossus",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -15
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.colossus",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 650
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.colossus"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.disruptor",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -30
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -30
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.disruptor",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.disruptor"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.phoenix",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.phoenix",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.phoenix"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.voidray",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -12
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.voidray",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 550
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.voidray"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.carrier",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -8
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.carrier",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 650
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.carrier"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.tempest",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -22
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -22
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.tempest",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 800
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.tempest"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.mothership",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -6
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.mothership",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.mothership"
+    }
+  },
+  {
+    "id": "Effect.Scf.Damage.protoss.corsair",
+    "tags": [
+      "Effect.Scf.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": -5
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
+    ],
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Scf.Protoss.ShieldRecharge"
+      }
+    }
+  },
+  {
+    "id": "Effect.Scf.AutoAttack.protoss.corsair",
+    "tags": [
+      "Effect.Scf.AutoAttack"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 999999,
+      "periodTicks": 20,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Scf.Damage.protoss.corsair"
+    }
+  },
+  {
+    "id": "Effect.Scf.Graph.ZergRegen",
+    "tags": [
+      "Effect.Scf.Graph"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 15
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Graph.ArmorShred",
+    "tags": [
+      "Effect.Scf.Graph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": -2
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Graph.ShieldRecharge",
+    "tags": [
+      "Effect.Scf.Graph"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Terran.MarineRange",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Terran.TankArmor",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Terran.MedivacSpeed",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Terran.StimPack",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Zerg.ZerglingSpeed",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Zerg.RoachArmor",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Zerg.HydraRange",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Zerg.MetabolicBoost",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Protoss.ZealotCharge",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Protoss.StalkerBlink",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Protoss.ShieldBoost",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  },
+  {
+    "id": "Effect.Scf.Item.Protoss.GraviticDrive",
+    "tags": [
+      "Effect.Scf.ItemPassive"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Add",
+        "value": 3
+      }
+    ]
+  }
+]

@@ -1,0 +1,482 @@
+[
+  {
+    "id": "entity_health_bar",
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
+    "maxVisibilityDistanceCm": 5000,
+    "positionOffset": [
+      0,
+      0.65,
+      0
+    ],
+    "defaultColor": [
+      0.1,
+      0.85,
+      0.15,
+      1
+    ],
+    "bindings": [
+      {
+        "paramKey": "worldBar.fillRatio",
+        "source": "attributeRatio",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "worldBar.width",
+        "source": "constant",
+        "constantValue": 50
+      },
+      {
+        "paramKey": "worldBar.height",
+        "source": "constant",
+        "constantValue": 8
+      },
+      {
+        "paramKey": "worldBar.background.r",
+        "source": "constant",
+        "constantValue": 0.3
+      },
+      {
+        "paramKey": "worldBar.background.g",
+        "source": "constant",
+        "constantValue": 0
+      },
+      {
+        "paramKey": "worldBar.background.b",
+        "source": "constant",
+        "constantValue": 0
+      },
+      {
+        "paramKey": "worldBar.background.a",
+        "source": "constant",
+        "constantValue": 0.85
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            50,
+            8,
+            1
+          ],
+          "materialParamKey": "worldBar.fillRatio"
+        }
+      }
+    ]
+  },
+  {
+    "id": "entity_world_text",
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
+    "maxVisibilityDistanceCm": 3000,
+    "positionOffset": [
+      0,
+      0.8,
+      0
+    ],
+    "defaultColor": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "defaultFontSize": 12,
+    "worldTextMode": "AttributeCurrentOverBase",
+    "bindings": [
+      {
+        "paramKey": "worldText.value0",
+        "source": "attribute",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "worldText.value1",
+        "source": "attributeBase",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "worldText.tokenId",
+        "source": "textToken",
+        "textToken": "hud.attribute.current_over_base"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "scaleParamKey": "worldText.value0",
+          "materialParamKey": "worldText.value1",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "cast_committed_marker",
+    "defaultColor": [
+      0,
+      1,
+      1,
+      0.9
+    ],
+    "defaultLifetime": 0.22,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [
+      0,
+      0.6,
+      0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            0.55,
+            0.55,
+            0.55
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "CastCommitted",
+          "key": "*"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "cast_committed_marker",
+          "scopeSource": "Fixed"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cast_failed_marker",
+    "defaultColor": [
+      0.7,
+      0.7,
+      0.7,
+      0.6
+    ],
+    "defaultLifetime": 0.15,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [
+      0,
+      0.9,
+      0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "CastFailed",
+          "key": "*"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "cast_failed_marker",
+          "scopeSource": "Fixed"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.combat_text.event_rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "EffectApplied",
+          "key": "*"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "floating_combat_text",
+          "ownerSource": "EventSource",
+          "scopeSource": "Fixed",
+          "paramKey": "worldText.value0",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      }
+    ]
+  },
+  {
+    "id": "floating_combat_text",
+    "defaultColor": [
+      1,
+      0.2,
+      0.1,
+      1
+    ],
+    "defaultFontSize": 18,
+    "worldTextMode": "AttributeCurrent",
+    "defaultLifetime": 1.2,
+    "positionOffset": [
+      0,
+      1,
+      0
+    ],
+    "positionYDriftPerSecond": 0.8,
+    "alphaFadeOverLifetime": true,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.combat.delta",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "scaleParamKey": "worldText.value0",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.character.hero_skinned",
+    "paramDefaults": [
+      {
+        "paramKey": "core.hero.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.9,
+            0.9,
+            0.9
+          ]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": "core.hero.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.prop.dummy_static",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.foliage.tree_pine_hism",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "HierarchicalInstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.moba_hero_visual",
+    "extends": "core.character.hero_skinned",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_hero"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.moba_hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_hero"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.moba_dummy_visual",
+    "extends": "core.prop.dummy_static",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_dummy"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.moba_dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_dummy"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.tree_pine_visual",
+    "extends": "core.foliage.tree_pine_hism",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "tree_pine"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.tree_pine_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "tree_pine"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

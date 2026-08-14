@@ -1,0 +1,136 @@
+ GAS 测试修复清单（含游戏情景说明）
+
+ Priority 1：立即修（真回归 + 噪声淹没信号）
+
+ ### 1.1 修复 PR #660 引入的 Moba 测试回归
+
+ 文件：src/Tests/GasTests/InteractionInput/InputOrderContractTests.cs:340-380
+ 问题：测试 fixture 缺 GasRuntimeCapacity，生产代码要求但测试没提供
+ 修法：
+
+ ```csharp
+   [CoreServiceKeys.GameConfig.Name] = new GameConfig
+   {
+       Constants = new GameConstants { /* 原有 OrderTypeIds */ },
+       GasRuntimeCapacity = new GasRuntimeCapacityConfig
+       {
+           CommandIntentScratchCapacity = 32  // 生产默认值
+       }
+   }
+ ```
+
+ 为何修：这是已合入 main 的真回归，会让任何跑完整 GasTests 的人看到稳定红测。
+ 游戏情景：玩家在 MOBA showcase 中框选 5 个英雄按 Q 技能，系统要为每个单位生成一条 castAbility 订单。CommandIntentScratchCapacity 就是这个"批量下单暂存区"的容量上限——超过会拒单并返回 RejectedQueueFull。现在生产代码强制要求此配置存在，但测试 fixture 没给，导致构造
+ MobaLocalOrderSourceSystem 时直接抛 InvalidOperationException。
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ ### 1.2 统一零分配断言写法（消除 16 个稳定假红）
+
+ 文件：散布在 Association/Vision/GasCore/Presentation 等 62 个文件
+ 问题：46 处用硬 Assert.That(allocated, Is.EqualTo(0))，9 处用 LessThanOrEqualTo(64/512/1024)
+ 修法选项 A（推荐）：统一改为预算容差
+
+ ```csharp
+   // 替换所有 Is.EqualTo(0) 为：
+   const int AllocationBudget = 64; // 单次调用理论上界
+   Assert.That(allocated, Is.LessThanOrEqualTo(AllocationBudget),
+       $"Hot path should allocate ≤{AllocationBudget} bytes, got {allocated}");
+ ```
+
+ 修法选项 B：标注隔离
+
+ ```csharp
+   [Test, Category("Allocation")] // 从主门禁排除
+   public void SomeHotPath_AllocatesZeroAfterWarmup() { /* ... */ }
+ ```
+
+ 然后 CI 主门禁用 --filter "Category!=Allocation"，单开一条容忍失败的 Allocation 泳道。
+
+ 为何修：当前 ScopeResolver/FogField/KnowledgeProjection 等 16 个测试在 .NET 10 SDK + Release 下稳定失败（实测分配 24–512 字节），但这些分配来自 JIT/GC 后台活动，不是被测代码。硬零断言让真实回归（如意外装箱、闭包逃逸）淹没在噪声里。
+ 游戏情景：玩家在战争迷雾（FogField）中移动单位，系统每帧要查询 10×10 区块的可见性并更新脏标记。FogField_ReadWriteHotPathAllocatesZeroAfterWarmup 测的是"这个循环不该产生 GC 压力"——但因为断言太严（0 字节），SDK 升级、PGO 策略变化都会让它红，掩盖真正的性能倒退（比如有人改了查询逻
+ 辑意外触发 LINQ ToArray()）。改成 ≤64 字节后，噪声消失，真倒退才会触发。
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ Priority 2：下一轮改（防止类似 PR #660 的掩盖）
+
+ ### 2.1 拆分 Production 验收测试的行为与证据生成
+
+ 文件：src/Tests/GasTests/Production/*AcceptanceTests.cs 41 个
+ 问题：单测试方法 250–418 行，既跑行为又写 artifacts/keyframes/screenshots
+ 修法：
+
+ ```csharp
+   // 原测试拆成两部分
+   [Test]
+   public void Physics2DShowcase_StressLoad_EntityCountStable()
+   {
+       // 只保留行为断言
+       engine.StepSeconds(10);
+       Assert.That(activeCount, Is.EqualTo(expectedCount));
+       Assert.That(failedSpawns, Is.Zero);
+   }
+
+   [Test, Category("Evidence"), Explicit] // 需手动触发
+   public void Physics2DShowcase_GenerateAcceptanceEvidence()
+   {
+       // 移到这里：写文件、截图、keyframes
+       File.WriteAllText($"{artifactsPath}/acceptance.md", report);
+   }
+ ```
+
+ CI 主门禁跑行为断言，证据生成走独立 job 且容忍失败（磁盘满、路径长度等环境因素）。
+
+ 为何修：当前 Production 测试有 33 个基线失败（PR 作者自述），大部分因路径、时间戳、文件锁等环境问题，掩盖真正的行为回归。PR #660 的"160/160 聚焦跑测"恰好绕过了 Production，才没发现 Moba 回归。
+ 游戏情景：Physics2D showcase 要验证"同时 500 辆车碰撞时帧率稳定、无实体泄漏"，但当前测试还要写 benchmark-report.md + 截图 10 帧 keyframe。某次 CI 跑测因磁盘满写文件失败，整个测试红了，但行为其实正确——团队看到红测后因为"又是 Production 环境问题"直接忽略，结果真正的碰撞回归（某次
+ 改动让车辆穿模）也被淹没。拆开后，行为红才是真红。
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ ### 2.2 收敛源码扫描 guard 到 ArchitectureTests
+
+ 文件：32 个文件含 File.ReadAllText + 禁词检查
+ 问题：如 AiShowcaseHardcodingGuardTests 扫描 .cs 查"hardcoded coordinates"
+ 修法：删除功能测试里的扫描，统一到：
+
+ ```csharp
+   // src/Tests/ArchitectureTests/Governance/ShowcaseDataDrivenGuard.cs
+   [Test]
+   public void AllShowcaseMods_BehaviorFromDataFiles_NotHardcoded()
+   {
+       foreach (var modDir in GetShowcaseMods())
+       {
+           var sourceFiles = Directory.GetFiles(modDir, "*.cs", Recursive);
+           var dataFiles = Directory.GetFiles(modDir, "*.json", Recursive);
+           Assert.That(dataFiles, Is.Not.Empty, $"{modDir} must have data files");
+           // 运行时验证：加载 mod，检查行为来自 Registry 而非常量
+           var registry = LoadModBehaviorRegistry(modDir);
+           Assert.That(registry.IsDataDriven, Is.True);
+       }
+   }
+ ```
+
+ 从验证"文件里没出现字符串"变为"运行时行为来自 Registry"。
+
+ 为何修：源码扫描脆且信号低。PR #660 已删过 3 个 Navigation 禁词测试（会误伤文档和断言文本），但 GasTests 残留 32 个同类。
+ 游戏情景：AI showcase 要求"敌人巡逻路径从 JSON 读，不能硬编码坐标"。当前 AiShowcaseHardcodingGuardTests 扫描 .cs 查 new Vector3(100, 200)。某次重构把坐标改成字符串拼接 $"({x},{y})" 就绕过了检查。改成运行时断言"巡逻点数 == JSON 文件定义的数量"后，才能真正锁住契约。
+
+ ────────────────────────────────────────────────────────────────────────────────
+
+ Priority 3：补盲区
+
+ ### 3.1 补 DEBUG 配置 CI 泳道
+
+ 问题：冲突检测等只在 DEBUG 生效，Release 下测试直接 Assert.Pass
+ 修法：.github/workflows/solution-verify.yml 加一条：
+
+ ```yaml
+   - name: Run GasTests (Debug for conflict detection)
+     run: dotnet test src/Tests/GasTests -c Debug --filter "ConflictDetection"
+ ```
+
+ 为何修：PR #660 的全部证据是 Release，意味着 ModRegistrationConflictTests 的 3 个测试根本没跑，合并时冲突检测契约完全没被验证。
+ 游戏情景：两个 mod 都注册了函数 "onUnitDeath"，后加载的会覆盖前者。冲突检测在 DEBUG 下会记录 ConflictReport（触发警告面板），但 Release 直接静默覆盖。如果 CI 只跑 Release，团队永远不知道这个保护机制坏了——直到玩家报 bug"装了 ModA+ModB 后 ModA 的单位死亡事件失效"。
+
+ ────────────────────────────────────────────────────────────────────────────────

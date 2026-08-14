@@ -186,7 +186,7 @@ z
 " clip-path="url(#p7cd862286f)" style="fill: #e9eff5; stroke: #7490a8; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="619.2" y="141.392187" transform="rotate(-0 619.2 141.392187)">PerformerDefinition</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="619.2" y="141.392187" transform="rotate(-0 619.2 141.392187)">PresenterDefinition</text>
    </g>
    <g id="text_2">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="619.2" y="158.273625" transform="rotate(-0 619.2 158.273625)">Declarative Definition</text>
@@ -474,7 +474,7 @@ z
     <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="619.2" y="68.6325" transform="rotate(-0 619.2 68.6325)">BehaviorSlot = AssetBinding / Animator / Sound / Material / Spline / Grounding / MinimapMarker</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #8a94a3" x="619.2" y="92.554062" transform="rotate(-0 619.2 92.554062)">PerformerDefinition 声明式定义，激活 BehaviorSlot 组合单元</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #8a94a3" x="619.2" y="92.554062" transform="rotate(-0 619.2 92.554062)">PresenterDefinition 声明式定义，激活 BehaviorSlot 组合单元</text>
    </g>
   </g>
  </g>

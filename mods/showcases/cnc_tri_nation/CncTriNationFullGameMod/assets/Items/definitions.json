@@ -1,0 +1,137 @@
+[
+  {
+    "id": "itm_allied_upgrade_0",
+    "displayName": "Allied Armor Plating",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.allied"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Allied.Upgrade0"
+    ]
+  },
+  {
+    "id": "itm_allied_upgrade_1",
+    "displayName": "Allied Reactor Boost",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.allied"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Allied.Upgrade1"
+    ]
+  },
+  {
+    "id": "itm_allied_upgrade_2",
+    "displayName": "Allied Targeting AI",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.allied"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Allied.Upgrade2"
+    ]
+  },
+  {
+    "id": "itm_soviet_upgrade_0",
+    "displayName": "Soviet Armor Plating",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.soviet"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Soviet.Upgrade0"
+    ]
+  },
+  {
+    "id": "itm_soviet_upgrade_1",
+    "displayName": "Soviet Reactor Boost",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.soviet"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Soviet.Upgrade1"
+    ]
+  },
+  {
+    "id": "itm_soviet_upgrade_2",
+    "displayName": "Soviet Targeting AI",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.soviet"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Soviet.Upgrade2"
+    ]
+  },
+  {
+    "id": "itm_yuri_upgrade_0",
+    "displayName": "Yuri Armor Plating",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.yuri"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Yuri.Upgrade0"
+    ]
+  },
+  {
+    "id": "itm_yuri_upgrade_1",
+    "displayName": "Yuri Reactor Boost",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.yuri"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Yuri.Upgrade1"
+    ]
+  },
+  {
+    "id": "itm_yuri_upgrade_2",
+    "displayName": "Yuri Targeting AI",
+    "shape": "shape_cnc_mod_1x1",
+    "tags": [
+      "Equip.Slot.CncUpgrade",
+      "Item.Cnc.yuri"
+    ],
+    "allowedNamedSlots": [
+      "upgrade_module"
+    ],
+    "equipEffects": [
+      "Effect.Cnc.Item.Yuri.Upgrade2"
+    ]
+  }
+]

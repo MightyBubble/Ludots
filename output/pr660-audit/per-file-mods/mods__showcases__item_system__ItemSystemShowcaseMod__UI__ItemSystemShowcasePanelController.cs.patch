@@ -1,0 +1,33 @@
+diff --git a/mods/showcases/item_system/ItemSystemShowcaseMod/UI/ItemSystemShowcasePanelController.cs b/mods/showcases/item_system/ItemSystemShowcaseMod/UI/ItemSystemShowcasePanelController.cs
+index 5c79c76ecc..0dc5fe850c 100644
+--- a/mods/showcases/item_system/ItemSystemShowcaseMod/UI/ItemSystemShowcasePanelController.cs
++++ b/mods/showcases/item_system/ItemSystemShowcaseMod/UI/ItemSystemShowcasePanelController.cs
+@@ -711,12 +711,13 @@ internal sealed class ItemSystemShowcasePanelController
+ 
+     private void LoadMap(string mapId)
+     {
+-        if (_engine == null)
++        GameEngine? engine = _engine;
++        if (engine == null)
+         {
+             return;
+         }
+ 
+-        string? currentMapId = _engine.CurrentMapSession?.MapId.Value;
++        string? currentMapId = engine.CurrentMapSession?.MapId.Value;
+         if (string.Equals(currentMapId, mapId, StringComparison.OrdinalIgnoreCase))
+         {
+             return;
+@@ -724,10 +725,10 @@ internal sealed class ItemSystemShowcasePanelController
+ 
+         if (!string.IsNullOrWhiteSpace(currentMapId))
+         {
+-            _engine.UnloadMap(currentMapId);
++            engine.UnloadMap(currentMapId);
+         }
+ 
+-        _engine.LoadMap(mapId);
++        engine.LoadMap(mapId);
+     }
+ 
+     private void Run(Action<GameEngine> action)

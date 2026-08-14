@@ -1,0 +1,88 @@
+[
+  {
+    "id": "rts_frontline_core",
+    "components": {
+      "Name": { "Value": "Command Core" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1000, "Crystals": 40 } },
+      "AbilityStateBuffer": { "abilityIds": ["Ability.Rts.Frontline.TrainInfantry"] },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineCore": {},
+      "FrontlineCoreState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_harvester",
+    "components": {
+      "Name": { "Value": "Crystal Harvester" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 120, "MoveSpeed": 700 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineHarvester": {},
+      "FrontlineHarvestState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_infantry",
+    "components": {
+      "Name": { "Value": "Frontline Infantry" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 800 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "FrontlineParticipant": { "SideIndex": 0 },
+      "FrontlineInfantry": {},
+      "FrontlineAttackState": {},
+      "FrontlineDeathState": {},
+      "FrontlineTagBindingState": {}
+    }
+  },
+  {
+    "id": "rts_frontline_crystal_node",
+    "components": {
+      "Name": { "Value": "Crystal Field" },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "FrontlineCrystalNode": {},
+      "FrontlineTagBindingState": {}
+    }
+  }
+]

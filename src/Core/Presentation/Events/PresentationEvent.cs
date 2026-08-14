@@ -19,6 +19,6 @@ namespace Ludots.Core.Presentation.Events
         public float FloatC;
         public float FloatD;
         public Vector3 Position;
-        public Entity PerformerEntity;
+        public Entity PresenterEntity;
     }
 }

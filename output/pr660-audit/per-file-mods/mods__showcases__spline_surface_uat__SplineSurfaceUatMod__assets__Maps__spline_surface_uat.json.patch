@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Maps/spline_surface_uat.json b/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Maps/spline_surface_uat.json
+index a5a6855ba3..e3b4812dfa 100644
+--- a/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Maps/spline_surface_uat.json
++++ b/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Maps/spline_surface_uat.json
+@@ -9,7 +9,8 @@
+       "WidthInMacroTiles": 2,
+       "HeightInMacroTiles": 2,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 64
+     }
+   ],
+   "DefaultCamera": {

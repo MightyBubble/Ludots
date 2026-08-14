@@ -1,0 +1,46 @@
+diff --git a/src/Core/Navigation/GraphEcs/GraphPathComponents.cs b/src/Core/Navigation/GraphEcs/GraphPathComponents.cs
+index 8eeedc88c5..872c06b248 100644
+--- a/src/Core/Navigation/GraphEcs/GraphPathComponents.cs
++++ b/src/Core/Navigation/GraphEcs/GraphPathComponents.cs
+@@ -1,3 +1,4 @@
++using System.Runtime.CompilerServices;
+ using Ludots.Core.Navigation.GraphCore;
+ 
+ namespace Ludots.Core.Navigation.GraphEcs
+@@ -22,24 +23,18 @@ namespace Ludots.Core.Navigation.GraphEcs
+         }
+     }
+ 
+-    public sealed class GraphPathBuffer
++    public struct GraphPathBuffer
+     {
+-        public int[] Nodes;
+-        public int Count;
++        public const int Capacity = 128;
+ 
+-        public GraphPathBuffer(int capacity = 128)
++        [InlineArray(Capacity)]
++        public struct NodeArray
+         {
+-            Nodes = capacity <= 0 ? System.Array.Empty<int>() : new int[capacity];
+-            Count = 0;
++            private int _element0;
+         }
+ 
+-        public void EnsureCapacity(int required)
+-        {
+-            if (required <= Nodes.Length) return;
+-            int newCap = Nodes.Length == 0 ? 4 : Nodes.Length * 2;
+-            if (newCap < required) newCap = required;
+-            System.Array.Resize(ref Nodes, newCap);
+-        }
++        public NodeArray Nodes;
++        public int Count;
+     }
+ 
+     public readonly struct GraphPathResultComponent
+@@ -52,4 +47,3 @@ namespace Ludots.Core.Navigation.GraphEcs
+         }
+     }
+ }
+-

@@ -17,7 +17,7 @@
 - ConfigPipeline：合并运行时配置
 - Mod Loading：解析 `mod.json`、排序依赖、挂载 VFS、调用 `IMod.OnLoad`
 - GAS Effect Pipeline：从 Ability 激活到 Effect 处理、属性计算与延迟触发
-- Presentation Pipeline：通过 Performer 和 ResponseChain 驱动表现
+- Presentation Pipeline：通过 Presenter 和 ResponseChain 驱动表现
 - Trigger Pipeline：通过 `TriggerManager.OnEvent` 组织脚本触发
 - UI Runtime：通过 `UiScene` 与 `IUiRenderer` 驱动 UI
 

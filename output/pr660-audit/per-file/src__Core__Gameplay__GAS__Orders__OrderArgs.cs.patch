@@ -1,0 +1,62 @@
+diff --git a/src/Core/Gameplay/GAS/Orders/OrderArgs.cs b/src/Core/Gameplay/GAS/Orders/OrderArgs.cs
+index 5e29006002..cc4aaa4ec4 100644
+--- a/src/Core/Gameplay/GAS/Orders/OrderArgs.cs
++++ b/src/Core/Gameplay/GAS/Orders/OrderArgs.cs
+@@ -1,5 +1,6 @@
+ using System.Numerics;
+ using Arch.Core;
++using Ludots.Core.Gameplay.GAS.Components;
+  
+ namespace Ludots.Core.Gameplay.GAS.Orders
+ {
+@@ -20,9 +21,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
+         Set = 3
+     }
+  
+-    public unsafe struct OrderSpatial
++    public struct OrderSpatial
+     {
+         public const int MaxPoints = 64;
++        public const int MaxInlinePoints = 2;
+  
+         public OrderSpatialKind Kind;
+         public OrderCollectionMode Mode;
+@@ -33,16 +35,30 @@ namespace Ludots.Core.Gameplay.GAS.Orders
+         public int A2;
+  
+         public int PointCount;
+-        public fixed int PointX[MaxPoints];
+-        public fixed int PointY[MaxPoints];
+-        public fixed int PointZ[MaxPoints];
++        public Vector3 Point0WorldCm;
++        public Vector3 Point1WorldCm;
++        public OrderSpatialPayloadHandle Payload;
++
++        public byte HasDestinationWorldCm;
++        public Vector3 DestinationWorldCm;
+  
+-        public void AddPointWorldCm(int x, int y, int z)
++        public void AddInlinePointWorldCm(int x, int y, int z)
+         {
+-            if (PointCount >= MaxPoints) return;
+-            fixed (int* px = PointX) px[PointCount] = x;
+-            fixed (int* py = PointY) py[PointCount] = y;
+-            fixed (int* pz = PointZ) pz[PointCount] = z;
++            Vector3 point = new(x, y, z);
++            if (PointCount == 0)
++            {
++                Point0WorldCm = point;
++            }
++            else if (PointCount == 1)
++            {
++                Point1WorldCm = point;
++            }
++            else
++            {
++                throw new System.InvalidOperationException(
++                    $"ORDER.SPATIAL.ERR.InlineCapacity: list has more than {MaxInlinePoints} points; author OrderSpatialPayloadBuffer for long paths.");
++            }
++
+             PointCount++;
+         }
+     }

@@ -1,0 +1,12 @@
+diff --git a/src/Core/Gameplay/Relationships/RelationshipTeamBootstrapper.cs b/src/Core/Gameplay/Relationships/RelationshipTeamBootstrapper.cs
+index f71f79e036..b9c0a2f37f 100644
+--- a/src/Core/Gameplay/Relationships/RelationshipTeamBootstrapper.cs
++++ b/src/Core/Gameplay/Relationships/RelationshipTeamBootstrapper.cs
+@@ -23,6 +23,7 @@ namespace Ludots.Core.Gameplay.Relationships
+                 new GameplayTagContainer(),
+                 new TagCountContainer(),
+                 default(AttributeBuffer),
++                new DirtyFlags(),
+                 new ActiveEffectContainer());
+             lookup.Register(teamId, entity);
+             return entity;

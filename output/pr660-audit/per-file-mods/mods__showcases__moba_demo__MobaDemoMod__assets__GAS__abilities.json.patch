@@ -1,0 +1,22 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/assets/GAS/abilities.json b/mods/showcases/moba_demo/MobaDemoMod/assets/GAS/abilities.json
+index eb192b3e06..915ddd4910 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/assets/GAS/abilities.json
++++ b/mods/showcases/moba_demo/MobaDemoMod/assets/GAS/abilities.json
+@@ -65,17 +65,5 @@
+     "blockTags": {
+       "blockedAny": ["Cooldown.GCD", "Cooldown.Skill.R"]
+     }
+-  },
+-  {
+-    "id": "Ability.Nav.Move",
+-    "exec": {
+-      "clockId": "Step",
+-      "items": [
+-        { "kind": "TagSignal", "tick": 0, "tag": "Ability.Nav.Move", "payloadA": 0 },
+-        { "kind": "EventGate", "tick": 0, "tag": "Event.Nav.Arrived" },
+-        { "kind": "TagSignal", "tick": 0, "tag": "Ability.Nav.Move", "payloadA": 1 },
+-        { "kind": "End", "tick": 0 }
+-      ]
+-    }
+   }
+ ]

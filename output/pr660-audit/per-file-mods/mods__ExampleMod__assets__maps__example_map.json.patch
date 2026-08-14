@@ -1,0 +1,13 @@
+diff --git a/mods/ExampleMod/assets/maps/example_map.json b/mods/ExampleMod/assets/maps/example_map.json
+index ea6516ba4a..e6ab6b6155 100644
+--- a/mods/ExampleMod/assets/maps/example_map.json
++++ b/mods/ExampleMod/assets/maps/example_map.json
+@@ -1,7 +1,7 @@
+ {
+   "Id": "example_map",
+   "Boards": [
+-    { "Name": "default", "DataFile": "example_map.bin" }
++    { "Name": "default", "DataFile": "example_map.bin", "LoadedChunkCapacity": 256 }
+   ],
+   "Dependencies": [
+     { "Id": "ExampleMod", "MinVersion": "1.0.0" }

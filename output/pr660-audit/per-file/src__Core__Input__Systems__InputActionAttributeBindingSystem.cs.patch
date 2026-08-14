@@ -1,0 +1,69 @@
+diff --git a/src/Core/Input/Systems/InputActionAttributeBindingSystem.cs b/src/Core/Input/Systems/InputActionAttributeBindingSystem.cs
+index c5c842830a..3b5955c3c3 100644
+--- a/src/Core/Input/Systems/InputActionAttributeBindingSystem.cs
++++ b/src/Core/Input/Systems/InputActionAttributeBindingSystem.cs
+@@ -17,6 +17,7 @@ namespace Ludots.Core.Input.Systems
+         private readonly InputActionAttributeBindingRegistry _registry;
+         private readonly QueryDescription _cameraBehaviorInputTargetQuery =
+             new QueryDescription().WithAll<AttributeBuffer, CameraBehaviorInputTarget>();
++        private Entity _cameraBehaviorInputCarrier = Entity.Null;
+ 
+         public InputActionAttributeBindingSystem(
+             World world,
+@@ -99,26 +100,42 @@ namespace Ludots.Core.Input.Systems
+ 
+         private Entity ResolveCameraBehaviorInputCarrier()
+         {
+-            Entity resolved = Entity.Null;
+-            int count = 0;
+-            World.Query(
++            if (_cameraBehaviorInputCarrier != Entity.Null &&
++                World.IsAlive(_cameraBehaviorInputCarrier) &&
++                World.Has<AttributeBuffer>(_cameraBehaviorInputCarrier) &&
++                World.Has<CameraBehaviorInputTarget>(_cameraBehaviorInputCarrier))
++            {
++                return _cameraBehaviorInputCarrier;
++            }
++
++            var job = new ResolveCameraBehaviorInputCarrierJob();
++            World.InlineEntityQuery<ResolveCameraBehaviorInputCarrierJob, AttributeBuffer, CameraBehaviorInputTarget>(
+                 in _cameraBehaviorInputTargetQuery,
+-                (Entity entity, ref AttributeBuffer _, ref CameraBehaviorInputTarget __) =>
+-                {
+-                    count++;
+-                    if (count == 1)
+-                    {
+-                        resolved = entity;
+-                    }
+-                });
++                ref job);
+ 
+-            if (count == 1)
++            if (job.Count == 1)
+             {
+-                return resolved;
++                _cameraBehaviorInputCarrier = job.Resolved;
++                return job.Resolved;
+             }
+ 
+             throw new InvalidOperationException(
+-                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {count}.");
++                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {job.Count}.");
++        }
++
++        private struct ResolveCameraBehaviorInputCarrierJob : IForEachWithEntity<AttributeBuffer, CameraBehaviorInputTarget>
++        {
++            public Entity Resolved;
++            public int Count;
++
++            public void Update(Entity entity, ref AttributeBuffer attributes, ref CameraBehaviorInputTarget target)
++            {
++                Count++;
++                if (Count == 1)
++                {
++                    Resolved = entity;
++                }
++            }
+         }
+ 
+         private static float ReadValue(IInputActionReader input, in InputActionAttributeBindingEntry entry)

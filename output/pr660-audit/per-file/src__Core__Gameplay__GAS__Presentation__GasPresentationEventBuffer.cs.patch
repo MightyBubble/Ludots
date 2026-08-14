@@ -1,0 +1,29 @@
+diff --git a/src/Core/Gameplay/GAS/Presentation/GasPresentationEventBuffer.cs b/src/Core/Gameplay/GAS/Presentation/GasPresentationEventBuffer.cs
+index b3ada813a4..ea2fab2a01 100644
+--- a/src/Core/Gameplay/GAS/Presentation/GasPresentationEventBuffer.cs
++++ b/src/Core/Gameplay/GAS/Presentation/GasPresentationEventBuffer.cs
+@@ -65,6 +65,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
+ 
+         public int Count => _count;
+         public int Capacity => _events.Length;
++        public int AvailableCapacity => _events.Length - _count;
+ 
+         public GasPresentationEventBuffer(int capacity)
+         {
+@@ -89,6 +90,16 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
+ 
+         public ReadOnlySpan<GasPresentationEvent> Events => new(_events, 0, _count);
+ 
++        internal void RollbackWrites(int checkpoint)
++        {
++            if ((uint)checkpoint > (uint)_count)
++            {
++                throw new InvalidOperationException("GAS.PRESENTATION_EVENT.ERR.InvalidWriteRollback");
++            }
++
++            _count = checkpoint;
++        }
++
+         public void Clear()
+         {
+             _count = 0;

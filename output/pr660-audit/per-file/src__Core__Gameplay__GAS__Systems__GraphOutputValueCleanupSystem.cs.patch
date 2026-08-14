@@ -1,0 +1,46 @@
+diff --git a/src/Core/Gameplay/GAS/Systems/GraphOutputValueCleanupSystem.cs b/src/Core/Gameplay/GAS/Systems/GraphOutputValueCleanupSystem.cs
+new file mode 100644
+index 0000000000..7e1e5d6e35
+--- /dev/null
++++ b/src/Core/Gameplay/GAS/Systems/GraphOutputValueCleanupSystem.cs
+@@ -0,0 +1,40 @@
++using System;
++using Arch.Core;
++using Arch.System;
++using Ludots.Core.NodeLibraries.GASGraph;
++
++namespace Ludots.Core.Gameplay.GAS.Systems
++{
++    public sealed class GraphOutputValueCleanupSystem : ISystem<float>
++    {
++        private readonly World _world;
++        private readonly GraphOutputValueStore _values;
++
++        public GraphOutputValueCleanupSystem(World world, GraphOutputValueStore values)
++        {
++            _world = world ?? throw new ArgumentNullException(nameof(world));
++            _values = values ?? throw new ArgumentNullException(nameof(values));
++            _world.SubscribeEntityDestroyed(QueueRetiredOwner);
++        }
++
++        public int ReleasedLastUpdate { get; private set; }
++        public int RetiredOwnersProcessedLastUpdate { get; private set; }
++
++        public void Initialize() { }
++        public void BeforeUpdate(in float dt) { }
++
++        public void Update(in float dt)
++        {
++            ReleasedLastUpdate = _values.ReleaseQueuedOwners(out int retiredOwnersProcessed);
++            RetiredOwnersProcessedLastUpdate = retiredOwnersProcessed;
++        }
++
++        private void QueueRetiredOwner(in Entity owner)
++        {
++            _values.QueueOwnerRetirement(owner);
++        }
++
++        public void AfterUpdate(in float dt) { }
++        public void Dispose() { }
++    }
++}

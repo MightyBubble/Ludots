@@ -561,12 +561,12 @@ namespace Ludots.Tests.Architecture
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_static_performer_30k" },
+                        new[] { "$capability_standard_static_presenter_30k" },
                         LauncherPlatformIds.Raylib,
                         LauncherBuildMode.Never).Plan,
-                    expectedRootModId: "CapabilityStandardStaticPerformer30kMod",
-                    expectedStartupMapId: "capability_standard_static_performer_30k_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPerformer30kMod" });
+                    expectedRootModId: "CapabilityStandardStaticPresenter30kMod",
+                    expectedStartupMapId: "capability_standard_static_presenter_30k_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPresenter30kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1159,8 +1159,8 @@ namespace Ludots.Tests.Architecture
                 }
             }
 
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PresenterBlacksmithShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PresenterBlacksmithScatterHudTextBenchmarkEntryMod"));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));

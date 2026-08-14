@@ -1,0 +1,30 @@
+diff --git a/mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/Runtime/ControlPlaneProjectionScenarioState.cs b/mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/Runtime/ControlPlaneProjectionScenarioState.cs
+index a94bd72d06..4819978e25 100644
+--- a/mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/Runtime/ControlPlaneProjectionScenarioState.cs
++++ b/mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/Runtime/ControlPlaneProjectionScenarioState.cs
+@@ -63,6 +63,7 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
+         {
+             _world = world ?? throw new ArgumentNullException(nameof(world));
+             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
++            TagStateInstaller.EnsureInstalled(world, P2Rep);
+             Ready = true;
+         }
+ 
+@@ -79,15 +80,14 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
+             }
+ 
+             ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(P2Rep);
+-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(P2Rep);
+             bool activate = !tags.HasTag(OfflineTagId);
+             if (activate)
+             {
+-                _tagOps.AddTag(ref tags, ref counts, OfflineTagId);
++                _tagOps.AddTag(_world, P2Rep, OfflineTagId);
+             }
+             else
+             {
+-                _tagOps.RemoveTag(ref tags, ref counts, OfflineTagId);
++                _tagOps.RemoveTag(_world, P2Rep, OfflineTagId);
+             }
+ 
+             return activate;

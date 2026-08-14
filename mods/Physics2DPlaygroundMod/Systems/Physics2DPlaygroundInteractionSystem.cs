@@ -22,7 +22,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -43,7 +43,7 @@ namespace Physics2DPlaygroundMod.Systems
                 new PresentationLodEntry(maxDistanceCm: 24000f, minScreenCoverage01: 0.008f),
                 new PresentationLodEntry(maxDistanceCm: 50000f, minScreenCoverage01: 0.002f));
 
-        private const string SpawnedBoxPerformerId = "physics2d_playground.spawned_box";
+        private const string SpawnedBoxPresenterId = "physics2d_playground.spawned_box";
         private const int InitialSelectedScratchCapacity = 64;
 
         private readonly GameEngine _engine;
@@ -52,8 +52,8 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly List<Entity> _selectedEntities = new(1024);
         private Entity[] _selectedScratch = new Entity[InitialSelectedScratchCapacity];
         private readonly PresentationStableIdAllocator _stableIds;
-        private readonly PerformerCommandBuffer _performerCommands;
-        private readonly PerformerDefinitionRegistry _performerDefinitions;
+        private readonly PresenterCommandBuffer _presenterCommands;
+        private readonly PresenterDefinitionRegistry _presenterDefinitions;
         private readonly ShapeDataStorage2D _shapeStorage;
         private readonly Physics2DSolverConfig _solverConfig;
 
@@ -89,10 +89,10 @@ namespace Physics2DPlaygroundMod.Systems
             _solverConfig = solverConfig ?? throw new ArgumentNullException(nameof(solverConfig));
             _stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationStableIdAllocator.");
-            _performerCommands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerCommandBuffer.");
-            _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerDefinitionRegistry.");
+            _presenterCommands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PresenterCommandBuffer.");
+            _presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PresenterDefinitionRegistry.");
         }
 
         public void Initialize()
@@ -442,16 +442,16 @@ namespace Physics2DPlaygroundMod.Systems
                 default(CommandSourceSelectableTag),
                 CommandSourceSelectableState.EnabledByDefault);
 
-            if (!_performerCommands.TryAdd(new PerformerCommand
+            if (!_presenterCommands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = ResolveSpawnedBoxDefinitionId(),
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = ResolveSpawnedBoxDefinitionId(),
                     ScopeTag = ResolveSpawnedBoxScopeId(entity),
                     Source = entity,
                     AnchorKind = PresentationAnchorKind.Entity,
                 }))
             {
-                throw new InvalidOperationException("Physics2DPlayground failed to queue performer creation for spawned box.");
+                throw new InvalidOperationException("Physics2DPlayground failed to queue presenter creation for spawned box.");
             }
         }
 
@@ -474,11 +474,11 @@ namespace Physics2DPlaygroundMod.Systems
                 return _spawnedBoxDefinitionId;
             }
 
-            _spawnedBoxDefinitionId = _performerDefinitions.GetId(SpawnedBoxPerformerId);
+            _spawnedBoxDefinitionId = _presenterDefinitions.GetId(SpawnedBoxPresenterId);
             if (_spawnedBoxDefinitionId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Performer '{SpawnedBoxPerformerId}' is required by Physics2DPlaygroundMod.");
+                    $"Presenter '{SpawnedBoxPresenterId}' is required by Physics2DPlaygroundMod.");
             }
 
             return _spawnedBoxDefinitionId;
@@ -486,7 +486,7 @@ namespace Physics2DPlaygroundMod.Systems
 
         private static int ResolveSpawnedBoxScopeId(Entity entity)
         {
-            int scopeId = HashCode.Combine(SpawnedBoxPerformerId, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
+            int scopeId = HashCode.Combine(SpawnedBoxPresenterId, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
             return scopeId == 0 ? 1 : scopeId;
         }
     }

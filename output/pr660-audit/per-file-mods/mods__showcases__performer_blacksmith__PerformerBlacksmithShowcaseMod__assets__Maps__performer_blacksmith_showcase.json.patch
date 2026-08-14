@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_showcase.json b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_showcase.json
+index a04b307896..aa34abd592 100644
+--- a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_showcase.json
++++ b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_showcase.json
+@@ -17,7 +17,8 @@
+       "SpatialType": "Grid",
+       "WidthInMacroTiles": 1,
+       "HeightInMacroTiles": 1,
+-      "GridCellSizeCm": 100
++      "GridCellSizeCm": 100,
++      "LoadedChunkCapacity": 16
+     }
+   ],
+   "DefaultCamera": {

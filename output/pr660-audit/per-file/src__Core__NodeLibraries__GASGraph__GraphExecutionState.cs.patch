@@ -1,0 +1,14 @@
+diff --git a/src/Core/NodeLibraries/GASGraph/GraphExecutionState.cs b/src/Core/NodeLibraries/GASGraph/GraphExecutionState.cs
+index e5ebd60c79..02105a31bd 100644
+--- a/src/Core/NodeLibraries/GASGraph/GraphExecutionState.cs
++++ b/src/Core/NodeLibraries/GASGraph/GraphExecutionState.cs
+@@ -41,7 +41,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
+         public Entity Viewer;
+         /// <summary>Event payload slots read by LoadEventPayloadInt/Float ops.</summary>
+         public GraphEventPayload EventPayload;
+-        public IntVector2 TargetPos;
++        /// <summary>Target position in world centimeters.</summary>
++        public IntVector2 TargetPosCm;
+         public uint RandomSeed;
+         public IGraphRuntimeApi Api;
+         public Span<float> F;

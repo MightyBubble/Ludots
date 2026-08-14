@@ -1,0 +1,22 @@
+diff --git a/mods/capabilities/entityinfo/EntityInfoPanelsMod/Triggers/InstallEntityInfoPanelsOnGameStartTrigger.cs b/mods/capabilities/entityinfo/EntityInfoPanelsMod/Triggers/InstallEntityInfoPanelsOnGameStartTrigger.cs
+index e1bc93f5d5..2c74294960 100644
+--- a/mods/capabilities/entityinfo/EntityInfoPanelsMod/Triggers/InstallEntityInfoPanelsOnGameStartTrigger.cs
++++ b/mods/capabilities/entityinfo/EntityInfoPanelsMod/Triggers/InstallEntityInfoPanelsOnGameStartTrigger.cs
+@@ -47,12 +47,11 @@ internal sealed class InstallEntityInfoPanelsOnGameStartTrigger : Trigger
+         var templateCatalog = new EntityInfoPanelTemplateCatalog();
+ 
+         var service = new EntityInfoPanelService(
+-            insightCatalog,
+-            presentationTextCatalog,
+-            presentationLocaleSelection,
+-            engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+-            engine.GetService(CoreServiceKeys.TagOps),
+-            templateCatalog);
++            insightCatalog: insightCatalog,
++            presentationTextCatalog: presentationTextCatalog,
++            localeSelection: presentationLocaleSelection,
++            abilityDefinitions: engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
++            templates: templateCatalog);
+         var handles = new EntityInfoPanelHandleStore();
+         engine.SetService(EntityInfoPanelServiceKeys.Service, service);
+         engine.SetService(EntityInfoPanelServiceKeys.HandleStore, handles);

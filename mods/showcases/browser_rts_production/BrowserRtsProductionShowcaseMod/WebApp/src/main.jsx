@@ -54,6 +54,17 @@ const EMPTY_STATE = {
   },
   buildables: [],
   productionQueue: [],
+  scenario: {
+    phase: '',
+    lastEvent: '',
+    miningWorkers: 0,
+    armyCount: 0,
+    enemyHqName: '',
+    enemyHqHealth: 0,
+    enemyHqMaxHealth: 1,
+    enemyTeamAlive: 0,
+    victory: false
+  },
   techTree: { nodes: [], edges: [] },
   diplomacy: { rows: [], proposals: [] },
   diagnostics: {
@@ -107,6 +118,7 @@ function App() {
           onSelect={(entityKey) => command('selectEntity', { entityKey })}
         />
         <RightHud
+          scenario={snapshot.scenario}
           selection={snapshot.selection}
           productionQueue={snapshot.productionQueue}
           statuses={snapshot.commands.statuses}
@@ -123,6 +135,7 @@ function App() {
           connection={connection}
           messages={diagnosticMessages}
         />
+        <VictoryBanner scenario={snapshot.scenario} />
       </div>
     </main>
   );
@@ -370,14 +383,43 @@ function EntityRoster({ entities, selectedKey, onSelect }) {
   );
 }
 
-function RightHud({ selection, productionQueue, statuses, diplomacy, techTree }) {
+function RightHud({ scenario, selection, productionQueue, statuses, diplomacy, techTree }) {
   const showStrategic = techTree.nodes.length > 0 || diplomacy.rows.length > 0;
   return (
     <aside className="right-hud">
+      {scenario?.phase ? <ScenarioPanel scenario={scenario} /> : null}
       <SelectionPanel selection={selection} />
       <ProductionPanel queue={productionQueue} statuses={statuses} />
       {showStrategic ? <StrategicReadout techTree={techTree} diplomacy={diplomacy} /> : null}
     </aside>
+  );
+}
+
+function ScenarioPanel({ scenario }) {
+  return (
+    <section className={scenario.victory ? 'hud-panel scenario-panel victory' : 'hud-panel scenario-panel'}>
+      <PanelTitle title="Scenario" meta={scenario.phase || '-'} />
+      <div className="scenario-grid">
+        <div>
+          <span>Mining</span>
+          <strong>{scenario.miningWorkers}</strong>
+        </div>
+        <div>
+          <span>Army</span>
+          <strong>{scenario.armyCount}</strong>
+        </div>
+        <div>
+          <span>Enemy</span>
+          <strong>{scenario.enemyTeamAlive}</strong>
+        </div>
+      </div>
+      <Meter
+        label={scenario.enemyHqName || 'HQ'}
+        value={scenario.enemyHqHealth}
+        max={Math.max(1, scenario.enemyHqMaxHealth)}
+      />
+      <p className="scenario-event">{scenario.lastEvent}</p>
+    </section>
   );
 }
 
@@ -527,6 +569,19 @@ function DiagnosticsHud({ snapshot, connection, messages }) {
   );
 }
 
+function VictoryBanner({ scenario }) {
+  if (!scenario?.victory) {
+    return null;
+  }
+
+  return (
+    <div className="victory-banner hud-panel">
+      <strong>VICTORY</strong>
+      <span>{scenario.lastEvent}</span>
+    </div>
+  );
+}
+
 function PanelTitle({ title, meta }) {
   return (
     <div className="panel-title">
@@ -576,8 +631,12 @@ function abilityArtFor(label) {
     return ENTITY_ART.tower;
   }
 
-  if (token.includes('refinery') || token.includes('ore')) {
+  if (token.includes('refinery') || token.includes('ore') || token.includes('mineral') || token.includes('harvest')) {
     return ENTITY_ART.mine;
+  }
+
+  if (token.includes('assault') || token.includes('attack')) {
+    return ENTITY_ART.catapult;
   }
 
   if (token.includes('war factory') || token.includes('factory') || token.includes('workshop')) {
@@ -701,6 +760,7 @@ function mergeSnapshot(previous, payload) {
     commands: payload.commands ?? previous.commands,
     buildables: payload.buildables ?? previous.buildables,
     productionQueue: payload.productionQueue ?? previous.productionQueue,
+    scenario: payload.scenario ?? previous.scenario,
     techTree: payload.techTree ?? previous.techTree,
     diplomacy: payload.diplomacy ?? previous.diplomacy,
     diagnostics: payload.diagnostics ?? previous.diagnostics
@@ -711,6 +771,7 @@ function subtitleForFlavor(flavor, mapId, tick) {
   const label = {
     'red-alert-like': 'Live command-card slice for structure production and battlefield deployment',
     'starcraft-like': 'Live command-card slice for macro, warp tech, and unit production',
+    'starcraft-full': 'Live full RTS loop for mining, production, assault, and victory',
     'empire-like': 'Live command-card slice for villager economy and tech progression',
     'fourx-like': 'Live command-card slice for city production and empire growth'
   }[flavor] ?? 'Live engine-backed RTS production slice';
@@ -721,6 +782,7 @@ function titleForFlavor(flavor) {
   return {
     'red-alert-like': 'Red Alert Production',
     'starcraft-like': 'StarCraft Production',
+    'starcraft-full': 'StarCraft Full RTS',
     'empire-like': 'Empire Production',
     'fourx-like': '4X City Production'
   }[flavor] ?? 'RTS Production Showcase';

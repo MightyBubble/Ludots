@@ -9,7 +9,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -1074,10 +1074,10 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            if (engine.World.TryGet(entity, out PerformerWorldPlanePosition performerPlanePosition))
+            if (engine.World.TryGet(entity, out PresenterWorldPlanePosition presenterPlanePosition))
             {
-                worldXcm = performerPlanePosition.ValueCm.X;
-                worldYcm = performerPlanePosition.ValueCm.Y;
+                worldXcm = presenterPlanePosition.ValueCm.X;
+                worldYcm = presenterPlanePosition.ValueCm.Y;
                 return true;
             }
 

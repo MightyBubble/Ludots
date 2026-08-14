@@ -1,0 +1,89 @@
+diff --git a/src/Core/Gameplay/GAS/Systems/AbilityMoveWorldCmSystem.cs b/src/Core/Gameplay/GAS/Systems/AbilityMoveWorldCmSystem.cs
+deleted file mode 100644
+index 26a0d6fdf6..0000000000
+--- a/src/Core/Gameplay/GAS/Systems/AbilityMoveWorldCmSystem.cs
++++ /dev/null
+@@ -1,83 +0,0 @@
+-using System;
+-using System.Runtime.CompilerServices;
+-using Arch.Core;
+-using Arch.System;
+-using Ludots.Core.Components;
+-using Ludots.Core.Gameplay.GAS;
+-using Ludots.Core.Gameplay.GAS.Components;
+-using Ludots.Core.Gameplay.GAS.Registry;
+-using Ludots.Core.Mathematics.FixedPoint;
+-namespace Ludots.Core.Gameplay.GAS.Systems
+-{
+-    public sealed class AbilityMoveWorldCmSystem : BaseSystem<World, float>
+-    {
+-        private static readonly QueryDescription _query = new QueryDescription()
+-            .WithAll<WorldPositionCm, GameplayTagContainer, AbilityExecInstance>();
+-
+-        private readonly GameplayEventBus _eventBus;
+-        private readonly int _navMoveTagId;
+-        private readonly int _arrivedEventTagId;
+-        private readonly float _speedCmPerSec;
+-        private readonly float _stopRadiusCm;
+-
+-        public AbilityMoveWorldCmSystem(World world, GameplayEventBus eventBus, float speedCmPerSec, float stopRadiusCm) : base(world)
+-        {
+-            _eventBus = eventBus;
+-            _navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
+-            _arrivedEventTagId = TagRegistry.Register("Event.Nav.Arrived");
+-            _speedCmPerSec = Math.Max(0f, speedCmPerSec);
+-            _stopRadiusCm = Math.Max(0f, stopRadiusCm);
+-        }
+-
+-        public override void Update(in float dt)
+-        {
+-            if (_eventBus == null) return;
+-            if (_speedCmPerSec <= 0f) return;
+-
+-            float stepCm = _speedCmPerSec * Math.Max(0f, dt);
+-            if (stepCm <= 0f) return;
+-
+-            foreach (ref var chunk in World.Query(in _query))
+-            {
+-                var pos = chunk.GetSpan<WorldPositionCm>();
+-                var tags = chunk.GetSpan<GameplayTagContainer>();
+-                var execs = chunk.GetSpan<AbilityExecInstance>();
+-
+-                ref var entityFirst = ref chunk.Entity(0);
+-                foreach (var index in chunk)
+-                {
+-                    var entity = Unsafe.Add(ref entityFirst, index);
+-                    if (!World.IsAlive(entity)) continue;
+-
+-                    ref var t = ref tags[index];
+-                    if (_navMoveTagId <= 0 || !t.HasTag(_navMoveTagId)) continue;
+-
+-                    ref var exec = ref execs[index];
+-                    if (exec.HasTargetPos == 0) continue;
+-
+-                    ref var wp = ref pos[index];
+-                    Fix64Vec2 current = wp.Value;
+-                    Fix64Vec2 target = exec.TargetPosCm;
+-
+-                    bool arrived = WorldMoveCmStepHelper.StepTowards(
+-                        ref current,
+-                        target,
+-                        stepCm,
+-                        _stopRadiusCm);
+-                    wp.Value = current;
+-                    if (arrived)
+-                    {
+-                        _eventBus.Publish(new GameplayEvent
+-                        {
+-                            TagId = _arrivedEventTagId,
+-                            Source = entity,
+-                            Target = entity,
+-                            Magnitude = 0f,
+-                        });
+-                    }
+-                }
+-            }
+-        }
+-    }
+-}
+-

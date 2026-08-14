@@ -1,0 +1,14 @@
+diff --git a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_follow.json b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_follow.json
+index ede26b194a..3461b804e7 100644
+--- a/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_follow.json
++++ b/mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_follow.json
+@@ -10,7 +10,8 @@
+                        "SpatialType":  "Grid",
+                        "WidthInMacroTiles":  1,
+                        "HeightInMacroTiles":  1,
+-                       "GridCellSizeCm":  100
++                       "GridCellSizeCm":  100,
++                       "LoadedChunkCapacity":  16
+                    }
+                ],
+     "DefaultCamera":  {

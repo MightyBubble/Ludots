@@ -1,0 +1,23 @@
+diff --git a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/Runtime/PerformerBlacksmithShowcaseRuntime.cs b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/Runtime/PerformerBlacksmithShowcaseRuntime.cs
+index 7c4e1b036e..3c155e3cb5 100644
+--- a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/Runtime/PerformerBlacksmithShowcaseRuntime.cs
++++ b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/Runtime/PerformerBlacksmithShowcaseRuntime.cs
+@@ -220,16 +220,13 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
+             EnsureGameplayTagState(engine, _buildingEntity);
+             TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                 ?? throw new InvalidOperationException("TagOps service missing.");
+-            ref GameplayTagContainer tags = ref engine.World.Get<GameplayTagContainer>(_buildingEntity);
+-            ref TagCountContainer counts = ref engine.World.Get<TagCountContainer>(_buildingEntity);
+-            ref DirtyFlags dirty = ref engine.World.Get<DirtyFlags>(_buildingEntity);
+             if (_isWorking)
+             {
+-                tagOps.AddTag(ref tags, ref counts, _workingTagId, ref dirty);
++                tagOps.AddTag(engine.World, _buildingEntity, _workingTagId);
+             }
+             else
+             {
+-                tagOps.RemoveTag(ref tags, ref counts, _workingTagId, ref dirty);
++                tagOps.RemoveTag(engine.World, _buildingEntity, _workingTagId);
+             }
+ 
+             Flash($"Working => {(_isWorking ? "ON" : "OFF")}");

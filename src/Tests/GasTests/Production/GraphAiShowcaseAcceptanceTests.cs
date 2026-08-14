@@ -432,7 +432,7 @@ public sealed class GraphAiShowcaseAcceptanceTests
             Assert.That(File.Exists(Path.Combine(absoluteModPath, "assets", "Maps", item.MapId + ".json")), Is.True);
             Assert.That(File.Exists(Path.Combine(absoluteModPath, "assets", "GraphAiShowcase", "showcase.json")), Is.True);
             Assert.That(File.Exists(Path.Combine(absoluteModPath, "assets", "Entities", "templates.json")), Is.True);
-            Assert.That(File.Exists(Path.Combine(absoluteModPath, "assets", "Presentation", "performers.json")), Is.True);
+            Assert.That(File.Exists(Path.Combine(absoluteModPath, "assets", "Presentation", "presenters.json")), Is.True);
             Assert.That(
                 File.Exists(Path.Combine(absoluteModPath, "bin", "net8.0", "GraphAiShowcaseCommon.dll")),
                 Is.True,

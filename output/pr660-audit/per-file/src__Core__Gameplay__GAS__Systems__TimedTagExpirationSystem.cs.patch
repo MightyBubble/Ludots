@@ -1,0 +1,88 @@
+diff --git a/src/Core/Gameplay/GAS/Systems/TimedTagExpirationSystem.cs b/src/Core/Gameplay/GAS/Systems/TimedTagExpirationSystem.cs
+index 54a19853e7..9188f4399c 100644
+--- a/src/Core/Gameplay/GAS/Systems/TimedTagExpirationSystem.cs
++++ b/src/Core/Gameplay/GAS/Systems/TimedTagExpirationSystem.cs
+@@ -19,12 +19,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
+             .WithAll<GameplayTagContainer, TagCountContainer, TimedTagBuffer>()
+             .WithNone<DirtyFlags>();
+ 
+-        private readonly CommandBuffer _commandBuffer = new CommandBuffer();
+-
+-        public TimedTagExpirationSystem(World world, IClock clock, TagOps tagOps = null) : base(world)
++        public TimedTagExpirationSystem(World world, IClock clock, TagOps tagOps) : base(world)
+         {
+             _clock = clock;
+-            _tagOps = tagOps ?? new TagOps();
++            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+         }
+ 
+         public override void Update(in float dt)
+@@ -32,10 +30,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
+             var withDirty = new WithDirtyJob { World = World, Clock = _clock, TagOps = _tagOps };
+             World.InlineEntityQuery<WithDirtyJob, GameplayTagContainer, TagCountContainer, TimedTagBuffer, DirtyFlags>(in _withDirtyQuery, ref withDirty);
+ 
+-            var withoutDirty = new WithoutDirtyJob { World = World, Clock = _clock, CommandBuffer = _commandBuffer, TagOps = _tagOps };
++            var withoutDirty = new WithoutDirtyJob();
+             World.InlineEntityQuery<WithoutDirtyJob, GameplayTagContainer, TagCountContainer, TimedTagBuffer>(in _withoutDirtyQuery, ref withoutDirty);
+-
+-            _commandBuffer.Playback(World, dispose: true);
+         }
+ 
+         private struct WithDirtyJob : IForEachWithEntity<GameplayTagContainer, TagCountContainer, TimedTagBuffer, DirtyFlags>
+@@ -67,7 +63,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
+                     int now = GasClockRuntime.Now(World, Clock, clockId, entity, "Timed tag expiration");
+                     if (now < expireAt) continue;
+ 
+-                    TagOps.RemoveTag(ref tags, ref counts, tagId, ref dirtyFlags);
++                    TagOps.RemoveTag(World, entity, tagId);
+                     timed.RemoveAtSwapBack(i);
+                 }
+             }
+@@ -75,45 +71,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
+ 
+         private struct WithoutDirtyJob : IForEachWithEntity<GameplayTagContainer, TagCountContainer, TimedTagBuffer>
+         {
+-            public World World;
+-            public IClock Clock;
+-            public CommandBuffer CommandBuffer;
+-            public TagOps TagOps;
+-
+             public void Update(Entity entity, ref GameplayTagContainer tags, ref TagCountContainer counts, ref TimedTagBuffer timed)
+             {
+-                DirtyFlags dirtyFlags = default;
+-                bool anyDirty = false;
+-
+-                for (int i = timed.Count - 1; i >= 0; i--)
+-                {
+-                    int tagId;
+-                    unsafe
+-                    {
+-                        fixed (int* ids = timed.TagIds) tagId = ids[i];
+-                    }
+-                    int expireAt;
+-                    unsafe
+-                    {
+-                        fixed (int* exp = timed.ExpireAt) expireAt = exp[i];
+-                    }
+-                    GasClockId clockId;
+-                    unsafe
+-                    {
+-                        fixed (byte* clocks = timed.ClockIds) clockId = (GasClockId)clocks[i];
+-                    }
+-
+-                    int now = GasClockRuntime.Now(World, Clock, clockId, entity, "Timed tag expiration");
+-                    if (now < expireAt) continue;
+-
+-                    anyDirty |= TagOps.RemoveTag(ref tags, ref counts, tagId, ref dirtyFlags);
+-                    timed.RemoveAtSwapBack(i);
+-                }
+-
+-                if (anyDirty)
+-                {
+-                    CommandBuffer.Add(entity, dirtyFlags);
+-                }
++                throw new InvalidOperationException(
++                    $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, system=TimedTagExpirationSystem.");
+             }
+         }
+     }

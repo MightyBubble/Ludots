@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -477,7 +477,7 @@ namespace Ludots.Tests.GAS.Production
                 }
             }
 
-            Assert.That(matched.HasValue, Is.True, $"{entityName} should emit a visible primitive through the performer mainline.");
+            Assert.That(matched.HasValue, Is.True, $"{entityName} should emit a visible primitive through the presenter mainline.");
             PrimitiveDrawItem primitive = matched!.Value;
             Assert.That(bestDistanceSq, Is.LessThanOrEqualTo(0.25f), $"{entityName} should match the nearest visible primitive for {expectedMeshAssetKey}.");
             Assert.That(primitive.MeshAssetId, Is.GreaterThan(0), $"{entityName} should resolve a mesh asset.");
@@ -798,7 +798,7 @@ namespace Ludots.Tests.GAS.Production
                 view,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
                 loadedChunks: null,
-                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
                 timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);

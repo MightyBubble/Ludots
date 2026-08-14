@@ -1,0 +1,13 @@
+diff --git a/mods/showcases/tcg_demo/TcgDemoMod/assets/GAS/effects.json b/mods/showcases/tcg_demo/TcgDemoMod/assets/GAS/effects.json
+index b86a88347a..b526c38cbd 100644
+--- a/mods/showcases/tcg_demo/TcgDemoMod/assets/GAS/effects.json
++++ b/mods/showcases/tcg_demo/TcgDemoMod/assets/GAS/effects.json
+@@ -13,7 +13,7 @@
+         "value": -30
+       }
+     ],
+-    "participatesInResponse": false
++    "participatesInResponse": true
+   },
+   {
+     "id": "Effect.Tcg.CounterBlast",

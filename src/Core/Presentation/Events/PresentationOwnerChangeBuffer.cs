@@ -4,7 +4,7 @@ using Arch.Core;
 namespace Ludots.Core.Presentation.Events
 {
     /// <summary>
-    /// Per-tick projected owner fact change consumed by performer owner bindings.
+    /// Per-tick projected owner fact change consumed by presenter owner bindings.
     /// The record is an index entry only: gameplay values remain owned by their gameplay components.
     /// </summary>
     public readonly struct PresentationOwnerChange

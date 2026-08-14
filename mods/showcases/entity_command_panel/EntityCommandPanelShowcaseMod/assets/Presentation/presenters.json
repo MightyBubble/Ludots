@@ -1,0 +1,256 @@
+[
+  {
+    "id": "entity_command_panel.visual.template_projection_marker",
+    "defaultColor": [0.43, 0.78, 1.0, 0.92],
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "source": "constant",
+        "constantValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.43
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.85, 1.85, 1.85]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.08, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "entity_command_panel.visual.family_projection_marker",
+    "defaultColor": [0.96, 0.83, 0.48, 0.92],
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "source": "constant",
+        "constantValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.98
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 0.34
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.85, 1.85, 1.85]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.08, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "entity_command_panel.visual.ability_projection_marker",
+    "defaultColor": [0.62, 0.89, 0.58, 0.92],
+    "bindings": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "source": "constant",
+        "constantValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "constant",
+        "constantValue": 0.58
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "constant",
+        "constantValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "constant",
+        "constantValue": 0.55
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "source": "constant",
+        "constantValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.85, 1.85, 1.85]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.08, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "entity_command_panel.visual.profile_projection_marker.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.entity_command_panel.template"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "entity_command_panel.visual.template_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.entity_command_panel.template"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "entity_command_panel.visual.template_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.entity_command_panel.family"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "entity_command_panel.visual.family_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.entity_command_panel.family"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "entity_command_panel.visual.family_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.entity_command_panel.ability"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "entity_command_panel.visual.ability_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.entity_command_panel.ability"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "entity_command_panel.visual.ability_projection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  }
+]

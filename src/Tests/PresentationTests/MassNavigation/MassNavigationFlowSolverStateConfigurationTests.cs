@@ -333,14 +333,14 @@ namespace Ludots.Tests.Presentation
             using var engine = new GameEngine();
             MassNavigationConfig config = LoadBaseMassNavigationConfig();
             config.ScenarioRuntime.AutoSpawnConfiguredScenario = false;
-            engine.RemoveService(CoreServiceKeys.PerformerDefinitionRegistry);
+            engine.RemoveService(CoreServiceKeys.PresenterDefinitionRegistry);
             engine.RemoveService(CoreServiceKeys.PresentationMeshAssetRegistry);
             engine.RemoveService(CoreServiceKeys.VisualHeightmap);
 
             Assert.That(
                 () => MassNavigationAuthoringContract.Require(engine, config),
                 Throws.Nothing,
-                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation performer, mesh, or VisualHeightmap services.");
+                "Externally-authored MassNavigation maps must be able to prepare execution without Presentation presenter, mesh, or VisualHeightmap services.");
         }
 
         [Test]

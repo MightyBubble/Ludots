@@ -34,19 +34,19 @@
       "id": "blacksmith_test",
       "path": "mods/fixtures/blacksmith/BlacksmithTestMod",
       "projectPath": null,
-      "title": "铁匠铺 Performer 测试夹具",
-      "summary": "Performer-as-Actor 逐模块 UAT 的资产配置夹具（铁匠铺场景，纯资产无程序集）。",
+      "title": "铁匠铺 Presenter 测试夹具",
+      "summary": "Presenter-as-Actor 逐模块 UAT 的资产配置夹具（铁匠铺场景，纯资产无程序集）。",
       "tier": "T1",
       "category": "fixture",
       "tags": [
-        "performer",
+        "presenter",
         "uat"
       ],
       "binding": "blacksmith_test",
       "preset": "blacksmith_test_raylib",
-      "docsPath": "gitbook/architecture/performer-raylib-uat.md",
+      "docsPath": "gitbook/architecture/presenter-raylib-uat.md",
       "readmePath": null,
-      "acceptanceTest": "BlacksmithPerformerUatTests",
+      "acceptanceTest": "BlacksmithPresenterUatTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
@@ -100,7 +100,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
       "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj",
       "title": "标准能力·大世界万人导航",
-      "summary": "10K 导航 agent 大世界驻留标准验收：performer、HUD 血条/文本、效果与小地图联动。",
+      "summary": "10K 导航 agent 大世界驻留标准验收：presenter、HUD 血条/文本、效果与小地图联动。",
       "tier": "T1",
       "category": "capability",
       "tags": [
@@ -225,6 +225,28 @@
       "screenshot": null,
       "status": "active",
       "notes": "截图证据待 CI 验收产物补录"
+    },
+    {
+      "id": "capability_standard_hfsm_showcase",
+      "path": "mods/showcases/capability_standard/CapabilityStandardHfsmShowcaseMod",
+      "projectPath": "CapabilityStandardHfsmShowcaseMod.csproj",
+      "title": "Capability Standard HFSM",
+      "summary": "Capability showcase: one actor visibly goes to drink when water is low, runs laps when full, and Any State death freezes it in place.",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "hfsm",
+        "any-state",
+        "capability"
+      ],
+      "binding": "capability_standard_hfsm_showcase",
+      "preset": "capability_standard_hfsm_showcase_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CapabilityStandardHfsmShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     },
     {
       "id": "capability_standard_virtual_camera_showcase",
@@ -1040,7 +1062,7 @@
       "path": "mods/showcases/minimap/MinimapShowcaseMod",
       "projectPath": "MinimapShowcaseMod.csproj",
       "title": "小地图",
-      "summary": "小地图 marker 链路 showcase：实体经 performer authoring 显式声明 MinimapMarker 接入小地图。",
+      "summary": "小地图 marker 链路 showcase：实体经 presenter authoring 显式声明 MinimapMarker 接入小地图。",
       "tier": "T2",
       "category": "capability",
       "binding": null,
@@ -1369,20 +1391,20 @@
       ]
     },
     {
-      "id": "performer_schema_reference",
-      "path": "mods/fixtures/performer_schema_reference/PerformerSchemaReferenceMod",
+      "id": "presenter_schema_reference",
+      "path": "mods/fixtures/presenter_schema_reference/PresenterSchemaReferenceMod",
       "projectPath": null,
-      "title": "Performer Schema 参考夹具",
-      "summary": "performers.json 的 schema 参考样例（纯数据 fixture，无程序集）。",
+      "title": "Presenter Schema 参考夹具",
+      "summary": "presenters.json 的 schema 参考样例（纯数据 fixture，无程序集）。",
       "tier": "T2",
       "category": "fixture",
       "tags": [
-        "performer",
+        "presenter",
         "schema"
       ],
       "binding": null,
       "preset": null,
-      "docsPath": "gitbook/architecture/performer-as-actor-architecture.md",
+      "docsPath": "gitbook/architecture/presenter-as-actor-architecture.md",
       "readmePath": null,
       "acceptanceTest": null,
       "artifactDir": null,
@@ -1530,6 +1552,53 @@
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "rts_starcraft_full",
+      "path": "mods/showcases/rts_starcraft_full/RtsStarCraftFullShowcaseMod",
+      "projectPath": "RtsStarCraftFullShowcaseMod.csproj",
+      "title": "StarCraft Full RTS Showcase",
+      "summary": "100-unit StarCraft-style playable RTS slice with browser command HUD, production, items, GAS effects, and graph-driven combat loops.",
+      "tier": "T2",
+      "category": "genre",
+      "tags": [
+        "rts",
+        "browser",
+        "production",
+        "graph"
+      ],
+      "binding": "rts_starcraft_full_showcase",
+      "preset": "rts_starcraft_full_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/rts_starcraft_full/RtsStarCraftFullShowcaseMod/README.md",
+      "acceptanceTest": "RtsStarCraftFullShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
+    },
+    {
+      "id": "cnc_tri_nation",
+      "path": "mods/showcases/cnc_tri_nation/CncTriNationFullGameMod",
+      "projectPath": "CncTriNationFullGameMod.csproj",
+      "title": "C&C Tri-Nation Full Game Showcase",
+      "summary": "Player-facing C&C-style tri-nation RTS slice with a live DataPlane command HUD, faction view switching, selection, production, and graph signal panels.",
+      "tier": "T2",
+      "category": "genre",
+      "tags": [
+        "rts",
+        "cnc",
+        "browser",
+        "production",
+        "graph"
+      ],
+      "binding": "cnc_tri_nation_showcase",
+      "preset": "cnc_tri_nation_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/cnc_tri_nation/CncTriNationFullGameMod/README.md",
+      "acceptanceTest": "CncTriNationShowcaseAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active"
@@ -1828,7 +1897,7 @@
       "path": "mods/showcases/ux_prototype/UxPrototypeMod",
       "projectPath": "UxPrototypeMod.csproj",
       "title": "UX 原型",
-      "summary": "UX 原型可玩演示，验证 performer 主链路渲染输出与交互体验。",
+      "summary": "UX 原型可玩演示，验证 presenter 主链路渲染输出与交互体验。",
       "tier": "T2",
       "category": "demo",
       "binding": null,
@@ -2049,20 +2118,20 @@
       ]
     },
     {
-      "id": "capability_standard_static_performer_30k",
-      "path": "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
-      "projectPath": "CapabilityStandardStaticPerformer30kMod.csproj",
-      "title": "标准能力·3 万静态 Performer 人群",
-      "summary": "30K 静态 performer + HUD 血条/文本 + GAS 效果状态变化的人群压测，含 scatter/ISM/dynamic worker 多组基准地图。",
+      "id": "capability_standard_static_presenter_30k",
+      "path": "mods/showcases/capability_standard/CapabilityStandardStaticPresenter30kMod",
+      "projectPath": "CapabilityStandardStaticPresenter30kMod.csproj",
+      "title": "标准能力·3 万静态 Presenter 人群",
+      "summary": "30K 静态 presenter + HUD 血条/文本 + GAS 效果状态变化的人群压测，含 scatter/ISM/dynamic worker 多组基准地图。",
       "tier": "T3",
       "category": "capability",
       "tags": [
-        "performer",
+        "presenter",
         "stress",
         "benchmark"
       ],
-      "binding": "capability_standard_static_performer_30k",
-      "preset": "capability_standard_static_performer_30k_raylib",
+      "binding": "capability_standard_static_presenter_30k",
+      "preset": "capability_standard_static_presenter_30k_raylib",
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": null,
@@ -2361,15 +2430,15 @@
       ]
     },
     {
-      "id": "performer_blacksmith",
-      "path": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
-      "projectPath": "PerformerBlacksmithShowcaseMod.csproj",
-      "title": "铁匠 Performer 场景",
-      "summary": "Performer 渲染管线铁匠场景 showcase/benchmark；能力标准文档标注为历史遗留入口，保留作本地调试材料。",
+      "id": "presenter_blacksmith",
+      "path": "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod",
+      "projectPath": "PresenterBlacksmithShowcaseMod.csproj",
+      "title": "铁匠 Presenter 场景",
+      "summary": "Presenter 渲染管线铁匠场景 showcase/benchmark；能力标准文档标注为历史遗留入口，保留作本地调试材料。",
       "tier": "T3",
       "category": "stress",
-      "binding": "performer_blacksmith_showcase",
-      "preset": "performer_blacksmith_showcase_raylib",
+      "binding": "presenter_blacksmith_showcase",
+      "preset": "presenter_blacksmith_showcase_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": null,
@@ -2377,20 +2446,20 @@
       "screenshot": null,
       "status": "active",
       "tags": [
-        "performer",
+        "presenter",
         "rendering"
       ]
     },
     {
-      "id": "performer_blacksmith_large_world_entry",
-      "path": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
-      "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj",
+      "id": "presenter_blacksmith_large_world_entry",
+      "path": "mods/showcases/presenter_blacksmith_large_world_entry/PresenterBlacksmithLargeWorldEntryMod",
+      "projectPath": "PresenterBlacksmithLargeWorldEntryMod.csproj",
       "title": "铁匠大世界入口",
-      "summary": "铁匠 performer 大世界场景运行入口。",
+      "summary": "铁匠 presenter 大世界场景运行入口。",
       "tier": "T3",
       "category": "stress",
-      "binding": "performer_blacksmith_large_world",
-      "preset": "performer_blacksmith_large_world_raylib",
+      "binding": "presenter_blacksmith_large_world",
+      "preset": "presenter_blacksmith_large_world_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": null,
@@ -2398,20 +2467,20 @@
       "screenshot": null,
       "status": "active",
       "tags": [
-        "performer",
+        "presenter",
         "large-world"
       ]
     },
     {
-      "id": "performer_blacksmith_large_world_nohud_entry",
-      "path": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
-      "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj",
+      "id": "presenter_blacksmith_large_world_nohud_entry",
+      "path": "mods/showcases/presenter_blacksmith_large_world_nohud_entry/PresenterBlacksmithLargeWorldNoHudEntryMod",
+      "projectPath": "PresenterBlacksmithLargeWorldNoHudEntryMod.csproj",
       "title": "铁匠大世界无 HUD 入口",
       "summary": "铁匠大世界场景的无 HUD/GAS 变体入口，用于隔离渲染开销。",
       "tier": "T3",
       "category": "stress",
-      "binding": "performer_blacksmith_large_world_nohud",
-      "preset": "performer_blacksmith_large_world_nohud_raylib",
+      "binding": "presenter_blacksmith_large_world_nohud",
+      "preset": "presenter_blacksmith_large_world_nohud_raylib",
       "docsPath": null,
       "readmePath": null,
       "acceptanceTest": null,
@@ -2419,16 +2488,16 @@
       "screenshot": null,
       "status": "active",
       "tags": [
-        "performer",
+        "presenter",
         "large-world"
       ]
     },
     {
-      "id": "performer_blacksmith_mesh_benchmark_entry",
-      "path": "mods/showcases/performer_blacksmith_mesh_benchmark_entry/PerformerBlacksmithMeshBenchmarkEntryMod",
-      "projectPath": "PerformerBlacksmithMeshBenchmarkEntryMod.csproj",
+      "id": "presenter_blacksmith_mesh_benchmark_entry",
+      "path": "mods/showcases/presenter_blacksmith_mesh_benchmark_entry/PresenterBlacksmithMeshBenchmarkEntryMod",
+      "projectPath": "PresenterBlacksmithMeshBenchmarkEntryMod.csproj",
       "title": "铁匠网格基准入口",
-      "summary": "铁匠 performer 网格渲染基准入口。",
+      "summary": "铁匠 presenter 网格渲染基准入口。",
       "tier": "T3",
       "category": "stress",
       "binding": null,
@@ -2440,16 +2509,16 @@
       "screenshot": null,
       "status": "experimental",
       "tags": [
-        "performer",
+        "presenter",
         "benchmark"
       ]
     },
     {
-      "id": "performer_blacksmith_scatter_benchmark_entry",
-      "path": "mods/showcases/performer_blacksmith_scatter_benchmark_entry/PerformerBlacksmithScatterBenchmarkEntryMod",
-      "projectPath": "PerformerBlacksmithScatterBenchmarkEntryMod.csproj",
+      "id": "presenter_blacksmith_scatter_benchmark_entry",
+      "path": "mods/showcases/presenter_blacksmith_scatter_benchmark_entry/PresenterBlacksmithScatterBenchmarkEntryMod",
+      "projectPath": "PresenterBlacksmithScatterBenchmarkEntryMod.csproj",
       "title": "铁匠散布基准入口",
-      "summary": "铁匠 performer 散布场景渲染基准入口。",
+      "summary": "铁匠 presenter 散布场景渲染基准入口。",
       "tier": "T3",
       "category": "stress",
       "binding": null,
@@ -2461,14 +2530,14 @@
       "screenshot": null,
       "status": "experimental",
       "tags": [
-        "performer",
+        "presenter",
         "benchmark"
       ]
     },
     {
-      "id": "performer_blacksmith_scatter_hudbar_benchmark_entry",
-      "path": "mods/showcases/performer_blacksmith_scatter_hudbar_benchmark_entry/PerformerBlacksmithScatterHudBarBenchmarkEntryMod",
-      "projectPath": "PerformerBlacksmithScatterHudBarBenchmarkEntryMod.csproj",
+      "id": "presenter_blacksmith_scatter_hudbar_benchmark_entry",
+      "path": "mods/showcases/presenter_blacksmith_scatter_hudbar_benchmark_entry/PresenterBlacksmithScatterHudBarBenchmarkEntryMod",
+      "projectPath": "PresenterBlacksmithScatterHudBarBenchmarkEntryMod.csproj",
       "title": "铁匠散布 HUD 条基准入口",
       "summary": "铁匠散布场景叠加 HUD 血条的渲染基准入口。",
       "tier": "T3",
@@ -2482,14 +2551,14 @@
       "screenshot": null,
       "status": "experimental",
       "tags": [
-        "performer",
+        "presenter",
         "benchmark"
       ]
     },
     {
-      "id": "performer_blacksmith_scatter_hudtext_benchmark_entry",
-      "path": "mods/showcases/performer_blacksmith_scatter_hudtext_benchmark_entry/PerformerBlacksmithScatterHudTextBenchmarkEntryMod",
-      "projectPath": "PerformerBlacksmithScatterHudTextBenchmarkEntryMod.csproj",
+      "id": "presenter_blacksmith_scatter_hudtext_benchmark_entry",
+      "path": "mods/showcases/presenter_blacksmith_scatter_hudtext_benchmark_entry/PresenterBlacksmithScatterHudTextBenchmarkEntryMod",
+      "projectPath": "PresenterBlacksmithScatterHudTextBenchmarkEntryMod.csproj",
       "title": "铁匠散布 HUD 文本基准入口",
       "summary": "铁匠散布场景叠加 HUD 文本的渲染基准入口。",
       "tier": "T3",
@@ -2503,16 +2572,16 @@
       "screenshot": null,
       "status": "experimental",
       "tags": [
-        "performer",
+        "presenter",
         "benchmark"
       ]
     },
     {
-      "id": "performer_blacksmith_showcase_entry",
-      "path": "mods/showcases/performer_blacksmith_showcase_entry/PerformerBlacksmithShowcaseEntryMod",
-      "projectPath": "PerformerBlacksmithShowcaseEntryMod.csproj",
+      "id": "presenter_blacksmith_showcase_entry",
+      "path": "mods/showcases/presenter_blacksmith_showcase_entry/PresenterBlacksmithShowcaseEntryMod",
+      "projectPath": "PresenterBlacksmithShowcaseEntryMod.csproj",
       "title": "铁匠 showcase 入口",
-      "summary": "铁匠 performer 展示入口（历史遗留 showcase entry）。",
+      "summary": "铁匠 presenter 展示入口（历史遗留 showcase entry）。",
       "tier": "T3",
       "category": "stress",
       "binding": null,
@@ -2524,7 +2593,7 @@
       "screenshot": null,
       "status": "experimental",
       "tags": [
-        "performer",
+        "presenter",
         "benchmark"
       ]
     },

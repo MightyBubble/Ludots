@@ -1,0 +1,11 @@
+diff --git a/mods/fixtures/gas/DerivedAttributeGraphAcceptanceMod/assets/Configs/GAS/attribute_constraints.json b/mods/fixtures/gas/DerivedAttributeGraphAcceptanceMod/assets/Configs/GAS/attribute_constraints.json
+new file mode 100644
+index 0000000000..51c65bf601
+--- /dev/null
++++ b/mods/fixtures/gas/DerivedAttributeGraphAcceptanceMod/assets/Configs/GAS/attribute_constraints.json
+@@ -0,0 +1,5 @@
++{
++  "tests.production-derived-graph.source": {},
++  "tests.production-derived-graph.doubled": {},
++  "tests.production-derived-graph.offset": {}
++}

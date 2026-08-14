@@ -1,0 +1,5402 @@
+[
+  {
+    "id": "scf.visual.scf_terran_scv",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_scv",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_scv"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_scv"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_scv"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_command_center",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_command_center",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_command_center"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_command_center"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_command_center"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_supply_depot",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_supply_depot",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_supply_depot"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_supply_depot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_supply_depot"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_barracks",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_barracks",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_barracks"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_barracks"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_barracks"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_factory",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_factory",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_factory"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_factory"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_factory"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_starport",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_starport",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_starport"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_starport"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_starport"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_refinery",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_refinery",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_refinery"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_refinery"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_refinery"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_engineering_bay",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_engineering_bay",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_engineering_bay"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_engineering_bay"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_engineering_bay"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_armory",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_armory",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_armory"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_armory"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_armory"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_bunker",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_bunker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_bunker"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_bunker"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_bunker"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_missile_turret",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_missile_turret",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_missile_turret"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_missile_turret"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_missile_turret"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_fusion_core",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_fusion_core",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_fusion_core"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_fusion_core"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_fusion_core"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_orbital_command",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_orbital_command",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_orbital_command"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_orbital_command"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_orbital_command"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_marine",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_marine",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_marine"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_marine"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_marine"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_marauder",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_marauder",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_marauder"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_marauder"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_marauder"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_reaper",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_reaper",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_reaper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_reaper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_reaper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_ghost",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_ghost",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_ghost"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_ghost"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_ghost"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_firebat",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_firebat",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_firebat"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_firebat"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_firebat"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_medic",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_medic",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_medic"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_medic"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_medic"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_vulture",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_vulture",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_vulture"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_vulture"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_vulture"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_goliath",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_goliath",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_goliath"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_goliath"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_goliath"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_siege_tank",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_siege_tank",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_siege_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_siege_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_siege_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_hellion",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_hellion",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_hellion"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_hellion"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_hellion"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_hellbat",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_hellbat",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_hellbat"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_hellbat"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_hellbat"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_thor",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_thor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_thor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_thor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_thor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_viking",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_viking",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_viking"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_viking"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_viking"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_medivac",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_medivac",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_medivac"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_medivac"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_medivac"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_banshee",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_banshee",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_banshee"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_banshee"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_banshee"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_battlecruiser",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_battlecruiser",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_battlecruiser"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_battlecruiser"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_battlecruiser"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_raven",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_raven",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_raven"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_raven"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_raven"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_cyclone",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_cyclone",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_cyclone"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_cyclone"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_cyclone"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_widow_mine",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_widow_mine",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_widow_mine"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_widow_mine"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_widow_mine"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_liberator",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_liberator",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_liberator"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_liberator"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_liberator"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_terran_diamondback",
+    "defaultColor": [
+      0.2314,
+      0.5098,
+      0.9647,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_terran_diamondback",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_terran_diamondback"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_terran_diamondback"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_terran_diamondback"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_drone",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_drone",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_drone"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_drone"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_drone"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_overlord",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_overlord",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_overlord"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_overlord"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_overlord"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_hatchery",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_hatchery",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_hatchery"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_hatchery"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_hatchery"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_spawning_pool",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_spawning_pool",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_spawning_pool"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_spawning_pool"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_spawning_pool"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_roach_warren",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_roach_warren",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_roach_warren"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_roach_warren"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_roach_warren"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_baneling_nest",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_baneling_nest",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_baneling_nest"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_baneling_nest"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_baneling_nest"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_hydra_den",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_hydra_den",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_hydra_den"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_hydra_den"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_hydra_den"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_spire",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_spire",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_spire"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_spire"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_spire"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_infestation_pit",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_infestation_pit",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_infestation_pit"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_infestation_pit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_infestation_pit"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_ultra_cavern",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_ultra_cavern",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_ultra_cavern"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_ultra_cavern"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_ultra_cavern"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_evolution_chamber",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_evolution_chamber",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_evolution_chamber"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_evolution_chamber"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_evolution_chamber"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_extractor",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_extractor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_extractor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_extractor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_extractor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_nydus",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_nydus",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_nydus"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_nydus"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_nydus"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_hive",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_hive",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_hive"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_hive"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_hive"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_creep_tumor",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_creep_tumor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_creep_tumor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_creep_tumor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_creep_tumor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_zergling",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_zergling",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_zergling"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_zergling"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_zergling"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_baneling",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_baneling",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_baneling"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_baneling"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_baneling"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_roach",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_roach",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_roach"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_roach"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_roach"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_ravager",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_ravager",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_ravager"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_ravager"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_ravager"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_hydralisk",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_hydralisk",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_hydralisk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_hydralisk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_hydralisk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_lurker",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_lurker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_lurker"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_lurker"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_lurker"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_mutalisk",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_mutalisk",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_mutalisk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_mutalisk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_mutalisk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_corruptor",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_corruptor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_corruptor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_corruptor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_corruptor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_broodlord",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_broodlord",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_broodlord"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_broodlord"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_broodlord"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_swarm_host",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_swarm_host",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_swarm_host"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_swarm_host"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_swarm_host"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_viper",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_viper",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_viper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_viper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_viper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_infestor",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_infestor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_infestor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_infestor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_infestor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_ultralisk",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_ultralisk",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_ultralisk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_ultralisk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_ultralisk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_queen",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_queen",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_queen"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_queen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_queen"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_spine_crawler",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_spine_crawler",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_spine_crawler"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_spine_crawler"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_spine_crawler"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_spore_crawler",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_spore_crawler",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_spore_crawler"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_spore_crawler"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_spore_crawler"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_nydus_worm",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_nydus_worm",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_nydus_worm"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_nydus_worm"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_nydus_worm"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_zerg_brutalisk",
+    "defaultColor": [
+      0.6588,
+      0.3333,
+      0.9686,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_zerg_brutalisk",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_zerg_brutalisk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_zerg_brutalisk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_zerg_brutalisk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_probe",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_probe",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_probe"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_probe"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_probe"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_nexus",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_nexus",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_nexus"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_nexus"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_nexus"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_pylon",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_pylon",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_pylon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_pylon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_pylon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_gateway",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_gateway",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_gateway"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_gateway"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_gateway"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_cybernetics",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_cybernetics",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_cybernetics"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_cybernetics"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_cybernetics"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_robotics",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_robotics",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_robotics"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_robotics"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_robotics"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_stargate",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_stargate",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_stargate"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_stargate"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_stargate"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_forge",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_forge",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_forge"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_forge"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_forge"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_assimilator",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_assimilator",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_assimilator"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_assimilator"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_assimilator"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_twilight",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_twilight",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_twilight"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_twilight"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_twilight"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_templar_archives",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_templar_archives",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_templar_archives"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_templar_archives"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_templar_archives"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_robo_bay",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_robo_bay",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_robo_bay"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_robo_bay"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_robo_bay"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_fleet_beacon",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_fleet_beacon",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_fleet_beacon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_fleet_beacon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_fleet_beacon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_photon_cannon",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_photon_cannon",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            1.8,
+            2.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_photon_cannon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_photon_cannon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_photon_cannon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_zealot",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_zealot",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_zealot"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_zealot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_zealot"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_stalker",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_stalker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_stalker"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_stalker"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_stalker"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_sentry",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_sentry",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_sentry"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_sentry"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_sentry"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_adept",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_adept",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_adept"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_adept"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_adept"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_hightemplar",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_hightemplar",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_hightemplar"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_hightemplar"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_hightemplar"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_darktemplar",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_darktemplar",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_darktemplar"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_darktemplar"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_darktemplar"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_archon",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_archon",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_archon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_archon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_archon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_immortal",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_immortal",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_immortal"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_immortal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_immortal"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_colossus",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_colossus",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_colossus"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_colossus"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_colossus"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_disruptor",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_disruptor",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_disruptor"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_disruptor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_disruptor"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_phoenix",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_phoenix",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_phoenix"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_phoenix"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_phoenix"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_voidray",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_voidray",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_voidray"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_voidray"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_voidray"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_oracle",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_oracle",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_oracle"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_oracle"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_oracle"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_carrier",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_carrier",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_carrier"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_carrier"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_carrier"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_tempest",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_tempest",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_tempest"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_tempest"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_tempest"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_mothership",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_mothership",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_mothership"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_mothership"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_mothership"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_observer",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_observer",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_observer"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_observer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_observer"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_warp_prism",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_warp_prism",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_warp_prism"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_warp_prism"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_warp_prism"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "scf.visual.scf_protoss_corsair",
+    "defaultColor": [
+      0.9608,
+      0.6196,
+      0.0431,
+      1.0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "scf.prim.scf_protoss_corsair",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.2,
+            0.8,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "scf_protoss_corsair"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "scf.visual.scf_protoss_corsair"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "scf_protoss_corsair"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

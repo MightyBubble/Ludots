@@ -1,0 +1,13 @@
+diff --git a/src/Core/MovePlanning/MovePlanRuntimeService.cs b/src/Core/MovePlanning/MovePlanRuntimeService.cs
+index 5a57b4fdb3..25a6770542 100644
+--- a/src/Core/MovePlanning/MovePlanRuntimeService.cs
++++ b/src/Core/MovePlanning/MovePlanRuntimeService.cs
+@@ -55,7 +55,7 @@ public sealed class MovePlanRuntimeService
+ 
+         int planPointCount = _plans.TryGetPlan(entity, order.OrderId, out MovePlanView plan)
+             ? plan.Count
+-            : OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
++            : OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
+ 
+         short executionGeneration = orderState.ExecutionGeneration;
+         executionGeneration++;

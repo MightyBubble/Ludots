@@ -1,0 +1,12 @@
+diff --git a/mods/showcases/road_network/RoadNetworkShowcaseMod/RoadNetworkShowcaseIds.cs b/mods/showcases/road_network/RoadNetworkShowcaseMod/RoadNetworkShowcaseIds.cs
+index 2a35a6e172..267d1cdcd3 100644
+--- a/mods/showcases/road_network/RoadNetworkShowcaseMod/RoadNetworkShowcaseIds.cs
++++ b/mods/showcases/road_network/RoadNetworkShowcaseMod/RoadNetworkShowcaseIds.cs
+@@ -10,6 +10,7 @@ namespace RoadNetworkShowcaseMod
+         public const string ScenarioServiceKey = "RoadNetworkShowcaseMod.Scenario";
+         public const string GraphLoadedChunksServiceKey = "RoadNetworkShowcaseMod.GraphLoadedChunks";
+         public const string PathPlannerAgentTypeId = "RoadColumn";
++        public const string MoveToOrderTypeKey = "moveTo";
+         public const string RoadMoveFollowOrderTypeKey = "roadMoveFollow";
+         public const string RoadSurfacePerformerId = "road_surface_chunk";
+ 

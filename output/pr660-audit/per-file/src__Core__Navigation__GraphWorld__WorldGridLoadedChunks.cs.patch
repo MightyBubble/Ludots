@@ -1,0 +1,199 @@
+diff --git a/src/Core/Navigation/GraphWorld/WorldGridLoadedChunks.cs b/src/Core/Navigation/GraphWorld/WorldGridLoadedChunks.cs
+index 31151b3dba..6596586da2 100644
+--- a/src/Core/Navigation/GraphWorld/WorldGridLoadedChunks.cs
++++ b/src/Core/Navigation/GraphWorld/WorldGridLoadedChunks.cs
+@@ -7,7 +7,7 @@ namespace Ludots.Core.Navigation.GraphWorld
+ {
+     /// <summary>
+     /// Map-scoped loaded chunk set for world-space grid chunks keyed by <see cref="GraphChunkKey"/>.
+-    /// Supports explicit chunk toggles and AOI-style square updates without per-update allocations.
++    /// Supports explicit chunk toggles, contributor-owned chunks, and AOI-style square updates.
+     /// </summary>
+     public sealed class WorldGridLoadedChunks : ILoadedChunks, IWorldChunkKeyResolver
+     {
+@@ -15,39 +15,35 @@ namespace Ludots.Core.Navigation.GraphWorld
+         private readonly HashSet<long> _directChunks;
+         private readonly HashSet<long> _nextDirectChunks;
+         private readonly Dictionary<long, int> _contributionCounts;
++        private readonly List<long> _eventScratch;
+         private int _generation;
+ 
+         public int ChunkSizeCm { get; }
++        public int LoadedChunkCapacity { get; }
+         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
+ 
+         public event Action<long> ChunkLoaded;
+         public event Action<long> ChunkUnloaded;
+ 
+-        public WorldGridLoadedChunks(int chunkSizeCm, int loadedChunkCapacity = 0)
++        public WorldGridLoadedChunks(int chunkSizeCm, int loadedChunkCapacity)
+         {
+             if (chunkSizeCm <= 0)
+             {
+                 throw new ArgumentOutOfRangeException(nameof(chunkSizeCm));
+             }
+ 
+-            if (loadedChunkCapacity < 0)
++            if (loadedChunkCapacity <= 0)
+             {
+                 throw new ArgumentOutOfRangeException(nameof(loadedChunkCapacity));
+             }
+ 
+-            _activeChunks = loadedChunkCapacity > 0
+-                ? new HashSet<long>(loadedChunkCapacity)
+-                : new HashSet<long>();
+-            _directChunks = loadedChunkCapacity > 0
+-                ? new HashSet<long>(loadedChunkCapacity)
+-                : new HashSet<long>();
+-            _nextDirectChunks = loadedChunkCapacity > 0
+-                ? new HashSet<long>(loadedChunkCapacity)
+-                : new HashSet<long>();
+-            _contributionCounts = loadedChunkCapacity > 0
+-                ? new Dictionary<long, int>(loadedChunkCapacity)
+-                : new Dictionary<long, int>();
++            _activeChunks = new HashSet<long>(loadedChunkCapacity);
++            _directChunks = new HashSet<long>(loadedChunkCapacity);
++            _nextDirectChunks = new HashSet<long>(loadedChunkCapacity);
++            _contributionCounts = new Dictionary<long, int>(loadedChunkCapacity);
++            _eventScratch = new List<long>(loadedChunkCapacity);
+             ChunkSizeCm = chunkSizeCm;
++            LoadedChunkCapacity = loadedChunkCapacity;
+         }
+ 
+         public bool IsLoaded(long chunkKey)
+@@ -84,38 +80,54 @@ namespace Ludots.Core.Navigation.GraphWorld
+         {
+             if (radiusCm < 0)
+             {
+-                radiusCm = 0;
++                throw new ArgumentOutOfRangeException(nameof(radiusCm));
+             }
+ 
+-            int minChunkX = MathUtil.FloorDiv(centerXcm - radiusCm, ChunkSizeCm);
+-            int maxChunkX = MathUtil.FloorDiv(centerXcm + radiusCm, ChunkSizeCm);
+-            int minChunkY = MathUtil.FloorDiv(centerYcm - radiusCm, ChunkSizeCm);
+-            int maxChunkY = MathUtil.FloorDiv(centerYcm + radiusCm, ChunkSizeCm);
++            int minChunkX = ResolveChunkCoordinate((long)centerXcm - radiusCm);
++            int maxChunkX = ResolveChunkCoordinate((long)centerXcm + radiusCm);
++            int minChunkY = ResolveChunkCoordinate((long)centerYcm - radiusCm);
++            int maxChunkY = ResolveChunkCoordinate((long)centerYcm + radiusCm);
++            long width = (long)maxChunkX - minChunkX + 1L;
++            long height = (long)maxChunkY - minChunkY + 1L;
++            long requiredChunkCount = checked(width * height);
++            EnsureCapacityFor(requiredChunkCount);
+ 
+             _nextDirectChunks.Clear();
+-            for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
++            for (long chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
+             {
+-                for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
++                for (long chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+                 {
+-                    _nextDirectChunks.Add(GraphChunkKey.Pack(chunkX, chunkY));
++                    _nextDirectChunks.Add(GraphChunkKey.Pack((int)chunkX, (int)chunkY));
+                 }
+             }
+ 
++            _eventScratch.Clear();
+             foreach (long chunkKey in _directChunks)
+             {
+                 if (!_nextDirectChunks.Contains(chunkKey))
+                 {
+-                    DeactivateIfUnreferenced(chunkKey, directWillRemain: false);
++                    _eventScratch.Add(chunkKey);
+                 }
+             }
++            _eventScratch.Sort();
++            for (int i = 0; i < _eventScratch.Count; i++)
++            {
++                DeactivateIfUnreferenced(_eventScratch[i], directWillRemain: false);
++            }
+ 
++            _eventScratch.Clear();
+             foreach (long chunkKey in _nextDirectChunks)
+             {
+                 if (!_directChunks.Contains(chunkKey))
+                 {
+-                    Activate(chunkKey);
++                    _eventScratch.Add(chunkKey);
+                 }
+             }
++            _eventScratch.Sort();
++            for (int i = 0; i < _eventScratch.Count; i++)
++            {
++                Activate(_eventScratch[i]);
++            }
+ 
+             _directChunks.Clear();
+             foreach (long chunkKey in _nextDirectChunks)
+@@ -166,10 +178,14 @@ namespace Ludots.Core.Navigation.GraphWorld
+ 
+         private void Activate(long chunkKey)
+         {
+-            if (_activeChunks.Add(chunkKey))
++            if (_activeChunks.Contains(chunkKey))
+             {
+-                ChunkLoaded?.Invoke(chunkKey);
++                return;
+             }
++
++            EnsureCapacityFor(checked(_activeChunks.Count + 1));
++            _activeChunks.Add(chunkKey);
++            ChunkLoaded?.Invoke(chunkKey);
+         }
+ 
+         private void DeactivateIfUnreferenced(long chunkKey, bool? directWillRemain = null)
+@@ -183,17 +199,49 @@ namespace Ludots.Core.Navigation.GraphWorld
+ 
+         public void Reset()
+         {
+-            long[] snapshot = new long[_activeChunks.Count];
+-            _activeChunks.CopyTo(snapshot);
++            _eventScratch.Clear();
++            foreach (long chunkKey in _activeChunks)
++            {
++                _eventScratch.Add(chunkKey);
++            }
++            _eventScratch.Sort();
++
+             _activeChunks.Clear();
+             _directChunks.Clear();
+             _nextDirectChunks.Clear();
+             _contributionCounts.Clear();
+             _generation = checked(_generation + 1);
+ 
+-            for (int i = 0; i < snapshot.Length; i++)
++            for (int i = 0; i < _eventScratch.Count; i++)
++            {
++                ChunkUnloaded?.Invoke(_eventScratch[i]);
++            }
++        }
++
++        private int ResolveChunkCoordinate(long worldCoordinateCm)
++        {
++            long quotient = worldCoordinateCm / ChunkSizeCm;
++            long remainder = worldCoordinateCm % ChunkSizeCm;
++            if (remainder != 0 && worldCoordinateCm < 0)
++            {
++                quotient--;
++            }
++
++            if (quotient < int.MinValue || quotient > int.MaxValue)
++            {
++                throw new InvalidOperationException(
++                    $"World chunk coordinate {quotient} exceeds the GraphChunkKey coordinate range.");
++            }
++
++            return (int)quotient;
++        }
++
++        private void EnsureCapacityFor(long requiredChunkCount)
++        {
++            if (requiredChunkCount > LoadedChunkCapacity)
+             {
+-                ChunkUnloaded?.Invoke(snapshot[i]);
++                throw new InvalidOperationException(
++                    $"Loaded chunk count {requiredChunkCount} exceeds configured capacity {LoadedChunkCapacity}.");
+             }
+         }
+ 

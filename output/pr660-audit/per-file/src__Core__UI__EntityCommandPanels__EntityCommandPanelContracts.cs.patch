@@ -1,0 +1,63 @@
+diff --git a/src/Core/UI/EntityCommandPanels/EntityCommandPanelContracts.cs b/src/Core/UI/EntityCommandPanels/EntityCommandPanelContracts.cs
+index 132cc54e99..0de4eee6fe 100644
+--- a/src/Core/UI/EntityCommandPanels/EntityCommandPanelContracts.cs
++++ b/src/Core/UI/EntityCommandPanels/EntityCommandPanelContracts.cs
+@@ -1,5 +1,7 @@
+ using System;
+ using Arch.Core;
++using Ludots.Core.Gameplay.GAS.Orders;
++using Ludots.Core.Input.Orders;
+ 
+ namespace Ludots.Core.UI.EntityCommandPanels
+ {
+@@ -64,7 +66,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
+         TemplateBacked = 1 << 4,
+         Blocked = 1 << 5,
+         Active = 1 << 6,
+-        PendingTarget = 1 << 7
++        PendingTarget = 1 << 7,
++        ItemGrantedOverride = 1 << 8
+     }
+ 
+     public readonly struct EntityCommandPanelOpenRequest
+@@ -310,12 +313,12 @@ namespace Ludots.Core.UI.EntityCommandPanels
+ 
+     public interface IEntityCommandPanelActionSource
+     {
+-        bool ActivateSlot(Entity target, int groupIndex, int slotIndex);
++        InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex);
+     }
+ 
+     public interface IEntityCommandPanelContextActionSource : IEntityCommandPanelActionSource
+     {
+-        bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
++        InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
+     }
+ 
+     /// <summary>
+@@ -432,7 +435,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
+             return source is IEntityCommandPanelActionSource or IEntityCommandPanelContextActionSource;
+         }
+ 
+-        public static bool ActivateSlot(
++        public static InputOrderActivationResult ActivateSlot(
+             IEntityCommandPanelSource source,
+             in EntityCommandPanelSourceContext context,
+             int groupIndex,
+@@ -443,8 +446,14 @@ namespace Ludots.Core.UI.EntityCommandPanels
+                 return contextSource.ActivateSlot(in context, groupIndex, slotIndex);
+             }
+ 
+-            return source is IEntityCommandPanelActionSource actionSource &&
+-                   actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
++            if (source is IEntityCommandPanelActionSource actionSource)
++            {
++                return actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
++            }
++
++            return InputOrderActivationResult.Rejected(
++                context.TargetEntity,
++                OrderSubmitResult.RejectedByRule);
+         }
+ 
+         public static bool TryCopyAggregationMembers(

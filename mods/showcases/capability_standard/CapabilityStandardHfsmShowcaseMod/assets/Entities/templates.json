@@ -1,0 +1,43 @@
+[
+  {
+    "id": "capability_standard_hfsm_actor",
+    "components": {
+      "Name": { "Value": "HFSM Runner" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "capability_standard_hfsm_water_station",
+    "components": {
+      "Name": { "Value": "Water Station" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {},
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "capability_standard_hfsm_track_center",
+    "components": {
+      "Name": { "Value": "Track Center" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {},
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "capability_standard_hfsm_track_marker",
+    "components": {
+      "Name": { "Value": "Track Marker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "PresentationStaticTransform": {},
+      "GameplayTagContainer": {}
+    }
+  }
+]

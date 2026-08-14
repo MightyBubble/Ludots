@@ -16,9 +16,9 @@ public readonly record struct MassNavigationAnchorEvidenceSample(
     [property: JsonPropertyName("agent_index")] int AgentIndex,
     [property: JsonPropertyName("team_id")] int TeamId,
     [property: JsonPropertyName("owner_entity_id")] int OwnerEntityId,
-    [property: JsonPropertyName("performer_stable_id")] int PerformerStableId,
+    [property: JsonPropertyName("presenter_stable_id")] int PresenterStableId,
     [property: JsonPropertyName("solver_world_cm")] MassNavigationEvidencePoint SolverWorldCm,
     [property: JsonPropertyName("ecs_world_cm")] MassNavigationEvidencePoint EcsWorldCm,
     [property: JsonPropertyName("visual_world_cm")] MassNavigationEvidencePoint VisualWorldCm,
-    [property: JsonPropertyName("performer_world_cm")] MassNavigationEvidencePoint PerformerWorldCm,
+    [property: JsonPropertyName("presenter_world_cm")] MassNavigationEvidencePoint PresenterWorldCm,
     [property: JsonPropertyName("owner_visible")] bool OwnerVisible);

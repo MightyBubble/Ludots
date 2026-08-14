@@ -1,0 +1,38 @@
+diff --git a/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json b/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json
+index 5c84ccc0d2..d277045383 100644
+--- a/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json
++++ b/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json
+@@ -80,6 +80,7 @@
+     "targetQuery": {
+       "kind": "BuiltinSpatial",
+       "shape": "Circle",
++      "origin": "Source",
+       "radius": 280
+     },
+     "targetFilter": {
+@@ -284,6 +285,7 @@
+     "targetQuery": {
+       "kind": "BuiltinSpatial",
+       "shape": "Ring",
++      "origin": "Source",
+       "radius": 320,
+       "innerRadius": 140
+     },
+@@ -576,7 +578,7 @@
+     ],
+     "presetType": "LaunchProjectile",
+     "lifetime": "Instant",
+-    "participatesInResponse": true,
++    "participatesInResponse": false,
+     "projectile": {
+       "speed": 1400,
+       "range": 5200,
+@@ -599,7 +601,7 @@
+     ],
+     "presetType": "InstantDamage",
+     "lifetime": "Instant",
+-    "participatesInResponse": true,
++    "participatesInResponse": false,
+     "modifiers": [
+       {
+         "attribute": "Health",

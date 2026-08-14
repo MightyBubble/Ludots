@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/assets/Maps/chunk_streaming_showcase.json b/mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/assets/Maps/chunk_streaming_showcase.json
+index 2287152fe3..9ad16618e9 100644
+--- a/mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/assets/Maps/chunk_streaming_showcase.json
++++ b/mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/assets/Maps/chunk_streaming_showcase.json
+@@ -8,7 +8,8 @@
+       "WidthInMacroTiles": 2,
+       "HeightInMacroTiles": 2,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 64
+     }
+   ],
+   "DefaultCamera": {

@@ -1,0 +1,25 @@
+diff --git a/src/Core/Gameplay/GAS/GasStepRate.cs b/src/Core/Gameplay/GAS/GasStepRate.cs
+new file mode 100644
+index 0000000000..5371f92480
+--- /dev/null
++++ b/src/Core/Gameplay/GAS/GasStepRate.cs
+@@ -0,0 +1,19 @@
++using System;
++
++namespace Ludots.Core.Gameplay.GAS;
++
++public static class GasStepRate
++{
++    public static int RequirePositive(int stepRateHz, string consumer)
++    {
++        if (stepRateHz <= 0)
++        {
++            throw new ArgumentOutOfRangeException(
++                nameof(stepRateHz),
++                stepRateHz,
++                $"{consumer} requires a positive GAS step rate.");
++        }
++
++        return stepRateHz;
++    }
++}

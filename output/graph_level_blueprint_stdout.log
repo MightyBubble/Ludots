@@ -1,0 +1,148 @@
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=73a7bb1396c2ee989a31471e3ae282be33503215c0fab80f57a9d0ecbfbd5e78, schema=1, mods=2
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - GraphLevelBlueprintShowcaseMod (P:134)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\mods\LudotsCoreMod\bin\net8.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for GraphLevelBlueprintShowcaseMod at C:\001_AI\LudotsProd\mods\showcases\graph_level_blueprint\GraphLevelBlueprintShowcaseMod\bin\net8.0\GraphLevelBlueprintShowcaseMod.dll
+[INF][ModLoader] Scanning 1 types in assembly...
+[INF][ModLoader] Instantiated entry for GraphLevelBlueprintShowcaseMod. Calling OnLoad...
+[INF][Mod.GraphLevelBlueprintShowcaseMod] [GraphLevelBlueprintShowcaseMod] Loaded
+[INF][ModLoader] GraphLevelBlueprintShowcaseMod OnLoad completed.
+[INF][ModLoader] Loaded GraphLevelBlueprintShowcaseMod
+[INF][Config] Merged fragment from: Core:Configs/game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: GraphLevelBlueprintShowcaseMod:assets/game.json
+[INF][Config] Merged fragment from: Core:Configs/config_catalog.json
+[INF][Config] Merged fragment from: Core:Configs/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=graph_level_blueprint_showcase, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: GraphLevelBlueprintShowcaseMod:assets/Entities/templates.json
+[INF][Config] Loaded 10 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Configs/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Configs/Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Configs/Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/clock.json
+[INF][Config] Merged fragment from: Core:Configs/Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Configs/Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Configs/Vision/fog_layers.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/graphs.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Configs/Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Configs/Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Configs/Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Configs/Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/effects.json
+[INF][Config] Merged fragment from: Core:Configs/Items/shapes.json
+[INF][Config] Merged fragment from: Core:Configs/Items/layouts.json
+[INF][Config] Merged fragment from: Core:Configs/Items/definitions.json
+[INF][Config] Merged fragment from: Core:Configs/Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Configs/Input/filter_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/prefabs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/performers.json
+[INF][Config] Merged fragment from: GraphLevelBlueprintShowcaseMod:assets/Presentation/performers.json
+[INF][Config] Merged fragment from: Core:Configs/GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Configs/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Configs/Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:Configs/Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Configs/Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Configs/UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:Configs/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Configs/Quests/quests.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:Configs/Input/default_input.json
+INFO: Initializing raylib 5.0
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1600
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 25.30.33.05.260603
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Loading Map: graph_level_blueprint_showcase
+[INF][Map] Loading Map: graph_level_blueprint_showcase
+[INF][Config] Merged fragment from: GraphLevelBlueprintShowcaseMod:assets/Maps/graph_level_blueprint_showcase.json
+[INF][Map] Map 'graph_level_blueprint_showcase' loaded.
+[INF][Map] Map 'graph_level_blueprint_showcase' pushed to focus (stack depth=1).
+[INF][Config] Merged fragment from: Core:Configs/Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'graph_level_blueprint_showcase': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=58 dist=4200cm fov=42
+[INF][Engine] Firing MapLoaded event for graph_level_blueprint_showcase...
+[WRN][Presentation] Terrain height sync requested VisualHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 2] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 3] Trying to re-load an already loaded mesh
+INFO: FILEIO: [C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\instancing.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\instancing.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 5] Fragment shader compiled successfully
+INFO: SHADER: [ID 6] Program shader loaded successfully
+[INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
+INFO: TEXTURE: [ID 3] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1264x721 | R8G8B8A8 | 1 mipmaps)

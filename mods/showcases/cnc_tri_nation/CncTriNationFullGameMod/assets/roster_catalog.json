@@ -1,0 +1,617 @@
+{
+  "unitCount": 102,
+  "roster": [
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_power",
+      "name": "Power Plant",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_refinery",
+      "name": "Ore Refinery",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_gi",
+      "name": "GI",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_engineer",
+      "name": "Engineer",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_medic",
+      "name": "Medic",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_rocketeer",
+      "name": "Rocketeer",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_sniper",
+      "name": "Sniper",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_spy",
+      "name": "Spy",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_seal",
+      "name": "Seal",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_infantry_chrono_legionnaire",
+      "name": "Chrono Legionnaire",
+      "category": "infantry"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_barracks",
+      "name": "Barracks",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_grizzly_tank",
+      "name": "Grizzly Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_ifv",
+      "name": "IFV",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_mirage_tank",
+      "name": "Mirage Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_prism_tank",
+      "name": "Prism Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_battle_fortress",
+      "name": "Battle Fortress",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_destroyer",
+      "name": "Destroyer",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_aircraft_carrier",
+      "name": "Aircraft Carrier",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_vehicle_chrono_tank",
+      "name": "Chrono Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_war_factory",
+      "name": "War Factory",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_aircraft_harrier",
+      "name": "Harrier",
+      "category": "aircraft"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_aircraft_black_eagle",
+      "name": "Black Eagle",
+      "category": "aircraft"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_aircraft_nighthawk",
+      "name": "Nighthawk",
+      "category": "aircraft"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_aircraft_chrono_copter",
+      "name": "Chrono Copter",
+      "category": "aircraft"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_airfield",
+      "name": "Airfield",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_battle_lab",
+      "name": "Battle Lab",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_pillbox",
+      "name": "Pillbox",
+      "category": "defense"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_super_weapon",
+      "name": "Super Weapon",
+      "category": "super"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_service_depot",
+      "name": "Service Depot",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_structure_conyard",
+      "name": "Construction Yard",
+      "category": "structure"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_worker_harvester",
+      "name": "Ore Harvester",
+      "category": "worker"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_special_tanya",
+      "name": "Tanya",
+      "category": "special"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_special_weather_controller",
+      "name": "Weather Controller",
+      "category": "special"
+    },
+    {
+      "nation": "allied",
+      "id": "cnc_allied_special_grand_cannon",
+      "name": "Grand Cannon",
+      "category": "special"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_power",
+      "name": "Power Plant",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_refinery",
+      "name": "Ore Refinery",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_conscript",
+      "name": "Conscript",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_flak_trooper",
+      "name": "Flak Trooper",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_tesla_trooper",
+      "name": "Tesla Trooper",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_engineer",
+      "name": "Engineer",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_crazy_ivan",
+      "name": "Crazy Ivan",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_desolator",
+      "name": "Desolator",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_boris",
+      "name": "Boris",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_infantry_terrorist",
+      "name": "Terrorist",
+      "category": "infantry"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_barracks",
+      "name": "Barracks",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_rhino_tank",
+      "name": "Rhino Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_flak_track",
+      "name": "Flak Track",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_v3_launcher",
+      "name": "V3 Launcher",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_apocalypse_tank",
+      "name": "Apocalypse Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_tesla_tank",
+      "name": "Tesla Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_demolisher",
+      "name": "Demolisher",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_dreadnought",
+      "name": "Dreadnought",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_vehicle_mammoth_tank",
+      "name": "Mammoth Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_war_factory",
+      "name": "War Factory",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_aircraft_mig",
+      "name": "MiG",
+      "category": "aircraft"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_aircraft_kirov",
+      "name": "Kirov",
+      "category": "aircraft"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_aircraft_siege_chopper",
+      "name": "Siege Chopper",
+      "category": "aircraft"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_aircraft_vortex",
+      "name": "Vortex",
+      "category": "aircraft"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_airfield",
+      "name": "Airfield",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_battle_lab",
+      "name": "Battle Lab",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_pillbox",
+      "name": "Pillbox",
+      "category": "defense"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_super_weapon",
+      "name": "Super Weapon",
+      "category": "super"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_service_depot",
+      "name": "Service Depot",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_structure_conyard",
+      "name": "Construction Yard",
+      "category": "structure"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_worker_harvester",
+      "name": "Ore Harvester",
+      "category": "worker"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_special_iron_curtain",
+      "name": "Iron Curtain",
+      "category": "special"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_special_nuclear_silo",
+      "name": "Nuclear Silo",
+      "category": "special"
+    },
+    {
+      "nation": "soviet",
+      "id": "cnc_soviet_special_tesla_coil",
+      "name": "Tesla Coil",
+      "category": "special"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_power",
+      "name": "Power Plant",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_refinery",
+      "name": "Ore Refinery",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_initiate",
+      "name": "Initiate",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_brute",
+      "name": "Brute",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_virus",
+      "name": "Virus",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_yuri_clone",
+      "name": "Yuri Clone",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_yuri_prime",
+      "name": "Yuri Prime",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_genetic_mutator",
+      "name": "Genetic Mutator",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_slave_miner",
+      "name": "Slave Miner",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_infantry_guardian_gi",
+      "name": "Guardian GI",
+      "category": "infantry"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_barracks",
+      "name": "Barracks",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_gattling_tank",
+      "name": "Gattling Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_magnetron",
+      "name": "Magnetron",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_mastermind",
+      "name": "Mastermind",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_floating_disk",
+      "name": "Floating Disk",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_lasher_tank",
+      "name": "Lasher Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_virus_tank",
+      "name": "Virus Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_chaos_tank",
+      "name": "Chaos Tank",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_vehicle_battle_fortress_yuri",
+      "name": "Battle Fortress Yuri",
+      "category": "vehicle"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_war_factory",
+      "name": "War Factory",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_aircraft_floating_disk_scout",
+      "name": "Floating Disk Scout",
+      "category": "aircraft"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_aircraft_harrier_yuri",
+      "name": "Harrier Yuri",
+      "category": "aircraft"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_aircraft_kirov_yuri",
+      "name": "Kirov Yuri",
+      "category": "aircraft"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_aircraft_vortex_yuri",
+      "name": "Vortex Yuri",
+      "category": "aircraft"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_airfield",
+      "name": "Airfield",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_battle_lab",
+      "name": "Battle Lab",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_pillbox",
+      "name": "Pillbox",
+      "category": "defense"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_super_weapon",
+      "name": "Super Weapon",
+      "category": "super"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_service_depot",
+      "name": "Service Depot",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_structure_conyard",
+      "name": "Construction Yard",
+      "category": "structure"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_worker_harvester",
+      "name": "Ore Harvester",
+      "category": "worker"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_special_psychic_dominator",
+      "name": "Psychic Dominator",
+      "category": "special"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_special_cloning_vats",
+      "name": "Cloning Vats",
+      "category": "special"
+    },
+    {
+      "nation": "yuri",
+      "id": "cnc_yuri_special_genetic_mutator_device",
+      "name": "Genetic Mutator Device",
+      "category": "special"
+    }
+  ]
+}

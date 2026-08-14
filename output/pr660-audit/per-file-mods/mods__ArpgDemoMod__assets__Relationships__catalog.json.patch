@@ -1,0 +1,4 @@
+diff --git a/mods/ArpgDemoMod/assets/Relationships/catalog.json b/mods/showcases/arpg_demo/ArpgDemoMod/assets/Relationships/catalog.json
+similarity index 100%
+rename from mods/ArpgDemoMod/assets/Relationships/catalog.json
+rename to mods/showcases/arpg_demo/ArpgDemoMod/assets/Relationships/catalog.json

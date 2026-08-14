@@ -1,0 +1,14 @@
+diff --git a/mods/LudotsCoreMod/assets/GAS/order_types.json b/mods/LudotsCoreMod/assets/GAS/order_types.json
+index 77b7df1e87..af9b1078b4 100644
+--- a/mods/LudotsCoreMod/assets/GAS/order_types.json
++++ b/mods/LudotsCoreMod/assets/GAS/order_types.json
+@@ -1,5 +1,8 @@
+ {
+-  "orderBlackboardKeys": {},
++  "orderBlackboardKeys": {
++    "Attack.MovePosition": true,
++    "Attack.TargetEntity": true
++  },
+   "orderTypes": {
+     "castAbility": {
+       "orderTypeId": 100,

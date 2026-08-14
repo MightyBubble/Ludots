@@ -1,0 +1,12 @@
+diff --git a/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Configs/Navigation/pathing.json b/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Configs/Navigation/pathing.json
+index 7b669ba800..dd4d45b2f8 100644
+--- a/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Configs/Navigation/pathing.json
++++ b/mods/showcases/spline_surface_uat/SplineSurfaceUatMod/assets/Configs/Navigation/pathing.json
+@@ -3,7 +3,6 @@
+     {
+       "id": "Humanoid",
+       "profileId": "Small",
+-      "layer": 0,
+       "selection": {
+         "mode": "PreferGraph",
+         "graphBias": 0.0,

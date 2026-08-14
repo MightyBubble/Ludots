@@ -1,0 +1,14 @@
+{
+  "name": "ThreeKingdomsTacticsMod",
+  "version": "1.0.0",
+  "description": "三国志11-like seamless full-map tactical chess showcase with 100 unique officer skills and 100 troop types.",
+  "main": "bin/net8.0/ThreeKingdomsTacticsMod.dll",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["tactics", "three-kingdoms", "webui-dataplane", "gas", "items", "graph", "cc0"]
+}

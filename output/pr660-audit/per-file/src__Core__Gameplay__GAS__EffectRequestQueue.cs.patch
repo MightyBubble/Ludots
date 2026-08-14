@@ -1,0 +1,153 @@
+diff --git a/src/Core/Gameplay/GAS/EffectRequestQueue.cs b/src/Core/Gameplay/GAS/EffectRequestQueue.cs
+index cb0ad66ba7..01c11c718c 100644
+--- a/src/Core/Gameplay/GAS/EffectRequestQueue.cs
++++ b/src/Core/Gameplay/GAS/EffectRequestQueue.cs
+@@ -21,6 +21,8 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+     public sealed class EffectRequestQueue
+     {
++        public const string CapacityExceededError = "GAS.EFFECT_REQUEST_QUEUE.ERR.CapacityExceeded";
++
+         private EffectRequest[] _items;
+         private int _count;
+         private int _nextRootId = 1;
+@@ -31,6 +33,8 @@ namespace Ludots.Core.Gameplay.GAS
+         private int _overflowCount;
+         private int _dropped;
+         private bool _budgetFused;
++        private int _responseChainListenerRevision;
++        private World? _responseChainListenerWorld;
+ 
+         public EffectRequestQueue(int initialCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+         {
+@@ -42,12 +46,74 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+         public int Count => _count;
+         public int Capacity => _items.Length;
++        public int TotalCapacity => _items.Length + _overflow.Length;
++        public int AvailableCapacity => (_items.Length - _count) + (_overflow.Length - _overflowCount);
+         public int OverflowCount => _overflowCount;
+         public int DroppedCount => _dropped;
+         public bool BudgetFused => _budgetFused;
++        public int ResponseChainListenerRevision => _responseChainListenerRevision;
++
++        internal readonly struct WriteCheckpoint
++        {
++            internal readonly int Count;
++            internal readonly int NextRootId;
++            internal readonly int OverflowHead;
++            internal readonly int OverflowTail;
++            internal readonly int OverflowCount;
++            internal readonly int Dropped;
++            internal readonly bool BudgetFused;
++
++            internal WriteCheckpoint(
++                int count,
++                int nextRootId,
++                int overflowHead,
++                int overflowTail,
++                int overflowCount,
++                int dropped,
++                bool budgetFused)
++            {
++                Count = count;
++                NextRootId = nextRootId;
++                OverflowHead = overflowHead;
++                OverflowTail = overflowTail;
++                OverflowCount = overflowCount;
++                Dropped = dropped;
++                BudgetFused = budgetFused;
++            }
++        }
+ 
+         public EffectRequest this[int index] => _items[index];
+ 
++        internal WriteCheckpoint CaptureWriteCheckpoint()
++        {
++            return new WriteCheckpoint(
++                _count,
++                _nextRootId,
++                _overflowHead,
++                _overflowTail,
++                _overflowCount,
++                _dropped,
++                _budgetFused);
++        }
++
++        internal void RollbackWrites(in WriteCheckpoint checkpoint)
++        {
++            if (_count < checkpoint.Count ||
++                _overflowHead != checkpoint.OverflowHead ||
++                _overflowCount < checkpoint.OverflowCount)
++            {
++                throw new InvalidOperationException("GAS.EFFECT_REQUEST.ERR.InvalidWriteRollback");
++            }
++
++            _count = checkpoint.Count;
++            _nextRootId = checkpoint.NextRootId;
++            _overflowHead = checkpoint.OverflowHead;
++            _overflowTail = checkpoint.OverflowTail;
++            _overflowCount = checkpoint.OverflowCount;
++            _dropped = checkpoint.Dropped;
++            _budgetFused = checkpoint.BudgetFused;
++        }
++
+         public void Reserve(int capacity)
+         {
+             if (capacity <= _items.Length) return;
+@@ -88,8 +154,8 @@ namespace Ludots.Core.Gameplay.GAS
+ 
+             if (_overflowCount >= _overflow.Length)
+             {
+-                _dropped++;
+-                return;
++                throw new System.InvalidOperationException(
++                    $"{CapacityExceededError}: capacity={_items.Length}, overflowCapacity={_overflow.Length}, requestedTemplateId={r.TemplateId}, rootId={r.RootId}.");
+             }
+ 
+             _overflow[_overflowTail] = r;
+@@ -141,5 +207,44 @@ namespace Ludots.Core.Gameplay.GAS
+                 _overflowTail = 0;
+             }
+         }
++
++        internal void NotifyResponseChainListenersChanged()
++        {
++            unchecked
++            {
++                _responseChainListenerRevision++;
++            }
++        }
++
++        internal void TrackResponseChainListenerLifecycle(World world)
++        {
++            if (world == null)
++            {
++                throw new System.ArgumentNullException(nameof(world));
++            }
++
++            if (ReferenceEquals(_responseChainListenerWorld, world))
++            {
++                return;
++            }
++
++            if (_responseChainListenerWorld != null)
++            {
++                throw new System.InvalidOperationException(
++                    "GAS.RESPONSE_CHAIN.ERR.ListenerWorldAlreadyBound");
++            }
++
++            _responseChainListenerWorld = world;
++            world.SubscribeEntityDestroyed(OnResponseChainEntityDestroyed);
++        }
++
++        private void OnResponseChainEntityDestroyed(in Entity entity)
++        {
++            World world = _responseChainListenerWorld!;
++            if (world.Has<ResponseChainListener>(entity))
++            {
++                NotifyResponseChainListenersChanged();
++            }
++        }
+     }
+ }

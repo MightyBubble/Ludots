@@ -1,0 +1,170 @@
+[
+  {
+    "id": "graph_level_blueprint_marker_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_marker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "graph_level_blueprint_marker_visual",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "graph_level_blueprint_marker" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_marker_visual",
+    "defaultColor": [0.06, 0.92, 0.78, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [3.4, 3.4, 1.1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_cursor_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_cursor" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "graph_level_blueprint_cursor_visual",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "graph_level_blueprint_cursor" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_cursor_visual",
+    "defaultColor": [0.98, 0.82, 0.20, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [2.4, 2.4, 1.8]
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_door_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_door" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_level_blueprint_door_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_door_visual",
+    "defaultColor": [0.92, 0.24, 0.18, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Movable", "localScale": [2.8, 1.9, 0.35] }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_spawn_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_spawn" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_level_blueprint_spawn_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_spawn_visual",
+    "defaultColor": [1.0, 0.55, 0.14, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Movable", "localScale": [2.2, 0.45, 2.2] }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_objective_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_objective" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_level_blueprint_objective_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_objective_visual",
+    "defaultColor": [0.22, 0.58, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Movable", "localScale": [1.15, 2.4, 1.15] }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_exit_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_level_blueprint_exit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_level_blueprint_exit_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_level_blueprint_exit_visual",
+    "defaultColor": [0.66, 0.44, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Movable", "localScale": [2.8, 1.9, 0.35] }
+      }
+    ]
+  }
+]

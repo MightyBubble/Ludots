@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/interaction/InteractionShowcaseMod/assets/game.json b/mods/showcases/interaction/InteractionShowcaseMod/assets/game.json
+index ea3ffa1852..bde064a1b0 100644
+--- a/mods/showcases/interaction/InteractionShowcaseMod/assets/game.json
++++ b/mods/showcases/interaction/InteractionShowcaseMod/assets/game.json
+@@ -1,5 +1,9 @@
+ {
+   "startupMapId": "interaction_showcase_hub",
++  "gasRuntimeCapacity": {
++    "orderAdmissionResultCapacity": 8192,
++    "orderAdmissionRejectionCapacity": 4096
++  },
+   "commandSource": {
+     "targetFilter": { "relationFilter": "Friendly" }
+   }

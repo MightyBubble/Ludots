@@ -1,0 +1,15 @@
+diff --git a/src/Core/Gameplay/GAS/Components/AbilityTagGrantReceiver.cs b/src/Core/Gameplay/GAS/Components/AbilityTagGrantReceiver.cs
+new file mode 100644
+index 0000000000..623d3c0d5b
+--- /dev/null
++++ b/src/Core/Gameplay/GAS/Components/AbilityTagGrantReceiver.cs
+@@ -0,0 +1,9 @@
++namespace Ludots.Core.Gameplay.GAS.Components;
++
++/// <summary>
++/// Declares that an entity can receive direct ability timeline tag grants.
++/// Authoring paths install the complete tag state before the entity becomes playable.
++/// </summary>
++public struct AbilityTagGrantReceiver
++{
++}

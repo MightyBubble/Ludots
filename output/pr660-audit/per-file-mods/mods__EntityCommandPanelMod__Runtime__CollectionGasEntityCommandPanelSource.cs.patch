@@ -1,0 +1,177 @@
+diff --git a/mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs b/mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs
+index 8232d12fcd..c353f0c93c 100644
+--- a/mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs
++++ b/mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs
+@@ -5,7 +5,9 @@ using Ludots.Core.Engine;
+ using Ludots.Core.EntityCollections;
+ using Ludots.Core.Gameplay.GAS;
+ using Ludots.Core.Gameplay.GAS.Components;
++using Ludots.Core.Gameplay.GAS.Orders;
+ using Ludots.Core.Gameplay.GAS.Registry;
++using Ludots.Core.Input.Orders;
+ using Ludots.Core.Scripting;
+ using Ludots.Core.UI.EntityCommandPanels;
+ 
+@@ -17,8 +19,8 @@ namespace EntityCommandPanelMod.Runtime
+     /// one panel cell, the cell view is composed from the group's member slot views (representative
+     /// icon/label from the first member, state flags OR-ed, cooldown max, badge = member count).
+     /// <see cref="CopyAggregationMembers"/> exposes the surviving member set for CommandDeck route
+-    /// profiles; <see cref="ActivateSlot"/> still activates the group's first surviving member for
+-    /// the legacy panel path. <see cref="SetAggregationProfile"/> switches the active profile at
++    /// profiles; <see cref="ActivateSlot"/> activates every surviving member behind the displayed
++    /// group cell. <see cref="SetAggregationProfile"/> switches the active profile at
+     /// runtime (P3): the next build regroups and the revision hash changes, so open panels re-pull
+     /// without rebinding. FormSet switches need no extra code here — the kernel groups over the
+     /// <c>AbilitySlotResolver</c> effective abilities on every build.
+@@ -161,23 +163,110 @@ namespace EntityCommandPanelMod.Runtime
+             return BuildAggregatedSlots(handle, config, destination, updateActivationMap: true);
+         }
+ 
+-        public bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
++        public InputOrderActivationResult ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex)
+         {
+             if (groupIndex != 0 ||
+                 slotIndex < 0 ||
+                 !TryResolveCollection(context, out EntityCommandPanelCollectionQueryConfig config, out EntityCollectionHandle handle, out _))
+             {
+-                return false;
++                return RecordActivationResult(InputOrderActivationResult.Rejected(
++                    context.TargetEntity,
++                    OrderSubmitResult.RejectedValidation));
+             }
+ 
+             BuildAggregatedSlots(handle, config, Span<EntityCommandPanelSlotView>.Empty, updateActivationMap: true);
+-            if ((uint)slotIndex >= (uint)_activationOwners.Length ||
+-                _activationOwners[slotIndex] == Entity.Null)
++            if ((uint)slotIndex >= (uint)MaxAggregatedSlots)
+             {
+-                return false;
++                return RecordActivationResult(InputOrderActivationResult.Rejected(
++                    context.TargetEntity,
++                    OrderSubmitResult.RejectedValidation));
++            }
++
++            int start = _memberStarts[slotIndex];
++            int count = _ownerCounts[slotIndex];
++            if (count <= 0 ||
++                start < 0 ||
++                start + count > _memberScratch.Length)
++            {
++                return RecordActivationResult(InputOrderActivationResult.Rejected(
++                    context.TargetEntity,
++                    OrderSubmitResult.RejectedValidation));
++            }
++
++            InputOrderActivationResult firstAccepted = default;
++            InputOrderActivationResult firstRejected = default;
++            bool hasAccepted = false;
++            bool hasRejected = false;
++
++            if (count > 1 &&
++                TryFindAimingMember(start, count, out Entity aimingActor))
++            {
++                return RecordActivationResult(InputOrderActivationResult.Rejected(
++                    aimingActor,
++                    OrderSubmitResult.RejectedByRule));
++            }
++
++            for (int i = 0; i < count; i++)
++            {
++                EntityCommandPanelAggregationMember member = _memberScratch[start + i];
++                InputOrderActivationResult result = _gasSource.ActivateSlot(member.Owner, groupIndex, member.SlotIndex);
++                if (result.State == InputOrderActivationState.Rejected)
++                {
++                    if (!hasRejected)
++                    {
++                        firstRejected = result;
++                        hasRejected = true;
++                    }
++
++                    continue;
++                }
++
++                if (!hasAccepted)
++                {
++                    firstAccepted = result;
++                    hasAccepted = true;
++                }
++
++                if (result.State == InputOrderActivationState.EnteredAiming)
++                {
++                    break;
++                }
++            }
++
++            if (hasRejected)
++            {
++                return RecordActivationResult(firstRejected);
++            }
++
++            return RecordActivationResult(hasAccepted
++                ? firstAccepted
++                : InputOrderActivationResult.Rejected(
++                    context.TargetEntity,
++                    OrderSubmitResult.RejectedValidation));
++        }
++
++        private InputOrderActivationResult RecordActivationResult(in InputOrderActivationResult result)
++        {
++            InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
++            return mapping != null
++                ? mapping.RecordExternalActivationResult(in result)
++                : result;
++        }
++
++        private bool TryFindAimingMember(int start, int count, out Entity actor)
++        {
++            for (int i = 0; i < count; i++)
++            {
++                EntityCommandPanelAggregationMember member = _memberScratch[start + i];
++                if (_gasSource.WouldEnterUiAiming(member.Owner, member.SlotIndex))
++                {
++                    actor = member.Owner;
++                    return true;
++                }
+             }
+ 
+-            return _gasSource.ActivateSlot(_activationOwners[slotIndex], groupIndex, _activationSlotIndices[slotIndex]);
++            actor = Entity.Null;
++            return false;
+         }
+ 
+         public int CopyAggregationMembers(
+@@ -232,7 +321,8 @@ namespace EntityCommandPanelMod.Runtime
+ 
+         public int CopySlots(Entity target, int groupIndex, Span<EntityCommandPanelSlotView> destination) => 0;
+ 
+-        public bool ActivateSlot(Entity target, int groupIndex, int slotIndex) => false;
++        public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex) =>
++            InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedByRule);
+ 
+         private bool TryResolveCollection(
+             in EntityCommandPanelSourceContext context,
+@@ -268,7 +358,7 @@ namespace EntityCommandPanelMod.Runtime
+         /// One kernel group = one panel cell: <see cref="AbilityAggregationProfileRegistry.BuildGroups"/>
+         /// decides membership, this method only composes the per-cell view from the members' slot
+         /// views (query filter, flags OR, cooldown max, badge count) and maps activation to the
+-        /// group's first surviving member.
++        /// group's surviving members.
+         /// </summary>
+         private int BuildAggregatedSlots(
+             EntityCollectionHandle handle,
+@@ -333,8 +423,14 @@ namespace EntityCommandPanelMod.Runtime
+                         view = ComposeGroupView(in view, in memberView);
+                     }
+ 
+-                    if (updateActivationMap && _memberTotal < _memberScratch.Length)
++                    if (updateActivationMap)
+                     {
++                        if (_memberTotal >= _memberScratch.Length)
++                        {
++                            throw new InvalidOperationException(
++                                $"ENTITY_COMMAND_PANEL.ERR.MemberScratchCapacity: required={_memberTotal + 1}, capacity={_memberScratch.Length}.");
++                        }
++
+                         _memberScratch[_memberTotal++] = new EntityCommandPanelAggregationMember(
+                             members[memberIndex],
+                             memberSlotIndices[memberIndex]);

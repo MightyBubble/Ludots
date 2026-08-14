@@ -12,7 +12,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using MobaDemoMod.GAS;
@@ -73,29 +73,29 @@ namespace MobaDemoMod.Triggers
             }
 
             // Command-source acquisition feedback hooks are provided by CoreInputMod; MOBA injects only visual callbacks here.
-            PerformerCommandBuffer cmdBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
+            PresenterCommandBuffer cmdBuffer = null;
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresenterCommandBuffer.Name, out var cmdObj) && cmdObj is PresenterCommandBuffer pcb)
                 cmdBuffer = pcb;
 
             if (CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> commandSourceAcquiredCallbacks))
             {
                 var capturedCmdBuffer = cmdBuffer;
-                var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
+                var perfReg = context.Get(CoreServiceKeys.PresenterDefinitionRegistry) as PresenterDefinitionRegistry;
                 int commandSourceIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.CommandSourceIndicatorDefKey) ?? 0;
                 commandSourceAcquiredCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
-                    capturedCmdBuffer.TryAdd(new PerformerCommand
+                    capturedCmdBuffer.TryAdd(new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                        CommandKind = PresenterCommandKind.DestroyPresenterScope,
                         ScopeTag = mobaConfig.Presentation.CommandSourceScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
-                        capturedCmdBuffer.TryAdd(new PerformerCommand
+                        capturedCmdBuffer.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = commandSourceIndicatorDefId,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = commandSourceIndicatorDefId,
                             ScopeTag = mobaConfig.Presentation.CommandSourceScopeId,
                             Source = entity
                         });
@@ -103,7 +103,7 @@ namespace MobaDemoMod.Triggers
                 });
             }
 
-            // Unit rendering is defined by performers.json and entity-scoped Marker3D rules.
+            // Unit rendering is defined by presenters.json and entity-scoped Marker3D rules.
             // Colors come from EntityColor instead of trigger-owned presentation logic.
             return Task.CompletedTask;
         }

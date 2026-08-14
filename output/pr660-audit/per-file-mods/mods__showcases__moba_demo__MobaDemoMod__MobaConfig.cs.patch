@@ -1,0 +1,27 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/MobaConfig.cs b/mods/showcases/moba_demo/MobaDemoMod/MobaConfig.cs
+index 988faf2120..cd4e27892a 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/MobaConfig.cs
++++ b/mods/showcases/moba_demo/MobaDemoMod/MobaConfig.cs
+@@ -16,9 +16,6 @@ namespace MobaDemoMod
+         [JsonPropertyName("abilities")]
+         public AbilityConfig Abilities { get; set; } = new();
+ 
+-        [JsonPropertyName("movement")]
+-        public MovementConfig Movement { get; set; } = new();
+-
+         [JsonPropertyName("commands")]
+         public CommandConfig Commands { get; set; } = new();
+ 
+@@ -50,12 +47,6 @@ namespace MobaDemoMod
+             [JsonPropertyName("rangeCircleColor")] public float[] RangeCircleColor { get; set; } = { 0.3f, 0.7f, 1f, 0.2f };
+         }
+ 
+-        public sealed class MovementConfig
+-        {
+-            [JsonPropertyName("speedCmPerSec")] public int SpeedCmPerSec { get; set; } = 600;
+-            [JsonPropertyName("stopRadiusCm")] public int StopRadiusCm { get; set; } = 20;
+-        }
+-
+         public sealed class CommandConfig
+         {
+             [JsonPropertyName("maxPerFrame")] public int MaxPerFrame { get; set; } = 128;

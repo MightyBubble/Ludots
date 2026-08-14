@@ -2,11 +2,11 @@
   "startupMapId": "entry",
   "startupInputContexts": ["Default_Gameplay"],
   "presentation": {
-    "performerInstanceCapacity": 2048,
+    "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 65536,
     "presentationEventStreamCapacity": 65536,
     "presentationOwnerChangeCapacity": 65536,
-    "performerCommandCapacity": 262144,
+    "presenterCommandCapacity": 262144,
     "primitiveDrawBufferCapacity": 131072,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,

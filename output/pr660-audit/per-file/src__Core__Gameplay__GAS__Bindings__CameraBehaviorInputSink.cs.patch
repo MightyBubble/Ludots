@@ -1,0 +1,80 @@
+diff --git a/src/Core/Gameplay/GAS/Bindings/CameraBehaviorInputSink.cs b/src/Core/Gameplay/GAS/Bindings/CameraBehaviorInputSink.cs
+index b28ef832c1..e77254f28c 100644
+--- a/src/Core/Gameplay/GAS/Bindings/CameraBehaviorInputSink.cs
++++ b/src/Core/Gameplay/GAS/Bindings/CameraBehaviorInputSink.cs
+@@ -1,5 +1,6 @@
+ using System;
+ using Arch.Core;
++using Arch.System;
+ using Ludots.Core.Gameplay.Camera;
+ using Ludots.Core.Gameplay.GAS.Components;
+ 
+@@ -16,6 +17,11 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
+             _state = state ?? throw new ArgumentNullException(nameof(state));
+         }
+ 
++        public void ValidateBinding(byte channel, string bindingId, string relativePath)
++        {
++            CameraBehaviorInputChannels.Validate(channel, bindingId, relativePath);
++        }
++
+         public void Apply(World world, AttributeBindingEntry[] entries, int start, int count)
+         {
+             _state.Clear();
+@@ -25,8 +31,6 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
+             for (int i = 0; i < count; i++)
+             {
+                 AttributeBindingEntry binding = entries[start + i];
+-                CameraBehaviorInputChannels.Validate(binding.Channel, binding.AttributeId.ToString());
+-
+                 float value = attr.GetCurrent(binding.AttributeId) * binding.Scale;
+                 _state.Apply(binding.Channel, value, binding.Mode);
+ 
+@@ -39,26 +43,33 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
+ 
+         private Entity ResolveTarget(World world)
+         {
+-            Entity resolved = Entity.Null;
+-            int targetCount = 0;
+-            world.Query(
++            var job = new ResolveTargetJob();
++            world.InlineEntityQuery<ResolveTargetJob, AttributeBuffer, CameraBehaviorInputTarget>(
+                 in _targetQuery,
+-                (Entity entity, ref AttributeBuffer _, ref CameraBehaviorInputTarget __) =>
+-                {
+-                    targetCount++;
+-                    if (targetCount == 1)
+-                    {
+-                        resolved = entity;
+-                    }
+-                });
++                ref job);
+ 
+-            if (targetCount == 1)
++            if (job.TargetCount == 1)
+             {
+-                return resolved;
++                return job.Resolved;
+             }
+ 
+             throw new InvalidOperationException(
+-                $"Camera behavior input sink requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {targetCount}.");
++                $"Camera behavior input sink requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {job.TargetCount}.");
++        }
++
++        private struct ResolveTargetJob : IForEachWithEntity<AttributeBuffer, CameraBehaviorInputTarget>
++        {
++            public Entity Resolved;
++            public int TargetCount;
++
++            public void Update(Entity entity, ref AttributeBuffer _, ref CameraBehaviorInputTarget __)
++            {
++                TargetCount++;
++                if (TargetCount == 1)
++                {
++                    Resolved = entity;
++                }
++            }
+         }
+     }
+ }

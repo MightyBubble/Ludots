@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Systems/ChampionSkillStressCombatSystem.cs b/mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Systems/ChampionSkillStressCombatSystem.cs
+index 2bbcc9c504..cbd9fe3e94 100644
+--- a/mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Systems/ChampionSkillStressCombatSystem.cs
++++ b/mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Systems/ChampionSkillStressCombatSystem.cs
+@@ -159,7 +159,8 @@ namespace ChampionSkillSandboxMod.Systems
+                     }
+                 };
+ 
+-                if (_planner.TrySubmit(in order))
++                OrderSubmitResult submitResult = _planner.Submit(in order);
++                if (OrderSubmitResultSemantics.IsAccepted(submitResult))
+                 {
+                     issued++;
+                 }

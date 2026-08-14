@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_dynamic_worker_large_world_benchmark.json b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_dynamic_worker_large_world_benchmark.json
+index ced3dccbcb..5f2b7a6224 100644
+--- a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_dynamic_worker_large_world_benchmark.json
++++ b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_dynamic_worker_large_world_benchmark.json
+@@ -19,7 +19,8 @@
+       "WidthInMacroTiles": 256,
+       "HeightInMacroTiles": 256,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 256
+     }
+   ],
+   "DefaultCamera": {

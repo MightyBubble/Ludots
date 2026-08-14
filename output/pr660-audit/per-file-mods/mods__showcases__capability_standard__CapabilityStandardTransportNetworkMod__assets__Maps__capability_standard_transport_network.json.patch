@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod/assets/Maps/capability_standard_transport_network.json b/mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod/assets/Maps/capability_standard_transport_network.json
+index 606c5d7b8f..62b741ce26 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod/assets/Maps/capability_standard_transport_network.json
++++ b/mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod/assets/Maps/capability_standard_transport_network.json
+@@ -8,7 +8,8 @@
+       "WidthInMacroTiles": 2,
+       "HeightInMacroTiles": 2,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 64
+     }
+   ],
+   "Entities": []

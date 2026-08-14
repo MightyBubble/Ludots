@@ -1,0 +1,13 @@
+diff --git a/src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs b/src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs
+index dfb53a8ae0..6130e6cdb9 100644
+--- a/src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs
++++ b/src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs
+@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
+             : base(world)
+         {
+             _formSets = formSets;
+-            _tagOps = tagOps ?? new TagOps();
++            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+         }
+ 
+         public override void Update(in float dt)

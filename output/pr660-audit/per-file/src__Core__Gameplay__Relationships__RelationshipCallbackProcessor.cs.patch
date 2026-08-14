@@ -1,0 +1,58 @@
+diff --git a/src/Core/Gameplay/Relationships/RelationshipCallbackProcessor.cs b/src/Core/Gameplay/Relationships/RelationshipCallbackProcessor.cs
+index 58e18a1810..ff467645ec 100644
+--- a/src/Core/Gameplay/Relationships/RelationshipCallbackProcessor.cs
++++ b/src/Core/Gameplay/Relationships/RelationshipCallbackProcessor.cs
+@@ -89,14 +89,11 @@ namespace Ludots.Core.Gameplay.Relationships
+             }
+ 
+             EnsureTagState(entity);
+-            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
+-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+-            ref DirtyFlags dirty = ref _world.Get<DirtyFlags>(entity);
+             for (int i = 0; i < tagIds.Length; i++)
+             {
+                 if (tagIds[i] > 0)
+                 {
+-                    _tagOps.AddTag(ref tags, ref counts, tagIds[i], ref dirty);
++                    _tagOps.AddTag(_world, entity, tagIds[i]);
+                 }
+             }
+         }
+@@ -109,14 +106,11 @@ namespace Ludots.Core.Gameplay.Relationships
+             }
+ 
+             EnsureTagState(entity);
+-            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
+-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+-            ref DirtyFlags dirty = ref _world.Get<DirtyFlags>(entity);
+             for (int i = 0; i < tagIds.Length; i++)
+             {
+                 if (tagIds[i] > 0)
+                 {
+-                    _tagOps.RemoveTag(ref tags, ref counts, tagIds[i], ref dirty);
++                    _tagOps.RemoveTag(_world, entity, tagIds[i]);
+                 }
+             }
+         }
+@@ -141,20 +135,7 @@ namespace Ludots.Core.Gameplay.Relationships
+ 
+         private void EnsureTagState(Entity entity)
+         {
+-            if (!_world.Has<GameplayTagContainer>(entity))
+-            {
+-                entity.Add(new GameplayTagContainer());
+-            }
+-
+-            if (!_world.Has<TagCountContainer>(entity))
+-            {
+-                entity.Add(new TagCountContainer());
+-            }
+-
+-            if (!_world.Has<DirtyFlags>(entity))
+-            {
+-                entity.Add(new DirtyFlags());
+-            }
++            TagStateInstaller.EnsureInstalled(_world, entity);
+         }
+ 
+         private static ScriptContext CreateContext(GameEngine engine)

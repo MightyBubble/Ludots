@@ -4,7 +4,7 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Gameplay.Lifecycle
 {
@@ -14,7 +14,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
         private readonly EntityTemplateKeyRegistry _templateKeys;
         private readonly PresentationStableIdAllocator _stableIds;
-        private readonly PerformerEntitySpawnBootstrap _performerBootstrap;
+        private readonly PresenterEntitySpawnBootstrap _presenterBootstrap;
         private readonly Dictionary<string, EntityTemplate> _cachedTemplates;
         private readonly EntityBuilder _builder;
         private readonly ComponentAuthoringContext _authoringContext;
@@ -24,8 +24,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
             DataRegistry<EntityTemplate> templateRegistry,
             EntityTemplateKeyRegistry templateKeys,
             PresentationStableIdAllocator stableIds,
-            PerformerEntityRuntime? performerRuntime = null,
-            PerformerDefinitionRegistry? performerDefinitions = null,
+            PresenterEntityRuntime? presenterRuntime = null,
+            PresenterDefinitionRegistry? presenterDefinitions = null,
             ComponentAuthoringContext? authoringContext = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -35,20 +35,20 @@ namespace Ludots.Core.Gameplay.Lifecycle
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
             _cachedTemplates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
             _builder = new EntityBuilder(world, _cachedTemplates, _authoringContext);
-            _performerBootstrap = new PerformerEntitySpawnBootstrap(
+            _presenterBootstrap = new PresenterEntitySpawnBootstrap(
                 world,
                 templateKeys,
                 stableIds,
-                performerRuntime,
-                performerDefinitions,
-                performerDefinitions?.BootstrapRegistry);
+                presenterRuntime,
+                presenterDefinitions,
+                presenterDefinitions?.BootstrapRegistry);
         }
 
         public World World => _world;
 
         internal EntityBuilder Builder => _builder;
         internal EntityTemplateKeyRegistry TemplateKeys => _templateKeys;
-        internal PerformerEntitySpawnBootstrap PerformerBootstrap => _performerBootstrap;
+        internal PresenterEntitySpawnBootstrap PresenterBootstrap => _presenterBootstrap;
 
         internal EntityTemplate RequireTemplate(string templateId)
         {

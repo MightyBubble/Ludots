@@ -430,14 +430,14 @@ app.MapGet("/api/mods/{modId}/entity-templates", (string modId) =>
     }
 });
 
-app.MapGet("/api/mods/{modId}/performers", (string modId) =>
+app.MapGet("/api/mods/{modId}/presenters", (string modId) =>
 {
     string repoRoot = FindAssetsRoot();
     try
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
-        var performers = EditorRepo.LoadMergedPerformers(ctx, includeSources: false, out _);
-        return Results.Ok(new { ok = true, performers });
+        var presenters = EditorRepo.LoadMergedPresenters(ctx, includeSources: false, out _);
+        return Results.Ok(new { ok = true, presenters });
     }
     catch (Exception ex)
     {
@@ -2949,7 +2949,7 @@ static class EditorRepo
         return mergedNodes.Values.OrderBy(n => n?["id"]?.ToString() ?? string.Empty, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    public static JsonNode[] LoadMergedPerformers(ModContext ctx, bool includeSources, out List<string> sources)
+    public static JsonNode[] LoadMergedPresenters(ModContext ctx, bool includeSources, out List<string> sources)
     {
         var sourcesLocal = new List<string>();
         var defs = new Dictionary<int, JsonNode>();
@@ -2969,13 +2969,13 @@ static class EditorRepo
             }
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "performers.json"));
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "performers.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "presenters.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "presenters.json"));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
-            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "performers.json"));
-            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "performers.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "presenters.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "presenters.json"));
         }
 
         sources = sourcesLocal;

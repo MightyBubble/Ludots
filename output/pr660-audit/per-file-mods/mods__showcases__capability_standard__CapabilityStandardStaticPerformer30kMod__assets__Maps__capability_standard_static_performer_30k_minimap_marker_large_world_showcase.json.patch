@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_minimap_marker_large_world_showcase.json b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_minimap_marker_large_world_showcase.json
+index e7f06e24d0..7276e8eeb1 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_minimap_marker_large_world_showcase.json
++++ b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/Maps/capability_standard_static_performer_30k_minimap_marker_large_world_showcase.json
+@@ -24,7 +24,8 @@
+       "WidthInMacroTiles": 256,
+       "HeightInMacroTiles": 256,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 256
+     }
+   ],
+   "DefaultCamera": {

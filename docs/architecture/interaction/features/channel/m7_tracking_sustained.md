@@ -45,7 +45,7 @@ AbilityExecSpec:
 
 **视觉表现**:
 ```
-Performer: TrackingBeam(origin=caster, target=locked_target)
+Presenter: TrackingBeam(origin=caster, target=locked_target)
   color: yellow (治疗) / purple (伤害)
   lifetime: 与 EffectClip 同步
   auto_follow: true (自动跟随目标移动)
@@ -59,11 +59,11 @@ Performer: TrackingBeam(origin=caster, target=locked_target)
 | Target locking | ✅ 已有 |
 | IsDead check | ✅ 已有 |
 | DestroyEffect | ✅ 已有 |
-| TrackingBeam Performer | ⚠️ 需扩展 |
+| TrackingBeam Presenter | ⚠️ 需扩展 |
 
 ## 新增需求
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| TrackingBeam Performer | P2 | 追踪光束渲染 (表现层) |
+| TrackingBeam Presenter | P2 | 追踪光束渲染 (表现层) |
 | Target death detection | P1 | 目标死亡时断开 |

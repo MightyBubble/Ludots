@@ -1,11 +1,11 @@
-# Performer 统一编排落地方案
+# Presenter 统一编排落地方案
 
 Status: Proposed
 Last Updated: 2026-04-16
 
 ## 1. 目标
 
-本计划用于将当前“双主线表现架构”逐步收束为单一 `Performer` 编排架构，避免大爆炸式重构。
+本计划用于将当前“双主线表现架构”逐步收束为单一 `Presenter` 编排架构，避免大爆炸式重构。
 
 落地约束：
 
@@ -13,8 +13,8 @@ Last Updated: 2026-04-16
 - 不在迁移初期触碰 adapter 层
 - 不把 `PrefabPart` 运行时化
 - 不让 `PresentationRequest` 承担 orchestration truth
-- performer 间的参数透传、联动和投影一律优先复用现有 `bindings + override + set-param` 参数黑板
-- 只允许扩展现有 performer 参数黑板，不允许再起第二套参数真相
+- presenter 间的参数透传、联动和投影一律优先复用现有 `bindings + override + set-param` 参数黑板
+- 只允许扩展现有 presenter 参数黑板，不允许再起第二套参数真相
 - `PerformCommand` 是演出领域命令；`PresentationCommand` 只允许作为过渡 transport 壳存在
 - 先收束边界，再迁移主模型与动画
 
@@ -36,7 +36,7 @@ Last Updated: 2026-04-16
 
 完成标准：
 
-- 团队接受 `Performer = orchestration SSOT`
+- 团队接受 `Presenter = orchestration SSOT`
 - 接受 `PerformRule / PerformCommand / PerformBehavior` 命名方向
 
 ### Phase 1: 引入命名安全的并行契约
@@ -62,9 +62,9 @@ Last Updated: 2026-04-16
 
 策略：
 
-- 先做 wrapper / adapter，不立即删除 `Performer*`、`PresentationBehavior*`
+- 先做 wrapper / adapter，不立即删除 `Presenter*`、`PresentationBehavior*`
 - 允许新旧类型短期共存，但必须标明最终收敛目标
-- 所有新增 behavior 输入先映射到现有 performer 参数黑板；如需新参数，只扩展 param key / value source / graph 计算
+- 所有新增 behavior 输入先映射到现有 presenter 参数黑板；如需新参数，只扩展 param key / value source / graph 计算
 - 如 `PresentationCommand` 继续保留，它只能承载 `PerformCommand` 语义，不得发展成第二套领域命令模型
 
 完成标准：
@@ -92,7 +92,7 @@ Last Updated: 2026-04-16
 
 - 从这一阶段开始，不允许再往 `EntityVisualEmitSystem` 添加新的业务编排逻辑
 - showcase / fixture / mod 中不再新增 direct visual orchestration 特判
-- performer 之间的联动、attachment 输入、fade 权重、attr 映射输入，都优先走现有参数黑板，不再引入额外 linkage 容器
+- presenter 之间的联动、attachment 输入、fade 权重、attr 映射输入，都优先走现有参数黑板，不再引入额外 linkage 容器
 
 完成标准：
 
@@ -127,12 +127,12 @@ Last Updated: 2026-04-16
 
 原因：
 
-- HUD、marker、spline 当前已较多通过 performer 输出，迁移风险最低
+- HUD、marker、spline 当前已较多通过 presenter 输出，迁移风险最低
 - model 与 animator 耦合最重，应留到后面
 
 完成标准：
 
-- `PerformerEmitSystem` 不再以扩大 `PerformerVisualKind` 为主要扩展方式
+- `PresenterEmitSystem` 不再以扩大 `PresenterVisualKind` 为主要扩展方式
 - 至少一批行为种类已从 switch 中拆出
 
 ### Phase 4: 收编主模型路径
@@ -155,7 +155,7 @@ Last Updated: 2026-04-16
 
 完成标准：
 
-- 主模型行为能在 performer 生命周期下工作
+- 主模型行为能在 presenter 生命周期下工作
 - `EntityVisualEmitSystem` 不再作为 architecture truth
 
 ### Phase 5: 收编动画路径
@@ -175,7 +175,7 @@ Last Updated: 2026-04-16
 
 - 复用现有 controller、packed state、state resolution 逻辑
 - 改变 ownership 语义，而不是一开始就推翻 animator 内核
-- 让 animator 作为 behavior runtime 附着于 performer，而不是 entity visual
+- 让 animator 作为 behavior runtime 附着于 presenter，而不是 entity visual
 
 完成标准：
 
@@ -224,11 +224,11 @@ Last Updated: 2026-04-16
 
 - `EntityVisualEmitSystem` 作为主视觉编排入口的角色
 - entity-owned animator orchestration 的主路径语义
-- 新代码继续引入 `PerformerVisualKind` 扩展的模式
+- 新代码继续引入 `PresenterVisualKind` 扩展的模式
 
 完成标准：
 
-- performer 成为唯一编排入口
+- presenter 成为唯一编排入口
 - 新增代码被测试和架构规则约束，无法绕过 perform orchestration
 
 ## 3. 建议代码落点
@@ -266,8 +266,8 @@ src/Core/Presentation/Perform/Runtime/
 - 新的 presentation system 不得绕过 perform orchestration 直接发 request
 - `PrefabPart` 不得持有运行时行为状态或 adapter-specific 字段
 - behavior definition 不得直接引用 adapter-facing buffer
-- performer 只能消费上游 visibility input，不能拥有 visibility truth
-- performer 参数联动只能扩展现有参数黑板，不能新增第二套 performer 参数容器
+- presenter 只能消费上游 visibility input，不能拥有 visibility truth
+- presenter 参数联动只能扩展现有参数黑板，不能新增第二套 presenter 参数容器
 
 ### 4.2 表现层测试
 
@@ -304,7 +304,7 @@ src/Core/Presentation/Perform/Runtime/
 
 目标：
 
-- 至少有一条完整 acceptance 场景证明“一个单位的主模型、动画、HUD、指示器、文本、特效都归 performer 编排”
+- 至少有一条完整 acceptance 场景证明“一个单位的主模型、动画、HUD、指示器、文本、特效都归 presenter 编排”
 
 ## 5. 风险与缓解
 
@@ -328,7 +328,7 @@ src/Core/Presentation/Perform/Runtime/
 
 - 把 animator 放到后半阶段，并优先复用内部 controller runtime
 
-### 风险 3: performer 变成巨型 switch 中心
+### 风险 3: presenter 变成巨型 switch 中心
 
 影响：
 
@@ -366,7 +366,7 @@ src/Core/Presentation/Perform/Runtime/
 如果下一步直接开始落代码，建议第一批任务只做以下四件事：
 
 1. 新建 `src/Core/Presentation/Perform/` 基础契约与空实现
-2. 把当前 performer 路径中 HUD / marker / spline 输出拆出独立 behavior runtime
+2. 把当前 presenter 路径中 HUD / marker / spline 输出拆出独立 behavior runtime
 3. 增加架构测试，阻止新逻辑继续进入 `EntityVisualEmitSystem`
 4. 起一组 entity-fed visibility contract 测试，先覆盖 local player / cull / LOD
 

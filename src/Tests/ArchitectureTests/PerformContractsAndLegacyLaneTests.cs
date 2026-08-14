@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
@@ -14,7 +14,7 @@ namespace Ludots.Tests.Architecture
     [TestFixture]
     public sealed class PerformContractsAndLegacyLaneTests
     {
-        private static readonly string[] ForbiddenPerformerCommandTokens =
+        private static readonly string[] ForbiddenPresenterCommandTokens =
         {
             "PresentationCommand",
             "PresentationCommandKind",
@@ -24,35 +24,35 @@ namespace Ludots.Tests.Architecture
         };
 
         [Test]
-        public void PerformerCommand_IsTheOnlyCommandChainSsot()
+        public void PresenterCommand_IsTheOnlyCommandChainSsot()
         {
-            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assembly assembly = typeof(PresenterCommand).Assembly;
             Type?[] requiredTypes =
             {
-                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommand", throwOnError: false),
-                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommandKind", throwOnError: false),
-                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommandBuffer", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Presenters.PresenterCommand", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Presenters.PresenterCommandKind", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Presenters.PresenterCommandBuffer", throwOnError: false),
             };
             string[] missingTypes = requiredTypes
                 .Where(static type => type == null)
                 .Select((_, index) => index switch
                 {
-                    0 => "PerformerCommand",
-                    1 => "PerformerCommandKind",
-                    _ => "PerformerCommandBuffer",
+                    0 => "PresenterCommand",
+                    1 => "PresenterCommandKind",
+                    _ => "PresenterCommandBuffer",
                 })
                 .ToArray();
 
             Assert.That(
                 missingTypes,
                 Is.Empty,
-                "T3 command-chain rewrite requires PerformerCommand, PerformerCommandKind, and PerformerCommandBuffer to land together.");
+                "T3 command-chain rewrite requires PresenterCommand, PresenterCommandKind, and PresenterCommandBuffer to land together.");
         }
 
         [Test]
         public void LegacyCommandTypes_AreRemovedFromCore()
         {
-            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assembly assembly = typeof(PresenterCommand).Assembly;
             Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommand", throwOnError: false), Is.Null);
             Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommandKind", throwOnError: false), Is.Null);
             Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommandBuffer", throwOnError: false), Is.Null);
@@ -61,13 +61,13 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerCommandContract_ExposesT3Fields()
+        public void PresenterCommandContract_ExposesT3Fields()
         {
-            FieldInfo[] fields = typeof(PerformerCommand).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            FieldInfo[] fields = typeof(PresenterCommand).GetFields(BindingFlags.Instance | BindingFlags.Public);
             string[] fieldNames = fields.Select(static field => field.Name).ToArray();
 
             Assert.That(fieldNames, Does.Contain("CommandKind"));
-            Assert.That(fieldNames, Does.Contain("PerformerDefinitionId"));
+            Assert.That(fieldNames, Does.Contain("PresenterDefinitionId"));
             Assert.That(fieldNames, Does.Contain("ParentEntity"));
             Assert.That(fieldNames, Does.Contain("ScopeTag"));
             Assert.That(fieldNames, Does.Contain("ParamKey"));
@@ -78,13 +78,13 @@ namespace Ludots.Tests.Architecture
             Assert.That(fieldNames, Does.Contain("ValueSource"));
             Assert.That(fieldNames, Does.Contain("TargetBehaviorSlot"));
 
-            foreach (string forbiddenToken in ForbiddenPerformerCommandTokens)
+            foreach (string forbiddenToken in ForbiddenPresenterCommandTokens)
             {
                 Assert.That(fieldNames, Does.Not.Contain(forbiddenToken));
             }
 
-            Assert.That(typeof(PerformerCommand).GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public), Is.Null);
-            Assert.That(typeof(PerformerCommand).GetField("BehaviorSlot", BindingFlags.Instance | BindingFlags.Public), Is.Null);
+            Assert.That(typeof(PresenterCommand).GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public), Is.Null);
+            Assert.That(typeof(PresenterCommand).GetField("BehaviorSlot", BindingFlags.Instance | BindingFlags.Public), Is.Null);
         }
 
         [Test]
@@ -117,21 +117,21 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerRuntime_UsesExistingScopeAndParamFlow_InsteadOfDedicatedPartType()
+        public void PresenterRuntime_UsesExistingScopeAndParamFlow_InsteadOfDedicatedPartType()
         {
-            Type performerState = typeof(Ludots.Core.Presentation.Performers.PerformerState);
-            FieldInfo? scopeField = performerState.GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public);
-            Assert.That(scopeField, Is.Not.Null, "Performer runtime should continue using ScopeId for grouping.");
+            Type presenterState = typeof(Ludots.Core.Presentation.Presenters.PresenterState);
+            FieldInfo? scopeField = presenterState.GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(scopeField, Is.Not.Null, "Presenter runtime should continue using ScopeId for grouping.");
 
-            Assembly assembly = typeof(PerformerCommand).Assembly;
-            Type? legacyPartType = assembly.GetType("Ludots.Core.Presentation.Performers.PerformerPart", throwOnError: false);
-            Assert.That(legacyPartType, Is.Null, "Runtime must not introduce a dedicated PerformerPart type.");
+            Assembly assembly = typeof(PresenterCommand).Assembly;
+            Type? legacyPartType = assembly.GetType("Ludots.Core.Presentation.Presenters.PresenterPart", throwOnError: false);
+            Assert.That(legacyPartType, Is.Null, "Runtime must not introduce a dedicated PresenterPart type.");
         }
 
         [Test]
-        public void PerformerStateContract_ExposesIdentityAndBehaviorFields()
+        public void PresenterStateContract_ExposesIdentityAndBehaviorFields()
         {
-            FieldInfo[] fields = typeof(Ludots.Core.Presentation.Performers.PerformerState).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            FieldInfo[] fields = typeof(Ludots.Core.Presentation.Presenters.PresenterState).GetFields(BindingFlags.Instance | BindingFlags.Public);
             string[] fieldNames = fields.Select(static field => field.Name).ToArray();
 
             Assert.That(fieldNames, Does.Contain("DefId"));
@@ -143,9 +143,9 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerDefinitionContract_ExposesWave2DefinitionFields()
+        public void PresenterDefinitionContract_ExposesWave2DefinitionFields()
         {
-            FieldInfo[] fields = typeof(PerformerDefinition).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            FieldInfo[] fields = typeof(PresenterDefinition).GetFields(BindingFlags.Instance | BindingFlags.Public);
             string[] fieldNames = fields.Select(static field => field.Name).ToArray();
 
             Assert.That(fieldNames, Does.Contain("Key"));
@@ -156,17 +156,17 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerScopeTagRegistry_ProvidesStringToIntSsot()
+        public void PresenterScopeTagRegistry_ProvidesStringToIntSsot()
         {
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
 
-            int working = PerformerScopeTagRegistry.Register("working");
-            int structure = PerformerScopeTagRegistry.Register("structure");
+            int working = PresenterScopeTagRegistry.Register("working");
+            int structure = PresenterScopeTagRegistry.Register("structure");
 
             Assert.That(working, Is.GreaterThan(0));
             Assert.That(structure, Is.GreaterThan(0));
-            Assert.That(PerformerScopeTagRegistry.GetId("working"), Is.EqualTo(working));
-            Assert.That(PerformerScopeTagRegistry.GetName(structure), Is.EqualTo("structure"));
+            Assert.That(PresenterScopeTagRegistry.GetId("working"), Is.EqualTo(working));
+            Assert.That(PresenterScopeTagRegistry.GetName(structure), Is.EqualTo("structure"));
         }
 
         [Test]
@@ -181,13 +181,13 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerCommandValueSourceContract_MatchesArchitectureValues()
+        public void PresenterCommandValueSourceContract_MatchesArchitectureValues()
         {
-            Assert.That((byte)PerformerCommandValueSource.Fixed, Is.EqualTo(0));
-            Assert.That((byte)PerformerCommandValueSource.EventKeyId, Is.EqualTo(1));
-            Assert.That((byte)PerformerCommandValueSource.EventPayloadA, Is.EqualTo(2));
-            Assert.That((byte)PerformerCommandValueSource.EventPayloadB, Is.EqualTo(3));
-            Assert.That((byte)PerformerCommandValueSource.EventMagnitude, Is.EqualTo(4));
+            Assert.That((byte)PresenterCommandValueSource.Fixed, Is.EqualTo(0));
+            Assert.That((byte)PresenterCommandValueSource.EventKeyId, Is.EqualTo(1));
+            Assert.That((byte)PresenterCommandValueSource.EventPayloadA, Is.EqualTo(2));
+            Assert.That((byte)PresenterCommandValueSource.EventPayloadB, Is.EqualTo(3));
+            Assert.That((byte)PresenterCommandValueSource.EventMagnitude, Is.EqualTo(4));
         }
 
         [Test]
@@ -197,9 +197,9 @@ namespace Ludots.Tests.Architecture
 
             string[] forbiddenTokens =
             {
-                "PerformerRule",
-                "PerformerCommand",
-                "PerformerCommandBuffer",
+                "PresenterRule",
+                "PresenterCommand",
+                "PresenterCommandBuffer",
                 "PresentationBehaviorDefinition",
             };
 
@@ -282,26 +282,26 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void LegacyPerformerVisualKindAndBuiltinDefinitions_AreRemovedFromCore()
+        public void LegacyPresenterVisualKindAndBuiltinDefinitions_AreRemovedFromCore()
         {
-            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assembly assembly = typeof(PresenterCommand).Assembly;
 
-            Assert.That(assembly.GetType("Ludots.Core.Presentation.Performers.PerformerVisualKind", throwOnError: false), Is.Null);
-            Assert.That(assembly.GetType("Ludots.Core.Presentation.Performers.BuiltinPerformerDefinitions", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Presenters.PresenterVisualKind", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Presenters.BuiltinPresenterDefinitions", throwOnError: false), Is.Null);
         }
 
         [Test]
-        public void PerformerMainlineSystems_ArePresentInCore()
+        public void PresenterMainlineSystems_ArePresentInCore()
         {
-            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assembly assembly = typeof(PresenterCommand).Assembly;
             Assert.That(
-                assembly.GetType("Ludots.Core.Presentation.Systems.PerformerRuntimeSystem", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Systems.PresenterRuntimeSystem", throwOnError: false),
                 Is.Not.Null,
-                "PerformerRuntimeSystem must exist as lifecycle SSOT.");
+                "PresenterRuntimeSystem must exist as lifecycle SSOT.");
             Assert.That(
-                assembly.GetType("Ludots.Core.Presentation.Systems.PerformerEmitSystem", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Systems.PresenterEmitSystem", throwOnError: false),
                 Is.Not.Null,
-                "PerformerEmitSystem must exist as emit SSOT.");
+                "PresenterEmitSystem must exist as emit SSOT.");
         }
 
         private static IEnumerable<string> EnumerateForbiddenMemberDependencies(Type contractType)

@@ -1,0 +1,12 @@
+{
+  "name": "CapabilityStandardHfsmShowcaseMod",
+  "version": "1.0.0",
+  "description": "Single-responsibility HFSM capability showcase: thirsty actor drinks water, full actor runs laps, Any State death freezes in place.",
+  "main": "bin/net8.0/CapabilityStandardHfsmShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "hfsm", "any-state"]
+}

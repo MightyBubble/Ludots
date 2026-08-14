@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_scatter_hudbar_benchmark.json b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_scatter_hudbar_benchmark.json
+index 3adf8af555..e5eb17d96d 100644
+--- a/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_scatter_hudbar_benchmark.json
++++ b/mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Maps/performer_blacksmith_scatter_hudbar_benchmark.json
+@@ -17,7 +17,8 @@
+       "SpatialType": "Grid",
+       "WidthInMacroTiles": 1,
+       "HeightInMacroTiles": 1,
+-      "GridCellSizeCm": 100
++      "GridCellSizeCm": 100,
++      "LoadedChunkCapacity": 16
+     }
+   ],
+   "DefaultCamera": {

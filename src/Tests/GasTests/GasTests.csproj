@@ -53,6 +53,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\tcg_demo\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\arpg_demo\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_demo\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_showcase\RtsShowcaseMod\RtsShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_multiplayer_frontline\RtsMultiplayerFrontlineMod\RtsMultiplayerFrontlineMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ai_demo\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />
@@ -79,12 +81,16 @@
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\RtsWar3TrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\RtsCncTrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\RtsSc2TrainingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\browser_rts_production\BrowserRtsProductionShowcaseMod\BrowserRtsProductionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\rts_starcraft_full\RtsStarCraftFullShowcaseMod\RtsStarCraftFullShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\cnc_tri_nation\CncTriNationFullGameMod\CncTriNationFullGameMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\StaticObstaclePhysicsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\CapabilityStandardParticipantViewsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmShowcaseMod\CapabilityStandardHfsmShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
@@ -113,6 +119,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\graph_complex_bt\GraphComplexBtShowcaseMod\GraphComplexBtShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\graph_stress_field\GraphStressFieldShowcaseMod\GraphStressFieldShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,15 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/assets/Input/input_order_mappings.json b/mods/showcases/moba_demo/MobaDemoMod/assets/Input/input_order_mappings.json
+index 192c5192e9..ba0f06ed32 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/assets/Input/input_order_mappings.json
++++ b/mods/showcases/moba_demo/MobaDemoMod/assets/Input/input_order_mappings.json
+@@ -45,8 +45,8 @@
+       "actionId": "Command",
+       "actorCollectionKey": "collection.command.source",
+       "trigger": "PressedThisFrame",
+-      "orderTypeKey": "castAbility",
+-      "argsTemplate": { "i0": 4 },
++      "orderTypeKey": "moveTo",
++      "argsTemplate": {},
+       "requireTarget": true,
+       "targetType": "Position",
+       "isSkillMapping": false,

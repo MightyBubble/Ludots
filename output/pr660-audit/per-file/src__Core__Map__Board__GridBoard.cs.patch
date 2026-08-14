@@ -1,0 +1,15 @@
+diff --git a/src/Core/Map/Board/GridBoard.cs b/src/Core/Map/Board/GridBoard.cs
+index 4ac1d97f90..fa8f5b1448 100644
+--- a/src/Core/Map/Board/GridBoard.cs
++++ b/src/Core/Map/Board/GridBoard.cs
+@@ -41,7 +41,9 @@ namespace Ludots.Core.Map.Board
+             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
+             GridCellSizeCm = config.GridCellSizeCm;
+             ChunkSizeCells = config.ChunkSizeCells;
+-            LoadedChunksSource = new WorldGridLoadedChunks(config.ChunkSizeCells * config.GridCellSizeCm);
++            LoadedChunksSource = new WorldGridLoadedChunks(
++                config.ChunkSizeCells * config.GridCellSizeCm,
++                config.LoadedChunkCapacity);
+ 
+             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
+             SpatialPartition = partition;

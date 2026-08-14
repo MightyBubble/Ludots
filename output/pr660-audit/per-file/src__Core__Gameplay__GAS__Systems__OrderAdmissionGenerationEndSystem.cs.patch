@@ -1,0 +1,26 @@
+diff --git a/src/Core/Gameplay/GAS/Systems/OrderAdmissionGenerationEndSystem.cs b/src/Core/Gameplay/GAS/Systems/OrderAdmissionGenerationEndSystem.cs
+new file mode 100644
+index 0000000000..f93fbecb6b
+--- /dev/null
++++ b/src/Core/Gameplay/GAS/Systems/OrderAdmissionGenerationEndSystem.cs
+@@ -0,0 +1,20 @@
++using Arch.System;
++using Ludots.Core.Gameplay.GAS.Orders;
++
++namespace Ludots.Core.Gameplay.GAS.Systems;
++
++public sealed class OrderAdmissionGenerationEndSystem : ISystem<float>
++{
++    private readonly OrderAdmissionResultBuffer _results;
++
++    public OrderAdmissionGenerationEndSystem(OrderAdmissionResultBuffer results)
++    {
++        _results = results ?? throw new ArgumentNullException(nameof(results));
++    }
++
++    public void Initialize() { }
++    public void BeforeUpdate(in float dt) { }
++    public void Update(in float dt) => _results.EndLogicStep();
++    public void AfterUpdate(in float dt) { }
++    public void Dispose() { }
++}

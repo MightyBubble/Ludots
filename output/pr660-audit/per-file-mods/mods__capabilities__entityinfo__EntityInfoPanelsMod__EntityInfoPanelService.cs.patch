@@ -1,0 +1,28 @@
+diff --git a/mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.cs b/mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.cs
+index 75eddf69e1..401cccd7a3 100644
+--- a/mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.cs
++++ b/mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.cs
+@@ -27,7 +27,6 @@ public sealed partial class EntityInfoPanelService
+     private readonly EntityInsightIconFactory _insightIconFactory = new();
+     private readonly IEntityInfoPanelTemplateCatalog _templates;
+     private readonly AbilityDefinitionRegistry? _abilityDefinitions;
+-    private readonly TagOps _tagOps;
+ 
+     private readonly bool[] _active = new bool[PanelCapacity];
+     private readonly int[] _generation = new int[PanelCapacity];
+@@ -96,7 +95,6 @@ public sealed partial class EntityInfoPanelService
+         PresentationTextCatalog? presentationTextCatalog = null,
+         PresentationTextLocaleSelection? localeSelection = null,
+         AbilityDefinitionRegistry? abilityDefinitions = null,
+-        TagOps? tagOps = null,
+         IEntityInfoPanelTemplateCatalog? templates = null)
+     {
+         PresentationTextCatalog effectiveCatalog = presentationTextCatalog ?? PresentationTextCatalog.Empty;
+@@ -106,7 +104,6 @@ public sealed partial class EntityInfoPanelService
+         _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
+         _templates = templates ?? new EntityInfoPanelTemplateCatalog();
+         _abilityDefinitions = abilityDefinitions;
+-        _tagOps = tagOps ?? new TagOps();
+         _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
+     }
+ 

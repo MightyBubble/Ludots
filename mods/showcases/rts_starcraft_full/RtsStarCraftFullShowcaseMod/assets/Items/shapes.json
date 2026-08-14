@@ -1,0 +1,17 @@
+[
+  {
+    "id": "shape_scf_1x1",
+    "rows": [
+      "X"
+    ],
+    "rotatable": false
+  },
+  {
+    "id": "shape_scf_1x2",
+    "rows": [
+      "X",
+      "X"
+    ],
+    "rotatable": true
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "name": "GraphLevelBlueprintShowcaseMod",
+  "version": "1.0.0",
+  "description": "Standalone graph-driven level blueprint showcase.",
+  "main": "bin/net8.0/GraphLevelBlueprintShowcaseMod.dll",
+  "priority": 134,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "level-blueprint"]
+}

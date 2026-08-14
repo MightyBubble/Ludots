@@ -1,0 +1,62 @@
+[
+  {
+    "id": "graph_level_blueprint_marker",
+    "components": {
+      "Name": { "Value": "Graph Level Blueprint Marker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_level_blueprint_cursor",
+    "components": {
+      "Name": { "Value": "Graph Level Flow Cursor" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_level_blueprint_door",
+    "components": {
+      "Name": { "Value": "Door Gate" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_level_blueprint_spawn",
+    "components": {
+      "Name": { "Value": "Patrol Spawn" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_level_blueprint_objective",
+    "components": {
+      "Name": { "Value": "Objective Beacon" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_level_blueprint_exit",
+    "components": {
+      "Name": { "Value": "Exit Gate" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {}
+    }
+  }
+]

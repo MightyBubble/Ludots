@@ -109,7 +109,7 @@ namespace Ludots.Core.Presentation.Requests
                         break;
 
                     case PresentationRequestKind.SurfaceSource:
-                        // SurfaceSource requests are consumed by the dedicated performer-surface runtime
+                        // SurfaceSource requests are consumed by the dedicated presenter-surface runtime
                         // before request flush reaches adapter-facing buffers.
                         break;
 
@@ -193,7 +193,7 @@ namespace Ludots.Core.Presentation.Requests
 
             EmitVisualProxy(new PresentationVisualProxy
             {
-                ProxyKind = PresentationVisualProxyKind.Performer,
+                ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = prefab.MeshAssetId,
                 Position = request.Position,
                 Rotation = request.Rotation,

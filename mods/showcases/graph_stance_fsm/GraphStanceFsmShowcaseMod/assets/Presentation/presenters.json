@@ -1,0 +1,130 @@
+[
+  {
+    "id": "graph_stance_fsm_squad_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_stance_fsm_squad" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "graph_stance_fsm_squad_visual",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "graph_stance_fsm_squad" },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_squad_visual",
+    "defaultColor": [1.0, 0.50, 0.16, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [2.7, 2.7, 1.45]
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_threat_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_stance_fsm_threat" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_stance_fsm_threat_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_threat_visual",
+    "defaultColor": [1.0, 0.14, 0.10, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [3.4, 1.2, 3.4] }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_defense_line_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_stance_fsm_defense_line" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_stance_fsm_defense_line_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_defense_line_visual",
+    "defaultColor": [0.18, 0.48, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [0.35, 0.18, 24.0] }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_cover_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_stance_fsm_cover" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_stance_fsm_cover_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_cover_visual",
+    "defaultColor": [0.12, 0.84, 0.34, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [3.2, 0.7, 1.4] }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_watch_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_stance_fsm_watch" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "graph_stance_fsm_watch_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_stance_fsm_watch_visual",
+    "defaultColor": [0.92, 0.92, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [1.3, 2.2, 1.3] }
+      }
+    ]
+  }
+]

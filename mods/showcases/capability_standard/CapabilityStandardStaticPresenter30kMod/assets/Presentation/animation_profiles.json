@@ -1,0 +1,10 @@
+[
+  {
+    "id": "capability_static_presenter.worker.profile",
+    "animatorControllerId": "capability_static_presenter.worker.locomotion",
+    "stateClips": [
+      { "packedStateIndex": 41, "clipAssetId": "capability_static_presenter.worker.clip.idle" },
+      { "packedStateIndex": 42, "clipAssetId": "capability_static_presenter.worker.clip.walk" }
+    ]
+  }
+]

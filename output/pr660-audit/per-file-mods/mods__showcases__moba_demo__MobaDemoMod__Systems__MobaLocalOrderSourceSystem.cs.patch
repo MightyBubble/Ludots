@@ -1,0 +1,201 @@
+diff --git a/mods/showcases/moba_demo/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs b/mods/showcases/moba_demo/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs
+index 33e0871d59..7697f886cc 100644
+--- a/mods/showcases/moba_demo/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs
++++ b/mods/showcases/moba_demo/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs
+@@ -7,6 +7,8 @@ using Ludots.Core.Components;
+ using Ludots.Core.Config;
+ using Ludots.Core.EntityCollections;
+ using Ludots.Core.Gameplay.GAS.Orders;
++using Ludots.Core.Gameplay.Relationships;
++using Ludots.Core.Gameplay.Teams;
+ using Ludots.Core.Input.CommandSources;
+ using Ludots.Core.Input.Interaction;
+ using Ludots.Core.Input.Orders;
+@@ -32,20 +34,22 @@ namespace MobaDemoMod.Systems
+     /// </summary>
+     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
+     {
+-        private const int InitialCollectionScratchCapacity = 16;
+-
+         private readonly World _world;
+         private readonly Dictionary<string, object> _globals;
+         private readonly OrderQueue _orders;
+         private readonly IModContext _ctx;
+         private readonly int _castAbilityOrderTypeId;
++        private readonly int _moveToOrderTypeId;
+         private readonly int _stopOrderTypeId;
+         private readonly EntityCollectionStore _entityCollections;
+-        private Entity[] _collectionScratch = new Entity[InitialCollectionScratchCapacity];
++        private readonly PlayerEntityLookup _playerEntities;
++        private readonly ControlDomainQuery _controlDomains;
++        private readonly Entity[] _collectionScratch;
+         
+         // Configuration-driven input-order mapping
+         private InputOrderMappingSystem? _inputOrderMapping;
+         private bool _initialized = false;
++        private readonly int _commandIntentScratchCapacity;
+ 
+         public MobaLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext ctx)
+         {
+@@ -57,12 +61,24 @@ namespace MobaDemoMod.Systems
+             if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
+             {
+                 _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
++                _moveToOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
+                 _stopOrderTypeId = config.Constants.OrderTypeIds["stop"];
++                GasRuntimeCapacityConfig capacity = config.GasRuntimeCapacity
++                    ?? throw new InvalidOperationException(
++                        "MobaLocalOrderSourceSystem requires GameConfig.gasRuntimeCapacity.");
++                if (capacity.CommandIntentScratchCapacity <= 0)
++                {
++                    throw new InvalidOperationException(
++                        "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
++                }
++
++                _commandIntentScratchCapacity = capacity.CommandIntentScratchCapacity;
++                _collectionScratch = new Entity[_commandIntentScratchCapacity];
+             }
+             else
+             {
+                 throw new System.InvalidOperationException(
+-                    "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, stop). " +
++                    "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, moveTo, stop). " +
+                     "Ensure game.json constants.orderTypeIds is properly configured.");
+             }
+ 
+@@ -71,6 +87,16 @@ namespace MobaDemoMod.Systems
+                     ? collections
+                     : throw new InvalidOperationException(
+                         $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
++            _playerEntities = _globals.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? playersObj) &&
++                playersObj is PlayerEntityLookup players
++                    ? players
++                    : throw new InvalidOperationException(
++                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.PlayerEntityLookup.Name} to be registered.");
++            _controlDomains = _globals.TryGetValue(CoreServiceKeys.ControlDomainQuery.Name, out object? domainsObj) &&
++                domainsObj is ControlDomainQuery controlDomains
++                    ? controlDomains
++                    : throw new InvalidOperationException(
++                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.ControlDomainQuery.Name} to be registered.");
+         }
+ 
+         public void Initialize() { }
+@@ -85,7 +111,7 @@ namespace MobaDemoMod.Systems
+             
+             // Load input-order mappings from mod assets via VFS
+             var config = LoadInputOrderMappings();
+-            _inputOrderMapping = new InputOrderMappingSystem(input, config);
++            _inputOrderMapping = new InputOrderMappingSystem(input, config, _commandIntentScratchCapacity);
+             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = _inputOrderMapping;
+             _globals[CoreInputMod.Systems.SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
+             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(MobaLocalOrderSourceSystem));
+@@ -97,6 +123,7 @@ namespace MobaDemoMod.Systems
+             _inputOrderMapping.SetOrderTypeKeyResolver(key => key switch
+             {
+                 "castAbility" => _castAbilityOrderTypeId,
++                "moveTo" => _moveToOrderTypeId,
+                 "stop" => _stopOrderTypeId,
+                 _ => throw new InvalidOperationException(
+                     $"[{_ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.")
+@@ -122,13 +149,21 @@ namespace MobaDemoMod.Systems
+                     : default;
+                 return _world.IsAlive(entity);
+             });
++            _inputOrderMapping.SetActivationActorValidator((actor, playerId) =>
++                InputOrderActorAuthorization.IsAuthorized(
++                    _world,
++                    _playerEntities,
++                    _controlDomains,
++                    actor,
++                    playerId));
++            _inputOrderMapping.SetOrderIdentityAssigner((ref Order order) => _orders.EnsureOrderId(ref order));
+             _inputOrderMapping.SetCollectionPrimaryEntityProvider((string collectionKey, out Entity entity) =>
+             {
+                 return TryGetCollectionPrimary(collectionKey, out entity);
+             });
+-            _inputOrderMapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
++            _inputOrderMapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
+             {
+-                return TryCopyCollectionEntities(collectionKey, entities);
++                return TryCopyCollectionEntities(collectionKey, entities, capacity, out rejection);
+             });
+ 
+             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
+@@ -141,7 +176,7 @@ namespace MobaDemoMod.Systems
+             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
+             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
+             {
+-                _orders.TryEnqueue(order);
++                return _orders.Submit(in order);
+             });
+ 
+             // Aiming state -> Performer direct API (for AimCast mode)
+@@ -270,15 +305,26 @@ namespace MobaDemoMod.Systems
+             return true;
+         }
+ 
+-        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
++        private bool TryCopyCollectionEntities(
++            string collectionKey,
++            List<Entity> entities,
++            int capacity,
++            out OrderSubmitResult rejection)
+         {
+             entities.Clear();
++            rejection = OrderSubmitResult.RejectedInvalidActor;
+             if (!TryResolveLocalCollection(collectionKey, out EntityCollectionHandle handle, out EntityCollectionView view) ||
+                 view.Count <= 0)
+             {
+                 return false;
+             }
+ 
++            if (view.Count > capacity)
++            {
++                rejection = OrderSubmitResult.RejectedAdmissionCapacity;
++                return false;
++            }
++
+             EnsureCollectionScratch(view.Count);
+             int count = _entityCollections.CopyEntities(handle, 0, _collectionScratch);
+             for (int i = 0; i < count; i++)
+@@ -286,10 +332,24 @@ namespace MobaDemoMod.Systems
+                 Entity entity = _collectionScratch[i];
+                 if (_world.IsAlive(entity))
+                 {
++                    if (entities.Count >= capacity)
++                    {
++                        entities.Clear();
++                        rejection = OrderSubmitResult.RejectedAdmissionCapacity;
++                        return false;
++                    }
++
+                     entities.Add(entity);
+                 }
+             }
+ 
++            if (entities.Count <= 0)
++            {
++                rejection = OrderSubmitResult.RejectedInvalidActor;
++                return false;
++            }
++
++            rejection = OrderSubmitResult.Activated;
+             return entities.Count > 0;
+         }
+ 
+@@ -322,13 +382,8 @@ namespace MobaDemoMod.Systems
+                 return;
+             }
+ 
+-            int next = _collectionScratch.Length;
+-            while (next < required)
+-            {
+-                next *= 2;
+-            }
+-
+-            Array.Resize(ref _collectionScratch, next);
++            throw new InvalidOperationException(
++                $"MOBA.INPUT.ERR.CollectionScratchCapacityExceeded: required={required}, capacity={_collectionScratch.Length}.");
+         }
+ 
+         private bool TryGetHovered(out Entity target)

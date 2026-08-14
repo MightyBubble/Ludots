@@ -1,0 +1,14 @@
+diff --git a/mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json b/mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json
+index 05db3b6fea..8952d716cf 100644
+--- a/mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json
++++ b/mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json
+@@ -20,7 +20,8 @@
+       "WidthInMacroTiles": 250,
+       "HeightInMacroTiles": 250,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 256
+     }
+   ],
+   "Entities": [

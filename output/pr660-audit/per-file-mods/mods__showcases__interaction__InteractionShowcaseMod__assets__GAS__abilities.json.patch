@@ -1,0 +1,24 @@
+diff --git a/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/abilities.json b/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/abilities.json
+index 7da2b6293a..667ed5a7ec 100644
+--- a/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/abilities.json
++++ b/mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/abilities.json
+@@ -105,7 +105,8 @@
+         {
+           "kind": "EffectSignal",
+           "tick": 0,
+-          "template": "Effect.Interaction.NovaPulse"
++          "template": "Effect.Interaction.NovaPulse",
++          "dispatchTarget": "Source"
+         },
+         {
+           "kind": "End",
+@@ -348,7 +349,8 @@
+         {
+           "kind": "EffectSignal",
+           "tick": 0,
+-          "template": "Effect.Interaction.Shockwave"
++          "template": "Effect.Interaction.Shockwave",
++          "dispatchTarget": "Source"
+         },
+         {
+           "kind": "End",

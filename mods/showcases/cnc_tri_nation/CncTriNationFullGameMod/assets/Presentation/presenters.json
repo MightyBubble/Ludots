@@ -1,0 +1,5714 @@
+[
+  {
+    "id": "cnc.visual.cnc_allied_structure_power",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_power.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_power"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_power"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_power"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_power.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_refinery",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_refinery.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_refinery"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_refinery"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_refinery"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_refinery.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_gi",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_gi.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_gi"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_gi"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_gi"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_gi.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_engineer",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_engineer.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_engineer"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_engineer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_engineer"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_engineer.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_medic",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_medic.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_medic"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_medic"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_medic"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_medic.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_rocketeer",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_rocketeer.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_rocketeer"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_rocketeer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_rocketeer"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_rocketeer.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_sniper",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_sniper.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_sniper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_sniper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_sniper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_sniper.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_spy",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_spy.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_spy"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_spy"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_spy"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_spy.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_seal",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_seal.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_seal"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_seal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_seal"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_seal.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_chrono_legionnaire",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_infantry_chrono_legionnaire.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_infantry_chrono_legionnaire"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_infantry_chrono_legionnaire"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_infantry_chrono_legionnaire"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_infantry_chrono_legionnaire.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_barracks",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_barracks.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_barracks"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_barracks"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_barracks"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_barracks.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_grizzly_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_grizzly_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_grizzly_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_grizzly_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_grizzly_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_grizzly_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_ifv",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_ifv.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_ifv"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_ifv"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_ifv"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_ifv.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_mirage_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_mirage_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_mirage_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_mirage_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_mirage_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_mirage_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_prism_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_prism_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_prism_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_prism_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_prism_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_prism_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_battle_fortress",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_battle_fortress.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_battle_fortress"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_battle_fortress"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_battle_fortress"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_battle_fortress.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_destroyer",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_destroyer.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_destroyer"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_destroyer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_destroyer"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_destroyer.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_aircraft_carrier",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_aircraft_carrier.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_aircraft_carrier"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_aircraft_carrier"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_aircraft_carrier"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_aircraft_carrier.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_chrono_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_vehicle_chrono_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_vehicle_chrono_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_vehicle_chrono_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_vehicle_chrono_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_vehicle_chrono_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_war_factory",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_war_factory.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_war_factory"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_war_factory"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_war_factory"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_war_factory.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_harrier",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_aircraft_harrier.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_aircraft_harrier"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_aircraft_harrier"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_aircraft_harrier"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_harrier.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_black_eagle",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_aircraft_black_eagle.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_aircraft_black_eagle"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_aircraft_black_eagle"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_aircraft_black_eagle"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_black_eagle.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_nighthawk",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_aircraft_nighthawk.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_aircraft_nighthawk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_aircraft_nighthawk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_aircraft_nighthawk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_nighthawk.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_chrono_copter",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_aircraft_chrono_copter.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_aircraft_chrono_copter"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_aircraft_chrono_copter"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_aircraft_chrono_copter"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_aircraft_chrono_copter.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_airfield",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_airfield.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_airfield"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_airfield"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_airfield"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_airfield.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_battle_lab",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_battle_lab.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_battle_lab"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_battle_lab"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_battle_lab"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_battle_lab.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_pillbox",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_pillbox.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_pillbox"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_pillbox"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_pillbox"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_pillbox.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_super_weapon",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_super_weapon.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_super_weapon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_super_weapon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_super_weapon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_super_weapon.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_service_depot",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_service_depot.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_service_depot"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_service_depot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_service_depot"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_service_depot.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_conyard",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_structure_conyard.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_structure_conyard"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_structure_conyard"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_structure_conyard"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_structure_conyard.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_worker_harvester",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_worker_harvester.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_worker_harvester"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_worker_harvester"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_worker_harvester"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_worker_harvester.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.6,
+            1.0,
+            2.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_tanya",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_special_tanya.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_special_tanya"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_special_tanya"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_special_tanya"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_tanya.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_weather_controller",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_special_weather_controller.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_special_weather_controller"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_special_weather_controller"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_special_weather_controller"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_weather_controller.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_grand_cannon",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_allied_special_grand_cannon.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_allied_special_grand_cannon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_allied_special_grand_cannon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_allied_special_grand_cannon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_allied_special_grand_cannon.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#59A7FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_power",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_power.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_power"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_power"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_power"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_power.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_refinery",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_refinery.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_refinery"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_refinery"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_refinery"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_refinery.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_conscript",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_conscript.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_conscript"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_conscript"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_conscript"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_conscript.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_flak_trooper",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_flak_trooper.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_flak_trooper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_flak_trooper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_flak_trooper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_flak_trooper.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_tesla_trooper",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_tesla_trooper.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_tesla_trooper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_tesla_trooper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_tesla_trooper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_tesla_trooper.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_engineer",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_engineer.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_engineer"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_engineer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_engineer"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_engineer.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_crazy_ivan",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_crazy_ivan.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_crazy_ivan"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_crazy_ivan"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_crazy_ivan"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_crazy_ivan.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_desolator",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_desolator.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_desolator"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_desolator"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_desolator"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_desolator.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_boris",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_boris.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_boris"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_boris"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_boris"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_boris.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_terrorist",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_infantry_terrorist.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_infantry_terrorist"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_infantry_terrorist"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_infantry_terrorist"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_infantry_terrorist.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_barracks",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_barracks.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_barracks"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_barracks"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_barracks"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_barracks.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_rhino_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_rhino_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_rhino_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_rhino_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_rhino_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_rhino_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_flak_track",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_flak_track.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_flak_track"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_flak_track"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_flak_track"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_flak_track.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_v3_launcher",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_v3_launcher.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_v3_launcher"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_v3_launcher"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_v3_launcher"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_v3_launcher.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_apocalypse_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_apocalypse_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_apocalypse_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_apocalypse_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_apocalypse_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_apocalypse_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_tesla_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_tesla_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_tesla_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_tesla_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_tesla_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_tesla_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_demolisher",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_demolisher.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_demolisher"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_demolisher"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_demolisher"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_demolisher.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_dreadnought",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_dreadnought.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_dreadnought"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_dreadnought"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_dreadnought"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_dreadnought.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_mammoth_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_vehicle_mammoth_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_vehicle_mammoth_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_vehicle_mammoth_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_vehicle_mammoth_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_vehicle_mammoth_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_war_factory",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_war_factory.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_war_factory"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_war_factory"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_war_factory"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_war_factory.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_mig",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_aircraft_mig.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_aircraft_mig"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_aircraft_mig"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_aircraft_mig"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_mig.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_kirov",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_aircraft_kirov.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_aircraft_kirov"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_aircraft_kirov"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_aircraft_kirov"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_kirov.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_siege_chopper",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_aircraft_siege_chopper.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_aircraft_siege_chopper"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_aircraft_siege_chopper"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_aircraft_siege_chopper"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_siege_chopper.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_vortex",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_aircraft_vortex.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_aircraft_vortex"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_aircraft_vortex"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_aircraft_vortex"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_aircraft_vortex.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_airfield",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_airfield.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_airfield"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_airfield"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_airfield"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_airfield.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_battle_lab",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_battle_lab.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_battle_lab"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_battle_lab"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_battle_lab"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_battle_lab.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_pillbox",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_pillbox.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_pillbox"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_pillbox"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_pillbox"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_pillbox.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_super_weapon",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_super_weapon.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_super_weapon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_super_weapon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_super_weapon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_super_weapon.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_service_depot",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_service_depot.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_service_depot"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_service_depot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_service_depot"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_service_depot.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_conyard",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_structure_conyard.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_structure_conyard"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_structure_conyard"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_structure_conyard"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_structure_conyard.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_worker_harvester",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_worker_harvester.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_worker_harvester"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_worker_harvester"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_worker_harvester"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_worker_harvester.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.6,
+            1.0,
+            2.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_iron_curtain",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_special_iron_curtain.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_special_iron_curtain"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_special_iron_curtain"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_special_iron_curtain"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_iron_curtain.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_nuclear_silo",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_special_nuclear_silo.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_special_nuclear_silo"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_special_nuclear_silo"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_special_nuclear_silo"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_nuclear_silo.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_tesla_coil",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_soviet_special_tesla_coil.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_soviet_special_tesla_coil"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_soviet_special_tesla_coil"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_soviet_special_tesla_coil"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_soviet_special_tesla_coil.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#F06449"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_power",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_power.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_power"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_power"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_power"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_power.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_refinery",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_refinery.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_refinery"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_refinery"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_refinery"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_refinery.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_initiate",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_initiate.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_initiate"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_initiate"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_initiate"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_initiate.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_brute",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_brute.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_brute"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_brute"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_brute"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_brute.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_virus",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_virus.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_virus"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_virus"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_virus"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_virus.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_yuri_clone",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_yuri_clone.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_yuri_clone"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_yuri_clone"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_yuri_clone"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_yuri_clone.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_yuri_prime",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_yuri_prime.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_yuri_prime"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_yuri_prime"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_yuri_prime"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_yuri_prime.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_genetic_mutator",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_genetic_mutator.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_genetic_mutator"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_genetic_mutator"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_genetic_mutator"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_genetic_mutator.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_slave_miner",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_slave_miner.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_slave_miner"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_slave_miner"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_slave_miner"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_slave_miner.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_guardian_gi",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_infantry_guardian_gi.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_infantry_guardian_gi"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_infantry_guardian_gi"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_infantry_guardian_gi"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_infantry_guardian_gi.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            1.4,
+            0.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_barracks",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_barracks.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_barracks"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_barracks"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_barracks"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_barracks.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_gattling_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_gattling_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_gattling_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_gattling_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_gattling_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_gattling_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_magnetron",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_magnetron.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_magnetron"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_magnetron"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_magnetron"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_magnetron.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_mastermind",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_mastermind.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_mastermind"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_mastermind"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_mastermind"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_mastermind.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_floating_disk",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_floating_disk.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_floating_disk"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_floating_disk"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_floating_disk"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_floating_disk.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_lasher_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_lasher_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_lasher_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_lasher_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_lasher_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_lasher_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_virus_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_virus_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_virus_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_virus_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_virus_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_virus_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_chaos_tank",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_chaos_tank.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_chaos_tank"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_chaos_tank"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_chaos_tank"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_chaos_tank.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_battle_fortress_yuri",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_vehicle_battle_fortress_yuri.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_vehicle_battle_fortress_yuri"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_vehicle_battle_fortress_yuri"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_vehicle_battle_fortress_yuri"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_vehicle_battle_fortress_yuri.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.0,
+            1.2,
+            2.8
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_war_factory",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_war_factory.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_war_factory"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_war_factory"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_war_factory"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_war_factory.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_floating_disk_scout",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_aircraft_floating_disk_scout.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_aircraft_floating_disk_scout"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_aircraft_floating_disk_scout"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_aircraft_floating_disk_scout"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_floating_disk_scout.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_harrier_yuri",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_aircraft_harrier_yuri.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_aircraft_harrier_yuri"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_aircraft_harrier_yuri"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_aircraft_harrier_yuri"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_harrier_yuri.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_kirov_yuri",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_aircraft_kirov_yuri.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_aircraft_kirov_yuri"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_aircraft_kirov_yuri"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_aircraft_kirov_yuri"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_kirov_yuri.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_vortex_yuri",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_aircraft_vortex_yuri.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_aircraft_vortex_yuri"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_aircraft_vortex_yuri"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_aircraft_vortex_yuri"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_aircraft_vortex_yuri.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            0.6,
+            2.4
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_airfield",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_airfield.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_airfield"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_airfield"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_airfield"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_airfield.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_battle_lab",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_battle_lab.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_battle_lab"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_battle_lab"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_battle_lab"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_battle_lab.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_pillbox",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_pillbox.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_pillbox"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_pillbox"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_pillbox"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_pillbox.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_super_weapon",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_super_weapon.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_super_weapon"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_super_weapon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_super_weapon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_super_weapon.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_service_depot",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_service_depot.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_service_depot"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_service_depot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_service_depot"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_service_depot.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_conyard",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_structure_conyard.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_structure_conyard"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_structure_conyard"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_structure_conyard"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_structure_conyard.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_worker_harvester",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_worker_harvester.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_worker_harvester"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_worker_harvester"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_worker_harvester"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_worker_harvester.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.6,
+            1.0,
+            2.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_psychic_dominator",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_special_psychic_dominator.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_special_psychic_dominator"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_special_psychic_dominator"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_special_psychic_dominator"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_psychic_dominator.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_cloning_vats",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_special_cloning_vats.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_special_cloning_vats"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_special_cloning_vats"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_special_cloning_vats"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_cloning_vats.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_genetic_mutator_device",
+    "children": [
+      {
+        "definitionId": "cnc.visual.cnc_yuri_special_genetic_mutator_device.body",
+        "scopeTag": "body"
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "cnc_yuri_special_genetic_mutator_device"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "cnc.visual.cnc_yuri_special_genetic_mutator_device"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "cnc_yuri_special_genetic_mutator_device"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cnc.visual.cnc_yuri_special_genetic_mutator_device.body",
+    "behaviors": [
+      {
+        "slot": "AssetBinding",
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ],
+          "tintColor": "#B692FF"
+        }
+      }
+    ]
+  }
+]

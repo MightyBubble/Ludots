@@ -1,0 +1,9 @@
+diff --git a/src/Core/Properties/AssemblyInfo.cs b/src/Core/Properties/AssemblyInfo.cs
+index df9258983e..aad533d55d 100644
+--- a/src/Core/Properties/AssemblyInfo.cs
++++ b/src/Core/Properties/AssemblyInfo.cs
+@@ -3,3 +3,4 @@ using System.Runtime.CompilerServices;
+ [assembly: InternalsVisibleTo("PersistenceTests")]
+ [assembly: InternalsVisibleTo("PresentationTests")]
+ [assembly: InternalsVisibleTo("ArchitectureTests")]
++[assembly: InternalsVisibleTo("GasTests")]

@@ -1,0 +1,12 @@
+diff --git a/src/Core/Gameplay/GAS/Config/EffectTemplateConfig.cs b/src/Core/Gameplay/GAS/Config/EffectTemplateConfig.cs
+index 909f03a924..9d0c5da0f8 100644
+--- a/src/Core/Gameplay/GAS/Config/EffectTemplateConfig.cs
++++ b/src/Core/Gameplay/GAS/Config/EffectTemplateConfig.cs
+@@ -154,6 +154,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
+         public int? HalfHeight { get; set; }
+         public int? Rotation { get; set; }
+         public int? Length { get; set; }
++        public string? Origin { get; set; }
+         public int? GraphProgramId { get; set; }
+     }
+ 

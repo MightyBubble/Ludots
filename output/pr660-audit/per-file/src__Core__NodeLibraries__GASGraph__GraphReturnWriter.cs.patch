@@ -1,0 +1,22 @@
+diff --git a/src/Core/NodeLibraries/GASGraph/GraphReturnWriter.cs b/src/Core/NodeLibraries/GASGraph/GraphReturnWriter.cs
+index d59d048fd2..9c6236185c 100644
+--- a/src/Core/NodeLibraries/GASGraph/GraphReturnWriter.cs
++++ b/src/Core/NodeLibraries/GASGraph/GraphReturnWriter.cs
+@@ -37,7 +37,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
+             Entity caster,
+             Entity explicitTarget,
+             Entity targetContext,
+-            IntVector2 targetPos,
++            IntVector2 targetPosCm,
+             uint randomSeed,
+             IGraphRuntimeApi api)
+         {
+@@ -71,7 +71,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
+                 Caster = caster,
+                 ExplicitTarget = explicitTarget,
+                 TargetContext = targetContext,
+-                TargetPos = targetPos,
++                TargetPosCm = targetPosCm,
+                 RandomSeed = randomSeed,
+                 Api = api ?? throw new ArgumentNullException(nameof(api)),
+                 F = floats,

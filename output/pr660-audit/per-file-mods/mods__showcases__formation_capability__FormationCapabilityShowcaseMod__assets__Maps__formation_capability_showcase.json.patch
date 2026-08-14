@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json b/mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json
+index 129337775e..4e25023b59 100644
+--- a/mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json
++++ b/mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json
+@@ -21,7 +21,8 @@
+       "WidthInMacroTiles": 250,
+       "HeightInMacroTiles": 250,
+       "GridCellSizeCm": 100,
+-      "ChunkSizeCells": 64
++      "ChunkSizeCells": 64,
++      "LoadedChunkCapacity": 512
+     }
+   ],
+   "Entities": [

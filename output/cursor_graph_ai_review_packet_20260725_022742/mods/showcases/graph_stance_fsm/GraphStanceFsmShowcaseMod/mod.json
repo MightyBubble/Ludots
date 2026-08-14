@@ -1,0 +1,12 @@
+{
+  "name": "GraphStanceFsmShowcaseMod",
+  "version": "1.0.0",
+  "description": "Standalone graph-driven RTS stance FSM showcase.",
+  "main": "bin/net8.0/GraphStanceFsmShowcaseMod.dll",
+  "priority": 135,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "fsm", "rts-stance"]
+}

@@ -1,0 +1,15 @@
+diff --git a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/game.json b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/game.json
+index cb33b5e6e1..6c72a4a759 100644
+--- a/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/game.json
++++ b/mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod/assets/game.json
+@@ -1,6 +1,10 @@
+ {
+   "startupMapId": "capability_standard_static_performer_30k_showcase",
+   "targetFps": 0,
++  "gasRuntimeCapacity": {
++    "effectLifetimeSnapshotCapacity": 32768,
++    "deferredTriggerActiveEntityCapacity": 32768
++  },
+   "presentation": {
+     "performerInstanceCapacity": 1048576,
+     "gasPresentationEventCapacity": 2097152,

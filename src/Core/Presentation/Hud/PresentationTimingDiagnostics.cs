@@ -52,8 +52,8 @@ namespace Ludots.Core.Presentation.Hud
         public float LastCameraCullingMs { get; private set; }
         public float CameraCullingEntityProcessMs { get; private set; }
         public float LastCameraCullingEntityProcessMs { get; private set; }
-        public float CameraCullingPerformerSyncMs { get; private set; }
-        public float LastCameraCullingPerformerSyncMs { get; private set; }
+        public float CameraCullingPresenterSyncMs { get; private set; }
+        public float LastCameraCullingPresenterSyncMs { get; private set; }
         public float CameraCullingSpatialQueryMs { get; private set; }
         public float LastCameraCullingSpatialQueryMs { get; private set; }
         public float CameraCullingStaticProcessMs { get; private set; }
@@ -83,23 +83,23 @@ namespace Ludots.Core.Presentation.Hud
         public float LastSimulationTopSystem2Ms => _lastSimulationTopSystem2Ms;
         public string LastSimulationTopSystem3Name => _lastSimulationTopSystem3Name;
         public float LastSimulationTopSystem3Ms => _lastSimulationTopSystem3Ms;
-        public float PerformerBehaviorMs { get; private set; }
-        public float LastPerformerBehaviorMs { get; private set; }
-        public int PerformerBootstrapCountLastFrame { get; private set; }
-        public int PerformerOwnerChangesLastFrame { get; private set; }
-        public int PerformerOwnerAttributeChangesLastFrame { get; private set; }
-        public int PerformerOwnerTagChangesLastFrame { get; private set; }
-        public int PerformerTickDrivenCountLastFrame { get; private set; }
-        public int PerformerActiveSoundTrackingCountLastFrame { get; private set; }
-        public int PerformerDestroyEventScanCountLastFrame { get; private set; }
-        public float PerformerAnimatorMs { get; private set; }
-        public float LastPerformerAnimatorMs { get; private set; }
-        public float PerformerEntityTransformSyncMs { get; private set; }
-        public float LastPerformerEntityTransformSyncMs { get; private set; }
-        public float PerformerMinimapMarkerMs { get; private set; }
-        public float LastPerformerMinimapMarkerMs { get; private set; }
-        public int PerformerMinimapMarkersLastFrame { get; private set; }
-        public int PerformerMinimapDroppedLastFrame { get; private set; }
+        public float PresenterBehaviorMs { get; private set; }
+        public float LastPresenterBehaviorMs { get; private set; }
+        public int PresenterBootstrapCountLastFrame { get; private set; }
+        public int PresenterOwnerChangesLastFrame { get; private set; }
+        public int PresenterOwnerAttributeChangesLastFrame { get; private set; }
+        public int PresenterOwnerTagChangesLastFrame { get; private set; }
+        public int PresenterTickDrivenCountLastFrame { get; private set; }
+        public int PresenterActiveSoundTrackingCountLastFrame { get; private set; }
+        public int PresenterDestroyEventScanCountLastFrame { get; private set; }
+        public float PresenterAnimatorMs { get; private set; }
+        public float LastPresenterAnimatorMs { get; private set; }
+        public float PresenterEntityTransformSyncMs { get; private set; }
+        public float LastPresenterEntityTransformSyncMs { get; private set; }
+        public float PresenterMinimapMarkerMs { get; private set; }
+        public float LastPresenterMinimapMarkerMs { get; private set; }
+        public int PresenterMinimapMarkersLastFrame { get; private set; }
+        public int PresenterMinimapDroppedLastFrame { get; private set; }
         public float MinimapProjectionMs { get; private set; }
         public float LastMinimapProjectionMs { get; private set; }
         public int MinimapScreenMarkersLastFrame { get; private set; }
@@ -112,38 +112,38 @@ namespace Ludots.Core.Presentation.Hud
         public float LastRuntimeSpawnFillBatchMs { get; private set; }
         public float RuntimeSpawnPostSpawnMs { get; private set; }
         public float LastRuntimeSpawnPostSpawnMs { get; private set; }
-        public float RuntimeSpawnPerformerBatchMs { get; private set; }
-        public float LastRuntimeSpawnPerformerBatchMs { get; private set; }
-        public float RuntimeSpawnPerformerCreateMs { get; private set; }
-        public float LastRuntimeSpawnPerformerCreateMs { get; private set; }
-        public float RuntimeSpawnPerformerBootstrapMarkMs { get; private set; }
-        public float LastRuntimeSpawnPerformerBootstrapMarkMs { get; private set; }
-        public float LastRuntimeSpawnPerformerCreateSetupMs { get; private set; }
-        public float LastRuntimeSpawnPerformerWorldCreateMs { get; private set; }
-        public float LastRuntimeSpawnPerformerComponentFillMs { get; private set; }
-        public float LastRuntimeSpawnPerformerIndexWriteMs { get; private set; }
-        public float LastRuntimeSpawnPerformerOwnerPayloadMs { get; private set; }
-        public float LastRuntimeSpawnPerformerPostCreateMs { get; private set; }
-        public float LastRuntimeSpawnPerformerChildSetupMs { get; private set; }
-        public float LastRuntimeSpawnPerformerChildWorldCreateMs { get; private set; }
-        public float LastRuntimeSpawnPerformerChildComponentFillMs { get; private set; }
-        public float LastRuntimeSpawnPerformerChildIndexWriteMs { get; private set; }
-        public float LastRuntimeSpawnPerformerChildStableIdMs { get; private set; }
+        public float RuntimeSpawnPresenterBatchMs { get; private set; }
+        public float LastRuntimeSpawnPresenterBatchMs { get; private set; }
+        public float RuntimeSpawnPresenterCreateMs { get; private set; }
+        public float LastRuntimeSpawnPresenterCreateMs { get; private set; }
+        public float RuntimeSpawnPresenterBootstrapMarkMs { get; private set; }
+        public float LastRuntimeSpawnPresenterBootstrapMarkMs { get; private set; }
+        public float LastRuntimeSpawnPresenterCreateSetupMs { get; private set; }
+        public float LastRuntimeSpawnPresenterWorldCreateMs { get; private set; }
+        public float LastRuntimeSpawnPresenterComponentFillMs { get; private set; }
+        public float LastRuntimeSpawnPresenterIndexWriteMs { get; private set; }
+        public float LastRuntimeSpawnPresenterOwnerPayloadMs { get; private set; }
+        public float LastRuntimeSpawnPresenterPostCreateMs { get; private set; }
+        public float LastRuntimeSpawnPresenterChildSetupMs { get; private set; }
+        public float LastRuntimeSpawnPresenterChildWorldCreateMs { get; private set; }
+        public float LastRuntimeSpawnPresenterChildComponentFillMs { get; private set; }
+        public float LastRuntimeSpawnPresenterChildIndexWriteMs { get; private set; }
+        public float LastRuntimeSpawnPresenterChildStableIdMs { get; private set; }
         public int RuntimeSpawnBatchCountLastFrame { get; private set; }
-        public int RuntimeSpawnPerformerCreatedLastFrame { get; private set; }
-        public float PerformerEmitMs { get; private set; }
-        public float LastPerformerEmitMs { get; private set; }
-        public float PerformerEmitDirtyProcessMs { get; private set; }
-        public float LastPerformerEmitDirtyProcessMs { get; private set; }
-        public float PerformerEmitDirtyCleanupMs { get; private set; }
-        public float LastPerformerEmitDirtyCleanupMs { get; private set; }
-        public int PerformerEmitDirtyCountLastFrame { get; private set; }
-        public float PerformerEmitRetainedProcessMs { get; private set; }
-        public float LastPerformerEmitRetainedProcessMs { get; private set; }
-        public int PerformerEmitRetainedCountLastFrame { get; private set; }
-        public int PerformerEmitRetainedDirectHitsLastFrame { get; private set; }
-        public int PerformerEmitRetainedFullPathLastFrame { get; private set; }
-        public int PerformerEmitRetainedDirectMissesLastFrame { get; private set; }
+        public int RuntimeSpawnPresenterCreatedLastFrame { get; private set; }
+        public float PresenterEmitMs { get; private set; }
+        public float LastPresenterEmitMs { get; private set; }
+        public float PresenterEmitDirtyProcessMs { get; private set; }
+        public float LastPresenterEmitDirtyProcessMs { get; private set; }
+        public float PresenterEmitDirtyCleanupMs { get; private set; }
+        public float LastPresenterEmitDirtyCleanupMs { get; private set; }
+        public int PresenterEmitDirtyCountLastFrame { get; private set; }
+        public float PresenterEmitRetainedProcessMs { get; private set; }
+        public float LastPresenterEmitRetainedProcessMs { get; private set; }
+        public int PresenterEmitRetainedCountLastFrame { get; private set; }
+        public int PresenterEmitRetainedDirectHitsLastFrame { get; private set; }
+        public int PresenterEmitRetainedFullPathLastFrame { get; private set; }
+        public int PresenterEmitRetainedDirectMissesLastFrame { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
@@ -291,12 +291,12 @@ namespace Ludots.Core.Presentation.Hud
             VisibleEntitiesLastFrame = visibleEntities;
         }
 
-        public void ObserveCameraCullingBreakdown(double entityProcessMs, double performerSyncMs)
+        public void ObserveCameraCullingBreakdown(double entityProcessMs, double presenterSyncMs)
         {
             LastCameraCullingEntityProcessMs = (float)entityProcessMs;
             CameraCullingEntityProcessMs = Smooth(CameraCullingEntityProcessMs, (float)entityProcessMs);
-            LastCameraCullingPerformerSyncMs = (float)performerSyncMs;
-            CameraCullingPerformerSyncMs = Smooth(CameraCullingPerformerSyncMs, (float)performerSyncMs);
+            LastCameraCullingPresenterSyncMs = (float)presenterSyncMs;
+            CameraCullingPresenterSyncMs = Smooth(CameraCullingPresenterSyncMs, (float)presenterSyncMs);
         }
 
         public void ObserveCameraCullingSpatialQuery(double spatialQueryMs)
@@ -317,12 +317,12 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObserveCameraPresenter(double sampleMs) => CameraPresenterMs = Smooth(CameraPresenterMs, (float)sampleMs);
 
-        public void ObservePerformerMinimapMarker(double sampleMs, int markers, int dropped)
+        public void ObservePresenterMinimapMarker(double sampleMs, int markers, int dropped)
         {
-            LastPerformerMinimapMarkerMs = (float)sampleMs;
-            PerformerMinimapMarkerMs = Smooth(PerformerMinimapMarkerMs, (float)sampleMs);
-            PerformerMinimapMarkersLastFrame = markers;
-            PerformerMinimapDroppedLastFrame = dropped;
+            LastPresenterMinimapMarkerMs = (float)sampleMs;
+            PresenterMinimapMarkerMs = Smooth(PresenterMinimapMarkerMs, (float)sampleMs);
+            PresenterMinimapMarkersLastFrame = markers;
+            PresenterMinimapDroppedLastFrame = dropped;
         }
 
         public void ObserveMinimapProjection(double sampleMs, int screenMarkers, int dropped)
@@ -410,13 +410,13 @@ namespace Ludots.Core.Presentation.Hud
                 ref _lastSimulationTopSystem3Ms);
         }
 
-        public void ObservePerformerBehavior(double sampleMs)
+        public void ObservePresenterBehavior(double sampleMs)
         {
-            LastPerformerBehaviorMs = (float)sampleMs;
-            PerformerBehaviorMs = Smooth(PerformerBehaviorMs, (float)sampleMs);
+            LastPresenterBehaviorMs = (float)sampleMs;
+            PresenterBehaviorMs = Smooth(PresenterBehaviorMs, (float)sampleMs);
         }
 
-        public void ObservePerformerBehaviorCounts(
+        public void ObservePresenterBehaviorCounts(
             int bootstrapCount,
             int ownerChanges,
             int ownerAttributeChanges,
@@ -425,51 +425,51 @@ namespace Ludots.Core.Presentation.Hud
             int activeSoundTrackingCount,
             int destroyEventScanCount)
         {
-            PerformerBootstrapCountLastFrame = bootstrapCount;
-            PerformerOwnerChangesLastFrame = ownerChanges;
-            PerformerOwnerAttributeChangesLastFrame = ownerAttributeChanges;
-            PerformerOwnerTagChangesLastFrame = ownerTagChanges;
-            PerformerTickDrivenCountLastFrame = tickDrivenCount;
-            PerformerActiveSoundTrackingCountLastFrame = activeSoundTrackingCount;
-            PerformerDestroyEventScanCountLastFrame = destroyEventScanCount;
+            PresenterBootstrapCountLastFrame = bootstrapCount;
+            PresenterOwnerChangesLastFrame = ownerChanges;
+            PresenterOwnerAttributeChangesLastFrame = ownerAttributeChanges;
+            PresenterOwnerTagChangesLastFrame = ownerTagChanges;
+            PresenterTickDrivenCountLastFrame = tickDrivenCount;
+            PresenterActiveSoundTrackingCountLastFrame = activeSoundTrackingCount;
+            PresenterDestroyEventScanCountLastFrame = destroyEventScanCount;
         }
 
-        public void ObservePerformerAnimator(double sampleMs)
+        public void ObservePresenterAnimator(double sampleMs)
         {
-            LastPerformerAnimatorMs = (float)sampleMs;
-            PerformerAnimatorMs = Smooth(PerformerAnimatorMs, (float)sampleMs);
+            LastPresenterAnimatorMs = (float)sampleMs;
+            PresenterAnimatorMs = Smooth(PresenterAnimatorMs, (float)sampleMs);
         }
 
-        public void ObservePerformerEntityTransformSync(double sampleMs)
+        public void ObservePresenterEntityTransformSync(double sampleMs)
         {
-            LastPerformerEntityTransformSyncMs = (float)sampleMs;
-            PerformerEntityTransformSyncMs = Smooth(PerformerEntityTransformSyncMs, (float)sampleMs);
+            LastPresenterEntityTransformSyncMs = (float)sampleMs;
+            PresenterEntityTransformSyncMs = Smooth(PresenterEntityTransformSyncMs, (float)sampleMs);
         }
 
         public void ObserveRuntimeSpawnBatch(
             int batchCount,
-            int performerCreated,
+            int presenterCreated,
             double prepareMs,
             double worldCreateMs,
             double fillBatchMs,
             double postSpawnMs,
-            double performerBatchMs,
-            double performerCreateMs,
-            double performerBootstrapMarkMs,
-            double performerCreateSetupMs = 0d,
-            double performerWorldCreateMs = 0d,
-            double performerComponentFillMs = 0d,
-            double performerIndexWriteMs = 0d,
-            double performerOwnerPayloadMs = 0d,
-            double performerPostCreateMs = 0d,
-            double performerChildSetupMs = 0d,
-            double performerChildWorldCreateMs = 0d,
-            double performerChildComponentFillMs = 0d,
-            double performerChildIndexWriteMs = 0d,
-            double performerChildStableIdMs = 0d)
+            double presenterBatchMs,
+            double presenterCreateMs,
+            double presenterBootstrapMarkMs,
+            double presenterCreateSetupMs = 0d,
+            double presenterWorldCreateMs = 0d,
+            double presenterComponentFillMs = 0d,
+            double presenterIndexWriteMs = 0d,
+            double presenterOwnerPayloadMs = 0d,
+            double presenterPostCreateMs = 0d,
+            double presenterChildSetupMs = 0d,
+            double presenterChildWorldCreateMs = 0d,
+            double presenterChildComponentFillMs = 0d,
+            double presenterChildIndexWriteMs = 0d,
+            double presenterChildStableIdMs = 0d)
         {
             RuntimeSpawnBatchCountLastFrame = batchCount;
-            RuntimeSpawnPerformerCreatedLastFrame = performerCreated;
+            RuntimeSpawnPresenterCreatedLastFrame = presenterCreated;
             LastRuntimeSpawnBatchPrepareMs = (float)prepareMs;
             RuntimeSpawnBatchPrepareMs = Smooth(RuntimeSpawnBatchPrepareMs, (float)prepareMs);
             LastRuntimeSpawnWorldCreateMs = (float)worldCreateMs;
@@ -478,52 +478,52 @@ namespace Ludots.Core.Presentation.Hud
             RuntimeSpawnFillBatchMs = Smooth(RuntimeSpawnFillBatchMs, (float)fillBatchMs);
             LastRuntimeSpawnPostSpawnMs = (float)postSpawnMs;
             RuntimeSpawnPostSpawnMs = Smooth(RuntimeSpawnPostSpawnMs, (float)postSpawnMs);
-            LastRuntimeSpawnPerformerBatchMs = (float)performerBatchMs;
-            RuntimeSpawnPerformerBatchMs = Smooth(RuntimeSpawnPerformerBatchMs, (float)performerBatchMs);
-            LastRuntimeSpawnPerformerCreateMs = (float)performerCreateMs;
-            RuntimeSpawnPerformerCreateMs = Smooth(RuntimeSpawnPerformerCreateMs, (float)performerCreateMs);
-            LastRuntimeSpawnPerformerBootstrapMarkMs = (float)performerBootstrapMarkMs;
-            RuntimeSpawnPerformerBootstrapMarkMs = Smooth(RuntimeSpawnPerformerBootstrapMarkMs, (float)performerBootstrapMarkMs);
-            LastRuntimeSpawnPerformerCreateSetupMs = (float)performerCreateSetupMs;
-            LastRuntimeSpawnPerformerWorldCreateMs = (float)performerWorldCreateMs;
-            LastRuntimeSpawnPerformerComponentFillMs = (float)performerComponentFillMs;
-            LastRuntimeSpawnPerformerIndexWriteMs = (float)performerIndexWriteMs;
-            LastRuntimeSpawnPerformerOwnerPayloadMs = (float)performerOwnerPayloadMs;
-            LastRuntimeSpawnPerformerPostCreateMs = (float)performerPostCreateMs;
-            LastRuntimeSpawnPerformerChildSetupMs = (float)performerChildSetupMs;
-            LastRuntimeSpawnPerformerChildWorldCreateMs = (float)performerChildWorldCreateMs;
-            LastRuntimeSpawnPerformerChildComponentFillMs = (float)performerChildComponentFillMs;
-            LastRuntimeSpawnPerformerChildIndexWriteMs = (float)performerChildIndexWriteMs;
-            LastRuntimeSpawnPerformerChildStableIdMs = (float)performerChildStableIdMs;
+            LastRuntimeSpawnPresenterBatchMs = (float)presenterBatchMs;
+            RuntimeSpawnPresenterBatchMs = Smooth(RuntimeSpawnPresenterBatchMs, (float)presenterBatchMs);
+            LastRuntimeSpawnPresenterCreateMs = (float)presenterCreateMs;
+            RuntimeSpawnPresenterCreateMs = Smooth(RuntimeSpawnPresenterCreateMs, (float)presenterCreateMs);
+            LastRuntimeSpawnPresenterBootstrapMarkMs = (float)presenterBootstrapMarkMs;
+            RuntimeSpawnPresenterBootstrapMarkMs = Smooth(RuntimeSpawnPresenterBootstrapMarkMs, (float)presenterBootstrapMarkMs);
+            LastRuntimeSpawnPresenterCreateSetupMs = (float)presenterCreateSetupMs;
+            LastRuntimeSpawnPresenterWorldCreateMs = (float)presenterWorldCreateMs;
+            LastRuntimeSpawnPresenterComponentFillMs = (float)presenterComponentFillMs;
+            LastRuntimeSpawnPresenterIndexWriteMs = (float)presenterIndexWriteMs;
+            LastRuntimeSpawnPresenterOwnerPayloadMs = (float)presenterOwnerPayloadMs;
+            LastRuntimeSpawnPresenterPostCreateMs = (float)presenterPostCreateMs;
+            LastRuntimeSpawnPresenterChildSetupMs = (float)presenterChildSetupMs;
+            LastRuntimeSpawnPresenterChildWorldCreateMs = (float)presenterChildWorldCreateMs;
+            LastRuntimeSpawnPresenterChildComponentFillMs = (float)presenterChildComponentFillMs;
+            LastRuntimeSpawnPresenterChildIndexWriteMs = (float)presenterChildIndexWriteMs;
+            LastRuntimeSpawnPresenterChildStableIdMs = (float)presenterChildStableIdMs;
         }
 
-        public void ObservePerformerEmit(double sampleMs)
+        public void ObservePresenterEmit(double sampleMs)
         {
-            LastPerformerEmitMs = (float)sampleMs;
-            PerformerEmitMs = Smooth(PerformerEmitMs, (float)sampleMs);
+            LastPresenterEmitMs = (float)sampleMs;
+            PresenterEmitMs = Smooth(PresenterEmitMs, (float)sampleMs);
         }
 
-        public void ObservePerformerEmitDirtyBreakdown(double processMs, double cleanupMs, int dirtyCount)
+        public void ObservePresenterEmitDirtyBreakdown(double processMs, double cleanupMs, int dirtyCount)
         {
-            LastPerformerEmitDirtyProcessMs = (float)processMs;
-            PerformerEmitDirtyProcessMs = Smooth(PerformerEmitDirtyProcessMs, (float)processMs);
-            LastPerformerEmitDirtyCleanupMs = (float)cleanupMs;
-            PerformerEmitDirtyCleanupMs = Smooth(PerformerEmitDirtyCleanupMs, (float)cleanupMs);
-            PerformerEmitDirtyCountLastFrame = dirtyCount;
+            LastPresenterEmitDirtyProcessMs = (float)processMs;
+            PresenterEmitDirtyProcessMs = Smooth(PresenterEmitDirtyProcessMs, (float)processMs);
+            LastPresenterEmitDirtyCleanupMs = (float)cleanupMs;
+            PresenterEmitDirtyCleanupMs = Smooth(PresenterEmitDirtyCleanupMs, (float)cleanupMs);
+            PresenterEmitDirtyCountLastFrame = dirtyCount;
         }
 
-        public void ObservePerformerEmitRetainedBreakdown(double processMs, int dirtyCount)
+        public void ObservePresenterEmitRetainedBreakdown(double processMs, int dirtyCount)
         {
-            LastPerformerEmitRetainedProcessMs = (float)processMs;
-            PerformerEmitRetainedProcessMs = Smooth(PerformerEmitRetainedProcessMs, (float)processMs);
-            PerformerEmitRetainedCountLastFrame = dirtyCount;
+            LastPresenterEmitRetainedProcessMs = (float)processMs;
+            PresenterEmitRetainedProcessMs = Smooth(PresenterEmitRetainedProcessMs, (float)processMs);
+            PresenterEmitRetainedCountLastFrame = dirtyCount;
         }
 
-        public void ObservePerformerEmitRetainedDirectPath(int directHits, int fullPathCount, int directMisses)
+        public void ObservePresenterEmitRetainedDirectPath(int directHits, int fullPathCount, int directMisses)
         {
-            PerformerEmitRetainedDirectHitsLastFrame = directHits;
-            PerformerEmitRetainedFullPathLastFrame = fullPathCount;
-            PerformerEmitRetainedDirectMissesLastFrame = directMisses;
+            PresenterEmitRetainedDirectHitsLastFrame = directHits;
+            PresenterEmitRetainedFullPathLastFrame = fullPathCount;
+            PresenterEmitRetainedDirectMissesLastFrame = directMisses;
         }
 
         public void ObservePresentationRequestFlush(double sampleMs)

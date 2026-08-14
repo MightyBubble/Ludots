@@ -1,0 +1,18 @@
+diff --git a/mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/Maps/rts_red_alert_like.json b/mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/Maps/rts_red_alert_like.json
+index 1afa6b9ec8..43fb8147d5 100644
+--- a/mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/Maps/rts_red_alert_like.json
++++ b/mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/Maps/rts_red_alert_like.json
+@@ -13,10 +13,11 @@
+     {
+       "Name": "default",
+       "SpatialType": "Grid",
+-      "WidthInTiles": 64,
+-      "HeightInTiles": 64,
++      "WidthInMacroTiles": 64,
++      "HeightInMacroTiles": 64,
+       "GridCellSizeCm": 400,
+       "ChunkSizeCells": 32,
++      "LoadedChunkCapacity": 256,
+       "NavigationEnabled": false
+     }
+   ],

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "capability_standard_hfsm_actor_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_hfsm_actor" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "capability_standard_hfsm_actor_visual", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_hfsm_actor" },
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_actor_visual",
+    "defaultColor": [0.98, 0.58, 0.18, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.1, 2.6, 1.1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_water_station_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_hfsm_water_station" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "capability_standard_hfsm_water_station_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_water_station_visual",
+    "defaultColor": [0.14, 0.58, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [1.1, 1.55, 1.1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_track_center_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_hfsm_track_center" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "capability_standard_hfsm_track_center_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_track_center_visual",
+    "defaultColor": [0.20, 0.24, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [0.8, 0.22, 0.8]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_track_marker_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_hfsm_track_marker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePresenter", "definitionId": "capability_standard_hfsm_track_marker_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_hfsm_track_marker_visual",
+    "defaultColor": [0.96, 0.78, 0.30, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [0.52, 0.18, 0.52]
+        }
+      }
+    ]
+  }
+]

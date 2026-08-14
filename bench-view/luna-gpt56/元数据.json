@@ -1,0 +1,7 @@
+﻿{
+    "timestamp":  "2026-08-12T18:17:36.3589587+08:00",
+    "status":  "failed",
+    "error":  "Settlement blocked: 当前模型缺少有效价格配置，服务返回 503 / SETTLEMENT_PRICING_NOT_FOUND",
+    "prompt":  "同一命题的 8 集完整现实主义短剧剧本 bench",
+    "model":  "gpt-5.6-luna"
+}

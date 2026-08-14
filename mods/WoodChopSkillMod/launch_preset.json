@@ -1,0 +1,32 @@
+{
+  "presetName": "WoodChopShowcasePreset",
+  "description": "Loads the Wood Chop Skill Mod to showcase its ability and performer interaction.",
+  "modList": [
+    {
+      "modId": "WoodChopSkillMod",
+      "loadOrder": 10,
+      "priority": 50,
+      "configOverrides": {
+        "initialState": "Ready"
+      }
+    }
+  ],
+  "sceneConfig": {
+    "defaultScene": "DefaultWorld",
+    "cameraTarget": [0.0, 1.0, -10.0],
+    "initialEntitySpawn": [
+      {
+        "entityType": "TestEntity",
+        "position": [0.0, 0.0, 0.0],
+        "attributes": {
+          "Health": 100.0
+        }
+      },
+      {
+        "entityType": "HeroCharacter",
+        "position": [2.0, 0.0, 0.0],
+        "attributes": {}
+      }
+    ]
+  }
+}

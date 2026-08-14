@@ -1,0 +1,23 @@
+diff --git a/mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveActiveOrderBufferSync.cs b/mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveActiveOrderBufferSync.cs
+index 947774c19f..09065d3ad4 100644
+--- a/mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveActiveOrderBufferSync.cs
++++ b/mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveActiveOrderBufferSync.cs
+@@ -11,15 +11,18 @@ namespace RoadNetworkShowcaseMod.Gameplay
+             if (!world.IsAlive(entity) ||
+                 !world.Has<OrderBuffer>(entity))
+             {
++                OrderSpatialPayloadOps.Release(world, in order);
+                 return false;
+             }
+ 
+             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(entity);
+             if (!buffer.HasActive)
+             {
++                OrderSpatialPayloadOps.Release(world, in order);
+                 return false;
+             }
+ 
++            OrderSpatialPayloadOps.Release(world, in buffer.ActiveOrder.Order);
+             buffer.ActiveOrder.Order = order;
+             return true;
+         }

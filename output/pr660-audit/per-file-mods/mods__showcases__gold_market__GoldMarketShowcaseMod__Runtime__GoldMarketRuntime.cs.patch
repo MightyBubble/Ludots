@@ -1,0 +1,14 @@
+diff --git a/mods/showcases/gold_market/GoldMarketShowcaseMod/Runtime/GoldMarketRuntime.cs b/mods/showcases/gold_market/GoldMarketShowcaseMod/Runtime/GoldMarketRuntime.cs
+index c9e64ec0ed..579fa031b0 100644
+--- a/mods/showcases/gold_market/GoldMarketShowcaseMod/Runtime/GoldMarketRuntime.cs
++++ b/mods/showcases/gold_market/GoldMarketShowcaseMod/Runtime/GoldMarketRuntime.cs
+@@ -225,7 +225,8 @@ public sealed class GoldMarketRuntime
+         _buyer = world.Create(
+             new Name { Value = _config!.BuyerName },
+             new MapEntity { MapId = new MapId(GoldMarketIds.ShowcaseMapId) },
+-            new AttributeBuffer());
++            new AttributeBuffer(),
++            new DirtyFlags());
+         _market = world.Create(
+             new Name { Value = _config.MarketName },
+             new MapEntity { MapId = new MapId(GoldMarketIds.ShowcaseMapId) });

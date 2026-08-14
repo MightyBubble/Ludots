@@ -1,0 +1,19 @@
+CC0 Asset Attribution
+=====================
+
+This mod uses CC0 (public domain) assets from:
+
+1. KayKit Medieval Hexagon Pack 1.0
+   https://opengameart.org/content/kaykit-medieval-hexagon-pack
+
+2. KayKit Character Pack Adventures 1.0
+   https://opengameart.org/content/kaykit-character-pack-adventures
+
+3. Kenney Retro Medieval Kit (reference / UAT alignment)
+   https://kenney-assets.itch.io/retro-medieval-kit
+
+Visual presenters in this mod primarily use Ludots primitive meshes (cube/sphere)
+with nation tint colors. Billboard PNGs may be sourced from sibling showcase mods
+that also document CC0 provenance.
+
+All gameplay unit definitions are original data authored for Ludots GAS pipelines.

@@ -14,10 +14,16 @@ import {
 import type { Camera, PerspectiveCamera } from 'three';
 import type { OrbitControls } from 'three-stdlib';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
+import {
+    DEFAULT_TERRAIN_VISUAL_OPTIONS,
+    TERRAIN_HEIGHT_CONTRAST_MAX,
+    TERRAIN_HEIGHT_CONTRAST_MIN,
+    type TerrainViewMode,
+} from '../../Core/Render/TerrainVisualStyle';
 
 export type JsonRecord = Record<string, unknown>;
 export type EntityTemplatePayload = JsonRecord;
-export type PerformerPayload = JsonRecord;
+export type PresenterPayload = JsonRecord;
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
@@ -121,7 +127,7 @@ export interface EditorState {
     canvasSessionLabel: string | null;
     mapConfig: JsonRecord | null;
     templates: EntityTemplatePayload[];
-    performers: PerformerPayload[];
+    presenters: PresenterPayload[];
     navigationConfig: JsonRecord | null;
     navigationConfigVersion: number;
     selectedTemplateId: string | null;
@@ -147,6 +153,8 @@ export interface EditorState {
     showGrid: boolean;
     showChunkBorders: boolean;
     showNavMesh: boolean; // Added NavMesh Toggle
+    terrainViewMode: TerrainViewMode;
+    terrainHeightContrast: number;
     navMeshBakeVersion: number;
     bakedNavTiles: Map<string, BakedNavTileVisual>;
     bakedNavTilePayloads: BakedNavTilePayload[];
@@ -168,6 +176,8 @@ export interface EditorState {
     toggleGrid: () => void;
     toggleChunkBorders: () => void;
     toggleNavMesh: () => void; // Added Action
+    setTerrainViewMode: (mode: TerrainViewMode) => void;
+    setTerrainHeightContrast: (contrast: number) => void;
     
     // Map Actions
     initMap: (w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
@@ -249,7 +259,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     canvasSessionLabel: null,
     mapConfig: null,
     templates: [],
-    performers: [],
+    presenters: [],
     navigationConfig: null,
     navigationConfigVersion: 0,
     selectedTemplateId: null,
@@ -271,6 +281,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     showGrid: true,
     showChunkBorders: true,
     showNavMesh: false, // Default Off
+    terrainViewMode: DEFAULT_TERRAIN_VISUAL_OPTIONS.terrainViewMode,
+    terrainHeightContrast: DEFAULT_TERRAIN_VISUAL_OPTIONS.heightContrast,
     navMeshBakeVersion: 0,
     bakedNavTiles: new Map(),
     bakedNavTilePayloads: [],
@@ -299,6 +311,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleChunkBorders: () => set((state) => ({ showChunkBorders: !state.showChunkBorders })),
     toggleNavMesh: () => set((state) => ({ showNavMesh: !state.showNavMesh })),
+    setTerrainViewMode: (mode) => set({ terrainViewMode: mode }),
+    setTerrainHeightContrast: (contrast) => set({
+        terrainHeightContrast: Math.max(
+            TERRAIN_HEIGHT_CONTRAST_MIN,
+            Math.min(TERRAIN_HEIGHT_CONTRAST_MAX, Number.isFinite(contrast) ? contrast : DEFAULT_TERRAIN_VISUAL_OPTIONS.heightContrast)),
+    }),
     
     bakeNavMesh: () => {
         set((state) => ({ navMeshBakeVersion: state.navMeshBakeVersion + 1 }));
@@ -409,7 +427,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
         newTerrain.loadFromBytes(w, h, data, format);
         const boardMetrics = normalizeBoardMetrics(metrics ?? get().boardMetrics);
-        const allChunks = new Set<string>(newTerrain.chunks.keys());
         
         set({ 
             terrain: newTerrain, 
@@ -421,7 +438,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             loadedMapInfo: null,
             loadedBoardName: null,
             loadedBoardInfo: null,
-            minimapDirtyChunks: allChunks,
+            minimapDirtyChunks: new Set(),
             navDirtyChunks: new Set(),
             bakedNavTiles: new Map(),
             bakedNavTilePayloads: [],
@@ -465,7 +482,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             canvasSessionLabel: null,
             mapConfig: null,
             templates: [],
-            performers: [],
+            presenters: [],
             navigationConfig: null,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: null,
@@ -490,10 +507,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const tJson = await tRes.json() as JsonRecord;
         const templates = arrayOfRecords(tJson.templates);
 
-        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/performers`);
+        const pRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/presenters`);
         if (!pRes.ok) throw new Error(`Bridge error ${pRes.status}`);
         const pJson = await pRes.json() as JsonRecord;
-        const performers = arrayOfRecords(pJson.performers);
+        const presenters = arrayOfRecords(pJson.presenters);
 
         const defaultTemplateId = templates.length > 0 ? String(templates[0]?.Id ?? templates[0]?.id ?? '') : null;
         const obstacleTemplate = templates.find((t) => {
@@ -530,7 +547,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             selectedBoardName: defaultBoardInfo?.name ?? null,
             selectedBoardInfo: defaultBoardInfo,
             templates,
-            performers,
+            presenters,
             navigationConfig,
             navigationConfigVersion: Date.now(),
             selectedTemplateId: defaultTemplateId && defaultTemplateId.length > 0 ? defaultTemplateId : null,

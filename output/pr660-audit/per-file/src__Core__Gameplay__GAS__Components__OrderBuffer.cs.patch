@@ -1,0 +1,179 @@
+diff --git a/src/Core/Gameplay/GAS/Components/OrderBuffer.cs b/src/Core/Gameplay/GAS/Components/OrderBuffer.cs
+index 1676648de9..452bd10612 100644
+--- a/src/Core/Gameplay/GAS/Components/OrderBuffer.cs
++++ b/src/Core/Gameplay/GAS/Components/OrderBuffer.cs
+@@ -28,11 +28,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// </summary>
+         public int InsertStep;
+ 
+-        /// <summary>
+-        /// Runtime-owned integer slot for execution cursors or other transient state.
+-        /// Must not be used to rewrite authored order payload.
+-        /// </summary>
+-        public int RuntimeInt0;
+     }
+     
+     /// <summary>
+@@ -70,6 +65,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// The currently active order (if ActiveIndex >= 0).
+         /// </summary>
+         public QueuedOrder ActiveOrder;
++
++        /// <summary>
++        /// Runtime-owned integer slot for the active order's execution cursor.
++        /// Must not be used to rewrite authored order payload.
++        /// </summary>
++        public int ActiveRuntimeInt0;
+         
+         /// <summary>
+         /// Pending order slot - stores a blocked order for automatic retry when the
+@@ -176,6 +177,18 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// <param name="index">Index in the queue.</param>
+         /// <returns>The removed order, or default if invalid index.</returns>
+         public QueuedOrder RemoveAt(int index)
++        {
++            QueuedOrder candidate = GetQueued(index);
++            if (candidate.Order.Args.Spatial.Payload.IsValid)
++            {
++                throw new System.InvalidOperationException(
++                    "ORDER.BUFFER.ERR.QueuedPayloadRemoveRequiresOwner");
++            }
++
++            return RemoveAtTransferred(index);
++        }
++
++        internal QueuedOrder RemoveAtTransferred(int index)
+         {
+             if ((uint)index >= (uint)QueuedCount) return default;
+             
+@@ -257,8 +270,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         {
+             if (QueuedCount == 0) return false;
+             
+-            ActiveOrder = RemoveAt(0);
++            ActiveOrder = RemoveAtTransferred(0);
+             ActiveIndex = 0;
++            ActiveRuntimeInt0 = 0;
+             return true;
+         }
+         
+@@ -268,6 +282,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// </summary>
+         public void SetActiveDirect(in Order order, int priority)
+         {
++            if (HasActive && ActiveOrder.Order.Args.Spatial.Payload.IsValid)
++            {
++                throw new System.InvalidOperationException(
++                    "ORDER.BUFFER.ERR.ActivePayloadOverwriteRequiresOwner");
++            }
++
+             ActiveOrder = new QueuedOrder
+             {
+                 Order = order,
+@@ -276,15 +296,28 @@ namespace Ludots.Core.Gameplay.GAS.Components
+                 InsertStep = 0
+             };
+             ActiveIndex = 0;
++            ActiveRuntimeInt0 = 0;
+         }
+         
+         /// <summary>
+         /// Clear the active order.
+         /// </summary>
+         public void ClearActive()
++        {
++            if (HasActive && ActiveOrder.Order.Args.Spatial.Payload.IsValid)
++            {
++                throw new System.InvalidOperationException(
++                    "ORDER.BUFFER.ERR.ActivePayloadClearRequiresOwner");
++            }
++
++            ClearActiveTransferred();
++        }
++
++        internal void ClearActiveTransferred()
+         {
+             ActiveIndex = -1;
+             ActiveOrder = default;
++            ActiveRuntimeInt0 = 0;
+         }
+         
+         /// <summary>
+@@ -292,6 +325,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// </summary>
+         public void ClearQueued()
+         {
++            for (int i = 0; i < QueuedCount; i++)
++            {
++                if (GetQueued(i).Order.Args.Spatial.Payload.IsValid)
++                {
++                    throw new System.InvalidOperationException(
++                        "ORDER.BUFFER.ERR.QueuedPayloadClearRequiresOwner");
++                }
++            }
++
+             QueuedCount = 0;
+         }
+         
+@@ -318,6 +360,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+                 var queued = GetQueued(i);
+                 if (queued.ExpireStep >= 0 && queued.ExpireStep <= currentStep)
+                 {
++                    if (queued.Order.Args.Spatial.Payload.IsValid)
++                    {
++                        throw new System.InvalidOperationException(
++                            "ORDER.BUFFER.ERR.QueuedPayloadExpireRequiresOwner");
++                    }
++
+                     RemoveAt(i);
+                     removed++;
+                 }
+@@ -335,6 +383,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// <param name="insertStep">Step at which the order was submitted.</param>
+         public void SetPending(in Order order, int priority, int expireStep, int insertStep)
+         {
++            if (HasPending && PendingOrder.Order.Args.Spatial.Payload.IsValid)
++            {
++                throw new System.InvalidOperationException(
++                    "ORDER.BUFFER.ERR.PendingPayloadOverwriteRequiresOwner");
++            }
++
+             PendingOrder = new QueuedOrder
+             {
+                 Order = order,
+@@ -349,6 +403,17 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         /// Clear the pending order slot.
+         /// </summary>
+         public void ClearPending()
++        {
++            if (HasPending && PendingOrder.Order.Args.Spatial.Payload.IsValid)
++            {
++                throw new System.InvalidOperationException(
++                    "ORDER.BUFFER.ERR.PendingPayloadClearRequiresOwner");
++            }
++
++            ClearPendingTransferred();
++        }
++
++        internal void ClearPendingTransferred()
+         {
+             HasPending = false;
+             PendingOrder = default;
+@@ -363,6 +428,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         {
+             if (HasPending && PendingOrder.ExpireStep >= 0 && PendingOrder.ExpireStep <= currentStep)
+             {
++                if (PendingOrder.Order.Args.Spatial.Payload.IsValid)
++                {
++                    throw new System.InvalidOperationException(
++                        "ORDER.BUFFER.ERR.PendingPayloadExpireRequiresOwner");
++                }
++
+                 ClearPending();
+                 return true;
+             }
+@@ -378,4 +449,3 @@ namespace Ludots.Core.Gameplay.GAS.Components
+         }
+     }
+ }
+-

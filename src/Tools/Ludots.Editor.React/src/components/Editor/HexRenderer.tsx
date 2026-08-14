@@ -11,9 +11,11 @@ import {
     worldPointToCell,
 } from '../../Core/Map/TopologyMetrics';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
+import { getTerrainDisplayRgb, getTerrainHeightScale, type TerrainVisualOptions } from '../../Core/Render/TerrainVisualStyle';
 
 const FULL_RENDER_CHUNK_LIMIT = 64;
 const MEDIUM_RENDER_CHUNK_LIMIT = 1024;
+const LARGE_RENDER_CHUNK_LIMIT = 8192;
 const MAX_TERRAIN_LOD_PATCHES_PER_AXIS = 192;
 const INITIAL_RENDER_FRAME_BUDGET_MS = 12;
 type MouseAction = (typeof THREE.MOUSE)[keyof typeof THREE.MOUSE];
@@ -45,7 +47,7 @@ const disposeThreeObject = (object: THREE.Object3D) => {
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, navSimulation, navSimulationVersion, navPanelTab, navQueryProfileId, navQueryLayer, navQueryStartCell, navQueryGoalCell, navigationConfig, navigationConfigVersion, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, setNavQueryStartCell, setNavQueryGoalCell, registerCamera, reportDirtyChunks, reportMinimapDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, terrainViewMode, terrainHeightContrast, bakedNavTiles, bakedNavTilesVersion, navSimulation, navSimulationVersion, navPanelTab, navQueryProfileId, navQueryLayer, navQueryStartCell, navQueryGoalCell, navigationConfig, navigationConfigVersion, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, setNavQueryStartCell, setNavQueryGoalCell, registerCamera, reportDirtyChunks, reportMinimapDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
     const canvasHasRepoSession = Boolean(canvasSessionKind === 'repo' && loadedModId && loadedMapId && loadedBoardName);
     const canvasHasVisibleSession = canvasSessionKind === 'local' || canvasHasRepoSession;
     const canvasMapLoaded = Boolean(canvasHasRepoSession && selectedModId && selectedMapId && selectedBoardName && loadedModId === selectedModId && loadedMapId === selectedMapId && loadedBoardName === selectedBoardName);
@@ -109,6 +111,10 @@ export const HexRenderer: React.FC = () => {
     // because the animation loop closure captures the initial terrain instance.
     const terrainRef = useRef(terrain);
     const boardMetricsRef = useRef(boardMetrics);
+    const terrainVisualOptionsRef = useRef<TerrainVisualOptions>({
+        terrainViewMode,
+        heightContrast: terrainHeightContrast,
+    });
     const viewStateRef = useRef({
         showGrid,
         showChunkBorders,
@@ -119,6 +125,7 @@ export const HexRenderer: React.FC = () => {
     const totalInitChunksRef = useRef(0);
     const renderDirtyChunksRef = useRef<Set<string>>(new Set());
     const renderedWindowKeyRef = useRef<string | null>(null);
+    const framedLocalSessionKeyRef = useRef<string | null>(null);
     const canvasHasVisibleSessionRef = useRef(canvasHasVisibleSession);
 
     const getChunkCount = (currentTerrain = terrainRef.current) => currentTerrain.widthChunks * currentTerrain.heightChunks;
@@ -129,29 +136,13 @@ export const HexRenderer: React.FC = () => {
         const chunkCount = getChunkCount(currentTerrain);
         if (chunkCount <= FULL_RENDER_CHUNK_LIMIT) return Math.max(currentTerrain.widthChunks, currentTerrain.heightChunks);
         if (chunkCount <= MEDIUM_RENDER_CHUNK_LIMIT) return 3;
-        return 2;
+        if (chunkCount <= LARGE_RENDER_CHUNK_LIMIT) return 3;
+        return 1;
     };
 
     const getLodColor = (height: number, water: number, biome: number) => {
-        const color = new THREE.Color();
-        if (water > height) {
-            color.setRGB(0.05, Math.min(0.8, 0.35 + water * 0.03), Math.min(1.0, 0.65 + water * 0.025));
-            return color;
-        }
-
-        switch (biome) {
-            case 1: color.setHex(0x9f7a3d); break;
-            case 2: color.setHex(0x6f7378); break;
-            case 3: color.setHex(0x3d6c2e); break;
-            case 4: color.setHex(0x5a5d5a); break;
-            case 5: color.setHex(0x435322); break;
-            default: color.setHex(0x8b4f24); break;
-        }
-
-        const hsl = { h: 0, s: 0, l: 0 };
-        color.getHSL(hsl);
-        color.setHSL(hsl.h, hsl.s, Math.min(0.76, hsl.l + height * 0.018));
-        return color;
+        const [r, g, b] = getTerrainDisplayRgb(height, water, biome, terrainVisualOptionsRef.current);
+        return new THREE.Color(r, g, b);
     };
 
     const isValidChunk = (cx: number, cy: number, currentTerrain = terrainRef.current) =>
@@ -176,6 +167,21 @@ export const HexRenderer: React.FC = () => {
             cx: Math.max(0, Math.min(currentTerrain.widthChunks - 1, Math.floor(cell.col / chunkSize))),
             cy: Math.max(0, Math.min(currentTerrain.heightChunks - 1, Math.floor(cell.row / chunkSize))),
         };
+    };
+
+    const intersectsRenderedChunk = (
+        cx0: number,
+        cy0: number,
+        cx1Exclusive: number,
+        cy1Exclusive: number,
+    ) => {
+        if (chunksRef.current.size === 0) return false;
+        for (let cy = cy0; cy < cy1Exclusive; cy++) {
+            for (let cx = cx0; cx < cx1Exclusive; cx++) {
+                if (chunksRef.current.has(`${cx},${cy}`)) return true;
+            }
+        }
+        return false;
     };
 
     const evictChunksOutsideWindow = (center: { cx: number; cy: number }, retainRadius: number) => {
@@ -225,6 +231,7 @@ export const HexRenderer: React.FC = () => {
         }
 
         evictChunksOutsideWindow(center, radius + 2);
+        rebuildTerrainLod();
     };
 
     const moveTerrainDirtyChunksToRenderQueue = (currentTerrain: typeof terrainRef.current) => {
@@ -235,7 +242,43 @@ export const HexRenderer: React.FC = () => {
             const [cx, cy] = key.split(',').map(Number);
             enqueueRenderChunk(cx, cy, currentTerrain);
         }
-        rebuildTerrainLod();
+    };
+
+    const updateCameraBoundsForWorld = (worldSize: { width: number; height: number }) => {
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (!camera || !controls) return;
+
+        const maxAxis = Math.max(worldSize.width, worldSize.height, 1);
+        camera.near = Math.max(0.1, Math.min(100, maxAxis / 100000));
+        camera.far = Math.max(10000, maxAxis * 4);
+        camera.updateProjectionMatrix();
+        controls.maxDistance = Math.max(800, maxAxis * 2);
+        controls.minDistance = Math.max(1, Math.min(5, maxAxis / 1000000));
+    };
+
+    const frameLocalTerrainDraft = (worldSize: { width: number; height: number }) => {
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (!camera || !controls || canvasSessionKind !== 'local') return;
+
+        const sessionKey = [
+            canvasSessionLabel ?? 'local',
+            terrainRef.current.widthChunks,
+            terrainRef.current.heightChunks,
+            boardMetricsRef.current.topology,
+            boardMetricsRef.current.cellSizeCm,
+        ].join(':');
+        if (framedLocalSessionKeyRef.current === sessionKey) return;
+        framedLocalSessionKeyRef.current = sessionKey;
+
+        const maxAxis = Math.max(worldSize.width, worldSize.height, 1);
+        const centerX = worldSize.width * 0.5;
+        const centerZ = worldSize.height * 0.5;
+        controls.target.set(centerX, 0, centerZ);
+        camera.position.set(centerX, maxAxis * 0.62, centerZ + maxAxis * 0.58);
+        camera.lookAt(controls.target);
+        controls.update();
     };
 
     const rebuildTerrainLod = () => {
@@ -248,8 +291,14 @@ export const HexRenderer: React.FC = () => {
         if (!canvasHasVisibleSessionRef.current || isFullRenderBoard(currentTerrain)) return;
 
         const metrics = boardMetricsRef.current;
+        const terrainHeightScale = getTerrainHeightScale(metrics);
+        const cellSizeM = metrics.cellSizeCm / 100.0;
+        const lodSurfaceYOffset = -Math.max(0.18, Math.min(4, cellSizeM * 0.003));
+        const lineYBias = Math.max(0.08, Math.min(1.2, cellSizeM * 0.001));
         const chunkSize = metrics.chunkSizeCells;
         const worldSize = getMapWorldSizeM(currentTerrain.widthChunks, currentTerrain.heightChunks, metrics);
+        const totalCols = currentTerrain.widthChunks * chunkSize;
+        const totalRows = currentTerrain.heightChunks * chunkSize;
         const chunkWorldW = worldSize.width / currentTerrain.widthChunks;
         const chunkWorldH = worldSize.height / currentTerrain.heightChunks;
         const positions: number[] = [];
@@ -293,44 +342,99 @@ export const HexRenderer: React.FC = () => {
             return height;
         };
 
-        const lodStepX = Math.max(1, Math.ceil(currentTerrain.widthChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
-        const lodStepY = Math.max(1, Math.ceil(currentTerrain.heightChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+        const pushLodPatch = (
+            c0: number,
+            r0: number,
+            c1: number,
+            r1: number,
+            x0: number,
+            z0: number,
+            x1: number,
+            z1: number,
+            cx0: number,
+            cy0: number,
+            cx1Exclusive: number,
+            cy1Exclusive: number,
+        ) => {
+            const overlapsRenderedChunk = intersectsRenderedChunk(cx0, cy0, cx1Exclusive, cy1Exclusive);
+            const sampleC = Math.min(totalCols - 1, c0 + Math.floor((c1 - c0) / 2));
+            const sampleR = Math.min(totalRows - 1, r0 + Math.floor((r1 - r0) / 2));
+            const height = currentTerrain.getHeight(sampleC, sampleR);
+            const water = currentTerrain.getWater(sampleC, sampleR);
+            const biome = currentTerrain.getBiome(sampleC, sampleR);
+            const color = getLodColor(height, water, biome);
+            const flatY = Math.max(height, water) * terrainHeightScale + lodSurfaceYOffset;
+            const y00 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r0) * terrainHeightScale + lodSurfaceYOffset : flatY;
+            const y10 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r0) * terrainHeightScale + lodSurfaceYOffset : flatY;
+            const y11 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r1) * terrainHeightScale + lodSurfaceYOffset : flatY;
+            const y01 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r1) * terrainHeightScale + lodSurfaceYOffset : flatY;
 
-        for (let cy = 0; cy < currentTerrain.heightChunks; cy += lodStepY) {
-            for (let cx = 0; cx < currentTerrain.widthChunks; cx += lodStepX) {
-                const nextCx = Math.min(currentTerrain.widthChunks, cx + lodStepX);
-                const nextCy = Math.min(currentTerrain.heightChunks, cy + lodStepY);
-                const sampleC = Math.min(currentTerrain.widthChunks * chunkSize - 1, (cx * chunkSize) + Math.floor(((nextCx - cx) * chunkSize) / 2));
-                const sampleR = Math.min(currentTerrain.heightChunks * chunkSize - 1, (cy * chunkSize) + Math.floor(((nextCy - cy) * chunkSize) / 2));
-                const height = currentTerrain.getHeight(sampleC, sampleR);
-                const water = currentTerrain.getWater(sampleC, sampleR);
-                const biome = currentTerrain.getBiome(sampleC, sampleR);
-                const color = getLodColor(height, water, biome);
-                const x0 = cx * chunkWorldW;
-                const x1 = nextCx * chunkWorldW;
-                const z0 = cy * chunkWorldH;
-                const z1 = nextCy * chunkWorldH;
-                const flatY = Math.max(height, water) * 2.0 - 0.18;
-                const c0 = cx * chunkSize;
-                const c1 = Math.min(nextCx * chunkSize, currentTerrain.widthChunks * chunkSize);
-                const r0 = cy * chunkSize;
-                const r1 = Math.min(nextCy * chunkSize, currentTerrain.heightChunks * chunkSize);
-                const y00 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r0) * 2.0 - 0.18 : flatY;
-                const y10 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r0) * 2.0 - 0.18 : flatY;
-                const y11 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r1) * 2.0 - 0.18 : flatY;
-                const y01 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r1) * 2.0 - 0.18 : flatY;
+            const i0 = pushVertex(x0, y00, z0, color);
+            const i1 = pushVertex(x1, y10, z0, color);
+            const i2 = pushVertex(x1, y11, z1, color);
+            const i3 = pushVertex(x0, y01, z1, color);
+            indices.push(i0, i1, i2, i0, i2, i3);
 
-                const i0 = pushVertex(x0, y00, z0, color);
-                const i1 = pushVertex(x1, y10, z0, color);
-                const i2 = pushVertex(x1, y11, z1, color);
-                const i3 = pushVertex(x0, y01, z1, color);
-                indices.push(i0, i1, i2, i0, i2, i3);
-
+            if (!overlapsRenderedChunk) {
                 lines.push(
-                    x0, y00 + 0.04, z0, x1, y10 + 0.04, z0,
-                    x1, y10 + 0.04, z0, x1, y11 + 0.04, z1,
-                    x1, y11 + 0.04, z1, x0, y01 + 0.04, z1,
-                    x0, y01 + 0.04, z1, x0, y00 + 0.04, z0);
+                    x0, y00 + lineYBias, z0, x1, y10 + lineYBias, z0,
+                    x1, y10 + lineYBias, z0, x1, y11 + lineYBias, z1,
+                    x1, y11 + lineYBias, z1, x0, y01 + lineYBias, z1,
+                    x0, y01 + lineYBias, z1, x0, y00 + lineYBias, z0);
+            }
+        };
+
+        if (metrics.topology === 'Grid') {
+            const lodStepC = Math.max(1, Math.ceil(totalCols / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+            const lodStepR = Math.max(1, Math.ceil(totalRows / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+
+            for (let r0 = 0; r0 < totalRows; r0 += lodStepR) {
+                for (let c0 = 0; c0 < totalCols; c0 += lodStepC) {
+                    const c1 = Math.min(totalCols, c0 + lodStepC);
+                    const r1 = Math.min(totalRows, r0 + lodStepR);
+                    const cx0 = Math.floor(c0 / chunkSize);
+                    const cy0 = Math.floor(r0 / chunkSize);
+                    const cx1Exclusive = Math.min(currentTerrain.widthChunks, Math.floor((c1 - 1) / chunkSize) + 1);
+                    const cy1Exclusive = Math.min(currentTerrain.heightChunks, Math.floor((r1 - 1) / chunkSize) + 1);
+                    pushLodPatch(
+                        c0,
+                        r0,
+                        c1,
+                        r1,
+                        c0 * cellSizeM,
+                        r0 * cellSizeM,
+                        c1 * cellSizeM,
+                        r1 * cellSizeM,
+                        cx0,
+                        cy0,
+                        cx1Exclusive,
+                        cy1Exclusive,
+                    );
+                }
+            }
+        } else {
+            const lodStepX = Math.max(1, Math.ceil(currentTerrain.widthChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+            const lodStepY = Math.max(1, Math.ceil(currentTerrain.heightChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+
+            for (let cy = 0; cy < currentTerrain.heightChunks; cy += lodStepY) {
+                for (let cx = 0; cx < currentTerrain.widthChunks; cx += lodStepX) {
+                    const nextCx = Math.min(currentTerrain.widthChunks, cx + lodStepX);
+                    const nextCy = Math.min(currentTerrain.heightChunks, cy + lodStepY);
+                    pushLodPatch(
+                        cx * chunkSize,
+                        cy * chunkSize,
+                        Math.min(nextCx * chunkSize, totalCols),
+                        Math.min(nextCy * chunkSize, totalRows),
+                        cx * chunkWorldW,
+                        cy * chunkWorldH,
+                        nextCx * chunkWorldW,
+                        nextCy * chunkWorldH,
+                        cx,
+                        cy,
+                        nextCx,
+                        nextCy,
+                    );
+                }
             }
         }
 
@@ -339,12 +443,12 @@ export const HexRenderer: React.FC = () => {
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         geometry.setIndex(indices);
         geometry.computeVertexNormals();
-        const material = new THREE.MeshBasicMaterial({
+        const material = new THREE.MeshStandardMaterial({
             vertexColors: true,
-            transparent: true,
-            opacity: 0.72,
             side: THREE.DoubleSide,
-            depthWrite: false,
+            flatShading: false,
+            roughness: 0.82,
+            metalness: 0.0,
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.name = 'ChunkLodTerrain';
@@ -356,13 +460,13 @@ export const HexRenderer: React.FC = () => {
         const lineMaterial = new THREE.LineBasicMaterial({
             color: 0x00e5ff,
             transparent: true,
-            opacity: showChunkBorders ? 0.42 : 0.0,
+            opacity: viewStateRef.current.showChunkBorders ? 0.06 : 0.0,
             depthWrite: false,
         });
         const lineMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
         lineMesh.name = 'ChunkLodGrid';
         lineMesh.renderOrder = -10;
-        lineMesh.visible = showChunkBorders;
+        lineMesh.visible = viewStateRef.current.showChunkBorders;
         group.add(lineMesh);
     };
 
@@ -377,6 +481,23 @@ export const HexRenderer: React.FC = () => {
     useEffect(() => {
         boardMetricsRef.current = boardMetrics;
     }, [boardMetrics]);
+
+    useEffect(() => {
+        terrainVisualOptionsRef.current = {
+            terrainViewMode,
+            heightContrast: terrainHeightContrast,
+        };
+
+        chunkRendererRef.current?.setVisualOptions(terrainVisualOptionsRef.current);
+        if (!canvasHasVisibleSessionRef.current) return;
+
+        renderedWindowKeyRef.current = null;
+        for (const key of chunksRef.current.keys()) {
+            renderDirtyChunksRef.current.add(key);
+        }
+        enqueueVisibleRenderWindow(true);
+        rebuildTerrainLod();
+    }, [terrainViewMode, terrainHeightContrast]);
 
     useEffect(() => {
         viewStateRef.current = {
@@ -574,18 +695,7 @@ export const HexRenderer: React.FC = () => {
             return;
         }
         
-        chunkRendererRef.current = new ChunkRenderer(terrain, boardMetrics);
-        rebuildTerrainLod();
-        
-        enqueueVisibleRenderWindow(true);
-        const initialChunkCount = renderDirtyChunksRef.current.size;
-        totalInitChunksRef.current = initialChunkCount;
-        if (initialChunkCount > 0) {
-            setLoading(true, `Generating visible terrain... 0%`, 0);
-        } else {
-            setLoading(false);
-        }
-        updateDirtyChunks();
+        chunkRendererRef.current = new ChunkRenderer(terrain, boardMetrics, terrainVisualOptionsRef.current);
         
         // Update Input Plane Size/Pos
         if (inputPlaneRef.current) {
@@ -595,7 +705,21 @@ export const HexRenderer: React.FC = () => {
             inputPlaneRef.current.scale.set(totalW, totalH, 1);
             inputPlaneRef.current.position.set(totalW/2, 0, totalH/2);
             inputPlaneRef.current.updateMatrixWorld();
+            updateCameraBoundsForWorld(worldSize);
+            frameLocalTerrainDraft(worldSize);
         }
+
+        rebuildTerrainLod();
+        
+        enqueueVisibleRenderWindow(true);
+        const initialChunkCount = renderDirtyChunksRef.current.size;
+        totalInitChunksRef.current = initialChunkCount;
+        if (initialChunkCount > 0) {
+            setLoading(true, `Generating terrain detail... 0%`, 0);
+        } else {
+            setLoading(false);
+        }
+        updateDirtyChunks();
 
     }, [terrain, boardMetrics, canvasHasVisibleSession]); // Re-run when terrain, topology, or session visibility changes
 
@@ -670,7 +794,7 @@ export const HexRenderer: React.FC = () => {
                 (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0;
             }
 
-            const bindings = asRecord(e.overrides?.PerformerBindings) ?? asRecord(e.overrides?.performerBindings);
+            const bindings = asRecord(e.overrides?.PresenterBindings) ?? asRecord(e.overrides?.presenterBindings);
             const ids = bindings?.Ids ?? bindings?.ids ?? bindings?.DefinitionIds ?? bindings?.definitionIds ?? null;
             if (Array.isArray(ids) && ids.length > 0) {
                 const sprite = buildTextSprite(String(ids[0]));
@@ -834,7 +958,7 @@ export const HexRenderer: React.FC = () => {
             }
 
             // Generate new
-            const newChunk = renderer.generateChunk(cx, cy, 0, 0, 2.0); 
+            const newChunk = renderer.generateChunk(cx, cy, 0, 0, getTerrainHeightScale(boardMetricsRef.current)); 
 
             applyChunkLayerVisibility(newChunk);
             group.add(newChunk);
@@ -849,6 +973,9 @@ export const HexRenderer: React.FC = () => {
 
         // Remove processed from dirty set
         processedKeys.forEach(k => renderDirtyChunksRef.current.delete(k));
+        if (processedKeys.length > 0 && renderDirtyChunksRef.current.size === 0 && !isFullRenderBoard(currentTerrain)) {
+            rebuildTerrainLod();
+        }
 
         // Sync render rebuilds to the minimap only. Nav dirty is authored by terrain/area/obstacle edits,
         // not by the renderer consuming its own rebuild queue after Open.
@@ -870,7 +997,7 @@ export const HexRenderer: React.FC = () => {
                 totalInitChunksRef.current = 0;
             } else {
                  // Update every 5% or so?
-                 setLoading(true, `Generating visible terrain... ${progress}%`, progress);
+                 setLoading(true, `Generating terrain detail... ${progress}%`, progress);
             }
         }
     };
