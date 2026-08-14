@@ -19,7 +19,7 @@
   - [属性写入权威](architecture/attribute-write-authority.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
   - [图复用库合同：FuncLib / ActionLib](architecture/graph-funclib-actionlib-contract.md)
-  - [Graph FuncLib / ActionLib UAT 映射](acceptance/graph-funclib-actionlib-uat.md)
+  - [FuncLib / ActionLib UAT](acceptance/graph-funclib-actionlib-uat.md)
   - [Tag → 展示 Token 查表（面板 curState）](architecture/tag-display-lookup.md)
   - [通用图查表（ResolveTableRow + TableRead）](architecture/graph-table-lookup.md)
   - [GAS、订单与输入运行时合同](architecture/gas-order-input-runtime-contract.md)
