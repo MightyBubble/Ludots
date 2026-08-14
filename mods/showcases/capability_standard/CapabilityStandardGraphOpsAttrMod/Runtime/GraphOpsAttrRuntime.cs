@@ -45,6 +45,7 @@ public sealed class GraphOpsAttrRuntime : IDisposable
     private bool _visualsSpawned;
     private World? _world;
     private GasGraphRuntimeApi? _api;
+    private TagOps? _tagOps;
     private EffectRequestQueue? _requests;
     private Entity _caster;
     private Entity _target;
@@ -124,8 +125,8 @@ public sealed class GraphOpsAttrRuntime : IDisposable
         _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
         _world = _session.World;
         _requests = new EffectRequestQueue();
-        var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-        _api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null, effectRequests: _requests, tagOps: tagOps);
+        _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+        _api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null, effectRequests: _requests, tagOps: _tagOps);
 
         _caster = _world.Create(new AttributeBuffer(), new DirtyFlags());
         _target = _world.Create(new AttributeBuffer(), new DirtyFlags(), new ActiveEffectContainer());
@@ -364,18 +365,18 @@ public sealed class GraphOpsAttrRuntime : IDisposable
 
     private void ResetCombatants()
     {
-        ref var casterAttrs = ref _world!.Get<AttributeBuffer>(_caster);
-        ref var targetAttrs = ref _world.Get<AttributeBuffer>(_target);
-        casterAttrs.SetBase(_healthAttrId, 100f);
-        casterAttrs.SetCurrent(_healthAttrId, 100f);
-        casterAttrs.SetBase(_bonusAttrId, 5f);
-        casterAttrs.SetCurrent(_bonusAttrId, 5f);
-        casterAttrs.SetBase(_tallyAttrId, 0f);
-        casterAttrs.SetCurrent(_tallyAttrId, 0f);
-        casterAttrs.SetBase(_lastHitAttrId, 0f);
-        casterAttrs.SetCurrent(_lastHitAttrId, 0f);
-        targetAttrs.SetBase(_healthAttrId, OpeningHealth);
-        targetAttrs.SetCurrent(_healthAttrId, OpeningHealth);
+        TagOps tagOps = _tagOps
+            ?? throw new InvalidOperationException("GraphOpsAttr requires TagOps.");
+        AttributeMutationOps.SetBase(_world!, _caster, _healthAttrId, 100f, tagOps);
+        AttributeMutationOps.SetCurrent(_world, _caster, _healthAttrId, 100f, tagOps);
+        AttributeMutationOps.SetBase(_world, _caster, _bonusAttrId, 5f, tagOps);
+        AttributeMutationOps.SetCurrent(_world, _caster, _bonusAttrId, 5f, tagOps);
+        AttributeMutationOps.SetBase(_world, _caster, _tallyAttrId, 0f, tagOps);
+        AttributeMutationOps.SetCurrent(_world, _caster, _tallyAttrId, 0f, tagOps);
+        AttributeMutationOps.SetBase(_world, _caster, _lastHitAttrId, 0f, tagOps);
+        AttributeMutationOps.SetCurrent(_world, _caster, _lastHitAttrId, 0f, tagOps);
+        AttributeMutationOps.SetBase(_world, _target, _healthAttrId, OpeningHealth, tagOps);
+        AttributeMutationOps.SetCurrent(_world, _target, _healthAttrId, OpeningHealth, tagOps);
         TargetHealth = OpeningHealth;
         CasterHealth = 100f;
         DamageBonus = 5f;

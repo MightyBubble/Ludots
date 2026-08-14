@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Vision;
@@ -327,6 +328,12 @@ namespace Ludots.Core.Gameplay.GAS
         public EffectPresetType PresetType;
         public int PresetAttribute0;
         public int PresetAttribute1;
+
+        public EffectTemplateData()
+        {
+            PresetAttribute0 = AttributeRegistry.InvalidId;
+            PresetAttribute1 = AttributeRegistry.InvalidId;
+        }
         public EffectLifetimeKind LifetimeKind;
         public GasClockId ClockId;
         public int DurationTicks;

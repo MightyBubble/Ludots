@@ -474,7 +474,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.Gold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 8f);
@@ -505,7 +505,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.SpendableGold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 30f);
@@ -535,7 +535,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0);
             int goldId = AttributeRegistry.Register("Exchange.Tests.RollbackGold");
@@ -569,7 +569,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 100, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.HotPathGold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 10_000f);
@@ -870,7 +870,8 @@ namespace Ludots.Tests.GAS
             var operations = new ExchangeOperationRegistry();
             var scoped = new ExchangeScopedOperationStore();
             var effects = new EffectRequestQueue();
-            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects, relationships);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects, relationships, tagOps);
             return new ExchangeFixture(inventory, operations, scoped, runtime, relationships, stashLayout, targetLayout, diplomacyTypeId, trustMetricId, embargoFlagId);
         }
 

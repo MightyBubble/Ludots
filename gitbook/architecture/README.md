@@ -9,6 +9,7 @@
 - [UI 面板作者形态（四种表面）](ui-panel-authoring-form.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
+- [属性写入权威](attribute-write-authority.md) — **current 直写存活；聚合器只算有效上限；裸写由 IL 守卫收口**
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
 - [图复用库合同：FuncLib / ActionLib](graph-funclib-actionlib-contract.md) — **纯函数库 vs 可挂起动作库；Effect 时间轴与阶段表达力补丁**
 - [Tag → 展示 Token 查表（面板 curState）](tag-display-lookup.md)

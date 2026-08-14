@@ -20,17 +20,34 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static bool IsFrozen => _frozen;
 
-        public static void Clear()
+        public static bool IsValidId(int attributeId)
         {
-            if (_frozen)
+            return attributeId != InvalidId && _idToName.ContainsKey(attributeId);
+        }
+
+        public static int RequireId(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
             {
-                throw new System.InvalidOperationException("AttributeRegistry is frozen.");
+                throw new System.ArgumentException("Attribute name is empty.", nameof(name));
             }
 
+            int id = GetId(name);
+            if (id == InvalidId)
+            {
+                throw new System.ArgumentException($"Attribute '{name}' is not registered.", nameof(name));
+            }
+
+            return id;
+        }
+
+        public static void Clear()
+        {
             _nameToId.Clear();
             _idToName.Clear();
             System.Array.Clear(_constraints, 0, _constraints.Length);
             _nextId = 0;
+            _frozen = false;
         }
 
         public static void Freeze()
@@ -40,14 +57,15 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static int Register(string name)
         {
-            if (_frozen)
-            {
-                throw new System.InvalidOperationException("AttributeRegistry is frozen.");
-            }
-
             if (_nameToId.TryGetValue(name, out var id))
             {
                 return id;
+            }
+
+            if (_frozen)
+            {
+                throw new System.InvalidOperationException(
+                    $"AttributeRegistry is frozen; '{name}' is not registered.");
             }
 
             if (_nextId >= MaxAttributes)
@@ -86,7 +104,11 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static void SetConstraints(int attributeId, in AttributeConstraints constraints)
         {
-            if ((uint)attributeId >= (uint)MaxAttributes) return;
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
+            }
+
             _constraints[attributeId] = constraints;
         }
 

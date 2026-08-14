@@ -933,7 +933,8 @@ namespace Ludots.Core.Engine
                 exchangeScopedOperations,
                 inventoryRuntime,
                 effectRequestQueue,
-                relationshipRuntime);
+                relationshipRuntime,
+                tagOps);
             var graphOutputValueStore = new GraphOutputValueStore(
                 graphOutputValueKeyRegistry,
                 gasRuntimeCapacity.GraphOutputValueCapacity);
@@ -1282,6 +1283,7 @@ namespace Ludots.Core.Engine
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
+            attributeSinks.Freeze();
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
             var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi, tagOps);
             var sessionSystem = new GameSessionSystem(GameSession);
@@ -1646,6 +1648,7 @@ namespace Ludots.Core.Engine
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
+            AttributeRegistry.Freeze();
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
@@ -1665,7 +1668,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
-            RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings), SystemGroup.InputCollection);
+            RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);

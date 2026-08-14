@@ -136,8 +136,11 @@ Feature: 用数据组合新的技能效果
     And 玩家不会进入使用了该无效规则的对局
 ```
 
+属性 current 的权威、有效上限、非法 id 失败关闭与注册表 Freeze 见 [属性写入权威](attribute-write-authority.md)。属性表必须在一个注册点统一 `Register` 并在装载结束时 `Freeze`。
+
 相关入口：
 
+- [属性写入权威](attribute-write-authority.md)
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
 - [实体生命周期原子操作](entity-lifecycle-atomic-ops.md)
 - [Graph Query Services](../reference/graph-query-services.md)
