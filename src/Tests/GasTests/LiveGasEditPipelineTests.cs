@@ -11,6 +11,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class LiveGasEditPipelineTests
     {
         private const string GraphKey = "Graph.Live.HotConst";

@@ -15,6 +15,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Graph
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class GraphContractTests
     {
         private string? _tempRoot;
