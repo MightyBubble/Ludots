@@ -81,7 +81,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int LastSliceProcessed { get; private set; }
 
         /// <summary>
-        /// Time-sliced application stages for EffectApplicationSystem.
+        /// Time-sliced application stages. ProcessPending through AttachEffects
+        /// commit a visible attachment; ActivateEffects is the settlement transaction.
         /// </summary>
         private enum ApplicationStage : byte
         {
@@ -388,19 +389,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             EffectContext context = World.Get<EffectContext>(e);
                             if (!IsEffectAttached(context.Target, e))
                             {
-                                RollbackPersistentAttachment(context.Target, e);
-                                ConsumeWork(ref workUnits);
-                                continue;
+                                throw new InvalidOperationException(
+                                    $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.MissingAttachment: target={context.Target.Id}, effect={e.Id}.");
                             }
 
                             int templateId = World.Has<EffectTemplateRef>(e)
                                 ? World.Get<EffectTemplateRef>(e).TemplateId
                                 : 0;
 
-                            bool hasGrantedTagSnapshot = false;
-                            GameplayTagContainer tagsBefore = default;
-                            TagCountContainer tagCountsBefore = default;
-                            DirtyFlags dirtyFlagsBefore = default;
                             int fanOutCommandCountBefore = _fanOutCommands.Count;
                             int listenerRegistrationCountBefore = _pendingListenerRegistrations.Count;
                             bool graphTransactionBound = false;
@@ -418,16 +414,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 {
                                     EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(e);
                                     int stackCount = World.Has<EffectStack>(e) ? World.Get<EffectStack>(e).Count : 1;
-                                    TagOps.RequireTagState(World, context.Target);
-                                    tagsBefore = World.Get<GameplayTagContainer>(context.Target);
-                                    tagCountsBefore = World.Get<TagCountContainer>(context.Target);
-                                    dirtyFlagsBefore = World.Get<DirtyFlags>(context.Target);
-                                    hasGrantedTagSnapshot = true;
-                                    EffectTagContributionHelper.PrepareGrantToEntity(World, context.Target, in grantedTags, stackCount, _tagOps, _budget);
-                                    if (World.Get<DirtyFlags>(context.Target).IsAnyTagDirty())
-                                    {
-                                        _persistentPhaseTransaction.StageDirtyEntity(context.Target);
-                                    }
+                                    _persistentPhaseTransaction.StageGrantedTagGrant(context.Target, in grantedTags, stackCount);
                                 }
 
                                 ExecutePersistentPhases(e, in context, templateId);
@@ -459,13 +446,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 _persistentPhaseTransaction.Rollback();
                                 _fanOutCommands.Truncate(fanOutCommandCountBefore);
                                 TrimTail(_pendingListenerRegistrations, listenerRegistrationCountBefore);
-                                if (hasGrantedTagSnapshot && World.IsAlive(context.Target))
-                                {
-                                    World.Get<GameplayTagContainer>(context.Target) = tagsBefore;
-                                    World.Get<TagCountContainer>(context.Target) = tagCountsBefore;
-                                    World.Get<DirtyFlags>(context.Target) = dirtyFlagsBefore;
-                                }
-                                RollbackPersistentAttachment(context.Target, e);
                                 throw;
                             }
                             finally
@@ -735,38 +715,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             for (int i = 0; i < container.Count; i++)
             {
                 if (container.GetEntity(i) == effect)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private void RollbackPersistentAttachment(Entity target, Entity effect)
-        {
-            bool removeCreatedContainer = false;
-            if (World.IsAlive(target) && World.Has<ActiveEffectContainer>(target))
-            {
-                ref ActiveEffectContainer container = ref World.Get<ActiveEffectContainer>(target);
-                container.Remove(effect);
-                removeCreatedContainer = container.Count == 0 && WasContainerCreatedThisPass(target);
-            }
-
-            if (removeCreatedContainer && World.IsAlive(target) && World.Has<ActiveEffectContainer>(target))
-            {
-                World.Remove<ActiveEffectContainer>(target);
-            }
-            if (World.IsAlive(effect))
-            {
-                World.Destroy(effect);
-            }
-        }
-
-        private bool WasContainerCreatedThisPass(Entity target)
-        {
-            for (int i = 0; i < _createdContainers.Count; i++)
-            {
-                if (_createdContainers[i] == target)
                 {
                     return true;
                 }

@@ -21,6 +21,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public const string UnsupportedSideEffectError = "GAS.EFFECT_TRANSACTION.ERR.UnsupportedSideEffect";
     public const string AttributeTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.AttributeTargetInvalid";
     public const string RelationTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.RelationTargetInvalid";
+    public const string MissingPresentationEventBufferError = "GAS.GRAPH.ERR.MissingGasPresentationEventBuffer";
 
     private readonly World _world;
     private readonly TagOps? _tagOps;
@@ -350,15 +351,28 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageAttributeAdd(Entity target, int attributeId, float delta)
     {
         int index = GetOrAddAttributeEntity(target);
-        float before = _attributeValues[index].GetCurrent(attributeId);
-        _attributeValues[index].SetCurrent(attributeId, before + delta);
+        var modifiers = new EffectModifiers();
+        if (!modifiers.Add(attributeId, ModifierOp.Add, delta))
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=EffectModifiers, staged=1, capacity={EffectModifiers.CAPACITY}.");
+        }
+
+        EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
     }
 
     public void StageAttributeSet(Entity target, int attributeId, float value)
     {
         int index = GetOrAddAttributeEntity(target);
-        _attributeValues[index].SetCurrent(attributeId, value);
+        var modifiers = new EffectModifiers();
+        if (!modifiers.Add(attributeId, ModifierOp.Override, value))
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=EffectModifiers, staged=1, capacity={EffectModifiers.CAPACITY}.");
+        }
+
+        EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
     }
 
@@ -428,7 +442,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         RequireActive();
         if (_presentationEvents == null)
         {
-            return;
+            throw new InvalidOperationException(MissingPresentationEventBufferError);
         }
         if (_presentationEventCount >= _stagedPresentationEvents.Length ||
             _presentationEventCount >= _presentationEvents.AvailableCapacity)
@@ -497,6 +511,45 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         hasTag = _tagOps.HasTag(ref _tagValues[index], tagId, TagSense.Effective);
         return true;
+    }
+
+    public void StageGrantedTagGrant(Entity target, in EffectGrantedTags grantedTags, int stackCount)
+    {
+        RequireActive();
+        if (!_world.IsAlive(target) || grantedTags.Count <= 0)
+        {
+            return;
+        }
+        if (_tagOps == null)
+        {
+            throw new InvalidOperationException(TagOps.MissingTagOpsError);
+        }
+
+        int index = GetOrAddTagEntity(target);
+        bool changed = false;
+        for (int grantIndex = 0; grantIndex < grantedTags.Count; grantIndex++)
+        {
+            TagContribution contribution = grantedTags.Get(grantIndex);
+            int amount = contribution.Compute(stackCount);
+            for (int repeat = 0; repeat < amount; repeat++)
+            {
+                if (!_tagOps.AddTag(
+                    ref _tagValues[index],
+                    ref _tagCountValues[index],
+                    contribution.TagId,
+                    ref _tagDirtyValues[index]))
+                {
+                    throw new InvalidOperationException(TagOps.RuleRejectedError);
+                }
+
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            StageDirtyEntity(target);
+        }
     }
 
     public void StageGrantedTagRevoke(Entity target, in EffectGrantedTags grantedTags, int stackCount)
@@ -799,14 +852,20 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     {
         RequireActive();
         ValidateCommit();
-        PrepareCommitState();
 
+        int pendingDestroyCount = _destroyedEffectCount;
         try
         {
+            PrepareCommitState();
             _worldCommitStarted = true;
             if (_structuralCommands.Size > 0)
             {
                 _structuralCommands.Playback(_world);
+            }
+
+            if (_attributeCount > 0 && _tagOps == null)
+            {
+                throw new InvalidOperationException(TagOps.MissingTagOpsError);
             }
 
             for (int i = 0; i < _attributeCount; i++)
@@ -817,14 +876,25 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
 
                 Entity entity = _attributeEntities[i];
-                _world.Get<AttributeBuffer>(entity) = _attributeValues[i];
-                _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedValues[i];
                 for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
                 {
-                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) != 0UL)
+                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) == 0UL)
                     {
-                        _world.Get<DirtyFlags>(entity).MarkAttributeDirty(attributeId);
+                        continue;
                     }
+
+                    float stagedBase = ReadRawBase(ref _attributeValues[i], attributeId);
+                    if (stagedBase != ReadRawBase(ref _attributeOriginalValues[i], attributeId))
+                    {
+                        AttributeMutationOps.SetBase(_world, entity, attributeId, stagedBase, _tagOps!);
+                    }
+
+                    AttributeMutationOps.SetCurrent(
+                        _world,
+                        entity,
+                        attributeId,
+                        _attributeValues[i].GetCurrent(attributeId),
+                        _tagOps!);
                 }
             }
             for (int i = 0; i < _tagEntityCount; i++)
@@ -907,25 +977,21 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             {
                 _gameplayEventBus!.Publish(_stagedGameplayEvents[i]);
             }
-            for (int i = 0; i < _destroyedEffectCount; i++)
-            {
-                Entity effect = _destroyedEffects[i];
-                if (_world.IsAlive(effect))
-                {
-                    _world.Destroy(effect);
-                }
-            }
-
             if (_rootBudget != null)
             {
                 _rootBudget.CommitWrites(in _rootBudgetCheckpoint);
             }
 
             End();
+            LandStagedDestroys(pendingDestroyCount);
         }
         catch
         {
-            Rollback();
+            if (IsActive)
+            {
+                Rollback();
+            }
+
             throw;
         }
     }
@@ -1156,8 +1222,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             return;
         }
         ulong bit = 1UL << attributeId;
-        if (_attributeValues[index].GetCurrent(attributeId) !=
-            _attributeOriginalValues[index].GetCurrent(attributeId))
+        bool currentChanged = _attributeValues[index].GetCurrent(attributeId) !=
+            _attributeOriginalValues[index].GetCurrent(attributeId);
+        bool baseChanged = ReadRawBase(ref _attributeValues[index], attributeId) !=
+            ReadRawBase(ref _attributeOriginalValues[index], attributeId);
+        if (currentChanged || baseChanged)
         {
             _attributeChangedMasks[index] |= bit;
         }
@@ -1165,6 +1234,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             _attributeChangedMasks[index] &= ~bit;
         }
+    }
+
+    private static unsafe float ReadRawBase(ref AttributeBuffer buffer, int attributeId)
+    {
+        return buffer.BaseValues[attributeId];
     }
 
     private void ValidateCommit()
@@ -1711,25 +1785,32 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
         for (int i = 0; i < _blackboardFloatCount; i++)
         {
-            _world.Get<BlackboardFloatBuffer>(_blackboardFloatEntities[i]) = _blackboardFloatOriginalValues[i];
+            RestoreComponent(_blackboardFloatEntities[i], in _blackboardFloatOriginalValues[i]);
         }
         for (int i = 0; i < _blackboardIntCount; i++)
         {
-            _world.Get<BlackboardIntBuffer>(_blackboardIntEntities[i]) = _blackboardIntOriginalValues[i];
+            RestoreComponent(_blackboardIntEntities[i], in _blackboardIntOriginalValues[i]);
         }
         for (int i = 0; i < _blackboardEntityCount; i++)
         {
-            _world.Get<BlackboardEntityBuffer>(_blackboardEntityEntities[i]) = _blackboardEntityOriginalValues[i];
+            RestoreComponent(_blackboardEntityEntities[i], in _blackboardEntityOriginalValues[i]);
         }
         for (int i = 0; i < _cancelledEffectCount; i++)
         {
-            _world.Get<GameplayEffect>(_cancelledEffects[i]).CancelRequested = _cancelledEffectOriginalValues[i];
+            Entity entity = _cancelledEffects[i];
+            if (_world.IsAlive(entity) && _world.Has<GameplayEffect>(entity))
+            {
+                _world.Get<GameplayEffect>(entity).CancelRequested = _cancelledEffectOriginalValues[i];
+            }
         }
         for (int i = 0; i < _listenerEntityCount; i++)
         {
-            if (_listenerExisted[i] && _world.Has<EffectPhaseListenerBuffer>(_listenerEntities[i]))
+            Entity entity = _listenerEntities[i];
+            if (_listenerExisted[i] &&
+                _world.IsAlive(entity) &&
+                _world.Has<EffectPhaseListenerBuffer>(entity))
             {
-                _world.Get<EffectPhaseListenerBuffer>(_listenerEntities[i]) = _listenerOriginalValues[i];
+                _world.Get<EffectPhaseListenerBuffer>(entity) = _listenerOriginalValues[i];
             }
         }
         for (int i = 0; i < _relationParentCount; i++)
@@ -1980,6 +2061,28 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         position = default;
         return false;
+    }
+
+    private void RestoreComponent<T>(Entity entity, in T original)
+        where T : struct
+    {
+        if (_world.IsAlive(entity) && _world.Has<T>(entity))
+        {
+            _world.Get<T>(entity) = original;
+        }
+    }
+
+    private void LandStagedDestroys(int pendingDestroyCount)
+    {
+        // Destroy only after End(): the transaction can no longer fail or roll back.
+        for (int i = 0; i < pendingDestroyCount; i++)
+        {
+            Entity effect = _destroyedEffects[i];
+            if (_world.IsAlive(effect))
+            {
+                _world.Destroy(effect);
+            }
+        }
     }
 
     private void RequireActive()
