@@ -16,6 +16,7 @@
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
+  - [属性写入权威](architecture/attribute-write-authority.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
   - [图复用库合同：FuncLib / ActionLib](architecture/graph-funclib-actionlib-contract.md)
   - [Graph FuncLib / ActionLib UAT 映射](acceptance/graph-funclib-actionlib-uat.md)
