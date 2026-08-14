@@ -981,7 +981,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
             return f[floatReg];
         }
 
@@ -1014,7 +1014,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
             return iArr[intReg];
         }
 
@@ -1047,7 +1047,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
             return e[entityReg];
         }
 
@@ -1080,7 +1080,20 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
+        }
+
+        private static GraphInstruction[] WithHalt(GraphInstruction[] program)
+        {
+            if (program.Length > 0 && program[^1].Op == (ushort)GraphNodeOp.HaltReturnInt)
+            {
+                return program;
+            }
+
+            var copy = new GraphInstruction[program.Length + 1];
+            program.CopyTo(copy, 0);
+            copy[^1] = new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt };
+            return copy;
         }
     }
 }
