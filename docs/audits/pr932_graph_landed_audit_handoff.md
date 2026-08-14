@@ -4,7 +4,9 @@
 这是一次**独立架构审计请求**，对象是已经快进进 `main` 的图能力收口（落地 PR [#932](https://github.com/MightyBubble/Ludots/pull/932)，tip `82ddb3322a`）。  
 不要只扫 diff 文件名；必须对照合同与玩家门做「说的和进游戏看到的是不是同一件事」。
 
-本文件**不含结论**。结论另开一份 SSOT 报告。禁止借本需求夹带实现修复。
+本文件**不含结论**。当时结论在 [`pr932_graph_landed_architecture_audit.md`](pr932_graph_landed_architecture_audit.md)。**当前进度只认** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)。禁止借本需求夹带实现修复，也不要再按本页开一轮新审计。
+
+**事后更正：** 八间家族房间已删除。不要再按「退役卡还能点进去」取证。
 
 **刻意不审：** UI 面板图（#886 / #893 及查表/TagDisplay 面板债）、表现层改名/贴花/客户端座椅、更早平行的 GraphScore 预算 [#723](https://github.com/MightyBubble/Ludots/pull/723)。
 

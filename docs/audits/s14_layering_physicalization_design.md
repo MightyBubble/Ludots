@@ -1,6 +1,6 @@
 # S14 分层物理化设计（第一阶段 · 只出设计）
 
-**状态：** 实现进行中。Wave 1 已在 main；本实现补 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine 不在本实现里——那两步会改 67 个 Mod 或造成程序集环，单独开票。gitbook 合同仍不标「已落地」。
+**状态：** 脚手架在主干，墙没砌完。Wave 1 与 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）已合。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine **没做**——单独开票。进度只认 [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)。gitbook 合同仍不标「已落地」。
 **基线：** `origin/main` @ `46fcd9dcda`
 **计划正本：** GitHub PR #942 计划文 §S14（该文尚未合入本基线，以 PR head 为准）
 **审查编号：** B21、B22、B23、B24、B25、C21、C22
@@ -125,7 +125,7 @@ L1 今天还 `using Ludots.Core.Presentation.TagDisplay`（`GraphControlFlowComp
 #### 3.1.3 本阶段不切
 
 - Navigation / MassNavigation / Vision / Persistence / Association / 多数 Map：仍在 Engine。再切是后续票。
-- 八个 GraphOps 家族 Mod：不删、不退役（S6 锁门是另一票）。
+- 八个 GraphOps 家族 Mod：**后来按 #968 删除**。本设计写「不删」是当时范围，不是现状。单节点画廊留下。
 - Physics2D 三件套：保持独立，但后续应改成引用契约/Spatial，而不是整颗 Core。
 - 不新增 AAC 平行 ADR，不改 `docs/adr/`。
 

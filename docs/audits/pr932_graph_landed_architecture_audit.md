@@ -1,11 +1,14 @@
-# main 图能力收口架构审计（#932 落地后 · SSOT）
+# main 图能力收口架构审计（#932 落地后 · 当时结论）
 
-**被审对象：** `origin/main` @ `82ddb3322a`（落地 PR [#932](https://github.com/MightyBubble/Ludots/pull/932)，已合）
+**当时对象：** `origin/main` @ `82ddb3322a`（落地 PR [#932](https://github.com/MightyBubble/Ludots/pull/932)，已合）
+**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)
 **审计需求：** PR [#939](https://github.com/MightyBubble/Ludots/pull/939) → `docs/audits/pr932_graph_landed_audit_handoff.md`
 **前序审计：** `docs/audits/pr911_funclib_actionlib_architecture_audit.md`（#914）、`docs/audits/pr911_audit_fix_checklist.md`
 **合同：** `gitbook/architecture/graph-funclib-actionlib-contract.md`（状态：修复中 / Epic #915）
 
-本文件是本轮审计的唯一结论。九个领域（A–H2）的分头取证已在此合成，不另留平行报告。
+本文件是**当时那一轮**的结论，不是当前进度。九个领域（A–H2）的分头取证已在此合成。
+
+**事后更正（主干 `d1b8f5f4d7`）：** 当时 B2 写「退役的八间家族展厅玩家仍点得进去」。后来 #941 锁门，#968 **删掉**这些房间。现在启动器里没有退役卡片，也没有家族大杂烩。查询口、血条回卷等当时红线，后续 S 票已关。分层墙仍未立完。和现状页打架，以现状页为准。
 
 ---
 
@@ -27,14 +30,14 @@
 
 | 阶段 | 领域 | 一句话结论 |
 |------|------|------------|
-| 1 | A 启动器 / 登记表 | 无硬编码默认关；120 条字段齐全；退役家族 preset 已删但 binding 还在 |
+| 1 | A 启动器 / 登记表 | **当时**退役家族 preset 已删但 binding 还在。**现在**房间已删除 |
 | 1 | B 分镜 / 地图 / 字幕 | 人与字幕模板真数据驱动；填字幕的中文词与「演什么」仍在 C# 里按 op 名分支 |
 | 2 | C 开图 / 空间 / 效果队列 | 画廊走正式开图且等到空间索引就绪；效果队列「清空」不真清；家族场走平行世界 |
 | 2 | D 血条 / 披露 / 描边 | 披露管道是真的（Knowledge + WorldHud）；血量数值大量由 C# 摆放 |
 | 3 | E FuncLib / ActionLib | 加载期失败关闭全部到位；Query 前门是唯一未闭合的开口 |
 | 3 | F 作者前门 | 44 个曾无前门的 opcode 全部补齐，缺口 0；`AllowTruncated` / `validOutput` 写不出来 |
 | 3 | G 覆盖表 | 枚举/展厅/资产三个维度不假绿；`unitTestFilter` 有 21 条错误归因，守卫结构上抓不到 |
-| 4 | H1 退役家族场 | 门牌摘了门没锁；五间进门清空 `GraphIdRegistry`；两处「未完工先写成功文案」 |
+| 4 | H1 退役家族场 | **当时**门牌摘了门没锁。**现在**房间已删除 |
 | 4 | H2 L2 叶子 / 技能热改 | 跨拍续跑与未知 Tag 失败关闭都是真的；热改在会话层非原子 |
 | 5 | 合成 | 本文件 |
 

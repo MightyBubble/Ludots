@@ -1,12 +1,15 @@
-# GAS + Graph 修复计划落地后架构审计（#942 全票合入）
+# GAS + Graph 修复计划落地后架构审计（#942 全票合入 · 当时结论）
 
-**审计对象：** `origin/main` @ `46fcd9dcda`（#960 合入后）  
+**当时对象：** `origin/main` @ `46fcd9dcda`（#960 合入后）  
+**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)  
 **需求正本：** [`s_plan_landed_audit_handoff.md`](s_plan_landed_audit_handoff.md)  
 **计划正本：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)（[#942](https://github.com/MightyBubble/Ludots/pull/942)）  
 **合同：** `gitbook/architecture/graph-funclib-actionlib-contract.md`（状态仍是**修复中**）  
 **前序（输入，不是结论）：** [`s_batch1_architecture_audit.md`](s_batch1_architecture_audit.md)、[`s_batch2_s9_architecture_audit.md`](s_batch2_s9_architecture_audit.md)、[`pr932_graph_landed_architecture_audit.md`](pr932_graph_landed_architecture_audit.md)  
 **方法：** 对照源码与指定过滤器证伪；零生产代码。  
-**刻意不审：** UI 面板（#886 / #893）、#723 GraphScore、#947 Pi、删八家族 Mod、S14 第 2–6 波搬家。
+**刻意不审（当时）：** UI 面板（#886 / #893）、#723 GraphScore、#947 Pi。
+
+**事后更正（主干 `d1b8f5f4d7`）：** 本页写于 #960 刚合时。之后 #965 收了夹具、验收页、示意条；#964 合了分层脚手架（墙仍未立完）；#968 **删掉**八间家族房间，不是退役锁门；#963 残血打分短剧已合。S6 / 场景 4 / 「八家族 Mod 还在」已按现状改。其余取证仍是当时 tip 的证据。和现状页打架，以现状页为准。
 
 ---
 
@@ -16,19 +19,19 @@
 
 **FIX-FORWARD。**
 
-玩家能感觉到的主故障，在这棵树上已经关上门：自己调自己不会把游戏弄没；写进去的数不会自己变回去；查询图不能偷偷绑一张会等一拍的动作；划掉的家族展厅没有可复制的启动命令；「派事件改血」打到零不会无声回满；被镜头挡住的人还能点到。作者也能用配置写巡逻树，哨兵机挂「等一拍」会在加载时失败。
+玩家能感觉到的主故障，在当时那棵树上已经关上门：自己调自己不会把游戏弄没；写进去的数不会自己变回去；查询图不能偷偷绑一张会等一拍的动作；「派事件改血」打到零不会无声回满；被镜头挡住的人还能点到。作者也能用配置写巡逻树，哨兵机挂「等一拍」会在加载时失败。家族大杂烩当时是退役锁门；**现在房间已删除**，启动器里没有退役卡片。
 
 不能写成「计划已落地、合同改回已落地」。三件事还开着：
 
-1. **分层墙还在纸上和棘轮上。** S14 整体不得关单。Core 仍是一个程序集，这是本波预期，不是缺陷。
-2. **后票踩坏了一批夹具。** S8 的假防线没有回来（断言还在、门槛没放宽），但点名过滤器在 squash 后有 8 条红；S4 那条「后面一步失败必须整单回滚」的图用例登记不上。这是夹具没跟上新合同，不是玩家门重新打开。
-3. **验收页过时。** 查询口已经关了，UAT 页还写「本树未合入查询口收口」。合同必须继续写「修复中」。
+1. **分层墙当时还在纸上和棘轮上。** 后来 #964 合了脚手架，墙仍没砌完。S14 整体不得关单。
+2. **后票踩坏了一批夹具。** 当时点名过滤器有红。#965 已把夹具、验收页、示意条收干净。不要把当时的红当成现在的红。
+3. **验收页当时过时。** #965 已改。合同必须继续写「修复中」。
 
 没有新的阻断项。没有「一行配置杀死进程」或「退役门又能点进去」这种 P0 回潮。
 
 ### 1.2 玩家一句话
 
-进游戏：划掉的房间进不去；这一刀该掉的血会掉、掉到零不会偷偷回满；山坡后的人仍能点到。写技能：自己调自己当场被拒；查询图不能绑巡逻动作。写行为：巡逻树可以写在配置里，但默认「看见敌人 / 进入射程」这两片叶子还要 C# 喂一个数字。维护者：分层怎么切已经写清，工程没有假装拆完。
+进游戏：没有按家族打包的大杂烩，也没有退役卡片；这一刀该掉的血会掉、掉到零不会偷偷回满；山坡后的人仍能点到。写技能：自己调自己当场被拒；查询图不能绑巡逻动作。写行为：巡逻树可以写在配置里，但默认「看见敌人 / 进入射程」这两片叶子还要 C# 喂一个数字。维护者：分层怎么切已经写清，工程没有假装拆完。
 
 ### 1.3 逐票关单表
 
@@ -39,7 +42,7 @@
 | S3 查询口偷跑可挂起动作 | #941 | **首次独立审。** 查询 `InvokeScript.graphId` 编译失败，诊断与线性方言同一套 | **可关** |
 | S4 回滚自己会抛 / 提交对齐写入面 | #959 | 第一批 M2 已收口：提交逐属性走正式写入面；事务类已移出白名单。回滚整块恢复快照是回滚语义，不是违规 | **可关**（点名回滚图用例被 S9 踩红，记 Major） |
 | S5 容量到顶不说话 | #945 | 复验：满了就抛；假计数未回 | **可关**（事件总线旁系死计数仍是已知债） |
-| S6 退役门没锁 | #941 | **首次独立审。** 八条 `binding`/`preset` 为空；启动器卡片不给命令；生产 bootstrap 不再清图号 | **可关**（Mod 列表仍能勾选家族 Mod，记债） |
+| S6 退役门没锁 | #941 后由 #968 删房 | **当时**八条退役锁门。**现在**八间家族房间已删除，登记表没有退役卡片 | **可关** |
 | S7 血条演戏 | #941 | **首次独立审。** 静默回卷已删；喝茶不写生命；「派事件改血」走图内正式加减 | **可关**（Clamp/Mul/Sub 简介仍像真结算，记 Major） |
 | S8 假防线 | #951 | 复验：断言还在、门槛没放宽。点名过滤器 8 红 / 26 绿，是后票踩夹具，不是假防线回来 | **可关**（夹具对齐另开，不要重开 S8） |
 | S9 图执行走同一道门 | #953 | 复验：七个生产宿主走 `GraphExecutor` | **可关**（typed 图号、展厅内部入口仍是已知缺口） |
@@ -47,7 +50,7 @@
 | S11 覆盖表假绿 | #950 | 复验：`covered` 可解析；生成器 `--strict` 零漂移 | **可关** |
 | S12 格子与前门同一张表 | #956 | **首次独立审。** 临时格走分配器；前门 ⊆ 策略为空集；32 上限未改 | **可关**（双钉同格、`PatchFuncLib` 非幂等记债） |
 | S13 数据写行为 | #960 | **首次独立审。** 巡逻树来自 JSON；HFSM/关卡挂 Yield 加载失败；叶子自读能力已开，默认发货图未换 | **可关**（默认感知叶不得写成已关） |
-| S14 分层 | #954 设计 + #957 Wave 1 | **首次独立审。** 六问有书面答案；Wave 1 立了顺序墙和棘轮；**没有拆程序集** | **不关单** |
+| S14 分层 | #954 设计 + #957 Wave 1；后有 #964 脚手架 | **当时**没有拆程序集。**现在**有两份薄契约，Core 仍是大程序集，墙未立完 | **不关单** |
 | S15 验收页一份 | #948 | 复验：仍一个 H1。查询口段落与已落地代码矛盾 | **可关**（页要改写成「已关」，不要再写「未合入」） |
 
 ---
@@ -89,13 +92,11 @@
 
 运行期 `HandleInvokeScript` 仍只验「是 Script、不含 Yield」，不验是不是 FuncLib。作者 JSON 路径已关；绕过前门的 bytecode 仍能登记。这是纵深，不是今天作者能写进查询图的口。
 
-#### S6 · 退役门 — 可关
+#### S6 · 退役门 — 可关（事后：房间已删）
 
-八条 `capability_standard_graph_ops_*` 都是 `binding: null`、`preset: null`、`status: retired`。启动器配置和预设列表里没有对应名字。`launchHint` 对退役条目返回空，卡片写「已退役，不能启动」，没有复制按钮。`validate-registry.py` 错误 0。
+**当时（`46fcd9dcda`）：** 八条 `capability_standard_graph_ops_*` 是 `binding: null`、`preset: null`、`status: retired`。启动器不给命令。生产 bootstrap 不再清图号。八个家族 Mod 目录还在，勾选列表还能手动打开。
 
-五个生产 bootstrap 不再调用 `GraphIdRegistry.Clear()`。Rel / Query 的 GameStart 不再对活引擎 `BindStandaloneFromModAssets`。有清表的家族验收夹具都标了 `NonParallelizable`。八个家族 Mod 目录还在——本票禁止删，还在不是缺陷。
-
-退役 `binding=null` 能过双向校验，靠的是脚本把空值静默排除，不是书面规则。启动器仍递归扫描 `mods/`，家族 Mod 还能在勾选列表里被手动打开。这两条不影响玩家门，记债。
+**现在（`d1b8f5f4d7`）：** #968 把这八间房间和对应 Mod **删掉了**。登记表没有这八条，也没有退役卡片。玩家入口只剩一节点一间短剧。不要再写「划掉的卡进不去」。
 
 #### S7 · 血条 — 可关
 
@@ -129,7 +130,7 @@
 
 Wave 1：`SystemGroupOrder.All` 就是枚举声明顺序；合作仿真不再另藏一张阶段表；`GetEngine` 已标过时；棘轮只许下降。S8 的阶段顺序交叉校验没有被删成空断言，换成了「运行时表 = 枚举」加「禁止第二张表」。
 
-棘轮实测：`GetEngine` 205 / 未声明 `RegisterSystem` 100 / 引用门面 136 三项顶格；生产静态 `Clear` 10（上限 15）、mods `GraphIdRegistry.Clear` 0（上限 5）。低于上限来自 S6，不是 Wave 1 主动收口，**不得写成 S14 已关**。第 2–6 波未开工。
+棘轮实测：`GetEngine` 205 / 未声明 `RegisterSystem` 100 / 引用门面 136 三项顶格；生产静态 `Clear` 10（上限 15）、mods `GraphIdRegistry.Clear` 0（上限 5）。低于上限来自 S6，不是 Wave 1 主动收口，**不得写成 S14 已关**。Wave 2–4 脚手架后来在 #964；Wave 5–6 仍未做。
 
 ### 3.2 第一批当时不让关的收口
 
@@ -164,16 +165,16 @@ S8 不得写成「假防线回归」。断言有牙齿，所以夹具合同一�
 | M-B | Major | S4 点名回滚图用例登记失败 | `InstantGraph_WhenLaterOperationFails_RollsBackAllStagedSideEffects` → `MissingHalt`。实现仍在，夹具手写图没有 `HaltReturnInt` |
 | M-C | Major | 验收页仍写查询口未关 | `gitbook/acceptance/graph-funclib-actionlib-uat.md` 第 81 行 vs `GraphControlFlowCompiler.Query.cs` 与已带 Query 的过滤器 |
 | M-D | Major | Clamp / Mul / Sub 简介仍像真结算 | `showcase.registry.json`：`血条按钳住后的数掉` / `按放大后的数往下掉` / `按剩下的数掉`；实现与已披露的 `AddFloat` 一样是示意条 |
-| M-E | Major | 退役 `binding=null` 没有书面规则 | `validate-registry.py` 用非空过滤跳过，不是「改规则」或「补豁免」 |
+| M-E | Major（当时） | 退役 `binding=null` 没有书面规则 | #965 已补书面规则。#968 之后房间已删，这条不再是现状 |
 | m1 | Minor | 守卫扫描名单手工枚举，漏画廊与行为公共程序集 | `CollectAttributeBufferWriteScanAssemblies` |
 | m2 | Minor | 合同未显式写 Query 禁 `graphId` | `graph-funclib-actionlib-contract.md` §3.4 |
 | m3 | Minor | 双钉同格、`PatchFuncLib` 非幂等 | `GraphRegisterFile.Pin`；`GraphProgramSymbolPatcher.PatchFuncLib` |
 | m4 | Minor | 测试仍手写一份 `DesignedSystemGroupOrder` | `ArchitectureGuardTests.cs`；运行时 SSOT 已是枚举 |
-| m5 | Minor | Rel/Query 家族 Mod 手动勾选后半残 | GameStart 只挂引擎，不绑注册表 |
+| m5 | Minor（当时） | Rel/Query 家族 Mod 手动勾选后半残 | #968 已删这些 Mod，不再是现状 |
 | d1 | 债 | 默认 `bt.seeEnemy` / `bt.inAttackRange` 仍吃 `I[0]` | 实现方自报，核实。不得当新发现，也不得当已关 |
 | d2 | 债 | typed 图号仍是 `int`；展厅内部入口仍在 | 第二批已知缺口 |
 | d3 | 债 | `GameplayEventBus` 旁系死计数恒 0 | 第一批已知债 |
-| d4 | 债 | S14 Wave 2–6 未开工 | 设计明文。发现大搬家才是越界 |
+| d4 | 债 | S14 Wave 5–6 未做 | Wave 2–4 脚手架已在 #964。墙没砌完。发现大搬家才是越界 |
 | d5 | 债 | `BehaviorTreeFactory` 骨架树、`LevelBlueprintFactory.CreateTwoPhaseTrial` 仍是 C# | 实现方自报，核实：不是巡逻树 SSOT |
 
 ---
@@ -183,7 +184,7 @@ S8 不得写成「假防线回归」。断言有牙齿，所以夹具合同一�
 1. **自己调自己。** 登记失败，游戏还在。复验仍成立。
 2. **不夹上限的属性写下当前值。** 重算之后数还在。S2 自己的 21 条测试全绿。
 3. **查询图填巡逻动作的图号。** 编译失败，理由与线性方言一致。作者今天写不进去。
-4. **启动器翻到已划掉的家族大杂烩。** 没有可复制的启动命令，顶栏预设也没有。Mod 勾选列表里目录还在，那是另一扇侧门。
+4. **启动器里没有家族大杂烩。** 当时是退役锁门；现在房间已删除，也没有退役卡片。
 5. **点进「派事件改血」。** 木桩从 100 到 82，数从图里来。打到零不会被代码改回满血。加减乘钳那几间仍是示意条，其中三间简介还没说清楚。
 6. **镜头抬高、单位被挡住。** 仍能点到、能下令。
 7. **配置里写巡逻-追击-攻击树。** 代理按树走，不用改 Core 工厂。
@@ -201,7 +202,7 @@ S8 不得写成「假防线回归」。断言有牙齿，所以夹具合同一�
 
 **已裁决、不再争：** Duration/Period 在效果壳上；FuncLib 纯、ActionLib 可挂起；图节点玩家门是单节点展厅；选中读战场坐标；缺清单/空表/成环失败关闭；S14 禁止一周拆完。
 
-**已知已知（核实，不当新发现）：** 合同「修复中」；第一批/第二批对照的是旧 tip 上的 PR head；#943 已被 #959 取代；GetEngine 过时警告是 Wave 1 故意的；八家族 Mod 还在是 S6 要求。
+**已知已知（核实，不当新发现）：** 合同「修复中」；第一批/第二批对照的是旧 tip 上的 PR head；#943 已被 #959 取代；GetEngine 过时警告是 Wave 1 故意的。八家族房间后来按 #968 删除，不再是「S6 要求留着」。
 
 ---
 
@@ -226,11 +227,11 @@ Feature: 纯查询里不能偷偷跑起会等一拍的动作
     状态: 过
     证据: FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed("Query")；Query.cs 与 Linear.cs 同一套诊断
 
-Feature: 划掉的门要真的锁上
-  Scenario: 退役展厅不再给出可点的入口
-    状态: 过
-    证据: launchHint 对 retired 返回 null；八条 binding/preset 为空；validate-registry 错误 0
-    注: Mod 勾选列表仍能看见家族目录，不是本场景的启动命令
+Feature: 家族大杂烩不能再当玩家入口
+  Scenario: 启动器里没有这些房间
+    状态: 过（事后更正）
+    证据: #968 删除八间房间与 Mod；登记表没有退役卡片
+    注: 当时证据是退役锁门；现在是房间不存在
 
 Feature: 血条要么代表真被打掉的血，要么别装成那样
   Scenario: 打到零不许偷偷回满
@@ -345,13 +346,12 @@ BehaviorTreeFactory 骨架树可以留着给压测。
 禁止：放宽 kind；拓宽 Script。
 ```
 
-### B.6 删八个家族 Mod（S6 关门之后的独立票）
+### B.6 删八个家族 Mod — 已做完（#968）
 
 ```text
-S6 已经锁上玩家门。本票才允许删 CapabilityStandardGraphOps{Rel,Query,Attr,Spatial,Event,Float,Script,Blackboard}Mod。
-先从 launcher scanRoots / 默认 Mod 集拿掉，再删目录。
-禁止：在本票重开退役 binding 规则之前先删；动单节点画廊。
-该跑：python3 scripts/validate-registry.py；GraphOpsNodeGallery*
+已删 CapabilityStandardGraphOps{Rel,Query,Attr,Spatial,Event,Float,Script,Blackboard}Mod。
+登记表没有这八条，也没有退役卡片。不要再派「先锁门再删」的票。
+单节点画廊留下。
 ```
 
 ### B.7 简介对齐示意条（S7 文案）

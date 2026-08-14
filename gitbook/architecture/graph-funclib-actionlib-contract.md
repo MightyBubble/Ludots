@@ -1,6 +1,6 @@
 # 图复用库合同补丁：FuncLib / ActionLib 与 Kind 表达力
 
-状态：修复中（Epic #915）（`GAS/action_lib.json` + `GraphActionCatalog`；FuncLib 仅 `Script`（pure）/禁 Yield；`Score`/`Validation` FuncLib 延后；Effect `BranchBool` + 线性 `InvokeScript`；L2 Showcase 走 ActionLib；next-chain `GraphCompiler` 已移除）。对照评审仍以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。  
+状态：修复中（Epic #915；分层墙未立完）。规则以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。玩家门、分层脚手架、还开着的票只认 [图能力收口现状](graph-capability-status.md)，本页 §3.6 不再当进度表。  
 关联：#861 作者 SSOT / FuncLib；L0/L1/L2 分层；效果生命周期（Duration/Period）。
 
 ---
@@ -114,9 +114,11 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 禁止用「Effect 内 While+Wait」模拟 Period。  
 复杂跨拍行为：拆成多个效果阶段、或 L2 Action，不要塞进单次 Effect 事务图。
 
-### 3.6 与现状差异（实现债清单）
+### 3.6 与提出补丁时的差异（不是进度表）
 
-| # | 现状 | 补丁后 |
+进度只认 [图能力收口现状](graph-capability-status.md)。下表是补丁提出时相对旧代码的差异，用来解释合同为什么这样写。
+
+| # | 提出时 | 补丁后 |
 |---|------|--------|
 | 1 | 只有 FuncLib，且 callee 必须 Script | FuncLib 纯函数；ActionLib 可挂起 Script |
 | 2 | InvokeScript 嵌套禁 Yield，但 Script 又可当叶子 Yield | 按库拆开：同名不得跨库 |

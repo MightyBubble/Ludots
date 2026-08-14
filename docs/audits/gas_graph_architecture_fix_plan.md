@@ -1,9 +1,12 @@
 # GAS + Graph VM 架构修复计划（Epic + 子任务分配）
 
-**依据：** [GAS + Graph VM 架构审查](gas_graph_architecture_review.md)（SSOT）
-**被审 tip：** `origin/main` @ `82ddb3322a`
-**用途：** 本文件是开 GitHub Epic 与子 issue 的正文来源。每个子任务的「任务书」小节可以整段复制给一个修复 Agent，不需要再补上下文。
-**批量创建：** `scripts/create-gas-graph-fix-issues.sh`
+**依据：** [GAS + Graph VM 架构审查](gas_graph_architecture_review.md)（当时结论）
+**当时 tip：** `origin/main` @ `82ddb3322a`
+**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)
+**用途：** 当时用来开 GitHub Epic 与子 issue。S 计划子 issue 没建成，活是直接用 PR 做的。不要再跑建票脚本当现状。
+**批量创建：** `scripts/create-gas-graph-fix-issues.sh`（不要再 `--apply`）
+
+**事后更正（主干 `d1b8f5f4d7`）：** S1–S13、S15 玩家/作者门已合。S6 从「锁退役门」变成「房间删除」。S14 只合了脚手架。#916 / #917 / #918 还开着。合同仍是修复中。
 
 ---
 
@@ -477,6 +480,8 @@ UI 面板债（#886 / #893）、表现层改名、#723 评分预算、以及「�
 ---
 
 ### S6 · 退役展厅锁门 + 停止清空图编号表 【P1】
+
+**事后更正：** 锁门已做（#941），房间已删（#968）。下面任务书是当时写法，不要再按「八条 retired binding」派新票。
 
 **审查编号：** `pr932_graph_landed_architecture_audit.md` B2（本轮 B25 提供了根因）
 

@@ -1,11 +1,14 @@
 # S14 分层墙第二波架构审计（契约程序集 / 登记表实例 / Mod 端口）
 
-**审计对象：** [#964](https://github.com/MightyBubble/Ludots/pull/964) @ `29b951470`（相对 `origin/main` @ `46fcd9dcda`）  
+**当时对象：** [#964](https://github.com/MightyBubble/Ludots/pull/964) @ `29b951470`（相对 `origin/main` @ `46fcd9dcda`）  
+**进度 SSOT：** [图能力收口现状](../../gitbook/architecture/graph-capability-status.md)  
 **需求：** 独立审这一波实现 tip，不是把 #942 十五张票重审一遍  
 **设计正本：** [`s14_layering_physicalization_design.md`](s14_layering_physicalization_design.md) §3.1–§3.3、§3.6 Wave 2–4  
 **前序：** [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)（#962）。已关的票本轮只一行复验  
 **方法：** 对照源码与指定测试证伪；零生产代码  
 **刻意不审：** Wave 5 整层剥 Spatial/Input/Presentation/GAS；Wave 6 删除 `GetEngine`；#942 已关票的产品争论
+
+**事后更正：** 本页结论「可以当脚手架合，不能当墙已经砌完」仍然成立。#964 已合。Wave 5–6 仍未做。不要把本页读成「分层搞好了」。
 
 ---
 
