@@ -78,6 +78,8 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 - **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 在 ActionLib 加载前解析为 GraphId。未登记到 FuncLib 的名字失败关闭，ActionLib 名不得通过 `functionName` 进入 Effect / 线性 Kind。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
 - **加载顺序**：graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载（详见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)）。
 - **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
+- **L2 数据作者面**：`AI/behavior_trees.json` + `AI/hfsm.json` → `GraphBehaviorDefinitionLoader`；叶子与生命周期绑定只写 ActionLib 名，禁止用 Core 工厂参数代替数据作者面。
+- **HFSM Yield**：禁止。OnTick 是 think-wave 节拍；含 Yield 的 `Hfsm` / `Level` 条目在 ActionLib 加载期失败关闭。
 - **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM

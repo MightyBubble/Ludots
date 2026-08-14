@@ -4,11 +4,6 @@ using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.Level
 {
-    public static class LevelScriptKeys
-    {
-        public const string PhaseAdvance = "level.phaseAdvance";
-    }
-
     public sealed class GraphProgramLevelHost : ILevelGraphHost
     {
         private readonly GraphProgramRegistry _programs;

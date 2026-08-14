@@ -8,6 +8,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.AI
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class LevelDirectorRuntimeTests
     {
@@ -15,10 +16,8 @@ namespace Ludots.Tests.Gas.AI
         public void TwoPhaseTrial_AdvancesOnWavesAndCounter()
         {
             GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
-            int phaseScript = GraphRegistryScriptResolver.RequireActionId(actions, LevelScriptKeys.PhaseAdvance);
-            LevelDirector director = LevelBlueprintFactory.CreateTwoPhaseTrial(
-                "level.trial",
-                name => GraphRegistryScriptResolver.RequireActionId(actions, name));
+            int phaseScript = GraphRegistryScriptResolver.RequireActionId(actions, "level.phaseAdvance");
+            LevelDirector director = LevelBlueprintFactory.CreateTwoPhaseTrial("level.trial", phaseScript);
             var host = new GraphProgramLevelHost(programs);
             Assert.That(director.Phase, Is.EqualTo(0));
             director.TickThinkWave(host);

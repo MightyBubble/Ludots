@@ -138,7 +138,7 @@ namespace Ludots.Tests.Gas.Production
                 out GraphActionCatalog actions);
 
             int drinkId = GraphRegistryScriptResolver.RequireActionId(actions, GraphOpsScriptRuntime.DrinkActionName);
-            int patrolId = GraphRegistryScriptResolver.RequireActionId(actions, BehaviorTreeScriptKeys.Patrol);
+            int patrolId = GraphRegistryScriptResolver.RequireActionId(actions, "bt.patrol");
             int invokeId = GraphRegistryScriptResolver.RequireId(GraphOpsScriptRuntime.InvokeConstGraphKey);
             _ = catalog.Require(GraphOpsScriptRuntime.ConstFunctionName);
 

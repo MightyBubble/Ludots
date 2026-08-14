@@ -21,12 +21,18 @@ namespace Ludots.Core.Gameplay.AI.Config
         private readonly ConfigPipeline _pipeline;
         private readonly AtomRegistry _atoms;
         private readonly AiConfigValidationContext? _validation;
+        private readonly GraphActionCatalog? _actions;
 
-        public AiConfigLoader(ConfigPipeline pipeline, AtomRegistry atoms, AiConfigValidationContext? validation = null)
+        public AiConfigLoader(
+            ConfigPipeline pipeline,
+            AtomRegistry atoms,
+            AiConfigValidationContext? validation = null,
+            GraphActionCatalog? actions = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _atoms = atoms ?? throw new ArgumentNullException(nameof(atoms));
             _validation = validation;
+            _actions = actions;
         }
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
@@ -375,8 +381,9 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             var utilityRuntime = CompileUtilityRuntime(catalog, report);
+            var behavior = new GraphBehaviorDefinitionLoader(_pipeline, _actions).Load(catalog, report);
 
-            return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots, utilityRuntime);
+            return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots, utilityRuntime, behavior);
         }
 
         private UtilityAiCompiledRuntime CompileUtilityRuntime(ConfigCatalog catalog, ConfigConflictReport? report)

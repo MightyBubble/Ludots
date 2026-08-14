@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.Gameplay.Level;
 using Ludots.Core.GraphRuntime;
@@ -14,6 +15,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
     private GraphActionCatalog? _actions;
+    private GraphBehaviorCatalog? _behavior;
     private BehaviorTreeWorld? _bt;
     private HfsmWorld? _hfsm;
     private GraphProgramHfsmHost? _hfsmHost;
@@ -54,35 +56,31 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public float MarkerY => _markerY;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_behavior_integration" };
 
-    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions, GraphBehaviorCatalog behavior)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
         _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+        _behavior = behavior ?? throw new ArgumentNullException(nameof(behavior));
     }
 
     public void EnsureWorld()
     {
         if (_bt != null) return;
-        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
+        if (_programs == null || _actions == null || _behavior == null)
+        {
+            throw new InvalidOperationException("Bind(Registry, ActionCatalog, BehaviorCatalog) required.");
+        }
 
         int guards = 6, sentries = 6;
-        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.SeeEnemy);
-        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.InAttackRange);
-        _bt = new BehaviorTreeWorld(
-            BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-                "integration.bt",
-                name => GraphRegistryScriptResolver.RequireActionId(_actions, name)),
-            guards);
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy");
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange");
+        _bt = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
-        _hfsm = new HfsmWorld(
-            HfsmFactory.CreateSentryHierarchyWithScripts(
-                "integration.hfsm",
-                name => GraphRegistryScriptResolver.RequireActionId(_actions, name)),
-            sentries);
+        _hfsm = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry.scripted"), sentries);
         _levelHost = new GraphProgramLevelHost(_programs);
         _level = LevelBlueprintFactory.CreateTwoPhaseTrial(
             "integration.level",
-            name => GraphRegistryScriptResolver.RequireActionId(_actions, name));
+            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance"));
 
         _gx = new float[guards];
         _gy = new float[guards];

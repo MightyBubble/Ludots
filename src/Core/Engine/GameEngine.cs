@@ -584,7 +584,8 @@ namespace Ludots.Core.Engine
                     GetService(CoreServiceKeys.GraphProgramRegistry));
             }
 
-            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
+            TryGetService(CoreServiceKeys.GraphActionCatalog, out GraphActionCatalog? actions);
+            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation, actions);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
             Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);

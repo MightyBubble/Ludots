@@ -1,4 +1,5 @@
 using System;
+using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -7,13 +8,20 @@ namespace Ludots.Core.Gameplay.AI.Fsm;
 public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 {
     private readonly GraphProgramRegistry _programs;
+    private readonly World? _world;
+    private readonly IGraphRuntimeApi? _api;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
-    public GraphProgramHfsmHost(GraphProgramRegistry programs)
+    public GraphProgramHfsmHost(
+        GraphProgramRegistry programs,
+        World? world = null,
+        IGraphRuntimeApi? api = null)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _world = world;
+        _api = api;
     }
 
     public bool EvalCondition(int agentIndex, int conditionGraphId)
@@ -51,7 +59,9 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
             _bools,
             _callStack,
             ref cursor,
-            budgetSteps: 64);
+            budgetSteps: 64,
+            _world,
+            api: _api);
         if (!result.Halted)
         {
             throw new InvalidOperationException("HFSM-bound Script must halt within budget.");

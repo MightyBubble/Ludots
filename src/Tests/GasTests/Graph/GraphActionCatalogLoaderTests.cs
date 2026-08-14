@@ -11,6 +11,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphActionCatalogLoaderTests
     {
@@ -26,14 +27,18 @@ namespace Ludots.Tests.Gas.Graph
                 var programs = new GraphProgramRegistry();
                 programs.Register(
                     graphId,
-                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
                     GraphKind.Script);
 
                 var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
                     "GAS/action_lib.json",
                     """
                     [
-                      { "name": "script.yieldAction", "graph": "Graph.Script.YieldAction", "kind": "Script" }
+                      { "name": "script.yieldAction", "graph": "Graph.Script.YieldAction", "kind": "Script", "host": "Script" }
                     ]
                     """);
                 root = tempRoot;
@@ -73,7 +78,7 @@ namespace Ludots.Tests.Gas.Graph
                     "GAS/action_lib.json",
                     """
                     [
-                      { "name": "shared.name", "graph": "Graph.Script.Shared", "kind": "Script" }
+                      { "name": "shared.name", "graph": "Graph.Script.Shared", "kind": "Script", "host": "Script" }
                     ]
                     """);
                 root = tempRoot;
@@ -111,7 +116,7 @@ namespace Ludots.Tests.Gas.Graph
                     "GAS/action_lib.json",
                     """
                     [
-                      { "name": "bad.effectAction", "graph": "Graph.Effect.BadAction", "kind": "Effect" }
+                      { "name": "bad.effectAction", "graph": "Graph.Effect.BadAction", "kind": "Effect", "host": "Script" }
                     ]
                     """);
                 root = tempRoot;
@@ -185,6 +190,90 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void 含Yield的HFSM动作在加载期失败关闭()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.HFSM.YieldTick";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/action_lib.json",
+                    """
+                    [
+                      { "name": "hfsm.combat.onTick", "graph": "Graph.HFSM.YieldTick", "kind": "Script", "host": "Hfsm" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var actionCatalog = new GraphActionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
+
+                Assert.That(actionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("cannot bind a program that reaches Yield"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void 含Yield的关卡动作在加载期失败关闭()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Level.YieldPhase";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/action_lib.json",
+                    """
+                    [
+                      { "name": "level.phaseAdvance", "graph": "Graph.Level.YieldPhase", "kind": "Script", "host": "Level" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var actionCatalog = new GraphActionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
+
+                Assert.That(actionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("cannot bind a program that reaches Yield"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
         public void ActionCatalogLoader_LoadsValidEntry()
         {
             GraphIdRegistry.Clear();
@@ -203,7 +292,7 @@ namespace Ludots.Tests.Gas.Graph
                     "GAS/action_lib.json",
                     """
                     [
-                      { "name": "script.validAction", "graph": "Graph.Script.ValidAction", "kind": "Script" }
+                      { "name": "script.validAction", "graph": "Graph.Script.ValidAction", "kind": "Script", "host": "Script" }
                     ]
                     """);
                 root = tempRoot;

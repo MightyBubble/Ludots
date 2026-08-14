@@ -146,7 +146,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
    Score 图纯打分，可 `InvokeFunc` 共用「距离衰减」函数；不进 ActionLib。
 
 4. **哨兵警戒**  
-   HFSM OnTick → ActionLib「警戒一步」（内含 Yield）；不得从某次 Effect OnApply 里 InvokeAction。
+   HFSM OnTick → ActionLib「警戒一步」（必须 Halt，禁止 Yield）。HFSM 已有 think-wave 节拍，OnTick 本身就是警戒一步；再 Yield 会与转移 / OnExit 交错且合同未定义。Yield 只给 BehaviorTree ScriptSlice 与独立 Script 切片宿主。ActionLib 每条必须声明 `host`（`BehaviorTree` / `Hfsm` / `Level` / `Script`）；`Hfsm` 与 `Level` 条目若程序含 Yield，在 `GraphActionCatalogLoader` 加载期失败关闭。不得从某次 Effect OnApply 里 InvokeAction。
 
 5. **喝水直到满（Showcase）**  
    原子 Script 沙盒走 ActionLib 或 Script 切片宿主；不登记进 FuncLib。
@@ -158,6 +158,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 - 禁止平行第二套 VM / 第二套作者边模型。  
 - 禁止 Effect 事务中途 Yield / InvokeAction。  
 - 禁止 FuncLib 条目含 Yield，或未声明即产生 ApplyEffect/关系/订单等副作用。  
+- 禁止 HFSM 生命周期 / 条件与 Level `RunScript` 挂含 Yield 的 ActionLib 条目（加载期失败关闭）。  
 - 禁止 ActionLib 与 FuncLib 同名；禁止缺文件/缺条目静默空表。  
 - 禁止用 ActionLib 替代效果 Duration/Period 时间轴。  
 - 禁止编译期文本 Macro 展开冒充库。  

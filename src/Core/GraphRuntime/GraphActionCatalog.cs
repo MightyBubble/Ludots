@@ -41,6 +41,8 @@ namespace Ludots.Core.GraphRuntime
 
         public bool TryGet(string name, out int graphId) => _byName.TryGetValue(name, out graphId);
 
+        public IReadOnlyCollection<string> Names => _byName.Keys;
+
         public int Require(string name)
         {
             if (!TryGet(name, out int graphId))

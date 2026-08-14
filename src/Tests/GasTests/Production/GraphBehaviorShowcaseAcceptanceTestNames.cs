@@ -3,6 +3,7 @@ using CapabilityStandardBehaviorTreeArenaMod.Runtime;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using CapabilityStandardLevelBlueprintTrialMod.Runtime;
+using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Tests.Gas.Graph;
@@ -13,15 +14,16 @@ namespace Ludots.Tests.Gas.Production
     // Named fixtures referenced by showcase.registry.json acceptanceTest fields.
 
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class BehaviorTreeArenaShowcaseAcceptanceTests
     {
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
             var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(programs, actions);
+            runtime.Bind(programs, actions, behavior);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
@@ -29,15 +31,16 @@ namespace Ludots.Tests.Gas.Production
     }
 
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class HfsmSentryArenaShowcaseAcceptanceTests
     {
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
             var runtime = new HfsmSentryArenaRuntime();
-            runtime.Bind(programs, actions);
+            runtime.Bind(programs, actions, behavior);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
@@ -45,6 +48,7 @@ namespace Ludots.Tests.Gas.Production
     }
 
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class LevelBlueprintTrialShowcaseAcceptanceTests
     {
@@ -134,15 +138,16 @@ namespace Ludots.Tests.Gas.Production
     }
 
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphBehaviorIntegrationShowcaseAcceptanceTests
     {
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions, out GraphBehaviorCatalog behavior);
             var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(programs, actions);
+            runtime.Bind(programs, actions, behavior);
             runtime.EnsureWorld();
             for (int i = 0; i < 15; i++) runtime.Tick(0.2f);
             Assert.That(runtime.GuardCount, Is.EqualTo(6));

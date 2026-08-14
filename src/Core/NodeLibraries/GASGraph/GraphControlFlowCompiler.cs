@@ -617,7 +617,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return GraphOpDescriptorTable.GetQueryOutputType(op.NodeOp);
             }
 
-            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind) ||
+                UsesLinearDescriptorEmit(graphKind, op))
             {
                 return GraphOpDescriptorTable.GetLinearOutputType(op.NodeOp);
             }
@@ -630,6 +631,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 _ => GraphValueType.Void
             };
         }
+
+        private static bool IsScriptNativeDialectOp(GraphNodeOp op)
+            => op is GraphNodeOp.ConstInt
+                or GraphNodeOp.AddInt
+                or GraphNodeOp.CompareLtInt
+                or GraphNodeOp.MoveInt
+                or GraphNodeOp.Call
+                or GraphNodeOp.Return
+                or GraphNodeOp.HaltReturnInt
+                or GraphNodeOp.Yield
+                or GraphNodeOp.Jump
+                or GraphNodeOp.JumpIfFalse
+                or GraphNodeOp.InvokeScript;
+
+        private static bool UsesLinearDescriptorEmit(GraphKind graphKind, AuthoredOp op)
+            => graphKind == GraphKind.Script &&
+               op.Kind == AuthoredOpKind.GraphNodeOp &&
+               !IsScriptNativeDialectOp(op.NodeOp) &&
+               GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op.NodeOp);
 
         private static void ValidateRequiredEdges(
             List<GraphControlFlowNode> nodes,
@@ -686,7 +706,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+                if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind) ||
+                    UsesLinearDescriptorEmit(graphKind, op))
                 {
                     ValidateLinearNode(
                         node,
@@ -971,7 +992,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (cases * 4) + 1;
             }
 
-            if (graphKind == GraphKind.Query || GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            if (graphKind == GraphKind.Query ||
+                GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind) ||
+                UsesLinearDescriptorEmit(graphKind, op))
             {
                 if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
                 {
@@ -1057,7 +1080,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind) ||
+                UsesLinearDescriptorEmit(graphKind, op))
             {
                 CompileLinearNode(
                     document,
