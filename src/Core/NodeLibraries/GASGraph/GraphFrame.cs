@@ -17,7 +17,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public GraphEntityPreset(GraphEntityPresetKind kind, Entity entity)
         {
-            if (kind != GraphEntityPresetKind.None && !Enum.IsDefined(typeof(GraphEntityPresetKind), kind))
+            if (kind != GraphEntityPresetKind.None &&
+                kind is not (GraphEntityPresetKind.TargetContext or GraphEntityPresetKind.Viewer or GraphEntityPresetKind.PreviewTarget))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph entity preset kind is not supported.");
             }
@@ -83,7 +84,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             uint randomSeed = 0,
             GraphEventPayload eventPayload = default)
         {
-            if (kind == GraphKind.None || !Enum.IsDefined(typeof(GraphKind), kind))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph frame requires an explicit supported kind.");
             }
