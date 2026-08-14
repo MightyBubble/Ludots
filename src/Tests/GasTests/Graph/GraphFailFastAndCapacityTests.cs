@@ -268,10 +268,18 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryOutgoing, A = 0, Dst = (byte)typeId, Flags = 0 },
             };
 
-            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance))!;
+            InvalidOperationException? ex = null;
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            }
+            catch (InvalidOperationException caught)
+            {
+                ex = caught;
+            }
 
-            That(ex.Message, Does.Contain("GAS.GRAPH.ERR.RelationshipQueryIncomplete"));
+            That(ex, Is.Not.Null);
+            That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.RelationshipQueryIncomplete"));
             That(ex.Message, Does.Contain($"dropped={extra}"));
         }
 
@@ -306,9 +314,17 @@ namespace Ludots.Tests.GAS
         {
             var buffer = new Entity[2];
             var list = new GraphTargetList(buffer);
+            InvalidOperationException? error = null;
+            try
+            {
+                list.SetCount(3);
+            }
+            catch (InvalidOperationException caught)
+            {
+                error = caught;
+            }
 
-            var error = Throws<InvalidOperationException>(() => list.SetCount(3));
-
+            That(error, Is.Not.Null);
             That(error!.Message, Does.Contain("GAS.GRAPH.ERR.TargetListCapacityExceeded"));
         }
 
