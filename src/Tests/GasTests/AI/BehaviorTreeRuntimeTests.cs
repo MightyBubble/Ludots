@@ -48,7 +48,7 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void ThinkWave_10k_AlwaysSuccess16_UnderFiveMilliseconds()
+        public void ThinkWave_10k_AlwaysSuccess16_UnderFifteenMilliseconds()
         {
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("bt.perf", leafCount: 15);
             const int agents = 10_000;
@@ -59,8 +59,8 @@ namespace Ludots.Tests.Gas.AI
             var sw = Stopwatch.StartNew();
             BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
-            // Shared CI runners occasionally spike above 5ms; keep a hard gate at 15ms.
-            Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(15.0));
+            Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(15.0),
+                $"AlwaysSuccess-16 think wave exceeded 15ms: {sw.Elapsed.TotalMilliseconds:F3}ms");
             Assert.That(stats.Agents, Is.EqualTo(agents));
         }
 

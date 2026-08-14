@@ -118,7 +118,7 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
-        public void ThinkWave_10k_SentryHfsmWithScripts_UnderFiveMilliseconds()
+        public void ThinkWave_10k_SentryHfsmWithScripts_UnderFifteenMilliseconds()
         {
             var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts(
