@@ -10,8 +10,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const int MaxCallStackDepth = 16;
 
         /// <summary>
+        /// Hard limit on nested InvokeScript frames across one run-to-halt tree.
+        /// Distinct from MaxCallStackDepth, which only bounds Call inside one program.
+        /// </summary>
+        public const int MaxInvokeDepth = 16;
+
+        /// <summary>
         /// Hard limit on instructions executed per single Execute call.
         /// Prevents runaway programs (infinite jump loops, etc.) from hanging the frame.
+        /// Shared by the whole InvokeScript tree; nested Execute does not reset it.
         /// </summary>
         public const int MaxInstructionsPerExecution = 4096;
 

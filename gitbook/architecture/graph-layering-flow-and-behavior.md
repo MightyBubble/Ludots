@@ -41,7 +41,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | Score | 效用打分 | 禁止 |
 | Validation / Query / Derived | 既有专项 | 禁止 |
 
-跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
+跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。`InvokeScript` 图在 `GraphProgramRegistry.Register` / `ReplaceProgram` 时必须是有向无环的；自调用或 A→B→A 以 `GAS.GRAPH.ERR.InvokeCycle` 失败关闭。运行期另有 `GraphVmLimits.MaxInvokeDepth`，且整棵调用树共享 `MaxInstructionsPerExecution`；超限抛错，禁止静默截断，也禁止把栈溢出当成可捕获错误。
 
 ### 作者糖（编译期降级）
 

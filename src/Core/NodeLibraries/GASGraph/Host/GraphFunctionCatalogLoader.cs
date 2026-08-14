@@ -140,7 +140,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             out string diagnostic))
                     {
                         errors.Add(
-                            $"FuncLib '{definition.Name}' in '{relativePath}': {rootLabel} reaches Yield or an invalid pure closure and belongs in ActionLib. Path: {diagnostic}");
+                            $"FuncLib '{definition.Name}' in '{relativePath}': {rootLabel} reaches Yield, an invoke cycle, or an invalid pure closure and belongs in ActionLib. Path: {diagnostic}");
                     }
                 }
             }

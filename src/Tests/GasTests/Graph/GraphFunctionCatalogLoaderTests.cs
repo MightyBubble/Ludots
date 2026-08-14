@@ -317,6 +317,76 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FuncCatalogLoader_RejectsInvokeCycleThroughFunctionNames()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphA = "Graph.Script.CycleA";
+                const string graphB = "Graph.Script.CycleB";
+                int idA = GraphIdRegistry.Register(graphA);
+                int idB = GraphIdRegistry.Register(graphB);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    idA,
+                    new[]
+                    {
+                        new GraphInstruction
+                        {
+                            Op = (ushort)GraphNodeOp.InvokeScript,
+                            Dst = 0,
+                            Imm = 0,
+                            Flags = GraphInstructionFlags.FuncLibName
+                        },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+                    },
+                    GraphKind.Script,
+                    GraphInstructionSourceMap.Empty,
+                    new[] { "script.cycleB" });
+                programs.Register(
+                    idB,
+                    new[]
+                    {
+                        new GraphInstruction
+                        {
+                            Op = (ushort)GraphNodeOp.InvokeScript,
+                            Dst = 0,
+                            Imm = 0,
+                            Flags = GraphInstructionFlags.FuncLibName
+                        },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+                    },
+                    GraphKind.Script,
+                    GraphInstructionSourceMap.Empty,
+                    new[] { "script.cycleA" });
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.cycleA", "graph": "Graph.Script.CycleA", "kind": "Script", "purity": "pure" },
+                      { "name": "script.cycleB", "graph": "Graph.Script.CycleB", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("GAS.GRAPH.ERR.InvokeCycle"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("invoke cycle"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
         public void FuncCatalogLoader_RejectsScoreKind()
         {
             GraphIdRegistry.Clear();
