@@ -8,6 +8,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Graph
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphInvokeCycleTests
     {
