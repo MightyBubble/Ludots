@@ -109,6 +109,7 @@ public sealed class InstantEffectTransactionTests
             new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectDynamic, A = 0, B = 0 },
             new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 0, B = 0, Imm = eventTagId },
             new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, B = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
         ], GraphKind.Effect);
 
         EffectPhaseGraphBindings bindings = default;
@@ -596,6 +597,7 @@ public sealed class InstantEffectTransactionTests
         programs.Register(graphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, B = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
         ], GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, graphId), Is.True);

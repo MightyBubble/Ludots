@@ -14,8 +14,10 @@
     只读 tree 对象，不触发 blob 拉取）。
   ③ T1 条目必须具有非空 acceptanceTest（契约核心，缺失为错误）；
     binding / preset / screenshot 为完备性目标，缺失记警告（治理追赶项）。
-  ④ launcher.config.json 的每个 binding 必须在注册表中有对应条目（binding 字段）；
-    反向（注册表 binding 必须存在于 launcher.config.json）同样检查，
+  ④ launcher.config.json 的每个 binding 必须在注册表中有对应的在役条目（binding 字段）；
+    反向（在役条目的 binding 必须存在于 launcher.config.json）同样检查。
+    退役（status=retired）条目允许 binding / preset 为空（门已锁，不进启动器），
+    不参与双向对账；在役（active / experimental）条目仍须双向一致。
     两个方向均可通过注册表 exemptions 数组豁免。
   ⑤ mods/showcases/ 下每个 csproj（含 csproj 的目录）必须有注册表条目覆盖，
     或列入注册表 exemptions 数组。
@@ -231,11 +233,14 @@ def main() -> int:
         if entry.get("tier") != "T1":
             continue
         label = f"showcases[{i}](id={entry.get('id', '?')})"
+        retired = entry.get("status") == "retired"
         for field in T1_REQUIRED_FIELDS:
             if non_empty(entry.get(field)):
                 continue
             if field == "acceptanceTest":
                 errors.append(f"{label} 为 T1，必须具有非空字段: {field}")
+            elif retired and field in ("binding", "preset"):
+                continue
             else:
                 warnings.append(f"{label} 为 T1，完备性字段待补: {field}")
 
@@ -246,7 +251,7 @@ def main() -> int:
     }
     registry_bindings = {
         entry.get("binding") for _, entry in entries
-        if non_empty(entry.get("binding"))
+        if entry.get("status") != "retired" and non_empty(entry.get("binding"))
     }
     for name in sorted(launcher_bindings - registry_bindings):
         if name in binding_exempts:

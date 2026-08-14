@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 基础伤害加上额外伤害，这一刀一共 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 基础伤害加上额外伤害，这一刀一共 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
