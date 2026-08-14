@@ -63,7 +63,7 @@ Macro：仍不提供「编译期文本展开宏」；ActionLib 是**登记的可
 |------|----------|-------|------------|
 | Score | 纯函数：上下文 → `F[0]` 分数 | 禁 | 线性 + **可调 FuncLib**；可不扩分支糖 |
 | Validation | 纯函数：默认拒绝，写出通过位 | 禁 | 同上 |
-| Query | 准纯管道：查/滤/聚 → Summary/Collection | 禁 | 保留 `list` 值边；可不扩 While 糖 |
+| Query | 准纯管道：查/滤/聚 → Summary/Collection | 禁 | 保留 `list` 值边；可不扩 While 糖；禁 `InvokeScript.graphId` |
 | Derived | 公式：读属性 → `WriteSelfAttribute` | 禁 | 线性 + FuncLib；禁副作用 API |
 | Effect | **有副作用的阶段片段** | 禁 | 见 3.4 |
 | Script（FuncLib 条目） | 纯函数体 | 禁（作为 FuncLib 被调时） | 可有分支，但入口须声明 `purity=pure` |
@@ -83,6 +83,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 
 - 作者节点：`InvokeFunc`（或保留 `InvokeScript.functionName` 但语义改为「只调 FuncLib」——实现时二选一，禁止两套名字并存）。  
 - **所有 L1 Kind 前门白名单必须包含该调用节点**（含 Effect 线性方言）。  
+- 线性 Kind（Effect / Query / Score / Validation / Derived）前门禁止 `InvokeScript.graphId`，只许 `functionName` 走 FuncLib。缺函数名失败关闭；带了图号同样失败关闭。  
 - 被调图：一次 RunToHalt；禁止嵌套 Yield；CallStack 由调用方提供。  
 - I/O：以值边/寄存器约定为 SSOT（至少文档化：整型/浮点/布尔/实体入参槽与返回槽）；禁止靠「读全局黑板」冒充纯函数输入（黑板只读若保留须在条目上显式声明 `readsBlackboard`，默认 false）。
 

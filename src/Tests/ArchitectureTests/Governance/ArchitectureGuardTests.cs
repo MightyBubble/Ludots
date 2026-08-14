@@ -2457,6 +2457,8 @@ namespace Ludots.Tests.Architecture.Governance
                 "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
                 "CapabilityStandardGraphOpsQueryMod",
                 "CapabilityStandardGraphOpsAttrMod",
+                "CapabilityStandardGraphBehaviorCommon",
+                "CapabilityStandardGraphOpsNodeGalleryMod",
                 "PerformanceVisualizationMod",
                 "GasBenchmarkMod",
             };

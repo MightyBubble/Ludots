@@ -30,9 +30,11 @@ namespace Ludots.Tests.Architecture
             Assert.That(names, Does.Contain("CapabilityStandardLiveSkillWorkbenchShowcaseMod"));
             Assert.That(names, Does.Contain("CapabilityStandardGraphOpsQueryMod"));
             Assert.That(names, Does.Contain("CapabilityStandardGraphOpsAttrMod"));
+            Assert.That(names, Does.Contain("CapabilityStandardGraphBehaviorCommon"));
+            Assert.That(names, Does.Contain("CapabilityStandardGraphOpsNodeGalleryMod"));
             Assert.That(names, Does.Contain("PerformanceVisualizationMod"));
             Assert.That(names, Does.Contain("GasBenchmarkMod"));
-            Assert.That(names.Count(static name => !string.Equals(name, "Ludots.Core", StringComparison.Ordinal)), Is.GreaterThanOrEqualTo(10));
+            Assert.That(names.Count(static name => !string.Equals(name, "Ludots.Core", StringComparison.Ordinal)), Is.GreaterThanOrEqualTo(12));
         }
     }
 }

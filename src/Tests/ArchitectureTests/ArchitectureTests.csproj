@@ -31,6 +31,8 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsQueryMod\CapabilityStandardGraphOpsQueryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsAttrMod\CapabilityStandardGraphOpsAttrMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\GasBenchmarkMod\GasBenchmarkMod.csproj" />
   </ItemGroup>

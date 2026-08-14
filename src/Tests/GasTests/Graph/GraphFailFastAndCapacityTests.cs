@@ -266,6 +266,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryOutgoing, A = 0, Dst = (byte)typeId, Flags = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             InvalidOperationException? ex = null;
@@ -301,6 +302,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryOutgoing, A = 0, C = 1, Dst = (byte)typeId, Flags = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
