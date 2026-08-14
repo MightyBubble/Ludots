@@ -2,7 +2,7 @@
   "op": "MulFloat",
   "driver": "linear",
   "title": "伤害乘倍率",
-  "beat": "基础伤害再乘 1.5 倍，血条按放大后的数往下掉。",
+  "beat": "基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
   "detailTemplate": "乘过倍率后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "倍率"

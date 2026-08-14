@@ -78,7 +78,7 @@ Score / Validation FuncLib 登记延后至 `InvokeScore` / `InvokeValidation` �
 | Effect 阶段调用 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib`；`GraphFunctionCatalogLoaderTests.Compile_InvokeScript_ByFunctionName_PatchesToGraphId` | 部分覆盖 | FuncLib 资产无 `damage.falloff`（现有 `demo.const.seven` / `ability.slash` / `ability.bash`）。缺技能命中进入 OnApply 后调用真实衰减函数并完成当次效果事务的 UAT。 |
 | 含 Yield 的图不能进 FuncLib | `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsYieldProgram`；`FuncCatalogLoader_RejectsPureScriptInvokeScriptGraphIdClosureToYield`；`FuncCatalogLoader_RejectsPureScriptInvokeScriptFunctionNameClosureToYieldBeforePatch`；`LiveGasEditPipelineTests.Classify_FuncLibGraphBodyReplaceThatReachesYield_MapReloadRequired` | 已覆盖 | 加载器与热改分类已失败关闭。缺面向作者的错误文案截图 / launcher UAT，不影响本条合同场景。 |
 | 行为树叶子调用 ActionLib | `BehaviorTreeRuntimeTests.PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent`；`GraphBehaviorSeparatedShowcaseAcceptanceTests.BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves`；`GraphActionCatalogLoaderTests.LoadsScriptAction_WithYieldProgram`；`ScriptFlowSandboxShowcaseAcceptanceTests.DrinkUntilFull_YieldsThenHaltsAtLimit`（`script.drinkUntilFull` 原子沙盒，旁证而非本条主证据） | 已覆盖 | `bt.patrol` 真 Yield 叶子已在 BT 宿主跨拍续跑。 |
-| 技能阶段不能调用 ActionLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionNameActionLibName_PatchFailsClosed`（Effect 方言、`InvokeScript.functionName`，符号 patch 失败关闭） | 合同原文未覆盖 | 合同原文要 Effect 图写入 `InvokeAction` 且编译失败；该节点全仓不存在，不得把等价守卫写成原文已覆盖。查询方言仍可用 `InvokeScript.graphId` 直绑（`GraphControlFlowCompiler.Query.cs` 只拒双填/双空）；`FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed` 仅 Score / Validation / Derived，不含 Query。本树未合入查询口收口。 |
+| 技能阶段不能调用 ActionLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionNameActionLibName_PatchFailsClosed`（Effect 方言、`InvokeScript.functionName`，符号 patch 失败关闭） | 合同原文未覆盖 | 合同原文要 Effect 图写入 `InvokeAction` 且编译失败；该节点全仓不存在，不得把等价守卫写成原文已覆盖。 |
 | Score 图产出分数且可调 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_LinearKindsInvokeScriptFunctionName_Compile`（Score kind 线性 `InvokeScript`）；`GraphContractTests.GraphKindOperationPolicy_ReadOnlyKindsRejectGameplayWrites`（Score 拒玩法写入） | 部分覆盖 | 缺 Score 图经真实 FuncLib catalog patch、对两个候选产出分数，并断言无 Yield / 无技能效果类副作用的 UAT。 |
 
 合同外、本树已有的相邻守卫（不升格为 §6 已覆盖）：
@@ -86,8 +86,8 @@ Score / Validation FuncLib 登记延后至 `InvokeScore` / `InvokeValidation` �
 | 相邻守卫 | 本树测试 | 状态 |
 |----------|----------|------|
 | Query Kind 调 FuncLib（`InvokeScript.functionName`） | `GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib` | 已覆盖 |
+| L1 线性方言拒 `InvokeScript.graphId`（含 Query / Effect） | `GraphEffectAuthoringExpressivenessTests.FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed`（`Effect` / `Query` / `Score` / `Validation` / `Derived`）；`GraphControlFlowCompiler.Query.cs` 与 `Linear.cs` 同一套诊断（缺函数名 `MissingNodeRef`，带了图号 `TypeMismatch`） | 已覆盖 |
 | L2 ActionLib 与 FuncLib 同名隔离 | `GraphFunctionCatalogLoaderTests.CoreCatalogs_MoveL2ActionsToActionLib`；`GraphActionCatalogLoaderTests.RejectsFuncLibNameClash` | 已覆盖 |
-| Effect 线性方言拒 `InvokeScript.graphId` | `GraphControlFlowCompiler.Linear.cs`（缺 `functionName` → `MissingNodeRef`；给了 `graphId` → `TypeMismatch`）。`FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed` 未带 Effect TestCase，但线性编译器已拒。 | 编译器已拒；无独立 Effect 用例 |
 
 Preset / Showcase：`capability_standard_behavior_tree_arena_raylib`、`capability_standard_script_flow_sandbox_raylib`、`capability_standard_ability_graph_sandbox_raylib`。
 

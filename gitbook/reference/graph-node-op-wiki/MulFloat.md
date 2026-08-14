@@ -1,6 +1,6 @@
 # 伤害乘倍率
 
-基础伤害再乘 1.5 倍，血条按放大后的数往下掉。
+基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_MulFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 伤害乘倍率
     Given 玩家打开 capability_standard_graph_op_MulFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「基础伤害再乘 1.5 倍，血条按放大后的数往下掉。」这类人话
+    Then 字幕讲的是「基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -2,7 +2,7 @@
   "op": "ClampFloat",
   "driver": "linear",
   "title": "伤害钳在上下限里",
-  "beat": "算出来 90，但这一刀最多 40、最少 10，血条按钳住后的数掉。",
+  "beat": "算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
   "detailTemplate": "钳在上下限里后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "钳"
