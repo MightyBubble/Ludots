@@ -265,6 +265,7 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
 
             EffectPhaseListenerBuffer listeners = default;
@@ -397,7 +398,8 @@ namespace Ludots.Tests.GAS
             TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, 64);
             That(world.IsAlive(effect), Is.True);
             That(world.Get<AttributeBuffer>(target).GetBase(attrId), Is.EqualTo(100f));
-            That(world.Get<AttributeBuffer>(target).GetCurrent(attrId), Is.EqualTo(107f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCap(attrId), Is.EqualTo(107f));
 
             GC.Collect();
             GC.WaitForPendingFinalizers();

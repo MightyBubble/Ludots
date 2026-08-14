@@ -45,7 +45,8 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 4, Imm = 123 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 1, Imm = 999 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 42 }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 42 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 for (int i = 0; i < 1024; i++)

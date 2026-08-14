@@ -18,6 +18,8 @@ namespace Ludots.Core.Modding
         private readonly TriggerManager _triggerManager;
         private readonly LogChannel _logChannel;
         public LogChannel LogChannel => _logChannel;
+        public ISystemRegistrar Systems { get; private set; } = UnavailableSystemRegistrar.Instance;
+        public IRegistrySetView Registries { get; private set; } = UnavailableRegistrySetView.Instance;
 
         public ModContext(
             string modId,
@@ -34,6 +36,12 @@ namespace Ludots.Core.Modding
             SystemFactoryRegistry = sfr;
             TriggerDecorators = tdr;
             _logChannel = Diagnostics.Log.GetOrCreateModChannel(modId);
+        }
+
+        public void BindHostPorts(ISystemRegistrar systems, IRegistrySetView registries)
+        {
+            Systems = systems ?? throw new ArgumentNullException(nameof(systems));
+            Registries = registries ?? throw new ArgumentNullException(nameof(registries));
         }
 
         public void OnEvent(EventKey eventKey, Func<ScriptContext, Task> handler)

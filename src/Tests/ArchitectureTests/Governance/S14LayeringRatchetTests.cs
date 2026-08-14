@@ -12,7 +12,7 @@ public sealed class S14LayeringRatchetTests
 {
     public const int MaxGetEngineCalls = 205;
     public const int MaxUndeclaredModRegisterSystemCalls = 100;
-    public const int MaxProductionStaticRegistryClearCalls = 15;
+    public const int MaxProductionStaticRegistryClearCalls = 9;
     public const int MaxModProjectsReferencingFacadeGameEngine = 136;
     public const int MaxModGraphIdRegistryClearCalls = 5;
 

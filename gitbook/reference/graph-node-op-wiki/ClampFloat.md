@@ -1,6 +1,6 @@
 # 伤害钳在上下限里
 
-算出来 90，但这一刀最多 40、最少 10，血条按钳住后的数掉。
+算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ClampFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 钳在上下限里后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 钳在上下限里后这一刀是 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 伤害钳在上下限里
     Given 玩家打开 capability_standard_graph_op_ClampFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「算出来 90，但这一刀最多 40、最少 10，血条按钳住后的数掉。」这类人话
+    Then 字幕讲的是「算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 
