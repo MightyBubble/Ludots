@@ -32,13 +32,13 @@
 
 `AttributeBuffer.SetBase` / `SetCurrent` / `SetAggregatedCurrent` 不是玩法写入面。Core 与展厅程序集里只有白名单类型可以调用它们：
 
-- 结算：`AttributeMutationOps`、`EffectModifierOps`、`EffectPhaseSideEffectTransaction`
+- 结算：`AttributeMutationOps`、`EffectModifierOps`
 - 聚合与派生：`AttributeAggregatorSystem`、`GasGraphRuntimeApi`（仅派生暂存 buffer）
 - 装载物化：`ComponentRegistry`、`TemplateEntityBatchSpawner`、`QuestDefinitions`
 - 每帧脉冲消费：`ForceInput2DSink`、`CameraBehaviorInputSink`
 - 基准装配：`GasBenchmark`
 
-展厅运行时（含运行期补金、种子属性、基准装配）必须走 `AttributeMutationOps`，禁止裸写缓冲。`ArchitectureGuardTests.AttributeBufferWrites_MustComeFromWhitelistedCallers` 用 IL 扫描 Core 与展厅程序集强制这条名单；不在名单里的调用方必须让 CI 失败并点名。
+展厅运行时（含运行期补金、种子属性、基准装配）必须走 `AttributeMutationOps`，禁止裸写缓冲。`EffectPhaseSideEffectTransaction.Commit` 按变更的 attributeId 调用 `AttributeMutationOps` 写 current/base，不再整块赋值 `AttributeBuffer`，因此不在白名单里；暂存副本通过 `EffectModifierOps` 写入。`ArchitectureGuardTests.AttributeBufferWrites_MustComeFromWhitelistedCallers` 用 IL 扫描 Core 与展厅程序集强制这条名单；不在名单里的调用方必须让 CI 失败并点名。
 
 ## 非法编号失败关闭
 

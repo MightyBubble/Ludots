@@ -351,15 +351,28 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public void StageAttributeAdd(Entity target, int attributeId, float delta)
     {
         int index = GetOrAddAttributeEntity(target);
-        float before = _attributeValues[index].GetCurrent(attributeId);
-        _attributeValues[index].SetCurrent(attributeId, before + delta);
+        var modifiers = new EffectModifiers();
+        if (!modifiers.Add(attributeId, ModifierOp.Add, delta))
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=EffectModifiers, staged=1, capacity={EffectModifiers.CAPACITY}.");
+        }
+
+        EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
     }
 
     public void StageAttributeSet(Entity target, int attributeId, float value)
     {
         int index = GetOrAddAttributeEntity(target);
-        _attributeValues[index].SetCurrent(attributeId, value);
+        var modifiers = new EffectModifiers();
+        if (!modifiers.Add(attributeId, ModifierOp.Override, value))
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=EffectModifiers, staged=1, capacity={EffectModifiers.CAPACITY}.");
+        }
+
+        EffectModifierOps.Apply(in modifiers, ref _attributeValues[index]);
         RefreshAttributeChanged(index, attributeId);
     }
 
@@ -850,6 +863,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _structuralCommands.Playback(_world);
             }
 
+            if (_attributeCount > 0 && _tagOps == null)
+            {
+                throw new InvalidOperationException(TagOps.MissingTagOpsError);
+            }
+
             for (int i = 0; i < _attributeCount; i++)
             {
                 if (_attributeChangedMasks[i] == 0UL)
@@ -858,14 +876,25 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
 
                 Entity entity = _attributeEntities[i];
-                _world.Get<AttributeBuffer>(entity) = _attributeValues[i];
-                _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedValues[i];
                 for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
                 {
-                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) != 0UL)
+                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) == 0UL)
                     {
-                        _world.Get<DirtyFlags>(entity).MarkAttributeDirty(attributeId);
+                        continue;
                     }
+
+                    float stagedBase = ReadRawBase(ref _attributeValues[i], attributeId);
+                    if (stagedBase != ReadRawBase(ref _attributeOriginalValues[i], attributeId))
+                    {
+                        AttributeMutationOps.SetBase(_world, entity, attributeId, stagedBase, _tagOps!);
+                    }
+
+                    AttributeMutationOps.SetCurrent(
+                        _world,
+                        entity,
+                        attributeId,
+                        _attributeValues[i].GetCurrent(attributeId),
+                        _tagOps!);
                 }
             }
             for (int i = 0; i < _tagEntityCount; i++)
@@ -1193,8 +1222,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             return;
         }
         ulong bit = 1UL << attributeId;
-        if (_attributeValues[index].GetCurrent(attributeId) !=
-            _attributeOriginalValues[index].GetCurrent(attributeId))
+        bool currentChanged = _attributeValues[index].GetCurrent(attributeId) !=
+            _attributeOriginalValues[index].GetCurrent(attributeId);
+        bool baseChanged = ReadRawBase(ref _attributeValues[index], attributeId) !=
+            ReadRawBase(ref _attributeOriginalValues[index], attributeId);
+        if (currentChanged || baseChanged)
         {
             _attributeChangedMasks[index] |= bit;
         }
@@ -1202,6 +1234,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             _attributeChangedMasks[index] &= ~bit;
         }
+    }
+
+    private static unsafe float ReadRawBase(ref AttributeBuffer buffer, int attributeId)
+    {
+        return buffer.BaseValues[attributeId];
     }
 
     private void ValidateCommit()

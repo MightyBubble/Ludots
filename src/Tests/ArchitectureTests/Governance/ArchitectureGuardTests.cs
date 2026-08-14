@@ -985,7 +985,6 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(AttributeMutationOps),
                 typeof(AttributeAggregatorSystem),
                 typeof(EffectModifierOps),
-                typeof(EffectPhaseSideEffectTransaction),
                 typeof(GasGraphRuntimeApi),
                 typeof(Ludots.Core.Config.ComponentRegistry),
                 typeof(TemplateEntityBatchSpawner),
