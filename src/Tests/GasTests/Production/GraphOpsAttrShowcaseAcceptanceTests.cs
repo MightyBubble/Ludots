@@ -7,9 +7,16 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphOpsAttrShowcaseAcceptanceTests
     {
+        [SetUp]
+        public void ClearGraphIdsForStandaloneBootstrap()
+        {
+            GraphIdRegistry.Clear();
+        }
+
         [Test]
         public void AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget()
         {

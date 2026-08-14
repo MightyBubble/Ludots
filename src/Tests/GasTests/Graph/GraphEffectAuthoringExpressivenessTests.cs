@@ -1292,9 +1292,11 @@ namespace Ludots.Tests.Gas.Graph
                     GasGraphOpHandlerTable.Instance));
         }
 
+        [TestCase("Effect")]
         [TestCase("Score")]
         [TestCase("Validation")]
         [TestCase("Derived")]
+        [TestCase("Query")]
         public void FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed(string kind)
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(

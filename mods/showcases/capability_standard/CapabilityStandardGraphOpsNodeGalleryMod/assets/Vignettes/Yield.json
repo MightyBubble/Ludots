@@ -2,7 +2,7 @@
   "op": "Yield",
   "driver": "script",
   "title": "续一杯歇一口气",
-  "beat": "每续一口歇一下，茶水一格格涨，水位往上走。",
+  "beat": "每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。",
   "detailTemplate": "续一杯歇一口气。茶水 {water}/{limit}。",
   "assertDetailContains": [
     "歇"

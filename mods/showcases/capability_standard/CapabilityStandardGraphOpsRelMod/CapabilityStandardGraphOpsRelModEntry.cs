@@ -24,7 +24,6 @@ public sealed class CapabilityStandardGraphOpsRelModEntry : IMod
                 ?? throw new InvalidOperationException(
                     "CapabilityStandardGraphOpsRelMod GameStart requires GameEngine.");
             runtime.AttachEngine(engine);
-            runtime.BindStandaloneFromModAssets();
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();

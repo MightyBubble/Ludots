@@ -1,8 +1,11 @@
 {
   "id": "showcase.graph_op.FanOutDispatchEffect",
   "kind": "Effect",
-  "entry": "fanDispatch",
+  "entry": "explicit",
   "nodes": [
+    { "id": "explicit", "op": "LoadExplicitTarget" },
+    { "id": "wound", "op": "ConstFloat", "floatValue": -18 },
+    { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" },
     {
       "id": "fanDispatch",
       "op": "FanOutDispatchEffect",
@@ -10,6 +13,13 @@
       "payloadPreset": "TargetToResolved"
     }
   ],
-  "controlEdges": [],
-  "valueEdges": []
+  "controlEdges": [
+    { "from": "explicit", "fromPort": "next", "to": "wound" },
+    { "from": "wound", "fromPort": "next", "to": "hit" },
+    { "from": "hit", "fromPort": "next", "to": "fanDispatch" }
+  ],
+  "valueEdges": [
+    { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" },
+    { "from": "wound", "fromPort": "value", "to": "hit", "toPort": "value" }
+  ]
 }

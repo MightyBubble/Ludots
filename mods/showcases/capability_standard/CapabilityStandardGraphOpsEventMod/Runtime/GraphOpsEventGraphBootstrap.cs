@@ -64,7 +64,6 @@ public static class GraphOpsEventGraphBootstrap
             throw new FileNotFoundException($"Missing event showcase graphs: {graphsPath}");
         }
 
-        GraphIdRegistry.Clear();
         _ = GraphOpsMutableRegistry.EffectTemplate(GraphOpsEventGraphKeys.DispatchStubEffect);
         _ = GraphOpsMutableRegistry.Tag(GraphOpsEventGraphKeys.DamageDealtTag);
 

@@ -2976,7 +2976,7 @@
         "attribute",
         "effect-template"
       ],
-      "binding": "capability_standard_graph_ops_attr",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3001,7 +3001,7 @@
         "float",
         "graph-ops"
       ],
-      "binding": "capability_standard_graph_ops_float",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3026,7 +3026,7 @@
         "script",
         "graph-ops"
       ],
-      "binding": "capability_standard_graph_ops_script",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3051,7 +3051,7 @@
         "spatial",
         "graph-ops"
       ],
-      "binding": "capability_standard_graph_ops_spatial",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3075,7 +3075,7 @@
         "query",
         "gallery"
       ],
-      "binding": "capability_standard_graph_ops_query",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3100,7 +3100,7 @@
         "relationship",
         "graph-ops"
       ],
-      "binding": "capability_standard_graph_ops_rel",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3126,7 +3126,7 @@
         "blackboard",
         "lifecycle"
       ],
-      "binding": "capability_standard_graph_ops_blackboard",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3151,7 +3151,7 @@
         "event",
         "placement"
       ],
-      "binding": "capability_standard_graph_ops_event",
+      "binding": null,
       "preset": null,
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
@@ -3236,7 +3236,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAddFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpAddFloatEntryMod.csproj",
       "title": "两段伤害叠在一起",
-      "summary": "左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。",
+      "summary": "左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3263,7 +3263,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpConstFloatEntryMod.csproj",
       "title": "写死的一刀",
-      "summary": "这一刀不读装备、不算距离，伤害就是写死的 42。目标血条直接变成这个数。",
+      "summary": "这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3668,7 +3668,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpLoadConfigFloatEntryMod.csproj",
       "title": "从技能配置读出威力",
-      "summary": "配置写着 40，不是写死在图常数里。",
+      "summary": "配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3803,7 +3803,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadBlackboardFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpReadBlackboardFloatEntryMod.csproj",
       "title": "从记事板读出威力",
-      "summary": "板上写着 35 点威力，读出来打在血条上。",
+      "summary": "板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -4451,7 +4451,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpIfFalseEntryMod",
       "projectPath": "CapabilityStandardGraphOpJumpIfFalseEntryMod.csproj",
       "title": "没满就再续一杯",
-      "summary": "茶没满时继续续，满了才停。",
+      "summary": "茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -4532,7 +4532,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
       "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj",
       "title": "续一杯歇一口气",
-      "summary": "每续一口歇一下，茶水一格格涨，水位往上走。",
+      "summary": "每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。",
       "tier": "T2",
       "category": "capability",
       "tags": [

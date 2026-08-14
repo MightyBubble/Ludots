@@ -70,7 +70,9 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(runtime.Title, Is.EqualTo("续一杯歇一口气"));
-        Assert.That(runtime.Context.ActorHealth[0], Is.GreaterThan(opening));
+        Assert.That(runtime.Context.ActorHealth[0], Is.EqualTo(opening).Within(0.01f));
+        Assert.That(int.Parse(runtime.Context.CaptionValues["water"]), Is.GreaterThan(0));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("茶水"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("歇"));
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
@@ -102,24 +104,26 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         using var runtime = new GraphOpsNodeGalleryRuntime();
         runtime.BindOp("JumpIfFalse");
         runtime.EnsureWorld();
-        float opening = runtime.Context.ActorHealth[0];
+        float openingHealth = runtime.Context.ActorHealth[0];
 
         for (int i = 0; i < 4; i++)
         {
             runtime.Tick(0.2f);
         }
 
-        float mid = runtime.Context.ActorHealth[0];
+        int midWater = int.Parse(runtime.Context.CaptionValues["water"]);
         for (int i = 0; i < 8; i++)
         {
             runtime.Tick(0.2f);
         }
 
-        float later = runtime.Context.ActorHealth[0];
+        int laterWater = int.Parse(runtime.Context.CaptionValues["water"]);
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(runtime.Title, Is.EqualTo("没满就再续一杯"));
-        Assert.That(mid, Is.GreaterThan(opening));
-        Assert.That(later, Is.GreaterThanOrEqualTo(mid));
+        Assert.That(runtime.Context.ActorHealth[0], Is.EqualTo(openingHealth).Within(0.01f));
+        Assert.That(midWater, Is.GreaterThan(0));
+        Assert.That(laterWater, Is.GreaterThanOrEqualTo(midWater));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("茶水"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("再续"));
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {

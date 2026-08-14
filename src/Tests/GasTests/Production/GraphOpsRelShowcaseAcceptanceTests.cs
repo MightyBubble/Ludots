@@ -1,5 +1,6 @@
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphOpsRelMod.Runtime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
@@ -9,6 +10,12 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class GraphOpsRelShowcaseAcceptanceTests
     {
+        [SetUp]
+        public void ClearGraphIdsForStandaloneBootstrap()
+        {
+            GraphIdRegistry.Clear();
+        }
+
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {

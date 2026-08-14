@@ -65,7 +65,6 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Linear apply '{linear.ApplyTo}' requires a target actor.");
         }
 
-        float opening = ctx.Vignette.Actors[targetIndex].Health;
         float next = ctx.ActorHealth[targetIndex];
         if (string.Equals(linear.ApplyTo, "targetHealthSet", StringComparison.Ordinal))
         {
@@ -73,11 +72,7 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
         }
         else if (string.Equals(linear.ApplyTo, "targetHealthSubtract", StringComparison.Ordinal))
         {
-            next -= RequireFloat(linear, result);
-            if (next <= 0f)
-            {
-                next = opening;
-            }
+            next = Math.Max(0f, next - RequireFloat(linear, result));
         }
         else
         {

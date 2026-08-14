@@ -2,8 +2,8 @@
   "op": "AddFloat",
   "driver": "linear",
   "title": "两段伤害叠在一起",
-  "beat": "左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。",
-  "detailTemplate": "基础伤害加上额外伤害，这一刀一共 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "beat": "左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
+  "detailTemplate": "基础伤害加上额外伤害，这一刀一共 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "加上",
     "一共"

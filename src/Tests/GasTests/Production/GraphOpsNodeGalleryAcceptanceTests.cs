@@ -117,6 +117,56 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
     }
 
     [Test]
+    public void RetiredFamilyAggregates_HaveNoPlayerLaunchBinding()
+    {
+        string repoRoot = FindRepoRoot();
+        using JsonDocument registry = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "showcase.registry.json")));
+        using JsonDocument launcher = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, "launcher.config.json")));
+
+        var launcherNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (JsonElement binding in launcher.RootElement.GetProperty("bindings").EnumerateArray())
+        {
+            string? name = binding.GetProperty("name").GetString();
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                launcherNames.Add(name);
+            }
+        }
+
+        string[] familyIds =
+        {
+            "capability_standard_graph_ops_attr",
+            "capability_standard_graph_ops_float",
+            "capability_standard_graph_ops_script",
+            "capability_standard_graph_ops_spatial",
+            "capability_standard_graph_ops_query",
+            "capability_standard_graph_ops_rel",
+            "capability_standard_graph_ops_blackboard",
+            "capability_standard_graph_ops_event",
+        };
+
+        var byId = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (JsonElement showcase in registry.RootElement.GetProperty("showcases").EnumerateArray())
+        {
+            string? id = showcase.GetProperty("id").GetString();
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                byId[id] = showcase;
+            }
+        }
+
+        foreach (string id in familyIds)
+        {
+            Assert.That(byId.ContainsKey(id), Is.True, $"Missing retired family showcase '{id}'.");
+            JsonElement entry = byId[id];
+            Assert.That(entry.GetProperty("status").GetString(), Is.EqualTo("retired"), id);
+            Assert.That(entry.GetProperty("binding").ValueKind, Is.EqualTo(JsonValueKind.Null), id);
+            Assert.That(entry.GetProperty("preset").ValueKind, Is.EqualTo(JsonValueKind.Null), id);
+            Assert.That(launcherNames, Does.Not.Contain(id), $"Retired family '{id}' still has a launcher binding.");
+        }
+    }
+
+    [Test]
     public void EveryVignette_TicksOnce_WithChineseCaption()
     {
         string repoRoot = FindRepoRoot();

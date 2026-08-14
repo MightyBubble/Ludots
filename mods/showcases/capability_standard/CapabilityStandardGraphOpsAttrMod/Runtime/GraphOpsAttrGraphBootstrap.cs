@@ -49,7 +49,6 @@ public static class GraphOpsAttrGraphBootstrap
             throw new FileNotFoundException($"Missing attr showcase graphs: {graphsPath}");
         }
 
-        GraphIdRegistry.Clear();
         _ = GraphOpsMutableRegistry.EffectTemplate(GraphOpsAttrGraphKeys.MarkEffect);
 
         var programs = new GraphProgramRegistry();
