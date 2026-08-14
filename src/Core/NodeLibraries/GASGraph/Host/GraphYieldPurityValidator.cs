@@ -28,6 +28,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
     internal static class GraphYieldPurityValidator
     {
+        public const string InvokeCycleError = "GAS.GRAPH.ERR.InvokeCycle";
+
         public static bool TryValidateNoReachableYield(
             GraphProgramRegistry programs,
             int rootGraphId,
@@ -40,103 +42,140 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (programs == null) throw new ArgumentNullException(nameof(programs));
             if (resolveFunction == null) throw new ArgumentNullException(nameof(resolveFunction));
 
-            diagnostic = string.Empty;
-            var activeGraphs = new HashSet<int>();
-            var path = new List<string>(8);
             return !FindInGraph(
-                programs,
+                new WalkState(
+                    programs,
+                    rootGraphId,
+                    rootProgramOverride,
+                    rootSymbolsOverride,
+                    resolveFunction,
+                    findYield: true,
+                    allowMissingTargets: false),
                 rootGraphId,
                 string.IsNullOrWhiteSpace(rootLabel) ? GraphYieldPurityTarget.DescribeGraph(rootGraphId) : rootLabel,
-                rootGraphId,
-                rootProgramOverride,
-                rootSymbolsOverride,
-                resolveFunction,
-                activeGraphs,
-                path,
                 out diagnostic);
         }
 
-        private static bool FindInGraph(
+        public static bool TryValidateNoInvokeCycle(
             GraphProgramRegistry programs,
+            int rootGraphId,
+            string rootLabel,
+            out string diagnostic,
+            GraphInstruction[]? rootProgramOverride = null,
+            string[]? rootSymbolsOverride = null,
+            TryResolveFuncLibTarget? resolveFunction = null,
+            bool allowMissingTargets = true)
+        {
+            if (programs == null) throw new ArgumentNullException(nameof(programs));
+
+            return !FindInGraph(
+                new WalkState(
+                    programs,
+                    rootGraphId,
+                    rootProgramOverride,
+                    rootSymbolsOverride,
+                    resolveFunction,
+                    findYield: false,
+                    allowMissingTargets),
+                rootGraphId,
+                string.IsNullOrWhiteSpace(rootLabel) ? GraphYieldPurityTarget.DescribeGraph(rootGraphId) : rootLabel,
+                out diagnostic);
+        }
+
+        private sealed class WalkState
+        {
+            public WalkState(
+                GraphProgramRegistry programs,
+                int rootGraphId,
+                GraphInstruction[]? rootProgramOverride,
+                string[]? rootSymbolsOverride,
+                TryResolveFuncLibTarget? resolveFunction,
+                bool findYield,
+                bool allowMissingTargets)
+            {
+                Programs = programs;
+                RootGraphId = rootGraphId;
+                RootProgramOverride = rootProgramOverride;
+                RootSymbolsOverride = rootSymbolsOverride;
+                ResolveFunction = resolveFunction;
+                FindYield = findYield;
+                AllowMissingTargets = allowMissingTargets;
+                ActiveGraphs = new HashSet<int>();
+                Path = new List<string>(8);
+            }
+
+            public GraphProgramRegistry Programs { get; }
+            public int RootGraphId { get; }
+            public GraphInstruction[]? RootProgramOverride { get; }
+            public string[]? RootSymbolsOverride { get; }
+            public TryResolveFuncLibTarget? ResolveFunction { get; }
+            public bool FindYield { get; }
+            public bool AllowMissingTargets { get; }
+            public HashSet<int> ActiveGraphs { get; }
+            public List<string> Path { get; }
+        }
+
+        private static bool FindInGraph(
+            WalkState walk,
             int graphId,
             string label,
-            int rootGraphId,
-            GraphInstruction[]? rootProgramOverride,
-            string[]? rootSymbolsOverride,
-            TryResolveFuncLibTarget resolveFunction,
-            HashSet<int> activeGraphs,
-            List<string> path,
             out string diagnostic)
         {
             diagnostic = string.Empty;
             if (graphId <= 0)
             {
-                return Fail(path, $"invalid graph id {graphId}", out diagnostic);
+                return Fail(walk.Path, $"invalid graph id {graphId}", out diagnostic);
             }
 
-            if (!activeGraphs.Add(graphId))
+            if (!walk.ActiveGraphs.Add(graphId))
             {
-                return false;
+                return Fail(walk.Path, InvokeCycleError, out diagnostic);
             }
 
             try
             {
                 GraphInstruction[] program;
                 string[] symbols;
-                if (graphId == rootGraphId && rootProgramOverride != null)
+                if (graphId == walk.RootGraphId && walk.RootProgramOverride != null)
                 {
-                    program = rootProgramOverride;
-                    symbols = rootSymbolsOverride ?? Array.Empty<string>();
+                    program = walk.RootProgramOverride;
+                    symbols = walk.RootSymbolsOverride ?? Array.Empty<string>();
                 }
                 else
                 {
-                    if (!programs.TryGetRegistration(graphId, out GraphProgramRegistration registration))
+                    if (!walk.Programs.TryGetRegistration(graphId, out GraphProgramRegistration registration))
                     {
-                        return Fail(path, $"{GraphYieldPurityTarget.DescribeGraph(graphId)} has no registered program", out diagnostic);
+                        if (walk.AllowMissingTargets)
+                        {
+                            return false;
+                        }
+
+                        return Fail(walk.Path, $"{GraphYieldPurityTarget.DescribeGraph(graphId)} has no registered program", out diagnostic);
                     }
 
                     program = registration.Program;
                     symbols = registration.Symbols;
                 }
 
-                path.Add(label);
+                walk.Path.Add(label);
                 var visited = new bool[program.Length];
-                bool found = FindInProgram(
-                    programs,
-                    graphId,
-                    program,
-                    symbols,
-                    0,
-                    rootGraphId,
-                    rootProgramOverride,
-                    rootSymbolsOverride,
-                    resolveFunction,
-                    activeGraphs,
-                    visited,
-                    path,
-                    out diagnostic);
-                path.RemoveAt(path.Count - 1);
+                bool found = FindInProgram(walk, graphId, program, symbols, 0, visited, out diagnostic);
+                walk.Path.RemoveAt(walk.Path.Count - 1);
                 return found;
             }
             finally
             {
-                activeGraphs.Remove(graphId);
+                walk.ActiveGraphs.Remove(graphId);
             }
         }
 
         private static bool FindInProgram(
-            GraphProgramRegistry programs,
+            WalkState walk,
             int graphId,
             GraphInstruction[] program,
             string[] symbols,
             int pc,
-            int rootGraphId,
-            GraphInstruction[]? rootProgramOverride,
-            string[]? rootSymbolsOverride,
-            TryResolveFuncLibTarget resolveFunction,
-            HashSet<int> activeGraphs,
             bool[] visited,
-            List<string> path,
             out string diagnostic)
         {
             diagnostic = string.Empty;
@@ -157,36 +196,41 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             switch (op)
             {
                 case GraphNodeOp.None:
-                    return FindInProgram(programs, graphId, program, symbols, pc + 1, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
 
                 case GraphNodeOp.Yield:
-                    return Fail(path, $"Yield@pc={pc}", out diagnostic);
+                    if (walk.FindYield)
+                    {
+                        return Fail(walk.Path, $"Yield@pc={pc}", out diagnostic);
+                    }
+
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
 
                 case GraphNodeOp.InvokeScript:
-                    if (FindInvokeTarget(programs, graphId, symbols, ins, pc, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, path, out diagnostic))
+                    if (FindInvokeTarget(walk, symbols, ins, pc, out diagnostic))
                     {
                         return true;
                     }
 
-                    return FindInProgram(programs, graphId, program, symbols, pc + 1, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
 
                 case GraphNodeOp.Call:
                 {
                     int target = ins.Imm;
                     if ((uint)target >= (uint)program.Length)
                     {
-                        return Fail(path, $"Call@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
+                        return Fail(walk.Path, $"Call@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
                     }
 
-                    path.Add($"Call@pc={pc}->pc={target}");
-                    bool found = FindInProgram(programs, graphId, program, symbols, target, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
-                    path.RemoveAt(path.Count - 1);
+                    walk.Path.Add($"Call@pc={pc}->pc={target}");
+                    bool found = FindInProgram(walk, graphId, program, symbols, target, visited, out diagnostic);
+                    walk.Path.RemoveAt(walk.Path.Count - 1);
                     if (found)
                     {
                         return true;
                     }
 
-                    return FindInProgram(programs, graphId, program, symbols, pc + 1, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
                 }
 
                 case GraphNodeOp.Jump:
@@ -194,12 +238,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     int target = pc + 1 + ins.Imm;
                     if ((uint)target >= (uint)program.Length)
                     {
-                        return Fail(path, $"Jump@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
+                        return Fail(walk.Path, $"Jump@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
                     }
 
-                    path.Add($"Jump@pc={pc}->pc={target}");
-                    bool found = FindInProgram(programs, graphId, program, symbols, target, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
-                    path.RemoveAt(path.Count - 1);
+                    walk.Path.Add($"Jump@pc={pc}->pc={target}");
+                    bool found = FindInProgram(walk, graphId, program, symbols, target, visited, out diagnostic);
+                    walk.Path.RemoveAt(walk.Path.Count - 1);
                     return found;
                 }
 
@@ -208,18 +252,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     int target = pc + 1 + ins.Imm;
                     if ((uint)target >= (uint)program.Length)
                     {
-                        return Fail(path, $"JumpIfFalse@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
+                        return Fail(walk.Path, $"JumpIfFalse@pc={pc} target {target} is outside {GraphYieldPurityTarget.DescribeGraph(graphId)}", out diagnostic);
                     }
 
-                    path.Add($"JumpIfFalse.false@pc={pc}->pc={target}");
-                    bool found = FindInProgram(programs, graphId, program, symbols, target, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
-                    path.RemoveAt(path.Count - 1);
+                    walk.Path.Add($"JumpIfFalse.false@pc={pc}->pc={target}");
+                    bool found = FindInProgram(walk, graphId, program, symbols, target, visited, out diagnostic);
+                    walk.Path.RemoveAt(walk.Path.Count - 1);
                     if (found)
                     {
                         return true;
                     }
 
-                    return FindInProgram(programs, graphId, program, symbols, pc + 1, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
                 }
 
                 case GraphNodeOp.Return:
@@ -229,25 +273,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 default:
                     if (!Enum.IsDefined(typeof(GraphNodeOp), op))
                     {
-                        return Fail(path, $"unknown graph op {ins.Op}@pc={pc}", out diagnostic);
+                        return Fail(walk.Path, $"unknown graph op {ins.Op}@pc={pc}", out diagnostic);
                     }
 
-                    return FindInProgram(programs, graphId, program, symbols, pc + 1, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, visited, path, out diagnostic);
+                    return FindInProgram(walk, graphId, program, symbols, pc + 1, visited, out diagnostic);
             }
         }
 
         private static bool FindInvokeTarget(
-            GraphProgramRegistry programs,
-            int graphId,
+            WalkState walk,
             string[] symbols,
             in GraphInstruction ins,
             int pc,
-            int rootGraphId,
-            GraphInstruction[]? rootProgramOverride,
-            string[]? rootSymbolsOverride,
-            TryResolveFuncLibTarget resolveFunction,
-            HashSet<int> activeGraphs,
-            List<string> path,
             out string diagnostic)
         {
             diagnostic = string.Empty;
@@ -255,39 +292,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             {
                 if (!TryResolveSymbol(symbols, ins.Imm, out string functionName))
                 {
-                    return Fail(path, $"InvokeScript.functionName@pc={pc} cannot resolve symbol index {ins.Imm}", out diagnostic);
+                    return Fail(walk.Path, $"InvokeScript.functionName@pc={pc} cannot resolve symbol index {ins.Imm}", out diagnostic);
                 }
 
-                if (!resolveFunction(functionName, out GraphYieldPurityTarget target))
+                if (walk.ResolveFunction == null || !walk.ResolveFunction(functionName, out GraphYieldPurityTarget target))
                 {
-                    return Fail(path, $"InvokeScript.functionName '{functionName}'@pc={pc} is not registered in FuncLib", out diagnostic);
+                    if (walk.AllowMissingTargets)
+                    {
+                        return false;
+                    }
+
+                    return Fail(walk.Path, $"InvokeScript.functionName '{functionName}'@pc={pc} is not registered in FuncLib", out diagnostic);
                 }
 
-                path.Add($"InvokeScript.functionName '{functionName}'@pc={pc}");
-                bool found = FindInGraph(programs, target.GraphId, target.Label, rootGraphId, rootProgramOverride, rootSymbolsOverride, resolveFunction, activeGraphs, path, out diagnostic);
-                path.RemoveAt(path.Count - 1);
+                walk.Path.Add($"InvokeScript.functionName '{functionName}'@pc={pc}");
+                bool found = FindInGraph(walk, target.GraphId, target.Label, out diagnostic);
+                walk.Path.RemoveAt(walk.Path.Count - 1);
                 return found;
             }
 
             int childGraphId = ins.Imm;
             if (childGraphId <= 0)
             {
-                return Fail(path, $"InvokeScript.graphId@pc={pc} requires a positive graph id", out diagnostic);
+                return Fail(walk.Path, $"InvokeScript.graphId@pc={pc} requires a positive graph id", out diagnostic);
             }
 
-            path.Add($"InvokeScript.graphId={childGraphId}@pc={pc}");
+            walk.Path.Add($"InvokeScript.graphId={childGraphId}@pc={pc}");
             bool childFound = FindInGraph(
-                programs,
+                walk,
                 childGraphId,
                 GraphYieldPurityTarget.DescribeGraph(childGraphId),
-                rootGraphId,
-                rootProgramOverride,
-                rootSymbolsOverride,
-                resolveFunction,
-                activeGraphs,
-                path,
                 out diagnostic);
-            path.RemoveAt(path.Count - 1);
+            walk.Path.RemoveAt(walk.Path.Count - 1);
             return childFound;
         }
 

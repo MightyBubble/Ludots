@@ -184,6 +184,55 @@ namespace Ludots.Tests.GAS
 
         [Test]
         [Category("ci-gate")]
+        public void Classify_GraphBodyReplaceThatCreatesInvokeCycle_MapReloadRequired()
+        {
+            const string graphKey = "Graph.Live.CycleHot";
+            int graphId = GraphIdRegistry.Register(graphKey);
+            var graphs = new GraphProgramRegistry();
+            graphs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            }, GraphKind.Script);
+
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog());
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            string documentJson = $$"""
+                {
+                  "id": "{{graphKey}}",
+                  "kind": "Script",
+                  "entry": "invoke",
+                  "nodes": [
+                    { "id": "invoke", "op": "InvokeScript", "graphId": {{graphId}} },
+                    { "id": "h", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "invoke", "fromPort": "next", "to": "h" }
+                  ],
+                  "valueEdges": [
+                    { "from": "invoke", "fromPort": "value", "to": "h", "toPort": "value" }
+                  ]
+                }
+                """;
+
+            That(session.TryStage(LiveDebugPatchOperation.GraphBodyReplace(
+                graphKey,
+                documentJson,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://graph/" + graphKey))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+
+            That(report.CanCommitNextCast, Is.False);
+            That(report.RequiresMapReload, Is.True);
+            That(report.Items[0].Mode, Is.EqualTo(LiveApplyMode.MapReloadRequired));
+            That(report.Items[0].Diagnostics[0].Message, Does.Contain("GAS.GRAPH.ERR.InvokeCycle"));
+            That(graphs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> live), Is.True);
+            That(live[0].Op, Is.EqualTo((ushort)GraphNodeOp.ConstInt));
+        }
+
+        [Test]
+        [Category("ci-gate")]
         public void ClassifyAndCommit_EffectDurationTicks_NextCast()
         {
             string effectName = "Effect.Live.HotDuration";

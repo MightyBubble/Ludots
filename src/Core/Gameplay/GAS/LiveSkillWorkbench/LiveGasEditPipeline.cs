@@ -653,6 +653,31 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 return;
             }
 
+            if (!GraphYieldPurityValidator.TryValidateNoInvokeCycle(
+                    _graphs,
+                    graphId,
+                    $"graph '{graphKey}'",
+                    out string cycleDiagnostic,
+                    package.Program,
+                    package.Symbols,
+                    TryResolveFuncLibTarget,
+                    allowMissingTargets: true))
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphCompileFailed,
+                    $"{GraphYieldPurityValidator.InvokeCycleError}: {cycleDiagnostic}",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Graph candidate introduces an InvokeScript cycle.",
+                    diags));
+                return;
+            }
+
             _stagedGraphs.Add(new StagedGraphCandidate
             {
                 GraphKey = graphKey,

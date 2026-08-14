@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.GraphRuntime
 {
@@ -15,11 +17,26 @@ namespace Ludots.Core.GraphRuntime
             Program = program ?? Array.Empty<GraphInstruction>();
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
+            ContainsYield = ProgramContainsYield(Program);
         }
 
         public GraphInstruction[] Program { get; }
         public GraphKind Kind { get; }
         public string[] Symbols { get; }
+        public bool ContainsYield { get; }
+
+        private static bool ProgramContainsYield(GraphInstruction[] program)
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                if (program[i].Op == (ushort)GraphNodeOp.Yield)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     public sealed class GraphProgramRegistry
@@ -58,6 +75,17 @@ namespace Ludots.Core.GraphRuntime
             {
                 _sourceMaps[graphId] = sourceMap;
             }
+
+            try
+            {
+                EnsureNoInvokeCycle(graphId);
+            }
+            catch
+            {
+                _programs.Remove(graphId);
+                _sourceMaps.Remove(graphId);
+                throw;
+            }
         }
 
         /// <summary>
@@ -88,6 +116,8 @@ namespace Ludots.Core.GraphRuntime
                     $"Graph program id {graphId} kind is '{existing.Kind}'; cannot replace with '{kind}' (identity change requires EngineRestart).");
             }
 
+            GraphProgramRegistration previous = existing;
+            _sourceMaps.TryGetValue(graphId, out GraphInstructionSourceMap previousSourceMap);
             _programs[graphId] = new GraphProgramRegistration(program, kind, symbols);
             if (sourceMap.HasSources)
             {
@@ -96,6 +126,38 @@ namespace Ludots.Core.GraphRuntime
             else
             {
                 _sourceMaps.Remove(graphId);
+            }
+
+            try
+            {
+                EnsureNoInvokeCycle(graphId);
+            }
+            catch
+            {
+                _programs[graphId] = previous;
+                if (previousSourceMap.HasSources)
+                {
+                    _sourceMaps[graphId] = previousSourceMap;
+                }
+                else
+                {
+                    _sourceMaps.Remove(graphId);
+                }
+
+                throw;
+            }
+        }
+
+        private void EnsureNoInvokeCycle(int graphId)
+        {
+            if (!GraphYieldPurityValidator.TryValidateNoInvokeCycle(
+                    this,
+                    graphId,
+                    GraphYieldPurityTarget.DescribeGraph(graphId),
+                    out string diagnostic,
+                    allowMissingTargets: true))
+            {
+                throw new InvalidOperationException($"{GraphYieldPurityValidator.InvokeCycleError}: {diagnostic}");
             }
         }
 

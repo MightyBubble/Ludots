@@ -333,6 +333,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 CallStack = callStack,
                 CallStackCount = cursor.CallStackCount,
                 ReturnInt = cursor.ReturnInt,
+                InvokeDepth = cursor.InvokeDepth,
                 Status = GraphExecutionStatus.Running
             };
 

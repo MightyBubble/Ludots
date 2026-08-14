@@ -13,6 +13,7 @@ namespace Ludots.Core.GraphRuntime
         public int Steps;
         public int CallStackCount;
         public int ReturnInt;
+        public int InvokeDepth;
         public GraphExecutionStatus Status;
 
         public void Reset()
@@ -21,6 +22,7 @@ namespace Ludots.Core.GraphRuntime
             Steps = 0;
             CallStackCount = 0;
             ReturnInt = 0;
+            InvokeDepth = 0;
             Status = GraphExecutionStatus.Running;
         }
     }

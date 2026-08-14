@@ -58,5 +58,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphExecutionStatus Status;
         /// <summary>Set by the executor for the active program; used by Call absolute-target checks.</summary>
         public int ProgramLength;
+        public int InvokeDepth;
+        public int TreeSteps;
     }
 }

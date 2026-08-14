@@ -278,12 +278,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"Execute requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} (caller-owned; heap allocation is forbidden on this path).");
             }
 
+            if (state.TreeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
+            {
+                throw new InvalidOperationException(
+                    $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
+            }
+
             var cursor = new GraphExecutionCursor
             {
                 Pc = 0,
-                Steps = 0,
+                Steps = state.TreeSteps,
                 CallStackCount = state.CallStackCount,
                 ReturnInt = state.ReturnInt,
+                InvokeDepth = state.InvokeDepth,
                 Status = GraphExecutionStatus.Running
             };
 
@@ -292,10 +299,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 program,
                 handlers,
                 ref cursor,
-                GraphVmLimits.MaxInstructionsPerExecution);
+                GraphVmLimits.MaxInstructionsPerExecution - state.TreeSteps);
 
             state.CallStackCount = cursor.CallStackCount;
             state.ReturnInt = cursor.ReturnInt;
+            state.TreeSteps = cursor.Steps;
             state.Status = result.Status;
 
             if (result.Status == GraphExecutionStatus.Running)
@@ -359,6 +367,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             state.ReturnInt = cursor.ReturnInt;
             state.Status = GraphExecutionStatus.Running;
             state.ProgramLength = program.Length;
+            state.InvokeDepth = cursor.InvokeDepth;
+            if (state.TreeSteps < cursor.Steps)
+            {
+                state.TreeSteps = cursor.Steps;
+            }
+
             cursor.Status = GraphExecutionStatus.Running;
 
             var table = handlers.Handlers;
@@ -367,6 +381,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             while (stepsThisSlice < budgetSteps)
             {
+                if (state.TreeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
+                {
+                    cursor.Pc = pc;
+                    cursor.CallStackCount = state.CallStackCount;
+                    cursor.ReturnInt = state.ReturnInt;
+                    cursor.Steps = state.TreeSteps;
+                    cursor.Status = GraphExecutionStatus.Running;
+                    state.Status = GraphExecutionStatus.Running;
+                    return new GraphSliceResult(GraphExecutionStatus.Running, cursor.ReturnInt, cursor.Steps);
+                }
+
                 if ((uint)pc >= (uint)program.Length)
                 {
                     cursor.Pc = pc;
@@ -382,6 +407,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 pc++;
                 cursor.Steps++;
                 stepsThisSlice++;
+                state.TreeSteps = cursor.Steps;
 
                 if (ins.Op == 0)
                 {
@@ -402,6 +428,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 handler(ref state, in ins, ref pc);
+                if (state.TreeSteps > cursor.Steps)
+                {
+                    cursor.Steps = state.TreeSteps;
+                }
 
                 if (state.Status == GraphExecutionStatus.Yielded)
                 {
@@ -644,6 +674,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException("InvokeScript requires GraphExecutionState.Programs.");
             }
 
+            if (s.InvokeDepth >= GraphVmLimits.MaxInvokeDepth)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeDepthExceeded: invoke depth {s.InvokeDepth + 1} exceeds MaxInvokeDepth ({GraphVmLimits.MaxInvokeDepth}).");
+            }
+
             int graphId = ins.Imm;
             if (graphId <= 0)
             {
@@ -651,12 +687,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             s.Programs.RequireKind(graphId, GraphKind.Script);
-            if (!s.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> childProgram))
+            if (!s.Programs.TryGetRegistration(graphId, out GraphProgramRegistration childRegistration))
             {
                 throw new InvalidOperationException($"InvokeScript target graph id {graphId} is not registered.");
             }
 
-            RequireNoYield(childProgram, graphId);
+            if (childRegistration.ContainsYield)
+            {
+                throw new InvalidOperationException(
+                    $"InvokeScript target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
+            }
+
+            ReadOnlySpan<GraphInstruction> childProgram = childRegistration.Program;
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -687,23 +729,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Targets = targets,
                 TargetList = targetList,
                 CallStack = callStack,
-                Status = GraphExecutionStatus.Running
+                Status = GraphExecutionStatus.Running,
+                InvokeDepth = s.InvokeDepth + 1,
+                TreeSteps = s.TreeSteps
             };
 
             Execute(ref child, childProgram, Instance);
+            s.TreeSteps = child.TreeSteps;
             s.I[ins.Dst] = child.ReturnInt;
-        }
-
-        private static void RequireNoYield(ReadOnlySpan<GraphInstruction> program, int graphId)
-        {
-            for (int idx = 0; idx < program.Length; idx++)
-            {
-                if (program[idx].Op == (ushort)GraphNodeOp.Yield)
-                {
-                    throw new InvalidOperationException(
-                        $"InvokeScript target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
-                }
-            }
         }
 
         private static void HandleMoveInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
