@@ -47,7 +47,6 @@ namespace Ludots.Tests.Gas.AI
             world.AddAgent();
             for (int i = 0; i < 3; i++)
             {
-                world.RestartThinking(0);
                 world.TickAll(programs, 32, sensors: null);
             }
 

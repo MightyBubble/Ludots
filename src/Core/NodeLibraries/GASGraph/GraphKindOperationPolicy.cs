@@ -126,7 +126,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             for (int i = 0; i < program.Length; i++)
             {
                 ref readonly GraphInstruction instruction = ref program[i];
-                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
+                GraphNodeOp op = (GraphNodeOp)instruction.Op;
+                if (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
+                    descriptor.DstRole == GraphOperandRole.DstRegister)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
+                }
+
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
