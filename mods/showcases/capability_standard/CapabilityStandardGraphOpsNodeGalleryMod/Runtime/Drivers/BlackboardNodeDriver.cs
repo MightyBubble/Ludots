@@ -21,7 +21,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
     public const string StrikeEffectId = "Effect.GraphOps.Strike";
     public const float SeedPower = 35f;
     public const int SeedStacks = 4;
-    public const float StrikeDamage = 18f;
     public const float MarkHealth = 40f;
 
     private int _powerKey;
@@ -56,6 +55,7 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         ApplyVisibleResult(ctx, result, targetIndex);
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
 
         float healthAfter = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         if (ctx.Vignette.DetailTemplate.Contains("{result}", StringComparison.Ordinal))
@@ -133,7 +133,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             case "WriteBlackboardFloat":
                 float writtenPower = ReadFloat(ctx, ctx.Caster, _powerKey);
                 RequireNonZeroFloat(ctx, writtenPower, "记下威力");
-                SetTargetHealth(ctx, targetIndex, writtenPower);
                 break;
             case "WriteBlackboardInt":
                 int writtenStacks = ReadInt(ctx, ctx.Caster, _stacksKey);
@@ -167,7 +166,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("LoadConfigEffectId returned 0; effect template must point at a real effect.");
                 }
 
-                SubtractTargetHealth(ctx, targetIndex, StrikeDamage);
                 break;
             case "LoadContextSource":
                 if (result.EntityValue != ctx.Caster)
@@ -265,22 +263,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             ctx.Vignette.Actors[targetIndex].HealthMax,
             GraphOpsNodeActorBinding.RequireTagOps(ctx));
         ctx.ActorHealth[targetIndex] = next;
-    }
-
-    private static void SetTargetHealth(GraphOpsNodeDriverContext ctx, int targetIndex, float value)
-    {
-        if (targetIndex < 0)
-        {
-            throw new InvalidOperationException($"Blackboard vignette {ctx.Vignette.Op} requires a target actor for health visibility.");
-        }
-
-        GraphOpsNodeActorBinding.WriteHealth(
-            ctx.SimWorld,
-            ctx.SimActors[targetIndex],
-            value,
-            ctx.Vignette.Actors[targetIndex].HealthMax,
-            GraphOpsNodeActorBinding.RequireTagOps(ctx));
-        ctx.ActorHealth[targetIndex] = value;
     }
 
     private static float ReadFloat(GraphOpsNodeDriverContext ctx, Entity entity, int key)

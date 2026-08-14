@@ -28,7 +28,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
     private const float SnapRadiusCm = 200f;
     private const float PayloadFloatValue = 2.5f;
     private const int PayloadIntValue = 99;
-    private const float HitMagnitude = 18f;
 
     private bool _seeded;
     private Entity _viewer;
@@ -81,11 +80,14 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 
         ctx.EffectRequests.Clear();
         ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
+        float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
         ctx.EventBus.Update();
         _aimX = ctx.TargetPosCm.X;
         _aimY = ctx.TargetPosCm.Y;
-        ApplyBeat(ctx, result);
+        ApplyBeat(ctx, result, healthBefore);
         ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
         GraphOpsNodeVignetteLoader.RejectBannedCaption(ctx.Metrics.Detail, ctx.Vignette.Op, "detail");
         GraphOpsNodeActorBinding.SyncHud(ctx);
@@ -203,11 +205,10 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         ctx.PrefillTargetCount = targets.Count;
     }
 
-    private void ApplyBeat(GraphOpsNodeDriverContext ctx, GraphOpsNodeExecuteResult result)
+    private void ApplyBeat(GraphOpsNodeDriverContext ctx, GraphOpsNodeExecuteResult result, float healthBefore)
     {
         string op = ctx.Vignette.Op;
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
-        float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         ctx.CaptionValues.Clear();
         bool featuredBool = ReadFeaturedBool(ctx);
 
@@ -216,7 +217,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             case "FanOutDispatchEffect":
                 RequireDispatchTargets(ctx, result.TargetCount);
                 RequireDispatched(ctx);
-                HurtNonCasters(ctx, HitMagnitude);
                 ctx.CaptionValues["result"] = "派给";
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 _overlayArmed = true;
@@ -224,7 +224,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             case "FanOutDispatchEffectDynamic":
                 RequireDispatchTargets(ctx, result.TargetCount);
                 RequireDispatched(ctx);
-                HurtNonCasters(ctx, HitMagnitude);
                 ctx.CaptionValues["result"] = "读出来再派";
                 ctx.CaptionValues["count"] = result.TargetCount.ToString();
                 _overlayArmed = true;
@@ -235,7 +234,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("SendEvent gallery must broadcast; event bus stayed empty.");
                 }
 
-                HurtTarget(ctx, targetIndex, HitMagnitude);
                 ctx.CaptionValues["result"] = "广播";
                 break;
             case "LoadTargetPosX":
@@ -455,37 +453,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
 
         throw new InvalidOperationException(
             $"Compiled graph for {ctx.Vignette.Op} is missing featured node '{ctx.Vignette.FeaturedNodeId}'.");
-    }
-
-    private static void HurtNonCasters(GraphOpsNodeDriverContext ctx, float amount)
-    {
-        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
-        for (int i = 0; i < actors.Length; i++)
-        {
-            if (string.Equals(actors[i].Role, "caster", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            HurtTarget(ctx, i, amount);
-        }
-    }
-
-    private static void HurtTarget(GraphOpsNodeDriverContext ctx, int targetIndex, float amount)
-    {
-        if (targetIndex < 0)
-        {
-            return;
-        }
-
-        float next = Math.Max(0f, ctx.ActorHealth[targetIndex] - amount);
-        GraphOpsNodeActorBinding.WriteHealth(
-            ctx.SimWorld,
-            ctx.SimActors[targetIndex],
-            next,
-            ctx.Vignette.Actors[targetIndex].HealthMax,
-            GraphOpsNodeActorBinding.RequireTagOps(ctx));
-        ctx.ActorHealth[targetIndex] = next;
     }
 
     private static void MoveMarker(GraphOpsNodeDriverContext ctx, float x, float y)

@@ -2,8 +2,8 @@
   "op": "ReadBlackboardFloat",
   "driver": "blackboard",
   "title": "从记事板读出威力",
-  "beat": "板上写着 35 点威力，读出来打在血条上。",
-  "detailTemplate": "从记事板读出威力 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "beat": "板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。",
+  "detailTemplate": "从记事板读出威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "威力"
   ],

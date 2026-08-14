@@ -277,6 +277,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("ApplyEffectDynamic applied no effect to the named target.");
                 }
 
+                GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
                 LightTarget(ctx);
                 ctx.CaptionValues["applied"] = ctx.EffectRequests.Count.ToString();
                 break;

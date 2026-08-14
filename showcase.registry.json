@@ -3668,7 +3668,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLoadConfigFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpLoadConfigFloatEntryMod.csproj",
       "title": "从技能配置读出威力",
-      "summary": "配置写着 40，不是写死在图常数里。",
+      "summary": "配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3803,7 +3803,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadBlackboardFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpReadBlackboardFloatEntryMod.csproj",
       "title": "从记事板读出威力",
-      "summary": "板上写着 35 点威力，读出来打在血条上。",
+      "summary": "板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -4451,7 +4451,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpIfFalseEntryMod",
       "projectPath": "CapabilityStandardGraphOpJumpIfFalseEntryMod.csproj",
       "title": "没满就再续一杯",
-      "summary": "茶没满时继续续，满了才停。",
+      "summary": "茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。",
       "tier": "T2",
       "category": "capability",
       "tags": [

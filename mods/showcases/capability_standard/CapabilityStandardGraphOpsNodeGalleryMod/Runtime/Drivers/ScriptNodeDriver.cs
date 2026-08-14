@@ -145,7 +145,6 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
         if (IsDrinkOp(ctx) && caster >= 0)
         {
-            ctx.ActorHealth[caster] = Math.Clamp(water, 0, limit);
             ctx.Vignette.Actors[caster].X = _originX;
             ctx.Vignette.Actors[caster].Y = _originY;
         }

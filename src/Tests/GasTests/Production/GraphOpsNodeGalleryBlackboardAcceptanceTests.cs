@@ -1,6 +1,5 @@
 using System;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
-using CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -32,7 +31,7 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         AssertBannedPlayerCopy(write);
         Assert.That(write.Metrics.Detail, Does.Contain("记下"));
         Assert.That(write.Metrics.Detail, Does.Contain("35"));
-        Assert.That(write.Context.ActorHealth[1], Is.EqualTo(BlackboardNodeDriver.SeedPower).Within(0.01f));
+        Assert.That(write.Context.ActorHealth[1], Is.EqualTo(write.Vignette.Actors[1].Health).Within(0.01f));
 
         using var read = TickOp("ReadBlackboardFloat");
         AssertBannedPlayerCopy(read);

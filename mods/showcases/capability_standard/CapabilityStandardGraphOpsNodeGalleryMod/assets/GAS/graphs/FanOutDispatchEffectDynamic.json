@@ -4,12 +4,20 @@
   "entry": "payloadTemplate",
   "nodes": [
     { "id": "payloadTemplate", "op": "LoadEventPayloadInt", "slot": 0 },
+    { "id": "explicit", "op": "LoadExplicitTarget" },
+    { "id": "wound", "op": "ConstFloat", "floatValue": -18 },
+    { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" },
     { "id": "fanDyn", "op": "FanOutDispatchEffectDynamic", "payloadPreset": "TargetToResolved" }
   ],
   "controlEdges": [
-    { "from": "payloadTemplate", "fromPort": "next", "to": "fanDyn" }
+    { "from": "payloadTemplate", "fromPort": "next", "to": "explicit" },
+    { "from": "explicit", "fromPort": "next", "to": "wound" },
+    { "from": "wound", "fromPort": "next", "to": "hit" },
+    { "from": "hit", "fromPort": "next", "to": "fanDyn" }
   ],
   "valueEdges": [
-    { "from": "payloadTemplate", "fromPort": "value", "to": "fanDyn", "toPort": "value" }
+    { "from": "payloadTemplate", "fromPort": "value", "to": "fanDyn", "toPort": "value" },
+    { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" },
+    { "from": "wound", "fromPort": "value", "to": "hit", "toPort": "value" }
   ]
 }

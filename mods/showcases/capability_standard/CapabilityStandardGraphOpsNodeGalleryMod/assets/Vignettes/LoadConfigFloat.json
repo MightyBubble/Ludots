@@ -2,8 +2,8 @@
   "op": "LoadConfigFloat",
   "driver": "blackboard",
   "title": "从技能配置读出威力",
-  "beat": "配置写着 40，不是写死在图常数里。",
-  "detailTemplate": "配置威力 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "beat": "配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。",
+  "detailTemplate": "配置威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "配置威力"
   ],
