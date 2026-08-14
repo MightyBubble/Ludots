@@ -53,6 +53,8 @@ yarn-error.log*
 target/
 
 # ----- 临时文件与缓存 -----
+**/__pycache__/
+*.py[cod]
 .tmp/
 .trae/
 raylib_temp/

@@ -8,6 +8,30 @@ namespace Ludots.Tests.Gas.Production;
 [Category("ci-gate")]
 public sealed class GraphOpsNodeGalleryEventAcceptanceTests
 {
+    private static readonly string[] EventFamilyOpsWithoutDedicatedMethod =
+    [
+        "FanOutDispatchEffect",
+        "FanOutDispatchEffectDynamic",
+        "LoadTargetPosX",
+        "LoadTargetPosY",
+        "IsPointInCircle",
+        "LoadEventPayloadInt",
+        "LoadEventPayloadFloat",
+        "ControlDomainResolve",
+        "ControlDomainControls"
+    ];
+
+    [TestCaseSource(nameof(EventFamilyOpsWithoutDedicatedMethod))]
+    public void EventFamilyOp_RendersPlayerCaption(string op)
+    {
+        using GraphOpsNodeGalleryRuntime runtime = BindAndTick(op);
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), op);
+        }
+    }
+
     [Test]
     public void SnapToNearestInCollection_SucceedsWithPlayerCaption()
     {
