@@ -266,6 +266,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, Flags = 1, Dst = 0, ImmF = 100f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 0, B = 0, Imm = droppedKey },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(

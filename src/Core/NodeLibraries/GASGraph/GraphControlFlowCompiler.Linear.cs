@@ -7,220 +7,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     public static partial class GraphControlFlowCompiler
     {
-        private static bool IsLinearControlFlowAuthorable(GraphNodeOp op)
-            => op is GraphNodeOp.ConstFloat or
-                      GraphNodeOp.ConstBool or
-                      GraphNodeOp.ConstInt or
-                      GraphNodeOp.AddFloat or
-                      GraphNodeOp.MulFloat or
-                      GraphNodeOp.SubFloat or
-                      GraphNodeOp.DivFloat or
-                      GraphNodeOp.MinFloat or
-                      GraphNodeOp.MaxFloat or
-                      GraphNodeOp.ClampFloat or
-                      GraphNodeOp.AbsFloat or
-                      GraphNodeOp.NegFloat or
-                      GraphNodeOp.AddInt or
-                      GraphNodeOp.CompareGtFloat or
-                      GraphNodeOp.CompareLtInt or
-                      GraphNodeOp.CompareEqInt or
-                      GraphNodeOp.HasTag or
-                      GraphNodeOp.CompareEqEntity or
-                      GraphNodeOp.SelectTagInMask or
-                      GraphNodeOp.LookupTagDisplayToken or
-                      GraphNodeOp.SelectEntity or
-                      GraphNodeOp.LoadCaster or
-                      GraphNodeOp.LoadExplicitTarget or
-                      GraphNodeOp.LoadViewer or
-                      GraphNodeOp.LoadContextSource or
-                      GraphNodeOp.LoadContextTarget or
-                      GraphNodeOp.LoadContextTargetContext or
-                      GraphNodeOp.LoadEventPayloadInt or
-                      GraphNodeOp.LoadEventPayloadFloat or
-                      GraphNodeOp.ControlDomainResolve or
-                      GraphNodeOp.ControlDomainControls or
-                      GraphNodeOp.KnowledgeHasProjection or
-                      GraphNodeOp.SendEvent or
-                      GraphNodeOp.LoadAttribute or
-                      GraphNodeOp.LoadSelfAttribute or
-                      GraphNodeOp.RandomFloat01 or
-                      GraphNodeOp.ModifyAttributeAdd or
-                      GraphNodeOp.WriteSelfAttribute or
-                      GraphNodeOp.ApplyEffectTemplate or
-                      GraphNodeOp.FanOutApplyEffect or
-                      GraphNodeOp.ApplyEffectDynamic or
-                      GraphNodeOp.FanOutApplyEffectDynamic or
-                      GraphNodeOp.RemoveEffectTemplate or
-                      GraphNodeOp.FanOutDispatchEffect or
-                      GraphNodeOp.FanOutDispatchEffectDynamic or
-                      GraphNodeOp.BeginLifecycleTransaction or
-                      GraphNodeOp.InvokeBuiltin or
-                      GraphNodeOp.WriteBlackboardInt or
-                      GraphNodeOp.WriteBlackboardFloat or
-                      GraphNodeOp.WriteBlackboardEntity or
-                      GraphNodeOp.ReadBlackboardInt or
-                      GraphNodeOp.ReadBlackboardFloat or
-                      GraphNodeOp.ReadBlackboardEntity or
-                      GraphNodeOp.LoadConfigFloat or
-                      GraphNodeOp.LoadConfigInt or
-                      GraphNodeOp.LoadConfigEffectId or
-                      GraphNodeOp.QueryRadius or
-                      GraphNodeOp.QuerySortStable or
-                      GraphNodeOp.QueryLimit or
-                      GraphNodeOp.QueryCone or
-                      GraphNodeOp.QueryRectangle or
-                      GraphNodeOp.QueryLine or
-                      GraphNodeOp.QueryHexRange or
-                      GraphNodeOp.QueryHexRing or
-                      GraphNodeOp.QueryHexNeighbors or
-                      GraphNodeOp.QueryFilterLayer or
-                      GraphNodeOp.QueryFilterNotEntity or
-                      GraphNodeOp.QueryFilterRelationship or
-                      GraphNodeOp.AggCount or
-                      GraphNodeOp.AggMinByDistance or
-                      GraphNodeOp.TargetListGet or
-                      GraphNodeOp.RelationshipEnsureLink or
-                      GraphNodeOp.RelationshipRemoveLink or
-                      GraphNodeOp.RelationshipSetMetric or
-                      GraphNodeOp.RelationshipAddMetric or
-                      GraphNodeOp.RelationshipGetMetric or
-                      GraphNodeOp.RelationshipHasFlag or
-                      GraphNodeOp.RelationshipSetFlag or
-                      GraphNodeOp.RelationshipHasLink or
-                      GraphNodeOp.LoadTargetPosX or
-                      GraphNodeOp.LoadTargetPosY or
-                      GraphNodeOp.ClampTargetToRange or
-                      GraphNodeOp.IsPointInCircle or
-                      GraphNodeOp.SnapToNearestInCollection or
-                      GraphNodeOp.SnapToNearestGraphEdge or
-                      GraphNodeOp.InvokeScript;
-
-        private static GraphValueType GetLinearOutputType(GraphNodeOp op)
-            => op switch
-            {
-                GraphNodeOp.ConstFloat or
-                    GraphNodeOp.AddFloat or
-                    GraphNodeOp.MulFloat or
-                    GraphNodeOp.SubFloat or
-                    GraphNodeOp.DivFloat or
-                    GraphNodeOp.MinFloat or
-                    GraphNodeOp.MaxFloat or
-                    GraphNodeOp.ClampFloat or
-                    GraphNodeOp.AbsFloat or
-                    GraphNodeOp.NegFloat or
-                    GraphNodeOp.LoadAttribute or
-                    GraphNodeOp.LoadSelfAttribute or
-                    GraphNodeOp.LoadEventPayloadFloat or
-                    GraphNodeOp.RandomFloat01 or
-                    GraphNodeOp.ReadBlackboardFloat or
-                    GraphNodeOp.LoadConfigFloat => GraphValueType.Float,
-                GraphNodeOp.ConstInt or
-                    GraphNodeOp.AddInt or
-                    GraphNodeOp.AggCount or
-                    GraphNodeOp.RelationshipGetMetric or
-                    GraphNodeOp.LoadTargetPosX or
-                    GraphNodeOp.LoadTargetPosY or
-                    GraphNodeOp.LoadEventPayloadInt or
-                    GraphNodeOp.SelectTagInMask or
-                    GraphNodeOp.LookupTagDisplayToken or
-                    GraphNodeOp.ReadBlackboardInt or
-                    GraphNodeOp.LoadConfigInt or
-                    GraphNodeOp.LoadConfigEffectId or
-                    GraphNodeOp.InvokeScript => GraphValueType.Int,
-                GraphNodeOp.ConstBool or
-                    GraphNodeOp.CompareGtFloat or
-                    GraphNodeOp.CompareLtInt or
-                    GraphNodeOp.CompareEqInt or
-                    GraphNodeOp.HasTag or
-                    GraphNodeOp.CompareEqEntity or
-                    GraphNodeOp.RelationshipHasFlag or
-                    GraphNodeOp.RelationshipHasLink => GraphValueType.Bool,
-                    GraphNodeOp.ControlDomainControls or
-                    GraphNodeOp.KnowledgeHasProjection or
-                    GraphNodeOp.ClampTargetToRange or
-                    GraphNodeOp.IsPointInCircle or
-                    GraphNodeOp.RelationshipHasFlag or
-                    GraphNodeOp.RelationshipHasLink or
-                    GraphNodeOp.SnapToNearestGraphEdge => GraphValueType.Bool,
-                GraphNodeOp.LoadCaster or
-                    GraphNodeOp.LoadExplicitTarget or
-                    GraphNodeOp.LoadViewer or
-                    GraphNodeOp.LoadContextSource or
-                    GraphNodeOp.LoadContextTarget or
-                    GraphNodeOp.LoadContextTargetContext or
-                    GraphNodeOp.ControlDomainResolve or
-                    GraphNodeOp.SelectEntity or
-                    GraphNodeOp.AggMinByDistance or
-                    GraphNodeOp.ReadBlackboardEntity or
-                    GraphNodeOp.SnapToNearestInCollection or
-                    GraphNodeOp.TargetListGet => GraphValueType.Entity,
-                _ => GraphValueType.Void
-            };
-
         private static bool IsAllowedLinearControlPort(string port)
             => port == GraphControlFlowPorts.Next;
-
-        private static bool IsAllowedLinearInputPort(GraphNodeOp op, string port)
-            => op switch
-            {
-                GraphNodeOp.AddFloat or GraphNodeOp.MulFloat or GraphNodeOp.SubFloat or
-                    GraphNodeOp.DivFloat or GraphNodeOp.MinFloat or GraphNodeOp.MaxFloat or
-                    GraphNodeOp.CompareGtFloat or GraphNodeOp.AddInt or
-                    GraphNodeOp.CompareLtInt or GraphNodeOp.CompareEqInt
-                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.ClampFloat
-                    => port is GraphControlFlowPorts.Value or GraphControlFlowPorts.Min or GraphControlFlowPorts.Max,
-                GraphNodeOp.AbsFloat or GraphNodeOp.NegFloat
-                    => port == GraphControlFlowPorts.Value,
-                GraphNodeOp.SelectEntity
-                    => port is GraphControlFlowPorts.Condition or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.HasTag or GraphNodeOp.SelectTagInMask
-                    => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.CompareEqEntity or GraphNodeOp.ControlDomainControls or GraphNodeOp.KnowledgeHasProjection
-                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.ControlDomainResolve
-                    => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.SendEvent
-                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
-                GraphNodeOp.LookupTagDisplayToken
-                    => port == GraphControlFlowPorts.A,
-                GraphNodeOp.LoadAttribute => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.ModifyAttributeAdd
-                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
-                GraphNodeOp.WriteSelfAttribute => port == GraphControlFlowPorts.Value,
-                GraphNodeOp.ApplyEffectTemplate
-                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.ApplyEffectDynamic
-                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
-                GraphNodeOp.FanOutApplyEffectDynamic or GraphNodeOp.FanOutDispatchEffectDynamic
-                    => port == GraphControlFlowPorts.Value,
-                GraphNodeOp.RemoveEffectTemplate => port == GraphControlFlowPorts.Target,
-                GraphNodeOp.RelationshipEnsureLink or
-                    GraphNodeOp.RelationshipRemoveLink or
-                    GraphNodeOp.RelationshipGetMetric or
-                    GraphNodeOp.RelationshipHasFlag or
-                    GraphNodeOp.RelationshipHasLink => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target,
-                GraphNodeOp.RelationshipSetMetric or
-                    GraphNodeOp.RelationshipAddMetric => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
-                GraphNodeOp.RelationshipSetFlag => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
-                GraphNodeOp.ClampTargetToRange or GraphNodeOp.IsPointInCircle
-                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.SnapToNearestInCollection => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
-                GraphNodeOp.SnapToNearestGraphEdge => port == GraphControlFlowPorts.Value,
-                GraphNodeOp.WriteBlackboardInt or GraphNodeOp.WriteBlackboardFloat or GraphNodeOp.WriteBlackboardEntity
-                    => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
-                GraphNodeOp.ReadBlackboardInt or GraphNodeOp.ReadBlackboardFloat or GraphNodeOp.ReadBlackboardEntity
-                    => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.QueryCone or GraphNodeOp.QueryRectangle or GraphNodeOp.QueryLine
-                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.QueryFilterNotEntity or GraphNodeOp.QueryFilterRelationship
-                    => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.TargetListGet => port == GraphControlFlowPorts.Value,
-                _ => false
-            };
-
-        private static bool IsAllowedLinearOutputPort(GraphNodeOp op, string port)
-            => GetLinearOutputType(op) != GraphValueType.Void && port == GraphControlFlowPorts.Value;
 
         private static void ValidateLinearNode(
             GraphControlFlowNode node,
@@ -617,6 +405,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp op,
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
+            byte[] boolScratches,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, int> nodeIndices,
@@ -974,8 +763,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Value, GraphValueType.Int,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    // Scratch validity bool; ValidOutput authoring is not yet on the linear CF matrix.
-                    instruction.Flags = (byte)(GraphVmLimits.MaxBoolRegisters - 1);
+                    instruction.Flags = boolScratches[nodeIndex];
                     break;
 
                 case GraphNodeOp.RelationshipEnsureLink:
@@ -1070,9 +858,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Value, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
-                    instruction.Flags = string.IsNullOrWhiteSpace(node.ValidOutput)
-                        ? byte.MaxValue
-                        : (byte)(GraphVmLimits.MaxBoolRegisters - 1);
+                    instruction.Flags = boolScratches[nodeIndex];
                     break;
 
                 case GraphNodeOp.SnapToNearestGraphEdge:

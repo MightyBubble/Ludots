@@ -33,6 +33,37 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Registry_AuthorableKinds_MustMatchDescriptorProjection()
+        {
+            string repoRoot = FindRepoRoot();
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, RegistryRelativePath)));
+            var failures = new List<string>();
+            foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())
+            {
+                string opName = entry.GetProperty("op").GetString() ?? string.Empty;
+                if (!Enum.TryParse(opName, ignoreCase: false, out GraphNodeOp op) ||
+                    op == GraphNodeOp.None ||
+                    !Enum.IsDefined(typeof(GraphNodeOp), op))
+                {
+                    failures.Add($"{opName}: not a GraphNodeOp.");
+                    continue;
+                }
+
+                string[] expected = GraphOpDescriptorTable.ProjectCoverageAuthorableKinds(op);
+                string[] actual = entry.GetProperty("authorableKinds")
+                    .EnumerateArray()
+                    .Select(v => v.GetString() ?? string.Empty)
+                    .ToArray();
+                if (!expected.SequenceEqual(actual, StringComparer.Ordinal))
+                {
+                    failures.Add($"{opName}: expected [{string.Join(",", expected)}] but registry has [{string.Join(",", actual)}].");
+                }
+            }
+
+            Assert.That(failures, Is.Empty, string.Join(Environment.NewLine, failures));
+        }
+
+        [Test]
         public void Registry_Entries_MustMatch_GraphNodeOpEnum_ExcludingNone()
         {
             string repoRoot = FindRepoRoot();

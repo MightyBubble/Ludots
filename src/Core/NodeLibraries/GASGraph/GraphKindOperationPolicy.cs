@@ -326,38 +326,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static bool RequiresListenerOwnerContext(GraphNodeOp operation)
-            => operation is GraphNodeOp.LoadConfigFloat or
-                            GraphNodeOp.LoadConfigInt or
-                            GraphNodeOp.LoadConfigEffectId;
+            => GraphOpDescriptorTable.RequiresListenerOwnerContext(operation);
 
         private static bool IsAllowed(
             GraphKind kind,
             GraphNodeOp op,
             in EffectOperationMetadata metadata)
-        {
-            // Yield crosses frames; only Script (L1 flow) may pause. Effect transactions must not.
-            if (op == GraphNodeOp.Yield)
-            {
-                return kind == GraphKind.Script;
-            }
-
-            if (kind == GraphKind.Effect)
-            {
-                return true;
-            }
-
-            if (kind == GraphKind.Script)
-            {
-                return metadata.Kind == EffectOperationKind.Pure;
-            }
-
-            if (metadata.Kind == EffectOperationKind.Pure)
-            {
-                return true;
-            }
-
-            return kind == GraphKind.Derived && op == GraphNodeOp.WriteSelfAttribute;
-        }
+            => GraphOpDescriptorTable.IsPolicyAllowed(kind, op, in metadata);
 
         private static InvalidOperationException CreateError(
             string errorCode,

@@ -11,6 +11,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class LiveGasEditPipelineTests
     {
         private const string GraphKey = "Graph.Live.HotConst";
@@ -99,6 +100,7 @@ namespace Ludots.Tests.GAS
             graphs.Register(graphId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, Imm = BitConverter.SingleToInt32Bits(1f) },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             }, GraphKind.Score);
 
             var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog());
