@@ -68,7 +68,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 ### FrontDoor 作者面（已恢复）
 
-- Kind 白名单：`GraphControlFlowCompiler` 的 `IsQueryControlFlowAuthorable` / `IsLinearControlFlowAuthorable`（Effect·Score·Validation·Derived 共用线性矩阵）。覆盖登记 SSOT：`assets/Configs/GAS/graph_node_op_coverage.registry.json`。
+- Kind 白名单：`GraphOpDescriptorTable`（kinds × ports × operand roles）是唯一数据源；前门矩阵、`GetLinearOutputType` / `GetQueryOutputType`、端口白名单、覆盖表 `authorableKinds` 由它投影。Score / Validation 只投影 Pure 节点；Derived 额外投影 `WriteSelfAttribute`；Yield 只给 Script。覆盖登记：`assets/Configs/GAS/graph_node_op_coverage.registry.json`。
 - Tag / 显示作者糖（`GraphNodeOpParser`）：`ReadGameplayTag` → `SelectTagInMask`，`LookupTagDisplayText` → `LookupTagDisplayToken`（亦可直接写 L0 名）。字段：`displayTable`（必填）、`tagSelectPolicy`（`RequireOne` \| `AllowNone` \| `LowestId`，默认 `RequireOne`，仅 Select）。值边：`HasTag` / `SelectTagInMask` 用 `source`；`CompareEqEntity` 用 `a` / `b`；`LookupTagDisplayToken` 用 `a`（tagId）。登记与 Runtime：`TagDisplayTableRegistry`、`IGraphRuntimeApi.SelectEffectiveTagInMask` / `LookupTagDisplayToken`。详见 [Tag 显示查表](tag-display-lookup.md)。
 - Effect 线性复用：`InvokeScript.functionName` 只解析 FuncLib（禁 `graphId`、禁 ActionLib 名）。证据：`GraphEffectAuthoringExpressivenessTests`。
 
