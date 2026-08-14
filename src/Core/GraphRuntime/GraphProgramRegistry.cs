@@ -117,7 +117,7 @@ namespace Ludots.Core.GraphRuntime
             }
 
             GraphProgramRegistration previous = existing;
-            _sourceMaps.TryGetValue(graphId, out GraphInstructionSourceMap previousSourceMap);
+            bool hadPreviousSourceMap = _sourceMaps.TryGetValue(graphId, out GraphInstructionSourceMap previousSourceMap);
             _programs[graphId] = new GraphProgramRegistration(program, kind, symbols);
             if (sourceMap.HasSources)
             {
@@ -135,7 +135,7 @@ namespace Ludots.Core.GraphRuntime
             catch
             {
                 _programs[graphId] = previous;
-                if (previousSourceMap.HasSources)
+                if (hadPreviousSourceMap)
                 {
                     _sourceMaps[graphId] = previousSourceMap;
                 }
