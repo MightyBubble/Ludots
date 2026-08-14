@@ -9,9 +9,16 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphOpsSpatialShowcaseAcceptanceTests
     {
+        [SetUp]
+        public void ClearGraphIdsForStandaloneBootstrap()
+        {
+            GraphIdRegistry.Clear();
+        }
+
         [Test]
         public void SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail()
         {

@@ -466,10 +466,12 @@ def main() -> int:
             continue
         showcase["status"] = "retired"
         showcase["preset"] = None
+        showcase["binding"] = None
         showcase["notes"] = (
             "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
         )
     presets["presets"] = [preset for preset in preset_list if preset.get("id") not in family_presets]
+    launcher["bindings"] = [binding for binding in bindings if binding.get("name") not in family_ids]
 
     orphans = remove_orphan_per_op_artifacts(
         repo,

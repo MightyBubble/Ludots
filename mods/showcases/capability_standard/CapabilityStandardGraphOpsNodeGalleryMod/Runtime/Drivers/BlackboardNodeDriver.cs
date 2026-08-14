@@ -256,12 +256,7 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Blackboard vignette {ctx.Vignette.Op} requires a target actor for health visibility.");
         }
 
-        float opening = ctx.Vignette.Actors[targetIndex].Health;
-        float next = ctx.ActorHealth[targetIndex] - amount;
-        if (next <= 0f)
-        {
-            next = opening;
-        }
+        float next = Math.Max(0f, ctx.ActorHealth[targetIndex] - amount);
 
         GraphOpsNodeActorBinding.WriteHealth(
             ctx.SimWorld,

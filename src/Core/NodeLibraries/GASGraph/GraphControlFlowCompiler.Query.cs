@@ -139,17 +139,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.InvokeScript:
                 {
-                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
-                    bool hasId = node.GraphId > 0;
-                    if (hasName && hasId)
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                            $"InvokeScript node '{node.Id}' cannot set both functionName and graphId.", node.Id));
-                    }
-                    else if (!hasName && !hasId)
+                    if (string.IsNullOrWhiteSpace(node.FunctionName))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                            $"InvokeScript node '{node.Id}' requires functionName (Func Lib) or graphId.", node.Id));
+                            $"InvokeScript node '{node.Id}' requires functionName for linear FuncLib calls.", node.Id));
+                    }
+
+                    if (node.GraphId > 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeScript node '{node.Id}' cannot use graphId in linear FuncLib authoring.", node.Id));
                     }
 
                     break;
@@ -399,21 +398,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.AggCount:
                     break;
                 case GraphNodeOp.InvokeScript:
-                {
-                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
-                    if (hasName)
-                    {
-                        instruction.Imm = RequireSymbol(node.FunctionName!.Trim(), "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
-                        instruction.Flags = GraphInstructionFlags.FuncLibName;
-                    }
-                    else
-                    {
-                        instruction.Imm = node.GraphId;
-                        instruction.Flags = 0;
-                    }
-
+                    instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = GraphInstructionFlags.FuncLibName;
                     break;
-                }
                 case GraphNodeOp.AggSumAttribute:
                 case GraphNodeOp.AggAverageAttribute:
                 case GraphNodeOp.AggMaxAttribute:

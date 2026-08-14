@@ -478,9 +478,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
-        float opening = ctx.Vignette.Actors[targetIndex].Health;
-        float next = ctx.ActorHealth[targetIndex] - amount;
-        next = next <= 0f ? opening : next;
+        float next = Math.Max(0f, ctx.ActorHealth[targetIndex] - amount);
         GraphOpsNodeActorBinding.WriteHealth(
             ctx.SimWorld,
             ctx.SimActors[targetIndex],

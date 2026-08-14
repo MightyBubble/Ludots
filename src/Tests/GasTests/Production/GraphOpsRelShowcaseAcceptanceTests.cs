@@ -9,6 +9,12 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class GraphOpsRelShowcaseAcceptanceTests
     {
+        [SetUp]
+        public void ClearGraphIdsForStandaloneBootstrap()
+        {
+            GraphIdRegistry.Clear();
+        }
+
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {

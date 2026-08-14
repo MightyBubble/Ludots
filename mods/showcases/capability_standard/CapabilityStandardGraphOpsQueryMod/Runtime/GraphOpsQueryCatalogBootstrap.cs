@@ -41,7 +41,6 @@ internal static class GraphOpsQueryCatalogBootstrap
 
     public static GraphOpsQueryShowcaseBundle LoadStandalone()
     {
-        GraphIdRegistry.Clear();
         var programs = new GraphProgramRegistry();
         var templates = new EntityTemplateKeyRegistry();
         int soldierId = templates.Register(SoldierTemplate);

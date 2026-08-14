@@ -32,7 +32,6 @@ internal static class GraphOpsSpatialCatalogBootstrap
 
     public static GraphProgramRegistry Load(out GraphFunctionCatalog catalog)
     {
-        GraphIdRegistry.Clear();
         var programs = new GraphProgramRegistry();
         catalog = new GraphFunctionCatalog();
 

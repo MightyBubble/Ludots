@@ -17,7 +17,6 @@ public static class GraphOpsRelShowcaseBootstrap
 
     public static GraphOpsRelShowcaseBundle LoadStandalone()
     {
-        GraphIdRegistry.Clear();
         var programs = new GraphProgramRegistry();
         var functions = new GraphOpsRelFunctionIndex();
         var types = new RelationshipTypeRegistry();
