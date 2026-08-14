@@ -981,6 +981,7 @@ namespace Ludots.Tests.Architecture.Governance
         {
             Type[] allowed =
             {
+                typeof(AttributeBuffer),
                 typeof(AttributeMutationOps),
                 typeof(AttributeAggregatorSystem),
                 typeof(EffectModifierOps),
