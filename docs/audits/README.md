@@ -26,6 +26,7 @@
 * [S 第一批架构审计（#944 / #946 / #943 / #945）](s_batch1_architecture_audit.md)
 * [S14 分层物理化设计（第一阶段 · 只出设计）](s14_layering_physicalization_design.md)
 * [S 第二批 + S9 架构审计（#951 / #952 / #950 / #948 / #953）](s_batch2_s9_architecture_audit.md)
+* [S14 分层墙第二波架构审计（#964）](s14_wave2_architecture_audit.md)
 
 ## 2 使用边界
 
