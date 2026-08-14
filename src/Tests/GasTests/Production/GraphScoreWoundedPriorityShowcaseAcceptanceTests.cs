@@ -9,11 +9,9 @@ using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -45,41 +43,27 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
         float woundedBefore = ReadHealth(world, woundedDummy);
         Assert.That(woundedBefore, Is.LessThan(fullBefore));
 
-        float fullScore = ExecuteOfficialScore(engine, caster, fullDummy);
-        float woundedScore = ExecuteOfficialScore(engine, caster, woundedDummy);
-        Assert.Multiple(() =>
-        {
-            Assert.That(fullScore, Is.EqualTo(GraphScoreShowcaseContract.FullHealthReference - fullBefore).Within(0.01f));
-            Assert.That(woundedScore, Is.EqualTo(GraphScoreShowcaseContract.FullHealthReference - woundedBefore).Within(0.01f));
-            Assert.That(woundedScore, Is.GreaterThan(fullScore));
-        });
-
         int strikeAbilityId = AbilityIdRegistry.GetId(GraphScoreShowcaseContract.AbilityKey);
         UtilityAiDecisionTrace submitted = TickUntilSubmitted(engine, world, caster, strikeAbilityId, maxFrames: 12);
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("残血打分短剧需要屏幕字幕缓冲。");
         Assert.Multiple(() =>
         {
             Assert.That(submitted.CandidateCount, Is.GreaterThan(0));
             Assert.That(submitted.LastSubmittedAbilityId, Is.EqualTo(strikeAbilityId));
             Assert.That(submitted.BestTarget, Is.EqualTo(woundedDummy));
+            Assert.That(submitted.BestScore, Is.GreaterThan(0f));
+            Assert.That(OverlayContainsText(overlay, GraphScoreShowcaseContract.PlayerTitle), Is.True);
+            Assert.That(OverlayContainsText(overlay, GraphScoreShowcaseContract.WoundedDummyName), Is.True);
+            Assert.That(OverlayContainsText(overlay, "这一刀打向残血木桩"), Is.True);
+            Assert.That(OverlayContainsText(overlay, $"分 {submitted.BestScore:0}"), Is.True);
         });
 
         Tick(engine, 5);
         Assert.That(ReadHealth(world, woundedDummy), Is.LessThan(woundedBefore));
         Assert.That(ReadHealth(world, fullDummy), Is.EqualTo(fullBefore));
+        Assert.That(OverlayContainsText(overlay, "这一刀打向残血木桩"), Is.True);
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-    }
-
-    private static float ExecuteOfficialScore(GameEngine engine, Entity caster, Entity target)
-    {
-        GraphProgramRegistry graphs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
-            ?? throw new InvalidOperationException("GraphProgramRegistry missing.");
-        GasGraphRuntimeApi api = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
-            ?? throw new InvalidOperationException("GasGraphRuntimeApi missing.");
-        int graphId = GraphIdRegistry.GetId(GraphScoreShowcaseContract.GraphKey);
-        Assert.That(graphId, Is.GreaterThan(0));
-        Assert.That(graphs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-        GraphKind kind = graphs.RequireKind(graphId, GraphKind.Score);
-        return GraphExecutor.ExecuteScore(engine.World, caster, target, default, program, api, kind);
     }
 
     private static GameEngine CreateEngine()
@@ -141,6 +125,26 @@ public sealed class GraphScoreWoundedPriorityShowcaseAcceptanceTests
         Assert.That(healthId, Is.GreaterThanOrEqualTo(0));
         Assert.That(world.Has<AttributeBuffer>(entity), Is.True);
         return world.Get<AttributeBuffer>(entity).GetCurrent(healthId);
+    }
+
+    private static bool OverlayContainsText(ScreenOverlayBuffer overlay, string expected)
+    {
+        foreach (ref readonly var item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text)
+            {
+                continue;
+            }
+
+            string? text = overlay.GetString(item.StringId);
+            if (!string.IsNullOrEmpty(text) &&
+                text.Contains(expected, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Entity FindEntity(World world, string entityName)

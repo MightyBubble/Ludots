@@ -3005,7 +3005,7 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_score",
       "screenshot": null,
       "status": "active",
-      "notes": "Official GraphKind.Score path via GraphExecutor.ExecuteScore; Utility GraphScore input selects the wounded dummy."
+      "notes": "Score graph driven by Utility GraphScore; subtitle reads UtilityAiDecisionTrace BestTarget/BestScore. ConstFloat 100 lives only in the authored Score graph."
     },
     {
       "id": "capability_standard_script_flow_sandbox",

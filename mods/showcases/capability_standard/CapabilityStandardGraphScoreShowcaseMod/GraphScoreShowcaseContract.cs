@@ -9,5 +9,4 @@ public static class GraphScoreShowcaseContract
     public const string FullDummyName = "满血木桩";
     public const string WoundedDummyName = "残血木桩";
     public const string PlayerTitle = "残血的分更高";
-    public const float FullHealthReference = 100f;
 }

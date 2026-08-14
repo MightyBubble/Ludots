@@ -6,11 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.GraphRuntime;
-using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphScoreShowcaseMod.Runtime;
 
@@ -56,45 +52,36 @@ internal sealed class GraphScoreShowcasePresentationSystem : ISystem<float>
 
         float fullHealth = ReadHealth(world, fullDummy);
         float woundedHealth = ReadHealth(world, woundedDummy);
-        float fullScore = ExecuteOfficialScore(world, caster, fullDummy);
-        float woundedScore = ExecuteOfficialScore(world, caster, woundedDummy);
-        string chosen = world.Has<UtilityAiDecisionTrace>(caster)
-            && world.Get<UtilityAiDecisionTrace>(caster).BestTarget == woundedDummy
-            ? GraphScoreShowcaseContract.WoundedDummyName
-            : world.Has<UtilityAiDecisionTrace>(caster)
-                && world.Get<UtilityAiDecisionTrace>(caster).BestTarget == fullDummy
-                ? GraphScoreShowcaseContract.FullDummyName
-                : "还在打分";
+        string detail =
+            $"{GraphScoreShowcaseContract.FullDummyName} 血 {fullHealth:0}；" +
+            $"{GraphScoreShowcaseContract.WoundedDummyName} 血 {woundedHealth:0}；" +
+            ReadDecisionCaption(world, caster, fullDummy, woundedDummy);
 
         GraphShowcaseStagePresenter.DrawPlayerCaption(
             _overlay,
             GraphScoreShowcaseContract.PlayerTitle,
-            $"{GraphScoreShowcaseContract.FullDummyName} 血 {fullHealth:0} 分 {fullScore:0}；" +
-            $"{GraphScoreShowcaseContract.WoundedDummyName} 血 {woundedHealth:0} 分 {woundedScore:0}；" +
-            $"这一刀打向{chosen}");
+            detail);
     }
 
-    private float ExecuteOfficialScore(World world, Entity caster, Entity target)
+    private static string ReadDecisionCaption(World world, Entity caster, Entity fullDummy, Entity woundedDummy)
     {
-        GraphProgramRegistry graphs = _engine.GetService(CoreServiceKeys.GraphProgramRegistry)
-            ?? throw new InvalidOperationException("残血打分短剧需要已登记的打分图。");
-        GasGraphRuntimeApi api = _engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
-            ?? throw new InvalidOperationException("残血打分短剧需要正式图执行接口。");
-        int graphId = GraphIdRegistry.GetId(GraphScoreShowcaseContract.GraphKey);
-        if (graphId <= 0)
+        if (!world.Has<UtilityAiDecisionTrace>(caster))
         {
-            throw new InvalidOperationException(
-                $"打分图 '{GraphScoreShowcaseContract.GraphKey}' 没有登记，不能用空分糊弄过去。");
+            return "还在打分";
         }
 
-        if (!graphs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+        UtilityAiDecisionTrace trace = world.Get<UtilityAiDecisionTrace>(caster);
+        if (trace.BestTarget == woundedDummy)
         {
-            throw new InvalidOperationException(
-                $"打分图 '{GraphScoreShowcaseContract.GraphKey}' 没有可执行程序。");
+            return $"这一刀打向{GraphScoreShowcaseContract.WoundedDummyName}（分 {trace.BestScore:0}）";
         }
 
-        GraphKind kind = graphs.RequireKind(graphId, GraphKind.Score);
-        return GraphExecutor.ExecuteScore(world, caster, target, default, program, api, kind);
+        if (trace.BestTarget == fullDummy)
+        {
+            return $"这一刀打向{GraphScoreShowcaseContract.FullDummyName}（分 {trace.BestScore:0}）";
+        }
+
+        return "还在打分";
     }
 
     private static float ReadHealth(World world, Entity entity)
