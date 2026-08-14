@@ -371,7 +371,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 502,
                             MaterialId = 602,
                             Mobility = VisualMobility.Movable,
-                            RenderPath = VisualRenderPath.None,
+                            RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
                             AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
