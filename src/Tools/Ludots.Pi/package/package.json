@@ -1,0 +1,11 @@
+{
+  "name": "@ludots/pi-package",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ludots Pi extensions and prompt templates. Skills stay in the repository skills/ SSOT.",
+  "type": "module",
+  "pi": {
+    "extensions": ["./extensions"],
+    "prompts": ["./prompts"]
+  }
+}

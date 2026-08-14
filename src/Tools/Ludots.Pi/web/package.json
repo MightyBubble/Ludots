@@ -1,7 +1,7 @@
 {
-  "name": "@agegr/pi-web",
+  "name": "@ludots/pi-web",
   "version": "0.8.8",
-  "description": "Web UI for the pi coding agent",
+  "description": "Ludots Pi browser frontend, forked from agegr/pi-web",
   "homepage": "https://github.com/agegr/pi-web#readme",
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
     "node": ">=22.19.0"
   },
   "bin": {
+    "ludots-pi-web": "bin/pi-web.js",
     "pi-web": "bin/pi-web.js"
   },
   "files": [

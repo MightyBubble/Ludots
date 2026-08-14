@@ -1,3 +1,7 @@
+# Ludots Pi Web
+
+This directory is a Ludots-owned source fork of [agegr/pi-web](https://github.com/agegr/pi-web). The product name in the UI is **Ludots Pi**. Upstream pin and ownership notes live in `../UPSTREAM.md`. Start it with `scripts/run-ludots-pi`, not a generic `npx @agegr/pi-web`.
+
 # Pi Web
 
 [中文文档](./README.zh-CN.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)

@@ -1,0 +1,9 @@
+{
+  "extensions": [
+    "src/Tools/Ludots.Pi/package/extensions/ludots-decision-gate.ts",
+    "src/Tools/Ludots.Pi/package/extensions/ludots-cli.ts"
+  ],
+  "prompts": [
+    "src/Tools/Ludots.Pi/package/prompts"
+  ]
+}

@@ -5,6 +5,7 @@ This section collects current runbooks and reference pages.
 ## Current Pages
 
 - [Launcher CLI Runbook](cli-runbook.md)
+- [Ludots Pi](ludots-pi.md)
 - [MassNavigation User Book](mass-navigation-user-book.md)
 - [MassNavigation Formal Chain](mass-navigation-formal-chain.md)
 - [Agent Profile](agent-profile.md)

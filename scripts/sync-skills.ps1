@@ -1,9 +1,10 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet('all', 'codex', 'claude')]
+    [ValidateSet('all', 'codex', 'claude', 'pi')]
     [string]$Target = 'all',
     [string]$CodexRoot = (Join-Path $HOME '.codex/skills'),
     [string]$ClaudeRoot = (Join-Path $HOME '.claude/skills'),
+    [string]$PiRoot = (Join-Path $HOME '.pi/agent/skills'),
     [switch]$SkipValidation
 )
 
@@ -79,11 +80,15 @@ switch ($Target) {
     'all' {
         Sync-TargetRoot -Name 'Codex' -Root $CodexRoot
         Sync-TargetRoot -Name 'Claude' -Root $ClaudeRoot
+        Sync-TargetRoot -Name 'Pi' -Root $PiRoot
     }
     'codex' {
         Sync-TargetRoot -Name 'Codex' -Root $CodexRoot
     }
     'claude' {
         Sync-TargetRoot -Name 'Claude' -Root $ClaudeRoot
+    }
+    'pi' {
+        Sync-TargetRoot -Name 'Pi' -Root $PiRoot
     }
 }

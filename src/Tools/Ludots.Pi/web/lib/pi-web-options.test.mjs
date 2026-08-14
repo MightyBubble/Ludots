@@ -9,6 +9,7 @@ test("opens the browser by default", () => {
   assert.deepEqual(parseLaunchOptions([], {}), {
     port: "30141",
     hostname: "127.0.0.1",
+    workspace: null,
     openBrowser: true,
   });
 });
@@ -35,6 +36,7 @@ test("preserves port and hostname options", () => {
     {
       port: "8080",
       hostname: "0.0.0.0",
+      workspace: null,
       openBrowser: true,
     },
   );
@@ -48,6 +50,17 @@ test("rejects port values that could inject cmd arguments", () => {
   assert.throws(
     () => parseLaunchOptions([], { PORT: "30141&whoami" }),
     /Port must be a non-negative integer/,
+  );
+});
+
+test("reads the Ludots workspace from --workspace or LUDOTS_PI_WORKSPACE", () => {
+  assert.equal(
+    parseLaunchOptions(["--workspace", "/workspace"], {}).workspace,
+    "/workspace",
+  );
+  assert.equal(
+    parseLaunchOptions([], { LUDOTS_PI_WORKSPACE: "/workspace" }).workspace,
+    "/workspace",
   );
 });
 

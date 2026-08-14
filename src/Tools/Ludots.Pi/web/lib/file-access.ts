@@ -1,8 +1,6 @@
-import { readdirSync } from "fs";
-import { homedir } from "os";
-import path from "path";
 import { getAdditionalAllowedRoots, normalizeSlashes } from "./allowed-roots";
 import { isExistingPathWithinRoots, isPathWithinRoots } from "./path-security";
+import { LUDOTS_PI_WORKSPACE_ENV } from "./ludots-workspace";
 import { listAllSessions } from "./session-reader";
 export { allowFileRoot, normalizeSlashes } from "./allowed-roots";
 export { isWindowsAbsolutePath } from "./paths";
@@ -31,15 +29,9 @@ export async function getAllowedFileRoots(): Promise<Set<string>> {
     if (s.projectRoot) roots.add(normalizeSlashes(s.projectRoot));
   }
 
-  // Also allow ~/pi-cwd-* directories created by the default-cwd endpoint.
-  try {
-    for (const name of readdirSync(homedir())) {
-      if (/^pi-cwd-\d{8}$/.test(name)) {
-        roots.add(normalizeSlashes(path.join(homedir(), name)));
-      }
-    }
-  } catch {
-    // ignore if home is unreadable
+  const workspace = process.env[LUDOTS_PI_WORKSPACE_ENV]?.trim();
+  if (workspace) {
+    roots.add(normalizeSlashes(workspace));
   }
 
   for (const root of getAdditionalAllowedRoots()) roots.add(root);

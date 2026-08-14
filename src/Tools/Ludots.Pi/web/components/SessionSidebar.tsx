@@ -6,6 +6,7 @@ import { loadExplorerOpen, saveExplorerOpen } from "@/lib/file-explorer-state";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
 import { skillExpansionToCommand } from "@/lib/slash-display";
 import { useI18n } from "@/hooks/useI18n";
+import { LUDOTS_PI_PRODUCT_NAME } from "@/lib/ludots-brand";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
 
@@ -354,7 +355,7 @@ function PiWebTitle() {
   const [scrambling, setScrambling] = useState(false);
   const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const target = showVersion ? `${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"}p${process.env.NEXT_PUBLIC_PI_VERSION ?? "0.0.0"}` : "Pi Web";
+  const target = showVersion ? `${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"}p${process.env.NEXT_PUBLIC_PI_VERSION ?? "0.0.0"}` : LUDOTS_PI_PRODUCT_NAME;
   const display = useScramble(target, scrambling);
 
   const triggerScramble = useCallback((toVersion: boolean) => {
@@ -739,15 +740,17 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     try {
       const res = await fetch("/api/default-cwd", { method: "POST" });
       const data = await res.json() as { cwd?: string; error?: string };
-      if (data.cwd) {
-        setSelectedCwd(data.cwd);
-        setCustomPathOpen(false);
-        setCustomPathValue("");
-        setCustomPathError(null);
-        setDropdownOpen(false);
+      if (!res.ok || !data.cwd) {
+        throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-    } catch {
-      // ignore
+      setSelectedCwd(data.cwd);
+      setCustomPathOpen(false);
+      setCustomPathValue("");
+      setCustomPathError(null);
+      setDropdownOpen(false);
+    } catch (error) {
+      setCustomPathOpen(true);
+      setCustomPathError(error instanceof Error ? error.message : String(error));
     }
   }, []);
 

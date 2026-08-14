@@ -4,7 +4,8 @@
     "flatten_on_install":  true,
     "install_targets":  {
                             "codex":  "$HOME/.codex/skills",
-                            "claude":  "$HOME/.claude/skills"
+                            "claude":  "$HOME/.claude/skills",
+                            "pi":  "$HOME/.pi/agent/skills"
                         },
     "contracts":  {
                       "hook_packet":  "skills/contracts/hook.schema.json",

@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
+import { LUDOTS_PI_PRODUCT_DESCRIPTION, LUDOTS_PI_PRODUCT_NAME } from "@/lib/ludots-brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Pi Web",
-    short_name: "Pi Web",
-    description: "Local web interface for the pi coding agent",
+    name: LUDOTS_PI_PRODUCT_NAME,
+    short_name: LUDOTS_PI_PRODUCT_NAME,
+    description: LUDOTS_PI_PRODUCT_DESCRIPTION,
     start_url: "/",
     scope: "/",
     display: "standalone",
