@@ -1505,7 +1505,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ApplyInstantModifiersAndPublish(in proposal);
                 }
 
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
                 if (useGasTransaction)
                 {
                     _instantPhaseTransaction.Commit();
@@ -1830,7 +1830,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _builtinRuntime,
                     BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate),
                     proposal.RootId);
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
             }
             finally
             {
@@ -1838,13 +1838,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private void PublishBuiltinFanOutCommandsAndRecordDrops()
+        private void PublishBuiltinFanOutCommands()
         {
-            if (_builtinRuntime.DroppedCount > 0 && _budget != null)
-            {
-                _budget.EffectProposalFanOutDropped += _builtinRuntime.DroppedCount;
-            }
-
             for (int i = 0; i < _instantFanOutCommands.Count; i++)
             {
                 FanOutCommand command = _instantFanOutCommands[i];

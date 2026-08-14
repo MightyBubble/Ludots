@@ -1011,22 +1011,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipQueryOutgoing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectOutgoing(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectOutgoing(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryIncoming(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectIncoming(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectIncoming(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryMutual(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectMutual(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectMutual(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryBetweenPair(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectBetweenPair(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectBetweenPair(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+        }
+
+        private static void ApplyRelationshipQueryResult(
+            ref GraphExecutionState s,
+            in GraphInstruction ins,
+            RelationshipQueryResult result)
+        {
+            if (ins.Flags > 1)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidRelationshipQueryCapacityPolicy: flags={ins.Flags}.");
+            }
+
+            if ((uint)result.Count > (uint)s.Targets.Length || result.Dropped < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidRelationshipQueryResult: count={result.Count}, dropped={result.Dropped}, capacity={s.Targets.Length}.");
+            }
+
+            if (result.Dropped > 0 && ins.Flags == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.RelationshipQueryIncomplete: count={result.Count}, dropped={result.Dropped}.");
+            }
+
+            s.TargetList.SetCount(result.Count);
+            if (ins.Flags == 1)
+            {
+                s.I[ins.C] = result.Dropped;
+            }
         }
 
         private static void HandleRelationshipFilterMetricRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

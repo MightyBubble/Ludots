@@ -31,8 +31,6 @@ namespace Ludots.Core.Gameplay.GAS
         private int _overflowHead;
         private int _overflowTail;
         private int _overflowCount;
-        private int _dropped;
-        private bool _budgetFused;
         private int _responseChainListenerRevision;
         private World? _responseChainListenerWorld;
 
@@ -49,8 +47,6 @@ namespace Ludots.Core.Gameplay.GAS
         public int TotalCapacity => _items.Length + _overflow.Length;
         public int AvailableCapacity => (_items.Length - _count) + (_overflow.Length - _overflowCount);
         public int OverflowCount => _overflowCount;
-        public int DroppedCount => _dropped;
-        public bool BudgetFused => _budgetFused;
         public int ResponseChainListenerRevision => _responseChainListenerRevision;
 
         internal readonly struct WriteCheckpoint
@@ -60,25 +56,19 @@ namespace Ludots.Core.Gameplay.GAS
             internal readonly int OverflowHead;
             internal readonly int OverflowTail;
             internal readonly int OverflowCount;
-            internal readonly int Dropped;
-            internal readonly bool BudgetFused;
 
             internal WriteCheckpoint(
                 int count,
                 int nextRootId,
                 int overflowHead,
                 int overflowTail,
-                int overflowCount,
-                int dropped,
-                bool budgetFused)
+                int overflowCount)
             {
                 Count = count;
                 NextRootId = nextRootId;
                 OverflowHead = overflowHead;
                 OverflowTail = overflowTail;
                 OverflowCount = overflowCount;
-                Dropped = dropped;
-                BudgetFused = budgetFused;
             }
         }
 
@@ -91,9 +81,7 @@ namespace Ludots.Core.Gameplay.GAS
                 _nextRootId,
                 _overflowHead,
                 _overflowTail,
-                _overflowCount,
-                _dropped,
-                _budgetFused);
+                _overflowCount);
         }
 
         internal void RollbackWrites(in WriteCheckpoint checkpoint)
@@ -110,8 +98,6 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowHead = checkpoint.OverflowHead;
             _overflowTail = checkpoint.OverflowTail;
             _overflowCount = checkpoint.OverflowCount;
-            _dropped = checkpoint.Dropped;
-            _budgetFused = checkpoint.BudgetFused;
         }
 
         public void Reserve(int capacity)
@@ -152,11 +138,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            if (!_budgetFused)
-            {
-                _budgetFused = true;
-            }
-
             if (_overflowCount >= _overflow.Length)
             {
                 throw new System.InvalidOperationException(
@@ -169,10 +150,28 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowCount++;
         }
 
+        public void RequireAvailable(int needed, string source)
+        {
+            if (needed < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(needed));
+            }
+
+            if (AvailableCapacity >= needed)
+            {
+                return;
+            }
+
+            throw new System.InvalidOperationException(
+                $"{CapacityExceededError}: source={source}, needed={needed}, available={AvailableCapacity}, capacity={_items.Length}, overflowCapacity={_overflow.Length}.");
+        }
+
         public void Clear()
         {
             _count = 0;
-            RefillFromOverflow();
+            _overflowHead = 0;
+            _overflowTail = 0;
+            _overflowCount = 0;
         }
 
         public void ConsumePrefix(int count)

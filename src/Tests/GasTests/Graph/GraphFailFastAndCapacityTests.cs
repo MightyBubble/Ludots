@@ -2,6 +2,8 @@ using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -120,6 +122,47 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectRequestQueue_Clear_DiscardsOverflowInsteadOfRefilling()
+        {
+            var q = new EffectRequestQueue();
+            for (int i = 0; i < q.Capacity + 3; i++)
+            {
+                q.Publish(new EffectRequest { TemplateId = i + 1 });
+            }
+
+            That(q.Count, Is.EqualTo(q.Capacity));
+            That(q.OverflowCount, Is.EqualTo(3));
+
+            q.Clear();
+
+            That(q.Count, Is.EqualTo(0));
+            That(q.OverflowCount, Is.EqualTo(0));
+            That(q.AvailableCapacity, Is.EqualTo(q.TotalCapacity));
+
+            q.Publish(new EffectRequest { TemplateId = 99 });
+            That(q.Count, Is.EqualTo(1));
+            That(q[0].TemplateId, Is.EqualTo(99));
+            That(q.OverflowCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EffectRequestQueue_RequireAvailable_ThrowsWhenCapacityIsInsufficient()
+        {
+            var q = new EffectRequestQueue();
+            for (int i = 0; i < q.TotalCapacity; i++)
+            {
+                q.Publish(new EffectRequest { TemplateId = i + 1 });
+            }
+
+            var error = Throws<InvalidOperationException>(() => q.RequireAvailable(1, "RuntimeEntitySpawnSystem.OnSpawnEffect"));
+
+            That(error!.Message, Does.StartWith(EffectRequestQueue.CapacityExceededError));
+            That(error.Message, Does.Contain("source=RuntimeEntitySpawnSystem.OnSpawnEffect"));
+            That(error.Message, Does.Contain("needed=1"));
+            That(q.AvailableCapacity, Is.EqualTo(0));
+        }
+
+        [Test]
         public void GraphOutputValueStore_WhenConfiguredCapacityIsExceeded_FailsWithoutResizingOrMutation()
         {
             using var world = World.Create();
@@ -203,6 +246,125 @@ namespace Ludots.Tests.GAS
 
             That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
             That(error.Message, Does.Contain(nameof(BlackboardFloatBuffer)));
+        }
+
+        [Test]
+        public void RelationshipQuery_RequireComplete_ThrowsWhenOutgoingExceedsMaxTargets()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRelationshipRuntime(world, out int typeId);
+            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+            Entity source = world.Create();
+            int extra = 3;
+            for (int i = 0; i < GraphVmLimits.MaxTargets + extra; i++)
+            {
+                runtime.EnsureLink(source, world.Create(), typeId);
+            }
+
+            GraphExecutionState state = CreateGraphState(world, api, source);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryOutgoing, A = 0, Dst = (byte)typeId, Flags = 0 },
+            };
+
+            InvalidOperationException? ex = null;
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            }
+            catch (InvalidOperationException caught)
+            {
+                ex = caught;
+            }
+
+            That(ex, Is.Not.Null);
+            That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.RelationshipQueryIncomplete"));
+            That(ex.Message, Does.Contain($"dropped={extra}"));
+        }
+
+        [Test]
+        public void RelationshipQuery_AllowTruncated_PublishesDroppedCount()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRelationshipRuntime(world, out int typeId);
+            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+            Entity source = world.Create();
+            int extra = 5;
+            for (int i = 0; i < GraphVmLimits.MaxTargets + extra; i++)
+            {
+                runtime.EnsureLink(source, world.Create(), typeId);
+            }
+
+            GraphExecutionState state = CreateGraphState(world, api, source);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryOutgoing, A = 0, C = 1, Dst = (byte)typeId, Flags = 1 },
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+
+            That(state.TargetList.Count, Is.EqualTo(GraphVmLimits.MaxTargets));
+            That(state.I[1], Is.EqualTo(extra));
+        }
+
+        [Test]
+        public void GraphTargetList_SetCount_ThrowsWhenCountExceedsBuffer()
+        {
+            var buffer = new Entity[2];
+            var list = new GraphTargetList(buffer);
+            InvalidOperationException? error = null;
+            try
+            {
+                list.SetCount(3);
+            }
+            catch (InvalidOperationException caught)
+            {
+                error = caught;
+            }
+
+            That(error, Is.Not.Null);
+            That(error!.Message, Does.Contain("GAS.GRAPH.ERR.TargetListCapacityExceeded"));
+        }
+
+        private static GraphExecutionState CreateGraphState(World world, IGraphRuntimeApi api, Entity caster)
+        {
+            var floats = new float[GraphVmLimits.MaxFloatRegisters];
+            var ints = new int[GraphVmLimits.MaxIntRegisters];
+            var bools = new byte[GraphVmLimits.MaxBoolRegisters];
+            var entities = new Entity[GraphVmLimits.MaxEntityRegisters];
+            var targets = new Entity[GraphVmLimits.MaxTargets];
+            entities[0] = caster;
+            return new GraphExecutionState
+            {
+                World = world,
+                Caster = caster,
+                ExplicitTarget = Entity.Null,
+                TargetPosCm = default,
+                Api = api,
+                F = floats,
+                I = ints,
+                B = bools,
+                E = entities,
+                Targets = targets,
+                TargetList = new GraphTargetList(targets),
+                CallStack = new int[GraphVmLimits.MaxCallStackDepth],
+            };
+        }
+
+        private static RelationshipRuntime CreateRelationshipRuntime(World world, out int typeId)
+        {
+            var typeRegistry = new RelationshipTypeRegistry();
+            typeId = typeRegistry.Register("SocialBond");
+            return new RelationshipRuntime(
+                world,
+                typeRegistry,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(),
+                new RelationshipReverseIndex(world));
         }
 
         private sealed class RecordingSpatialQueries : ISpatialQueryService

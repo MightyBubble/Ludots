@@ -281,6 +281,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RelationshipQueryCompiler_RejectsAllowTruncatedWithoutDroppedOutput()
+        {
+            var (package, _, diagnostics) = CompileFrontDoor("""
+{
+  "id": "tests.graph.rel-capacity",
+  "kind": "Query",
+  "entry": "query",
+  "nodes": [
+    { "id": "self", "op": "LoadCaster" },
+    { "id": "query", "op": "RelationshipQueryOutgoing", "relationshipType": "SocialBond", "queryCapacityPolicy": "AllowTruncated" }
+  ],
+  "controlEdges": [
+    { "from": "self", "fromPort": "next", "to": "query" }
+  ],
+  "valueEdges": [
+    { "from": "self", "fromPort": "value", "to": "query", "toPort": "source" }
+  ]
+}
+""");
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Message.Contains("droppedOutput", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void SnapWithoutValidOutput_DoesNotOverwriteValidationResult()
         {
             using var world = World.Create();

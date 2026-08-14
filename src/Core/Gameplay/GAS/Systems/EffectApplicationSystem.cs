@@ -71,7 +71,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
         private readonly bool _ownsFanOutBudget;
-        private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private readonly EffectPhaseSideEffectTransaction _persistentPhaseTransaction;
@@ -206,7 +205,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     _fanOutBudget.NextFrame();
                 }
-                _fanOutDropped = 0;
                 _activeEffectAttachDropped = 0;
                 _listenerRegistrationDropped = 0;
 
@@ -404,7 +402,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             TagCountContainer tagCountsBefore = default;
                             DirtyFlags dirtyFlagsBefore = default;
                             int fanOutCommandCountBefore = _fanOutCommands.Count;
-                            int fanOutDroppedBefore = _fanOutDropped;
                             int listenerRegistrationCountBefore = _pendingListenerRegistrations.Count;
                             bool graphTransactionBound = false;
                             _persistentPhaseTransaction.Begin();
@@ -461,7 +458,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             {
                                 _persistentPhaseTransaction.Rollback();
                                 _fanOutCommands.Truncate(fanOutCommandCountBefore);
-                                _fanOutDropped = fanOutDroppedBefore;
                                 TrimTail(_pendingListenerRegistrations, listenerRegistrationCountBefore);
                                 if (hasGrantedTagSnapshot && World.IsAlive(context.Target))
                                 {
@@ -540,10 +536,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (_budget != null)
                 {
-                    if (_fanOutDropped > 0)
-                    {
-                        _budget.EffectApplicationFanOutDropped += _fanOutDropped;
-                    }
                     if (_activeEffectAttachDropped > 0)
                     {
                         _budget.ActiveEffectContainerAttachDropped += _activeEffectAttachDropped;
@@ -729,7 +721,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit, _builtinRuntime);
             ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
 
-            _fanOutDropped += _builtinRuntime.DroppedCount;
             PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
         }
 

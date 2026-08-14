@@ -171,15 +171,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.RelationshipQueryOutgoing:
                 case GraphNodeOp.RelationshipQueryIncoming:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireRelationshipQueryCapacityPolicy(node, graphId, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipQueryMutual:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireRelationshipQueryCapacityPolicy(node, graphId, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipQueryBetweenPair:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireRelationshipFields(node, requireMetric: false, requireFlag: false, graphId, diagnostics);
+                    RequireRelationshipQueryCapacityPolicy(node, graphId, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipFilterMetricRange:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -219,6 +222,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         $"Op '{op.NodeOp}' is not supported by Query ControlFlow compiler.", node.Id));
                     break;
             }
+        }
+
+        private static void RequireRelationshipQueryCapacityPolicy(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(node.QueryCapacityPolicy) ||
+                string.Equals(node.QueryCapacityPolicy, "RequireComplete", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (!string.Equals(node.QueryCapacityPolicy, "AllowTruncated", StringComparison.Ordinal))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' must declare queryCapacityPolicy as 'RequireComplete' or 'AllowTruncated'.",
+                    node.Id));
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(node.DroppedOutput))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' AllowTruncated requires a non-empty droppedOutput.",
+                    node.Id));
+                return;
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                $"Node '{node.Id}' AllowTruncated droppedOutput is not yet authorable on ControlFlow Query kinds.",
+                node.Id));
         }
 
         private static void RequireRelationshipFields(
@@ -393,6 +428,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.Flags = 0;
                     break;
                 case GraphNodeOp.RelationshipQueryMutual:
                     instruction.A = ResolveValueInput(
@@ -402,6 +438,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.Flags = 0;
                     break;
                 case GraphNodeOp.RelationshipQueryBetweenPair:
                     instruction.A = ResolveValueInput(
@@ -411,6 +448,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.Flags = 0;
                     break;
                 case GraphNodeOp.RelationshipFilterMetricRange:
                     instruction.A = ResolveValueInput(

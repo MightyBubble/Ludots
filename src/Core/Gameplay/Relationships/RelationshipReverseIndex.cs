@@ -112,14 +112,20 @@ namespace Ludots.Core.Gameplay.Relationships
         /// <summary>Copies live incoming sources for the target into the destination span; dead sources are skipped and reclaimed in place. Pass <see cref="RelationshipTypeRegistry.AnyTypeId"/> to merge all type slots with de-duplication.</summary>
         public int CopyIncoming(Entity target, int typeId, Span<Entity> destination)
         {
-            if (destination.IsEmpty || !_world.IsAlive(target))
+            return CopyIncoming(target, typeId, destination, out _);
+        }
+
+        public int CopyIncoming(Entity target, int typeId, Span<Entity> destination, out int dropped)
+        {
+            dropped = 0;
+            if (!_world.IsAlive(target))
             {
                 return 0;
             }
 
             if (typeId == RelationshipTypeRegistry.AnyTypeId)
             {
-                return CopyIncomingAnyType(target, destination);
+                return CopyIncomingAnyType(target, destination, out dropped);
             }
 
             if (!TryGetActiveSlot(target, typeId, out int slot))
@@ -127,7 +133,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return 0;
             }
 
-            return CopySlotRows(slot, alreadyWritten: 0, destination, deduplicate: false);
+            return CopySlotRows(slot, alreadyWritten: 0, destination, deduplicate: false, out dropped);
         }
 
         /// <summary>Returns true when a live (source → target) edge row of the given type exists; dead rows encountered while scanning are reclaimed in place. O(in-degree), buffer-free.</summary>
@@ -227,8 +233,9 @@ namespace Ludots.Core.Gameplay.Relationships
             return reclaimed;
         }
 
-        private int CopyIncomingAnyType(Entity target, Span<Entity> destination)
+        private int CopyIncomingAnyType(Entity target, Span<Entity> destination, out int dropped)
         {
+            dropped = 0;
             int slotCount = CopySlotsByTarget(target);
             int totalRows = 0;
             for (int i = 0; i < slotCount; i++)
@@ -238,9 +245,10 @@ namespace Ludots.Core.Gameplay.Relationships
 
             PrepareDedupSet(totalRows);
             int written = 0;
-            for (int i = 0; i < slotCount && written < destination.Length; i++)
+            for (int i = 0; i < slotCount; i++)
             {
-                written = CopySlotRows(_slotScratch[i].Slot, written, destination, deduplicate: true);
+                written = CopySlotRows(_slotScratch[i].Slot, written, destination, deduplicate: true, out int slotDropped);
+                dropped += slotDropped;
             }
 
             return written;
@@ -260,11 +268,12 @@ namespace Ludots.Core.Gameplay.Relationships
             }
         }
 
-        private int CopySlotRows(int slot, int alreadyWritten, Span<Entity> destination, bool deduplicate)
+        private int CopySlotRows(int slot, int alreadyWritten, Span<Entity> destination, bool deduplicate, out int dropped)
         {
             int written = alreadyWritten;
+            dropped = 0;
             int index = 0;
-            while (index < _rowCounts[slot] && written < destination.Length)
+            while (index < _rowCounts[slot])
             {
                 Entity source = _rowSources[_rowStarts[slot] + index];
                 if (!_world.IsAlive(source))
@@ -273,9 +282,19 @@ namespace Ludots.Core.Gameplay.Relationships
                     continue;
                 }
 
-                if (!deduplicate || TryAddToDedupSet(source))
+                if (deduplicate && !TryAddToDedupSet(source))
+                {
+                    index++;
+                    continue;
+                }
+
+                if (written < destination.Length)
                 {
                     destination[written++] = source;
+                }
+                else
+                {
+                    dropped++;
                 }
 
                 index++;

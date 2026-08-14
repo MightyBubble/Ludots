@@ -901,14 +901,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
             RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
         }
-        public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
-        public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer);
-        public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer);
-        public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer);
+        public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
             => RequireEntityQueries().FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
         public int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)
