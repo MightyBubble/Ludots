@@ -20,6 +20,7 @@
 * [PR911 FuncLib/ActionLib 架构审计（#914 SSOT）](pr911_funclib_actionlib_architecture_audit.md)
 * [PR911 审计修复清单（#913+#914 合并 / Epic #915）](pr911_audit_fix_checklist.md)
 * [main 图能力收口审计需求（#932 落地后，按领域/阶段）](pr932_graph_landed_audit_handoff.md)
+* [PR932 main 图能力收口架构审计（SSOT）](pr932_graph_landed_architecture_audit.md)
 * [GAS + Graph VM 架构审查（SSOT）](gas_graph_architecture_review.md)
 * [GAS + Graph VM 架构修复计划（Epic + 子任务）](gas_graph_architecture_fix_plan.md)
 * [S 第一批架构审计（#944 / #946 / #943 / #945）](s_batch1_architecture_audit.md)
