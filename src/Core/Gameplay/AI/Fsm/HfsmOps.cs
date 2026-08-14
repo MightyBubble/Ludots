@@ -95,7 +95,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         /// <summary>Run condition graph to halt; true means transition may fire.</summary>
         bool EvalCondition(int agentIndex, int conditionGraphId);
 
-        /// <summary>Run action/lifecycle Script to halt (Yield not allowed on these bindings for now).</summary>
+        /// <summary>Run action/lifecycle Script to halt. Yield is rejected at ActionLib load for Hfsm hosts.</summary>
         void RunAction(int agentIndex, int actionGraphId);
     }
 }

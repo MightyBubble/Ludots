@@ -174,15 +174,14 @@ namespace Ludots.Core.Gameplay.Level
     public static class LevelBlueprintFactory
     {
         /// <summary>Wave0: after 1 think → phase1; counter>=10 → phase2 signal.</summary>
-        public static LevelDirector CreateTwoPhaseTrial(string id, Func<string, int> resolveGraphId)
+        public static LevelDirector CreateTwoPhaseTrial(string id, int phaseAdvanceGraphId)
         {
-            if (resolveGraphId == null) throw new ArgumentNullException(nameof(resolveGraphId));
-            int phaseScript = resolveGraphId(LevelScriptKeys.PhaseAdvance);
-            if (phaseScript <= 0)
+            if (phaseAdvanceGraphId <= 0)
             {
-                throw new InvalidOperationException(
-                    $"Level Script '{LevelScriptKeys.PhaseAdvance}' is not registered.");
+                throw new InvalidOperationException("Level phase-advance Script graph id is not registered.");
             }
+
+            int phaseScript = phaseAdvanceGraphId;
 
             var actions = new[]
             {

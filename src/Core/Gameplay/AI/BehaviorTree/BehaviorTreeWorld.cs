@@ -1,4 +1,5 @@
 using System;
+using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -100,14 +101,29 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         public BehaviorTreeThinkStats TickAll(
             GraphProgramRegistry? programs,
             int scriptBudgetSteps,
-            IBehaviorTreeSensorFeed? sensors)
+            IBehaviorTreeSensorFeed? sensors,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null)
         {
             int visited = 0;
             int scriptSlices = 0;
             int scriptSteps = 0;
             for (int agent = 0; agent < _count; agent++)
             {
-                TickAgent(agent, programs, scriptBudgetSteps, sensors, ref visited, ref scriptSlices, ref scriptSteps);
+                TickAgent(
+                    agent,
+                    programs,
+                    scriptBudgetSteps,
+                    sensors,
+                    world,
+                    caster,
+                    explicitTarget,
+                    api,
+                    ref visited,
+                    ref scriptSlices,
+                    ref scriptSteps);
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
@@ -118,6 +134,10 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             GraphProgramRegistry? programs,
             int scriptBudgetSteps,
             IBehaviorTreeSensorFeed? sensors,
+            World? world,
+            Entity caster,
+            Entity explicitTarget,
+            IGraphRuntimeApi? api,
             ref int visited,
             ref int scriptSlices,
             ref int scriptSteps)
@@ -150,6 +170,10 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         programs,
                         scriptBudgetSteps,
                         sensors,
+                        world,
+                        caster,
+                        explicitTarget,
+                        api,
                         ref scriptSlices,
                         ref scriptSteps);
                     if (leaf == BehaviorTreeStatus.Running)
@@ -234,6 +258,10 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             GraphProgramRegistry? programs,
             int scriptBudgetSteps,
             IBehaviorTreeSensorFeed? sensors,
+            World? world,
+            Entity caster,
+            Entity explicitTarget,
+            IGraphRuntimeApi? api,
             ref int scriptSlices,
             ref int scriptSteps)
         {
@@ -286,7 +314,11 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         bools,
                         callStack,
                         ref cursor,
-                        scriptBudgetSteps);
+                        scriptBudgetSteps,
+                        world,
+                        caster,
+                        explicitTarget,
+                        api);
                     scriptSteps += result.Steps;
 
                     if (node.Kind == BehaviorTreeNodeKind.Condition)

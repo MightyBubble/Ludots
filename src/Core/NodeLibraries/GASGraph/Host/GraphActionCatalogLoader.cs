@@ -94,6 +94,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             $"ActionLib '{name}' graph '{graphKey}' has no registered program.");
                     }
 
+                    string hostText = ReadRequiredString(obj, "host", name);
+                    if (!GraphActionHostYieldPolicy.TryParse(hostText, out GraphActionHost host))
+                    {
+                        throw new InvalidOperationException(
+                            $"ActionLib '{name}' host '{hostText}' must be BehaviorTree, Hfsm, Level, or Script.");
+                    }
+
+                    if (_programs.TryGetRegistration(graphId, out GraphProgramRegistration registration) &&
+                        registration.ContainsYield &&
+                        !GraphActionHostYieldPolicy.AllowsYield(host))
+                    {
+                        throw new InvalidOperationException(
+                            $"ActionLib '{name}' host '{host}' cannot bind a program that reaches Yield.");
+                    }
+
                     _catalog.Register(name, graphId, GraphKind.Script);
                 }
                 catch (Exception ex)

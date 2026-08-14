@@ -1,16 +1,7 @@
 using System;
-using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.AI.Fsm
 {
-    public static class HfsmScriptKeys
-    {
-        public const string CondAlwaysTrue = "hfsm.cond.alwaysTrue";
-        public const string CombatOnEnter = "hfsm.combat.onEnter";
-        public const string CombatOnTick = "hfsm.combat.onTick";
-        public const string CombatOnExit = "hfsm.combat.onExit";
-    }
-
     public sealed class HfsmDefinition
     {
         private readonly int[] _transitionStarts;
@@ -150,92 +141,4 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         }
     }
 
-    public static class HfsmFactory
-    {
-        /// <summary>
-        /// Root(Compound) → Idle | Alerting(Compound → Alert/Combat/Retreat).
-        /// Idle --stimulus--> Alert; Alert→Combat→Retreat→Idle.
-        /// </summary>
-        public static HfsmDefinition CreateSentryHierarchy(string id)
-        {
-            // 0 Root compound children 1..2 default Idle
-            // 1 Idle leaf
-            // 2 Alerting compound children 3..5 default Alert
-            // 3 Alert leaf
-            // 4 Combat leaf
-            // 5 Retreat leaf
-            var states = new[]
-            {
-                new HfsmState(HfsmStateKind.Compound, parentIndex: -1, childStart: 1, childCount: 2, defaultChildIndex: 1),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 0, childStart: 0, childCount: 0, defaultChildIndex: 0),
-                new HfsmState(HfsmStateKind.Compound, parentIndex: 0, childStart: 3, childCount: 3, defaultChildIndex: 3),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
-            };
-            var transitions = new[]
-            {
-                new HfsmTransition(fromState: 1, toState: 3, HfsmTransitionPredicate.StimulusLatched, priority: 0),
-                new HfsmTransition(fromState: 3, toState: 4, HfsmTransitionPredicate.Always, priority: 0),
-                new HfsmTransition(fromState: 4, toState: 5, HfsmTransitionPredicate.Always, priority: 0),
-                new HfsmTransition(fromState: 5, toState: 1, HfsmTransitionPredicate.Always, priority: 0),
-            };
-            return new HfsmDefinition(id, states, rootIndex: 0, transitions);
-        }
-
-        /// <summary>
-        /// Same topology as <see cref="CreateSentryHierarchy"/> with Combat lifecycle Scripts.
-        /// <paramref name="resolveGraphId"/> maps <see cref="HfsmScriptKeys"/> to Registry ids.
-        /// </summary>
-        public static HfsmDefinition CreateSentryHierarchyWithScripts(string id, Func<string, int> resolveGraphId)
-        {
-            if (resolveGraphId == null) throw new ArgumentNullException(nameof(resolveGraphId));
-            int cond = Require(resolveGraphId, HfsmScriptKeys.CondAlwaysTrue);
-            int enter = Require(resolveGraphId, HfsmScriptKeys.CombatOnEnter);
-            int tick = Require(resolveGraphId, HfsmScriptKeys.CombatOnTick);
-            int exit = Require(resolveGraphId, HfsmScriptKeys.CombatOnExit);
-
-            var states = new[]
-            {
-                new HfsmState(HfsmStateKind.Compound, parentIndex: -1, childStart: 1, childCount: 2, defaultChildIndex: 1),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 0, childStart: 0, childCount: 0, defaultChildIndex: 0),
-                new HfsmState(HfsmStateKind.Compound, parentIndex: 0, childStart: 3, childCount: 3, defaultChildIndex: 3),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
-                new HfsmState(
-                    HfsmStateKind.Leaf,
-                    parentIndex: 2,
-                    childStart: 0,
-                    childCount: 0,
-                    defaultChildIndex: 0,
-                    onEnterGraphId: enter,
-                    onTickGraphId: tick,
-                    onExitGraphId: exit),
-                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
-            };
-            var transitions = new[]
-            {
-                new HfsmTransition(fromState: 1, toState: 3, HfsmTransitionPredicate.StimulusLatched, priority: 0),
-                new HfsmTransition(
-                    fromState: 3,
-                    toState: 4,
-                    HfsmTransitionPredicate.Always,
-                    priority: 0,
-                    conditionGraphId: cond),
-                new HfsmTransition(fromState: 4, toState: 5, HfsmTransitionPredicate.Always, priority: 0),
-                new HfsmTransition(fromState: 5, toState: 1, HfsmTransitionPredicate.Always, priority: 0),
-            };
-            return new HfsmDefinition(id, states, rootIndex: 0, transitions);
-        }
-
-        private static int Require(Func<string, int> resolve, string key)
-        {
-            int id = resolve(key);
-            if (id <= 0)
-            {
-                throw new InvalidOperationException($"HFSM Script graph '{key}' is not registered.");
-            }
-
-            return id;
-        }
-    }
 }

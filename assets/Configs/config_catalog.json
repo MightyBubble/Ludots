@@ -5,6 +5,8 @@
   { "Path": "AI/goap_actions.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "AI/goap_goals.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "AI/htn_domain.json", "Policy": "DeepObject" },
+  { "Path": "AI/behavior_trees.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "AI/hfsm.json", "Policy": "ArrayById", "IdField": "id" },
 
   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/abilities.json", "Policy": "ArrayById", "IdField": "id" },
