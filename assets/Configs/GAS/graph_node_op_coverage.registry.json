@@ -49,6 +49,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ConstFloat",
@@ -69,6 +70,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadCaster",
@@ -88,6 +90,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadExplicitTarget",
@@ -142,6 +145,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadAttribute",
@@ -374,6 +378,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_CompareGtFloat",
@@ -434,6 +439,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_HasTag",
@@ -536,6 +542,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_QueryRadius",
@@ -559,6 +566,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_QuerySortStable",
@@ -580,6 +588,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_QueryLimit",
@@ -711,6 +720,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_AggCount",
@@ -730,6 +740,7 @@
         "Effect",
         "Query",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_AggMinByDistance",
@@ -748,6 +759,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_TargetListGet",
@@ -976,6 +988,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ReadBlackboardFloat",
@@ -995,6 +1008,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ReadBlackboardInt",
@@ -1014,6 +1028,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ReadBlackboardEntity",
@@ -1197,6 +1212,7 @@
         "Derived",
         "Effect",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadSelfAttribute",
