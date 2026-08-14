@@ -7,10 +7,16 @@ using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Benchmarks;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -971,6 +977,66 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void AttributeBufferWrites_MustComeFromWhitelistedCallers()
+        {
+            Type[] allowed =
+            {
+                typeof(AttributeMutationOps),
+                typeof(AttributeAggregatorSystem),
+                typeof(EffectModifierOps),
+                typeof(EffectPhaseSideEffectTransaction),
+                typeof(GasGraphRuntimeApi),
+                typeof(Ludots.Core.Config.ComponentRegistry),
+                typeof(TemplateEntityBatchSpawner),
+                typeof(QuestDefinitionRegistry),
+                typeof(ForceInput2DSink),
+                typeof(CameraBehaviorInputSink),
+                typeof(GasBenchmark),
+            };
+
+            var writeNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                nameof(AttributeBuffer.SetBase),
+                nameof(AttributeBuffer.SetCurrent),
+                nameof(AttributeBuffer.SetAggregatedCurrent),
+            };
+
+            var hits = new List<string>();
+            foreach (Type type in typeof(AttributeBuffer).Assembly.GetTypes())
+            {
+                if (IsAllowedAttributeBufferWriter(type, allowed))
+                {
+                    continue;
+                }
+
+                const BindingFlags flags =
+                    BindingFlags.Instance |
+                    BindingFlags.Static |
+                    BindingFlags.Public |
+                    BindingFlags.NonPublic |
+                    BindingFlags.DeclaredOnly;
+                foreach (MethodInfo method in type.GetMethods(flags))
+                {
+                    foreach (MethodBase called in EnumerateCalledMethods(method))
+                    {
+                        if (called.DeclaringType == typeof(AttributeBuffer) &&
+                            writeNames.Contains(called.Name))
+                        {
+                            hits.Add($"{type.FullName}.{method.Name} -> {called.DeclaringType.FullName}.{called.Name}");
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "AttributeBuffer write methods are not a gameplay API; callers must be on the settlement/init whitelist:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void GasAbilityExecHotPath_DoesNotCallWorldAddOrRemoveDirectly()
         {
             var hits = new List<string>();
@@ -1312,7 +1378,7 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(runtime, Does.Contain("AttributeBuffer"));
                 Assert.That(runtime, Does.Contain("_attributeCosts"));
                 Assert.That(runtime, Does.Contain("AttributeCostRecord"));
-                Assert.That(runtime, Does.Contain("attributes.SetCurrent"));
+                Assert.That(runtime, Does.Contain("AttributeMutationOps.SetCurrent"));
                 Assert.That(loader, Does.Contain("AttributeRegistry.Register"));
                 Assert.That(loader, Does.Contain("inputs[{index}].attribute"));
             });
@@ -2087,6 +2153,25 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 return null;
             }
+        }
+
+        private static bool IsAllowedAttributeBufferWriter(Type type, IReadOnlyList<Type> allowed)
+        {
+            Type? current = type;
+            while (current != null)
+            {
+                for (int i = 0; i < allowed.Count; i++)
+                {
+                    if (current == allowed[i])
+                    {
+                        return true;
+                    }
+                }
+
+                current = current.DeclaringType;
+            }
+
+            return false;
         }
 
         private static bool IsForbiddenAbilityExecStructuralCall(MethodBase method)
