@@ -1,0 +1,120 @@
+using System;
+using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.GraphRuntime;
+
+namespace Ludots.Core.NodeLibraries.GASGraph
+{
+    public static partial class GraphOpDescriptorTable
+    {
+        private static readonly GraphOpDescriptor[] ByCode = Build();
+
+        public static GraphOpDescriptor Get(GraphNodeOp op)
+        {
+            if (!TryGet(op, out GraphOpDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"Graph opcode '{op}' has no descriptor.");
+            }
+
+            return descriptor;
+        }
+
+        public static bool TryGet(GraphNodeOp op, out GraphOpDescriptor descriptor)
+        {
+            ushort code = (ushort)op;
+            if (code < ByCode.Length && ByCode[code].Op == op)
+            {
+                descriptor = ByCode[code];
+                return true;
+            }
+
+            descriptor = default;
+            return false;
+        }
+
+        public static bool IsAuthorable(GraphKind kind, GraphNodeOp op)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.IsAuthorable(kind);
+
+        public static GraphValueType GetLinearOutputType(GraphNodeOp op)
+            => TryGet(op, out GraphOpDescriptor descriptor) ? descriptor.LinearOutputType : GraphValueType.Void;
+
+        public static GraphValueType GetQueryOutputType(GraphNodeOp op)
+            => TryGet(op, out GraphOpDescriptor descriptor) ? descriptor.QueryOutputType : GraphValueType.Void;
+
+        public static bool IsAllowedLinearInputPort(GraphNodeOp op, string port)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.AllowsLinearInput(port);
+
+        public static bool IsAllowedQueryInputPort(GraphNodeOp op, string port)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.AllowsQueryInput(port);
+
+        public static bool IsAllowedScriptInputPort(GraphNodeOp op, string port)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.AllowsScriptInput(port);
+
+        public static bool IsAllowedLinearOutputPort(GraphNodeOp op, string port)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.AllowsLinearOutput(port);
+
+        public static bool IsAllowedQueryOutputPort(GraphNodeOp op, string port)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.AllowsQueryOutput(port);
+
+        public static bool IsPolicyAllowed(GraphKind kind, GraphNodeOp op, in EffectOperationMetadata metadata)
+        {
+            GraphOpDescriptor descriptor = Get(op);
+            if (descriptor.ScriptOnly)
+            {
+                return kind == GraphKind.Script;
+            }
+
+            if (kind == GraphKind.Effect)
+            {
+                return true;
+            }
+
+            if (kind == GraphKind.Script)
+            {
+                return metadata.Kind == EffectOperationKind.Pure;
+            }
+
+            if (metadata.Kind == EffectOperationKind.Pure)
+            {
+                return true;
+            }
+
+            return kind == GraphKind.Derived && descriptor.DerivedAttributeWrite;
+        }
+
+        public static bool RequiresListenerOwnerContext(GraphNodeOp op)
+            => TryGet(op, out GraphOpDescriptor descriptor) && descriptor.RequiresListenerOwnerContext;
+
+        public static string[] ProjectCoverageAuthorableKinds(GraphNodeOp op)
+        {
+            GraphOpDescriptor descriptor = Get(op);
+            var names = new List<string>(6);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Derived);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Effect);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Query);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Score);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Script);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.Validation);
+            return names.ToArray();
+        }
+
+        public static IEnumerable<GraphNodeOp> EnumerateAuthorable(GraphKind kind)
+        {
+            foreach (GraphNodeOp op in Enum.GetValues<GraphNodeOp>())
+            {
+                if (op != GraphNodeOp.None && IsAuthorable(kind, op))
+                {
+                    yield return op;
+                }
+            }
+        }
+
+        private static void AppendKind(List<string> names, GraphKindMask mask, GraphKind kind)
+        {
+            if ((mask & GraphOpDescriptor.ToMask(kind)) != 0)
+            {
+                names.Add(kind.ToString());
+            }
+        }
+    }
+}

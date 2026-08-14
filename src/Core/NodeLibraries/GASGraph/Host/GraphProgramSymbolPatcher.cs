@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
@@ -9,6 +10,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
     public static class GraphProgramSymbolPatcher
     {
+        private static readonly ConditionalWeakTable<GraphInstruction[], object> PatchedPrograms = new();
+
         public static void Patch(
             string[] symbols,
             GraphInstruction[] program,
@@ -18,6 +21,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (symbols == null || symbols.Length == 0) return;
             if (program == null || program.Length == 0) return;
             if (symbolResolver == null) throw new ArgumentNullException(nameof(symbolResolver));
+            if (PatchedPrograms.TryGetValue(program, out _))
+            {
+                return;
+            }
 
             for (int i = 0; i < program.Length; i++)
             {
@@ -165,6 +172,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                 }
             }
+
+            PatchedPrograms.Add(program, PatchedPrograms);
         }
 
         /// <summary>

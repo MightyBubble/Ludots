@@ -199,12 +199,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var outputTypes = new GraphValueType[nodes.Count];
             var outputRegisters = new byte[nodes.Count];
-            AllocateOutputs(nodes, ops, outputTypes, outputRegisters, graphId, graphKind, diagnostics);
+            var boolScratches = new byte[nodes.Count];
+            GraphRegisterFile registers = GraphRegisterFile.Create(graphKind);
+            AllocateOutputs(nodes, ops, outputTypes, outputRegisters, registers, graphId, diagnostics);
+            AllocateOpScratches(nodes, ops, boolScratches, registers, graphId, diagnostics);
             ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
             DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
 
             var sugarScratches = new SugarScratch[nodes.Count];
-            AllocateSugarScratches(nodes, ops, outputTypes, outputRegisters, sugarScratches, graphId, diagnostics);
+            AllocateSugarScratches(nodes, ops, sugarScratches, registers, graphId, diagnostics);
             NodeLayout[] layouts = BuildLayouts(nodes, ops, graphKind, controlEdges, diagnostics);
             if (HasErrors(diagnostics))
             {
@@ -262,6 +265,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     ops[i],
                     outputRegisters,
                     outputTypes,
+                    boolScratches,
                     sugarScratches,
                     controlEdges,
                     valueEdges,
@@ -469,27 +473,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsControlFlowAuthorable(GraphKind graphKind, GraphNodeOp op)
         {
-            if (graphKind == GraphKind.Query)
-            {
-                return IsQueryControlFlowAuthorable(op);
-            }
-
-            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
-            {
-                return IsLinearControlFlowAuthorable(op);
-            }
-
-            return op is GraphNodeOp.ConstInt or
-                         GraphNodeOp.AddInt or
-                         GraphNodeOp.CompareLtInt or
-                         GraphNodeOp.Jump or
-                         GraphNodeOp.JumpIfFalse or
-                         GraphNodeOp.Call or
-                         GraphNodeOp.Return or
-                         GraphNodeOp.Yield or
-                         GraphNodeOp.HaltReturnInt or
-                         GraphNodeOp.InvokeScript or
-                         GraphNodeOp.MoveInt;
+            return GraphOpDescriptorTable.IsAuthorable(graphKind, op);
         }
 
         private static string GraphKindLabel(GraphKind graphKind)
@@ -578,19 +562,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp[] ops,
             GraphValueType[] outputTypes,
             byte[] outputRegisters,
+            GraphRegisterFile registers,
             string graphId,
-            GraphKind graphKind,
             List<GraphDiagnostic> diagnostics)
         {
-            int intNext = 0;
-            int boolNext = 0;
-            int floatNext = 0;
-            // E[0]=caster, E[1]=explicit target, E[2]=viewer are fixed context registers.
-            int entityNext = 3;
-
             for (int i = 0; i < nodes.Count; i++)
             {
-                GraphValueType outputType = GetOutputType(ops[i], graphKind);
+                GraphValueType outputType = GetOutputType(ops[i], registers.Kind);
                 outputTypes[i] = outputType;
                 if (outputType == GraphValueType.Void || outputType == GraphValueType.TargetList)
                 {
@@ -607,46 +585,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         continue;
                     }
 
-                    if (nodes[i].PinRegister >= GraphVmLimits.MaxIntRegisters)
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.RegisterOutOfRange,
-                            $"PinRegister {nodes[i].PinRegister} exceeds MaxIntRegisters.", nodes[i].Id));
-                        continue;
-                    }
-
-                    outputRegisters[i] = (byte)nodes[i].PinRegister;
-                    if (intNext <= nodes[i].PinRegister)
-                    {
-                        intNext = nodes[i].PinRegister + 1;
-                    }
-
+                    outputRegisters[i] = registers.PinInt(nodes[i].PinRegister, graphId, nodes[i].Id, diagnostics);
                     continue;
                 }
 
                 outputRegisters[i] = outputType switch
                 {
-                    GraphValueType.Int => Alloc(ref intNext, GraphVmLimits.MaxIntRegisters, graphId, nodes[i].Id, diagnostics),
-                    GraphValueType.Bool => Alloc(ref boolNext, GraphVmLimits.MaxBoolRegisters, graphId, nodes[i].Id, diagnostics),
-                    GraphValueType.Float => Alloc(ref floatNext, GraphVmLimits.MaxFloatRegisters, graphId, nodes[i].Id, diagnostics),
-                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadCaster => 0,
-                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadExplicitTarget => 1,
-                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadViewer => 2,
-                    GraphValueType.Entity => Alloc(ref entityNext, GraphVmLimits.MaxEntityRegisters, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Int => registers.Alloc(GraphValueType.Int, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Bool => registers.Alloc(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Float => registers.Alloc(GraphValueType.Float, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Entity when ops[i].NodeOp is GraphNodeOp.LoadCaster
+                        or GraphNodeOp.LoadExplicitTarget
+                        or GraphNodeOp.LoadViewer
+                        => registers.BindEntityPreset(ops[i].NodeOp),
+                    GraphValueType.Entity => registers.Alloc(GraphValueType.Entity, graphId, nodes[i].Id, diagnostics),
                     _ => (byte)0
                 };
             }
-        }
-
-        private static byte Alloc(ref int next, int max, string graphId, string nodeId, List<GraphDiagnostic> diagnostics)
-        {
-            if (next >= max)
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.RegisterOutOfRange,
-                    $"Register budget exceeded ({max}).", nodeId));
-                return 0;
-            }
-
-            return (byte)next++;
         }
 
         private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
@@ -659,12 +614,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (graphKind == GraphKind.Query)
             {
-                return GetQueryOutputType(op.NodeOp);
+                return GraphOpDescriptorTable.GetQueryOutputType(op.NodeOp);
             }
 
             if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
             {
-                return GetLinearOutputType(op.NodeOp);
+                return GraphOpDescriptorTable.GetLinearOutputType(op.NodeOp);
             }
 
             return op.NodeOp switch
@@ -884,32 +839,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (graphKind == GraphKind.Query)
             {
-                return IsAllowedQueryInputPort(op.NodeOp, port);
+                return GraphOpDescriptorTable.IsAllowedQueryInputPort(op.NodeOp, port);
             }
 
             if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
             {
-                return IsAllowedLinearInputPort(op.NodeOp, port);
+                return GraphOpDescriptorTable.IsAllowedLinearInputPort(op.NodeOp, port);
             }
 
-            return op.NodeOp switch
-            {
-                GraphNodeOp.AddInt or GraphNodeOp.CompareLtInt => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.MoveInt or GraphNodeOp.HaltReturnInt => port == GraphControlFlowPorts.Value,
-                _ => false
-            };
+            return GraphOpDescriptorTable.IsAllowedScriptInputPort(op.NodeOp, port);
         }
 
         private static bool IsAllowedOutputPort(AuthoredOp op, GraphKind graphKind, string port)
         {
             if (graphKind == GraphKind.Query)
             {
-                return IsAllowedQueryOutputPort(op.NodeOp, port);
+                return GraphOpDescriptorTable.IsAllowedQueryOutputPort(op.NodeOp, port);
             }
 
             if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
             {
-                return IsAllowedLinearOutputPort(op.NodeOp, port);
+                return GraphOpDescriptorTable.IsAllowedLinearOutputPort(op.NodeOp, port);
             }
 
             return GetOutputType(op, graphKind) != GraphValueType.Void && port == GraphControlFlowPorts.Value;
@@ -1046,6 +996,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp op,
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
+            byte[] boolScratches,
             SugarScratch[] sugarScratches,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
@@ -1114,6 +1065,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     op,
                     outputRegisters,
                     outputTypes,
+                    boolScratches,
                     controlEdges,
                     valueEdges,
                     nodeIndices,
@@ -1364,29 +1316,41 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
 
-        private static void AllocateSugarScratches(
+        private static void AllocateOpScratches(
             List<GraphControlFlowNode> nodes,
             AuthoredOp[] ops,
-            GraphValueType[] outputTypes,
-            byte[] outputRegisters,
-            SugarScratch[] sugarScratches,
+            byte[] boolScratches,
+            GraphRegisterFile registers,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
-            var usedInt = new bool[GraphVmLimits.MaxIntRegisters];
-            var usedBool = new bool[GraphVmLimits.MaxBoolRegisters];
             for (int i = 0; i < nodes.Count; i++)
             {
-                if (outputTypes[i] == GraphValueType.Int)
+                if (ops[i].NodeOp == GraphNodeOp.TargetListGet)
                 {
-                    usedInt[outputRegisters[i]] = true;
+                    boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
+                    continue;
                 }
-                else if (outputTypes[i] == GraphValueType.Bool)
-                {
-                    usedBool[outputRegisters[i]] = true;
-                }
-            }
 
+                if (ops[i].NodeOp == GraphNodeOp.SnapToNearestInCollection &&
+                    !string.IsNullOrWhiteSpace(nodes[i].ValidOutput))
+                {
+                    boolScratches[i] = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
+                    continue;
+                }
+
+                boolScratches[i] = byte.MaxValue;
+            }
+        }
+
+        private static void AllocateSugarScratches(
+            List<GraphControlFlowNode> nodes,
+            AuthoredOp[] ops,
+            SugarScratch[] sugarScratches,
+            GraphRegisterFile registers,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
             for (int i = 0; i < nodes.Count; i++)
             {
                 if (ops[i].Kind != AuthoredOpKind.SwitchInt)
@@ -1394,31 +1358,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                byte intReg = AllocFree(usedInt, GraphVmLimits.MaxIntRegisters, graphId, nodes[i].Id, diagnostics);
-                byte boolReg = AllocFree(usedBool, GraphVmLimits.MaxBoolRegisters, graphId, nodes[i].Id, diagnostics);
+                byte intReg = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                byte boolReg = registers.AllocScratch(GraphValueType.Bool, graphId, nodes[i].Id, diagnostics);
                 sugarScratches[i] = new SugarScratch(intReg, boolReg);
             }
-        }
-
-        private static byte AllocFree(
-            bool[] used,
-            int max,
-            string graphId,
-            string nodeId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            for (int i = 0; i < max; i++)
-            {
-                if (!used[i])
-                {
-                    used[i] = true;
-                    return (byte)i;
-                }
-            }
-
-            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.RegisterOutOfRange,
-                $"Register budget exceeded ({max}).", nodeId));
-            return 0;
         }
 
         private static void ValidateSwitchIntEdges(
