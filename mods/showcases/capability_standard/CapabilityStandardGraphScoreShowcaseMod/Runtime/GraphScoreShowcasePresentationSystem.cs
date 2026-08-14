@@ -10,6 +10,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphScoreShowcaseMod.Runtime;
 
