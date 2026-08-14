@@ -2454,8 +2454,6 @@ namespace Ludots.Tests.Architecture.Governance
                 "GoldMarketShowcaseMod",
                 "FourXAssociationShowcaseMod",
                 "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
-                "CapabilityStandardGraphOpsQueryMod",
-                "CapabilityStandardGraphOpsAttrMod",
                 "CapabilityStandardGraphBehaviorCommon",
                 "CapabilityStandardGraphOpsNodeGalleryMod",
                 "PerformanceVisualizationMod",

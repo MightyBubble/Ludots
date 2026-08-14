@@ -10,9 +10,9 @@ Writes/upserts (do not hand-edit these outputs):
   - launcher.presets.json raylib presets
   - showcase.registry.json entries + gallery csproj exemption
   - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestRefs
-  - family capability_standard_graph_ops_* registry status=retired and player presets removed
+  - family capability_standard_graph_ops_* registry rows, launcher bindings, and presets removed
 
-Subagents own vignettes, FrontDoor graphs, and family driver files only.
+Subagents own vignettes and FrontDoor graphs only.
 """
 from __future__ import annotations
 
@@ -461,15 +461,7 @@ def main() -> int:
 
     family_ids = set(FAMILY_SHOWCASE_IDS)
     family_presets = {f"{sid}_raylib" for sid in FAMILY_SHOWCASE_IDS}
-    for showcase in showcases:
-        if showcase.get("id") not in family_ids:
-            continue
-        showcase["status"] = "retired"
-        showcase["preset"] = None
-        showcase["binding"] = None
-        showcase["notes"] = (
-            "Family aggregate is not a player door. Play per-op capability_standard_graph_op_* galleries."
-        )
+    showcases[:] = [showcase for showcase in showcases if showcase.get("id") not in family_ids]
     presets["presets"] = [preset for preset in preset_list if preset.get("id") not in family_presets]
     launcher["bindings"] = [binding for binding in bindings if binding.get("name") not in family_ids]
 
@@ -489,7 +481,7 @@ def main() -> int:
     print(
         f"Generated {len(vignettes)} per-op galleries; "
         f"coverage showcaseIds+unitTestRefs updated for {len(ops)} ops; "
-        f"retired {len(FAMILY_SHOWCASE_IDS)} family player entries; "
+        f"removed {len(FAMILY_SHOWCASE_IDS)} family aggregate entries; "
         f"removed {len(orphans)} per-op orphans; "
         f"missing vignettes: {len(missing)}"
     )
