@@ -2,7 +2,7 @@
 
 本目录是当时记下的证据，不是现在怎样，也不是规矩。
 
-图能力现在做成什么样了，先读 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。  
+图能力的进度和还开着的活，只认 [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)。  
 规矩只认 `gitbook/`。这里和那边打架，改这里。
 
 ## 1 目录
@@ -38,7 +38,7 @@
 
 * 审计结论如需成为正式规则，必须回写 `gitbook/`。
 * 审计里的「现在怎样」如已过期，必须改掉正文，不准只加一句「去别处看」。
-* 现在怎样只回写 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。
+* 现在怎样只回写 [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)。
 
 ## 3 相关文档
 

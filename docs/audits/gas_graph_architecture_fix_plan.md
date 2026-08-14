@@ -2,7 +2,7 @@
 
 **依据：** [GAS + Graph VM 架构审查](gas_graph_architecture_review.md)（当时结论）
 **当时 tip：** `origin/main` @ `82ddb3322a`
-**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)
 **用途：** 当时用来开 GitHub Epic 与子 issue。S 计划子 issue 没建成，活是直接用 PR 做的。不要再跑建票脚本当现状。
 **批量创建：** `scripts/create-gas-graph-fix-issues.sh`（不要再 `--apply`）
 

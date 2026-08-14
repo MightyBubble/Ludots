@@ -2,7 +2,7 @@
 
 **当时对象：** `origin/main` @ `8b0f5a1afa`（#965 / #962 / #964 / #966）  
 **更正到：** `origin/main` @ `d1b8f5f4d7`（补 #968 删家族房间、#963 残血打分短剧）  
-**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)  
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)  
 **前序（输入，不重审）：** [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)（#962）、[`s14_wave2_architecture_audit.md`](s14_wave2_architecture_audit.md)（#966）  
 **合同：** `gitbook/architecture/graph-funclib-actionlib-contract.md`（状态仍是**修复中**）  
 **方法：** 对照已合主线与点名过滤器证伪；零生产代码。  
@@ -109,7 +109,7 @@
 - 本页不把附录 B 未做项升级成新阻断。
 - 本页不把 S14 脚手架写成「分层已落地」。
 - 本页不审、不建议合 #723 / #947 / UI 面板。
-- 本页零生产代码。进度与开票清单以 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md) 为准。
+- 本页零生产代码。进度与开票清单以 [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md) 为准。
 
 ---
 

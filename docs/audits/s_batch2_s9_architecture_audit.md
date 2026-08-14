@@ -1,7 +1,7 @@
 # S 第二批 + S9 架构审计：#951 / #952 / #950 / #948 / #953
 
 **当时对象：** GAS + Graph VM 修复计划（[#942](https://github.com/MightyBubble/Ludots/pull/942) / [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)）的第二批四张票，以及叠在 S1 上的 S9  
-**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)  
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)  
 **当时对照：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md) §S8 / §S10 / §S11 / §S15 / §S9；审查正本 [`gas_graph_architecture_review.md`](gas_graph_architecture_review.md)  
 **基线：** `main` @ `82ddb3322`（S9 叠在 S1 `cursor/s1-graph-invoke-cycle-2489` @ `02635f258`，不当独立于 S1 的主线票）  
 **本审计 tip：** 见当时 PR；零生产代码改动

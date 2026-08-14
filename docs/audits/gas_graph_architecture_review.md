@@ -1,7 +1,7 @@
 # GAS + Graph VM 架构审查（当时结论）
 
 **当时对象：** `origin/main` @ `82ddb3322a` 的 GAS 与图 VM 全栈
-**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)
 **范围：** `src/Core/Gameplay/GAS/`（215 个文件）、`src/Core/NodeLibraries/`（28 个）、及其牵连的 `src/Core/GraphRuntime/`、`Spatial/`、`Association/`
 **判据：** `gitbook/architecture/gas-layered-architecture.md`、`gitbook/architecture/graph-layering-flow-and-behavior.md`、`gitbook/architecture/graph-funclib-actionlib-contract.md`、`gitbook/architecture/entity-simulation-layering.md`、`gitbook/architecture/mod-architecture.md`、`gitbook/architecture/gas-order-input-runtime-contract.md`
 **配套修复分配：** [GAS + Graph VM 架构修复计划](gas_graph_architecture_fix_plan.md)

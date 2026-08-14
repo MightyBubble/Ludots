@@ -1,7 +1,7 @@
 # GAS + Graph 修复计划落地后架构审计（#942 全票合入 · 当时结论）
 
 **当时对象：** `origin/main` @ `46fcd9dcda`（#960 合入后）  
-**现在怎样：** [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)  
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)  
 **需求正本：** [`s_plan_landed_audit_handoff.md`](s_plan_landed_audit_handoff.md)  
 **计划正本：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)（[#942](https://github.com/MightyBubble/Ludots/pull/942)）  
 **合同：** `gitbook/architecture/graph-funclib-actionlib-contract.md`（状态仍是**修复中**）  

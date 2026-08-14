@@ -1,6 +1,6 @@
 # S14 分层物理化设计（第一阶段 · 只出设计）
 
-**状态：** 脚手架在主干，墙没砌完。Wave 1 与 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）已合。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine **没做**——单独开票。进度只认 [图能力现在走到哪](../../gitbook/architecture/graph-capability-status.md)。gitbook 合同仍不标「已落地」。
+**状态：** 脚手架在主干，墙没砌完。Wave 1 与 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）已合。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine **没做**——单独开票。进度只认 [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)。gitbook 合同仍不标「已落地」。
 **基线：** `origin/main` @ `46fcd9dcda`
 **计划正本：** GitHub PR #942 计划文 §S14（该文尚未合入本基线，以 PR head 为准）
 **审查编号：** B21、B22、B23、B24、B25、C21、C22

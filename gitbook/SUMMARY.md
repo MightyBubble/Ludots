@@ -18,7 +18,7 @@
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [属性写入权威](architecture/attribute-write-authority.md)
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
-  - [图能力现在走到哪](architecture/graph-capability-status.md)
+  - [图能力唯一入口](architecture/graph-capability-status.md)
   - [图复用库合同：FuncLib / ActionLib](architecture/graph-funclib-actionlib-contract.md)
   - [FuncLib / ActionLib UAT](acceptance/graph-funclib-actionlib-uat.md)
   - [Tag → 展示 Token 查表（面板 curState）](architecture/tag-display-lookup.md)
