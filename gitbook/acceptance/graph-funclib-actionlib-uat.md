@@ -4,7 +4,7 @@
 
 图复用库与可挂起动作的合同验收：FuncLib 纯函数无 Yield；ActionLib 供行为调度跨拍；Effect 可调 FuncLib 不可调 ActionLib；L1 Kind 前门与加载期失败关闭。
 
-对照：[图复用库合同](../architecture/graph-funclib-actionlib-contract.md)。
+对照：[图复用库合同](../architecture/graph-funclib-actionlib-contract.md) §6。本页是该合同场景的唯一验收映射；状态只写本树（`main`）实测，不把等价守卫写成合同原文已覆盖。
 
 ## 2. 结构
 
@@ -14,12 +14,17 @@
 
 覆盖 Epic #915 P3：至少一个 `bt.*` ActionLib 叶子真 Yield；Query Kind FuncLib `InvokeScript.functionName`；行为树跨拍 resume。
 
+名称对齐：ActionLib 巡逻条目以资产名 `bt.patrol` 为准（`assets/Configs/GAS/action_lib.json` → `Graph.BT.Leaf.Patrol`，图内含 `Yield`）。合同 §6 写作 `bt.patrolStep`，本页按资产名映射，不另立一条场景。
+
+合同 §6「技能阶段不能调用 ActionLib」原文节点是 `InvokeAction`。全仓 `GraphNodeOp` 无此作者节点；作者侧实际调用口是 `InvokeScript`。
+
 ## 4. 场景
 
 ```gherkin
-Feature: 技能周期结算不靠 Wait
-  Scenario: 周期效果按 Duration 与 Period 自动重复
-    Given 某技能带周期效果且 periodTicks 已配置
+Feature: 效果时间轴与阶段图分工
+  Scenario: 用模板字段而不是 Yield 定义 DoT
+    Given 我创建一条灼烧效果并设置持续 10 秒、每 1 秒跳一次
+    And OnPeriod 阶段绑定一张结算图
     When 战斗进行超过 1 秒
     Then 系统应再次执行 OnPeriod 结算图
     And 该结算图不得包含 Wait 或 Yield 节点
@@ -63,34 +68,31 @@ Feature: 纯 Kind 保持纯函数语义
 
 ## 5. 边界
 
-Score / Validation FuncLib 登记延后至 `InvokeScore` / `InvokeValidation` 真调用路径；Derived FuncLib 默认不进库；Showcase 不以假 Script 旁路冒充 ActionLib 加载。
+Score / Validation FuncLib 登记延后至 `InvokeScore` / `InvokeValidation` 真调用路径；Derived FuncLib 默认不进库；Showcase 不以假 Script 旁路冒充 ActionLib 加载。本页不改合同落地状态。
 
 ## 6. UAT
 
-| Cucumber 场景 | 自动化测试 |
-|---------------|------------|
-| 周期效果按 Duration 与 Period 自动重复 | `GraphEffectAuthoringExpressivenessTests`（Effect 线性方言与周期 op 白名单）；`GasExecutionBudgetTests.EffectLifetime_ResumesExpiredEffectsAcrossWorkSlices` |
-| Effect 阶段调用 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib`；`GraphFunctionCatalogLoaderTests.Compile_InvokeScript_ByFunctionName_PatchesToGraphId` |
-| 含 Yield 的图不能进 FuncLib | `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsPureScriptInvokeScriptGraphIdClosureToYield`；`FuncCatalogLoader_RejectsPureScriptInvokeScriptFunctionNameClosureToYieldBeforePatch` |
-| 行为树叶子调用 ActionLib（bt.patrol Yield resume） | `BehaviorTreeRuntimeTests.PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent`；`GraphBehaviorSeparatedShowcaseAcceptanceTests.BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves`；`ScriptFlowSandboxShowcaseAcceptanceTests.DrinkUntilFull_YieldsThenHaltsAtLimit`（Script ActionLib 原子沙盒） |
-| 技能阶段不能调用 ActionLib | `GraphEffectAuthoringExpressivenessTests`（Effect 前门拒 Yield / InvokeAction）；`GraphKindOperationPolicy` 合同测试 |
-| Score 图产出分数且可调 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_LinearKindsInvokeScriptFunctionName_Compile`（Score / Validation / Derived） |
-| Query Kind 调 FuncLib（§3.3 所有 L1） | `GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib` |
-| L2 ActionLib 与 FuncLib 同名隔离 | `GraphFunctionCatalogLoaderTests.CoreCatalogs_MoveL2ActionsToActionLib`；`GraphActionCatalogLoaderTests.RejectsFuncLibNameClash` |
-| LSW FuncLib 热替换含 Yield 拒绝 | `LiveGasEditPipelineTests.Classify_FuncLibGraphBodyReplaceThatReachesYield_MapReloadRequired` |
+| 合同 §6 场景 | 本树测试 | 状态 | 未覆盖部分 |
+|--------------|----------|------|------------|
+| 用模板字段而不是 Yield 定义 DoT | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectWaitYieldAndLoopSugar_FailClosed`；`GraphScriptWaitLoopSugarTests.GraphKindOperationPolicy_NonScriptKinds_RejectYield`；`LifetimeConditionTests.EffectLifetime_OnPeriodPostGraph_ModifiesTargetAttributeCurrent`（`periodTicks=2` 驱动 OnPeriod 图改属性） | 部分覆盖 | 缺合同原文那种 Duration/Period 多跳灼烧端到端 UAT：阶段图无 Wait/Yield，且靶子按跳动次数结算。 |
+| Effect 阶段调用 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib`；`GraphFunctionCatalogLoaderTests.Compile_InvokeScript_ByFunctionName_PatchesToGraphId` | 部分覆盖 | FuncLib 资产无 `damage.falloff`（现有 `demo.const.seven` / `ability.slash` / `ability.bash`）。缺技能命中进入 OnApply 后调用真实衰减函数并完成当次效果事务的 UAT。 |
+| 含 Yield 的图不能进 FuncLib | `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsYieldProgram`；`FuncCatalogLoader_RejectsPureScriptInvokeScriptGraphIdClosureToYield`；`FuncCatalogLoader_RejectsPureScriptInvokeScriptFunctionNameClosureToYieldBeforePatch`；`LiveGasEditPipelineTests.Classify_FuncLibGraphBodyReplaceThatReachesYield_MapReloadRequired` | 已覆盖 | 加载器与热改分类已失败关闭。缺面向作者的错误文案截图 / launcher UAT，不影响本条合同场景。 |
+| 行为树叶子调用 ActionLib | `BehaviorTreeRuntimeTests.PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent`；`GraphBehaviorSeparatedShowcaseAcceptanceTests.BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves`；`GraphActionCatalogLoaderTests.LoadsScriptAction_WithYieldProgram`；`ScriptFlowSandboxShowcaseAcceptanceTests.DrinkUntilFull_YieldsThenHaltsAtLimit`（`script.drinkUntilFull` 原子沙盒，旁证而非本条主证据） | 已覆盖 | `bt.patrol` 真 Yield 叶子已在 BT 宿主跨拍续跑。 |
+| 技能阶段不能调用 ActionLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionNameActionLibName_PatchFailsClosed`（Effect 方言、`InvokeScript.functionName`，符号 patch 失败关闭） | 合同原文未覆盖 | 合同原文要 Effect 图写入 `InvokeAction` 且编译失败；该节点全仓不存在，不得把等价守卫写成原文已覆盖。查询方言仍可用 `InvokeScript.graphId` 直绑（`GraphControlFlowCompiler.Query.cs` 只拒双填/双空）；`FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed` 仅 Score / Validation / Derived，不含 Query。本树未合入查询口收口。 |
+| Score 图产出分数且可调 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_LinearKindsInvokeScriptFunctionName_Compile`（Score kind 线性 `InvokeScript`）；`GraphContractTests.GraphKindOperationPolicy_ReadOnlyKindsRejectGameplayWrites`（Score 拒玩法写入） | 部分覆盖 | 缺 Score 图经真实 FuncLib catalog patch、对两个候选产出分数，并断言无 Yield / 无技能效果类副作用的 UAT。 |
+
+合同外、本树已有的相邻守卫（不升格为 §6 已覆盖）：
+
+| 相邻守卫 | 本树测试 | 状态 |
+|----------|----------|------|
+| Query Kind 调 FuncLib（`InvokeScript.functionName`） | `GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib` | 已覆盖 |
+| L2 ActionLib 与 FuncLib 同名隔离 | `GraphFunctionCatalogLoaderTests.CoreCatalogs_MoveL2ActionsToActionLib`；`GraphActionCatalogLoaderTests.RejectsFuncLibNameClash` | 已覆盖 |
+| Effect 线性方言拒 `InvokeScript.graphId` | `GraphControlFlowCompiler.Linear.cs`（缺 `functionName` → `MissingNodeRef`；给了 `graphId` → `TypeMismatch`）。`FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed` 未带 Effect TestCase，但线性编译器已拒。 | 编译器已拒；无独立 Effect 用例 |
 
 Preset / Showcase：`capability_standard_behavior_tree_arena_raylib`、`capability_standard_script_flow_sandbox_raylib`、`capability_standard_ability_graph_sandbox_raylib`。
-# Graph FuncLib / ActionLib UAT 映射
-本页映射 `gitbook/architecture/graph-funclib-actionlib-contract.md` §6 的 Gherkin 场景到当前验收/单测。状态只描述已知测试事实；没有玩家可见路径或端到端覆盖时明确标为 gap。
-| 合同 §6 场景 | 当前测试名 | 状态 | Gap |
-|--------------|------------|------|-----|
-| 用模板字段而不是 Yield 定义 DoT | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectWaitYieldAndLoopSugar_FailClosed`; `GraphScriptWaitLoopSugarTests.GraphKindOperationPolicy_NonScriptKinds_RejectYield`; `CoreHeroSkillInfraTests` phaseGraphs 配置解析片段 | Partial | 缺一条持续效果 OnPeriod 端到端 UAT：Duration/Period 驱动多跳结算，并断言阶段图无 Wait/Yield。 |
-| Effect 阶段调用 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib`; `GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps` | Partial | 缺技能命中进入 OnApply 后调用真实 `damage.falloff` FuncLib 并完成当次效果事务的 UAT。 |
-| 含 Yield 的图不能进 FuncLib | `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsYieldProgram`; `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsPureScriptInvokeScriptGraphIdClosureToYield`; `GraphFunctionCatalogLoaderTests.FuncCatalogLoader_RejectsPureScriptInvokeScriptFunctionNameClosureToYieldBeforePatch`; `LiveGasEditPipelineTests.Classify_FuncLibGraphBodyReplaceThatReachesYield_MapReloadRequired` | Covered contract-level | 缺面向作者的错误文案截图/launcher UAT；加载器与热改分类已有失败关闭覆盖。 |
-| 行为树叶子调用 ActionLib | `GraphActionCatalogLoaderTests.LoadsScriptAction_WithYieldProgram`; `ScriptFlowSandboxShowcaseAcceptanceTests.DrinkUntilFull_YieldsThenHaltsAtLimit`; `BehaviorTreeArenaShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite` | Partial | 缺一条 `bt.patrolStep` 真 Yield ActionLib 叶子在 BT 宿主中跨拍续跑，并让玩家看到巡逻一步完成的 showcase 验收。 |
-| 技能阶段不能调用 ActionLib | 无 | Gap | 需要作者前门测试：Effect 图写入 InvokeAction/ActionLib 名称时编译失败，并说明 Action 不得进入效果事务。 |
-| Score 图产出分数且可调 FuncLib | `GraphEffectAuthoringExpressivenessTests.FrontDoor_LinearKindsInvokeScriptFunctionName_Compile` 覆盖 Score kind 的线性 InvokeScript authoring | Partial | 缺 Score 图通过真实 FuncLib catalog patch、对两个候选产出分数，并断言无 Yield/无副作用的 UAT。 |
-## Showcase first wave
+
 | Showcase | 测试名 | 玩家可读断言 |
 |----------|--------|--------------|
-| `capability_standard_ability_graph_sandbox` | `AbilityGraphSandboxShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite`; `GraphBehaviorSeparatedShowcaseAcceptanceTests.AbilityGraphSandbox_CastArc_UnderBudget` | `Detail` 必须包含“查一圈”“挂状态”“加好感”“状态牌”，避免只展示 opcode 名称。 |
+| `capability_standard_behavior_tree_arena` | `GraphBehaviorSeparatedShowcaseAcceptanceTests.BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves`；`BehaviorTreeArenaShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite` | Detail 含 `patrol leaf yielding`，证明 `bt.patrol` ActionLib 叶子跨 think wave Yield 后续跑。 |
+| `capability_standard_script_flow_sandbox` | `ScriptFlowSandboxShowcaseAcceptanceTests.DrinkUntilFull_YieldsThenHaltsAtLimit` | Detail 含 `Script halted`；水位停在上限。 |
+| `capability_standard_ability_graph_sandbox` | `GraphBehaviorSeparatedShowcaseAcceptanceTests.AbilityGraphSandbox_CastArc_UnderBudget`；`AbilityGraphSandboxShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite` | Detail 必须包含「巡逻查一圈」「挂状态」「加好感」「状态牌」，避免只展示 opcode 名称。 |
