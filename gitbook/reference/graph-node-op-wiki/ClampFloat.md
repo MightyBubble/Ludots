@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 钳在上下限里后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 钳在上下限里后这一刀是 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 

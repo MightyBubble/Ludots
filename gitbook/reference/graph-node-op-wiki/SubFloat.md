@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 走远之后被削掉一截，这一刀剩下 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 走远之后被削掉一截，这一刀剩下 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 

@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 乘过倍率后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 乘过倍率后这一刀是 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
