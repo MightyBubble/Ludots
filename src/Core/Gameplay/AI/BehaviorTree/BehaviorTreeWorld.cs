@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private readonly BehaviorTreeStatus[] _status;
         private readonly int[] _lastScriptReturns;
         private readonly GraphExecutionCursor[] _scriptCursors;
+        private readonly int[] _scriptResumeGraphIds;
         private readonly int[] _scriptIntRegs;
         private readonly byte[] _scriptBoolRegs;
         private readonly int[] _scriptCallStacks;
@@ -39,6 +40,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             _status = new BehaviorTreeStatus[capacity];
             _lastScriptReturns = new int[capacity];
             _scriptCursors = new GraphExecutionCursor[capacity];
+            _scriptResumeGraphIds = new int[capacity];
             _scriptIntRegs = new int[capacity * GraphVmLimits.MaxIntRegisters];
             _scriptBoolRegs = new byte[capacity * GraphVmLimits.MaxBoolRegisters];
             _scriptCallStacks = new int[capacity * GraphVmLimits.MaxCallStackDepth];
@@ -67,6 +69,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         {
             RestartThinking(agent);
             _scriptCursors[agent].Reset();
+            _scriptResumeGraphIds[agent] = 0;
             int intBase = agent * GraphVmLimits.MaxIntRegisters;
             int boolBase = agent * GraphVmLimits.MaxBoolRegisters;
             Array.Clear(_scriptIntRegs, intBase, GraphVmLimits.MaxIntRegisters);
@@ -255,8 +258,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                             $"ScriptSlice GraphId={node.GraphId} requires GraphProgramRegistry.");
                     }
 
-                    ReadOnlySpan<GraphInstruction> program =
-                        GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
+                    programs.RequireHostKind(node.GraphId, GraphKind.Script, "行为树叶子");
+                    GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
 
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
@@ -264,8 +267,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
 
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
-                    bool resumeYield = cursor.Status == GraphExecutionStatus.Yielded;
-                    if (!resumeYield)
+                    bool resume = cursor.IsSuspended && _scriptResumeGraphIds[agent] == node.GraphId;
+                    if (!resume)
                     {
                         ints.Clear();
                         bools.Clear();
@@ -274,19 +277,14 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         cursor.Reset();
                     }
 
-                    var state = new GraphExecutionState
-                    {
-                        I = ints,
-                        B = bools,
-                        CallStack = callStack,
-                        CallStackCount = resumeYield ? cursor.CallStackCount : 0,
-                        ReturnInt = resumeYield ? cursor.ReturnInt : 0,
-                        Status = GraphExecutionStatus.Running
-                    };
-                    GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                        ref state,
-                        program,
-                        GasGraphOpHandlerTable.Instance,
+                    _scriptResumeGraphIds[agent] = node.GraphId;
+
+                    GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
+                        programs,
+                        node.GraphId,
+                        ints,
+                        bools,
+                        callStack,
                         ref cursor,
                         scriptBudgetSteps);
                     scriptSteps += result.Steps;
@@ -302,7 +300,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         return result.ReturnInt != 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure;
                     }
 
-                    if (result.Yielded || result.Running)
+                    if (result.Yielded || result.BudgetSuspended)
                     {
                         return BehaviorTreeStatus.Running;
                     }
@@ -315,6 +313,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
                     _lastScriptReturns[agent] = result.ReturnInt;
                     cursor.Reset();
+                    _scriptResumeGraphIds[agent] = 0;
                     return BehaviorTreeStatus.Success;
                 }
                 default:

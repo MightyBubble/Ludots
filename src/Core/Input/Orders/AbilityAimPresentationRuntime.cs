@@ -392,33 +392,27 @@ namespace Ludots.Core.Input.Orders
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             Span<Entity> targets = _candidateBuffer;
-            entities[0] = actor;
-            entities[1] = previewTarget;
-            entities[2] = previewTarget;
-            var targetList = new GraphTargetList(targets);
-            var state = new GraphExecutionState
-            {
-                World = _world,
-                Caster = actor,
-                ExplicitTarget = previewTarget,
-                TargetContext = previewTarget,
-                TargetPosCm = ToGraphTargetPos(aimWorldCm),
-                Api = _graphApi,
-                F = floats,
-                I = ints,
-                B = bools,
-                E = entities,
-                Targets = targets,
-                TargetList = targetList,
-                CallStack = callStack,
-                CallStackCount = 0,
-            };
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.PreviewTarget(previewTarget),
+                _world,
+                actor,
+                previewTarget,
+                ToGraphTargetPos(aimWorldCm),
+                _graphApi,
+                _graphPrograms,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                callStack);
 
             _graphApi.SetConfigContext(in previewParams);
             try
             {
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-                return state.TargetList.Count;
+                GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
+                return frame.TargetList.Count;
             }
             finally
             {

@@ -155,7 +155,8 @@ namespace Ludots.Tests.Gas.Graph
                 leafId,
                 new[]
                 {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                 },
                 GraphKind.Script);
             programs.Register(

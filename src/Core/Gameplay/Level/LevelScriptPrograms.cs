@@ -9,7 +9,6 @@ namespace Ludots.Core.Gameplay.Level
         public const string PhaseAdvance = "level.phaseAdvance";
     }
 
-    /// <summary>Runs Level Scripts from <see cref="GraphProgramRegistry"/> only.</summary>
     public sealed class GraphProgramLevelHost : ILevelGraphHost
     {
         private readonly GraphProgramRegistry _programs;
@@ -25,6 +24,7 @@ namespace Ludots.Core.Gameplay.Level
 
         public void RunScript(int scriptGraphId)
         {
+            _programs.RequireHostKind(scriptGraphId, GraphKind.Script, "关卡脚本");
             if (!_programs.TryGetProgram(scriptGraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
             {
                 throw new InvalidOperationException($"Level Script graph id {scriptGraphId} is not registered.");
@@ -34,15 +34,14 @@ namespace Ludots.Core.Gameplay.Level
             Array.Clear(_bools, 0, _bools.Length);
             Array.Clear(_callStack, 0, _callStack.Length);
             var cursor = new GraphExecutionCursor();
-            var state = new GraphExecutionState
-            {
-                I = _ints,
-                B = _bools,
-                CallStack = _callStack,
-                Status = GraphExecutionStatus.Running
-            };
-            GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                ref state, program, GasGraphOpHandlerTable.Instance, ref cursor, budgetSteps: 64);
+            GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
+                _programs,
+                scriptGraphId,
+                _ints,
+                _bools,
+                _callStack,
+                ref cursor,
+                budgetSteps: 64);
             if (!result.Halted)
             {
                 throw new InvalidOperationException($"Level Script {scriptGraphId} must halt (got {result.Status}).");

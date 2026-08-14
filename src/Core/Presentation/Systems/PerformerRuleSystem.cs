@@ -359,19 +359,22 @@ namespace Ludots.Core.Presentation.Systems
             Array.Clear(_entityRegs, 0, _entityRegs.Length);
             Array.Clear(_callStack, 0, _callStack.Length);
 
-            _entityRegs[0] = evt.Source;
-            _entityRegs[1] = evt.Target;
-            _entityRegs[2] = evt.Viewer;
-
-            var targetList = new GraphTargetList(_targets);
-
-            var state = new GraphExecutionState
-            {
-                World = World,
-                Caster = evt.Source,
-                ExplicitTarget = evt.Target,
-                Viewer = evt.Viewer,
-                EventPayload = new GraphEventPayload
+            GraphFrame frame = GraphFrame.Bind(
+                kind,
+                GraphEntityPreset.Viewer(evt.Viewer),
+                World,
+                evt.Source,
+                evt.Target,
+                IntVector2.Zero,
+                _graphApi,
+                _programs,
+                _floatRegs,
+                _intRegs,
+                _boolRegs,
+                _entityRegs,
+                _targets,
+                _callStack,
+                eventPayload: new GraphEventPayload
                 {
                     PayloadA = evt.PayloadA,
                     PayloadB = evt.PayloadB,
@@ -379,20 +382,8 @@ namespace Ludots.Core.Presentation.Systems
                     FloatB = evt.FloatB,
                     FloatC = evt.FloatC,
                     FloatD = evt.FloatD,
-                },
-                TargetPosCm = IntVector2.Zero,
-                Api = _graphApi,
-                F = _floatRegs,
-                I = _intRegs,
-                B = _boolRegs,
-                E = _entityRegs,
-                Targets = _targets,
-                TargetList = targetList,
-                CallStack = _callStack,
-                CallStackCount = 0,
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+                });
+            GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
         }
 
         // ── Command Emission ──

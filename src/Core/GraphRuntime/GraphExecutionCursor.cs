@@ -2,9 +2,11 @@ namespace Ludots.Core.GraphRuntime
 {
     public enum GraphExecutionStatus : byte
     {
-        Running = 0,
+        NotStarted = 0,
         Yielded = 1,
-        Halted = 2
+        Halted = 2,
+        BudgetSuspended = 3,
+        Running = 4
     }
 
     public struct GraphExecutionCursor
@@ -16,6 +18,9 @@ namespace Ludots.Core.GraphRuntime
         public int InvokeDepth;
         public GraphExecutionStatus Status;
 
+        public bool IsSuspended =>
+            Status is GraphExecutionStatus.Yielded or GraphExecutionStatus.BudgetSuspended;
+
         public void Reset()
         {
             Pc = 0;
@@ -23,7 +28,7 @@ namespace Ludots.Core.GraphRuntime
             CallStackCount = 0;
             ReturnInt = 0;
             InvokeDepth = 0;
-            Status = GraphExecutionStatus.Running;
+            Status = GraphExecutionStatus.NotStarted;
         }
     }
 
@@ -39,6 +44,7 @@ namespace Ludots.Core.GraphRuntime
         public GraphExecutionStatus Status { get; }
         public bool Halted => Status == GraphExecutionStatus.Halted;
         public bool Yielded => Status == GraphExecutionStatus.Yielded;
+        public bool BudgetSuspended => Status == GraphExecutionStatus.BudgetSuspended;
         public bool Running => Status == GraphExecutionStatus.Running;
         public int ReturnInt { get; }
         public int Steps { get; }

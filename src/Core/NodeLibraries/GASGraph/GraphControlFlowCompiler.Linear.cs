@@ -1150,6 +1150,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     sources,
                     graphId);
             }
+            else if (op.NodeOp != GraphNodeOp.HaltReturnInt)
+            {
+                EmitExplicitHalt(program, sources, bodyIndex + 1, graphId, node);
+            }
         }
 
         private static byte ParseTagSelectPolicy(

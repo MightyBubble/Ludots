@@ -78,6 +78,7 @@ namespace Ludots.Core.GraphRuntime
 
             try
             {
+                EnsureProgramValid(graphId, program, kind);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -130,6 +131,7 @@ namespace Ludots.Core.GraphRuntime
 
             try
             {
+                EnsureProgramValid(graphId, program, kind);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -145,6 +147,30 @@ namespace Ludots.Core.GraphRuntime
                 }
 
                 throw;
+            }
+        }
+
+        private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
+        {
+            GraphKindOperationPolicy.ValidateProgram(
+                kind,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId,
+                nameof(GraphProgramRegistry));
+        }
+
+        public void RequireHostKind(int graphId, GraphKind expected, string hostLabel)
+        {
+            if (!_programs.TryGetValue(graphId, out GraphProgramRegistration entry))
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+            }
+
+            if (entry.Kind != expected)
+            {
+                throw new InvalidOperationException(
+                    $"{GraphKindOperationPolicy.KindMismatchError}: 图 {graphId} 的种类是「{entry.Kind}」，不能挂在{hostLabel}上（这里只接受 {expected}）。");
             }
         }
 

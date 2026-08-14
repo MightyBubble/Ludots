@@ -1023,7 +1023,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (graphKind == GraphKind.Query || GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
             {
-                return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
+                if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
+                {
+                    return 2;
+                }
+
+                return op.NodeOp == GraphNodeOp.HaltReturnInt ? 1 : 2;
             }
 
             return op.NodeOp switch
@@ -1575,6 +1580,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Imm = RelativeOffset(defaultJumpIndex, defaultAbs)
             };
             SetSource(sources, defaultJumpIndex, graphId, node, SwitchIntOp, GraphControlFlowPorts.Default);
+        }
+
+        private static void EmitExplicitHalt(
+            GraphInstruction[] program,
+            GraphInstructionSource[] sources,
+            int instructionIndex,
+            string graphId,
+            GraphControlFlowNode node)
+        {
+            program[instructionIndex] = new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.HaltReturnInt,
+                A = 0
+            };
+            SetSource(sources, instructionIndex, graphId, node, nameof(GraphNodeOp.HaltReturnInt), GraphControlFlowPorts.Next);
         }
 
         private static void EmitRelativeJump(

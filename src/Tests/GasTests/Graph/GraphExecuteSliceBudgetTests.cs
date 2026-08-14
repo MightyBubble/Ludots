@@ -15,7 +15,8 @@ namespace Ludots.Tests.Gas.Graph
         {
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 }
+                new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
 
             using var world = World.Create();
@@ -60,7 +61,8 @@ namespace Ludots.Tests.Gas.Graph
         {
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 }
+                new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
 
             using var world = World.Create();
@@ -94,8 +96,9 @@ namespace Ludots.Tests.Gas.Graph
                 ref cursor,
                 budgetSteps: 8);
 
-            Assert.That(result.Running, Is.True);
+            Assert.That(result.BudgetSuspended, Is.True);
             Assert.That(result.Halted, Is.False);
+            Assert.That(cursor.Status, Is.EqualTo(GraphExecutionStatus.BudgetSuspended));
             Assert.That(cursor.Steps, Is.EqualTo(8));
         }
     }

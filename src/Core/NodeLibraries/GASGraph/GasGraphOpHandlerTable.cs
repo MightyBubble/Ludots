@@ -268,9 +268,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Run-to-halt execution. Budget exhaustion throws. Yield is rejected.
-        /// Existing GAS graphs that fall off the program end complete successfully.
+        /// Falling off the program end is an error; programs must halt with HaltReturnInt.
         /// </summary>
-        public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
+        internal static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
             if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
@@ -306,7 +306,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             state.TreeSteps = cursor.Steps;
             state.Status = result.Status;
 
-            if (result.Status == GraphExecutionStatus.Running)
+            if (result.Status is GraphExecutionStatus.Running or GraphExecutionStatus.BudgetSuspended)
             {
                 throw new InvalidOperationException(
                     $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
@@ -321,10 +321,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         /// <summary>
         /// Resumable execution. Caller must keep <see cref="GraphExecutionState.CallStack"/>
-        /// alive across slices. Budget exhaustion returns <see cref="GraphExecutionStatus.Running"/>
-        /// without throwing. Callers must handle Running explicitly.
+        /// alive across slices. Budget exhaustion returns <see cref="GraphExecutionStatus.BudgetSuspended"/>
+        /// without throwing. Callers must resume from the cursor, not restart.
         /// </summary>
-        public static GraphSliceResult ExecuteSlice(
+        internal static GraphSliceResult ExecuteSlice(
             ref GraphExecutionState state,
             ReadOnlySpan<GraphInstruction> program,
             GasGraphOpHandlerTable handlers,
@@ -387,19 +387,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     cursor.CallStackCount = state.CallStackCount;
                     cursor.ReturnInt = state.ReturnInt;
                     cursor.Steps = state.TreeSteps;
-                    cursor.Status = GraphExecutionStatus.Running;
-                    state.Status = GraphExecutionStatus.Running;
-                    return new GraphSliceResult(GraphExecutionStatus.Running, cursor.ReturnInt, cursor.Steps);
+                    cursor.Status = GraphExecutionStatus.BudgetSuspended;
+                    state.Status = GraphExecutionStatus.BudgetSuspended;
+                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
                 }
 
                 if ((uint)pc >= (uint)program.Length)
                 {
-                    cursor.Pc = pc;
-                    cursor.CallStackCount = state.CallStackCount;
-                    cursor.ReturnInt = state.ReturnInt;
-                    cursor.Status = GraphExecutionStatus.Halted;
-                    state.Status = GraphExecutionStatus.Halted;
-                    return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+                    throw new InvalidOperationException(
+                        $"{GraphKindOperationPolicy.PcOutOfRangeError}: pc={pc}, length={program.Length}. 程序计数器越界；掉出程序尾部不再算成功，必须用 HaltReturnInt 显式结束。");
                 }
 
                 ref readonly var ins = ref program[pc];
@@ -455,9 +451,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             cursor.Pc = pc;
             cursor.CallStackCount = state.CallStackCount;
             cursor.ReturnInt = state.ReturnInt;
-            cursor.Status = GraphExecutionStatus.Running;
-            state.Status = GraphExecutionStatus.Running;
-            return new GraphSliceResult(GraphExecutionStatus.Running, cursor.ReturnInt, cursor.Steps);
+            cursor.Status = GraphExecutionStatus.BudgetSuspended;
+            state.Status = GraphExecutionStatus.BudgetSuspended;
+            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
         }
 
         private void RegisterBuiltins()
@@ -709,6 +705,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var targetList = new GraphTargetList(targets);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
+            e[2] = s.E.Length > 2 ? s.E[2] : default;
 
             var child = new GraphExecutionState
             {

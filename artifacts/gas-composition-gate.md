@@ -1,6 +1,6 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: S1 · 图调用无界递归会杀进程（PR #942 修复计划 A1）
+- **Task / Issue**: S9 · L2 宿主走 L1 正式执行前门（引入执行帧）
 - **Date**: 2026-08-14
 - **Agent / Author**: Cursor Grok 4.6
 
@@ -10,24 +10,24 @@
 
 结论: PASS
 
-一句话理由: 不新增 graph 节点、profile enum 或平行管线；只把已有 `InvokeScript` 边的环从「当没找到 Yield」改成装载期错误，并给已有执行游标补上调用深度与整棵调用树共享的步数预算。
+一句话理由: 不新增 graph 节点、profile enum 或平行执行器；只把已有 `GraphExecutor` 收成唯一校验前门，用执行帧消灭部分初始化的 `GraphExecutionState`，并拆掉「掉出尾部算成功」与「预算挂起当未开始」两条兼容性 fallback。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 装载期拒环 | 0 | `GraphYieldPurityValidator` + `GraphProgramRegistry.Register` / `ReplaceProgram` |
-| 热改过闸 | 2 | `LiveGasEditPipeline.Classify`（候选体）+ `ReplaceProgram`（硬闸） |
-| FuncLib 纯闭包 | 2 | 已有 `GraphFunctionCatalogLoader`（环从 clean 改 error） |
-| 运行期深度 / 共享步数 | 0 | `GraphVmLimits` + `GraphExecutionState` / `GraphExecutionCursor` + `GasGraphOpHandlerTable` |
-| Yield 进 Invoke 目标 | 0 | 登记期 `ContainsYield` 标记；运行期 O(1) 读标记 |
+| 执行帧构造与一次性校验 | 0 | `GraphFrame` + `GraphExecutor` |
+| 七个宿主改走前门 | 2 | 已有 BT / HFSM / Level / Effect / Performer / Query / Aim 宿主 |
+| 装载期程序校验 | 0 | `GraphKindOperationPolicy.ValidateProgram`（叠在已有 `GraphYieldPurityValidator` 上） |
+| 显式终结 + 跳转目标 | 0 | 登记期校验 + VM `pc` 越界失败关闭 |
+| 预算挂起续跑 | 0 | `GraphExecutionStatus.BudgetSuspended` + BT 续跑判断 |
 
 ### 3. Reuse list
 
-- Handlers: 已有 `HandleInvokeScript`；不新增 opcode
-- Queues / Systems: 无
-- Resolvers / Registries: `GraphProgramRegistry`、`GraphIdRegistry`、`GraphFunctionCatalog`（热改 / FuncLib 解析）
-- Existing presets / graphs: 不改资产；装载期只拒绝成环的 `InvokeScript` 图
+- Handlers: 已有 `GasGraphOpHandlerTable`；`Execute` / `ExecuteSlice` 收成 internal
+- Queues / Systems: 无新 System
+- Resolvers / Registries: `GraphProgramRegistry`、`GraphKindOperationPolicy`、`GraphYieldPurityValidator`、`GraphExecutor`
+- Existing presets / graphs: 不改资产 schema；线性/Query 编译器在无 `next` 的末端发出已有 `HaltReturnInt`
 
 ### 4. New Layer 0 ops (if any)
 
@@ -35,15 +35,15 @@ N/A
 
 ### 5. Transaction boundary
 
-热改 `ReplaceProgram` 失败必须回滚到替换前的程序体（已有 `CommitNextCastSafeFrame` rollback 列表）。装载期 `Register` 失败不得留下半登记的 id。
+`Register` / `ReplaceProgram` 校验失败必须回滚到登记前状态（与 S1 环检测同一条回滚路径）。执行帧构造失败不得留下半初始化状态。
 
 ### 6. Config SSOT
 
-行为配置落在: 已有 graph / FuncLib / ActionLib catalog；闸门是登记与执行合同，不是新 JSON schema。
+行为配置落在: 已有 graph / ActionLib / FuncLib；本票是执行门与帧合同，不是新 JSON schema。
 
-是否新增 JSON schema: NO
+是否新增 JSON schema: NO — 不通过组合表达，因为这是执行基础设施收口，不是玩法变体。
 
-文档更新路径: `gitbook/architecture/graph-layering-flow-and-behavior.md`（步数硬顶旁补上调用环与 invoke 深度）。
+文档更新路径: 本票不把合同改成「已落地」；不新增 AAC 平行 ADR。
 
 ### 7. Red flag scan
 
@@ -51,9 +51,10 @@ N/A
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
 - [x] 未添加「说不清的」默认 fallback
-- [x] 未用「Script 不许 InvokeScript」回避问题
-- [x] 未只加运行期深度而不做装载期拒环
-- [x] 未尝试捕获 `StackOverflowException`
+- [x] 未拓宽 Script 方言
+- [x] 未放宽 kind 校验
+- [x] 未新建平行 Registry / 执行器
+- [x] 未删除八个家族 Mod
 
 ### 8. Next variant test
 
@@ -63,26 +64,19 @@ N/A
 
 ## 任务摘要
 
-一张图 `InvokeScript` 指向自己或成环时，当前会在运行期递归到栈溢出并杀掉进程。三道旧闸门都不覆盖跨图调用。本票只修这一条。
+L1 正式前门 `GraphExecutor` 在生产路径零调用者；七个宿主直连 `GasGraphOpHandlerTable`，跳过 kind / 能力 / 寄存器尺寸检查，且手工拼装不完整的 `GraphExecutionState`（`Programs` 为空导致生产路径写得出 `InvokeScript` 却执行不了）。BT 只认 `Yielded`，预算耗尽会清空寄存器并从 pc=0 重跑。掉出程序尾部被当成成功。本票收口执行门，不是新 op / 新 enum。
 
 ## 判断标准结论
 
-通过。交付物是已有 op 边上的装载/运行闸门，不是新 enum 或新管线。
+通过。交付物是已有执行入口上的帧与校验闸门，不是新 enum 或新管线。
 
 ## 复用 / 新增表
 
 | 类型 | 项 |
 |------|-----|
-| 复用 | `GraphYieldPurityValidator.activeGraphs`、`GraphProgramRegistry`、`LiveGasEditPipeline`、`GraphFunctionCatalogLoader`、`GraphExecutionCursor`、`GraphVmLimits.MaxInstructionsPerExecution` |
+| 复用 | `GraphExecutor`、`GraphKindOperationPolicy`、`GraphProgramRegistry`、`GraphYieldPurityValidator`、`GraphExecutionCursor` / `GraphSliceResult`、`GraphVmLimits`、S1 环检测与 `ContainsYield` |
 | 新增 Layer 0 op | 无 |
-| 新增常量 | `GraphVmLimits.MaxInvokeDepth`（与同文件 `MaxCallStackDepth` 并列） |
-| 新增错误码 | `GAS.GRAPH.ERR.InvokeCycle`、`GAS.GRAPH.ERR.InvokeDepthExceeded`（沿用 `GAS.GRAPH.ERR.*` 诊断风格） |
-| 禁止 | 新 profile DSL、平行加载器、重写 VM 核心 |
-
-## 挂载点选择
-
-选 `GraphProgramRegistry.Register` / `ReplaceProgram`，不是只挂 `GraphProgramConfigLoader.PatchAndRegister`。
-
-理由：所有 `InvokeScript` 来源（配置装载、测试直登、画廊 Mod 直登、热改 `ReplaceProgram`）都经过这两处。`GraphYieldPurityValidator` 今天只挂在 FuncLib 装载与热改纯闭包检查上，挡不住直登脚本图。`GraphRuntime` 的架构守卫只禁止引用 `Gameplay.GAS`，同一程序集内复用 Host 校验器不破那道墙。
-
-增量登记时尚未登记的调用目标视为「还没到」，不报错，避免 `PatchAndRegister` 的前向引用被误杀；环在第二个参与者登记时闭合并失败。热改路径：`Classify` 用候选程序体预检，`ReplaceProgram` 再硬拒。
+| 新增类型 | `GraphFrame`、`GraphEntityPreset`（E[2] 三种预置含义） |
+| 新增状态 | `GraphExecutionStatus.NotStarted`、`BudgetSuspended` |
+| 新增错误码 | `GAS.GRAPH.ERR.KindMismatch`、`GAS.GRAPH.ERR.JumpOutOfRange`、`GAS.GRAPH.ERR.MissingHalt`、`GAS.GRAPH.ERR.PcOutOfRange`、`GAS.GRAPH.ERR.RegisterOutOfRange` |
+| 禁止 | 新 profile DSL、平行执行器、放宽 kind、拓宽 Script 方言 |
