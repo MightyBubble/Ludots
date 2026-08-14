@@ -668,6 +668,13 @@ namespace Ludots.Core.Presentation.Systems
             if (!tickDrivenOnly)
             {
                 ApplyBindings(entity, owner, definition);
+                ApplyCompiledDirtyBindings(
+                    entity,
+                    owner,
+                    definition,
+                    state.BehaviorActiveMask,
+                    applyAttributes: firstFrame || updateAttributeBindings,
+                    applyTags: firstFrame || updateTagBindings);
             }
             else if (definition.HasOwnerFacingBindingWork)
             {
@@ -724,14 +731,6 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     switch (slot.Kind)
                     {
-                        case BehaviorKind.AttributeBinding:
-                            if (firstFrame || updateAttributeBindings)
-                                ApplyAttributeBinding(entity, owner, slot.AttributeBinding);
-                            break;
-                        case BehaviorKind.TagBinding:
-                            if (firstFrame || updateTagBindings)
-                                ApplyTagBinding(entity, owner, slot.TagBinding);
-                            break;
                         case BehaviorKind.Material:
                             ApplyMaterialBinding(entity, slot.Material);
                             break;
@@ -855,17 +854,75 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private void ApplyCompiledDirtyBindings(
+            Entity entity,
+            Entity owner,
+            PresenterDefinition definition,
+            uint activeMask,
+            bool applyAttributes,
+            bool applyTags)
+        {
+            CompiledBinding[] compiled = definition.CompiledBindings;
+            if (compiled.Length == 0)
+            {
+                return;
+            }
+
+            bool ownerAlive = World.IsAlive(owner);
+            bool hasAttributes = applyAttributes && ownerAlive && World.Has<AttributeBuffer>(owner);
+            bool hasTags = applyTags && ownerAlive && World.Has<GameplayTagContainer>(owner);
+            if (!hasAttributes && !applyTags)
+            {
+                return;
+            }
+
+            for (int i = 0; i < compiled.Length; i++)
+            {
+                ref readonly CompiledBinding binding = ref compiled[i];
+                if (!IsBehaviorActive(activeMask, binding.SlotIndex))
+                {
+                    continue;
+                }
+
+                if (applyAttributes && binding.IsAttributeBound && hasAttributes)
+                {
+                    ApplyCompiledAttributeBinding(entity, ref World.Get<AttributeBuffer>(owner), in binding);
+                    continue;
+                }
+
+                if (applyTags && binding.IsTagBound)
+                {
+                    bool tagActive = hasTags && World.Get<GameplayTagContainer>(owner).HasTag(binding.SourceTagId);
+                    ApplyCompiledTagBinding(entity, in binding, tagActive);
+                }
+            }
+        }
+
         private void ApplyOwnerAttributeWork(
             Entity entity,
             PresenterDefinition definition,
             ref AttributeBuffer attributes,
             in PresenterDefinition.OwnerAttributeWorkItem work)
         {
-            int[] behaviorIndices = work.BehaviorIndices;
-            for (int i = 0; i < behaviorIndices.Length; i++)
+            uint activeMask = World.Get<PresenterState>(entity).BehaviorActiveMask;
+            CompiledBinding[] compiled = definition.CompiledBindings;
+            int[] compiledBindingIndices = work.CompiledBindingIndices;
+            for (int i = 0; i < compiledBindingIndices.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndices[i]];
-                ApplyAttributeBinding(entity, ref attributes, in slot.AttributeBinding);
+                int compiledIndex = compiledBindingIndices[i];
+                if ((uint)compiledIndex >= (uint)compiled.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{definition.Key}' compiled attribute work points at missing CompiledBinding[{compiledIndex}].");
+                }
+
+                ref readonly CompiledBinding binding = ref compiled[compiledIndex];
+                if (!IsBehaviorActive(activeMask, binding.SlotIndex))
+                {
+                    continue;
+                }
+
+                ApplyCompiledAttributeBinding(entity, ref attributes, in binding);
             }
         }
 
@@ -875,72 +932,62 @@ namespace Ludots.Core.Presentation.Systems
             in PresenterDefinition.OwnerTagWorkItem work,
             bool tagActive)
         {
-            int[] behaviorIndices = work.BehaviorIndices;
-            for (int i = 0; i < behaviorIndices.Length; i++)
+            uint activeMask = World.Get<PresenterState>(entity).BehaviorActiveMask;
+            CompiledBinding[] compiled = definition.CompiledBindings;
+            int[] compiledBindingIndices = work.CompiledBindingIndices;
+            for (int i = 0; i < compiledBindingIndices.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndices[i]];
-                ApplyTagBinding(entity, in slot.TagBinding, tagActive);
-            }
-        }
+                int compiledIndex = compiledBindingIndices[i];
+                if ((uint)compiledIndex >= (uint)compiled.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter '{definition.Key}' compiled tag work points at missing CompiledBinding[{compiledIndex}].");
+                }
 
-        private void ApplyAttributeBinding(Entity entity, Entity owner, in AttributeBindingConfig config)
-        {
-            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return;
-            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-            ApplyAttributeBinding(entity, ref attributes, config);
-        }
-
-        private void ApplyTagBinding(Entity entity, Entity owner, in TagBindingConfig config)
-        {
-            bool active = World.IsAlive(owner) && World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(config.TagId);
-            ApplyTagBinding(entity, in config, active);
-        }
-
-        private void ApplyAttributeBinding(Entity entity, ref AttributeBuffer attributes, in AttributeBindingConfig config)
-        {
-            float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
-            SetParam(entity, config.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
-
-            ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
-            for (int i = 0; i < thresholds.Length; i++)
-            {
-                ref readonly ThresholdMapping threshold = ref thresholds[i];
-                if (value > threshold.Threshold)
+                ref readonly CompiledBinding binding = ref compiled[compiledIndex];
+                if (!IsBehaviorActive(activeMask, binding.SlotIndex))
                 {
                     continue;
                 }
 
+                ApplyCompiledTagBinding(entity, in binding, tagActive);
+            }
+        }
+
+        private void ApplyCompiledAttributeBinding(Entity entity, ref AttributeBuffer attributes, in CompiledBinding binding)
+        {
+            float value = ResolveAttributeValue(ref attributes, binding.SourceAttributeId, binding.Mode);
+            SetParam(entity, binding.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
+
+            if (binding.TrySelectThreshold(value, out ThresholdMapping threshold))
+            {
                 int thresholdIntValue = (int)threshold.OutputValue;
                 SetParam(entity, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
                 SetParam(entity, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
                 return;
             }
 
+            ThresholdMapping[] thresholds = binding.Thresholds;
             bool hasFloatParams = World.Has<PresenterFloatParams>(entity);
             bool hasIntParams = World.Has<PresenterIntParams>(entity);
             for (int i = 0; i < thresholds.Length; i++)
             {
-                ref readonly ThresholdMapping threshold = ref thresholds[i];
+                ref readonly ThresholdMapping unused = ref thresholds[i];
                 if (hasFloatParams)
                 {
-                    ClearParam(entity, threshold.OutputParamKey, ParamLane.Float);
+                    ClearParam(entity, unused.OutputParamKey, ParamLane.Float);
                 }
 
                 if (hasIntParams)
                 {
-                    ClearParam(entity, threshold.OutputParamKey, ParamLane.Int);
+                    ClearParam(entity, unused.OutputParamKey, ParamLane.Int);
                 }
             }
         }
 
-        private void ApplyTagBinding(Entity entity, in TagBindingConfig config, bool active)
+        private void ApplyCompiledTagBinding(Entity entity, in CompiledBinding binding, bool tagActive)
         {
-            if (config.InvertLogic)
-            {
-                active = !active;
-            }
-
-            SetParam(entity, config.TargetParamKey, ParamLane.Int, 0f, active ? 1 : 0, Vector4.Zero);
+            SetParam(entity, binding.TargetParamKey, ParamLane.Int, 0f, binding.ResolveTagInt(tagActive), Vector4.Zero);
         }
 
         private void ApplyMaterialBinding(Entity entity, in MaterialConfig config)

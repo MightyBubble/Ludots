@@ -184,6 +184,103 @@ namespace Ludots.Core.Presentation.Presenters
         public float OutputValue;
     }
 
+    public readonly struct CompiledBinding
+    {
+        public const int UnboundSourceId = -1;
+
+        public readonly int SlotIndex;
+        public readonly int SourceAttributeId;
+        public readonly int SourceTagId;
+        public readonly int TargetParamKey;
+        public readonly ValueSourceKind Mode;
+        public readonly bool InvertLogic;
+        public readonly ThresholdMapping[] Thresholds;
+
+        public CompiledBinding(
+            int slotIndex,
+            int sourceAttributeId,
+            int sourceTagId,
+            int targetParamKey,
+            ValueSourceKind mode,
+            bool invertLogic,
+            ThresholdMapping[] thresholds)
+        {
+            SlotIndex = slotIndex;
+            SourceAttributeId = sourceAttributeId;
+            SourceTagId = sourceTagId;
+            TargetParamKey = targetParamKey;
+            Mode = mode;
+            InvertLogic = invertLogic;
+            Thresholds = thresholds ?? System.Array.Empty<ThresholdMapping>();
+        }
+
+        public bool IsAttributeBound => SourceAttributeId >= 0;
+        public bool IsTagBound => SourceTagId >= 0;
+
+        public static CompiledBinding FromAttribute(int slotIndex, in AttributeBindingConfig config)
+        {
+            return new CompiledBinding(
+                slotIndex,
+                config.AttributeId,
+                UnboundSourceId,
+                config.TargetParamKey,
+                config.Mode,
+                invertLogic: false,
+                CompileThresholds(config.Thresholds));
+        }
+
+        public static CompiledBinding FromTag(int slotIndex, in TagBindingConfig config)
+        {
+            return new CompiledBinding(
+                slotIndex,
+                UnboundSourceId,
+                config.TagId,
+                config.TargetParamKey,
+                ValueSourceKind.Constant,
+                config.InvertLogic,
+                System.Array.Empty<ThresholdMapping>());
+        }
+
+        public bool TrySelectThreshold(float value, out ThresholdMapping selected)
+        {
+            ThresholdMapping[] thresholds = Thresholds;
+            for (int i = 0; i < thresholds.Length; i++)
+            {
+                if (value <= thresholds[i].Threshold)
+                {
+                    selected = thresholds[i];
+                    return true;
+                }
+            }
+
+            selected = default;
+            return false;
+        }
+
+        public int ResolveTagInt(bool tagActive)
+        {
+            if (InvertLogic)
+            {
+                tagActive = !tagActive;
+            }
+
+            return tagActive ? 1 : 0;
+        }
+
+        internal static ThresholdMapping[] CompileThresholds(ThresholdMapping[]? source)
+        {
+            if (source == null || source.Length == 0)
+            {
+                return System.Array.Empty<ThresholdMapping>();
+            }
+
+            var copy = new ThresholdMapping[source.Length];
+            System.Array.Copy(source, copy, source.Length);
+            System.Array.Sort(copy, static (left, right) => left.Threshold.CompareTo(right.Threshold));
+            return copy;
+        }
+    }
+
     public struct TagBindingConfig
     {
         public int TagId;

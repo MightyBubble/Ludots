@@ -30,24 +30,24 @@ namespace Ludots.Core.Presentation.Presenters
         internal readonly struct OwnerAttributeWorkItem
         {
             public readonly int AttributeId;
-            public readonly int[] BehaviorIndices;
+            public readonly int[] CompiledBindingIndices;
 
-            public OwnerAttributeWorkItem(int attributeId, int[] behaviorIndices)
+            public OwnerAttributeWorkItem(int attributeId, int[] compiledBindingIndices)
             {
                 AttributeId = attributeId;
-                BehaviorIndices = behaviorIndices ?? System.Array.Empty<int>();
+                CompiledBindingIndices = compiledBindingIndices ?? System.Array.Empty<int>();
             }
         }
 
         internal readonly struct OwnerTagWorkItem
         {
             public readonly int TagId;
-            public readonly int[] BehaviorIndices;
+            public readonly int[] CompiledBindingIndices;
 
-            public OwnerTagWorkItem(int tagId, int[] behaviorIndices)
+            public OwnerTagWorkItem(int tagId, int[] compiledBindingIndices)
             {
                 TagId = tagId;
-                BehaviorIndices = behaviorIndices ?? System.Array.Empty<int>();
+                CompiledBindingIndices = compiledBindingIndices ?? System.Array.Empty<int>();
             }
         }
 
@@ -108,6 +108,8 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasOwnerAttributeBindingWork;
         internal bool HasOwnerTagBindingWork;
         internal bool HasOwnerFacingBindingWork;
+        internal uint BehaviorPresenceMask;
+        internal CompiledBinding[] CompiledBindings = System.Array.Empty<CompiledBinding>();
         internal bool SupportsSingleRequestReplay;
         internal bool SupportsVisualProxyFastEmit;
         internal OwnerAttributeWorkItem[] OwnerAttributeWork = System.Array.Empty<OwnerAttributeWorkItem>();
@@ -304,6 +306,8 @@ namespace Ludots.Core.Presentation.Presenters
             HasOwnerAttributeBindingWork = false;
             HasOwnerTagBindingWork = false;
             HasOwnerFacingBindingWork = false;
+            BehaviorPresenceMask = 0u;
+            CompiledBindings = System.Array.Empty<CompiledBinding>();
             SupportsSingleRequestReplay = false;
             SupportsVisualProxyFastEmit = false;
             OwnerAttributeWork = System.Array.Empty<OwnerAttributeWorkItem>();
@@ -328,8 +332,9 @@ namespace Ludots.Core.Presentation.Presenters
             SingleVisualProxyFastBehaviorIndex = -1;
             SupportsSingleAnimatorFastUpdate = false;
             SingleAnimatorFastBehaviorIndex = -1;
-            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeBehaviorMap = null;
-            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagBehaviorMap = null;
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeCompiledMap = null;
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagCompiledMap = null;
+            System.Collections.Generic.List<CompiledBinding>? compiledBindings = null;
             System.Collections.Generic.List<int>? ownerFacingParamBindingIndices = null;
             var staticFloatParams = new System.Collections.Generic.HashSet<int>();
             var staticIntParams = new System.Collections.Generic.HashSet<int>();
@@ -359,8 +364,8 @@ namespace Ludots.Core.Presentation.Presenters
             OwnerFacingParamBindingIndices = ownerFacingParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
             if (Behaviors == null || Behaviors.Length == 0)
             {
-                OwnerAttributeWork = BuildOwnerAttributeWork(attributeBehaviorMap);
-                OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
+                OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);
+                OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
                 UsesRetainedPresentationRequest =
                     HasSurfaceAuthoring &&
                     DefaultLifetime <= 0f &&
@@ -386,6 +391,7 @@ namespace Ludots.Core.Presentation.Presenters
                 }
 
                 uint bit = 1u << slot.SlotIndex;
+                BehaviorPresenceMask |= bit;
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
@@ -473,15 +479,19 @@ namespace Ludots.Core.Presentation.Presenters
                         HasOwnerAttributeBindingWork = true;
                         RequiresBootstrapProcessing = true;
                         NeedsByOwnerDefinitionIndex = true;
-                        attributeBehaviorMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
-                        AddIndex(attributeBehaviorMap, slot.AttributeBinding.AttributeId, i);
+                        compiledBindings ??= new System.Collections.Generic.List<CompiledBinding>(4);
+                        attributeCompiledMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+                        AddIndex(attributeCompiledMap, slot.AttributeBinding.AttributeId, compiledBindings.Count);
+                        compiledBindings.Add(CompiledBinding.FromAttribute(slot.SlotIndex, in slot.AttributeBinding));
                         break;
                     case BehaviorKind.TagBinding:
                         HasOwnerTagBindingWork = true;
                         RequiresBootstrapProcessing = true;
                         NeedsByOwnerDefinitionIndex = true;
-                        tagBehaviorMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
-                        AddIndex(tagBehaviorMap, slot.TagBinding.TagId, i);
+                        compiledBindings ??= new System.Collections.Generic.List<CompiledBinding>(4);
+                        tagCompiledMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+                        AddIndex(tagCompiledMap, slot.TagBinding.TagId, compiledBindings.Count);
+                        compiledBindings.Add(CompiledBinding.FromTag(slot.SlotIndex, in slot.TagBinding));
                         break;
                     case BehaviorKind.Attachment:
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
@@ -558,8 +568,9 @@ namespace Ludots.Core.Presentation.Presenters
             StaticVisualFloatParamKeys = staticFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticFloatParams);
             StaticVisualIntParamKeys = staticIntParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticIntParams);
             StaticVisualVectorParamKeys = staticVectorParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticVectorParams);
-            OwnerAttributeWork = BuildOwnerAttributeWork(attributeBehaviorMap);
-            OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
+            CompiledBindings = compiledBindings?.ToArray() ?? System.Array.Empty<CompiledBinding>();
+            OwnerAttributeWork = BuildOwnerAttributeWork(attributeCompiledMap);
+            OwnerTagWork = BuildOwnerTagWork(tagCompiledMap);
             UsesStableVisualCache =
                 hasCacheableVisual &&
                 !hasDynamicVisualLane &&
@@ -986,10 +997,10 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < sortedKeys.Length; i++)
             {
                 int key = sortedKeys[i];
-                int[] behaviorIndices = behaviorMap.TryGetValue(key, out System.Collections.Generic.List<int>? behaviorsForKey)
-                    ? behaviorsForKey.ToArray()
+                int[] compiledBindingIndices = behaviorMap.TryGetValue(key, out System.Collections.Generic.List<int>? bindingsForKey)
+                    ? bindingsForKey.ToArray()
                     : System.Array.Empty<int>();
-                items[i] = new OwnerAttributeWorkItem(key, behaviorIndices);
+                items[i] = new OwnerAttributeWorkItem(key, compiledBindingIndices);
             }
 
             return items;

@@ -108,20 +108,24 @@ LOD 分档把 150K 降到 ~74K。这里的 LOD 只控制视觉质量/子节点�
 
 ### 3.1 Layer 1 → Layer 2：编译
 
-`PresenterDefinitionConfigLoader` 在注册 definition 时，同步编译 `CompiledBindingTable`：
+`PresenterDefinitionRegistry.Register` 调用现有 `BuildBehaviorMetadata()`，同步编译 `CompiledBinding[]`。不新造 authoring，也不改 `presenters.json` schema：
 
 ```csharp
 struct CompiledBinding
 {
+    public int SlotIndex;
     public int SourceAttributeId;   // -1 = not attribute-bound
     public int SourceTagId;         // -1 = not tag-bound
     public int TargetParamKey;
     public ValueSourceKind Mode;    // Attribute / AttributeRatio / AttributeBase
-    public ThresholdMapping[] Thresholds; // pre-sorted, pre-validated
+    public bool InvertLogic;        // TagBinding only
+    public ThresholdMapping[] Thresholds; // pre-sorted ascending, pre-validated
 }
 ```
 
-运行时 `PresenterBehaviorSystem` 直接读 compiled table，不走 `ResolveParam()` 链。Graph VM 执行只在 effect apply 时触发（已经是这样），不在 behavior eval 时。
+运行时 Dirty Sync 直接读 compiled table，不回头走 `Behaviors[]` 或 `ResolveParam()` 链。Graph VM 执行只在 effect apply 时触发（已经是这样），不在 behavior eval 时。
+
+实现状态：Lifecycle（`PresenterBootstrapPending`）、Dirty Sync（owner GAS dirty + `CompiledBinding[]`）、Continuous Tick（Animator / 样条巡逻 / 挂接 / 每帧贴地）、Visible Projection（`PresenterEmitSystem` + `StableDrawCache`）已按车道切开。静止摊贩进入 `PerfStaticStableVisual` 后不再进每帧 emit / tick 扫描。
 
 ### 3.2 Presence vs Active：两层位图
 
@@ -134,7 +138,7 @@ struct CompiledBinding
 
 GAS 的 entity-level dirty 信号（`GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`）已经是变化检测的 SSOT，presenter 层不需要自建 DirtyMask。
 
-`BehaviorPresenceMask` 在 `PresenterDefinitionConfigLoader` 注册时从 `Behaviors[]` 编译：
+`BehaviorPresenceMask` 在 `BuildBehaviorMetadata()` 注册时从 `Behaviors[]` 编译：
 
 ```csharp
 uint presenceMask = 0;
@@ -484,6 +488,20 @@ struct PerfHasSpline {}
 | [presenter-development-kanban.md](presenter-development-kanban.md) | 新增 Wave 7 性能迭代任务 |
 | [entity-simulation-layering.md](entity-simulation-layering.md) | LOD 分档与 entity 仿真车道协调 |
 
-## 10 一句话总结
+## 10 玩家验收
+
+```gherkin
+Feature: 静止的摊子不再被每帧折腾
+
+  Scenario: 看热闹时摊贩稳住、行人在走
+    Given 同屏有大量不动的摊贩和少量走动的人
+    When 我站着看热闹
+    Then 画面仍然流畅
+    And 走动的人位置跟着走，摊贩不会无故闪烁或消失
+```
+
+工程钩子：`PresenterCompiledLaneTests.StaticStallsStayPut_WhileWalkersKeepMoving`。
+
+## 11 一句话总结
 
 Presenter 统一创作语义（SSOT），然后被编译回高性能 ECS 热路径；不能为了统一配置，把表现系统退化成每帧解释整棵对象树的慢路径。

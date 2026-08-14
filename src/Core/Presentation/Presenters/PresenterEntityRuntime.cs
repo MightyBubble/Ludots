@@ -1502,6 +1502,11 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             uint bit = 1u << slotIndex;
+            if ((definition.BehaviorPresenceMask & bit) == 0)
+            {
+                return false;
+            }
+
             ref PresenterState state = ref _world.Get<PresenterState>(entity);
             uint nextMask = active
                 ? state.BehaviorActiveMask | bit
@@ -2629,20 +2634,20 @@ namespace Ludots.Core.Presentation.Presenters
                 return true;
             }
 
-            BehaviorSlot[] behaviors = definition.Behaviors;
+            CompiledBinding[] compiled = definition.CompiledBindings;
             uint activeMask = BuildDefaultBehaviorMask(definition);
-            for (int i = 0; i < behaviors.Length; i++)
+            for (int i = 0; i < compiled.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind != BehaviorKind.AttributeBinding ||
-                    slot.SlotIndex is < 0 or >= 32 ||
-                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                ref readonly CompiledBinding binding = ref compiled[i];
+                if (!binding.IsAttributeBound ||
+                    binding.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << binding.SlotIndex)) == 0)
                 {
                     continue;
                 }
 
-                if (slot.AttributeBinding.AttributeId < 0 ||
-                    slot.AttributeBinding.TargetParamKey < 0)
+                if (binding.SourceAttributeId < 0 ||
+                    binding.TargetParamKey < 0)
                 {
                     return false;
                 }
@@ -3149,7 +3154,7 @@ namespace Ludots.Core.Presentation.Presenters
                         ApplyInlineInitialAttributeBehaviors(
                             ref floatParams[componentIndex],
                             ref intParams[componentIndex],
-                            definition.Behaviors,
+                            definition.CompiledBindings,
                             defaultBehaviorMask,
                             ref attributes);
                     }
@@ -3220,16 +3225,16 @@ namespace Ludots.Core.Presentation.Presenters
         private static void ApplyInlineInitialAttributeBehaviors(
             ref PresenterFloatParams floatParams,
             ref PresenterIntParams intParams,
-            BehaviorSlot[] behaviors,
+            CompiledBinding[] compiled,
             uint activeMask,
             ref AttributeBuffer attributes)
         {
-            for (int i = 0; i < behaviors.Length; i++)
+            for (int i = 0; i < compiled.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind != BehaviorKind.AttributeBinding ||
-                    slot.SlotIndex is < 0 or >= 32 ||
-                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                ref readonly CompiledBinding binding = ref compiled[i];
+                if (!binding.IsAttributeBound ||
+                    binding.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << binding.SlotIndex)) == 0)
                 {
                     continue;
                 }
@@ -3237,7 +3242,7 @@ namespace Ludots.Core.Presentation.Presenters
                 ApplyInlineInitialAttributeBehavior(
                     ref floatParams,
                     ref intParams,
-                    in slot.AttributeBinding,
+                    in binding,
                     ref attributes);
             }
         }
@@ -3245,26 +3250,20 @@ namespace Ludots.Core.Presentation.Presenters
         private static void ApplyInlineInitialAttributeBehavior(
             ref PresenterFloatParams floatParams,
             ref PresenterIntParams intParams,
-            in AttributeBindingConfig config,
+            in CompiledBinding binding,
             ref AttributeBuffer attributes)
         {
-            float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
-            floatParams.Set(config.TargetParamKey, value);
+            float value = ResolveAttributeValue(ref attributes, binding.SourceAttributeId, binding.Mode);
+            floatParams.Set(binding.TargetParamKey, value);
 
-            ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
-            for (int i = 0; i < thresholds.Length; i++)
+            if (!binding.TrySelectThreshold(value, out ThresholdMapping threshold))
             {
-                ref readonly ThresholdMapping threshold = ref thresholds[i];
-                if (value > threshold.Threshold)
-                {
-                    continue;
-                }
-
-                int thresholdIntValue = (int)threshold.OutputValue;
-                floatParams.Set(threshold.OutputParamKey, threshold.OutputValue);
-                intParams.Set(threshold.OutputParamKey, thresholdIntValue);
                 return;
             }
+
+            int thresholdIntValue = (int)threshold.OutputValue;
+            floatParams.Set(threshold.OutputParamKey, threshold.OutputValue);
+            intParams.Set(threshold.OutputParamKey, thresholdIntValue);
         }
 
         private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)

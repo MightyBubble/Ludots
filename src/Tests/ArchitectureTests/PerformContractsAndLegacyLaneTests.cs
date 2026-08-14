@@ -290,6 +290,23 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PresenterCompiledBindingContract_LandsAtDefinitionRegister()
+        {
+            FieldInfo[] compiledFields = typeof(CompiledBinding).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            string[] compiledFieldNames = compiledFields.Select(static field => field.Name).ToArray();
+            Assert.That(compiledFieldNames, Does.Contain("SourceAttributeId"));
+            Assert.That(compiledFieldNames, Does.Contain("SourceTagId"));
+            Assert.That(compiledFieldNames, Does.Contain("TargetParamKey"));
+            Assert.That(compiledFieldNames, Does.Contain("Mode"));
+            Assert.That(compiledFieldNames, Does.Contain("Thresholds"));
+
+            FieldInfo[] definitionFields = typeof(PresenterDefinition).GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+            string[] definitionFieldNames = definitionFields.Select(static field => field.Name).ToArray();
+            Assert.That(definitionFieldNames, Does.Contain("CompiledBindings"));
+            Assert.That(definitionFieldNames, Does.Contain("BehaviorPresenceMask"));
+        }
+
+        [Test]
         public void PresenterMainlineSystems_ArePresentInCore()
         {
             Assembly assembly = typeof(PresenterCommand).Assembly;
