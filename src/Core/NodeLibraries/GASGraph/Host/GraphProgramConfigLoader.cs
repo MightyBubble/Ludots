@@ -43,7 +43,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string relativePath = "GAS/graphs.json")
         {
             _registry.Clear();
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Current.RequireGraphIdsEmptyAndUnfrozen();
             _pendingOutputSchemas.Clear();
             _pendingSourceMaps.Clear();
             _outputSchemas?.Clear();

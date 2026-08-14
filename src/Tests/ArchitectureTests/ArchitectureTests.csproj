@@ -8,12 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Contracts\Ludots.Contracts.csproj" />
+    <ProjectReference Include="..\..\Graph\Ludots.Graph.Abstractions\Ludots.Graph.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Analyzers\Ludots.Analyzers.Layering\Ludots.Analyzers.Layering.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Tool\Ludots.Tool.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />

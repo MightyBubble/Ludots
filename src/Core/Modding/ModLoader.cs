@@ -26,6 +26,8 @@ namespace Ludots.Core.Modding
         private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly HashSet<string> _processSharedAssemblyNames = new HashSet<string>(StringComparer.Ordinal);
         private ModLoadContext? _activePlanLoadContext;
+        private ISystemRegistrar _systems = UnavailableSystemRegistrar.Instance;
+        private IRegistrySetView _registries = UnavailableRegistrySetView.Instance;
 
         public IMapManager MapManager { get; set; }
         public List<string> LoadedModIds { get; private set; } = new List<string>();
@@ -68,6 +70,12 @@ namespace Ludots.Core.Modding
 
         public SystemFactoryRegistry SystemFactoryRegistry => _systemFactoryRegistry;
         public TriggerDecoratorRegistry TriggerDecoratorRegistry => _triggerDecoratorRegistry;
+
+        public void BindHostPorts(ISystemRegistrar systems, IRegistrySetView registries)
+        {
+            _systems = systems ?? throw new ArgumentNullException(nameof(systems));
+            _registries = registries ?? throw new ArgumentNullException(nameof(registries));
+        }
 
         public void LoadMods(string modsRootPath)
         {
@@ -441,6 +449,7 @@ namespace Ludots.Core.Modding
                         }
                         Log.Info(in LogChannels.ModLoader, $"Instantiated entry for {manifest.Name}. Calling OnLoad...");
                         var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry);
+                        context.BindHostPorts(_systems, _registries);
                         modInstance.OnLoad(context);
                         Log.Info(in LogChannels.ModLoader, $"{manifest.Name} OnLoad completed.");
                         _loadedMods.Add(modInstance);

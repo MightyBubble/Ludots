@@ -538,6 +538,7 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
+            GraphIdRegistry.Clear();
             var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
