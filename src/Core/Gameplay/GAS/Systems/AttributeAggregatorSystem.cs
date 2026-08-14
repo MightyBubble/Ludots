@@ -198,9 +198,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 AttributeBuffer attributesBefore = attrBuffer;
                 DirtyFlags dirtyBefore = dirtyFlags;
                 Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
+                Span<float> oldCaps = stackalloc float[AttributeBuffer.MAX_ATTRS];
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
                     oldValues[i] = attrBuffer.CurrentValues[i];
+                    oldCaps[i] = attrBuffer.CapValues[i];
                 }
 
                 ulong derivedWrittenMask = RecomputeEffectiveValues(
@@ -218,7 +220,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ulong changedMask = 0UL;
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
-                    if (oldValues[i] != attrBuffer.CurrentValues[i])
+                    if (oldValues[i] != attrBuffer.CurrentValues[i] ||
+                        oldCaps[i] != attrBuffer.CapValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
                         changedMask |= 1UL << i;

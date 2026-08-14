@@ -28,6 +28,11 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        private static bool HasAssignedAttribute(int attributeId)
+        {
+            return attributeId != AttributeRegistry.InvalidId;
+        }
+
         private static void RejectNonTransactionalPersistentSideEffect(string operation)
         {
             if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
@@ -112,16 +117,16 @@ namespace Ludots.Core.Gameplay.GAS
             var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
             if (transaction?.IsActive == true)
             {
-                if (AttributeRegistry.IsValidId(templateData.PresetAttribute0))
+                if (HasAssignedAttribute(templateData.PresetAttribute0))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
-                if (AttributeRegistry.IsValidId(templateData.PresetAttribute1))
+                if (HasAssignedAttribute(templateData.PresetAttribute1))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
                 return;
             }
 
-            if (AttributeRegistry.IsValidId(templateData.PresetAttribute0))
+            if (HasAssignedAttribute(templateData.PresetAttribute0))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
-            if (AttributeRegistry.IsValidId(templateData.PresetAttribute1))
+            if (HasAssignedAttribute(templateData.PresetAttribute1))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 

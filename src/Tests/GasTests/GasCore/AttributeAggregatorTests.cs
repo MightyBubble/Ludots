@@ -309,6 +309,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.Clear();
             try
             {
+                EffectParamKeys.Initialize();
                 int forceXId = AttributeRegistry.Register("S2.ForceX");
                 int forceYId = AttributeRegistry.Register("S2.ForceY");
                 That(forceXId, Is.EqualTo(0));
