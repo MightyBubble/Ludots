@@ -1,7 +1,7 @@
 # S14 分层物理化设计（第一阶段 · 只出设计）
 
-**状态：** 设计提案。评审通过之前不搬生产代码、不改 csproj、不把 gitbook 合同改成「已落地」。
-**基线：** `origin/main` @ `82ddb3322a`
+**状态：** 实现进行中。Wave 1 已在 main；本实现补 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine 不在本实现里——那两步会改 67 个 Mod 或造成程序集环，单独开票。gitbook 合同仍不标「已落地」。
+**基线：** `origin/main` @ `46fcd9dcda`
 **计划正本：** GitHub PR #942 计划文 §S14（该文尚未合入本基线，以 PR head 为准）
 **审查编号：** B21、B22、B23、B24、B25、C21、C22
 **前序（不推翻）：** S8（#951）顺序守卫临时加固；S10（#952）跨层组件 write owner 文档裁决

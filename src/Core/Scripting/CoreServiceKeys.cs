@@ -99,6 +99,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<VertexMap> VertexMap = new("VertexMap");
         public static readonly ServiceKey<GameSession> GameSession = new("GameSession");
         public static readonly ServiceKey<GameEngine> Engine = new("Engine");
+        public static readonly ServiceKey<ISystemRegistrar> SystemRegistrar = new("SystemRegistrar");
+        public static readonly ServiceKey<ModRegistrySet> ModRegistrySet = new("ModRegistrySet");
         public static readonly ServiceKey<GameConfig> GameConfig = new("GameConfig");
         public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");

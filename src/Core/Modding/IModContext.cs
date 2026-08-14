@@ -24,5 +24,8 @@ namespace Ludots.Core.Modding
         void Log(string message);
         void Log(LogLevel level, string message);
         Stream GetResource(string uri);
+
+        ISystemRegistrar Systems => UnavailableSystemRegistrar.Instance;
+        IRegistrySetView Registries => UnavailableRegistrySetView.Instance;
     }
 }

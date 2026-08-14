@@ -407,6 +407,7 @@ namespace Ludots.Tests.GAS.Graph
             var catalog = new ConfigCatalog();
             catalog.Add(new ConfigCatalogEntry("GAS/graphs.json", ConfigMergePolicy.ArrayById, "id"));
 
+            GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
             var loader = new GraphProgramConfigLoader(pipeline, programs, new PassthroughGraphSymbolResolver());
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
