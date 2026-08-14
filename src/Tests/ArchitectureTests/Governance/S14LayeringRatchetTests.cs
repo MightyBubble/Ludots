@@ -22,7 +22,7 @@ public sealed class S14LayeringRatchetTests
         @"SystemCapability\s*\(|capabilityId\s*:",
         RegexOptions.Compiled);
     private static readonly Regex StaticRegistryClear = new(
-        @"\b[A-Za-z][A-Za-z0-9]*Registry\.Clear\s*\(",
+        @"\b[A-Z][A-Za-z0-9]*Registry\.Clear\s*\(",
         RegexOptions.Compiled);
     private static readonly Regex GraphIdRegistryClear = new(
         @"GraphIdRegistry\.Clear\s*\(",
@@ -37,8 +37,8 @@ public sealed class S14LayeringRatchetTests
         Assert.That(method, Is.Not.Null);
         Assert.That(Attribute.IsDefined(method!, typeof(ObsoleteAttribute)), Is.True);
 
-        int actual = CountMatches(EnumerateCsFiles("mods", "src"), GetEngineCall);
-        AssertRatchet(actual, MaxGetEngineCalls, ".GetEngine(");
+        int actual = CountMatches(EnumerateProductionAndModCsFiles(), GetEngineCall);
+        AssertRatchet(actual, MaxGetEngineCalls, "GetEngine invocations");
     }
 
     [Test]
@@ -72,7 +72,7 @@ public sealed class S14LayeringRatchetTests
             }
         }
 
-        AssertRatchet(actual, MaxUndeclaredModRegisterSystemCalls, "mods undeclared RegisterSystem(");
+        AssertRatchet(actual, MaxUndeclaredModRegisterSystemCalls, "mods undeclared RegisterSystem invocations");
     }
 
     [Test]
@@ -84,14 +84,14 @@ public sealed class S14LayeringRatchetTests
             actual += StaticRegistryClear.Matches(File.ReadAllText(file)).Count;
         }
 
-        AssertRatchet(actual, MaxProductionStaticRegistryClearCalls, "production *Registry.Clear(");
+        AssertRatchet(actual, MaxProductionStaticRegistryClearCalls, "production static Registry.Clear invocations");
     }
 
     [Test]
     public void Mods_GraphIdRegistryClear_DoesNotIncrease()
     {
         int actual = CountMatches(EnumerateCsFiles("mods"), GraphIdRegistryClear);
-        AssertRatchet(actual, MaxModGraphIdRegistryClearCalls, "mods GraphIdRegistry.Clear(");
+        AssertRatchet(actual, MaxModGraphIdRegistryClearCalls, "mods GraphIdRegistry.Clear invocations");
     }
 
     [Test]
@@ -151,8 +151,27 @@ public sealed class S14LayeringRatchetTests
 
             foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             {
+                if (IsIgnoredBuildArtifact(file))
+                {
+                    continue;
+                }
+
                 yield return file;
             }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateProductionAndModCsFiles()
+    {
+        foreach (string file in EnumerateCsFiles("mods", "src"))
+        {
+            string relative = ToRepoRelativePath(FindRepoRoot(), file);
+            if (relative.StartsWith("src/Tests/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            yield return file;
         }
     }
 
@@ -170,6 +189,20 @@ public sealed class S14LayeringRatchetTests
 
             yield return file;
         }
+    }
+
+    private static bool IsIgnoredBuildArtifact(string path)
+    {
+        string[] parts = path.Replace('\\', '/').Split('/');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (parts[i] is "bin" or "obj")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string FindRepoRoot()

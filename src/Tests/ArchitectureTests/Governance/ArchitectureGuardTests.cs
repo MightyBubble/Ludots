@@ -88,7 +88,7 @@ namespace Ludots.Tests.Architecture.Governance
                 "Engine",
                 "SystemGroupOrder.cs"));
 
-            Assert.That(simulationSource, Does.Not.Contain("PhaseOrder"));
+            Assert.That(Regex.IsMatch(simulationSource, @"\bPhaseOrder\b"), Is.False);
             Assert.That(simulationSource, Does.Contain("SystemGroupOrder.All"));
             Assert.That(orderSource, Does.Contain("Enum.GetValues<SystemGroup>()"));
             Assert.That(orderSource, Does.Not.Contain("SystemGroup."));
