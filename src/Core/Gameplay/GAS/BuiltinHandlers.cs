@@ -167,7 +167,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -178,10 +177,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -211,7 +208,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -222,10 +218,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 

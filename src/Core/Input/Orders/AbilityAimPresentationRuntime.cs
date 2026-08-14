@@ -336,8 +336,7 @@ namespace Ludots.Core.Input.Orders
                     _candidateBuffer,
                     candidateCount,
                     _budget,
-                    _fanOutCommands,
-                    ref dropped);
+                    _fanOutCommands);
             }
 
             for (int i = 0; i < _fanOutCommands.Count; i++)

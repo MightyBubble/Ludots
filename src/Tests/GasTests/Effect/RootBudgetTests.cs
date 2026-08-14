@@ -132,8 +132,6 @@ namespace Ludots.Tests.GAS
                 PayloadEffectTemplateId = 1001,
                 ContextMapping = TargetResolverContextMapping.Default,
             };
-            int dropped = 0;
-
             var error = Throws<InvalidOperationException>(() =>
                 TargetResolverFanOutHelper.ValidateAndCollect(
                     world,
@@ -144,12 +142,10 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands,
-                    ref dropped));
+                    commands));
 
             That(error!.Message, Does.StartWith(TargetResolverFanOutHelper.RootBudgetExceededError));
             That(commands.Count, Is.Zero);
-            That(dropped, Is.Zero);
         }
 
         // Note: EffectCallbackComponent has been removed per the "Everything is Graph" architecture.

@@ -342,7 +342,7 @@ namespace Ludots.Core.Gameplay.Spawning
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + count);
+                _effectRequests.RequireAvailable(count, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawn");
             }
             else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
@@ -485,8 +485,7 @@ namespace Ludots.Core.Gameplay.Spawning
             double postSpawnMs = 0d;
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
-                // Capacity was reserved before create; keep the post-create reserve for overflow refill safety.
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
+                _effectRequests.RequireAvailable(created.Length, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawnPostCreate");
             }
 
             bool requiresPostSpawnLoop =
@@ -1036,7 +1035,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
             }
 
-            _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + 1);
+            _effectRequests.RequireAvailable(1, "RuntimeEntitySpawnSystem.OnSpawnEffect");
         }
 
         private int ResolveTemplateFinalTeamId(

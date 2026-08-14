@@ -513,7 +513,6 @@ namespace Ludots.Tests.GAS
             var commands = new FanOutCommandBuffer(capacity: 4);
             var budget = new RootBudgetTable(16);
             Entity[] buffer = new Entity[4];
-            int dropped = 0;
 
             TargetResolverFanOutHelper.CollectFanOutTargets(
                 world,
@@ -524,8 +523,7 @@ namespace Ludots.Tests.GAS
                 service,
                 budget,
                 commands,
-                buffer,
-                ref dropped);
+                buffer);
 
             var queue = new EffectRequestQueue();
             TargetResolverFanOutHelper.PublishFanOutCommands(commands, queue);
@@ -558,7 +556,6 @@ namespace Ludots.Tests.GAS
             Entity[] candidates = { firstTarget, secondTarget };
             var commands = new FanOutCommandBuffer(capacity: 1);
             var budget = new RootBudgetTable(16);
-            int dropped = 0;
 
             InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
                 TargetResolverFanOutHelper.ValidateAndCollect(
@@ -570,8 +567,7 @@ namespace Ludots.Tests.GAS
                     candidates,
                     candidates.Length,
                     budget,
-                    commands,
-                    ref dropped))!;
+                    commands))!;
 
             Assert.That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
             Assert.That(commands, Has.Count.EqualTo(1));

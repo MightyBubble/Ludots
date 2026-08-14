@@ -353,11 +353,10 @@ namespace Ludots.Tests.Presentation
             });
 
             TestContext.Out.WriteLine(
-                $"30K random drift coverage: blacksmiths={blacksmithCount}, activeRandomDrift={blacksmithWithRandomDrift}, fxQueue={effectQueue.Count}, fxOverflow={effectQueue.OverflowCount}, fxDropped={effectQueue.DroppedCount}, fxCapacity={effectQueue.Capacity}");
+                $"30K random drift coverage: blacksmiths={blacksmithCount}, activeRandomDrift={blacksmithWithRandomDrift}, fxQueue={effectQueue.Count}, fxOverflow={effectQueue.OverflowCount}, fxCapacity={effectQueue.Capacity}");
 
             Assert.That(blacksmithCount, Is.EqualTo(30000));
             Assert.That(blacksmithWithRandomDrift, Is.EqualTo(30000));
-            Assert.That(effectQueue.DroppedCount, Is.EqualTo(0));
         }
 
         [Test]
