@@ -11,7 +11,6 @@ using Arch.System;
 using CoreInputMod.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
-using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Benchmarks;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -61,17 +60,38 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void SystemGroup_PhaseOrder_MustIncludeEveryEnumValueInDesignedOrder()
+        public void RuntimeSystemGroupOrder_EqualsEnumDeclarationOrder()
         {
-            string[] phaseOrderNames = Array.ConvertAll(ReadRuntimePhaseOrder(), group => group.ToString());
-            Assert.That(
-                phaseOrderNames,
-                Is.EqualTo(DesignedSystemGroupOrder),
-                "PhaseOrderedCooperativeSimulation.PhaseOrder must list every SystemGroup in designed order.");
-            Assert.That(
-                phaseOrderNames,
-                Is.EqualTo(Enum.GetNames<SystemGroup>()),
-                "A SystemGroup present on the enum but missing from PhaseOrder would silently skip registered systems.");
+            SystemGroup[] enumOrder = Enum.GetValues<SystemGroup>();
+            Assert.That(SystemGroupOrder.All, Is.EqualTo(enumOrder));
+            for (int i = 0; i < enumOrder.Length; i++)
+            {
+                Assert.That((int)enumOrder[i], Is.EqualTo(i));
+            }
+        }
+
+        [Test]
+        public void PhaseOrderedCooperativeSimulation_HasNoSecondPhaseOrderTable()
+        {
+            var repoRoot = FindRepoRoot();
+            string simulationSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Engine",
+                "Pacemaker",
+                "PhaseOrderedCooperativeSimulation.cs"));
+            string orderSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Engine",
+                "SystemGroupOrder.cs"));
+
+            Assert.That(Regex.IsMatch(simulationSource, @"\bPhaseOrder\b"), Is.False);
+            Assert.That(simulationSource, Does.Contain("SystemGroupOrder.All"));
+            Assert.That(orderSource, Does.Contain("Enum.GetValues<SystemGroup>()"));
+            Assert.That(orderSource, Does.Not.Contain("SystemGroup."));
         }
 
         [Test]
@@ -2147,17 +2167,6 @@ namespace Ludots.Tests.Architecture.Governance
             string ArtifactFolder,
             string AcceptanceTestName,
             bool PurePhysics);
-
-        private static SystemGroup[] ReadRuntimePhaseOrder()
-        {
-            FieldInfo? field = typeof(PhaseOrderedCooperativeSimulation).GetField(
-                "PhaseOrder",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.That(field, Is.Not.Null, "PhaseOrderedCooperativeSimulation.PhaseOrder is the runtime order table.");
-            var order = field!.GetValue(null) as SystemGroup[];
-            Assert.That(order, Is.Not.Null, "PhaseOrderedCooperativeSimulation.PhaseOrder must be a SystemGroup array.");
-            return order!;
-        }
 
         private static string FindRepoRoot()
         {
