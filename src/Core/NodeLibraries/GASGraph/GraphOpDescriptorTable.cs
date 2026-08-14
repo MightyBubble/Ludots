@@ -7,7 +7,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     public static partial class GraphOpDescriptorTable
     {
-        private static readonly GraphOpDescriptor[] ByCode = Build();
+        private static GraphOpDescriptor[]? _byCode;
+
+        private static GraphOpDescriptor[] ByCode => _byCode ??= Build();
 
         public static GraphOpDescriptor Get(GraphNodeOp op)
         {
