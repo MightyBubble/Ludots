@@ -21,6 +21,7 @@
 * [PR911 审计修复清单（#913+#914 合并 / Epic #915）](pr911_audit_fix_checklist.md)
 * [GAS + Graph VM 架构审查（SSOT）](gas_graph_architecture_review.md)
 * [GAS + Graph VM 架构修复计划（Epic + 子任务）](gas_graph_architecture_fix_plan.md)
+* [S14 分层物理化设计（第一阶段 · 只出设计）](s14_layering_physicalization_design.md)
 
 ## 2 使用边界
 
