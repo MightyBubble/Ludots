@@ -649,6 +649,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     sources,
                     graphId);
             }
+            else if (op.NodeOp != GraphNodeOp.HaltReturnInt)
+            {
+                EmitExplicitHalt(program, sources, bodyIndex + 1, graphId, node);
+            }
         }
 
         private static int InternOptional(Dictionary<string, int> symbolToIndex, List<string> symbols, string? symbol)

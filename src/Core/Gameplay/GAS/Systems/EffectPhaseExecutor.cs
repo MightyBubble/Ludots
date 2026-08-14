@@ -761,27 +761,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _entityRegs[1] = target;
             _entityRegs[2] = targetContext;
 
-            var targetList = new GraphTargetList(_targets);
-
             Array.Clear(_callStack, 0, _callStack.Length);
-            var state = new GraphExecutionState
-            {
-                World = world,
-                Caster = caster,
-                ExplicitTarget = target,
-                TargetContext = targetContext,
-                TargetPosCm = targetPos,
-                RandomSeed = BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed),
-                Api = api,
-                F = _floatRegs,
-                I = _intRegs,
-                B = _boolRegs,
-                E = _entityRegs,
-                Targets = _targets,
-                TargetList = targetList,
-                CallStack = _callStack,
-                CallStackCount = 0,
-            };
+            GraphFrame frame = GraphFrame.Bind(
+                expectedKind,
+                GraphEntityPreset.TargetContext(targetContext),
+                world,
+                caster,
+                target,
+                targetPos,
+                api,
+                _programs,
+                _floatRegs,
+                _intRegs,
+                _boolRegs,
+                _entityRegs,
+                _targets,
+                _callStack,
+                randomSeed: BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed));
 
             GasGraphRuntimeApi? graphHost = api as GasGraphRuntimeApi;
             bool ownsBuiltinInvocation = false;
@@ -805,7 +801,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             try
             {
-                GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+                GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
                 // Sticky reject: a later graph may affirm B[0]=1, but cannot clear an earlier reject.
                 if (trackValidationResult && _boolRegs[0] == 0)
                 {

@@ -72,29 +72,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
             Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
-            var targetList = new GraphTargetList(targets);
-
-            var state = new GraphExecutionState
-            {
-                World = _world,
-                Caster = caster,
-                ExplicitTarget = explicitTarget,
-                TargetContext = targetContext,
-                TargetPosCm = targetPosCm,
-                RandomSeed = randomSeed,
-                Api = api ?? throw new ArgumentNullException(nameof(api)),
-                F = floats,
-                I = ints,
-                B = bools,
-                E = entities,
-                Targets = targets,
-                TargetList = targetList,
-                CallStack = callStack,
-                CallStackCount = 0,
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
-            WriteOutputs(resolvedOwner, caster, explicitTarget, targetContext, schema, ref state);
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.TargetContext(targetContext),
+                _world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api ?? throw new ArgumentNullException(nameof(api)),
+                _programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                callStack,
+                randomSeed: randomSeed);
+            GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
+            WriteOutputs(resolvedOwner, caster, explicitTarget, targetContext, schema, ref frame);
         }
 
         private void WriteOutputs(
@@ -103,7 +98,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             Entity targetContext,
             GraphOutputSchema schema,
-            ref GraphExecutionState state)
+            ref GraphFrame state)
         {
             GraphOutputBinding[] bindings = schema.Bindings;
             for (int i = 0; i < bindings.Length; i++)
@@ -129,7 +124,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             Entity targetContext,
             in GraphOutputBinding binding,
-            ref GraphExecutionState state)
+            ref GraphFrame state)
         {
             if (binding.ValueKind != GraphOutputValueKind.TargetList)
             {
@@ -153,7 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             _collections.Replace(owner, descriptor, state.TargetList.Span);
         }
 
-        private void WriteSummary(Entity owner, in GraphOutputBinding binding, ref GraphExecutionState state)
+        private void WriteSummary(Entity owner, in GraphOutputBinding binding, ref GraphFrame state)
         {
             if (binding.KeyId <= 0)
             {

@@ -255,8 +255,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                             $"ScriptSlice GraphId={node.GraphId} requires GraphProgramRegistry.");
                     }
 
-                    ReadOnlySpan<GraphInstruction> program =
-                        GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
+                    programs.RequireHostKind(node.GraphId, GraphKind.Script, "行为树叶子");
+                    GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
 
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
@@ -264,8 +264,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
 
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
-                    bool resumeYield = cursor.Status == GraphExecutionStatus.Yielded;
-                    if (!resumeYield)
+                    bool resume = cursor.IsSuspended;
+                    if (!resume)
                     {
                         ints.Clear();
                         bools.Clear();
@@ -274,19 +274,12 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         cursor.Reset();
                     }
 
-                    var state = new GraphExecutionState
-                    {
-                        I = ints,
-                        B = bools,
-                        CallStack = callStack,
-                        CallStackCount = resumeYield ? cursor.CallStackCount : 0,
-                        ReturnInt = resumeYield ? cursor.ReturnInt : 0,
-                        Status = GraphExecutionStatus.Running
-                    };
-                    GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                        ref state,
-                        program,
-                        GasGraphOpHandlerTable.Instance,
+                    GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
+                        programs,
+                        node.GraphId,
+                        ints,
+                        bools,
+                        callStack,
                         ref cursor,
                         scriptBudgetSteps);
                     scriptSteps += result.Steps;
@@ -302,7 +295,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         return result.ReturnInt != 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure;
                     }
 
-                    if (result.Yielded || result.Running)
+                    if (result.Yielded || result.BudgetSuspended)
                     {
                         return BehaviorTreeStatus.Running;
                     }
