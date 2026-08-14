@@ -1,5 +1,6 @@
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphOpsQueryMod.Runtime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
