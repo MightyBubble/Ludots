@@ -106,45 +106,6 @@ using Ludots.Core.Vision;
 
 namespace Ludots.Core.Engine
 {
-    public enum SystemGroup
-    {
-        // Phase 0: Schema更新（运行时注册：属性/Graph等）
-        // 说明：为保证确定性，运行时schema变更通过队列提交，在每帧开始统一生效
-        SchemaUpdate,
-
-        // Phase 1: 输入与状态收集
-        InputCollection,
-
-        // Phase 1.5: 移动后同步与空间更新（物理/导航输出落地后的 SSOT 更新）
-        PostMovement,
-
-        // Phase 2: 能力激活
-        AbilityActivation,
-
-        // Phase 3: Effect处理（含响应链）
-        EffectProcessing,
-
-        // Phase 3.5: 运行时实体创建后的能力绑定
-        // 目的：让 RuntimeEntitySpawnSystem 创建的 ECS-authored 实体由各 capability runtime 统一发现、验证并绑定
-        RuntimeEntityBinding,
-
-        // Phase 4: 属性计算
-        AttributeCalculation,
-
-        // Phase 5: 延迟触发器收集
-        DeferredTriggerCollection,
-
-        // Phase 6: 清理
-        Cleanup,
-
-        // Phase 7: 事件分发
-        EventDispatch,
-
-        // Phase 7.1: 表现层标记清理
-        // 目的：清理 EffectiveChangedBitset 等仅服务于 UI/表现层的脏标记位
-        ClearPresentationFlags,
-    }
-
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
         private const int PathStoreMaxPaths = 512;
@@ -221,6 +182,14 @@ namespace Ludots.Core.Engine
         }
 
         public GameSynchronizationContext SyncContext { get; private set; }
+
+        public ModRegistrySet RegistrySet { get; } = new();
+        private readonly EngineSystemRegistrar _systemRegistrar;
+
+        public GameEngine()
+        {
+            _systemRegistrar = new EngineSystemRegistrar(this);
+        }
 
         // Systems - 按Phase分组
         private Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups = new Dictionary<SystemGroup, List<ISystem<float>>>();
@@ -436,6 +405,9 @@ namespace Ludots.Core.Engine
             ConflictReport = new RegistrationConflictReport();
             Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
             SetService(CoreServiceKeys.Engine, this);
+            ModRegistryAmbient.Bind(RegistrySet);
+            SetService(CoreServiceKeys.ModRegistrySet, RegistrySet);
+            SetService(CoreServiceKeys.SystemRegistrar, _systemRegistrar);
             SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
             if (modPlan != null)
             {
@@ -456,6 +428,7 @@ namespace Ludots.Core.Engine
             SystemFactoryRegistry = new SystemFactoryRegistry();
             TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
             ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
+            ModLoader.BindHostPorts(_systemRegistrar, new RegistrySetView(RegistrySet));
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
             SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
@@ -3312,6 +3285,11 @@ namespace Ludots.Core.Engine
 
         public void Dispose()
         {
+            if (ReferenceEquals(ModRegistryAmbient.Current, RegistrySet))
+            {
+                ModRegistryAmbient.Reset();
+            }
+
             Stop();
             if (_pendingMapLoads.Count > 0)
             {

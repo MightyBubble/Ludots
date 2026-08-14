@@ -1,68 +1,25 @@
-using System;
-using System.Collections.Generic;
 using Ludots.Core.Registry;
 
-namespace Ludots.Core.NodeLibraries.GASGraph.Host
+namespace Ludots.Core.NodeLibraries.GASGraph.Host;
+
+public static class GraphIdRegistry
 {
-    public static class GraphIdRegistry
-    {
-        private static readonly Dictionary<string, int> _nameToId = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly Dictionary<int, string> _idToName = new();
-        private static int _nextId = 1;
-        private static bool _frozen;
+    public const int InvalidId = 0;
+    public const int MaxGraphs = 4095;
 
-        public const int InvalidId = 0;
-        public const int MaxGraphs = 4095;
+    private static IdentityTable Table => ModRegistryAmbient.Current.GraphIds;
 
-        public static bool IsFrozen => _frozen;
+    public static bool IsFrozen => Table.IsFrozen;
 
-        public static void Freeze() => _frozen = true;
+    public static void Freeze() => Table.Freeze();
 
-        public static void Clear()
-        {
-            _nameToId.Clear();
-            _idToName.Clear();
-            _nextId = 1;
-            _frozen = false;
-        }
+    public static void Clear() => ModRegistryAmbient.Current.ReplaceGraphIds();
 
-        public static int Register(string name)
-        {
-            if (_frozen)
-            {
-                throw new InvalidOperationException("GraphIdRegistry is frozen.");
-            }
+    public static int Register(string name) => Table.Register(name);
 
-            if (_nameToId.TryGetValue(name, out var id))
-            {
-                return id;
-            }
+    public static int GetId(string name) => Table.GetId(name);
 
-            if (_nextId > MaxGraphs)
-            {
-                throw new InvalidOperationException($"GraphIdRegistry supports up to {MaxGraphs} graphs (1..{MaxGraphs}).");
-            }
+    public static string GetName(int id) => Table.GetName(id);
 
-            id = _nextId++;
-            _nameToId[name] = id;
-            _idToName[id] = name;
-            return id;
-        }
-
-        public static int GetId(string name)
-        {
-            return _nameToId.TryGetValue(name, out var id) ? id : InvalidId;
-        }
-
-        public static string GetName(int id)
-        {
-            return _idToName.TryGetValue(id, out var name) ? name : string.Empty;
-        }
-
-        public static RegistryMapping[] SnapshotMappings()
-        {
-            return RegistryMappingSnapshot.FromNameToId(_nameToId);
-        }
-    }
+    public static RegistryMapping[] SnapshotMappings() => Table.SnapshotMappings();
 }
-

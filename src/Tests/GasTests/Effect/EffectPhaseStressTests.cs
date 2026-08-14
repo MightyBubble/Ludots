@@ -47,11 +47,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
                 int validationGraphId = 2;
                 programs.Register(validationGraphId, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Validation);
 
                 // Proposal uses validation; all other phases use the effect graph.
@@ -194,6 +196,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ClampFloat, Dst = 7, A = 4, B = 5, C = 6 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 8, A = 7 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AbsFloat, Dst = 9, A = 8 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 var f = new float[GraphVmLimits.MaxFloatRegisters];
@@ -286,6 +289,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ReadBlackboardFloat, Dst = 1, A = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 int entityCount = 1000;

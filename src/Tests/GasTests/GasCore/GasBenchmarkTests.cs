@@ -269,8 +269,9 @@ namespace Ludots.Tests.GAS
         {
             // Arrange
             var queue = new DeferredTriggerQueue();
-            var attributeTriggers = new AttributeChangedTrigger[ENTITY_COUNT];
-            for (int i = 0; i < ENTITY_COUNT; i++)
+            int fillCount = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
+            var attributeTriggers = new AttributeChangedTrigger[fillCount];
+            for (int i = 0; i < fillCount; i++)
             {
                 attributeTriggers[i] = new AttributeChangedTrigger
                 {
@@ -291,7 +292,7 @@ namespace Ludots.Tests.GAS
             
             for (int iter = 0; iter < ITERATIONS; iter++)
             {
-                for (int i = 0; i < ENTITY_COUNT; i++)
+                for (int i = 0; i < fillCount; i++)
                 {
                     queue.EnqueueAttributeChanged(attributeTriggers[i]);
                 }
@@ -304,10 +305,10 @@ namespace Ludots.Tests.GAS
             long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - initialAlloc;
             
             double avgTimeMs = sw.ElapsedMilliseconds / (double)ITERATIONS;
-            double opsPerSecond = (ENTITY_COUNT * ITERATIONS) / sw.Elapsed.TotalSeconds;
+            double opsPerSecond = (fillCount * ITERATIONS) / sw.Elapsed.TotalSeconds;
             
             Console.WriteLine($"[Benchmark] DeferredTriggerQueue.EnqueueAttributeChanged:");
-            Console.WriteLine($"  Triggers: {ENTITY_COUNT}");
+            Console.WriteLine($"  Triggers: {fillCount}");
             Console.WriteLine($"  Iterations: {ITERATIONS}");
             Console.WriteLine($"  Total Time: {sw.ElapsedMilliseconds}ms");
             Console.WriteLine($"  Avg Time per Iteration: {avgTimeMs:F2}ms");

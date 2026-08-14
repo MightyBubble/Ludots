@@ -84,8 +84,7 @@ namespace Ludots.Tests.Architecture.Governance
             string orderSource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "src",
-                "Core",
-                "Engine",
+                "Contracts",
                 "SystemGroupOrder.cs"));
 
             Assert.That(Regex.IsMatch(simulationSource, @"\bPhaseOrder\b"), Is.False);
@@ -2457,6 +2456,8 @@ namespace Ludots.Tests.Architecture.Governance
                 "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
                 "CapabilityStandardGraphOpsQueryMod",
                 "CapabilityStandardGraphOpsAttrMod",
+                "CapabilityStandardGraphBehaviorCommon",
+                "CapabilityStandardGraphOpsNodeGalleryMod",
                 "PerformanceVisualizationMod",
                 "GasBenchmarkMod",
             };
