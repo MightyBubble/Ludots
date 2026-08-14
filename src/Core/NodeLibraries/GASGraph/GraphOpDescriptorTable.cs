@@ -22,7 +22,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static bool TryGet(GraphNodeOp op, out GraphOpDescriptor descriptor)
         {
             ushort code = (ushort)op;
-            if (code < ByCode.Length && ByCode[code].Op == op)
+            if (op != GraphNodeOp.None &&
+                code < ByCode.Length &&
+                ByCode[code].Op == op)
             {
                 descriptor = ByCode[code];
                 return true;

@@ -123,6 +123,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool ContainsPort(string[] ports, string port)
         {
+            if (ports == null || ports.Length == 0)
+            {
+                return false;
+            }
+
             for (int i = 0; i < ports.Length; i++)
             {
                 if (string.Equals(ports[i], port, StringComparison.Ordinal))
