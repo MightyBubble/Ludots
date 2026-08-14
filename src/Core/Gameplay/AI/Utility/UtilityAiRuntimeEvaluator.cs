@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
@@ -656,7 +657,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             if (ability.HasCooldown)
             {
-                if (ability.Cooldown.CooldownValueAttributeId > 0 &&
+                if (AttributeRegistry.IsValidId(ability.Cooldown.CooldownValueAttributeId) &&
                     _world.Has<AttributeBuffer>(actor) &&
                     _world.Get<AttributeBuffer>(actor).GetCurrent(ability.Cooldown.CooldownValueAttributeId) > 0f)
                 {

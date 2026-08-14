@@ -213,8 +213,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 : 0;
 
             EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
-            int presetAttr0 = 0;
-            int presetAttr1 = 0;
+            int presetAttr0 = AttributeRegistry.InvalidId;
+            int presetAttr1 = AttributeRegistry.InvalidId;
             int reserved = 0;
             if (presetType == EffectPresetType.ApplyForce2D)
             {

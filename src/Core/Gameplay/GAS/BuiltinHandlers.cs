@@ -7,6 +7,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
@@ -111,16 +112,16 @@ namespace Ludots.Core.Gameplay.GAS
             var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
             if (transaction?.IsActive == true)
             {
-                if (templateData.PresetAttribute0 > 0)
+                if (AttributeRegistry.IsValidId(templateData.PresetAttribute0))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
-                if (templateData.PresetAttribute1 > 0)
+                if (AttributeRegistry.IsValidId(templateData.PresetAttribute1))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
                 return;
             }
 
-            if (templateData.PresetAttribute0 > 0)
+            if (AttributeRegistry.IsValidId(templateData.PresetAttribute0))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
-            if (templateData.PresetAttribute1 > 0)
+            if (AttributeRegistry.IsValidId(templateData.PresetAttribute1))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
