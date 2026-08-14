@@ -321,7 +321,7 @@ namespace Ludots.Tests.GAS
         public void DurationEffectTick_AllocatesZeroAfterWarmup()
         {
             using var world = World.Create();
-            int attrId = AttributeRegistry.Register($"DurationEffectTick.{Guid.NewGuid():N}");
+            const int attrId = 0;
             var clock = new DiscreteClock();
             var requests = new EffectRequestQueue();
             var dirtyQueue = new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
@@ -329,6 +329,15 @@ namespace Ludots.Tests.GAS
             var triggerQueue = new DeferredTriggerQueue();
             var conditions = new GasConditionRegistry();
             var templates = new EffectTemplateRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/AllocationTests.DurationEffectTick.json");
 
             using var application = new EffectApplicationSystem(
                 world,
@@ -387,7 +396,8 @@ namespace Ludots.Tests.GAS
 
             TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, 64);
             That(world.IsAlive(effect), Is.True);
-            That(world.Get<AttributeBuffer>(target).GetBase(attrId), Is.EqualTo(107f));
+            That(world.Get<AttributeBuffer>(target).GetBase(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(attrId), Is.EqualTo(107f));
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
