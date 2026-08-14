@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Presentation.Components;
+using Ludots.Core.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -11,11 +11,13 @@ namespace Ludots.Core.Input.CommandSources
 {
     /// <summary>
     /// Shared screen-pointer entity hit resolver for command-source acquisition and command intents.
+    /// Selectability is simulation-owned: WorldPositionCm plus CommandSourceSelectableTag.
+    /// Live inspectability uses KnowledgeProjectionStore, never camera frustum visibility.
     /// </summary>
     public static class CommandSourcePointerHitResolver
     {
         private static readonly QueryDescription SelectableQuery =
-            new QueryDescription().WithAll<VisualTransform, CullState, CommandSourceSelectableTag>();
+            new QueryDescription().WithAll<WorldPositionCm, CommandSourceSelectableTag>();
 
         public static Entity FindNearestInspectableEntity(
             World world,
@@ -38,13 +40,8 @@ namespace Ludots.Core.Input.CommandSources
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
 
-            world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
+            world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
             {
-                if (!cull.IsVisible)
-                {
-                    return;
-                }
-
                 if (!CommandSourceEligibility.CanInspectLive(world, globals, owner, entity))
                 {
                     return;

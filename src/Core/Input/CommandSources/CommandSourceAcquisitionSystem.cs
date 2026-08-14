@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -21,7 +21,7 @@ namespace Ludots.Core.Input.CommandSources
     {
         public delegate bool CommandSourceOwnerProvider(out Entity owner);
 
-        private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, CommandSourceSelectableTag>();
+        private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<WorldPositionCm, CommandSourceSelectableTag>();
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
@@ -247,10 +247,9 @@ namespace Ludots.Core.Input.CommandSources
 
             ScreenRect marquee = ScreenRect.FromPoints(drag.StartScreen, drag.CurrentScreen);
             int nextCount = 0;
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
+            _world.Query(in SelectableQuery, (Entity entity, ref CommandSourceSelectableTag selectable) =>
             {
-                if (!cull.IsVisible ||
-                    !CommandSourceEligibility.CanAcquire(_world, _globals, owner, entity, _targetRelationFilter))
+                if (!CommandSourceEligibility.CanAcquire(_world, _globals, owner, entity, _targetRelationFilter))
                 {
                     return;
                 }

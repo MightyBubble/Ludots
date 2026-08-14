@@ -12,7 +12,7 @@ namespace Ludots.Core.Spatial
 
     /// <summary>
     /// Core-owned local-space spatial bounds contract.
-    /// The local center is resolved through VisualTransform at runtime.
+    /// The local center is resolved through WorldPositionCm and optional FacingDirection.
     /// </summary>
     public struct SpatialBounds
     {
@@ -41,7 +41,7 @@ namespace Ludots.Core.Spatial
     }
 
     /// <summary>
-    /// Footprint polygons live on the local XZ plane and are transformed by VisualTransform.
+    /// Footprint polygons live on the local XZ plane and are transformed by WorldPositionCm plus FacingDirection.
     /// Multiple disjoint polygons are supported for selection and other screen-space queries.
     /// </summary>
     public unsafe struct SpatialFootprint2D
