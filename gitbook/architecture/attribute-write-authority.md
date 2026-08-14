@@ -30,7 +30,7 @@
 
 ## 强制手段
 
-`AttributeBuffer.SetBase` / `SetCurrent` / `SetAggregatedCurrent` 不是玩法写入面。Core 里只有白名单类型可以调用它们：
+`AttributeBuffer.SetBase` / `SetCurrent` / `SetAggregatedCurrent` 不是玩法写入面。Core 与展厅程序集里只有白名单类型可以调用它们：
 
 - 结算：`AttributeMutationOps`、`EffectModifierOps`、`EffectPhaseSideEffectTransaction`
 - 聚合与派生：`AttributeAggregatorSystem`、`GasGraphRuntimeApi`（仅派生暂存 buffer）
@@ -38,7 +38,7 @@
 - 每帧脉冲消费：`ForceInput2DSink`、`CameraBehaviorInputSink`
 - 基准装配：`GasBenchmark`
 
-新的运行时写入必须走 `AttributeMutationOps`。`ArchitectureGuardTests` 用 IL 扫描强制这条名单；不在名单里的调用方必须让 CI 失败并点名。
+展厅运行时（含运行期补金、种子属性、基准装配）必须走 `AttributeMutationOps`，禁止裸写缓冲。`ArchitectureGuardTests.AttributeBufferWrites_MustComeFromWhitelistedCallers` 用 IL 扫描 Core 与展厅程序集强制这条名单；不在名单里的调用方必须让 CI 失败并点名。
 
 ## 非法编号失败关闭
 

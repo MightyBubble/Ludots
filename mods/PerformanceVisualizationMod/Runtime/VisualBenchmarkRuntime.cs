@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Knowledge;
@@ -456,9 +457,10 @@ namespace PerformanceVisualizationMod.Runtime
                 {
                     world.Add(entity, new AttributeBuffer());
                     world.Add(entity, new DirtyFlags());
-                    ref var attributes = ref world.Get<AttributeBuffer>(entity);
-                    attributes.SetBase(_healthAttributeId, 100f);
-                    attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+                    TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                        ?? throw new InvalidOperationException("PerformanceVisualizationMod requires TagOps.");
+                    AttributeMutationOps.SetBase(world, entity, _healthAttributeId, 100f, tagOps);
+                    AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, 40f + (i % 60), tagOps);
 
                     knowledge!.Upsert(
                         audienceViewer,

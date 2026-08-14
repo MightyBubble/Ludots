@@ -187,9 +187,10 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
             if (_healthAttrId != AttributeRegistry.InvalidId)
             {
                 _mageEntity = _engine.World.Create(new AttributeBuffer(), new DirtyFlags());
-                ref AttributeBuffer buf = ref _engine.World.Get<AttributeBuffer>(_mageEntity);
-                buf.SetBase(_healthAttrId, 100f);
-                buf.SetCurrent(_healthAttrId, 35f);
+                TagOps tagOps = _engine.GetService(CoreServiceKeys.TagOps)
+                    ?? throw new InvalidOperationException("LiveSkillWorkbench requires TagOps.");
+                AttributeMutationOps.SetBase(_engine.World, _mageEntity, _healthAttrId, 100f, tagOps);
+                AttributeMutationOps.SetCurrent(_engine.World, _mageEntity, _healthAttrId, 35f, tagOps);
                 _attrExecutor?.SetSelectedEntity(_mageEntity);
             }
         }

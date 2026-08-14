@@ -35,6 +35,7 @@ public sealed class GraphOpsQueryRuntime : IDisposable
     private GasGraphRuntimeApi? _api;
     private EntitySetQueryRuntime? _entityQueries;
     private EntityCollectionStore? _collections;
+    private TagOps? _tagOps;
     private Entity _caster;
     private Entity[] _units = Array.Empty<Entity>();
     private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
@@ -108,7 +109,7 @@ public sealed class GraphOpsQueryRuntime : IDisposable
 
         _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
         _world = _session.World;
-        var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
+        _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
         var relationships = new RelationshipRuntime(
             _world,
             new RelationshipTypeRegistry(),
@@ -117,10 +118,10 @@ public sealed class GraphOpsQueryRuntime : IDisposable
             new RelationshipBandRegistry(),
             new RelationshipChangeBuffer(),
             new RelationshipReverseIndex(_world));
-        _entityQueries = new EntitySetQueryRuntime(_world, tagOps, relationships);
+        _entityQueries = new EntitySetQueryRuntime(_world, _tagOps, relationships);
         _api = new GasGraphRuntimeApi(
             _world,
-            tagOps: tagOps,
+            tagOps: _tagOps,
             relationshipRuntime: relationships,
             entityQueries: _entityQueries,
             entityCollections: _collections);
@@ -308,10 +309,12 @@ public sealed class GraphOpsQueryRuntime : IDisposable
             new Team { Id = teamId },
             new EntityTemplateKeyRef { TemplateKeyId = templateId },
             new AttributeBuffer(),
+            new DirtyFlags(),
             new GameplayTagContainer(),
             WorldPositionCm.FromCm(xCm, yCm));
-        ref AttributeBuffer attrs = ref _world.Get<AttributeBuffer>(entity);
-        attrs.SetBase(_bundle!.HealthAttrId, health);
+        TagOps tagOps = _tagOps
+            ?? throw new InvalidOperationException("GraphOpsQuery requires TagOps.");
+        AttributeMutationOps.SetBase(_world, entity, _bundle!.HealthAttrId, health, tagOps);
         ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
         if (enemy)
         {

@@ -23,6 +23,16 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\UiPlayerAggregateGraphMvpShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\ItemSystemShowcaseMod\ItemSystemShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsQueryMod\CapabilityStandardGraphOpsQueryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsAttrMod\CapabilityStandardGraphOpsAttrMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\GasBenchmarkMod\GasBenchmarkMod.csproj" />
   </ItemGroup>
 
 </Project>

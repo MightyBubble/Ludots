@@ -1003,27 +1003,46 @@ namespace Ludots.Tests.Architecture.Governance
             };
 
             var hits = new List<string>();
-            foreach (Type type in typeof(AttributeBuffer).Assembly.GetTypes())
+            Assembly[] assemblies = CollectAttributeBufferWriteScanAssemblies();
+            Assert.That(
+                assemblies.Any(static assembly => !string.Equals(assembly.GetName().Name, "Ludots.Core", StringComparison.Ordinal)),
+                Is.True,
+                "AttributeBuffer write guard must scan showcase assemblies, not only Core.");
+
+            foreach (Assembly assembly in assemblies)
             {
-                if (IsAllowedAttributeBufferWriter(type, allowed))
+                Type[] types;
+                try
                 {
-                    continue;
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    types = ex.Types.Where(static type => type != null).ToArray()!;
                 }
 
-                const BindingFlags flags =
-                    BindingFlags.Instance |
-                    BindingFlags.Static |
-                    BindingFlags.Public |
-                    BindingFlags.NonPublic |
-                    BindingFlags.DeclaredOnly;
-                foreach (MethodInfo method in type.GetMethods(flags))
+                foreach (Type type in types)
                 {
-                    foreach (MethodBase called in EnumerateCalledMethods(method))
+                    if (IsAllowedAttributeBufferWriter(type, allowed))
                     {
-                        if (called.DeclaringType == typeof(AttributeBuffer) &&
-                            writeNames.Contains(called.Name))
+                        continue;
+                    }
+
+                    const BindingFlags flags =
+                        BindingFlags.Instance |
+                        BindingFlags.Static |
+                        BindingFlags.Public |
+                        BindingFlags.NonPublic |
+                        BindingFlags.DeclaredOnly;
+                    foreach (MethodInfo method in type.GetMethods(flags))
+                    {
+                        foreach (MethodBase called in EnumerateCalledMethods(method))
                         {
-                            hits.Add($"{type.FullName}.{method.Name} -> {called.DeclaringType.FullName}.{called.Name}");
+                            if (called.DeclaringType == typeof(AttributeBuffer) &&
+                                writeNames.Contains(called.Name))
+                            {
+                                hits.Add($"{type.FullName}.{method.Name} -> {called.DeclaringType.FullName}.{called.Name}");
+                            }
                         }
                     }
                 }
@@ -2154,6 +2173,53 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 return null;
             }
+        }
+
+        internal static Assembly[] CollectAttributeBufferWriteScanAssemblies()
+        {
+            string[] requiredNames =
+            {
+                "Ludots.Core",
+                "UiPlayerAggregateGraphMvpShowcaseMod",
+                "ItemSystemShowcaseMod",
+                "GenreInfoShowcaseMod",
+                "GoldMarketShowcaseMod",
+                "FourXAssociationShowcaseMod",
+                "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+                "CapabilityStandardGraphOpsQueryMod",
+                "CapabilityStandardGraphOpsAttrMod",
+                "PerformanceVisualizationMod",
+                "GasBenchmarkMod",
+            };
+
+            var assemblies = new List<Assembly>(requiredNames.Length);
+            for (int i = 0; i < requiredNames.Length; i++)
+            {
+                assemblies.Add(LoadRequiredAttributeWriteAssembly(requiredNames[i]));
+            }
+
+            return assemblies.ToArray();
+        }
+
+        private static Assembly LoadRequiredAttributeWriteAssembly(string assemblyName)
+        {
+            Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < loaded.Length; i++)
+            {
+                if (string.Equals(loaded[i].GetName().Name, assemblyName, StringComparison.Ordinal))
+                {
+                    return loaded[i];
+                }
+            }
+
+            string path = Path.Combine(AppContext.BaseDirectory, assemblyName + ".dll");
+            if (!File.Exists(path))
+            {
+                Assert.Fail(
+                    $"AttributeBuffer write guard must load showcase assembly '{assemblyName}' from '{path}'.");
+            }
+
+            return Assembly.LoadFrom(path);
         }
 
         private static bool IsAllowedAttributeBufferWriter(Type type, IReadOnlyList<Type> allowed)
