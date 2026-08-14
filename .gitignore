@@ -76,6 +76,8 @@ external/
 # Ignore build/runtime evidence by default, but keep GraphNodeOp player
 # gallery videos (Git LFS) and gallery posters for GitHub Pages.
 artifacts/*
+!artifacts/gas-composition-gate.md
+!artifacts/gas-composition-gate-*.md
 !artifacts/evidence/
 artifacts/evidence/*
 !artifacts/evidence/capability_standard_graph_op_*/

@@ -459,6 +459,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_score_raylib",
+      "name": "残血的分更高",
+      "selectors": [
+        "$capability_standard_graph_score"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_op_AddFloat_raylib",
       "name": "Graph Op AddFloat Raylib",
       "selectors": [
