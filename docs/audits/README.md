@@ -29,6 +29,7 @@
 * [GAS + Graph 修复计划落地后审计需求（#942 全票合入）](s_plan_landed_audit_handoff.md)
 * [GAS + Graph 修复计划落地后架构审计（SSOT）](s_plan_landed_architecture_audit.md)
 * [S14 分层墙第二波架构审计（#964）](s14_wave2_architecture_audit.md)
+* [GAS + Graph 收口终审（#965/#962/#964/#966 合入后）](s_plan_final_architecture_audit.md)
 
 ## 2 使用边界
 
