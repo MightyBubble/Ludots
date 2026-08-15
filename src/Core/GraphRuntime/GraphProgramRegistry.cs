@@ -43,11 +43,15 @@ namespace Ludots.Core.GraphRuntime
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
         private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
+        private int _version;
+
+        public int Version => _version;
 
         public void Clear()
         {
             _programs.Clear();
             _sourceMaps.Clear();
+            _version++;
         }
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind)
@@ -79,6 +83,7 @@ namespace Ludots.Core.GraphRuntime
             try
             {
                 EnsureProgramValid(graphId, program, kind);
+                EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -87,6 +92,8 @@ namespace Ludots.Core.GraphRuntime
                 _sourceMaps.Remove(graphId);
                 throw;
             }
+
+            _version++;
         }
 
         /// <summary>
@@ -132,6 +139,7 @@ namespace Ludots.Core.GraphRuntime
             try
             {
                 EnsureProgramValid(graphId, program, kind);
+                EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -148,6 +156,8 @@ namespace Ludots.Core.GraphRuntime
 
                 throw;
             }
+
+            _version++;
         }
 
         private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
@@ -162,6 +172,21 @@ namespace Ludots.Core.GraphRuntime
 
         public void RequireHostKind(int graphId, GraphKind expected, string hostLabel)
         {
+            _ = RequireRegistration(graphId, expected, hostLabel, allowEmpty: true);
+        }
+
+        public ReadOnlySpan<GraphInstruction> RequireProgram(int graphId, GraphKind expected, string hostLabel)
+            => RequireProgramArray(graphId, expected, hostLabel);
+
+        public GraphInstruction[] RequireProgramArray(int graphId, GraphKind expected, string hostLabel)
+            => RequireRegistration(graphId, expected, hostLabel, allowEmpty: false).Program;
+
+        private GraphProgramRegistration RequireRegistration(
+            int graphId,
+            GraphKind expected,
+            string hostLabel,
+            bool allowEmpty)
+        {
             if (!_programs.TryGetValue(graphId, out GraphProgramRegistration entry))
             {
                 throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
@@ -172,18 +197,101 @@ namespace Ludots.Core.GraphRuntime
                 throw new InvalidOperationException(
                     $"{GraphKindOperationPolicy.KindMismatchError}: 图 {graphId} 的种类是「{entry.Kind}」，不能挂在{hostLabel}上（这里只接受 {expected}）。");
             }
+
+            if (!allowEmpty && entry.Program.Length == 0)
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+            }
+
+            return entry;
         }
 
         private void EnsureNoInvokeCycle(int graphId)
+            => EnsureNoInvokeCycle(graphId, allowMissingTargets: true);
+
+        private void EnsureNoInvokeCycle(int graphId, bool allowMissingTargets)
         {
             if (!GraphYieldPurityValidator.TryValidateNoInvokeCycle(
                     this,
                     graphId,
                     GraphYieldPurityTarget.DescribeGraph(graphId),
                     out string diagnostic,
-                    allowMissingTargets: true))
+                    allowMissingTargets: allowMissingTargets))
             {
                 throw new InvalidOperationException($"{GraphYieldPurityValidator.InvokeCycleError}: {diagnostic}");
+            }
+        }
+
+        public void ValidateInvokeTargets()
+        {
+            EnsureInvokeTargetsAreScript(allowMissingTargets: false, allowUnpatchedFuncLibNames: false);
+            foreach (int graphId in _programs.Keys)
+            {
+                EnsureNoInvokeCycle(graphId, allowMissingTargets: false);
+            }
+        }
+
+        private void EnsureInvokeTargetsAreScript(bool allowMissingTargets, bool allowUnpatchedFuncLibNames)
+        {
+            foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
+            {
+                ValidateProgramInvokeTargets(
+                    pair.Key,
+                    pair.Value,
+                    allowMissingTargets,
+                    allowUnpatchedFuncLibNames);
+            }
+        }
+
+        private void ValidateProgramInvokeTargets(
+            int graphId,
+            GraphProgramRegistration registration,
+            bool allowMissingTargets,
+            bool allowUnpatchedFuncLibNames)
+        {
+            ReadOnlySpan<GraphInstruction> program = registration.Program;
+            for (int i = 0; i < program.Length; i++)
+            {
+                GraphInstruction ins = program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                {
+                    continue;
+                }
+
+                if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
+                {
+                    if (allowUnpatchedFuncLibNames)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeScript.functionName remains unresolved in graph id {graphId} at pc={i}.");
+                }
+
+                int targetGraphId = ins.Imm;
+                if (targetGraphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeScript.graphId in graph id {graphId} at pc={i} requires a positive graph id.");
+                }
+
+                if (!_programs.TryGetValue(targetGraphId, out GraphProgramRegistration target))
+                {
+                    if (allowMissingTargets)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeScript target graph id {targetGraphId} is not registered.");
+                }
+
+                if (target.Kind != GraphKind.Script)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeScript target graph id {targetGraphId} must be Script, but is '{target.Kind}'.");
+                }
             }
         }
 

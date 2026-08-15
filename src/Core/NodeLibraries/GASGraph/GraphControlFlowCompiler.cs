@@ -200,9 +200,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var outputTypes = new GraphValueType[nodes.Count];
             var outputRegisters = new byte[nodes.Count];
             var boolScratches = new byte[nodes.Count];
+            var droppedRegisters = new byte[nodes.Count];
             GraphRegisterFile registers = GraphRegisterFile.Create(graphKind);
             AllocateOutputs(nodes, ops, outputTypes, outputRegisters, registers, graphId, diagnostics);
             AllocateOpScratches(nodes, ops, boolScratches, registers, graphId, diagnostics);
+            AllocateDroppedOutputs(nodes, ops, outputRegisters, droppedRegisters, registers, graphId, diagnostics);
             ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
             DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
 
@@ -266,6 +268,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     outputRegisters,
                     outputTypes,
                     boolScratches,
+                    droppedRegisters,
                     sugarScratches,
                     controlEdges,
                     valueEdges,
@@ -651,6 +654,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                !IsScriptNativeDialectOp(op.NodeOp) &&
                GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op.NodeOp);
 
+        private static bool NeedsDroppedOutput(GraphNodeOp op)
+            => IsSpatialCapacityQuery(op) || IsRelationshipCapacityQuery(op);
+
+        private static bool IsAllowTruncated(GraphControlFlowNode node)
+            => string.Equals(node.QueryCapacityPolicy, "AllowTruncated", StringComparison.Ordinal);
+
+        private static bool IsRequireComplete(GraphControlFlowNode node)
+            => string.Equals(node.QueryCapacityPolicy, "RequireComplete", StringComparison.Ordinal);
+
+        private static void ApplySpatialCapacityPolicy(
+            GraphControlFlowNode node,
+            byte droppedRegister,
+            ref GraphInstruction instruction)
+        {
+            if (!IsAllowTruncated(node))
+            {
+                instruction.Flags = 0;
+                return;
+            }
+
+            instruction.Flags = 1;
+            instruction.Dst = droppedRegister;
+        }
+
+        private static void ApplyRelationshipCapacityPolicy(
+            GraphControlFlowNode node,
+            byte droppedRegister,
+            ref GraphInstruction instruction)
+        {
+            if (!IsAllowTruncated(node))
+            {
+                instruction.Flags = 0;
+                return;
+            }
+
+            instruction.Flags = 1;
+            instruction.C = droppedRegister;
+        }
+
+        private static bool IsSpatialCapacityQuery(GraphNodeOp op)
+            => op is GraphNodeOp.QueryRadius
+                or GraphNodeOp.QueryCone
+                or GraphNodeOp.QueryRectangle
+                or GraphNodeOp.QueryLine
+                or GraphNodeOp.QueryHexRange
+                or GraphNodeOp.QueryHexRing
+                or GraphNodeOp.QueryHexNeighbors;
+
+        private static bool IsRelationshipCapacityQuery(GraphNodeOp op)
+            => op is GraphNodeOp.RelationshipQueryOutgoing
+                or GraphNodeOp.RelationshipQueryIncoming
+                or GraphNodeOp.RelationshipQueryMutual
+                or GraphNodeOp.RelationshipQueryBetweenPair;
+
         private static void ValidateRequiredEdges(
             List<GraphControlFlowNode> nodes,
             AuthoredOp[] ops,
@@ -667,6 +724,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowNode node = nodes[i];
                 AuthoredOp op = ops[i];
 
+                ValidateAuxiliaryOutputs(node, op, graphKind, graphId, diagnostics);
                 ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics);
 
                 if (graphKind == GraphKind.Query)
@@ -791,7 +849,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             foreach (GraphControlFlowValueEdge edge in valueEdges.Values)
             {
                 if (string.Equals(edge.From, node.Id, StringComparison.Ordinal) &&
-                    !IsAllowedOutputPort(op, graphKind, edge.FromPort))
+                    !IsAllowedOutputPort(node, op, graphKind, edge.FromPort))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
                         $"Unexpected value output '{edge.FromPort}' on node '{node.Id}'.", node.Id));
@@ -803,6 +861,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
                         $"Unexpected value input '{edge.ToPort}' on node '{node.Id}'.", node.Id));
                 }
+            }
+        }
+
+        private static void ValidateAuxiliaryOutputs(
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            GraphKind graphKind,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
+                op.NodeOp != GraphNodeOp.SnapToNearestInCollection)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' validOutput is only valid on SnapToNearestInCollection.",
+                    node.Id));
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.DroppedOutput) &&
+                !NeedsDroppedOutput(op.NodeOp))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' droppedOutput is only valid on capacity-limited query nodes.",
+                    node.Id));
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.DroppedOutput) &&
+                !IsAllowTruncated(node) &&
+                NeedsDroppedOutput(op.NodeOp))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' droppedOutput requires queryCapacityPolicy 'AllowTruncated'.",
+                    node.Id));
             }
         }
 
@@ -822,6 +913,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
             {
                 return port is GraphControlFlowPorts.Body or GraphControlFlowPorts.Next;
+            }
+
+            if (op.NodeOp == GraphNodeOp.HaltReturnInt)
+            {
+                return false;
             }
 
             if (graphKind == GraphKind.Query)
@@ -871,8 +967,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return GraphOpDescriptorTable.IsAllowedScriptInputPort(op.NodeOp, port);
         }
 
-        private static bool IsAllowedOutputPort(AuthoredOp op, GraphKind graphKind, string port)
+        private static bool IsAllowedOutputPort(GraphControlFlowNode node, AuthoredOp op, GraphKind graphKind, string port)
         {
+            if (!string.IsNullOrWhiteSpace(node.ValidOutput) &&
+                string.Equals(port, node.ValidOutput, StringComparison.Ordinal))
+            {
+                return op.NodeOp == GraphNodeOp.SnapToNearestInCollection;
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.DroppedOutput) &&
+                string.Equals(port, node.DroppedOutput, StringComparison.Ordinal))
+            {
+                return NeedsDroppedOutput(op.NodeOp) && IsAllowTruncated(node);
+            }
+
             if (graphKind == GraphKind.Query)
             {
                 return GraphOpDescriptorTable.IsAllowedQueryOutputPort(op.NodeOp, port);
@@ -1020,6 +1128,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
             byte[] boolScratches,
+            byte[] droppedRegisters,
             SugarScratch[] sugarScratches,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
@@ -1042,7 +1151,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 byte cond = ResolveValueInput(
                     node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
-                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                 int falseAbs = ResolveControlTarget(node, GraphControlFlowPorts.False, controlEdges, nodeIndices, layouts);
                 program[bodyIndex] = new GraphInstruction
                 {
@@ -1065,6 +1174,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     op,
                     outputRegisters,
                     outputTypes,
+                    boolScratches,
+                    droppedRegisters,
                     controlEdges,
                     valueEdges,
                     nodeIndices,
@@ -1090,6 +1201,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     outputRegisters,
                     outputTypes,
                     boolScratches,
+                    droppedRegisters,
                     controlEdges,
                     valueEdges,
                     nodeIndices,
@@ -1119,6 +1231,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     sources,
                     outputRegisters,
                     outputTypes,
+                    boolScratches,
+                    droppedRegisters,
                     definedInts,
                     definedBools,
                     graphId,
@@ -1131,7 +1245,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 // while (cond) body;  =>  JumpIfFalse(cond)->next; Jump->body
                 byte cond = ResolveValueInput(
                     node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
-                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                 int nextAbs = ResolveControlTarget(node, GraphControlFlowPorts.Next, controlEdges, nodeIndices, layouts);
                 program[bodyIndex] = new GraphInstruction
                 {
@@ -1151,7 +1265,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 // until (cond) body;  =>  JumpIfFalse(cond)->body; Jump->next  (exit when true)
                 byte cond = ResolveValueInput(
                     node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
-                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                 int bodyAbs = ResolveControlTarget(node, GraphControlFlowPorts.Body, controlEdges, nodeIndices, layouts);
                 program[bodyIndex] = new GraphInstruction
                 {
@@ -1182,8 +1296,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.AddInt:
                 {
-                    byte a = ResolveValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    byte b = ResolveValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte a = ResolveValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte b = ResolveValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.AddInt,
@@ -1199,8 +1313,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.CompareLtInt:
                 {
-                    byte a = ResolveValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    byte b = ResolveValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte a = ResolveValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte b = ResolveValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.CompareLtInt,
@@ -1216,7 +1330,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.MoveInt:
                 {
-                    byte a = ResolveValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte a = ResolveValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.MoveInt,
@@ -1257,6 +1371,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             nodeIndices,
                             outputTypes,
                             outputRegisters,
+                            boolScratches,
+                            droppedRegisters,
                             definedInts,
                             definedBools,
                             graphId,
@@ -1364,6 +1480,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 boolScratches[i] = byte.MaxValue;
+            }
+        }
+
+        private static void AllocateDroppedOutputs(
+            List<GraphControlFlowNode> nodes,
+            AuthoredOp[] ops,
+            byte[] outputRegisters,
+            byte[] droppedRegisters,
+            GraphRegisterFile registers,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (!NeedsDroppedOutput(ops[i].NodeOp) ||
+                    !string.Equals(nodes[i].QueryCapacityPolicy, "AllowTruncated", StringComparison.Ordinal))
+                {
+                    droppedRegisters[i] = byte.MaxValue;
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(nodes[i].DroppedOutput))
+                {
+                    droppedRegisters[i] = byte.MaxValue;
+                    continue;
+                }
+
+                droppedRegisters[i] = registers.AllocScratch(GraphValueType.Int, graphId, nodes[i].Id, diagnostics);
+                outputRegisters[i] = droppedRegisters[i];
             }
         }
 
@@ -1487,6 +1632,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphInstructionSource[] sources,
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
             bool[] definedInts,
             bool[] definedBools,
             string graphId,
@@ -1497,7 +1644,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<SwitchCaseArm> arms = CollectSwitchCaseArms(document, node);
             byte selector = ResolveValueInput(
                 node, GraphControlFlowPorts.Selector, GraphValueType.Int,
-                valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
             int defaultAbs = ResolveControlTarget(node, GraphControlFlowPorts.Default, controlEdges, nodeIndices, layouts);
             int defaultJumpIndex = bodyIndex + (arms.Count * 4);
 
@@ -1607,6 +1754,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Dictionary<string, int> nodeIndices,
             GraphValueType[] outputTypes,
             byte[] outputRegisters,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
             bool[] definedInts,
             bool[] definedBools,
             string graphId,
@@ -1622,6 +1771,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int sourceIndex = nodeIndices[edge.From];
             if (outputTypes[sourceIndex] != expectedType)
             {
+                bool isAuxiliaryPort = !string.Equals(edge.FromPort, GraphControlFlowPorts.Value, StringComparison.Ordinal) &&
+                                       !string.Equals(edge.FromPort, GraphControlFlowPorts.List, StringComparison.Ordinal);
+                if (expectedType == GraphValueType.Bool && isAuxiliaryPort)
+                {
+                    byte validOutputRegister = boolScratches[sourceIndex];
+                    if (validOutputRegister == byte.MaxValue)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                            $"Value input '{port}' on '{node.Id}' requires a validOutput on '{edge.From}'.",
+                            node.Id));
+                        return 0;
+                    }
+
+                    if (!definedBools[validOutputRegister])
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UninitializedRegisterRead,
+                            $"Bool register {validOutputRegister} read before assignment via '{edge.From}' -> '{node.Id}'.{port}.",
+                            node.Id));
+                    }
+
+                    return validOutputRegister;
+                }
+
+                if (expectedType == GraphValueType.Int && isAuxiliaryPort)
+                {
+                    byte droppedOutputRegister = droppedRegisters[sourceIndex];
+                    if (droppedOutputRegister == byte.MaxValue)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                            $"Value input '{port}' on '{node.Id}' requires a droppedOutput on '{edge.From}'.",
+                            node.Id));
+                        return 0;
+                    }
+
+                    if (!definedInts[droppedOutputRegister])
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UninitializedRegisterRead,
+                            $"Int register {droppedOutputRegister} read before assignment via '{edge.From}' -> '{node.Id}'.{port}.",
+                            node.Id));
+                    }
+
+                    return droppedOutputRegister;
+                }
+
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
                     $"Value input '{port}' on '{node.Id}' expects {expectedType} but '{edge.From}' produces {outputTypes[sourceIndex]}.",
                     node.Id));
@@ -1685,6 +1878,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int sourceIndex = nodeIndices[edge.From];
             if (outputTypes[sourceIndex] != expectedType && outputTypes[sourceIndex] != GraphValueType.Void)
             {
+                bool isAuxiliaryPort = !string.Equals(edge.FromPort, GraphControlFlowPorts.Value, StringComparison.Ordinal) &&
+                                       !string.Equals(edge.FromPort, GraphControlFlowPorts.List, StringComparison.Ordinal);
+                if (isAuxiliaryPort && expectedType is GraphValueType.Int or GraphValueType.Bool)
+                {
+                    return;
+                }
+
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
                     $"Value input '{port}' on '{node.Id}' expects {expectedType} but '{edge.From}' produces {outputTypes[sourceIndex]}.",
                     node.Id));

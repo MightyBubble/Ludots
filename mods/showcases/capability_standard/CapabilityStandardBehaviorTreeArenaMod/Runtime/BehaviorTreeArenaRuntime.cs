@@ -99,8 +99,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }
 
-        _seeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy");
-        _rangeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange");
+        _seeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+        _rangeGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
         Metrics.AgentCount = n;
         Metrics.Detail = "BT Script leaves from ActionLib";
     }
@@ -126,17 +126,12 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private void ThinkWave()
     {
         var world = _world!;
-        for (int i = 0; i < world.Count; i++) world.RestartThinking(i);
+        world.RestartAllThinking();
         var sw = Stopwatch.StartNew();
         BehaviorTreeThinkStats stats = world.TickAll(_programs, 32, this);
         if (_crowd != null)
         {
-            for (int i = 0; i < _crowd.Count; i++)
-            {
-                if (_crowd.Statuses[i] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
-                    _crowd.RestartThinking(i);
-            }
-
+            _crowd.RestartFinishedThinking();
             _crowd.TickAll(8);
         }
 

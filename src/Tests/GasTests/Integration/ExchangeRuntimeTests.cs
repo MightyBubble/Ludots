@@ -31,6 +31,7 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
+            AttributeRegistry.Clear();
             ModRegistryAmbient.Reset();
             EffectParamKeys.Initialize();
         }
@@ -38,6 +39,7 @@ namespace Ludots.Tests.GAS
         [TearDown]
         public void TearDown()
         {
+            AttributeRegistry.Clear();
             ModRegistryAmbient.Reset();
         }
 

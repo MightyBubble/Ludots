@@ -45,7 +45,8 @@ namespace Ludots.Core.Gameplay.GAS
                 targetPosCm,
                 validationProgram,
                 graphApi,
-                kind);
+                kind,
+                graphPrograms);
         }
     }
 }

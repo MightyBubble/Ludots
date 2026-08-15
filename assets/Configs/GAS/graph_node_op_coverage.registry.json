@@ -2063,7 +2063,12 @@
     {
       "op": "HaltReturnInt",
       "authorableKinds": [
-        "Script"
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_HaltReturnInt",
       "status": "covered",

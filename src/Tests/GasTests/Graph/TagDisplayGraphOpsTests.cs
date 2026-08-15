@@ -50,6 +50,7 @@ namespace Ludots.Tests.GAS
             {
                 new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new() { Op = (ushort)GraphNodeOp.SelectTagInMask, Dst = 1, A = 0, Imm = tableId, Flags = (byte)TagSelectPolicy.RequireOne },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
             };
 
             Assert.That(ExecuteInt(world, api, entity, program, intReg: 1), Is.EqualTo(moving));
@@ -75,6 +76,7 @@ namespace Ludots.Tests.GAS
             {
                 new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new() { Op = (ushort)GraphNodeOp.SelectTagInMask, Dst = 1, A = 0, Imm = tableId, Flags = (byte)TagSelectPolicy.RequireOne },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
             };
 
             Assert.That(
@@ -97,6 +99,7 @@ namespace Ludots.Tests.GAS
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = moving },
                 new() { Op = (ushort)GraphNodeOp.LookupTagDisplayToken, Dst = 1, A = 0, Imm = tableId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
             };
 
             Assert.That(ExecuteInt(world, api, entity, program, intReg: 1), Is.EqualTo(12));
@@ -119,6 +122,7 @@ namespace Ludots.Tests.GAS
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = attacking },
                 new() { Op = (ushort)GraphNodeOp.LookupTagDisplayToken, Dst = 1, A = 0, Imm = tableId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 1 },
             };
 
             Assert.That(
@@ -155,6 +159,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
                 new() { Op = (ushort)GraphNodeOp.SelectTagInMask, Dst = 2, A = 0, Imm = tableId, Flags = (byte)TagSelectPolicy.RequireOne },
                 new() { Op = (ushort)GraphNodeOp.LookupTagDisplayToken, Dst = 3, A = 2, Imm = tableId },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
             };
 
             Assert.That(ExecuteInt(world, api, entity, program, intReg: 3), Is.EqualTo(11));

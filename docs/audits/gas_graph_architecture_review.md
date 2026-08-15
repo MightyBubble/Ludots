@@ -1,11 +1,14 @@
-# GAS + Graph VM 架构审查（SSOT）
+# GAS + Graph VM 架构审查（当时结论）
 
-**被审对象：** `origin/main` @ `82ddb3322a` 的 GAS 与图 VM 全栈
+**当时对象：** `origin/main` @ `82ddb3322a` 的 GAS 与图 VM 全栈
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)
 **范围：** `src/Core/Gameplay/GAS/`（215 个文件）、`src/Core/NodeLibraries/`（28 个）、及其牵连的 `src/Core/GraphRuntime/`、`Spatial/`、`Association/`
 **判据：** `gitbook/architecture/gas-layered-architecture.md`、`gitbook/architecture/graph-layering-flow-and-behavior.md`、`gitbook/architecture/graph-funclib-actionlib-contract.md`、`gitbook/architecture/entity-simulation-layering.md`、`gitbook/architecture/mod-architecture.md`、`gitbook/architecture/gas-order-input-runtime-contract.md`
 **配套修复分配：** [GAS + Graph VM 架构修复计划](gas_graph_architecture_fix_plan.md)
 
-本文件是本轮架构审查的唯一结论。六个方向（VM 核心、效果管线事务性、属性系统、分层边界、ECS 纪律、以及主审的交叉实测）已在此合成。
+本文件是**当时那一轮**审查的结论，不是当前进度。
+
+**事后更正（主干 `d1b8f5f4d7`）：** 当时写「启动器里八张已退役灰标卡还能复制启动命令」。后来锁门并删除这些房间。自己调自己杀进程、属性写了又变回去、查询口偷挂动作，后续 S 票已关。分层只合了脚手架，墙没砌完。和现状页打架，以现状页为准。
 
 ---
 
@@ -164,7 +167,7 @@
 
 6. **一次命中打了很多目标，中途某个目标被别的效果销毁**。事务回滚在中途抛出，留下一半回滚的世界——属性回滚了、关系没回滚。
 
-7. **玩家在启动器列表里看到八张打了"已退役"灰标的旧展厅卡，卡底还是有可复制的启动命令**。复制粘贴进去，其中五间一进门就把引擎的图编号表清空。
+7. **当时：** 玩家在启动器列表里看到八张打了"已退役"灰标的旧展厅卡，卡底还是有可复制的启动命令；其中五间一进门就把引擎的图编号表清空。**现在：** 这些图能力家族房间已删除，启动器里没有它们的退役卡片。
 
 8. **玩家点进"两段伤害叠在一起"，字幕说血条按总和往下掉**。数字是真图算的，但把它落到世界上那一步是脚本直接改的；而且如果这一刀本该把血打到 0，代码会静默把它回卷成满血。
 

@@ -192,12 +192,12 @@ namespace Ludots.Tests.GAS
         public void AiConfigLoader_RejectsUtilityAiGraphScoreWriteOp()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.RegisterScoreGraph(new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat });
-            fixture.WriteUtilityConfig(includeGraphInput: true, considerationInput: "Input.Graph");
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                fixture.RegisterScoreGraph(
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }))!;
 
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("GraphScore graph"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
         }
 
@@ -329,7 +329,10 @@ namespace Ludots.Tests.GAS
 
                 var graphs = new GraphProgramRegistry();
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
-                graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
+                graphs.Register(graphId, new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Score);
 
                 return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
             }

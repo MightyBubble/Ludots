@@ -1,9 +1,12 @@
 # S 第一批架构审计：#944 / #946 / #943 / #945
 
-**审计对象：** GAS + Graph VM 修复计划（[#942](https://github.com/MightyBubble/Ludots/pull/942) / [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)）的第一批四张票  
-**合同 SSOT：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md) §S1 / §S2 / §S4 / §S5；审查正本 [`gas_graph_architecture_review.md`](gas_graph_architecture_review.md)  
+**当时对象：** GAS + Graph VM 修复计划（[#942](https://github.com/MightyBubble/Ludots/pull/942) / [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md)）的第一批四张票  
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)  
+**当时对照：** [`gas_graph_architecture_fix_plan.md`](gas_graph_architecture_fix_plan.md) §S1 / §S2 / §S4 / §S5；审查正本 [`gas_graph_architecture_review.md`](gas_graph_architecture_review.md)  
 **基线：** `main` @ `82ddb3322`  
-**本审计 tip：** 见本 PR；零生产代码改动
+**本审计 tip：** 见当时 PR；零生产代码改动
+
+**事后更正：** 这四张票已合。夹具红后来由 #965 收。不要把本页当时的 Major 当成现在还开着的门。
 
 | 任务 | PR | tip | 实现方声称 | 本轮结论 |
 |------|----|-----|------------|----------|

@@ -59,10 +59,12 @@ namespace Ludots.Tests.Gas.Graph
             GraphInstruction[] programA =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 30 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
             GraphInstruction[] programB =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 7 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             WeakReference weakAssembly = LoadHotReloadAndDrop(programA, programB);
@@ -101,6 +103,7 @@ namespace Ludots.Tests.Gas.Graph
             GraphInstruction[] goodProgram =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 42 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             using var host = new GraphRoslynAlcCompilerHost();

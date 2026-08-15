@@ -201,6 +201,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -7f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = durabilityId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
 
             var bindings = new EffectPhaseGraphBindings();

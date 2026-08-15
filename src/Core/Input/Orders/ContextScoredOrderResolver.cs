@@ -240,7 +240,8 @@ namespace Ludots.Core.Input.Orders
                         default,
                         preconditionProgram,
                         _graphApi,
-                        preconditionKind))
+                        preconditionKind,
+                        _graphPrograms))
                 {
                     return false;
                 }
@@ -261,7 +262,8 @@ namespace Ludots.Core.Input.Orders
                     default,
                     scoreProgram,
                     _graphApi,
-                    scoreKind);
+                    scoreKind,
+                    _graphPrograms);
             }
 
             return true;

@@ -187,25 +187,8 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         private void EnterDefaultPath(int agent, int stateIndex, IHfsmGraphHost? host)
         {
             int leaf = _hfsm.ResolveDefaultLeaf(stateIndex);
-            Span<int> path = stackalloc int[HfsmLimits.MaxStackDepth];
-            int n = 0;
-            int cur = leaf;
-            while (cur >= 0)
-            {
-                path[n++] = cur;
-                cur = _hfsm.States[cur].ParentIndex;
-                if (n > HfsmLimits.MaxStackDepth)
-                {
-                    throw new InvalidOperationException("HFSM enter path exceeds max depth.");
-                }
-            }
-
-            int baseIndex = agent * HfsmLimits.MaxStackDepth;
             _depth[agent] = 0;
-            for (int i = n - 1; i >= 0; i--)
-            {
-                PushEnter(agent, path[i], host);
-            }
+            EnterDownFrom(agent, lca: -1, leaf, host);
         }
 
         private void ExitUpTo(int agent, int lca, IHfsmGraphHost? host)
@@ -235,19 +218,23 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
         private void EnterDownFrom(int agent, int lca, int targetLeaf, IHfsmGraphHost? host)
         {
-            Span<int> path = stackalloc int[HfsmLimits.MaxStackDepth];
-            int n = 0;
-            int cur = targetLeaf;
-            while (cur != lca && cur >= 0)
+            EnterDownRecursive(agent, lca, targetLeaf, host);
+        }
+
+        private void EnterDownRecursive(int agent, int lca, int stateIndex, IHfsmGraphHost? host)
+        {
+            if (stateIndex == lca)
             {
-                path[n++] = cur;
-                cur = _hfsm.States[cur].ParentIndex;
+                return;
             }
 
-            for (int i = n - 1; i >= 0; i--)
+            if (stateIndex < 0)
             {
-                PushEnter(agent, path[i], host);
+                throw new InvalidOperationException("HFSM enter path cannot reach LCA.");
             }
+
+            EnterDownRecursive(agent, lca, _hfsm.States[stateIndex].ParentIndex, host);
+            PushEnter(agent, stateIndex, host);
         }
 
         private void PushEnter(int agent, int stateIndex, IHfsmGraphHost? host)
@@ -276,27 +263,40 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
         private int FindLca(int a, int b)
         {
-            Span<byte> seen = stackalloc byte[HfsmLimits.MaxStates];
-            seen.Clear();
-            int cur = a;
-            while (cur >= 0)
+            int depthA = GetStateDepth(a);
+            int depthB = GetStateDepth(b);
+            while (depthA > depthB)
             {
-                seen[cur] = 1;
-                cur = _hfsm.States[cur].ParentIndex;
+                a = _hfsm.States[a].ParentIndex;
+                depthA--;
             }
 
-            cur = b;
-            while (cur >= 0)
+            while (depthB > depthA)
             {
-                if (seen[cur] != 0)
-                {
-                    return cur;
-                }
-
-                cur = _hfsm.States[cur].ParentIndex;
+                b = _hfsm.States[b].ParentIndex;
+                depthB--;
             }
 
-            return _hfsm.RootIndex;
+            while (a >= 0 && b >= 0 && a != b)
+            {
+                a = _hfsm.States[a].ParentIndex;
+                b = _hfsm.States[b].ParentIndex;
+            }
+
+            return a >= 0 ? a : _hfsm.RootIndex;
+        }
+
+        private int GetStateDepth(int stateIndex)
+        {
+            int depth = 0;
+            int current = stateIndex;
+            while (current >= 0)
+            {
+                depth++;
+                current = _hfsm.States[current].ParentIndex;
+            }
+
+            return depth;
         }
 
         private bool EvalBuiltin(int agent, HfsmTransitionPredicate predicate)

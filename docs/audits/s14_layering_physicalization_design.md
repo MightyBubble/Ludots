@@ -1,8 +1,8 @@
 # S14 分层物理化设计（第一阶段 · 只出设计）
 
-**状态：** 实现进行中。Wave 1 已在 main；本实现补 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine 不在本实现里——那两步会改 67 个 Mod 或造成程序集环，单独开票。gitbook 合同仍不标「已落地」。
+**状态：** 脚手架在主干，墙没砌完。Wave 1 与 Wave 2–4（契约程序集、注册表实例、Mod 端口、分析器与引用图测试）已合。Wave 5 整层剥 Spatial/Input/Presentation/GAS 与 Wave 6 删除 GetEngine **没做**——单独开票。进度只认 [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)。gitbook 合同仍不标「已落地」。
 **基线：** `origin/main` @ `46fcd9dcda`
-**计划正本：** GitHub PR #942 计划文 §S14（该文尚未合入本基线，以 PR head 为准）
+**计划正本：** GitHub PR #942 计划文 §S14（已合入主干；本页保留当时的设计判断）
 **审查编号：** B21、B22、B23、B24、B25、C21、C22
 **前序（不推翻）：** S8（#951）顺序守卫临时加固；S10（#952）跨层组件 write owner 文档裁决
 **本文角色：** `docs/audits/` 审计/提案，不是正式架构门户。正式层合同仍以 [图分层](../../gitbook/architecture/graph-layering-flow-and-behavior.md)、[GAS 分层](../../gitbook/architecture/gas-layered-architecture.md)、[实体仿真分层](../../gitbook/architecture/entity-simulation-layering.md) 为准。
@@ -125,7 +125,7 @@ L1 今天还 `using Ludots.Core.Presentation.TagDisplay`（`GraphControlFlowComp
 #### 3.1.3 本阶段不切
 
 - Navigation / MassNavigation / Vision / Persistence / Association / 多数 Map：仍在 Engine。再切是后续票。
-- 八个 GraphOps 家族 Mod：不删、不退役（S6 锁门是另一票）。
+- 八个 GraphOps 家族 Mod：**后来按 #968 删除**。本设计写「不删」是当时范围，不是现状。单节点画廊留下。
 - Physics2D 三件套：保持独立，但后续应改成引用契约/Spatial，而不是整颗 Core。
 - 不新增 AAC 平行 ADR，不改 `docs/adr/`。
 
@@ -300,7 +300,7 @@ S10 §5.1 原文口径（实现墙必须服从）：
 4. 测试：运行时序列 `== Enum.GetValues<SystemGroup>()`。删除手写 `DesignedSystemGroupOrder`。
 5. 新增 phase = 在枚举里插入到正确位置。没有第二张表可忘。
 
-S8 若已先合入：删掉它新增的那份交叉校验数组，改测「没有第二张表」。S8 若尚未合入：Wave 1 直接做根治，不必先落地临时守卫再拆掉。
+当时条件句：S8 若已先合入，删掉它新增的那份交叉校验数组，改测「没有第二张表」；S8 若尚未合入，Wave 1 直接做根治，不必先落地临时守卫再拆掉。
 
 ---
 
@@ -392,7 +392,7 @@ Wave 5 的顺序理由：Spatial / Input 先剥，暴露对 Presentation 类型�
 - 一次性把 Core 拆完
 - 把 gitbook 合同改成已落地
 - 新增 AAC 平行 ADR
-- 删除八个 GraphOps 家族 Mod
+- 删除八个 GraphOps 家族 Mod（当时不在本设计范围；后续 #968 已完成）
 - partial-world / 第二份 Arch World
 - 重写 S10 的 owner 表
 - 平行虚拟机、第二套 opcode、第二套系统组
