@@ -23,7 +23,7 @@
     "assetId": "raylib_client_parity.albedo_building",
     "backendId": "raylib",
     "sourceUris": [
-      "PerformerBlacksmithShowcaseMod:assets/Models/building_blacksmith_blue.gltf"
+      "PresenterBlacksmithShowcaseMod:assets/Models/building_blacksmith_blue.gltf"
     ]
   },
   {

@@ -75,11 +75,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Caster" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Caster" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -111,11 +111,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Ally" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Ally" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -147,20 +147,20 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Target" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Target" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       },
       {
         "event": { "kind": "EntitySpawned", "key": "Unit.Soldier" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "Unit.Soldier" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -192,11 +192,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "Unit.Scout" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "Unit.Scout" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   }

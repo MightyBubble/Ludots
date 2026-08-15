@@ -11,7 +11,7 @@
           "inline": "None"
         },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_client_parity_crowd_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -22,7 +22,7 @@
           "key": "raylib_client_parity_crowd_agent"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -40,7 +40,7 @@
           "inline": "None"
         },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_client_parity_albedo_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -51,7 +51,7 @@
           "key": "raylib_client_parity_albedo_demo"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }
@@ -69,7 +69,7 @@
           "inline": "None"
         },
         "command": {
-          "kind": "CreatePerformer",
+          "kind": "CreatePresenter",
           "definitionId": "raylib_client_parity_vfx_actor",
           "scopeSource": "EventPayloadA"
         }
@@ -80,7 +80,7 @@
           "key": "raylib_client_parity_vfx_demo"
         },
         "command": {
-          "kind": "DestroyPerformerScope",
+          "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
       }

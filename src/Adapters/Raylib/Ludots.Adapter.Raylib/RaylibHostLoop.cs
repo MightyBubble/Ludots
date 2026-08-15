@@ -1035,6 +1035,53 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
+        /// Instanced DrawMeshInstanced can crash on some software GL stacks when Material.maps is null.
+        /// Prefer explicit env; otherwise auto-select Immediate when the host declares software GL.
+        private static RaylibPrimitiveRenderMode ResolvePrimitiveRenderMode()
+        {
+            string? configured = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE");
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                if (configured.Equals("immediate", StringComparison.OrdinalIgnoreCase) ||
+                    configured.Equals("0", StringComparison.Ordinal))
+                {
+                    Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE.");
+                    return RaylibPrimitiveRenderMode.Immediate;
+                }
+
+                if (configured.Equals("instanced", StringComparison.OrdinalIgnoreCase) ||
+                    configured.Equals("1", StringComparison.Ordinal))
+                {
+                    return RaylibPrimitiveRenderMode.Instanced;
+                }
+
+                throw new InvalidOperationException(
+                    "LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE must be 'immediate' or 'instanced'.");
+            }
+
+            if (ReadEnvBoolOrDefault("LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES", defaultValue: false))
+            {
+                Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES.");
+                return RaylibPrimitiveRenderMode.Immediate;
+            }
+
+            string? galliumDriver = Environment.GetEnvironmentVariable("GALLIUM_DRIVER");
+            bool softwareGl =
+                ReadEnvBoolOrDefault("LIBGL_ALWAYS_SOFTWARE", defaultValue: false) ||
+                string.Equals(galliumDriver, "llvmpipe", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(galliumDriver, "softpipe", StringComparison.OrdinalIgnoreCase);
+
+            if (softwareGl)
+            {
+                Log.Warn(
+                    in LogChannels.Presentation,
+                    "Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host.");
+                return RaylibPrimitiveRenderMode.Immediate;
+            }
+
+            return RaylibPrimitiveRenderMode.Instanced;
+        }
+
         private static int[] ReadEnvFrameList(string key)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
@@ -1138,7 +1185,7 @@ namespace Ludots.Adapter.Raylib
             string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
             string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPresenterEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPresenterBehaviorMs, 5, 1)}MS";
-            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
+            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  AVL {FormatFixed(effectRequests?.AvailableCapacity ?? 0, 6)}";
 
             const int x = 10;
             const int y = 10;

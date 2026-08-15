@@ -28,6 +28,8 @@ namespace Ludots.Core.Presentation.Surfaces
 
         public int CurrentFrame { get; private set; }
 
+        internal int Count => _records.Count;
+
         public IEnumerable<SurfaceSourceRecord> Records => _records.Values;
 
         public int BeginFrame()

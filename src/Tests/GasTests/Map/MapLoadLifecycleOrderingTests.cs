@@ -165,6 +165,8 @@ public sealed class MapLoadLifecycleOrderingTests
                     "visualProxyBufferCapacity": 16,
                     "skinnedVisualBatchCapacity": 16,
                     "presentationRequestCapacity": 16,
+                    "instancedBatchRequestCapacity": 16,
+                    "instancedBatchOperationCapacity": 16,
                     "groundOverlayCapacity": 16,
                     "splineRibbonCapacity": 16,
                     "worldHudCapacity": 16,

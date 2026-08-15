@@ -6,6 +6,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
@@ -15,6 +16,12 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class PresentationRequestChannelTests
     {
+        private const int LegacyBlacksmithPresentationLaneCapacity = 2_097_152;
+        private const int BlacksmithRequestPeakCapacity = 196_608;
+        private const int BlacksmithStaticPresenterPeak = 30_000;
+        private const int BlacksmithHudPeak = 100_000;
+        private const int BlacksmithInstancedBatchCapacity = 32_768;
+
         [Test]
         public void ChannelElementSizes_AreEachNarrowerThanFatPresentationRequest()
         {
@@ -30,30 +37,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BlacksmithScaleTypedChannels_UseLessResidentMemoryThanFatRequestArray()
+        public void BlacksmithScalePresentationLanePreallocation_FitsUnderLegacyTenth()
         {
-            var presentationConfig = new PresentationRuntimeConfig
-            {
-                VisualProxyBufferCapacity = 1_048_576,
-                GroundOverlayCapacity = 65_536,
-                WorldHudCapacity = 1_048_576,
-                SplineRibbonCapacity = 65_536,
-                PresenterInstanceCapacity = 1_048_576,
-            };
+            PresentationRuntimeConfig presentationConfig = CreateBlacksmithScaleConfig();
             var capacities = PresentationRequestChannelCapacities.From(presentationConfig);
 
-            long typedBytes =
-                (long)Unsafe.SizeOf<VisualProxyChannelItem>() * capacities.VisualProxy
-                + (long)Unsafe.SizeOf<GroundOverlayChannelItem>() * capacities.GroundOverlay
-                + (long)Unsafe.SizeOf<WorldHudChannelItem>() * capacities.WorldHud
-                + (long)Unsafe.SizeOf<SplineRibbonChannelItem>() * capacities.SplineRibbon
-                + (long)Unsafe.SizeOf<SurfaceSourceChannelItem>() * capacities.SurfaceSource
-                + (long)Unsafe.SizeOf<PresentationRemovalRequest>() * capacities.Removal
-                + (long)Unsafe.SizeOf<Entity>() * capacities.ClearTransient
-                + (long)Unsafe.SizeOf<PresentationRequestOp>() * capacities.TotalOperationCapacity;
+            long typedBytes = RequestChannelBytes(in capacities);
+            long instancedBatchBytes = InstancedBatchBytes(presentationConfig);
+            long legacyLaneBytes = (long)Unsafe.SizeOf<PresentationRequest>() * LegacyBlacksmithPresentationLaneCapacity;
 
-            long fatBytes = (long)Unsafe.SizeOf<PresentationRequest>() * 2_097_152;
-            Assert.That(typedBytes, Is.LessThan(fatBytes));
+            Assert.That(capacities.TotalOperationCapacity, Is.EqualTo(BlacksmithRequestPeakCapacity));
+            Assert.That(typedBytes + instancedBatchBytes, Is.LessThanOrEqualTo(legacyLaneBytes / 10));
+        }
+
+        [Test]
+        public void BlacksmithScaleRequestCapacity_CoversThirtyKStaticAndHundredKHudPeakBeforeFlush()
+        {
+            PresentationRuntimeConfig presentationConfig = CreateBlacksmithScaleConfig();
+            var requests = new PresentationRequestBuffer(
+                PresentationRequestChannelCapacities.From(presentationConfig));
+
+            for (int i = 0; i < BlacksmithStaticPresenterPeak; i++)
+            {
+                requests.Add(PresentationRequest.FromVisualProxy(
+                    Entity.Null,
+                    new PresentationVisualProxy
+                    {
+                        StableId = i + 1,
+                        MeshAssetId = 1,
+                    }));
+            }
+
+            for (int i = 0; i < BlacksmithHudPeak; i++)
+            {
+                requests.Add(PresentationRequest.FromWorldHud(
+                    Entity.Null,
+                    new WorldHudItem
+                    {
+                        StableId = BlacksmithStaticPresenterPeak + i + 1,
+                    },
+                    LODLevel.High));
+            }
+
+            Assert.That(requests.Count, Is.EqualTo(BlacksmithStaticPresenterPeak + BlacksmithHudPeak));
+            Assert.That(requests.Capacity, Is.EqualTo(BlacksmithRequestPeakCapacity));
         }
 
         [Test]
@@ -113,6 +140,37 @@ namespace Ludots.Tests.Presentation
                 LODLevel.High));
             Assert.That(requests.Count, Is.EqualTo(2));
             Assert.That(requests.GetSpan()[1].Kind, Is.EqualTo(PresentationRequestKind.GroundOverlay));
+        }
+
+        [Test]
+        public void Add_OverflowsTotalOperationBudget_WithoutExpandingChannels()
+        {
+            var requests = new PresentationRequestBuffer(new PresentationRequestChannelCapacities(
+                visualProxy: 4,
+                groundOverlay: 4,
+                worldHud: 4,
+                splineRibbon: 4,
+                surfaceSource: 4,
+                removal: 4,
+                clearTransient: 4,
+                totalOperationCapacity: 2));
+
+            requests.Add(PresentationRequest.FromVisualProxy(
+                Entity.Null,
+                new PresentationVisualProxy { StableId = 1, MeshAssetId = 4 }));
+            requests.Add(PresentationRequest.FromGroundOverlay(
+                Entity.Null,
+                new GroundOverlayItem { StableId = 8 },
+                LODLevel.High));
+
+            InvalidOperationException overflow = Assert.Throws<InvalidOperationException>(() =>
+                requests.Add(PresentationRequest.FromWorldHud(
+                    Entity.Null,
+                    new WorldHudItem { StableId = 9 },
+                    LODLevel.High)));
+            Assert.That(overflow.Message, Does.Contain("kind=WorldHud"));
+            Assert.That(requests.Count, Is.EqualTo(2));
+            Assert.That(requests.WorldHudAt(0).Item.StableId, Is.EqualTo(0));
         }
 
         [Test]
@@ -191,6 +249,39 @@ namespace Ludots.Tests.Presentation
                 new PrimitiveDrawBuffer(),
                 new PresentationVisualProxyBuffer(8),
                 new SkinnedVisualBatchBuffer(8));
+        }
+
+        private static PresentationRuntimeConfig CreateBlacksmithScaleConfig()
+        {
+            return new PresentationRuntimeConfig
+            {
+                VisualProxyBufferCapacity = 1_048_576,
+                GroundOverlayCapacity = 65_536,
+                WorldHudCapacity = 1_048_576,
+                SplineRibbonCapacity = 65_536,
+                PresenterInstanceCapacity = 1_048_576,
+                PresentationRequestCapacity = BlacksmithRequestPeakCapacity,
+                InstancedBatchRequestCapacity = BlacksmithInstancedBatchCapacity,
+                InstancedBatchOperationCapacity = BlacksmithInstancedBatchCapacity,
+            };
+        }
+
+        private static long RequestChannelBytes(in PresentationRequestChannelCapacities capacities)
+        {
+            return (long)Unsafe.SizeOf<VisualProxyChannelItem>() * capacities.VisualProxy
+                + (long)Unsafe.SizeOf<GroundOverlayChannelItem>() * capacities.GroundOverlay
+                + (long)Unsafe.SizeOf<WorldHudChannelItem>() * capacities.WorldHud
+                + (long)Unsafe.SizeOf<SplineRibbonChannelItem>() * capacities.SplineRibbon
+                + (long)Unsafe.SizeOf<SurfaceSourceChannelItem>() * capacities.SurfaceSource
+                + (long)Unsafe.SizeOf<PresentationRemovalRequest>() * capacities.Removal
+                + (long)Unsafe.SizeOf<Entity>() * capacities.ClearTransient
+                + (long)Unsafe.SizeOf<PresentationRequestOp>() * capacities.TotalOperationCapacity;
+        }
+
+        private static long InstancedBatchBytes(PresentationRuntimeConfig config)
+        {
+            return (long)Unsafe.SizeOf<InstancedBatchRequest>() * config.InstancedBatchRequestCapacity
+                + (long)Unsafe.SizeOf<InstancedBatchOperation>() * config.InstancedBatchOperationCapacity;
         }
     }
 }

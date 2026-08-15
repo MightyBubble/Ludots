@@ -1118,6 +1118,75 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void Launcher_ResolvesRaylibClientParity_AsPresenterEraContract()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-raylib-client-parity-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "$raylib_client_parity" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.RootModIds, Is.EqualTo(new[] { "RaylibClientParityShowcaseMod" }));
+                Assert.That(plan.OrderedModIds, Does.Contain("RaylibClientParityShowcaseMod"));
+                Assert.That(plan.OrderedModIds, Does.Contain("PresenterBlacksmithShowcaseMod"),
+                    "raylib_client_parity must depend on the Presenter-era blacksmith mod.");
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"),
+                    "raylib_client_parity must not pull the legacy Performer blacksmith mod.");
+
+                var modRoot = Path.Combine(
+                    repoRoot,
+                    "mods",
+                    "showcases",
+                    "raylib_client_parity",
+                    "RaylibClientParityShowcaseMod");
+                var presentationRoot = Path.Combine(modRoot, "assets", "Presentation");
+
+                Assert.That(
+                    File.Exists(Path.Combine(presentationRoot, "performers.json")),
+                    Is.False,
+                    "Legacy performers.json must no longer ship in the raylib_client_parity showcase.");
+                Assert.That(
+                    File.Exists(Path.Combine(presentationRoot, "presenters.json")),
+                    Is.True,
+                    "raylib_client_parity must ship a Presenter-era presenters.json.");
+
+                string presentersJson = File.ReadAllText(Path.Combine(presentationRoot, "presenters.json"));
+                Assert.That(presentersJson, Does.Contain("\"CreatePresenter\""));
+                Assert.That(presentersJson, Does.Contain("\"DestroyPresenterScope\""));
+                Assert.That(presentersJson, Does.Not.Contain("CreatePerformer"));
+                Assert.That(presentersJson, Does.Not.Contain("DestroyPerformerScope"));
+
+                string hostAssetsJson = File.ReadAllText(Path.Combine(presentationRoot, "host_assets.json"));
+                Assert.That(hostAssetsJson, Does.Contain("PresenterBlacksmithShowcaseMod:"));
+                Assert.That(hostAssetsJson, Does.Not.Contain("PerformerBlacksmithShowcaseMod:"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
         private static string CreateTestMod(string root, string modName, int priority, string? dependenciesJson = null)
         {
             var modDir = Path.Combine(root, modName);

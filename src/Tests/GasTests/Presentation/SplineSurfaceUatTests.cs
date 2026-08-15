@@ -9,7 +9,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -19,6 +21,50 @@ namespace Ludots.Tests.GAS
     public sealed class SplineSurfaceUatTests
     {
         private const string MapId = "spline_surface_uat";
+
+        [Test]
+        public void SurfaceSourceLifecycle_RemovesDeadPendingRecordsAfterEnumeration()
+        {
+            World world = World.Create();
+            try
+            {
+                var runtime = new SurfaceSourceRuntimeRegistry();
+                runtime.Upsert(
+                    new SurfaceSourceRequest
+                    {
+                        StableId = 1001,
+                        ScopeId = 2001,
+                        PresenterDefinitionId = 3001,
+                        SurfaceKind = PresenterSurfaceKind.SplineRibbon,
+                    },
+                    new SurfacePayloadSnapshot(PresenterSurfaceKind.SplineRibbon, 1, default, default, default),
+                    frame: 1);
+                runtime.Upsert(
+                    new SurfaceSourceRequest
+                    {
+                        StableId = 1002,
+                        ScopeId = 2002,
+                        PresenterDefinitionId = 3002,
+                        SurfaceKind = PresenterSurfaceKind.SplineRibbon,
+                    },
+                    new SurfacePayloadSnapshot(PresenterSurfaceKind.SplineRibbon, 1, default, default, default),
+                    frame: 1);
+                runtime.MarkPendingRemoval(1001);
+
+                using var lifecycle = new SurfaceSourceLifecycleSystem(
+                    world,
+                    runtime,
+                    new PresenterCommandBuffer(8));
+
+                Assert.DoesNotThrow(() => lifecycle.Update(1f / 60f));
+                SurfaceSourceRecord[] records = runtime.Records.ToArray();
+                Assert.That(records.Select(record => record.SourceStableId), Is.EqualTo(new[] { 1002 }));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
 
         [Test]
         public void SplineSurfaceUat_LoadMap_BakesAllPresenterSourcedSurfaceKinds()

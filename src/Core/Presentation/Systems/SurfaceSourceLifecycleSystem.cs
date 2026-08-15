@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Presenters;
@@ -11,6 +12,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly SurfaceSourceRuntimeRegistry _runtime;
         private readonly PresenterCommandBuffer _commands;
+        private readonly List<int> _completedRemovals = new();
 
         public SurfaceSourceLifecycleSystem(
             World world,
@@ -24,6 +26,12 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
+            _completedRemovals.Clear();
+            if (_completedRemovals.Capacity < _runtime.Count)
+            {
+                _completedRemovals.Capacity = _runtime.Count;
+            }
+
             foreach (SurfaceSourceRecord record in _runtime.Records)
             {
                 if (!record.PendingRemoval)
@@ -60,8 +68,13 @@ namespace Ludots.Core.Presentation.Systems
                 }
                 else
                 {
-                    _runtime.Remove(record.SourceStableId);
+                    _completedRemovals.Add(record.SourceStableId);
                 }
+            }
+
+            for (int i = 0; i < _completedRemovals.Count; i++)
+            {
+                _runtime.Remove(_completedRemovals[i]);
             }
         }
     }

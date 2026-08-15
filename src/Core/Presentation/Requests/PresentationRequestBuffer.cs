@@ -140,6 +140,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddVisualProxy(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.VisualProxy.StableId);
             EnsureChannelRoom(_visualProxyCount, _visualProxies.Length, request.Kind, request.VisualProxy.StableId);
             int slot = _visualProxyCount++;
             _visualProxies[slot] = new VisualProxyChannelItem
@@ -152,6 +153,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddGroundOverlay(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.GroundOverlay.StableId);
             EnsureChannelRoom(_groundOverlayCount, _groundOverlays.Length, request.Kind, request.GroundOverlay.StableId);
             int slot = _groundOverlayCount++;
             _groundOverlays[slot] = new GroundOverlayChannelItem
@@ -165,6 +167,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddWorldHud(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.WorldHud.StableId);
             EnsureChannelRoom(_worldHudCount, _worldHud.Length, request.Kind, request.WorldHud.StableId);
             int slot = _worldHudCount++;
             _worldHud[slot] = new WorldHudChannelItem
@@ -178,6 +181,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddSplineRibbon(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.SplineRibbon.StableId);
             EnsureChannelRoom(_splineRibbonCount, _splineRibbons.Length, request.Kind, request.SplineRibbon.StableId);
             int slot = _splineRibbonCount++;
             _splineRibbons[slot] = new SplineRibbonChannelItem
@@ -191,6 +195,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddSurfaceSource(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.SurfaceSource.StableId);
             EnsureChannelRoom(_surfaceSourceCount, _surfaceSources.Length, request.Kind, request.SurfaceSource.StableId);
             int slot = _surfaceSourceCount++;
             _surfaceSources[slot] = new SurfaceSourceChannelItem
@@ -204,6 +209,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddRemoval(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.StableId);
             EnsureChannelRoom(_removalCount, _removals.Length, request.Kind, request.StableId);
             int slot = _removalCount++;
             _removals[slot] = new PresentationRemovalRequest
@@ -217,20 +223,25 @@ namespace Ludots.Core.Presentation.Requests
 
         private void AddClearTransient(in PresentationRequest request)
         {
+            EnsureOperationRoom(request.Kind, request.StableId);
             EnsureChannelRoom(_clearTransientCount, _clearTransients.Length, request.Kind, request.StableId);
             int slot = _clearTransientCount++;
             _clearTransients[slot] = request.Owner;
             RecordOp(PresentationRequestChannel.ClearTransient, slot, request.Kind, request.StableId);
         }
 
-        private void RecordOp(PresentationRequestChannel channel, int slot, PresentationRequestKind kind, int stableId)
+        private void EnsureOperationRoom(PresentationRequestKind kind, int stableId)
         {
             if (_opCount >= _ops.Length)
             {
                 throw new InvalidOperationException(
                     $"PresentationRequestBuffer overflowed while adding kind={kind}, stableId={stableId}.");
             }
+        }
 
+        private void RecordOp(PresentationRequestChannel channel, int slot, PresentationRequestKind kind, int stableId)
+        {
+            EnsureOperationRoom(kind, stableId);
             _ops[_opCount++] = new PresentationRequestOp(channel, slot);
         }
 

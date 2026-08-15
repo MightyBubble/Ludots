@@ -6,7 +6,7 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "PerformerBlacksmithShowcaseMod": "^1.0.0"
+    "PresenterBlacksmithShowcaseMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["showcase", "raylib", "parity", "gpu-skinned", "ism"]

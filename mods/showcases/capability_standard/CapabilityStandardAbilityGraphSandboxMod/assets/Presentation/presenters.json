@@ -4,6 +4,10 @@
     "extends": "entity_health_bar",
     "visibility": { "inline": "None" },
     "maxVisibilityDistanceCm": 20000,
+    "bindings": [
+      { "paramKey": "worldBar.width", "source": "constant", "constantValue": 90 },
+      { "paramKey": "worldBar.height", "source": "constant", "constantValue": 12 }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -17,17 +21,6 @@
           "materialParamKey": "worldBar.fillRatio"
         },
         "style": { "color": [0.12, 0.92, 0.28, 1] }
-      },
-      {
-        "slot": "attachment",
-        "kind": "Attachment",
-        "activeByDefault": true,
-        "attachment": {
-          "target": "Parent",
-          "offset": [0, 2.35, 0],
-          "rotationOffset": [0, 0, 0, 1],
-          "inheritScale": false
-        }
       }
     ],
     "anchor": { "offset": [0, 2.35, 0] }
@@ -82,11 +75,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Caster" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.caster" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Caster" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -118,11 +111,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Ally" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.ally" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Ally" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -154,20 +147,20 @@
       {
         "event": { "kind": "EntitySpawned", "key": "GraphOps.Target" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "GraphOps.Target" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       },
       {
         "event": { "kind": "EntitySpawned", "key": "Unit.Soldier" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.enemy" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "Unit.Soldier" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -199,11 +192,11 @@
       {
         "event": { "kind": "EntitySpawned", "key": "Unit.Scout" },
         "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
+        "command": { "kind": "CreatePresenter", "scopeSource": "EventPayloadA", "definitionId": "graphops.visual.scout" }
       },
       {
         "event": { "kind": "EntityDestroyed", "key": "Unit.Scout" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "command": { "kind": "DestroyPresenterScope", "scopeSource": "EventPayloadA" }
       }
     ]
   }

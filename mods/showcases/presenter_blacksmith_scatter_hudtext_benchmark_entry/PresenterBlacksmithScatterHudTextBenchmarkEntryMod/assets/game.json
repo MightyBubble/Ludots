@@ -10,7 +10,7 @@
     "visualSnapshotBufferCapacity": 1048576,
     "visualProxyBufferCapacity": 1048576,
     "skinnedVisualBatchCapacity": 65536,
-    "presentationRequestCapacity": 2097152,
+    "presentationRequestCapacity": 196608,
     "groundOverlayCapacity": 1,
     "splineRibbonCapacity": 1,
     "worldHudCapacity": 1048576,

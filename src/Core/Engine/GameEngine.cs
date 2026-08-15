@@ -1028,8 +1028,8 @@ namespace Ludots.Core.Engine
             var particleVfx = new ParticleVfxRegistry();
             var materialAssets = new PresentationMaterialRegistry();
             var instancedBatchAssets = new InstancedBatchAssetRegistry();
-            var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
-            var instancedBatchOperations = new InstancedBatchOperationBuffer(presentationConfig.PresentationRequestCapacity);
+            var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.InstancedBatchRequestCapacity);
+            var instancedBatchOperations = new InstancedBatchOperationBuffer(presentationConfig.InstancedBatchOperationCapacity);
             var instancedBatchSubmissionRuntime = new InstancedBatchSubmissionRuntime();
             var animatorControllers = new AnimatorControllerRegistry();
             var animationClips = new AnimationClipRegistry();

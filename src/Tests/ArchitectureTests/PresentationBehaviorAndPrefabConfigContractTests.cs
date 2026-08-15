@@ -1018,6 +1018,8 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 16384,
     "skinnedVisualBatchCapacity": 2048,
     "presentationRequestCapacity": 16384,
+    "instancedBatchRequestCapacity": 2048,
+    "instancedBatchOperationCapacity": 4096,
     "globalFieldVisualRecordCapacity": 128,
     "globalFieldVisualCellCapacity": 65536,
     "globalFieldVisualDirtyRectCapacity": 1024,
@@ -1064,6 +1066,8 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 32768,
     "presentationRequestCapacity": 131072,
+    "instancedBatchRequestCapacity": 8192,
+    "instancedBatchOperationCapacity": 16384,
     "globalFieldVisualRecordCapacity": 512,
     "globalFieldVisualCellCapacity": 262144,
     "globalFieldVisualDirtyRectCapacity": 4096,
@@ -1099,6 +1103,8 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.InstancedBatchRequestCapacity, Is.EqualTo(8192));
+            Assert.That(config.Presentation.InstancedBatchOperationCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.GlobalFieldVisualRecordCapacity, Is.EqualTo(512));
             Assert.That(config.Presentation.GlobalFieldVisualCellCapacity, Is.EqualTo(262144));
             Assert.That(config.Presentation.GlobalFieldVisualDirtyRectCapacity, Is.EqualTo(4096));
