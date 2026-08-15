@@ -363,36 +363,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException($"Graph call stack count out of range: {cursor.CallStackCount}.");
             }
 
-            state.CallStackCount = cursor.CallStackCount;
-            state.ReturnInt = cursor.ReturnInt;
-            state.Status = GraphExecutionStatus.Running;
-            state.ProgramLength = program.Length;
-            state.InvokeDepth = cursor.InvokeDepth;
-            if (state.TreeSteps < cursor.Steps)
-            {
-                state.TreeSteps = cursor.Steps;
-            }
-
             cursor.Status = GraphExecutionStatus.Running;
 
             var table = handlers.Handlers;
             Span<int> ints = state.I;
             int pc = cursor.Pc;
-            int treeSteps = state.TreeSteps;
+            int callStackCount = cursor.CallStackCount;
+            int returnInt = cursor.ReturnInt;
+            int treeSteps = state.TreeSteps < cursor.Steps ? cursor.Steps : state.TreeSteps;
             int stepsThisSlice = 0;
+            bool statePrepared = false;
+            const ushort moveIntOp = (ushort)GraphNodeOp.MoveInt;
+            const ushort constIntOp = (ushort)GraphNodeOp.ConstInt;
+            const ushort haltReturnIntOp = (ushort)GraphNodeOp.HaltReturnInt;
 
             while (stepsThisSlice < budgetSteps)
             {
                 if (treeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
                 {
+                    state.CallStackCount = callStackCount;
+                    state.ReturnInt = returnInt;
                     cursor.Pc = pc;
-                    cursor.CallStackCount = state.CallStackCount;
-                    cursor.ReturnInt = state.ReturnInt;
+                    cursor.CallStackCount = callStackCount;
+                    cursor.ReturnInt = returnInt;
                     cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.BudgetSuspended;
                     state.TreeSteps = treeSteps;
                     state.Status = GraphExecutionStatus.BudgetSuspended;
-                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
                 }
 
                 if ((uint)pc >= (uint)program.Length)
@@ -407,87 +405,106 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 treeSteps++;
                 stepsThisSlice++;
 
-                if (ins.Op == 0)
+                ushort op = ins.Op;
+                if (op == moveIntOp)
+                {
+                    if (ins.Dst != ins.A)
+                    {
+                        ints[ins.Dst] = ints[ins.A];
+                    }
+
+                    continue;
+                }
+
+                if (op == constIntOp)
+                {
+                    ints[ins.Dst] = ins.Imm;
+                    continue;
+                }
+
+                if (op == haltReturnIntOp)
+                {
+                    returnInt = ints[ins.A];
+                    state.CallStackCount = callStackCount;
+                    state.ReturnInt = returnInt;
+                    state.Status = GraphExecutionStatus.Halted;
+                    cursor.Pc = instructionIndex + 1;
+                    cursor.CallStackCount = callStackCount;
+                    cursor.ReturnInt = returnInt;
+                    cursor.Steps = treeSteps;
+                    cursor.Status = GraphExecutionStatus.Halted;
+                    state.TreeSteps = treeSteps;
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
+                }
+
+                if (op == 0)
                 {
                     continue;
                 }
 
-                switch ((GraphNodeOp)ins.Op)
+                if (op >= table.Length)
                 {
-                    case GraphNodeOp.ConstInt:
-                        ints[ins.Dst] = ins.Imm;
-                        continue;
+                    throw new InvalidOperationException(
+                        $"Graph op {op} exceeds handler table capacity ({table.Length}).");
+                }
 
-                    case GraphNodeOp.MoveInt:
-                        ints[ins.Dst] = ints[ins.A];
-                        continue;
+                var handler = table[op];
+                if (handler == null)
+                {
+                    throw new InvalidOperationException(
+                        $"No handler registered for graph op {op}.");
+                }
 
-                    case GraphNodeOp.HaltReturnInt:
-                        state.ReturnInt = ints[ins.A];
-                        state.Status = GraphExecutionStatus.Halted;
-                        cursor.Pc = instructionIndex + 1;
-                        cursor.CallStackCount = state.CallStackCount;
-                        cursor.ReturnInt = state.ReturnInt;
-                        cursor.Steps = treeSteps;
-                        cursor.Status = GraphExecutionStatus.Halted;
-                        state.TreeSteps = treeSteps;
-                        return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+                if (!statePrepared)
+                {
+                    state.CallStackCount = callStackCount;
+                    state.ReturnInt = returnInt;
+                    state.Status = GraphExecutionStatus.Running;
+                    state.ProgramLength = program.Length;
+                    state.InvokeDepth = cursor.InvokeDepth;
+                    statePrepared = true;
+                }
 
-                    default:
-                    {
-                        if (ins.Op >= table.Length)
-                        {
-                            throw new InvalidOperationException(
-                                $"Graph op {ins.Op} exceeds handler table capacity ({table.Length}).");
-                        }
-
-                        var handler = table[ins.Op];
-                        if (handler == null)
-                        {
-                            throw new InvalidOperationException(
-                                $"No handler registered for graph op {ins.Op}.");
-                        }
-
-                        state.TreeSteps = treeSteps;
-                        handler(ref state, in ins, ref pc);
-                        if (state.TreeSteps > treeSteps)
-                        {
-                            treeSteps = state.TreeSteps;
-                        }
-
-                        break;
-                    }
+                state.TreeSteps = treeSteps;
+                handler(ref state, in ins, ref pc);
+                callStackCount = state.CallStackCount;
+                returnInt = state.ReturnInt;
+                if (state.TreeSteps > treeSteps)
+                {
+                    treeSteps = state.TreeSteps;
                 }
 
                 if (state.Status == GraphExecutionStatus.Yielded)
                 {
                     cursor.Pc = pc;
-                    cursor.CallStackCount = state.CallStackCount;
-                    cursor.ReturnInt = state.ReturnInt;
+                    cursor.CallStackCount = callStackCount;
+                    cursor.ReturnInt = returnInt;
                     cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.Yielded;
-                    return new GraphSliceResult(GraphExecutionStatus.Yielded, cursor.ReturnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.Yielded, returnInt, cursor.Steps);
                 }
 
                 if (state.Status == GraphExecutionStatus.Halted)
                 {
                     cursor.Pc = instructionIndex + 1;
-                    cursor.CallStackCount = state.CallStackCount;
-                    cursor.ReturnInt = state.ReturnInt;
+                    cursor.CallStackCount = callStackCount;
+                    cursor.ReturnInt = returnInt;
                     cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.Halted;
-                    return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
                 }
             }
 
+            state.CallStackCount = callStackCount;
+            state.ReturnInt = returnInt;
             cursor.Pc = pc;
-            cursor.CallStackCount = state.CallStackCount;
-            cursor.ReturnInt = state.ReturnInt;
+            cursor.CallStackCount = callStackCount;
+            cursor.ReturnInt = returnInt;
             cursor.Steps = treeSteps;
             cursor.Status = GraphExecutionStatus.BudgetSuspended;
             state.TreeSteps = treeSteps;
             state.Status = GraphExecutionStatus.BudgetSuspended;
-            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
+            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
         }
 
         private void RegisterBuiltins()
