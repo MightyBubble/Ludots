@@ -1,0 +1,38 @@
+[
+  {
+    "id": "raylib_client_parity.mannequin.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_client_parity.mannequin",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibClientParityShowcaseMod:assets/Models/mannequin_large_walk.glb"
+    ]
+  },
+  {
+    "id": "raylib_client_parity.vfx_marker.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_client_parity.vfx_marker",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibClientParityShowcaseMod:assets/Textures/smoke_puff.png"
+    ]
+  },
+  {
+    "id": "raylib_client_parity.albedo_building.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_client_parity.albedo_building",
+    "backendId": "raylib",
+    "sourceUris": [
+      "PerformerBlacksmithShowcaseMod:assets/Models/building_blacksmith_blue.gltf"
+    ]
+  },
+  {
+    "id": "raylib_client_parity.albedo_demo.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_client_parity.albedo_demo",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibClientParityShowcaseMod:assets/Textures/parity_albedo_override.png"
+    ]
+  }
+]

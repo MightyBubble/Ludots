@@ -1,6 +1,5 @@
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -13,16 +12,14 @@ namespace Ludots.Core.Presentation.Requests
         public Entity Owner;
         public LODLevel LOD;
         public PresentationVisualProxy VisualProxy;
-        public int PrefabId;
         public int StableId;
         public Vector3 Position;
         public Quaternion Rotation;
         public Vector3 Scale;
         public Vector4 Color;
-        public PrefabFinalizationContext PrefabContext;
         public GroundOverlayItem GroundOverlay;
         public WorldHudItem WorldHud;
-        public RoadSplineRequest RoadSpline;
+        public SplineRibbonRequest SplineRibbon;
         public SurfaceSourceRequest SurfaceSource;
 
         public static PresentationRequest FromVisualProxy(Entity owner, in PresentationVisualProxy proxy)
@@ -33,32 +30,6 @@ namespace Ludots.Core.Presentation.Requests
                 Owner = owner,
                 LOD = proxy.LOD,
                 VisualProxy = proxy,
-            };
-        }
-
-        public static PresentationRequest FromPrefab(
-            Entity owner,
-            int prefabId,
-            int stableId,
-            in Vector3 position,
-            in Quaternion rotation,
-            in Vector3 scale,
-            in Vector4 color,
-            LODLevel lod,
-            in PrefabFinalizationContext context)
-        {
-            return new PresentationRequest
-            {
-                Kind = PresentationRequestKind.Prefab,
-                Owner = owner,
-                PrefabId = prefabId,
-                StableId = stableId,
-                Position = position,
-                Rotation = rotation,
-                Scale = scale,
-                Color = color,
-                LOD = lod,
-                PrefabContext = context,
             };
         }
 
@@ -86,13 +57,13 @@ namespace Ludots.Core.Presentation.Requests
             };
         }
 
-        public static PresentationRequest FromRoadSpline(Entity owner, in RoadSplineRequest spline, LODLevel lod)
+        public static PresentationRequest FromSplineRibbon(Entity owner, in SplineRibbonRequest spline, LODLevel lod)
         {
             return new PresentationRequest
             {
-                Kind = PresentationRequestKind.RoadSpline,
+                Kind = PresentationRequestKind.SplineRibbon,
                 Owner = owner,
-                RoadSpline = spline,
+                SplineRibbon = spline,
                 LOD = lod,
             };
         }
@@ -129,11 +100,11 @@ namespace Ludots.Core.Presentation.Requests
             };
         }
 
-        public static PresentationRequest RemoveRoadSpline(Entity owner, int stableId)
+        public static PresentationRequest RemoveSplineRibbon(Entity owner, int stableId)
         {
             return new PresentationRequest
             {
-                Kind = PresentationRequestKind.RemoveRoadSpline,
+                Kind = PresentationRequestKind.RemoveSplineRibbon,
                 Owner = owner,
                 StableId = stableId,
             };

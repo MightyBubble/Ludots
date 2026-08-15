@@ -432,25 +432,25 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="532.8" y="547.793625" transform="rotate(-0 532.8 547.793625)">Selection -&gt; EventStream</text>
    </g>
    <g id="text_18">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="621.790391" transform="rotate(-0 532.8 621.790391)">PerformerRuleSystem</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="621.790391" transform="rotate(-0 532.8 621.790391)">PresenterRuleSystem</text>
    </g>
    <g id="text_19">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="532.8" y="638.513625" transform="rotate(-0 532.8 638.513625)">Event x Rule -&gt; Command</text>
    </g>
    <g id="text_20">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="712.510391" transform="rotate(-0 532.8 712.510391)">PerformerRuntimeSystem</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="712.510391" transform="rotate(-0 532.8 712.510391)">PresenterRuntimeSystem</text>
    </g>
    <g id="text_21">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="532.8" y="729.174656" transform="rotate(-0 532.8 729.174656)">Create / Destroy / SetParam</text>
    </g>
    <g id="text_22">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="803.230391" transform="rotate(-0 532.8 803.230391)">PerformerBehaviorSystem</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="803.230391" transform="rotate(-0 532.8 803.230391)">PresenterBehaviorSystem</text>
    </g>
    <g id="text_23">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="532.8" y="819.953625" transform="rotate(-0 532.8 819.953625)">Animator / Material / Sound</text>
    </g>
    <g id="text_24">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="893.950391" transform="rotate(-0 532.8 893.950391)">PerformerEmitSystem</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="532.8" y="893.950391" transform="rotate(-0 532.8 893.950391)">PresenterEmitSystem</text>
    </g>
    <g id="text_25">
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="532.8" y="910.793156" transform="rotate(-0 532.8 910.793156)">VisualProxy / DrawBuffer</text>

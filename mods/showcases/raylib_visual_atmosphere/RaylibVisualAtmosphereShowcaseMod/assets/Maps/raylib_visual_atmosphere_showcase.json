@@ -1,0 +1,46 @@
+{
+  "Id": "raylib_visual_atmosphere_showcase",
+  "VisualHeightmapAsset": "assets/terrain/tropical_island.vhtm",
+  "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
+  "DefaultCamera": {
+    "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 205,
+    "Pitch": 48,
+    "DistanceCm": 42000,
+    "FovYDeg": 48
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 128,
+      "HeightInMacroTiles": 128,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 512,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "raylib_visual_atmosphere_vfx_blend",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -4500, "Y": -2800 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_vfx_additive",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -3200, "Y": -3500 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_rock",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -1800, "Y": -2200 } }
+      }
+    }
+  ]
+}

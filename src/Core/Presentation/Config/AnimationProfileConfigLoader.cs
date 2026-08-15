@@ -2,7 +2,6 @@ using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -42,6 +41,12 @@ namespace Ludots.Core.Presentation.Config
 
         private AnimationProfileDefinition ParseProfile(JsonNode node, string key)
         {
+            if (node["builtinClips"] != null || node["builtin_clips"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Animation profile '{key}' uses removed field 'builtinClips'. Author packed-state bindings in 'stateClips'; overlay channels are named slots, not profile bindings.");
+            }
+
             string controllerKey = node["animatorControllerId"]?.GetValue<string>() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(controllerKey))
             {
@@ -56,16 +61,12 @@ namespace Ludots.Core.Presentation.Config
             }
 
             var stateClips = ParseStateClips(node["stateClips"], key);
-            var builtinClips = ParseBuiltinClips(node["builtinClips"], key);
-
             ValidateUniqueStateBindings(key, stateClips);
-            ValidateUniqueBuiltinBindings(key, builtinClips);
 
             return new AnimationProfileDefinition
             {
                 AnimatorControllerId = animatorControllerId,
                 StateClips = stateClips,
-                BuiltinClips = builtinClips,
             };
         }
 
@@ -89,41 +90,6 @@ namespace Ludots.Core.Presentation.Config
                 bindings[i] = new AnimationStateClipBinding
                 {
                     PackedStateIndex = bindingNode["packedStateIndex"]?.GetValue<int>() ?? 0,
-                    ClipAssetId = clipAssetId,
-                };
-            }
-
-            return bindings;
-        }
-
-        private AnimationBuiltinClipBinding[] ParseBuiltinClips(JsonNode? node, string key)
-        {
-            if (node is not JsonArray array || array.Count == 0)
-            {
-                return Array.Empty<AnimationBuiltinClipBinding>();
-            }
-
-            var bindings = new AnimationBuiltinClipBinding[array.Count];
-            for (int i = 0; i < array.Count; i++)
-            {
-                if (array[i] is not JsonObject bindingNode)
-                {
-                    throw new InvalidOperationException($"Animation profile '{key}' builtinClips[{i}] must be an object.");
-                }
-
-                string builtinClipText = bindingNode["builtinClipId"]?.GetValue<string>() ?? string.Empty;
-                if (!Enum.TryParse(builtinClipText, ignoreCase: false, out AnimatorBuiltinClipId builtinClipId) ||
-                    builtinClipId == AnimatorBuiltinClipId.None)
-                {
-                    throw new InvalidOperationException(
-                        $"Animation profile '{key}' builtinClips[{i}] has invalid builtinClipId '{builtinClipText}'.");
-                }
-
-                string clipKey = bindingNode["clipAssetId"]?.GetValue<string>() ?? string.Empty;
-                int clipAssetId = ResolveClipId(clipKey, key, $"builtinClips[{i}]");
-                bindings[i] = new AnimationBuiltinClipBinding
-                {
-                    BuiltinClipId = builtinClipId,
                     ClipAssetId = clipAssetId,
                 };
             }
@@ -158,21 +124,6 @@ namespace Ludots.Core.Presentation.Config
                     {
                         throw new InvalidOperationException(
                             $"Animation profile '{key}' defines duplicate state clip binding for packedStateIndex={bindings[i].PackedStateIndex}.");
-                    }
-                }
-            }
-        }
-
-        private static void ValidateUniqueBuiltinBindings(string key, AnimationBuiltinClipBinding[] bindings)
-        {
-            for (int i = 0; i < bindings.Length; i++)
-            {
-                for (int j = i + 1; j < bindings.Length; j++)
-                {
-                    if (bindings[i].BuiltinClipId == bindings[j].BuiltinClipId)
-                    {
-                        throw new InvalidOperationException(
-                            $"Animation profile '{key}' defines duplicate builtin clip binding for '{bindings[i].BuiltinClipId}'.");
                     }
                 }
             }

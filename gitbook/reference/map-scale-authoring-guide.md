@@ -58,7 +58,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 6. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
 7. 定执行窗口：MassNavigationFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
 8. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。
-9. 定表现容量：大地图不等于所有 performer 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
+9. 定表现容量：大地图不等于所有 presenter 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
 
 ## RTS / 战场型
 

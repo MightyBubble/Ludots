@@ -135,7 +135,7 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
             intent.SinkPhysicsCollider = 0;
             intent.SinkNavigationObstacle = 0;
             // 开门 = 视觉门消失：销毁 door 实体（物理/导航由 ManifestationObstacleBridge 清理，
-            // performer 随 EntityDestroyed 销毁），玩家看到门消失。
+            // presenter 随 EntityDestroyed 销毁），玩家看到门消失。
             World.Destroy(entity);
             OpenedDoorCount++;
         }

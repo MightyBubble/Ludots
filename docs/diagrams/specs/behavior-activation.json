@@ -5,7 +5,7 @@
   "canvas": { "width": 1720, "height": 1280 },
 
   "nodes": [
-    { "id": "performer", "title": "PerformerDefinition", "tint": "stone",
+    { "id": "presenter", "title": "PresenterDefinition", "tint": "stone",
       "x": 710, "y": 160, "w": 300, "h": 90,
       "items": ["Declarative Definition"] },
 
@@ -48,7 +48,7 @@
   ],
 
   "edges": [
-    { "from": "performer", "to": "slot", "route": "elbow", "from_side": "bottom", "to_side": "top" },
+    { "from": "presenter", "to": "slot", "route": "elbow", "from_side": "bottom", "to_side": "top" },
 
     { "from": "asset", "to": "slot", "route": "curve", "rad": 0.12 },
     { "from": "animator", "to": "slot", "route": "curve", "rad": 0.08 },
@@ -65,6 +65,6 @@
   ],
 
   "notes": [
-    { "text": "PerformerDefinition 声明式定义，激活 BehaviorSlot 组合单元", "x": 860, "y": 118, "ha": "center" }
+    { "text": "PresenterDefinition 声明式定义，激活 BehaviorSlot 组合单元", "x": 860, "y": 118, "ha": "center" }
   ]
 }

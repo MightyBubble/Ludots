@@ -9,9 +9,9 @@ namespace Ludots.Core.Presentation.Events
         EntityDestroyed = 4,
         ProjectileSpawned = 5,
 
-        // Performer domain events
-        PerformerCreated = 10,
-        PerformerDestroyed = 11,
+        // Presenter domain events
+        PresenterCreated = 10,
+        PresenterDestroyed = 11,
 
         // GAS presentation events
         EffectApplied = 20,

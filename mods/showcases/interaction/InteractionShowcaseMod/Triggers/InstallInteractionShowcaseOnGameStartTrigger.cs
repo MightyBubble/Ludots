@@ -13,7 +13,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
 namespace InteractionShowcaseMod.Triggers
@@ -93,12 +93,12 @@ namespace InteractionShowcaseMod.Triggers
                 return;
             }
 
-            if (context.Get(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
+            if (context.Get(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
             {
                 return;
             }
 
-            if (context.Get(CoreServiceKeys.PerformerDefinitionRegistry) is not PerformerDefinitionRegistry definitions)
+            if (context.Get(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry definitions)
             {
                 return;
             }
@@ -111,9 +111,9 @@ namespace InteractionShowcaseMod.Triggers
 
             commandSourceAcquiredCallbacks.Add((_, entity) =>
             {
-                commands.TryAdd(new PerformerCommand
+                commands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    CommandKind = PresenterCommandKind.DestroyPresenterScope,
                     ScopeTag = InteractionShowcaseIds.SelectionScopeId
                 });
 
@@ -122,10 +122,10 @@ namespace InteractionShowcaseMod.Triggers
                     return;
                 }
 
-                commands.TryAdd(new PerformerCommand
+                commands.TryAdd(new PresenterCommand
                 {
-                    CommandKind = PerformerCommandKind.CreatePerformer,
-                    PerformerDefinitionId = selectionDefId,
+                    CommandKind = PresenterCommandKind.CreatePresenter,
+                    PresenterDefinitionId = selectionDefId,
                     ScopeTag = InteractionShowcaseIds.SelectionScopeId,
                     Source = entity
                 });

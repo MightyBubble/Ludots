@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -15,6 +16,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
@@ -24,7 +26,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
@@ -169,17 +171,13 @@ namespace Ludots.Adapter.Raylib
                 HeightScale = 2.0f,
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
-                LightPosition = new Vector3(50f, 200f, 100f),
-                Ambient = 0.8f,
-                LightIntensity = 1.0f
             };
-            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer
+            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS, engine.ConfigPipeline)
             {
                 VisibleRadiusCm = 140_000f,
-                LightPosition = new Vector3(50f, 200f, 100f),
-                Ambient = 0.45f,
-                LightIntensity = 0.55f
             };
+            var frameLighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: ResolveInitialDayPhase01());
+            RaylibRenderEnvironmentConfig renderEnvironmentConfig = RaylibRenderEnvironmentConfig.CreateDefault();
 
             try
             {
@@ -206,6 +204,7 @@ namespace Ludots.Adapter.Raylib
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
                 using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
+                using var environmentRenderer = new RaylibRenderEnvironmentRenderer(renderEnvironmentConfig);
                 var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
@@ -236,7 +235,7 @@ namespace Ludots.Adapter.Raylib
                 var cullingFocusOverride = new CameraCullingFocusOverride();
                 engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, cullingFocusOverride);
 
-                var performerInstances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+                var presenterInstances = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
                 var cullingSystem = new CameraCullingSystem(
                     engine.World,
                     engine.GameSession.Camera,
@@ -244,7 +243,7 @@ namespace Ludots.Adapter.Raylib
                     viewController,
                     loadedChunks: null,
                     focusOverride: cullingFocusOverride,
-                    performers: performerInstances,
+                    presenters: presenterInstances,
                     timingDiagnostics: presentationTiming,
                     cullingConfig: config.Presentation.CameraCulling);
                 engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
@@ -278,10 +277,25 @@ namespace Ludots.Adapter.Raylib
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
-                using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
+                using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials);
+                primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer);
+                using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS, engine.ConfigPipeline);
+                skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                using var waterPass = new RaylibWaterPass(engine.VFS, engine.ConfigPipeline);
+                waterPass.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                visualHeightmapRenderer.LoadAlbedoDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
+                skyEnvironment.BindPhaseSource(globalPresentationEvents, requiredWhenActive: true);
+                skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
+                if (globalPresentationEvents != null)
+                {
+                    engine.InsertPresentationSystemBefore<GlobalPresentationEventProjectionSystem>(
+                        new RaylibSkyDayNightLatchSystem(engine.World, globalPresentationEvents, skyEnvironment));
+                }
+
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
                 if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
                 {
@@ -434,7 +448,11 @@ namespace Ludots.Adapter.Raylib
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
-                        benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
+                        benchmarkRenderer?.PrepareFrame(
+                            presentationTiming,
+                            lastW,
+                            lastH,
+                            suppressControlPanel: hostDiagnosticUiSuppressed);
                         if (globalFieldVisualBuffer != null)
                         {
                             globalFieldVisualBuffer.BeginFrame();
@@ -463,16 +481,120 @@ namespace Ludots.Adapter.Raylib
                         Rl.BeginDrawing();
                         presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                         Restore3DDepthState();
-                        Rl.ClearBackground(activeMapRequestsDeepBackground
-                            ? new Raylib_cs.Color(6, 10, 16, 255)
-                            : new Raylib_cs.Color(0, 0, 0, 255));
+                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+                        skyEnvironment.EnsureActiveForMap(activeMapId);
+                        waterPass.EnsureActiveForMap(activeMapId);
+                        visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
+                        Color frameClearColor = skyEnvironment.IsActive
+                            ? skyEnvironment.ResolveClearColor()
+                            : (activeMapRequestsDeepBackground
+                                ? new Raylib_cs.Color(6, 10, 16, 255)
+                                : new Raylib_cs.Color(0, 0, 0, 255));
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
+
+                        if (skyEnvironment.HasDayPhase)
+                        {
+                            frameLighting.SetDayPhase(skyEnvironment.DayPhase01);
+                        }
+                        else
+                        {
+                            frameLighting.Evaluate();
+                        }
+
+                        terrainRenderer.ApplyFrameLighting(frameLighting);
+                        visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
+
+                        bool waterOnVisualHeightmap = waterPass.IsActive &&
+                                                      drawTerrain &&
+                                                      drawVisualHeightmap &&
+                                                      hasVisualHeightmap;
+                        bool waterOnVertexMap = waterPass.IsActive &&
+                                                drawTerrain &&
+                                                !waterOnVisualHeightmap &&
+                                                engine.VertexMap != null;
+                        bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+                        bool postProcessWorldFrame = !waterFboEnabled;
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
+                        }
+                        else
+                        {
+                            Rl.ClearBackground(frameClearColor);
+                        }
+                        if (waterFboEnabled)
+                        {
+                            waterPass.EnsureRenderTargets(lastW, lastH);
+                            waterPass.Advance(dt);
+
+                            Camera3D reflectionCamera = waterPass.BuildReflectionCamera(in activeCamera);
+                            waterPass.BeginReflectionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(reflectionCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in reflectionCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
+                                vhReflect is IVisualHeightmapRenderSource reflectSource)
+                            {
+                                // Peak span matches IslandTerrainGenerator.AbsoluteColorPeakSpanCm (showcase SSOT).
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                                visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, reflectionCamera);
+                            }
+
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+
+                            waterPass.BeginRefractionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
+                                vhRefract is IVisualHeightmapRenderSource refractSource)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                                visualHeightmapRenderer.Render(refractSource, activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, activeCamera);
+                            }
+
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+                        }
+
                         long mode3DStart = Stopwatch.GetTimestamp();
                         Restore3DDepthState();
                         BeginCoreMode3D(activeCamera, in activeCameraState);
                         Restore3DDepthState();
+
+                        if (skyEnvironment.IsActive)
+                        {
+                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                        }
 
                         if (drawDebugDraw &&
                             !(drawVisualHeightmap && hasVisualHeightmap) &&
@@ -491,7 +613,33 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
+                            if (waterOnVisualHeightmap)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                            }
+                            else
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                            }
+
                             visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
+
+                            if (waterOnVisualHeightmap)
+                            {
+                                terrainRenderer.EnsureWaterShadersReady();
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                                // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                                terrainRenderer.DrawReflectiveOceanPlane(
+                                    waterPass.WaterPlaneY,
+                                    halfExtentMeters: 900f,
+                                    in activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
                                 visualHeightmapRenderer.ChunkBuildMsLastFrame,
@@ -501,6 +649,15 @@ namespace Ludots.Adapter.Raylib
                         else if (drawTerrain)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
+                            if (waterOnVertexMap)
+                            {
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
                             terrainRenderer.Render(engine.VertexMap, activeCamera);
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
@@ -516,40 +673,53 @@ namespace Ludots.Adapter.Raylib
                         if (drawFieldOverlays && globalFieldVisualBuffer != null)
                         {
                             long fieldRenderStart = Stopwatch.GetTimestamp();
-                            fieldRenderPerformer.Draw(globalFieldVisualBuffer);
+                            fieldRenderPresenter.Draw(globalFieldVisualBuffer);
                             presentationTiming?.ObserveGlobalFieldRender(
                                 ElapsedMs(fieldRenderStart),
-                                fieldRenderPerformer.LastFieldTextureCount,
-                                fieldRenderPerformer.LastDirtyUploadCount,
-                                fieldRenderPerformer.LastDirtyUploadArea,
-                                fieldRenderPerformer.LastDrawCount);
+                                fieldRenderPresenter.LastFieldTextureCount,
+                                fieldRenderPresenter.LastDirtyUploadCount,
+                                fieldRenderPresenter.LastDirtyUploadArea,
+                                fieldRenderPresenter.LastDrawCount);
                         }
                         else
                         {
                             presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
                         }
 
-                        bool benchmarkDrew = false;
+                        // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
+                        // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
                         if (benchmarkRenderer != null)
                         {
-                            benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
+                            _ = benchmarkRenderer.Draw(activeCamera);
                         }
 
-                        if (!benchmarkDrew &&
-                            drawPrimitives &&
+                        if (drawPrimitives &&
                             engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
                             engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D presenters emitting?");
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();
                             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                            primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
+                            if (visualHeightmap != null)
+                            {
+                                visualHeightmapRenderer.BindStampHeightSampleSource(visualHeightmap);
+                            }
+
+                            primitiveRenderer.Draw(
+                                draw,
+                                activeCamera,
+                                snapshot,
+                                skinnedBatch,
+                                meshes,
+                                renderDebug.AcceptanceScaleMultiplier,
+                                visualHeightmap,
+                                runtimeStopwatch.Elapsed.TotalSeconds);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
                                 primitiveRenderer.LastInstancedInstances,
@@ -588,16 +758,16 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         if (!cleanPerformanceMode &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
-                            splineObj is RoadSplineBuffer roadSplines && roadSplines.Count > 0)
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.SplineRibbonBuffer.Name, out var splineObj) &&
+                            splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
                         {
-                            long roadSplineStart = Stopwatch.GetTimestamp();
-                            DrawRoadSplines(roadSplines);
-                            presentationTiming?.ObserveRoadSplineRender(ElapsedMs(roadSplineStart), roadSplines.Count);
+                            long splineRibbonStart = Stopwatch.GetTimestamp();
+                            DrawSplineRibbons(splineRibbons);
+                            presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
                         }
                         else
                         {
-                            presentationTiming?.ObserveRoadSplineRender(0d, 0);
+                            presentationTiming?.ObserveSplineRibbonRender(0d, 0);
                         }
 
                         if (drawDebugDraw &&
@@ -616,6 +786,10 @@ namespace Ludots.Adapter.Raylib
 
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
+                        }
 
                         if (drawSkiaUi)
                         {
@@ -709,6 +883,8 @@ namespace Ludots.Adapter.Raylib
                                 File.Copy(screenshotWorkingFilePath, fullScreenshotPath, overwrite: true);
                                 File.Delete(screenshotWorkingFilePath);
                             }
+
+                            ValidateRuntimeScreenshotEvidence(fullScreenshotPath, lastW, lastH);
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             if (screenshotSequenceEnabled)
@@ -859,55 +1035,6 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// Instanced DrawMeshInstanced segfaults on some software GL stacks (llvmpipe) when Material.maps is null.
-        /// Prefer explicit env; otherwise auto-select Immediate when the host declares software GL.
-        /// </summary>
-        private static RaylibPrimitiveRenderMode ResolvePrimitiveRenderMode()
-        {
-            string? configured = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE");
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                if (configured.Equals("immediate", StringComparison.OrdinalIgnoreCase) ||
-                    configured.Equals("0", StringComparison.Ordinal))
-                {
-                    Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE.");
-                    return RaylibPrimitiveRenderMode.Immediate;
-                }
-
-                if (configured.Equals("instanced", StringComparison.OrdinalIgnoreCase) ||
-                    configured.Equals("1", StringComparison.Ordinal))
-                {
-                    return RaylibPrimitiveRenderMode.Instanced;
-                }
-
-                throw new InvalidOperationException(
-                    "LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE must be 'immediate' or 'instanced'.");
-            }
-
-            if (ReadEnvBoolOrDefault("LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES", defaultValue: false))
-            {
-                Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES.");
-                return RaylibPrimitiveRenderMode.Immediate;
-            }
-
-            string? galliumDriver = Environment.GetEnvironmentVariable("GALLIUM_DRIVER");
-            bool softwareGl =
-                ReadEnvBoolOrDefault("LIBGL_ALWAYS_SOFTWARE", defaultValue: false) ||
-                string.Equals(galliumDriver, "llvmpipe", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(galliumDriver, "softpipe", StringComparison.OrdinalIgnoreCase);
-
-            if (softwareGl)
-            {
-                Log.Warn(
-                    in LogChannels.Presentation,
-                    "Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host.");
-                return RaylibPrimitiveRenderMode.Immediate;
-            }
-
-            return RaylibPrimitiveRenderMode.Instanced;
-        }
-
         private static int[] ReadEnvFrameList(string key)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
@@ -1010,8 +1137,8 @@ namespace Ludots.Adapter.Raylib
             string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
             string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
-            string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPerformerEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPerformerBehaviorMs, 5, 1)}MS";
-            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  AVAIL {FormatFixed(effectRequests?.AvailableCapacity ?? 0, 6)}";
+            string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPresenterEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPresenterBehaviorMs, 5, 1)}MS";
+            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
 
             const int x = 10;
             const int y = 10;
@@ -1163,9 +1290,9 @@ namespace Ludots.Adapter.Raylib
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+            PresenterEntityRuntime? presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
             GroundOverlayBuffer? groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
-            RoadSplineBuffer? roadSpline = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            SplineRibbonBuffer? splineRibbon = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
@@ -1175,8 +1302,8 @@ namespace Ludots.Adapter.Raylib
                 : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
-            string performerDefs = performers?.BuildActiveDefinitionSummary(8) ?? string.Empty;
-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+            string presenterDefs = presenters?.BuildActiveDefinitionSummary(8) ?? string.Empty;
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} presenterActive={presenters?.ActiveCount ?? 0} presenterDefs={presenterDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPresenterBehaviorMs:F2} behaviorBoot={timing.PresenterBootstrapCountLastFrame} behaviorOwner={timing.PresenterOwnerChangesLastFrame} behaviorAttr={timing.PresenterOwnerAttributeChangesLastFrame} behaviorTag={timing.PresenterOwnerTagChangesLastFrame} behaviorTick={timing.PresenterTickDrivenCountLastFrame} animator={timing.LastPresenterAnimatorMs:F2} transformSync={timing.LastPresenterEntityTransformSyncMs:F2} minimapCollect={timing.LastPresenterMinimapMarkerMs:F2} minimapMarkers={timing.PresenterMinimapMarkersLastFrame}/{timing.PresenterMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPresenterBatchMs:F2}/{timing.LastRuntimeSpawnPresenterCreateMs:F2}/{timing.LastRuntimeSpawnPresenterBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPresenterCreateSetupMs:F2}/{timing.LastRuntimeSpawnPresenterWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPresenterPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPresenterChildSetupMs:F2}/{timing.LastRuntimeSpawnPresenterChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPresenterChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPresenterChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPresenterChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPresenterSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastSplineRibbonRenderMs:F2} splineCount={timing.SplineRibbonsLastFrame} splineRaw={splineRibbon?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPresenterEmitMs:F2} emitDirty={timing.LastPresenterEmitDirtyProcessMs:F2} emitDirtyCount={timing.PresenterEmitDirtyCountLastFrame} emitRetained={timing.LastPresenterEmitRetainedProcessMs:F2} emitRetainedCount={timing.PresenterEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PresenterEmitRetainedDirectHitsLastFrame}/{timing.PresenterEmitRetainedFullPathLastFrame}/{timing.PresenterEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
@@ -1779,6 +1906,113 @@ namespace Ludots.Adapter.Raylib
             return found != Entity.Null;
         }
 
+        private static float ResolveInitialDayPhase01()
+        {
+            string? raw = Environment.GetEnvironmentVariable("LUDOTS_DAY_PHASE");
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return 0.42f;
+            }
+
+            if (!float.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float phase) ||
+                float.IsNaN(phase) ||
+                float.IsInfinity(phase))
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_DAY_PHASE must be a finite float in [0,1] (got '{raw}').");
+            }
+
+            return phase - MathF.Floor(phase);
+        }
+
+        internal static void ValidateRuntimeScreenshotEvidence(string screenshotPath, int expectedWidth, int expectedHeight)
+        {
+            if (string.IsNullOrWhiteSpace(screenshotPath))
+            {
+                throw new ArgumentException("Raylib screenshot evidence path cannot be null or whitespace.", nameof(screenshotPath));
+            }
+
+            if (expectedWidth <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(expectedWidth));
+            }
+
+            if (expectedHeight <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(expectedHeight));
+            }
+
+            string fullPath = Path.GetFullPath(screenshotPath);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence was not written: {fullPath}");
+            }
+
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length < 24)
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is too small to be a valid PNG: {fullPath} length={fileInfo.Length}.");
+            }
+
+            if (!string.Equals(Path.GetExtension(fullPath), ".png", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence must be a PNG so dimensions can be verified: {fullPath}");
+            }
+
+            using var bitmap = SKBitmap.Decode(fullPath);
+            if (bitmap == null)
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is not a decodable PNG image: {fullPath}");
+            }
+
+            int actualWidth = bitmap.Width;
+            int actualHeight = bitmap.Height;
+            if (actualWidth != expectedWidth || actualHeight != expectedHeight)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib screenshot evidence dimensions mismatch: {fullPath} actual={actualWidth}x{actualHeight} expected={expectedWidth}x{expectedHeight}.");
+            }
+
+            if (IsVisuallyFlat(bitmap))
+            {
+                throw new InvalidOperationException($"Raylib screenshot evidence is visually flat and cannot prove a rendered scene: {fullPath}");
+            }
+        }
+
+        private static bool IsVisuallyFlat(SKBitmap bitmap)
+        {
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            if (width <= 0 || height <= 0)
+            {
+                return true;
+            }
+
+            SKColor first = bitmap.GetPixel(0, 0);
+            int stepX = Math.Max(1, width / 16);
+            int stepY = Math.Max(1, height / 16);
+            for (int y = 0; y < height; y += stepY)
+            {
+                for (int x = 0; x < width; x += stepX)
+                {
+                    if (ColorDistance(bitmap.GetPixel(x, y), first) > 6)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return ColorDistance(bitmap.GetPixel(width - 1, height - 1), first) <= 6;
+        }
+
+        private static int ColorDistance(SKColor a, SKColor b)
+        {
+            return Math.Abs(a.Red - b.Red) +
+                Math.Abs(a.Green - b.Green) +
+                Math.Abs(a.Blue - b.Blue) +
+                Math.Abs(a.Alpha - b.Alpha);
+        }
+
         private static double ElapsedMs(long startTicks)
         {
             return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
@@ -1842,7 +2076,7 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void DrawRoadSplines(RoadSplineBuffer splines)
+        private static void DrawSplineRibbons(SplineRibbonBuffer splines)
         {
             ReadOnlySpan<float> p0x = splines.P0X;
             ReadOnlySpan<float> p0y = splines.P0Y;
@@ -1877,11 +2111,11 @@ namespace Ludots.Adapter.Raylib
                 float drawBorder = MathF.Max(0.01f, borderWidth[i]);
                 var fill = ToRaylibColor(new Vector4(fillR[i], fillG[i], fillB[i], fillA[i]));
                 var border = ToRaylibColor(new Vector4(borderR[i], borderG[i], borderB[i], borderA[i]));
-                DrawRoadSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
+                DrawSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
             }
         }
 
-        private static void DrawRoadSplineRibbon(
+        private static void DrawSplineRibbon(
             in Vector3 p0,
             in Vector3 p1,
             in Vector3 p2,
@@ -1971,7 +2205,7 @@ namespace Ludots.Adapter.Raylib
             if (item.FillColor.W > 0.01f)
             {
                 var fillColor = ToRaylibColor(item.FillColor);
-                const int fillRings = 4;
+                const int fillRings = 7;
                 for (int r = 1; r <= fillRings; r++)
                 {
                     float radius = item.Radius * r / fillRings;
@@ -1986,10 +2220,11 @@ namespace Ludots.Adapter.Raylib
                 }
             }
 
-            // Draw border as line loop (outermost ring, thicker appearance via slight offset)
+            // Dual border loops for readable marks on VH terrain from shore/aerial.
             if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
             {
                 var border = ToRaylibColor(item.BorderColor);
+                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
                 for (int s = 0; s < segments; s++)
                 {
                     float a0 = s * step;
@@ -1997,6 +2232,10 @@ namespace Ludots.Adapter.Raylib
                     var p0 = new Vector3(center.X + MathF.Cos(a0) * item.Radius, center.Y, center.Z + MathF.Sin(a0) * item.Radius);
                     var p1 = new Vector3(center.X + MathF.Cos(a1) * item.Radius, center.Y, center.Z + MathF.Sin(a1) * item.Radius);
                     Rl.DrawLine3D(p0, p1, border);
+                    float rOuter = item.Radius + borderPad;
+                    var q0 = new Vector3(center.X + MathF.Cos(a0) * rOuter, center.Y, center.Z + MathF.Sin(a0) * rOuter);
+                    var q1 = new Vector3(center.X + MathF.Cos(a1) * rOuter, center.Y, center.Z + MathF.Sin(a1) * rOuter);
+                    Rl.DrawLine3D(q0, q1, border);
                 }
             }
         }
@@ -2011,7 +2250,7 @@ namespace Ludots.Adapter.Raylib
             if (item.FillColor.W > 0.01f && outerRadius > innerRadius)
             {
                 var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 6;
+                const int bands = 8;
                 for (int band = 0; band < bands; band++)
                 {
                     float radius = innerRadius + (outerRadius - innerRadius) * (band + 0.5f) / bands;
@@ -2022,10 +2261,14 @@ namespace Ludots.Adapter.Raylib
             if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
             {
                 var border = ToRaylibColor(item.BorderColor);
+                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
                 DrawGroundArcLoop(center, outerRadius, 0f, MathF.PI * 2f, segments, border);
+                DrawGroundArcLoop(center, outerRadius + borderPad, 0f, MathF.PI * 2f, segments, border);
                 if (innerRadius > 0.001f)
                 {
                     DrawGroundArcLoop(center, innerRadius, 0f, MathF.PI * 2f, segments, border);
+                    float innerDual = MathF.Max(0.001f, innerRadius - borderPad);
+                    DrawGroundArcLoop(center, innerDual, 0f, MathF.PI * 2f, segments, border);
                 }
             }
         }

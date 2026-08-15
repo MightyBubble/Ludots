@@ -5,7 +5,6 @@ namespace Ludots.Core.Presentation.Assets
         None = 0,
         Primitive = 1,
         Model = 2,
-        Prefab = 3,
         Billboard = 4,
         ProceduralMesh = 5
     }

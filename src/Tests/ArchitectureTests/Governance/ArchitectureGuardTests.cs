@@ -361,15 +361,15 @@ namespace Ludots.Tests.Architecture.Governance
                 "src",
                 "Core",
                 "Presentation",
-                "Performers",
-                "WorldHudPerformBehavior.cs");
+                "Presenters",
+                "WorldHudPresentBehavior.cs");
             string phaseResolverPath = Path.Combine(
                 repoRoot,
                 "src",
                 "Core",
                 "Presentation",
-                "Performers",
-                "PerformPhaseResolver.cs");
+                "Presenters",
+                "PresentPhaseResolver.cs");
 
             string hudSource = File.ReadAllText(hudPath);
             string phaseResolverSource = File.ReadAllText(phaseResolverPath);
@@ -464,7 +464,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPerformers()
+        public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPresenters()
         {
             var repoRoot = FindRepoRoot();
             string modsDir = Path.Combine(repoRoot, "mods");
@@ -474,10 +474,10 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 "indicator",
                 "aimVisual",
-                "areaPerformerId",
-                "rangeCirclePerformerId",
-                "previewPerformerId",
-                "performerId"
+                "areaPresenterId",
+                "rangeCirclePresenterId",
+                "previewPresenterId",
+                "presenterId"
             };
 
             var hits = new List<string>();
@@ -495,7 +495,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action performer rules:\n" +
+                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action presenter rules:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -553,13 +553,13 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                "Epic #322 ability aim presentation is an event/collection projection consumed by performer rules; overlay-named entry points must not return:\n" +
+                "Epic #322 ability aim presentation is an event/collection projection consumed by presenter rules; overlay-named entry points must not return:\n" +
                     string.Join("\n", hits));
             }
         }
 
         [Test]
-        public void Epic322_ChampionSandboxPresentation_DoesNotBypassPerformerRules()
+        public void Epic322_ChampionSandboxPresentation_DoesNotBypassPresenterRules()
         {
             var repoRoot = FindRepoRoot();
             string sandboxDir = Path.Combine(
@@ -584,7 +584,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 champion skill presentation must project events and let PerformerRuleSystem produce performer commands. Sandbox code must not consume GAS events or write presentation buffers directly:\n" +
+                    "Epic #322 champion skill presentation must project events and let PresenterRuleSystem produce presenter commands. Sandbox code must not consume GAS events or write presentation buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -629,7 +629,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; the old direct overlay bridge must not return:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -663,7 +663,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; it must not read or write render buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -687,9 +687,11 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 "GroundOverlayBuffer",
                 "RoadSplineBuffer",
+                "SplineRibbonBuffer",
                 "WorldHudBatchBuffer",
                 "new GroundOverlayItem",
                 "new RoadSplineItem",
+                "new SplineRibbonItem",
                 "new WorldHudItem",
                 ".TryAddLine(",
                 ".TryAdd(new GroundOverlayItem",
@@ -707,7 +709,87 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 showcase presentation systems must publish semantic world facts and let PerformerRuleSystem/performer emit own render buffers:\n" +
+                    "Epic #322 showcase presentation systems must publish semantic world facts and let PresenterRuleSystem/presenter emit own render buffers:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void PresentationSplineRibbon_HasNoRoadSplineArchitectureTypes()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Adapters"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "src", "Apps"),
+                Path.Combine(repoRoot, "src", "Tools"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] forbidden =
+            {
+                "RoadSplineBuffer",
+                "RoadSplineRequest",
+                "RoadSplineCapture",
+                "new RoadSplineItem",
+                "PresentationRequestKind.RoadSpline",
+                "RemoveRoadSpline",
+                "FromRoadSpline",
+                "roadSplineCapacity"
+            };
+
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, directories, forbidden);
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Visible spline ribbons use SplineRibbon types. RoadSpline architecture names must not reappear:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void AnimationProfile_DoesNotKeepBuiltinClipEnumOrProfileBindings()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] forbiddenTypes =
+            {
+                "AnimatorBuiltinClipId",
+                "AnimatorBuiltinClipState",
+                "AnimationBuiltinClipBinding",
+                "TryResolveBuiltinClipId",
+            };
+
+            var hits = new List<string>();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "mods"),
+            };
+            for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+            {
+                foreach (string file in Directory.GetFiles(roots[rootIndex], "*.cs", SearchOption.AllDirectories))
+                {
+                    if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                        file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbiddenTypes, hits);
+                }
+            }
+
+            foreach (string file in Directory.GetFiles(Path.Combine(repoRoot, "mods"), "animation_profiles.json", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, ["\"builtinClips\"", "\"builtin_clips\""], hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Animation profiles keep packed-state clip bindings only. Overlay uses named channels, not builtin clip enums:\n" +
                     string.Join("\n", hits));
             }
         }

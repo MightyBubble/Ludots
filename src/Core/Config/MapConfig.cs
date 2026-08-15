@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 
 namespace Ludots.Core.Config
@@ -83,7 +83,7 @@ namespace Ludots.Core.Config
         public string Template { get; set; }
         public IntVector2 Position { get; set; }
         public Dictionary<string, JsonNode> Overrides { get; set; }
-        public List<ParamOverrideData> PerformerParamOverrides { get; set; } = new List<ParamOverrideData>();
+        public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
     }
 
     public class TeamBindingData

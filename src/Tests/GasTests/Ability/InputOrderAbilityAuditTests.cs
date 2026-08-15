@@ -1718,7 +1718,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact",
                     "aimVisual": {
-                      "areaPerformerId": "performer.aim.area"
+                      "areaPresenterId": "presenter.aim.area"
                     }
                   }
                 }
@@ -1731,14 +1731,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPerformerField()
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPresenterField()
         {
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
             var obj = JsonNode.Parse(
                 """
                 {
-                  "previewPerformerId": "performer.aim.preview",
+                  "previewPresenterId": "presenter.aim.preview",
                   "targeting": {
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact"
@@ -1747,9 +1747,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 """)!.AsObject();
 
             var ex = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPresenter", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
+            That(ex!.Message, Does.Contain("field 'previewPresenterId' is removed"));
         }
 
         [Test]

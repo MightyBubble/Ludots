@@ -39,16 +39,64 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         for (int chunkX = 0; chunkX < 2; chunkX++)
         {
             Assert.That(document.TryGetChunkProceduralMesh(chunkX, 0, out var proceduralMesh), Is.True);
+            Vector3 chunkCenterMeters = ChunkCenterMeters(document.Asset, chunkX, 0);
             for (int vertexIndex = 0; vertexIndex < proceduralMesh.VertexCount; vertexIndex++)
             {
                 Vector3 position = ReadPosition(proceduralMesh, vertexIndex);
-                float worldXCm = position.X * 100f;
-                float worldYCm = position.Z * 100f;
+                float worldXCm = (chunkCenterMeters.X + position.X) * 100f;
+                float worldYCm = (chunkCenterMeters.Z + position.Z) * 100f;
 
                 Assert.That(runtime.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm), Is.True, $"chunk={chunkX} vertex={vertexIndex} position={position}");
                 Assert.That(position.Y, Is.EqualTo(heightCm * 0.01f).Within(0.001f), $"chunk={chunkX} vertex={vertexIndex} position={position}");
+
+                Vector4 tangent = ReadTangent(proceduralMesh, vertexIndex);
+                Assert.That(float.IsFinite(tangent.X), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.Y), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.Z), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.W), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(new Vector3(tangent.X, tangent.Y, tangent.Z).LengthSquared(), Is.GreaterThan(1e-10f), $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(tangent.W, Is.EqualTo(1f).Within(0.001f), $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
             }
         }
+    }
+
+    [Test]
+    public void VisualTerrainEditor_ProceduralMeshEdgesMeetInWorldCoordinates()
+    {
+        using var document = new VisualTerrainEditorDocument(
+            new VisualTerrainAssetDescriptor(
+                id: $"visual_terrain_editor_world_mesh_{Guid.NewGuid():N}",
+                displayName: "World Mesh",
+                bounds: new WorldAabbCm(-10_000, -5_000, 20_000, 10_000),
+                chunkColumns: 2,
+                chunkRows: 1,
+                samplesPerChunkColumn: 9,
+                samplesPerChunkRow: 9,
+                renderColumnsPerChunk: 9,
+                renderRowsPerChunk: 9,
+                defaultHeight01: 0.45f),
+            defaultMaterialAssetId: 1);
+
+        document.SetViewMode(TerrainViewMode.Base);
+        document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 1);
+        document.Update();
+
+        Assert.That(document.TryGetChunkProceduralMesh(0, 0, out var leftChunk), Is.True);
+        Assert.That(document.TryGetChunkProceduralMesh(1, 0, out var rightChunk), Is.True);
+
+        Assert.That(leftChunk.LocalBounds.Center.X, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(leftChunk.LocalBounds.Center.Z, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(rightChunk.LocalBounds.Center.X, Is.EqualTo(0f).Within(0.001f));
+        Assert.That(rightChunk.LocalBounds.Center.Z, Is.EqualTo(0f).Within(0.001f));
+
+        Vector3 leftEastEdge = ReadPosition(leftChunk, 8);
+        Vector3 rightWestEdge = ReadPosition(rightChunk, 0);
+        Vector3 leftCenterMeters = ChunkCenterMeters(document.Asset, 0, 0);
+        Vector3 rightCenterMeters = ChunkCenterMeters(document.Asset, 1, 0);
+
+        Assert.That(leftEastEdge.X, Is.EqualTo(50f).Within(0.001f));
+        Assert.That(rightWestEdge.X, Is.EqualTo(-50f).Within(0.001f));
+        Assert.That(leftCenterMeters.X + leftEastEdge.X, Is.EqualTo(rightCenterMeters.X + rightWestEdge.X).Within(0.001f));
     }
 
     [Test]
@@ -127,5 +175,22 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
             proceduralMesh.Positions[floatOffset + 0],
             proceduralMesh.Positions[floatOffset + 1],
             proceduralMesh.Positions[floatOffset + 2]);
+    }
+
+    private static Vector4 ReadTangent(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    {
+        int floatOffset = vertexIndex * 4;
+        return new Vector4(
+            proceduralMesh.Tangents[floatOffset + 0],
+            proceduralMesh.Tangents[floatOffset + 1],
+            proceduralMesh.Tangents[floatOffset + 2],
+            proceduralMesh.Tangents[floatOffset + 3]);
+    }
+
+    private static Vector3 ChunkCenterMeters(VisualTerrainAssetDescriptor asset, int chunkX, int chunkY)
+    {
+        float centerXCm = asset.Bounds.Left + ((chunkX + 0.5f) * asset.ChunkWorldWidthCm);
+        float centerYCm = asset.Bounds.Top + ((chunkY + 0.5f) * asset.ChunkWorldHeightCm);
+        return new Vector3(centerXCm * 0.01f, 0f, centerYCm * 0.01f);
     }
 }

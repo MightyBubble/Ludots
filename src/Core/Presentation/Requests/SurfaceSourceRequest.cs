@@ -1,15 +1,15 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Requests
 {
     public struct SurfaceSourceRequest
     {
         public int StableId;
-        public int PerformerDefinitionId;
+        public int PresenterDefinitionId;
         public int ScopeId;
-        public PerformerSurfaceKind SurfaceKind;
+        public PresenterSurfaceKind SurfaceKind;
         public SurfaceAuthoringBlock Authoring;
         public Vector3 AnchorPosition;
         public LODLevel LodSeed;

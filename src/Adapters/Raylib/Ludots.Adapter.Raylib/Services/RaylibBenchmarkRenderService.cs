@@ -59,7 +59,11 @@ namespace Ludots.Adapter.Raylib.Services
                 return;
             }
 
-            _targetInstanceCount = Math.Clamp(scene.InitialActiveInstanceCount, MinInstances, scene.Instances.Length);
+            // Stress-slider floor applies only when the scene pool is large enough; small parity scenes
+            // must be able to start at their authored active count (e.g. 48).
+            int max = scene.Instances.Length;
+            int min = max >= MinInstances ? MinInstances : 0;
+            _targetInstanceCount = Math.Clamp(scene.InitialActiveInstanceCount, min, max);
             _frameSerial = 1;
         }
 
@@ -70,7 +74,11 @@ namespace Ludots.Adapter.Raylib.Services
 
         public bool SetActiveInstanceCount(int count)
         {
-            return _renderer.SetActiveInstanceCount(count);
+            RaylibBenchmarkScene scene = _renderer.CurrentScene;
+            int max = scene.Enabled ? scene.Instances.Length : 0;
+            int min = max >= MinInstances ? MinInstances : 0;
+            _targetInstanceCount = Math.Clamp(count, min, max);
+            return _renderer.SetActiveInstanceCount(_targetInstanceCount);
         }
 
         public int GetActiveInstanceCount()
@@ -88,7 +96,11 @@ namespace Ludots.Adapter.Raylib.Services
             return _screenOverlay;
         }
 
-        public void PrepareFrame(PresentationTimingDiagnostics? timing, int screenWidth, int screenHeight)
+        public void PrepareFrame(
+            PresentationTimingDiagnostics? timing,
+            int screenWidth,
+            int screenHeight,
+            bool suppressControlPanel = false)
         {
             RaylibBenchmarkScene scene = _renderer.CurrentScene;
             if (!scene.Enabled)
@@ -98,13 +110,29 @@ namespace Ludots.Adapter.Raylib.Services
 
             _time += MathF.Max(0.0001f, Rl.GetFrameTime());
             _frameSerial++;
-            UpdateSlider(scene.Instances.Length);
+            if (!suppressControlPanel && scene.Instances.Length >= MinInstances)
+            {
+                UpdateSlider(scene.Instances.Length);
+            }
+
             _renderer.SetActiveInstanceCount(_targetInstanceCount);
+            if (suppressControlPanel)
+            {
+                _screenHud.Clear();
+                _screenOverlay.Clear();
+                return;
+            }
+
             PopulateSkiaHud(LastStats, timing, screenWidth, screenHeight, IsStressOverlayEnabled());
         }
 
         private void UpdateSlider(int maxInstances)
         {
+            if (maxInstances < MinInstances)
+            {
+                return;
+            }
+
             Vector2 mouse = Rl.GetMousePosition();
             bool overTrack = mouse.X >= SliderLeft &&
                              mouse.X <= SliderLeft + SliderTrackWidth &&
@@ -146,7 +174,8 @@ namespace Ludots.Adapter.Raylib.Services
 
         private void AddControlPanel(RaylibBenchmarkStats stats, PresentationTimingDiagnostics? timing)
         {
-            int maxInstances = Math.Max(MinInstances, _renderer.CurrentScene.Instances.Length);
+            RaylibBenchmarkScene scene = _renderer.CurrentScene;
+            int maxInstances = Math.Max(MinInstances, scene.Instances.Length);
             float ratio = maxInstances == MinInstances
                 ? 0f
                 : (_targetInstanceCount - MinInstances) / (float)(maxInstances - MinInstances);
@@ -155,6 +184,9 @@ namespace Ludots.Adapter.Raylib.Services
             const int panelTop = 18;
             const int panelWidth = 560;
             const int panelHeight = 154;
+            string title = string.IsNullOrWhiteSpace(scene.Label)
+                ? "Raylib ISM Final Render Benchmark"
+                : scene.Label;
 
             _screenOverlay.AddRect(panelLeft, panelTop, panelWidth, panelHeight,
                 new Vector4(0.05f, 0.07f, 0.1f, 0.88f),
@@ -163,7 +195,7 @@ namespace Ludots.Adapter.Raylib.Services
                 dirtySerial: _frameSerial);
 
             _screenOverlay.AddText(panelLeft + 16, panelTop + 14,
-                "Raylib ISM Final Render Benchmark",
+                title,
                 22,
                 new Vector4(0.95f, 0.98f, 1f, 1f),
                 stableId: 11,
