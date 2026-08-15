@@ -49,7 +49,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (visual.AssetKind != AssetKind.VFX)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVfxRenderer)} can only draw VFX presentation items, but received '{visual.AssetKind}'.");
+                    $"{nameof(RaylibVfxRenderer)} can only draw VFX presentation items, but received AssetKind '{visual.AssetKind}'.");
             }
 
             if (visual.StableId <= 0)

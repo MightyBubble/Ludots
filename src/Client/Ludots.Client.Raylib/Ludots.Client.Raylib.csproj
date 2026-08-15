@@ -42,14 +42,6 @@
       <Link>vfx_unlit_tint.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\Platforms\Desktop\decal_unlit.vs">
-      <Link>decal_unlit.vs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\Platforms\Desktop\decal_unlit.fs">
-      <Link>decal_unlit.fs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\Platforms\Desktop\decal_project.vs">
       <Link>decal_project.vs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

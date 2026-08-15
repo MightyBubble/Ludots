@@ -108,6 +108,25 @@ public sealed class RaylibVisualHeightmapRendererTests
         Assert.That(RaylibVisualHeightmapRenderer.ResolveChunkSourceSampleIndex(columns - 1, 257, stride), Is.EqualTo(256));
     }
 
+    [Test]
+    public void ResolveChunkRenderSampling_UsesDecimatedGridForEditorChunk()
+    {
+        RaylibVisualHeightmapRenderer.ResolveChunkRenderSampling(
+            sampleColumns: 257,
+            sampleRows: 257,
+            out int renderColumns,
+            out int renderRows,
+            out int sampleStride);
+
+        Assert.That(sampleStride, Is.EqualTo(2));
+        Assert.That(renderColumns, Is.EqualTo(129));
+        Assert.That(renderRows, Is.EqualTo(129));
+        Assert.That(renderColumns * renderRows, Is.LessThanOrEqualTo(ushort.MaxValue));
+        Assert.That(
+            RaylibVisualHeightmapRenderer.ResolveChunkSourceSampleIndex(renderColumns - 1, 257, sampleStride),
+            Is.EqualTo(256));
+    }
+
     private sealed class FakeVisualHeightmapRenderSource : IVisualHeightmapRenderSource
     {
         public FakeVisualHeightmapRenderSource(WorldAabbCm bounds, int chunkColumns, int chunkRows)
