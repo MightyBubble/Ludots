@@ -224,10 +224,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             IGraphRuntimeApi? api = null)
         {
             ArgumentNullException.ThrowIfNull(programs);
-            programs.RequireHostKind(graphId, GraphKind.Script, "切片宿主");
-            if (!programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+            ReadOnlySpan<GraphInstruction> program = programs.RequireProgram(graphId, GraphKind.Script, "切片宿主");
+
+            return ExecuteResolvedRegisteredScriptSlice(
+                programs,
+                program,
+                ints,
+                bools,
+                callStack,
+                ref cursor,
+                budgetSteps,
+                world,
+                caster,
+                explicitTarget,
+                api);
+        }
+
+        public static GraphSliceResult ExecuteResolvedRegisteredScriptSlice(
+            GraphProgramRegistry programs,
+            ReadOnlySpan<GraphInstruction> program,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null)
+        {
+            ArgumentNullException.ThrowIfNull(programs);
+            if (program.Length == 0)
             {
-                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+                throw new InvalidOperationException("Resolved Script program is empty.");
             }
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];

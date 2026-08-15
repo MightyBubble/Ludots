@@ -1302,9 +1302,18 @@ namespace Ludots.Core.Config
             private static int ResolveAttributeId(string attributeName)
             {
                 int attributeId = AttributeRegistry.GetId(attributeName);
-                return attributeId == AttributeRegistry.InvalidId
-                    ? AttributeRegistry.Register(attributeName)
-                    : attributeId;
+                if (attributeId != AttributeRegistry.InvalidId)
+                {
+                    return attributeId;
+                }
+
+                if (!AttributeRegistry.IsFrozen)
+                {
+                    return AttributeRegistry.Register(attributeName);
+                }
+
+                throw new InvalidOperationException(
+                    $"Entity template AttributeBuffer references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
             }
 
             private static void UpsertAttributeSeed(

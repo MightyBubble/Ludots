@@ -1,6 +1,6 @@
 A,G,N_topo,T_ai_ms,notes
-10000,1,16,4.045,G worlds share shape; sum of think waves
-10000,4,16,3.550,G worlds share shape; sum of think waves
-10000,16,16,3.963,G worlds share shape; sum of think waves
-10000,64,16,3.565,G worlds share shape; sum of think waves
-10000,256,16,3.969,G worlds share shape; sum of think waves
+10000,1,16,0.017,G worlds share shape; sum of think waves
+10000,4,16,0.017,G worlds share shape; sum of think waves
+10000,16,16,0.018,G worlds share shape; sum of think waves
+10000,64,16,0.064,G worlds share shape; sum of think waves
+10000,256,16,0.028,G worlds share shape; sum of think waves

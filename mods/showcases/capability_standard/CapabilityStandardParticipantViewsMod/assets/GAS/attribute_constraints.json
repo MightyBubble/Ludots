@@ -1,0 +1,11 @@
+{
+  "CommandPower": {
+    "min": 0
+  },
+  "Focus": {
+    "min": 0
+  },
+  "Morale": {
+    "min": 0
+  }
+}

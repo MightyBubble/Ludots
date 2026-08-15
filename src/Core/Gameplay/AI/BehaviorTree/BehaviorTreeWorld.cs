@@ -164,6 +164,11 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             Entity explicitTarget = default,
             IGraphRuntimeApi? api = null)
         {
+            if (_tree.AlwaysSuccessSequenceNodeVisitsPerAgent > 0)
+            {
+                return TickAlwaysSuccessSequence();
+            }
+
             int visited = 0;
             int scriptSlices = 0;
             int scriptSteps = 0;
@@ -184,6 +189,27 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
+        }
+
+        private BehaviorTreeThinkStats TickAlwaysSuccessSequence()
+        {
+            int active = 0;
+            int visitsPerAgent = _tree.AlwaysSuccessSequenceNodeVisitsPerAgent;
+            BehaviorTreeStatus[] status = _status;
+            byte[] stackCount = _stackCount;
+            for (int agent = 0; agent < _count; agent++)
+            {
+                if (status[agent] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    continue;
+                }
+
+                status[agent] = BehaviorTreeStatus.Success;
+                stackCount[agent] = 0;
+                active++;
+            }
+
+            return new BehaviorTreeThinkStats(_count, active * visitsPerAgent, 0, 0);
         }
 
         private void TickAgent(
@@ -361,8 +387,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                             $"ScriptSlice GraphId={node.GraphId} requires GraphProgramRegistry.");
                     }
 
-                    programs.RequireHostKind(node.GraphId, GraphKind.Script, "行为树叶子");
-                    GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
+                    ReadOnlySpan<GraphInstruction> program = programs.RequireProgram(node.GraphId, GraphKind.Script, "行为树叶子");
 
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
@@ -382,9 +407,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
                     _scriptResumeGraphIds[agent] = node.GraphId;
 
-                    GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
+                    GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
                         programs,
-                        node.GraphId,
+                        program,
                         ints,
                         bools,
                         callStack,

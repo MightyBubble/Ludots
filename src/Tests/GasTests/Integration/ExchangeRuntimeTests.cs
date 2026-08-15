@@ -30,7 +30,14 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
+            AttributeRegistry.Clear();
             EffectParamKeys.Initialize();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            AttributeRegistry.Clear();
         }
 
         [Test]

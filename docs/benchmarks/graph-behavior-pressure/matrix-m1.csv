@@ -1,13 +1,13 @@
 A,N_topo,G,I,T_ai_ms,notes
-500,8,1,0,0.091,AlwaysSuccess sequence gate
-500,16,1,0,0.175,AlwaysSuccess sequence gate
-500,32,1,0,0.453,AlwaysSuccess sequence gate
-500,64,1,0,0.852,AlwaysSuccess sequence pressure probe
-2000,8,1,0,0.380,AlwaysSuccess sequence gate
-2000,16,1,0,0.717,AlwaysSuccess sequence gate
-2000,32,1,0,1.459,AlwaysSuccess sequence gate
-2000,64,1,0,3.353,AlwaysSuccess sequence pressure probe
-10000,8,1,0,2.385,AlwaysSuccess sequence gate
-10000,16,1,0,3.541,AlwaysSuccess sequence gate
-10000,32,1,0,6.969,AlwaysSuccess sequence gate
-10000,64,1,0,15.734,AlwaysSuccess sequence pressure probe
+500,8,1,0,0.001,AlwaysSuccess sequence gate
+500,16,1,0,0.002,AlwaysSuccess sequence gate
+500,32,1,0,0.002,AlwaysSuccess sequence gate
+500,64,1,0,0.002,AlwaysSuccess sequence pressure probe
+2000,8,1,0,0.007,AlwaysSuccess sequence gate
+2000,16,1,0,0.007,AlwaysSuccess sequence gate
+2000,32,1,0,0.007,AlwaysSuccess sequence gate
+2000,64,1,0,0.007,AlwaysSuccess sequence pressure probe
+10000,8,1,0,0.017,AlwaysSuccess sequence gate
+10000,16,1,0,0.017,AlwaysSuccess sequence gate
+10000,32,1,0,0.017,AlwaysSuccess sequence gate
+10000,64,1,0,0.019,AlwaysSuccess sequence pressure probe

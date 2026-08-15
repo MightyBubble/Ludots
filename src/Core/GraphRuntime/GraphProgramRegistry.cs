@@ -43,11 +43,15 @@ namespace Ludots.Core.GraphRuntime
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
         private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
+        private int _version;
+
+        public int Version => _version;
 
         public void Clear()
         {
             _programs.Clear();
             _sourceMaps.Clear();
+            _version++;
         }
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind)
@@ -88,6 +92,8 @@ namespace Ludots.Core.GraphRuntime
                 _sourceMaps.Remove(graphId);
                 throw;
             }
+
+            _version++;
         }
 
         /// <summary>
@@ -150,6 +156,8 @@ namespace Ludots.Core.GraphRuntime
 
                 throw;
             }
+
+            _version++;
         }
 
         private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
@@ -164,6 +172,21 @@ namespace Ludots.Core.GraphRuntime
 
         public void RequireHostKind(int graphId, GraphKind expected, string hostLabel)
         {
+            _ = RequireRegistration(graphId, expected, hostLabel, allowEmpty: true);
+        }
+
+        public ReadOnlySpan<GraphInstruction> RequireProgram(int graphId, GraphKind expected, string hostLabel)
+            => RequireProgramArray(graphId, expected, hostLabel);
+
+        public GraphInstruction[] RequireProgramArray(int graphId, GraphKind expected, string hostLabel)
+            => RequireRegistration(graphId, expected, hostLabel, allowEmpty: false).Program;
+
+        private GraphProgramRegistration RequireRegistration(
+            int graphId,
+            GraphKind expected,
+            string hostLabel,
+            bool allowEmpty)
+        {
             if (!_programs.TryGetValue(graphId, out GraphProgramRegistration entry))
             {
                 throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
@@ -174,6 +197,13 @@ namespace Ludots.Core.GraphRuntime
                 throw new InvalidOperationException(
                     $"{GraphKindOperationPolicy.KindMismatchError}: 图 {graphId} 的种类是「{entry.Kind}」，不能挂在{hostLabel}上（这里只接受 {expected}）。");
             }
+
+            if (!allowEmpty && entry.Program.Length == 0)
+            {
+                throw new InvalidOperationException($"Graph program id {graphId} is not registered.");
+            }
+
+            return entry;
         }
 
         private void EnsureNoInvokeCycle(int graphId)
