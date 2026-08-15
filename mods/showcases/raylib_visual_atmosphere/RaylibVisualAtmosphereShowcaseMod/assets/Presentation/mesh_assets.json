@@ -9,11 +9,17 @@
   },
   {
     "id": "raylib_visual_atmosphere.vfx_blend",
-    "type": "Billboard"
+    "type": "Billboard",
+    "vfx": {
+      "particleVfxId": "raylib_visual_atmosphere.vfx_blend"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.vfx_additive",
-    "type": "Billboard"
+    "type": "Billboard",
+    "vfx": {
+      "particleVfxId": "raylib_visual_atmosphere.vfx_additive"
+    }
   },
   {
     "id": "raylib_visual_atmosphere.rock",

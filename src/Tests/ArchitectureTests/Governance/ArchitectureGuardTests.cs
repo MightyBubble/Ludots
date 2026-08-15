@@ -736,6 +736,9 @@ namespace Ludots.Tests.Architecture.Governance
                 "PresentationRequestKind.RoadSpline",
                 "RemoveRoadSpline",
                 "FromRoadSpline",
+                "RaylibFramePass.RoadSpline",
+                "HasRoadSplines",
+                "DrawRoadSpline",
                 "roadSplineCapacity"
             };
 

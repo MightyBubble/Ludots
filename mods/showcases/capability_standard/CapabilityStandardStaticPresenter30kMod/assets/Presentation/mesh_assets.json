@@ -25,7 +25,10 @@
   },
   {
     "id": "capability_static_presenter.smoke.billboard",
-    "type": "Billboard"
+    "type": "Billboard",
+    "vfx": {
+      "particleVfxId": "capability_static_performer.smoke"
+    }
   },
   {
     "id": "capability_static_presenter.worker.patrol",

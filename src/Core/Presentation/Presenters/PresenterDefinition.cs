@@ -27,6 +27,8 @@ namespace Ludots.Core.Presentation.Presenters
     /// </summary>
     public sealed class PresenterDefinition
     {
+        internal const string InvalidBehaviorSlotIndexError = "PRESENTATION.PRESENTER.ERR.InvalidBehaviorSlotIndex";
+
         internal readonly struct OwnerAttributeWorkItem
         {
             public readonly int AttributeId;
@@ -387,7 +389,8 @@ namespace Ludots.Core.Presentation.Presenters
                 ref readonly BehaviorSlot slot = ref Behaviors[i];
                 if (slot.SlotIndex is < 0 or >= 32)
                 {
-                    continue;
+                    throw new System.InvalidOperationException(
+                        $"{InvalidBehaviorSlotIndexError}: presenter='{Key}', behaviorIndex={i}, slotIndex={slot.SlotIndex}, validRange=0..31.");
                 }
 
                 uint bit = 1u << slot.SlotIndex;

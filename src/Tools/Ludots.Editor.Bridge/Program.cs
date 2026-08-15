@@ -3283,7 +3283,7 @@ static class EditorRepo
     public static JsonNode[] LoadMergedPresenters(ModContext ctx, bool includeSources, out List<string> sources)
     {
         var sourcesLocal = new List<string>();
-        var defs = new Dictionary<int, JsonNode>();
+        var defs = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
 
         void Load(string path)
         {
@@ -3294,8 +3294,7 @@ static class EditorRepo
             foreach (var item in arr)
             {
                 if (item is not JsonObject obj) continue;
-                int id = int.TryParse(obj["id"]?.GetValue<string>(), out int parsedId) ? parsedId : 0;
-                if (id <= 0) continue;
+                if (!TryReadId(obj, out string id)) continue;
                 defs[id] = obj.DeepClone();
             }
         }
@@ -3310,7 +3309,7 @@ static class EditorRepo
         }
 
         sources = sourcesLocal;
-        return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
+        return defs.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase).Select(kvp => kvp.Value).ToArray();
     }
 
     public static JsonNode LoadMergedNavigationJson(

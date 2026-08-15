@@ -515,6 +515,7 @@ namespace Ludots.Tests.Presentation
         private PresenterDefinitionRegistry _definitions;
         private PresenterRuntimeSystem _system;
         private PresentationRequestBuffer _requests;
+        private TransientMarkerBuffer _markers;
 
         [SetUp]
         public void Setup()
@@ -524,9 +525,9 @@ namespace Ludots.Tests.Presentation
             _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             _instances = new PresenterEntityRuntime(_world);
             _definitions = new PresenterDefinitionRegistry();
-            var markers = new TransientMarkerBuffer();
+            _markers = new TransientMarkerBuffer();
             _requests = new PresentationRequestBuffer();
-            _system = new PresenterRuntimeSystem(_world, _commands, _events, markers, _requests, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
+            _system = new PresenterRuntimeSystem(_world, _commands, _events, _markers, _requests, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
         }
 
         [TearDown]
@@ -593,6 +594,57 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
 
             Assert.That(_instances.ActiveCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EntityDestroyedEvent_ReleasesOwnerWithFivePresenters()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.owner_many", new PresenterDefinition
+            {
+                DefaultLifetime = -1f,
+            });
+            for (int i = 0; i < 5; i++)
+            {
+                Entity presenter = _instances.Create(defId, owner, scopeId: i + 1);
+                Assert.That(presenter, Is.Not.EqualTo(Entity.Null));
+            }
+
+            Assert.That(_instances.ActiveCount, Is.EqualTo(5));
+            Assert.That(_events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntityDestroyed,
+                Source = owner,
+                Target = owner,
+            }), Is.True);
+
+            Assert.DoesNotThrow(() => TickAndFlush(0.016f));
+
+            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Update_WhenPaused_DoesNotTickTransientMarkers()
+        {
+            Assert.That(_markers.TryAddMesh(
+                meshAssetId: 1,
+                position: Vector3.Zero,
+                scale: Vector3.One,
+                color: Vector4.One,
+                lifetimeSeconds: 0.25f), Is.True);
+
+            Assert.DoesNotThrow(() => TickAndFlush(0f));
+
+            Assert.That(_markers.Count, Is.EqualTo(1));
+            Assert.That(_requests.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Update_WhenNegativeDeltaTime_Throws()
+        {
+            Assert.That(
+                () => TickAndFlush(-0.01f),
+                Throws.InvalidOperationException.With.Message.Contains("PresenterRuntimeSystem dt"));
         }
 
         [Test]

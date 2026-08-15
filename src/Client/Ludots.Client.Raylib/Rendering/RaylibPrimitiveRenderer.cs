@@ -35,6 +35,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private bool _initialized;
         private const float DefaultVegetationAlphaCutoff = 0.9f;
+        private const string BillboardTextureRequiredError = "RAYLIB.PRIMITIVE.ERR.BillboardTextureRequired";
 
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
@@ -1349,7 +1350,8 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
 
             float height = MathF.Max(scale.Y, 0.05f);
@@ -1665,6 +1667,13 @@ namespace Ludots.Client.Raylib.Rendering
                 Directory.CreateDirectory(directory);
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] meshAssetId={meshAssetId} {message}{Environment.NewLine}");
+        }
+
+        private static string FormatSourceUris(string[]? sourceUris)
+        {
+            return sourceUris == null || sourceUris.Length == 0
+                ? "(none)"
+                : string.Join("|", sourceUris);
         }
 
         private void LogBillboardDrawDiagnostic(int meshAssetId, string message)

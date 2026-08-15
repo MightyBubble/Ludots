@@ -78,11 +78,11 @@ namespace Ludots.Adapter.Raylib
                 float drawBorder = MathF.Max(0.01f, borderWidth[i]);
                 Color fill = ToRaylibColor(new Vector4(fillR[i], fillG[i], fillB[i], fillA[i]));
                 Color border = ToRaylibColor(new Vector4(borderR[i], borderG[i], borderB[i], borderA[i]));
-                DrawRoadSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
+                DrawSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
             }
         }
 
-        private static void DrawRoadSplineRibbon(
+        private static void DrawSplineRibbon(
             in Vector3 p0,
             in Vector3 p1,
             in Vector3 p2,

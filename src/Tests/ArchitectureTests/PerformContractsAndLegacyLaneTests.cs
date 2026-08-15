@@ -307,6 +307,27 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PresenterDefinitionRegister_RejectsOutOfRangeBehaviorSlotIndex()
+        {
+            var registry = new PresenterDefinitionRegistry();
+            var definition = new PresenterDefinition
+            {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        Kind = BehaviorKind.Sound,
+                        SlotIndex = 32,
+                    },
+                },
+            };
+
+            Assert.That(
+                () => registry.Register("bad.slot.index", definition),
+                Throws.InvalidOperationException.With.Message.StartsWith("PRESENTATION.PRESENTER.ERR.InvalidBehaviorSlotIndex"));
+        }
+
+        [Test]
         public void PresenterMainlineSystems_ArePresentInCore()
         {
             Assembly assembly = typeof(PresenterCommand).Assembly;

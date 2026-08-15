@@ -33,7 +33,7 @@ namespace Ludots.Adapter.Raylib
         BenchmarkScene,
         PrimitiveVisuals,
         GroundOverlay,
-        RoadSpline,
+        SplineRibbon,
         DebugDraw,
         EndWorld3D,
         PostProcessComposite,
@@ -50,7 +50,7 @@ namespace Ludots.Adapter.Raylib
         bool HasBenchmarkRenderer,
         bool DrawPrimitives,
         bool HasGroundOverlays,
-        bool HasRoadSplines,
+        bool HasSplineRibbons,
         bool DrawDebugDraw,
         bool DrawSkiaUi,
         bool DrawEnvironment,
@@ -243,9 +243,9 @@ namespace Ludots.Adapter.Raylib
                 Add(output, ref count, RaylibFramePass.GroundOverlay);
             }
 
-            if (input.HasRoadSplines)
+            if (input.HasSplineRibbons)
             {
-                Add(output, ref count, RaylibFramePass.RoadSpline);
+                Add(output, ref count, RaylibFramePass.SplineRibbon);
             }
 
             if (input.DrawDebugDraw)

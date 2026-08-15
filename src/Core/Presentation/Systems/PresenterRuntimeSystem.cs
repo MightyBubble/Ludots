@@ -26,6 +26,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterAnimatorStateBuffer? _animatorStates;
         private readonly StableDrawCache? _stableDrawCache;
         private readonly PresenterVisualStableIdTable? _visualStableIds;
+        private Entity[] _ownerDestroyScratch = Array.Empty<Entity>();
         private int _lastCullSyncStructureVersion = -1;
 
         public PresenterRuntimeSystem(
@@ -56,11 +57,16 @@ namespace Ludots.Core.Presentation.Systems
         }
         public override void Update(in float dt)
         {
+            if (dt < 0f || !float.IsFinite(dt))
+            {
+                throw new InvalidOperationException($"PresenterRuntimeSystem dt must be finite and >= 0, got {dt}.");
+            }
+
             bool hasCommands = _commands.Count != 0;
             bool hasEvents = _events.Count != 0;
             bool hasMarkers = _markers.Count != 0;
             ReleaseDestroyedOwnerAnchors();
-            int releasedDeadOwners = _runtime.ReleaseDeadOwners(EmitDestroyedEvent);
+            int releasedDeadOwners = hasCommands ? _runtime.ReleaseDeadOwners(EmitDestroyedEvent) : 0;
             bool needsCullSync = _lastCullSyncStructureVersion != _runtime.StructureVersion;
             if (!hasCommands && !hasEvents && !hasMarkers && !needsCullSync && releasedDeadOwners == 0)
             {
@@ -162,7 +168,10 @@ namespace Ludots.Core.Presentation.Systems
                 _lastCullSyncStructureVersion = structureVersion;
             }
 
-            _markers.TickAndRequest(_requests, dt, World);
+            if (hasMarkers && dt > 0f)
+            {
+                _markers.TickAndRequest(_requests, dt, World);
+            }
         }
 
         private void ReleaseDestroyedOwnerAnchors()
@@ -197,15 +206,40 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            for (int i = 0; i < presenters.Count; i++)
+            int count = presenters.Count;
+            EnsureOwnerDestroyScratchCapacity(count);
+            int scratchCount = 0;
+            for (int i = 0; i < count; i++)
             {
                 Entity presenter = presenters.GetAt(i);
+                if (World.IsAlive(presenter) && World.Has<PresenterState>(presenter))
+                {
+                    _ownerDestroyScratch[scratchCount++] = presenter;
+                }
+            }
+
+            for (int i = 0; i < scratchCount; i++)
+            {
+                Entity presenter = _ownerDestroyScratch[i];
+                _ownerDestroyScratch[i] = Entity.Null;
                 if (World.IsAlive(presenter) && World.Has<PresenterState>(presenter))
                 {
                     _runtime.Destroy(presenter, EmitDestroyedEvent);
                 }
             }
         }
+
+        private void EnsureOwnerDestroyScratchCapacity(int required)
+        {
+            if (_ownerDestroyScratch.Length >= required)
+            {
+                return;
+            }
+
+            int capacity = Math.Max(required, _ownerDestroyScratch.Length == 0 ? 8 : _ownerDestroyScratch.Length * 2);
+            Array.Resize(ref _ownerDestroyScratch, capacity);
+        }
+
         private void HandleInitializeTransform(in PresenterCommand cmd)
         {
             Entity presenter = cmd.PresenterEntity;

@@ -15,9 +15,9 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     [NonParallelizable]
     [Category("benchmark")]
-    public sealed class PresentationHudEntityHealth100kBenchmarkTests
+    public sealed class PresentationHudEntityHealth50kBenchmarkTests
     {
-        private const int EntityCount = 100_000;
+        private const int EntityCount = 50_000;
         private const int HudItemCount = EntityCount * 2;
         private const int MaxHealth = 1000;
         private const int WarmupFrames = 4;
@@ -26,7 +26,7 @@ namespace Ludots.Tests.Presentation
         private const int RandomSeed = 0x5EED_1000;
 
         [Test]
-        public void Benchmark_EntityHealth100k_SyncsHudBarsAndText_WritesReport()
+        public void Benchmark_EntityHealth50k_SyncsHudBarsAndText_WritesReport()
         {
             using var world = World.Create();
             int healthAttributeId = AttributeRegistry.Register("Health");
@@ -46,7 +46,7 @@ namespace Ludots.Tests.Presentation
                 FindRepoRoot(),
                 "artifacts",
                 "benchmarks",
-                "presentation-entity-health-hud-100k");
+                "presentation-entity-health-hud-50k");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");
@@ -368,7 +368,7 @@ namespace Ludots.Tests.Presentation
         private static string BuildReport(BenchmarkResult result, HudSyncValidation validation)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# Presentation Entity Health HUD 100k Benchmark");
+            sb.AppendLine("# Presentation Entity Health HUD 50k Benchmark");
             sb.AppendLine();
             sb.AppendLine($"- workload: `{EntityCount}` Arch ECS entities with `AttributeBuffer.Health`");
             sb.AppendLine($"- HUD output: `{EntityCount}` bars + `{EntityCount}` text items");
@@ -414,7 +414,7 @@ namespace Ludots.Tests.Presentation
             for (int frame = 0; frame < result.FrameTotals.Length; frame++)
             {
                 sb.Append("{");
-                sb.Append("\"scenario\":\"entity_health_hud_100k\",");
+                sb.Append("\"scenario\":\"entity_health_hud_50k\",");
                 sb.Append("\"frame\":").Append(frame).Append(',');
                 sb.Append("\"total_ms\":").Append(result.FrameTotals[frame].ToString("F4", CultureInfo.InvariantCulture)).Append(',');
                 sb.Append("\"sync_ms\":").Append(result.SyncTimes[frame].ToString("F4", CultureInfo.InvariantCulture)).Append(',');

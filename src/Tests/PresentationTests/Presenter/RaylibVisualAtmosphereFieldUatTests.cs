@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -244,6 +245,24 @@ namespace Ludots.Tests.Presentation
 
             public static AtmosphereFieldFixture Create(string repoRoot, string coreRoot)
             {
+                int ResolveVfxAssetId(string key, MeshAssetRegistry meshes)
+                {
+                    int assetId = meshes.GetId(key);
+                    if (assetId <= 0)
+                    {
+                        return 0;
+                    }
+
+                    if (!meshes.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                        !descriptor.VfxData.IsValid)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter behavior VFX asset '{key}' must declare VFX particle data.");
+                    }
+
+                    return assetId;
+                }
+
                 var world = World.Create();
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", coreRoot);
@@ -259,8 +278,10 @@ namespace Ludots.Tests.Presentation
                 var mapLoader = new MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
                 mapLoader.LoadTemplates(catalog);
 
+                var particleVfx = new ParticleVfxRegistry();
+                new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
                 var meshAssets = new MeshAssetRegistry();
-                new MeshAssetConfigLoader(pipeline, meshAssets).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshAssets, particleVfx).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
                 new PresentationMaterialConfigLoader(pipeline, materialAssets).Load(catalog);
                 var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
@@ -285,8 +306,9 @@ namespace Ludots.Tests.Presentation
                     resolveAnimationProfileId: animationProfiles.GetId,
                     resolveBehaviorAssetId: (kind, key) => kind switch
                     {
-                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline
+                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.Spline
                             => meshAssets.GetId(key),
+                        AssetKind.VFX => ResolveVfxAssetId(key, meshAssets),
                         _ => throw new InvalidOperationException($"Unexpected asset {kind} '{key}'."),
                     }).Load(catalog);
 
