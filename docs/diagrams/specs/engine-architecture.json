@@ -56,7 +56,7 @@
       "items": ["SpatialQuery · Physics2D", "Terrain · ChunkedGrid"] },
     { "id": "presentation", "title": "Presentation", "tint": "sand",
       "x": 1320, "y": 405, "w": 300, "h": 150,
-      "items": ["Performer · Visual · HUD", "Primitive · Animation"] },
+      "items": ["Presenter · Visual · HUD", "Primitive · Animation"] },
     { "id": "input", "title": "Input", "tint": "mauve",
       "x": 120, "y": 725, "w": 300, "h": 150,
       "items": ["InputRuntime · Order", "Selection · Interaction"] },

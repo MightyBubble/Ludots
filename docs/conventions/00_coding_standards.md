@@ -88,7 +88,7 @@ Core 本身也作为 Mod 挂载。所有 gameplay 内容（技能、效果、地
 |------|------|-----------|
 | `GameplayEventBus` | GAS gameplay 事件（EffectApplied、CastCommitted 等） | 表现、UI |
 | `TriggerManager` | Map/Script 触发器（MapLoaded 等） | 高频 gameplay 事件 |
-| `PresentationEventStream` | 表现事件，由 Performer 消费 | gameplay 状态变更 |
+| `PresentationEventStream` | 表现事件，由 Presenter 消费 | gameplay 状态变更 |
 
 **本仓库实际发生过的违规**：
 
@@ -216,7 +216,7 @@ scope 使用模块名（如 `gas`、`physics2d`、`editor`、`mod/MobaDemoMod`�
 | 跨层数据传递 | 通过 Sink（`AttributeSinkRegistry`） | 直接写组件跨 phase |
 | 配置加载 | 接入 `ConfigPipeline` + `ConfigCatalogEntry` | 自建 JSON 加载器 |
 | 事件通信 | `GameplayEventBus` 或 `TriggerManager.OnEvent` | 自建事件系统 |
-| 表现更新 | Performer 管线 + `ResponseChain` | 在 Core 系统里直接调平台 API |
+| 表现更新 | Presenter 管线 + `ResponseChain` | 在 Core 系统里直接调平台 API |
 | Mod 入口 | `IMod.OnLoad(IModContext)` | 静态构造器或反射扫描 |
 
 ## 8 相关文档

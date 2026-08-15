@@ -1,7 +1,7 @@
 {
   "name": "CapabilityStandardMassNavigationLargeWorld10kMod",
   "version": "1.0.0",
-  "description": "Standard capability acceptance entry for the large-world 10K MassNavigation performer showcase.",
+  "description": "Standard capability acceptance entry for the large-world 10K MassNavigation presenter showcase.",
   "main": "bin/net8.0/CapabilityStandardMassNavigationLargeWorld10kMod.dll",
   "priority": -2000,
   "dependencies": {
@@ -10,5 +10,5 @@
     "MassNavigationMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "capability-standard", "mass-navigation", "large-world", "performer", "hudbar", "hudtext", "minimap"]
+  "tags": ["showcase", "capability-standard", "mass-navigation", "large-world", "presenter", "hudbar", "hudtext", "minimap"]
 }

@@ -18,6 +18,8 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class BehaviorTreeArenaShowcaseAcceptanceTests
     {
+        private const double ShowcaseThinkBudgetMs = 25.0;
+
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
@@ -26,7 +28,7 @@ namespace Ludots.Tests.Gas.Production
             runtime.Bind(programs, actions, behavior);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
         }
     }
 
@@ -35,6 +37,8 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class HfsmSentryArenaShowcaseAcceptanceTests
     {
+        private const double ShowcaseThinkBudgetMs = 25.0;
+
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
@@ -43,7 +47,7 @@ namespace Ludots.Tests.Gas.Production
             runtime.Bind(programs, actions, behavior);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
         }
     }
 

@@ -138,8 +138,8 @@ public sealed class MassNavigationConfig
         {
             RequireProperties(
                 presentation,
-                "blockerPerformerId",
-                "hotspotPerformerId",
+                "blockerPresenterId",
+                "hotspotPresenterId",
                 "hotspotTemplateId");
         }
 
@@ -655,8 +655,8 @@ public sealed class MassNavigationStreamingConfig
 public sealed class MassNavigationPresentationConfig
 {
     public string[] RequiredMeshAssetIds { get; set; } = Array.Empty<string>();
-    public string BlockerPerformerId { get; set; } = string.Empty;
-    public string HotspotPerformerId { get; set; } = string.Empty;
+    public string BlockerPresenterId { get; set; } = string.Empty;
+    public string HotspotPresenterId { get; set; } = string.Empty;
     public string BlockerTemplateId { get; set; } = string.Empty;
     public string HotspotTemplateId { get; set; } = string.Empty;
     public MassNavigationTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavigationTeamPresentationConfig>();
@@ -698,8 +698,8 @@ public sealed class MassNavigationPresentationConfig
             return;
         }
 
-        RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
-        RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
+        RequireNonEmpty(BlockerPresenterId, nameof(BlockerPresenterId));
+        RequireNonEmpty(HotspotPresenterId, nameof(HotspotPresenterId));
         RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
 
         if (Teams.Length != scenario.Teams.Length)
@@ -749,10 +749,10 @@ public sealed class MassNavigationPresentationConfig
         return heavy ? team.HeavyTemplateId : team.LightTemplateId;
     }
 
-    public string ResolveAgentPerformerId(int teamId, bool heavy)
+    public string ResolveAgentPresenterId(int teamId, bool heavy)
     {
         MassNavigationTeamPresentationConfig team = GetTeam(teamId);
-        return heavy ? team.HeavyPerformerId : team.LightPerformerId;
+        return heavy ? team.HeavyPresenterId : team.LightPresenterId;
     }
 
     private static void RequireNonEmpty(string value, string fieldName)
@@ -870,8 +870,8 @@ public sealed class MassNavigationTeamPresentationConfig
     public string StyleId { get; set; } = string.Empty;
     public string LightTemplateId { get; set; } = string.Empty;
     public string HeavyTemplateId { get; set; } = string.Empty;
-    public string LightPerformerId { get; set; } = string.Empty;
-    public string HeavyPerformerId { get; set; } = string.Empty;
+    public string LightPresenterId { get; set; } = string.Empty;
+    public string HeavyPresenterId { get; set; } = string.Empty;
 
     public void Validate()
     {
@@ -895,14 +895,14 @@ public sealed class MassNavigationTeamPresentationConfig
             throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyTemplateId.");
         }
 
-        if (string.IsNullOrWhiteSpace(LightPerformerId))
+        if (string.IsNullOrWhiteSpace(LightPresenterId))
         {
-            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires LightPerformerId.");
+            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires LightPresenterId.");
         }
 
-        if (string.IsNullOrWhiteSpace(HeavyPerformerId))
+        if (string.IsNullOrWhiteSpace(HeavyPresenterId))
         {
-            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyPerformerId.");
+            throw new InvalidOperationException($"MassNavigation presentation team {TeamId} requires HeavyPresenterId.");
         }
     }
 }

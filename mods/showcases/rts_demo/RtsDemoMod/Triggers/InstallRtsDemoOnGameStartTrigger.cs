@@ -62,7 +62,7 @@ namespace RtsDemoMod.Triggers
                 new RtsRelationRuntimeSystem(engine, relationEntityCapacity),
                 SystemGroup.EffectProcessing);
             engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
             _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");

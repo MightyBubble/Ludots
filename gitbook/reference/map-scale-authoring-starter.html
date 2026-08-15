@@ -704,7 +704,7 @@
         </section>
 
         <p class="footnote">
-          这页只生成入门片段。正式 Mod 仍要把 config catalog、agent profile、navmesh/pathing、entity template、performer 和业务 runtime 接完整。
+          这页只生成入门片段。正式 Mod 仍要把 config catalog、agent profile、navmesh/pathing、entity template、presenter 和业务 runtime 接完整。
           大小写保持严格，缺字段不加 fallback。
         </p>
       </section>
@@ -818,7 +818,7 @@
         advice: {
           world: ["大世界可以沿用 64km 级 board。", "StreamingChunk 可从 64 cells * CellCm 起步。", "相机/玩家活动半径决定 loaded window。"],
           nav: ["动态门/桥/建筑用 runtime-incremental + cdt。", "临时拥堵仍归 MassNavigationFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
-          perf: ["不要让远区 performer 常驻。", "view residency 控制保留时间和半径。", "minimap 与相机跳转要验证 marker 不丢。"]
+          perf: ["不要让远区 presenter 常驻。", "view residency 控制保留时间和半径。", "minimap 与相机跳转要验证 marker 不丢。"]
         }
       }
     };
@@ -1148,7 +1148,7 @@
       document.getElementById("agentLabel").textContent =
         `radius ${fmt(agentRadius)}cm；clearance ${fmt(clearance)}cm；height ${fmt(number("agentHeightCm"))}cm`;
       document.getElementById("capacityLabel").textContent =
-        `visible agents ${fmt(visibleAgents)}；capacity 需按 performer/marker/overlay 另配`;
+        `visible agents ${fmt(visibleAgents)}；capacity 需按 presenter/marker/overlay 另配`;
       document.getElementById("routingLabel").textContent = preset.routing;
       document.getElementById("areaLabel").textContent =
         `areaId ${fmt(blockedAreaId)} 可对 heavy 标记为 blocked`;

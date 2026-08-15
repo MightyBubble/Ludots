@@ -29,7 +29,7 @@
 * [RFC-0060 通用存档系统](RFC-0060-universal-save-system.md)
   * Epic #292 引用的通用存档 RFC 回写；编号与 AI Utility Autocast 历史文件重叠，正式结论以 `gitbook/architecture/save-system.md` 为准
 * [RFC-0065 统一交互—集合—施法架构](RFC-0065-unified-interaction-collection-casting-architecture.md)
-  * 整合 RFC-0061~0064 为单一 Epic SSOT：Context Stack、Control Plane、Provenance Performer，并补齐 Panel Router / 聚合 catalog / CastFlow / CastDispatch；含 Mod 开发者与玩家双 persona 的 BDD UAT 验收
+  * 整合 RFC-0061~0064 为单一 Epic SSOT：Context Stack、Control Plane、Provenance Presenter，并补齐 Panel Router / 聚合 catalog / CastFlow / CastDispatch；含 Mod 开发者与玩家双 persona 的 BDD UAT 验收
   * Epic issue 粘贴稿：[RFC-0065-epic-issue-body-draft.md](RFC-0065-epic-issue-body-draft.md)（issue 建立后本稿即可删除）
 
 ## 2 使用规则

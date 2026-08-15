@@ -1,0 +1,14 @@
+[
+  {
+    "id": "vfx_forge_anchor",
+    "components": {
+      "Name": { "Value": "VFX Forge" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialPartitionExcluded": {}
+    }
+  }
+]

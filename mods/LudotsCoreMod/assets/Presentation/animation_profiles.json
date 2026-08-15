@@ -6,11 +6,6 @@
       { "packedStateIndex": 101, "clipAssetId": "core.hero.state.idle" },
       { "packedStateIndex": 102, "clipAssetId": "core.hero.state.walk" },
       { "packedStateIndex": 103, "clipAssetId": "core.hero.state.run" }
-    ],
-    "builtinClips": [
-      { "builtinClipId": "LocomotionCycle", "clipAssetId": "core.hero.builtin.locomotion_cycle" },
-      { "builtinClipId": "AimYawOffset", "clipAssetId": "core.hero.builtin.aim_yaw_offset" },
-      { "builtinClipId": "RecoilPulse", "clipAssetId": "core.hero.builtin.recoil_pulse" }
     ]
   }
 ]

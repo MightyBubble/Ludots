@@ -1,5 +1,4 @@
 using System;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Presentation.Assets
@@ -50,17 +49,6 @@ namespace Ludots.Core.Presentation.Assets
             if (TryGet(profileId, out var definition))
             {
                 return definition.TryResolveStateClipId(packedStateIndex, out clipAssetId);
-            }
-
-            clipAssetId = 0;
-            return false;
-        }
-
-        public bool TryResolveBuiltinClipId(int profileId, AnimatorBuiltinClipId builtinClipId, out int clipAssetId)
-        {
-            if (TryGet(profileId, out var definition))
-            {
-                return definition.TryResolveBuiltinClipId(builtinClipId, out clipAssetId);
             }
 
             clipAssetId = 0;

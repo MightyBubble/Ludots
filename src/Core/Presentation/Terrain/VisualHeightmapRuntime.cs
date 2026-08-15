@@ -8,14 +8,21 @@ namespace Ludots.Core.Presentation.Terrain
     {
         private const int PreferredRenderChunkSampleSpan = 33;
         private readonly VisualHeightmapAsset _asset;
+        private readonly VisualHeightmapRenderProfile _renderProfile;
         private readonly int _renderChunkColumns;
         private readonly int _renderChunkRows;
         private readonly int _renderChunkStepColumns;
         private readonly int _renderChunkStepRows;
 
         public VisualHeightmapRuntime(VisualHeightmapAsset asset)
+            : this(asset, VisualHeightmapRenderProfile.CreateDefault())
+        {
+        }
+
+        public VisualHeightmapRuntime(VisualHeightmapAsset asset, VisualHeightmapRenderProfile renderProfile)
         {
             _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+            _renderProfile = (renderProfile ?? throw new ArgumentNullException(nameof(renderProfile))).NormalizeAndValidate();
             _renderChunkColumns = ResolveRenderChunkCount(_asset.SampleColumns);
             _renderChunkRows = ResolveRenderChunkCount(_asset.SampleRows);
             _renderChunkStepColumns = ResolveRenderChunkStep(_asset.SampleColumns, _renderChunkColumns);
@@ -37,6 +44,8 @@ namespace Ludots.Core.Presentation.Terrain
         public int DefaultLayerIndex => _asset.DefaultLayerIndex;
 
         public int Revision => 0;
+
+        public VisualHeightmapRenderProfile RenderProfile => _renderProfile;
 
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
         {

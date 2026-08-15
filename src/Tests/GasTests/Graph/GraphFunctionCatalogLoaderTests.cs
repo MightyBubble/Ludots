@@ -130,7 +130,11 @@ namespace Ludots.Tests.Gas.Graph
                 var programs = new GraphProgramRegistry();
                 programs.Register(
                     graphId,
-                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
                     GraphKind.Script);
 
                 var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
@@ -171,7 +175,11 @@ namespace Ludots.Tests.Gas.Graph
                 var programs = new GraphProgramRegistry();
                 programs.Register(
                     yieldGraphId,
-                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
                     GraphKind.Script);
                 programs.Register(
                     rootGraphId,
@@ -227,7 +235,11 @@ namespace Ludots.Tests.Gas.Graph
                 var programs = new GraphProgramRegistry();
                 programs.Register(
                     yieldGraphId,
-                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                    },
                     GraphKind.Script);
                 programs.Register(
                     rootGraphId,

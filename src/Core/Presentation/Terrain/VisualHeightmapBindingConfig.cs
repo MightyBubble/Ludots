@@ -20,6 +20,11 @@ namespace Ludots.Core.Presentation.Terrain
         /// </summary>
         public int DefaultLayerIndex { get; set; } = -1;
 
+        /// <summary>
+        /// Presentation-only render profile for adapters. This never changes sampling truth.
+        /// </summary>
+        public VisualHeightmapRenderProfile RenderProfile { get; set; } = VisualHeightmapRenderProfile.CreateDefault();
+
         public VisualHeightmapBindingConfig Clone()
         {
             return new VisualHeightmapBindingConfig
@@ -27,6 +32,7 @@ namespace Ludots.Core.Presentation.Terrain
                 Asset = Asset,
                 BoardName = BoardName,
                 DefaultLayerIndex = DefaultLayerIndex,
+                RenderProfile = (RenderProfile ?? VisualHeightmapRenderProfile.CreateDefault()).NormalizeAndValidate(),
             };
         }
     }

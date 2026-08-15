@@ -14,7 +14,7 @@ namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
     /// Bridges owner-keyed entity collection row diffs into presentation events.
-    /// Performer rules stay responsible for visual lifecycle and asset choice.
+    /// Presenter rules stay responsible for visual lifecycle and asset choice.
     /// </summary>
     public sealed class EntityCollectionPresentationEventSystem : BaseSystem<World, float>
     {

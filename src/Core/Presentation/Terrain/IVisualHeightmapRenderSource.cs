@@ -22,6 +22,8 @@ namespace Ludots.Core.Presentation.Terrain
 
         int Revision { get; }
 
+        VisualHeightmapRenderProfile RenderProfile { get; }
+
         bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk);
     }
 }

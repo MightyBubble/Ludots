@@ -28,7 +28,7 @@ using Ludots.Core.Hosting;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -126,7 +126,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndPerformerComponents()
+        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndPresenterComponents()
         {
             using var engine = CreateEngine();
             LoadMap(engine, StressMapId, frames: 8);
@@ -155,12 +155,12 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<PreviousWorldPositionCm>(warrior), Is.True);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
             Assert.That(
-                HasEntityAnchoredPerformer(engine.World, performers, warrior),
+                HasEntityAnchoredPresenter(engine.World, presenters, warrior),
                 Is.True,
-                "Stress warrior should now participate in the performer mainline instead of relying on legacy presentation authoring.");
+                "Stress warrior should now participate in the presenter mainline instead of relying on legacy presentation authoring.");
         }
 
         [Test]
@@ -234,16 +234,16 @@ namespace Ludots.Tests.GAS.Production
                 ? currentPrimary
                 : Entity.Null;
             Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
-            var performerRegistry = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
+            var presenterRegistry = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
             Assert.That(
-                performerRegistry.GetId("champion_skill_sandbox.selection_indicator"),
+                presenterRegistry.GetId("champion_skill_sandbox.selection_indicator"),
                 Is.GreaterThan(0),
-                "Sandbox performer config should register a dedicated selection indicator.");
+                "Sandbox presenter config should register a dedicated selection indicator.");
             Assert.That(
-                performerRegistry.GetId("champion_skill_sandbox.hover_indicator"),
+                presenterRegistry.GetId("champion_skill_sandbox.hover_indicator"),
                 Is.GreaterThan(0),
-                "Sandbox performer config should register a dedicated hover indicator.");
+                "Sandbox presenter config should register a dedicated hover indicator.");
             var cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");
             Assert.That(
@@ -695,113 +695,113 @@ namespace Ludots.Tests.GAS.Production
 
             var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
                 ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
-            var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
 
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
                 bindingEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
                 hitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
-                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_e");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.ezreal_e");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
                 bindingEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
                 hitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit",
-                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_w");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.ezreal_w");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.Champion.Ezreal.MysticShot",
                 bindingEffectKey: "Effect.Champion.Ezreal.MysticShot",
                 hitEffectKey: "Effect.Champion.Ezreal.MysticShotHit",
-                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_q");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.ezreal_q");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
                 bindingEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
                 hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit",
-                projectilePerformerKey: "champion_skill_sandbox.projectile.ezreal_r");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.ezreal_r");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlast",
                 bindingEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
                 hitEffectKey: null,
-                projectilePerformerKey: "champion_skill_sandbox.projectile.jayce_q");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.jayce_q");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.ChampionStress.FireMage.Fireball",
                 bindingEffectKey: "Effect.ChampionStress.FireMage.FireballResolve",
                 hitEffectKey: null,
-                projectilePerformerKey: "champion_skill_sandbox.projectile.stress_fireball");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.stress_fireball");
             AssertProjectileEffect(
                 effects,
-                performers,
+                presenters,
                 projectileEffectKey: "Effect.ChampionStress.LaserMage.Laser",
                 bindingEffectKey: "Effect.ChampionStress.LaserMage.LaserResolve",
                 hitEffectKey: null,
-                projectilePerformerKey: "champion_skill_sandbox.projectile.stress_laser");
+                projectilePresenterKey: "champion_skill_sandbox.projectile.stress_laser");
 
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.ezreal_arcane_shift"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.ezreal_essence_flux_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.ezreal_essence_flux_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.garen_courage"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.garen_demacian_justice_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_runic_beacon"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_rune_field_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_rune_field_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_stone_pillar"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_prismatic_beam_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.geomancer_prismatic_beam_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.jayce_hammer_lightning_field"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.jayce_transform_hammer"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_warrior_cleave"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_fireball_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_fireball_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_laser_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_laser_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_priest_heal_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.stress_priest_heal_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_gravity_well_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_gravity_well_hit"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_cast"), Is.GreaterThan(0));
-            Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.ezreal_arcane_shift"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.ezreal_essence_flux_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.ezreal_essence_flux_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.garen_courage"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.garen_demacian_justice_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_runic_beacon"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_rune_field_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_rune_field_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_stone_pillar"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_prismatic_beam_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.geomancer_prismatic_beam_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.jayce_hammer_lightning_field"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.jayce_transform_hammer"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_warrior_cleave"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_fireball_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_fireball_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_laser_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_laser_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_priest_heal_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.stress_priest_heal_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_gravity_well_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_gravity_well_hit"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_cast"), Is.GreaterThan(0));
+            Assert.That(presenters.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_hit"), Is.GreaterThan(0));
 
             AssertSkillCueRule(
-                performers,
+                presenters,
                 PresentationEventKind.CastCommitted,
                 "Ability.Champion.Ezreal.EssenceFlux",
                 "champion_skill_sandbox.cue.ezreal_essence_flux_cast");
             AssertSkillCueRule(
-                performers,
+                presenters,
                 PresentationEventKind.EffectActivated,
                 "Effect.Champion.Ezreal.EssenceFluxHit",
                 "champion_skill_sandbox.cue.ezreal_essence_flux_hit");
             AssertSkillCueRule(
-                performers,
+                presenters,
                 PresentationEventKind.EffectApplied,
                 "Effect.Champion.Garen.DemacianJusticeHit",
                 "champion_skill_sandbox.cue.garen_demacian_justice_hit");
             AssertSkillCueRule(
-                performers,
+                presenters,
                 PresentationEventKind.EffectApplied,
                 "Effect.ChampionStress.FireMage.FireballHit",
                 "champion_skill_sandbox.cue.stress_fireball_hit");
             AssertSkillCueRule(
-                performers,
+                presenters,
                 PresentationEventKind.EffectApplied,
                 "Effect.Champion.SpellEngineer.GuidedLaserHit",
                 "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
             AssertTagLifecycleRule(
-                performers,
+                presenters,
                 "State.Champion.Ezreal.WMark",
                 "champion_skill_sandbox.mark.ezreal_essence_flux");
         }
@@ -943,7 +943,7 @@ namespace Ludots.Tests.GAS.Production
                 File.WriteAllText(Path.Combine(modDir, "assets", "game.json"), """
                 {
                   "presentation": {
-                    "performerInstanceCapacity": 0
+                    "presenterInstanceCapacity": 0
                   }
                 }
                 """);
@@ -965,13 +965,13 @@ namespace Ludots.Tests.GAS.Production
 
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                     firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot))!;
-                Assert.That(ex.Message, Does.Contain("presentation.performerInstanceCapacity"));
+                Assert.That(ex.Message, Does.Contain("presentation.presenterInstanceCapacity"));
                 Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, originalSyncContext), Is.True);
 
                 File.WriteAllText(Path.Combine(modDir, "assets", "game.json"), """
                 {
                   "presentation": {
-                    "performerInstanceCapacity": 64
+                    "presenterInstanceCapacity": 64
                   }
                 }
                 """);
@@ -1046,7 +1046,7 @@ namespace Ludots.Tests.GAS.Production
                 view,
                 loadedChunks: null,
                 focusOverride: null,
-                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
                 timingDiagnostics: timingDiagnostics,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
@@ -1318,11 +1318,11 @@ namespace Ludots.Tests.GAS.Production
                 teamBPriests);
         }
 
-        private static bool HasEntityAnchoredPerformer(World world, PerformerEntityRuntime performers, Entity owner)
+        private static bool HasEntityAnchoredPresenter(World world, PresenterEntityRuntime presenters, Entity owner)
         {
             bool found = false;
-            var query = new QueryDescription().WithAll<PerformerState>();
-            world.Query(in query, (Entity entity, ref PerformerState state) =>
+            var query = new QueryDescription().WithAll<PresenterState>();
+            world.Query(in query, (Entity entity, ref PresenterState state) =>
             {
                 if (found)
                 {
@@ -1416,19 +1416,19 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertProjectileEffect(
             EffectTemplateRegistry effects,
-            PerformerDefinitionRegistry performers,
+            PresenterDefinitionRegistry presenters,
             string projectileEffectKey,
             string bindingEffectKey,
             string? hitEffectKey,
-            string projectilePerformerKey)
+            string projectilePresenterKey)
         {
             int projectileEffectId = EffectTemplateIdRegistry.GetId(projectileEffectKey);
             int bindingEffectId = EffectTemplateIdRegistry.GetId(bindingEffectKey);
-            int projectilePerformerId = performers.GetId(projectilePerformerKey);
+            int projectilePresenterId = presenters.GetId(projectilePresenterKey);
 
             Assert.That(projectileEffectId, Is.GreaterThan(0), $"{projectileEffectKey} should be registered.");
             Assert.That(bindingEffectId, Is.GreaterThan(0), $"{bindingEffectKey} should be registered.");
-            Assert.That(projectilePerformerId, Is.GreaterThan(0), $"{projectilePerformerKey} should be registered.");
+            Assert.That(projectilePresenterId, Is.GreaterThan(0), $"{projectilePresenterKey} should be registered.");
 
             Assert.That(effects.TryGet(projectileEffectId, out var projectileEffect), Is.True);
             Assert.That(projectileEffect.PresetType, Is.EqualTo(EffectPresetType.LaunchProjectile));
@@ -1440,31 +1440,31 @@ namespace Ludots.Tests.GAS.Production
                     Is.EqualTo(EffectTemplateIdRegistry.GetId(hitEffectKey)));
             }
 
-            Assert.That(performers.TryGet(projectilePerformerId, out var performer), Is.True);
+            Assert.That(presenters.TryGet(projectilePresenterId, out var presenter), Is.True);
             AssertProjectileLifecycleRule(
-                performer,
-                projectilePerformerId,
+                presenter,
+                projectilePresenterId,
                 PresentationEventKind.ProjectileSpawned,
                 bindingEffectId,
-                PerformerCommandKind.CreatePerformer);
+                PresenterCommandKind.CreatePresenter);
             AssertProjectileLifecycleRule(
-                performer,
-                projectilePerformerId,
+                presenter,
+                projectilePresenterId,
                 PresentationEventKind.EntityDestroyed,
                 keyId: -1,
-                PerformerCommandKind.DestroyPerformerScope);
+                PresenterCommandKind.DestroyPresenterScope);
         }
 
         private static void AssertProjectileLifecycleRule(
-            PerformerDefinition performer,
-            int performerId,
+            PresenterDefinition presenter,
+            int presenterId,
             PresentationEventKind eventKind,
             int keyId,
-            PerformerCommandKind commandKind)
+            PresenterCommandKind commandKind)
         {
-            for (int i = 0; i < performer.Rules.Length; i++)
+            for (int i = 0; i < presenter.Rules.Length; i++)
             {
-                var rule = performer.Rules[i];
+                var rule = presenter.Rules[i];
                 if (rule.Event.Kind != eventKind || rule.Command.CommandKind != commandKind)
                 {
                     continue;
@@ -1473,25 +1473,25 @@ namespace Ludots.Tests.GAS.Production
                 if (keyId >= 0)
                 {
                     Assert.That(rule.Event.KeyId, Is.EqualTo(keyId));
-                    Assert.That(rule.Command.PerformerDefinitionId, Is.EqualTo(performerId));
-                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                    Assert.That(rule.Command.PresenterDefinitionId, Is.EqualTo(presenterId));
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
                 }
                 else
                 {
-                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
                 }
 
                 return;
             }
 
-            Assert.Fail($"Expected performer lifecycle rule kind={eventKind}, command={commandKind}.");
+            Assert.Fail($"Expected presenter lifecycle rule kind={eventKind}, command={commandKind}.");
         }
 
         private static void AssertSkillCueRule(
-            PerformerDefinitionRegistry performers,
+            PresenterDefinitionRegistry presenters,
             PresentationEventKind eventKind,
             string eventKey,
-            string cuePerformerKey)
+            string cuePresenterKey)
         {
             Assert.That(
                 eventKind,
@@ -1500,83 +1500,83 @@ namespace Ludots.Tests.GAS.Production
                     .Or.EqualTo(PresentationEventKind.EffectActivated),
                 "Skill cue rules should be cast/effect events. Tag lifecycle presentation uses dedicated scoped rules.");
 
-            const string eventRulePerformerKey = "champion_skill_sandbox.event_rules";
-            int eventRulePerformerId = performers.GetId(eventRulePerformerKey);
-            int cuePerformerId = performers.GetId(cuePerformerKey);
+            const string eventRulePresenterKey = "champion_skill_sandbox.event_rules";
+            int eventRulePresenterId = presenters.GetId(eventRulePresenterKey);
+            int cuePresenterId = presenters.GetId(cuePresenterKey);
             int eventKeyId = ResolvePresentationEventKey(eventKind, eventKey);
 
-            Assert.That(eventRulePerformerId, Is.GreaterThan(0), $"{eventRulePerformerKey} should be registered.");
-            Assert.That(cuePerformerId, Is.GreaterThan(0), $"{cuePerformerKey} should be registered.");
+            Assert.That(eventRulePresenterId, Is.GreaterThan(0), $"{eventRulePresenterKey} should be registered.");
+            Assert.That(cuePresenterId, Is.GreaterThan(0), $"{cuePresenterKey} should be registered.");
             Assert.That(eventKeyId, Is.GreaterThan(0), $"{eventKey} should resolve for event kind {eventKind}.");
-            Assert.That(performers.TryGet(eventRulePerformerId, out var rulePerformer), Is.True);
+            Assert.That(presenters.TryGet(eventRulePresenterId, out var rulePresenter), Is.True);
 
-            for (int i = 0; i < rulePerformer.Rules.Length; i++)
+            for (int i = 0; i < rulePresenter.Rules.Length; i++)
             {
-                PerformerRule rule = rulePerformer.Rules[i];
+                PresenterRule rule = rulePresenter.Rules[i];
                 if (rule.Event.Kind != eventKind ||
                     rule.Event.KeyId != eventKeyId ||
-                    rule.Command.CommandKind != PerformerCommandKind.CreatePerformer ||
-                    rule.Command.PerformerDefinitionId != cuePerformerId)
+                    rule.Command.CommandKind != PresenterCommandKind.CreatePresenter ||
+                    rule.Command.PresenterDefinitionId != cuePresenterId)
                 {
                     continue;
                 }
 
-                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.Fixed));
-                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.Fixed));
+                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PresenterCommandEntitySource.EventSource));
                 Assert.That(rule.Condition.Inline, Is.EqualTo(InlineConditionKind.SourceHasVisualTransform));
                 return;
             }
 
-            Assert.Fail($"Expected sandbox performer rule {eventKind}:{eventKey} -> {cuePerformerKey}.");
+            Assert.Fail($"Expected sandbox presenter rule {eventKind}:{eventKey} -> {cuePresenterKey}.");
         }
 
         private static void AssertTagLifecycleRule(
-            PerformerDefinitionRegistry performers,
+            PresenterDefinitionRegistry presenters,
             string tagKey,
-            string performerKey)
+            string presenterKey)
         {
-            int performerId = performers.GetId(performerKey);
+            int presenterId = presenters.GetId(presenterKey);
             int tagId = TagRegistry.GetId(tagKey);
 
-            Assert.That(performerId, Is.GreaterThan(0), $"{performerKey} should be registered.");
+            Assert.That(presenterId, Is.GreaterThan(0), $"{presenterKey} should be registered.");
             Assert.That(tagId, Is.GreaterThan(0), $"{tagKey} should be registered.");
-            Assert.That(performers.TryGet(performerId, out var performer), Is.True);
+            Assert.That(presenters.TryGet(presenterId, out var presenter), Is.True);
 
             AssertTagLifecycleRule(
-                performer,
+                presenter,
                 tagId,
-                performerId,
+                presenterId,
                 InlineConditionKind.TagGained,
-                PerformerCommandKind.CreatePerformer);
+                PresenterCommandKind.CreatePresenter);
             AssertTagLifecycleRule(
-                performer,
+                presenter,
                 tagId,
-                performerId,
+                presenterId,
                 InlineConditionKind.TagLost,
-                PerformerCommandKind.DestroyScopedPerformer);
+                PresenterCommandKind.DestroyScopedPresenter);
         }
 
         private static void AssertTagLifecycleRule(
-            PerformerDefinition performer,
+            PresenterDefinition presenter,
             int tagId,
-            int performerId,
+            int presenterId,
             InlineConditionKind condition,
-            PerformerCommandKind commandKind)
+            PresenterCommandKind commandKind)
         {
-            for (int i = 0; i < performer.Rules.Length; i++)
+            for (int i = 0; i < presenter.Rules.Length; i++)
             {
-                PerformerRule rule = performer.Rules[i];
+                PresenterRule rule = presenter.Rules[i];
                 if (rule.Event.Kind != PresentationEventKind.TagEffectiveChanged ||
                     rule.Event.KeyId != tagId ||
                     rule.Condition.Inline != condition ||
                     rule.Command.CommandKind != commandKind ||
-                    rule.Command.PerformerDefinitionId != performerId)
+                    rule.Command.PresenterDefinitionId != presenterId)
                 {
                     continue;
                 }
 
-                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.SourceStableId));
-                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+                Assert.That(rule.Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.SourceStableId));
+                Assert.That(rule.Command.OwnerSource, Is.EqualTo(PresenterCommandEntitySource.EventSource));
                 return;
             }
 

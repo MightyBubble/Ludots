@@ -26,7 +26,7 @@ Layer 3  Preset           DeployConsumeSource 等封装名（给人抄）
 
 | Op | BuiltinHandler / Queue | 职责 |
 |----|------------------------|------|
-| `MaterializeTemplate` | 复用 spawn 物化 + performer/map | 按 templateId 创建实体 |
+| `MaterializeTemplate` | 复用 spawn 物化 + presenter/map | 按 templateId 创建实体 |
 | `ConsumeEntity` | 新或 presentation lifecycle 包装 | 标记/销毁源实体 |
 | `TransferStableId` | 新 | 源 → 目标 presentation id |
 | `CopyAttributeSlice` | 新或扩展 `ApplyModifiers` | 显式 attribute 列表 + Base/Current |

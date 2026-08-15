@@ -12,7 +12,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphBehaviorCommon;
@@ -35,7 +35,7 @@ public sealed class GraphOpsStageVisuals
     private readonly World _world;
     private readonly EntityTemplateKeyRegistry _templates;
     private readonly PresentationStableIdAllocator _stableIds;
-    private readonly PerformerEntitySpawnBootstrap _bootstrap;
+    private readonly PresenterEntitySpawnBootstrap _bootstrap;
     private readonly KnowledgeProjectionStore _knowledge;
     private readonly TagOps _tagOps;
     private readonly int _healthAttrId;
@@ -46,7 +46,7 @@ public sealed class GraphOpsStageVisuals
         World world,
         EntityTemplateKeyRegistry templates,
         PresentationStableIdAllocator stableIds,
-        PerformerEntitySpawnBootstrap bootstrap,
+        PresenterEntitySpawnBootstrap bootstrap,
         KnowledgeProjectionStore knowledge,
         TagOps tagOps,
         int healthAttrId)
@@ -68,10 +68,10 @@ public sealed class GraphOpsStageVisuals
             ?? throw new InvalidOperationException("GraphOps HUD requires EntityTemplateKeyRegistry.");
         PresentationStableIdAllocator stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
             ?? throw new InvalidOperationException("GraphOps HUD requires PresentationStableIdAllocator.");
-        PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-            ?? throw new InvalidOperationException("GraphOps HUD requires PerformerEntityRuntime.");
-        PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("GraphOps HUD requires PerformerDefinitionRegistry.");
+        PresenterEntityRuntime presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+            ?? throw new InvalidOperationException("GraphOps HUD requires PresenterEntityRuntime.");
+        PresenterDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("GraphOps HUD requires PresenterDefinitionRegistry.");
         KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
             ?? throw new InvalidOperationException("GraphOps HUD requires KnowledgeProjectionStore.");
         if (engine.GetService(CoreServiceKeys.KnowledgeProjectionResolver) == null)
@@ -92,11 +92,11 @@ public sealed class GraphOpsStageVisuals
             throw new InvalidOperationException("GraphOps HUD requires the Health attribute.");
         }
 
-        var bootstrap = new PerformerEntitySpawnBootstrap(
+        var bootstrap = new PresenterEntitySpawnBootstrap(
             engine.World,
             templates,
             stableIds,
-            performers,
+            presenters,
             definitions,
             definitions.BootstrapRegistry);
         return new GraphOpsStageVisuals(engine, engine.World, templates, stableIds, bootstrap, knowledge, tagOps, healthId);
@@ -148,10 +148,10 @@ public sealed class GraphOpsStageVisuals
 
         WriteHealth(entity, health, healthMax);
         _bootstrap.TryBootstrap(entity, templateId);
-        if (!_world.Has<PerformerRootBootstrapHandled>(entity))
+        if (!_world.Has<PresenterRootBootstrapHandled>(entity))
         {
             throw new InvalidOperationException(
-                $"GraphOps HUD performer did not bind for template '{templateId}' ({displayName}).");
+                $"GraphOps HUD presenter did not bind for template '{templateId}' ({displayName}).");
         }
 
         if (isViewer)
@@ -248,10 +248,10 @@ public sealed class GraphOpsStageVisuals
         }
 
         _bootstrap.TryBootstrap(entity, templateId);
-        if (!_world.Has<PerformerRootBootstrapHandled>(entity))
+        if (!_world.Has<PresenterRootBootstrapHandled>(entity))
         {
             throw new InvalidOperationException(
-                $"GraphOps HUD performer did not bind for template '{templateId}' ({displayName}).");
+                $"GraphOps HUD presenter did not bind for template '{templateId}' ({displayName}).");
         }
 
         DiscloseHealth(entity);

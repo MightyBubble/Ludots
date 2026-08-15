@@ -17,7 +17,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardLiveSkillWorkbenchShowcaseMod.Runtime;
@@ -50,8 +50,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private readonly LiveGasEditPipeline _pipeline;
     private readonly DebugDrawCommandBuffer _debugDraw;
     private readonly ScreenOverlayBuffer? _overlay;
-    private readonly PerformerEntityRuntime? _performerRuntime;
-    private readonly PerformerDefinitionRegistry? _performerDefinitions;
+    private readonly PresenterEntityRuntime? _presenterRuntime;
+    private readonly PresenterDefinitionRegistry? _presenterDefinitions;
     private readonly KnowledgeProjectionStore? _knowledge;
     private readonly GasClocks? _gasClocks;
     private readonly int _castAbilityOrderTypeId;
@@ -85,8 +85,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer)
             ?? throw new InvalidOperationException("DebugDrawCommandBuffer required.");
         _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-        _performerRuntime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
-        _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+        _presenterRuntime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
+        _presenterDefinitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
         _knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore);
         _gasClocks = engine.GetService(CoreServiceKeys.GasClocks);
 
@@ -105,29 +105,29 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
 
     private bool TryResolveHudBindings()
     {
-        if (_performerRuntime == null || _performerDefinitions == null)
+        if (_presenterRuntime == null || _presenterDefinitions == null)
         {
             return false;
         }
 
         if (_chillBarDefId <= 0)
         {
-            _chillBarDefId = _performerDefinitions.GetId(ChillBarDefinitionId);
+            _chillBarDefId = _presenterDefinitions.GetId(ChillBarDefinitionId);
         }
 
         if (_chillCountdownDefId <= 0)
         {
-            _chillCountdownDefId = _performerDefinitions.GetId(ChillCountdownDefinitionId);
+            _chillCountdownDefId = _presenterDefinitions.GetId(ChillCountdownDefinitionId);
         }
 
         if (_chillRatioParamId == 0)
         {
-            PerformerParamKeyRegistry.TryGetId(ChillRatioParamKey, out _chillRatioParamId);
+            PresenterParamKeyRegistry.TryGetId(ChillRatioParamKey, out _chillRatioParamId);
         }
 
         if (_chillSecondsParamId == 0)
         {
-            PerformerParamKeyRegistry.TryGetId(ChillSecondsParamKey, out _chillSecondsParamId);
+            PresenterParamKeyRegistry.TryGetId(ChillSecondsParamKey, out _chillSecondsParamId);
         }
 
         return _chillBarDefId > 0 &&
@@ -153,7 +153,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _elapsed += dt;
         TickDemo();
         ProbeTargetState();
-        DriveChillHudPerformers();
+        DriveChillHudPresenters();
         LogStatusIfChanged();
         DrawEditorStateMarkers();
         DrawHud();
@@ -403,7 +403,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         }
     }
 
-    private void DriveChillHudPerformers()
+    private void DriveChillHudPresenters()
     {
         EnsureWorldHudVisible();
         if (!TryResolveHudBindings())
@@ -497,16 +497,16 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
 
     private void ProbeHudAttachment(Entity caster, Entity target)
     {
-        if (_performerRuntime == null || _performerDefinitions == null)
+        if (_presenterRuntime == null || _presenterDefinitions == null)
         {
-            Log.Info(in LogChannels.GAS, "[LSW HotApply Demo] HUD probe: performer runtime missing");
+            Log.Info(in LogChannels.GAS, "[LSW HotApply Demo] HUD probe: presenter runtime missing");
             return;
         }
 
-        int healthBarDef = _performerDefinitions.GetId("lsw.unit_health_bar");
-        int healthTextDef = _performerDefinitions.GetId("lsw.unit_health_text");
-        int chillBarDef = _performerDefinitions.GetId("lsw.unit_chill_bar");
-        int chillTextDef = _performerDefinitions.GetId("lsw.unit_chill_countdown");
+        int healthBarDef = _presenterDefinitions.GetId("lsw.unit_health_bar");
+        int healthTextDef = _presenterDefinitions.GetId("lsw.unit_health_text");
+        int chillBarDef = _presenterDefinitions.GetId("lsw.unit_chill_bar");
+        int chillTextDef = _presenterDefinitions.GetId("lsw.unit_chill_countdown");
         int bars = CountOwned(healthBarDef, caster) + CountOwned(healthBarDef, target);
         int texts = CountOwned(healthTextDef, caster) + CountOwned(healthTextDef, target);
         int chillBars = CountOwned(chillBarDef, caster) + CountOwned(chillBarDef, target);
@@ -519,12 +519,12 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
 
     private int CountOwned(int defId, Entity owner)
     {
-        if (defId <= 0 || owner == Entity.Null || _performerRuntime == null)
+        if (defId <= 0 || owner == Entity.Null || _presenterRuntime == null)
         {
             return 0;
         }
 
-        return _performerRuntime.GetActiveByOwnerDefinition(defId, owner).Count;
+        return _presenterRuntime.GetActiveByOwnerDefinition(defId, owner).Count;
     }
 
     private void EnsureWorldHudVisible()
@@ -541,32 +541,32 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
 
     private void SyncChillBar(Entity owner, float ratio)
     {
-        IReadOnlyList<Entity> bars = _performerRuntime!.GetActiveByOwnerDefinition(_chillBarDefId, owner);
+        IReadOnlyList<Entity> bars = _presenterRuntime!.GetActiveByOwnerDefinition(_chillBarDefId, owner);
         for (int i = 0; i < bars.Count; i++)
         {
-            _performerRuntime.SetParam(bars[i], _chillRatioParamId, ParamLane.Float, ratio, 0, Vector4.Zero);
+            _presenterRuntime.SetParam(bars[i], _chillRatioParamId, ParamLane.Float, ratio, 0, Vector4.Zero);
         }
     }
 
     private void SyncChillCountdown(Entity owner, float displaySeconds, bool active)
     {
-        if (!_performerDefinitions!.TryGet(_chillCountdownDefId, out PerformerDefinition definition))
+        if (!_presenterDefinitions!.TryGet(_chillCountdownDefId, out PresenterDefinition definition))
         {
             return;
         }
 
-        IReadOnlyList<Entity> texts = _performerRuntime!.GetActiveByOwnerDefinition(_chillCountdownDefId, owner);
+        IReadOnlyList<Entity> texts = _presenterRuntime!.GetActiveByOwnerDefinition(_chillCountdownDefId, owner);
         for (int i = 0; i < texts.Count; i++)
         {
-            Entity performer = texts[i];
-            _performerRuntime.SetParam(
-                performer,
+            Entity presenter = texts[i];
+            _presenterRuntime.SetParam(
+                presenter,
                 _chillSecondsParamId,
                 ParamLane.Float,
                 displaySeconds,
                 0,
                 Vector4.Zero);
-            _performerRuntime.SetBehaviorActive(performer, definition, ChillCountdownBodySlot, active);
+            _presenterRuntime.SetBehaviorActive(presenter, definition, ChillCountdownBodySlot, active);
         }
     }
 

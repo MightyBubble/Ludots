@@ -9,7 +9,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -38,24 +38,24 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, "interaction_showcase_hub");
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
 
-            int performerVisuals = 0;
+            int presenterVisuals = 0;
             int skinnedCount = 0;
             int staticCount = 0;
-            var performerQuery = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state) =>
+            var presenterQuery = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in presenterQuery, (Entity entity, ref PresenterState state) =>
             {
                 if (state.AnchorKind != PresentationAnchorKind.Entity || !engine.World.IsAlive(state.OwnerEntity) || !engine.World.Has<MapEntity>(state.OwnerEntity))
                 {
                     return;
                 }
 
-                performerVisuals++;
+                presenterVisuals++;
             });
 
-            Assert.That(performerVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap performer instances for encounter actors.");
+            Assert.That(presenterVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap presenter instances for encounter actors.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);

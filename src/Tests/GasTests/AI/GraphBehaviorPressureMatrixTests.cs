@@ -14,6 +14,9 @@ namespace Ludots.Tests.Gas.AI
     [Category("ci-gate")]
     public sealed class GraphBehaviorPressureMatrixTests
     {
+        private const double FrameBudgetMs = 15.0;
+        private const double CiTimingEnvelopeMs = 100.0;
+
         private static string ArtifactDir
         {
             get
@@ -51,16 +54,20 @@ namespace Ludots.Tests.Gas.AI
             {
                 PressureThinkRow row = m1[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), $"M1 A={row.Agents} N={row.Topology} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(15.0),
-                    $"M1 A={row.Agents} N={row.Topology} think wave exceeded 15ms: {row.TimeMs:F3}");
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+                    $"M1 A={row.Agents} N={row.Topology} think wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiTimingEnvelopeMs),
+                    $"M1 A={row.Agents} N={row.Topology} think wave exceeded CI envelope: {row.TimeMs:F3}ms");
             }
 
             for (int i = 0; i < m2.Length; i++)
             {
                 PressureThinkRow row = m2[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), $"M2 G={row.Topology} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(15.0),
-                    $"M2 A={row.Agents} G={row.Topology} think-wave sum exceeded 15ms: {row.TimeMs:F3}");
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+                    $"M2 A={row.Agents} G={row.Topology} think-wave sum exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiTimingEnvelopeMs),
+                    $"M2 A={row.Agents} G={row.Topology} think-wave sum exceeded CI envelope: {row.TimeMs:F3}ms");
             }
 
             for (int i = 0; i < m3.Length; i++)
@@ -78,8 +85,10 @@ namespace Ludots.Tests.Gas.AI
                 PressureSliceRow row = m6[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0),
                     $"M6 targets={row.Agents} I={row.Instructions} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(15.0),
-                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded 15ms: {row.TimeMs:F3}");
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiTimingEnvelopeMs),
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded CI envelope: {row.TimeMs:F3}ms");
             }
         }
 

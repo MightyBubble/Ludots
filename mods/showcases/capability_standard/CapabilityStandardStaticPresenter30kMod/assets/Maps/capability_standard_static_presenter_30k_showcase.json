@@ -1,0 +1,36 @@
+{
+  "Id": "capability_standard_static_presenter_30k_showcase",
+  "Tags": ["showcase", "presenter"],
+  "VisualHeightmapAsset": "assets/terrain/capability_standard_static_presenter_30k_showcase_flat.vhtm",
+  "Metadata": {
+    "capabilityStandardStaticPresenter30k": {
+      "scatterInitialTarget": 30000,
+      "scatterSeed": 271828,
+      "scatterMinRadiusCm": 750.0,
+      "scatterMaxRadiusCm": 2400.0,
+      "scatterJitterCm": 140.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 16
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": [
+    {
+      "Template": "capability_static_presenter_building",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    }
+  ]
+}
