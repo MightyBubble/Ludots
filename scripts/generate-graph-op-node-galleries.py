@@ -236,10 +236,6 @@ def write_text_lf(path: Path, text: str) -> None:
         file.write(text)
 
 
-def write_text_native(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
-
-
 def dump(path: Path, data) -> None:
     write_text_lf(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
@@ -323,7 +319,7 @@ def write_entry_mod(repo: Path, op: str, title: str) -> None:
     folder = repo / ENTRY_ROOT_REL / ns
     folder.mkdir(parents=True, exist_ok=True)
     map_id = PREFIX + op
-    write_text_native(folder / "GENERATED.txt", STAMP)
+    write_text_lf(folder / "GENERATED.txt", STAMP)
     write_text_lf(folder / f"{ns}.csproj", ENTRY_CSPROJ.format(ns=ns))
     write_text_lf(folder / f"{ns}Entry.cs", ENTRY_CS.format(ns=ns))
     write_text_lf(folder / "mod.json", ENTRY_MOD_JSON.format(ns=ns, op=op))
