@@ -376,18 +376,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             cursor.Status = GraphExecutionStatus.Running;
 
             var table = handlers.Handlers;
+            Span<int> ints = state.I;
             int pc = cursor.Pc;
+            int treeSteps = state.TreeSteps;
             int stepsThisSlice = 0;
 
             while (stepsThisSlice < budgetSteps)
             {
-                if (state.TreeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
+                if (treeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
                 {
                     cursor.Pc = pc;
                     cursor.CallStackCount = state.CallStackCount;
                     cursor.ReturnInt = state.ReturnInt;
-                    cursor.Steps = state.TreeSteps;
+                    cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.BudgetSuspended;
+                    state.TreeSteps = treeSteps;
                     state.Status = GraphExecutionStatus.BudgetSuspended;
                     return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
                 }
@@ -401,32 +404,59 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ref readonly var ins = ref program[pc];
                 int instructionIndex = pc;
                 pc++;
-                cursor.Steps++;
+                treeSteps++;
                 stepsThisSlice++;
-                state.TreeSteps = cursor.Steps;
 
                 if (ins.Op == 0)
                 {
                     continue;
                 }
 
-                if (ins.Op >= table.Length)
+                switch ((GraphNodeOp)ins.Op)
                 {
-                    throw new InvalidOperationException(
-                        $"Graph op {ins.Op} exceeds handler table capacity ({table.Length}).");
-                }
+                    case GraphNodeOp.ConstInt:
+                        ints[ins.Dst] = ins.Imm;
+                        continue;
 
-                var handler = table[ins.Op];
-                if (handler == null)
-                {
-                    throw new InvalidOperationException(
-                        $"No handler registered for graph op {ins.Op}.");
-                }
+                    case GraphNodeOp.MoveInt:
+                        ints[ins.Dst] = ints[ins.A];
+                        continue;
 
-                handler(ref state, in ins, ref pc);
-                if (state.TreeSteps > cursor.Steps)
-                {
-                    cursor.Steps = state.TreeSteps;
+                    case GraphNodeOp.HaltReturnInt:
+                        state.ReturnInt = ints[ins.A];
+                        state.Status = GraphExecutionStatus.Halted;
+                        cursor.Pc = instructionIndex + 1;
+                        cursor.CallStackCount = state.CallStackCount;
+                        cursor.ReturnInt = state.ReturnInt;
+                        cursor.Steps = treeSteps;
+                        cursor.Status = GraphExecutionStatus.Halted;
+                        state.TreeSteps = treeSteps;
+                        return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+
+                    default:
+                    {
+                        if (ins.Op >= table.Length)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph op {ins.Op} exceeds handler table capacity ({table.Length}).");
+                        }
+
+                        var handler = table[ins.Op];
+                        if (handler == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"No handler registered for graph op {ins.Op}.");
+                        }
+
+                        state.TreeSteps = treeSteps;
+                        handler(ref state, in ins, ref pc);
+                        if (state.TreeSteps > treeSteps)
+                        {
+                            treeSteps = state.TreeSteps;
+                        }
+
+                        break;
+                    }
                 }
 
                 if (state.Status == GraphExecutionStatus.Yielded)
@@ -434,6 +464,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     cursor.Pc = pc;
                     cursor.CallStackCount = state.CallStackCount;
                     cursor.ReturnInt = state.ReturnInt;
+                    cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.Yielded;
                     return new GraphSliceResult(GraphExecutionStatus.Yielded, cursor.ReturnInt, cursor.Steps);
                 }
@@ -443,6 +474,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     cursor.Pc = instructionIndex + 1;
                     cursor.CallStackCount = state.CallStackCount;
                     cursor.ReturnInt = state.ReturnInt;
+                    cursor.Steps = treeSteps;
                     cursor.Status = GraphExecutionStatus.Halted;
                     return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
                 }
@@ -451,7 +483,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             cursor.Pc = pc;
             cursor.CallStackCount = state.CallStackCount;
             cursor.ReturnInt = state.ReturnInt;
+            cursor.Steps = treeSteps;
             cursor.Status = GraphExecutionStatus.BudgetSuspended;
+            state.TreeSteps = treeSteps;
             state.Status = GraphExecutionStatus.BudgetSuspended;
             return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, cursor.ReturnInt, cursor.Steps);
         }

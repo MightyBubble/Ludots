@@ -164,11 +164,6 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             Entity explicitTarget = default,
             IGraphRuntimeApi? api = null)
         {
-            if (_tree.AlwaysSuccessSequenceNodeVisitsPerAgent > 0)
-            {
-                return TickAlwaysSuccessSequence();
-            }
-
             int visited = 0;
             int scriptSlices = 0;
             int scriptSteps = 0;
@@ -189,27 +184,6 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
-        }
-
-        private BehaviorTreeThinkStats TickAlwaysSuccessSequence()
-        {
-            int active = 0;
-            int visitsPerAgent = _tree.AlwaysSuccessSequenceNodeVisitsPerAgent;
-            BehaviorTreeStatus[] status = _status;
-            byte[] stackCount = _stackCount;
-            for (int agent = 0; agent < _count; agent++)
-            {
-                if (status[agent] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
-                {
-                    continue;
-                }
-
-                status[agent] = BehaviorTreeStatus.Success;
-                stackCount[agent] = 0;
-                active++;
-            }
-
-            return new BehaviorTreeThinkStats(_count, active * visitsPerAgent, 0, 0);
         }
 
         private void TickAgent(
@@ -234,16 +208,24 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             int depth = _stackCount[agent];
             if (depth <= 0)
             {
+                _stackCount[agent] = 0;
                 _status[agent] = BehaviorTreeStatus.Success;
                 return;
             }
 
             int stackBase = agent * BehaviorTreeLimits.MaxStackDepth;
             BehaviorTreeNode[] nodes = _tree.Nodes;
+            if (depth == 1 &&
+                _stack[stackBase] == _tree.RootIndex &&
+                TryTickFlatRootSequence(agent, nodes, stackBase, ref visited))
+            {
+                return;
+            }
+
             while (depth > 0)
             {
                 int nodeIndex = _stack[stackBase + depth - 1];
-                BehaviorTreeNode node = nodes[nodeIndex];
+                ref readonly BehaviorTreeNode node = ref nodes[nodeIndex];
                 visited++;
 
                 if (node.Kind == BehaviorTreeNodeKind.Condition || node.Kind == BehaviorTreeNodeKind.Action)
@@ -280,14 +262,15 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
                     if (leaf == BehaviorTreeStatus.Running)
                     {
+                        _stackCount[agent] = (byte)depth;
                         _status[agent] = BehaviorTreeStatus.Running;
                         return;
                     }
 
                     depth = PopAndPropagate(agent, stackBase, depth, leaf);
-                    _stackCount[agent] = (byte)depth;
                     if (depth == 0)
                     {
+                        _stackCount[agent] = 0;
                         _status[agent] = leaf;
                         return;
                     }
@@ -303,9 +286,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         ? BehaviorTreeStatus.Success
                         : BehaviorTreeStatus.Failure;
                     depth = PopAndPropagate(agent, stackBase, depth, done);
-                    _stackCount[agent] = (byte)depth;
                     if (depth == 0)
                     {
+                        _stackCount[agent] = 0;
                         _status[agent] = done;
                         return;
                     }
@@ -323,14 +306,84 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                 _stack[stackBase + depth] = child;
                 _childCursor[stackBase + depth] = 0;
                 depth++;
-                _stackCount[agent] = (byte)depth;
             }
+        }
+
+        private bool TryTickFlatRootSequence(
+            int agent,
+            BehaviorTreeNode[] nodes,
+            int stackBase,
+            ref int visited)
+        {
+            ref readonly BehaviorTreeNode root = ref nodes[_tree.RootIndex];
+            if (root.Kind != BehaviorTreeNodeKind.Sequence ||
+                root.Leaf != BehaviorTreeLeafBinding.None ||
+                root.ChildCount <= 0)
+            {
+                return false;
+            }
+
+            int childStart = root.ChildStart;
+            int childEnd = childStart + root.ChildCount;
+            if ((uint)childStart >= (uint)nodes.Length || childEnd > nodes.Length)
+            {
+                return false;
+            }
+
+            int cursor = _childCursor[stackBase];
+            if (cursor > root.ChildCount)
+            {
+                return false;
+            }
+
+            int localVisited = 1;
+            for (; cursor < root.ChildCount; cursor++)
+            {
+                int childIndex = childStart + cursor;
+                ref readonly BehaviorTreeNode child = ref nodes[childIndex];
+                if ((child.Kind != BehaviorTreeNodeKind.Condition && child.Kind != BehaviorTreeNodeKind.Action) ||
+                    child.ChildCount != 0)
+                {
+                    return false;
+                }
+
+                localVisited++;
+                switch (child.Leaf)
+                {
+                    case BehaviorTreeLeafBinding.AlwaysSuccess:
+                        break;
+
+                    case BehaviorTreeLeafBinding.AlwaysFailure:
+                        _childCursor[stackBase] = (byte)(cursor + 1);
+                        _stackCount[agent] = 0;
+                        _status[agent] = BehaviorTreeStatus.Failure;
+                        visited += localVisited;
+                        return true;
+
+                    case BehaviorTreeLeafBinding.HoldRunning:
+                        _childCursor[stackBase] = (byte)(cursor + 1);
+                        _stack[stackBase + 1] = childIndex;
+                        _childCursor[stackBase + 1] = 0;
+                        _stackCount[agent] = 2;
+                        _status[agent] = BehaviorTreeStatus.Running;
+                        visited += localVisited;
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+
+            _childCursor[stackBase] = (byte)root.ChildCount;
+            _stackCount[agent] = 0;
+            _status[agent] = BehaviorTreeStatus.Success;
+            visited += localVisited;
+            return true;
         }
 
         private int PopAndPropagate(int agent, int stackBase, int depth, BehaviorTreeStatus childStatus)
         {
             depth--;
-            _stackCount[agent] = (byte)depth;
             if (depth <= 0)
             {
                 return 0;

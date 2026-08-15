@@ -50,6 +50,8 @@
 - 点人、下令看战场上的位置，不看镜头挡没挡住。
 - 表上写「测过了」，就必须真跑到那个节点。
 - 巡逻树、门岗可以写在配置里。哨兵机挂「等一拍」，加载就失败。
+- 图程序都要显式结束。查询、结算、打分、校验、派生和脚本，都走同一条 `HaltReturnInt` 终点。
+- 动作库登记必须写明宿主；行为树、门岗、关卡脚本不靠默认宿主蒙混过去。
 
 看见旧本子还在说「门没锁 / 打分没合 / 房间只是退役」，那是过期句子。
 
@@ -88,11 +90,12 @@
 - 面板是另一条线。https://github.com/MightyBubble/Ludots/issues/886
 - 助手工具无关。https://github.com/MightyBubble/Ludots/pull/947
 
-把本页写进仓库的那份文档改动，走 https://github.com/MightyBubble/Ludots/pull/969 。合进去之后，入口就是本页，不再是那张 PR。
+把本页和这次图基建收口写进仓库，走 https://github.com/MightyBubble/Ludots/pull/969 。这不是单纯文档改动；它同时收紧了登记、显式结束、动作宿主和压力门。合进去之后，入口就是本页，不再是那张 PR。
 
 ### 3.5 两份自审别盖掉
 
 脚本方言拓宽时的自审正本：`artifacts/gas-composition-gate.md`。后开的活不许覆盖它。  
+这次图基建收口自己的自审：`artifacts/gas-composition-gate-pr969-graph-closeout.md`。
 打分短剧自己的自审：`artifacts/gas-composition-gate-graph-score-showcase.md`。
 
 ---
@@ -172,4 +175,4 @@ Feature: 接手的人只看一页
 
 不要当这轮去合：961、723、886、893、947。
 
-写本页的文档改动：969。
+本页和图基建收口：969。

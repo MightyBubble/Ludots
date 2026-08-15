@@ -12,9 +12,6 @@ namespace Ludots.Core.GraphRuntime
 
         public void Clear() => _byName.Clear();
 
-        public void Register(string name, int graphId, GraphKind kind)
-            => Register(name, graphId, kind, GraphActionHost.Script);
-
         public void Register(string name, int graphId, GraphKind kind, GraphActionHost host)
         {
             if (string.IsNullOrWhiteSpace(name))

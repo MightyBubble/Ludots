@@ -59,16 +59,8 @@ namespace Ludots.Tests.Gas.AI
             {
                 PressureThinkRow row = m1[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), $"M1 A={row.Agents} N={row.Topology} produced no timing sample.");
-                if (row.Topology <= 32)
-                {
-                    Assert.That(row.TimeMs, Is.LessThan(15.0),
-                        $"M1 A={row.Agents} N={row.Topology} think wave exceeded 15ms: {row.TimeMs:F3}");
-                }
-                else
-                {
-                    Assert.That(row.TimeMs, Is.LessThan(50.0),
-                        $"M1 A={row.Agents} N={row.Topology} pressure probe exceeded 50ms runaway guard: {row.TimeMs:F3}");
-                }
+                Assert.That(row.TimeMs, Is.LessThan(15.0),
+                    $"M1 A={row.Agents} N={row.Topology} think wave exceeded 15ms: {row.TimeMs:F3}");
             }
 
             for (int i = 0; i < m2.Length; i++)
@@ -118,8 +110,8 @@ namespace Ludots.Tests.Gas.AI
                     $"M6 targets={row.Agents} I={row.Instructions} halted {row.Halted}/{row.Agents} cast programs.");
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0),
                     $"M6 targets={row.Agents} I={row.Instructions} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(250.0),
-                    $"M6 targets={row.Agents} I={row.Instructions} cast-wave pressure sample exceeded 250ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(15.0),
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded 15ms: {row.TimeMs:F3}");
             }
         }
 
@@ -161,10 +153,7 @@ namespace Ludots.Tests.Gas.AI
                     world.TickAll(8);
                     sw.Stop();
                     rows[rowIndex++] = new PressureThinkRow(a, nTopo, sw.Elapsed.TotalMilliseconds);
-                    string notes = nTopo <= 32
-                        ? "AlwaysSuccess sequence gate"
-                        : "AlwaysSuccess sequence pressure probe";
-                    sb.AppendLine($"{a},{nTopo},1,0,{sw.Elapsed.TotalMilliseconds:F3},{notes}");
+                    sb.AppendLine($"{a},{nTopo},1,0,{sw.Elapsed.TotalMilliseconds:F3},AlwaysSuccess sequence gate");
                 }
             }
 

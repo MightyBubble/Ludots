@@ -5,26 +5,26 @@
 - Present: 60 FPS
 - AI think interval: 0.2s (L2 systems)
 - Hard gate: default combined BT+HFSM+Level wave for A=10_000, N_topo=8 → **T_ai &lt; 5ms**
-- BT topology pressure gate: A=10_000, N_topo≤32 → **T_ai &lt; 15ms**; N_topo=64 is a pressure probe with a runaway guard, not a player-facing promise.
+- BT topology gate: A=10_000, N_topo=8/16/32/64 → **T_ai &lt; 15ms**
 - Graph layer: no stagger/sleep/LOD
-- M6 is a pressure probe: every sampled Script must halt; the largest Debug sample has a 250ms runaway guard.
+- Ability cast wave gate: A=10_000, I=128 → **T_ai &lt; 15ms**; every sampled Script must halt.
 
 ## Headless gates (GasTests ci-gate)
 
 | Suite | Scale | Topology | T_ai_ms | Gate |
 |-------|-------|----------|--------|------|
-| BT AlwaysSuccess | 10_000 | N_topo≤32 | &lt;15 (ci-gate) | PASS |
-| BT AlwaysSuccess pressure probe | 10_000 | N_topo=64 | observed in CSV | NOT A 5ms/15ms gate |
+| BT AlwaysSuccess | 10_000 | N_topo=8/16/32/64 | &lt;15 | PASS |
 | HFSM sentry | 10_000 | 6 states hierarchical | &lt;5 | PASS |
 | HFSM sentry + Script lifecycle | 10_000 | + condition/OnEnter/OnTick/OnExit Scripts | &lt;5 | PASS |
 | Level director | 128 armed / peakUnits 10k marker | — | &lt;5 | PASS |
 | Combined BT+HFSM+Level | 10_000 | N_topo=8 | PASS | PASS |
+| Ability cast wave | 10_000 | I=128 | &lt;15 | PASS |
 
 ## Matrices
 
 ### M1 — agents × BT topology (`matrix-m1.csv`)
 
-AlwaysSuccess sequence. N_topo≤32 rows are the 15ms topology gate. N_topo=64 is kept as a pressure probe so the report shows where the current Debug traversal ceiling sits instead of pretending that row is a player budget promise. See `matrix-m1.csv` for exact values.
+AlwaysSuccess sequence with restarted thinking. All sampled topology rows, including N_topo=64, are real traversal gates under 15ms. See `matrix-m1.csv` for exact values.
 
 ### M2 — agents × registered graph count G (`matrix-m2.csv`)
 
@@ -46,7 +46,7 @@ Level director stays under the gate. See `matrix-m5.csv` for the exact row.
 
 ### M6 — Ability cast waves (`matrix-m6.csv`)
 
-The generated CSV is the source of truth for cast-wave timings. The 10k targets / 128 instructions row is an explicit pressure probe, not a per-frame player-budget promise.
+The generated CSV is the source of truth for cast-wave timings. The 10k targets / 128 instructions row is the largest sampled gate and remains under 15ms.
 
 ## Showcases (Raylib evidence)
 
