@@ -261,6 +261,7 @@ namespace Ludots.Tests.Presentation
                 SplineRibbonCapacity = 65_536,
                 PresenterInstanceCapacity = 1_048_576,
                 PresentationRequestCapacity = BlacksmithRequestPeakCapacity,
+                ClearTransientVisualProjectionCapacity = 65_536,
                 InstancedBatchRequestCapacity = BlacksmithInstancedBatchCapacity,
                 InstancedBatchOperationCapacity = BlacksmithInstancedBatchCapacity,
             };

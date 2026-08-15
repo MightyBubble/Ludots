@@ -43,6 +43,7 @@ namespace Ludots.Core.Presentation.Requests
             int hud = Min(config.WorldHudCapacity, request);
             int ribbon = Min(config.SplineRibbonCapacity, request);
             int instances = Min(config.PresenterInstanceCapacity, request);
+            int clearTransient = Min(config.ClearTransientVisualProjectionCapacity, request);
             return new PresentationRequestChannelCapacities(
                 visualProxy: Min(config.VisualProxyBufferCapacity, request),
                 groundOverlay: overlay,
@@ -50,7 +51,7 @@ namespace Ludots.Core.Presentation.Requests
                 splineRibbon: ribbon,
                 surfaceSource: instances,
                 removal: Min(checked(overlay + hud + ribbon + instances), request),
-                clearTransient: instances,
+                clearTransient: clearTransient,
                 totalOperationCapacity: request);
         }
 

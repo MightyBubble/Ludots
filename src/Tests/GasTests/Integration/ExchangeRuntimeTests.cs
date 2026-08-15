@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Modding;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -30,7 +31,14 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
+            ModRegistryAmbient.Reset();
             EffectParamKeys.Initialize();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            ModRegistryAmbient.Reset();
         }
 
         [Test]

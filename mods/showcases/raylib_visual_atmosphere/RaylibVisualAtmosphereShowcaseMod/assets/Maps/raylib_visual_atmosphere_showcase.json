@@ -1,6 +1,13 @@
 {
   "Id": "raylib_visual_atmosphere_showcase",
-  "VisualHeightmapAsset": "assets/terrain/tropical_island.vhtm",
+  "VisualHeightmap": {
+    "Asset": "assets/terrain/tropical_island.vhtm",
+    "RenderProfile": {
+      "WaterEnabled": true,
+      "SeaLevelCm": 200,
+      "AbsoluteColorPeakSpanCm": 14000
+    }
+  },
   "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
   "DefaultCamera": {
     "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",

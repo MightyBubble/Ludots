@@ -11,10 +11,13 @@ namespace Ludots.Core.Presentation.Terrain
         public const float DefaultSeaLevelCm = 0f;
         public const float DefaultDisplayHeightScale = 1f;
         public const float DefaultColorContrast = 1f;
+        public const float DefaultAbsoluteColorPeakSpanCm = 3600f;
         public const float MinDisplayHeightScale = 0.01f;
         public const float MaxDisplayHeightScale = 5000f;
         public const float MinColorContrast = 0.01f;
         public const float MaxColorContrast = 16f;
+        public const float MinAbsoluteColorPeakSpanCm = 1f;
+        public const float MaxAbsoluteColorPeakSpanCm = 1_000_000f;
 
         public bool WaterEnabled { get; set; }
 
@@ -23,6 +26,8 @@ namespace Ludots.Core.Presentation.Terrain
         public float DisplayHeightScale { get; set; } = DefaultDisplayHeightScale;
 
         public float ColorContrast { get; set; } = DefaultColorContrast;
+
+        public float AbsoluteColorPeakSpanCm { get; set; } = DefaultAbsoluteColorPeakSpanCm;
 
         public static VisualHeightmapRenderProfile CreateDefault()
         {
@@ -37,6 +42,7 @@ namespace Ludots.Core.Presentation.Terrain
                 SeaLevelCm = SeaLevelCm,
                 DisplayHeightScale = DisplayHeightScale,
                 ColorContrast = ColorContrast,
+                AbsoluteColorPeakSpanCm = AbsoluteColorPeakSpanCm,
             };
         }
 
@@ -53,6 +59,11 @@ namespace Ludots.Core.Presentation.Terrain
                 MinColorContrast,
                 MaxColorContrast,
                 nameof(ColorContrast));
+            RequireRange(
+                AbsoluteColorPeakSpanCm,
+                MinAbsoluteColorPeakSpanCm,
+                MaxAbsoluteColorPeakSpanCm,
+                nameof(AbsoluteColorPeakSpanCm));
 
             return Clone();
         }

@@ -1,4 +1,5 @@
 [
+  { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
   { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" }

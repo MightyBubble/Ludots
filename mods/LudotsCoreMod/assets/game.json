@@ -12,6 +12,7 @@
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
     "presentationRequestCapacity": 262144,
+    "clearTransientVisualProjectionCapacity": 262144,
     "instancedBatchRequestCapacity": 32768,
     "instancedBatchOperationCapacity": 32768,
     "globalFieldVisualRecordCapacity": 256,

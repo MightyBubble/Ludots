@@ -545,9 +545,8 @@ namespace Ludots.Adapter.Raylib
                                 engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
                                 vhReflect is IVisualHeightmapRenderSource reflectSource)
                             {
-                                // Peak span matches IslandTerrainGenerator.AbsoluteColorPeakSpanCm (showcase SSOT).
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = reflectSource.RenderProfile.AbsoluteColorPeakSpanCm;
                                 visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
                             }
                             else
@@ -573,7 +572,7 @@ namespace Ludots.Adapter.Raylib
                                 vhRefract is IVisualHeightmapRenderSource refractSource)
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = refractSource.RenderProfile.AbsoluteColorPeakSpanCm;
                                 visualHeightmapRenderer.Render(refractSource, activeCamera);
                             }
                             else
@@ -616,7 +615,7 @@ namespace Ludots.Adapter.Raylib
                             if (waterOnVisualHeightmap)
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
-                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = visualTerrainSource.RenderProfile.AbsoluteColorPeakSpanCm;
                             }
                             else
                             {
@@ -749,7 +748,7 @@ namespace Ludots.Adapter.Raylib
                             overlays.Count > 0)
                         {
                             long groundOverlayStart = Stopwatch.GetTimestamp();
-                            DrawGroundOverlays(overlays);
+                            RaylibWorldOverlayRenderer.DrawGroundOverlays(overlays);
                             presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
                         }
                         else
@@ -762,7 +761,7 @@ namespace Ludots.Adapter.Raylib
                             splineObj is SplineRibbonBuffer splineRibbons && splineRibbons.Count > 0)
                         {
                             long splineRibbonStart = Stopwatch.GetTimestamp();
-                            DrawSplineRibbons(splineRibbons);
+                            RaylibWorldOverlayRenderer.DrawSplineRibbons(splineRibbons);
                             presentationTiming?.ObserveSplineRibbonRender(ElapsedMs(splineRibbonStart), splineRibbons.Count);
                         }
                         else
@@ -2099,320 +2098,5 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void DrawGroundOverlays(GroundOverlayBuffer overlays)
-        {
-            var span = overlays.GetSpan();
-            for (int i = 0; i < span.Length; i++)
-            {
-                ref readonly var item = ref span[i];
-                switch (item.Shape)
-                {
-                    case GroundOverlayShape.Circle:
-                        DrawGroundCircle(in item);
-                        break;
-                    case GroundOverlayShape.Cone:
-                        DrawGroundCone(in item);
-                        break;
-                    case GroundOverlayShape.Ring:
-                        DrawGroundRing(in item);
-                        break;
-                    case GroundOverlayShape.Line:
-                        DrawGroundLine(in item);
-                        break;
-                }
-            }
-        }
-
-        private static void DrawSplineRibbons(SplineRibbonBuffer splines)
-        {
-            ReadOnlySpan<float> p0x = splines.P0X;
-            ReadOnlySpan<float> p0y = splines.P0Y;
-            ReadOnlySpan<float> p0z = splines.P0Z;
-            ReadOnlySpan<float> p1x = splines.P1X;
-            ReadOnlySpan<float> p1y = splines.P1Y;
-            ReadOnlySpan<float> p1z = splines.P1Z;
-            ReadOnlySpan<float> p2x = splines.P2X;
-            ReadOnlySpan<float> p2y = splines.P2Y;
-            ReadOnlySpan<float> p2z = splines.P2Z;
-            ReadOnlySpan<float> p3x = splines.P3X;
-            ReadOnlySpan<float> p3y = splines.P3Y;
-            ReadOnlySpan<float> p3z = splines.P3Z;
-            ReadOnlySpan<float> width = splines.Width;
-            ReadOnlySpan<float> borderWidth = splines.BorderWidth;
-            ReadOnlySpan<float> fillR = splines.FillR;
-            ReadOnlySpan<float> fillG = splines.FillG;
-            ReadOnlySpan<float> fillB = splines.FillB;
-            ReadOnlySpan<float> fillA = splines.FillA;
-            ReadOnlySpan<float> borderR = splines.BorderR;
-            ReadOnlySpan<float> borderG = splines.BorderG;
-            ReadOnlySpan<float> borderB = splines.BorderB;
-            ReadOnlySpan<float> borderA = splines.BorderA;
-
-            for (int i = 0; i < splines.Count; i++)
-            {
-                Vector3 p0 = new(p0x[i], p0y[i], p0z[i]);
-                Vector3 p1 = new(p1x[i], p1y[i], p1z[i]);
-                Vector3 p2 = new(p2x[i], p2y[i], p2z[i]);
-                Vector3 p3 = new(p3x[i], p3y[i], p3z[i]);
-                float drawWidth = MathF.Max(0.02f, width[i]);
-                float drawBorder = MathF.Max(0.01f, borderWidth[i]);
-                var fill = ToRaylibColor(new Vector4(fillR[i], fillG[i], fillB[i], fillA[i]));
-                var border = ToRaylibColor(new Vector4(borderR[i], borderG[i], borderB[i], borderA[i]));
-                DrawSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
-            }
-        }
-
-        private static void DrawSplineRibbon(
-            in Vector3 p0,
-            in Vector3 p1,
-            in Vector3 p2,
-            in Vector3 p3,
-            float width,
-            Color fill,
-            Color border,
-            float borderWidth)
-        {
-            const int samples = 20;
-            Span<Vector3> points = stackalloc Vector3[samples + 1];
-            for (int i = 0; i <= samples; i++)
-            {
-                float t = i / (float)samples;
-                points[i] = EvaluateCubicBezier(p0, p1, p2, p3, t);
-            }
-
-            if (fill.a > 0)
-            {
-                int lanes = Math.Max(1, (int)MathF.Ceiling(width / 0.08f));
-                for (int lane = 0; lane < lanes; lane++)
-                {
-                    float alpha = lanes == 1 ? 0f : lane / (float)(lanes - 1);
-                    float offset = (alpha - 0.5f) * width;
-                    DrawOffsetPolyline(points, offset, fill);
-                }
-            }
-
-            if (border.a > 0)
-            {
-                float edgeOffset = (width * 0.5f) + borderWidth;
-                DrawOffsetPolyline(points, edgeOffset, border);
-                DrawOffsetPolyline(points, -edgeOffset, border);
-            }
-        }
-
-        private static void DrawOffsetPolyline(ReadOnlySpan<Vector3> points, float offset, Color color)
-        {
-            if (points.Length < 2)
-            {
-                return;
-            }
-
-            Vector3 previous = OffsetPoint(points, 0, offset);
-            for (int i = 1; i < points.Length; i++)
-            {
-                Vector3 current = OffsetPoint(points, i, offset);
-                Rl.DrawLine3D(previous, current, color);
-                previous = current;
-            }
-        }
-
-        private static Vector3 OffsetPoint(ReadOnlySpan<Vector3> points, int index, float offset)
-        {
-            Vector3 current = points[index];
-            Vector3 forward = index == points.Length - 1
-                ? current - points[index - 1]
-                : points[index + 1] - current;
-            Vector2 lateral = new(-forward.Z, forward.X);
-            float length = lateral.Length();
-            if (length <= 0.0001f)
-            {
-                return current;
-            }
-
-            lateral /= length;
-            return new Vector3(current.X + lateral.X * offset, current.Y, current.Z + lateral.Y * offset);
-        }
-
-        private static Vector3 EvaluateCubicBezier(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3 p3, float t)
-        {
-            float oneMinusT = 1f - t;
-            float a = oneMinusT * oneMinusT * oneMinusT;
-            float b = 3f * oneMinusT * oneMinusT * t;
-            float c = 3f * oneMinusT * t * t;
-            float d = t * t * t;
-            return (p0 * a) + (p1 * b) + (p2 * c) + (p3 * d);
-        }
-
-        private static void DrawGroundCircle(in GroundOverlayItem item)
-        {
-            const int segments = 48;
-            float step = MathF.PI * 2f / segments;
-            var center = item.Center;
-
-            // Draw fill as multiple concentric rings (approximation since Raylib has no DrawTriangle3D)
-            if (item.FillColor.W > 0.01f)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int fillRings = 7;
-                for (int r = 1; r <= fillRings; r++)
-                {
-                    float radius = item.Radius * r / fillRings;
-                    for (int s = 0; s < segments; s++)
-                    {
-                        float a0 = s * step;
-                        float a1 = (s + 1) * step;
-                        var p0 = new Vector3(center.X + MathF.Cos(a0) * radius, center.Y, center.Z + MathF.Sin(a0) * radius);
-                        var p1 = new Vector3(center.X + MathF.Cos(a1) * radius, center.Y, center.Z + MathF.Sin(a1) * radius);
-                        Rl.DrawLine3D(p0, p1, fillColor);
-                    }
-                }
-            }
-
-            // Dual border loops for readable marks on VH terrain from shore/aerial.
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
-                for (int s = 0; s < segments; s++)
-                {
-                    float a0 = s * step;
-                    float a1 = (s + 1) * step;
-                    var p0 = new Vector3(center.X + MathF.Cos(a0) * item.Radius, center.Y, center.Z + MathF.Sin(a0) * item.Radius);
-                    var p1 = new Vector3(center.X + MathF.Cos(a1) * item.Radius, center.Y, center.Z + MathF.Sin(a1) * item.Radius);
-                    Rl.DrawLine3D(p0, p1, border);
-                    float rOuter = item.Radius + borderPad;
-                    var q0 = new Vector3(center.X + MathF.Cos(a0) * rOuter, center.Y, center.Z + MathF.Sin(a0) * rOuter);
-                    var q1 = new Vector3(center.X + MathF.Cos(a1) * rOuter, center.Y, center.Z + MathF.Sin(a1) * rOuter);
-                    Rl.DrawLine3D(q0, q1, border);
-                }
-            }
-        }
-
-        private static void DrawGroundRing(in GroundOverlayItem item)
-        {
-            const int segments = 48;
-            float innerRadius = Math.Clamp(item.InnerRadius, 0f, item.Radius);
-            float outerRadius = MathF.Max(item.Radius, innerRadius);
-            var center = item.Center;
-
-            if (item.FillColor.W > 0.01f && outerRadius > innerRadius)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 8;
-                for (int band = 0; band < bands; band++)
-                {
-                    float radius = innerRadius + (outerRadius - innerRadius) * (band + 0.5f) / bands;
-                    DrawGroundArcLoop(center, radius, 0f, MathF.PI * 2f, segments, fillColor);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
-                DrawGroundArcLoop(center, outerRadius, 0f, MathF.PI * 2f, segments, border);
-                DrawGroundArcLoop(center, outerRadius + borderPad, 0f, MathF.PI * 2f, segments, border);
-                if (innerRadius > 0.001f)
-                {
-                    DrawGroundArcLoop(center, innerRadius, 0f, MathF.PI * 2f, segments, border);
-                    float innerDual = MathF.Max(0.001f, innerRadius - borderPad);
-                    DrawGroundArcLoop(center, innerDual, 0f, MathF.PI * 2f, segments, border);
-                }
-            }
-        }
-
-        private static void DrawGroundCone(in GroundOverlayItem item)
-        {
-            const int segments = 24;
-            float radius = MathF.Max(item.Radius, 0f);
-            float start = item.Rotation - item.Angle;
-            float end = item.Rotation + item.Angle;
-            var center = item.Center;
-
-            if (radius <= 0f)
-            {
-                return;
-            }
-
-            if (item.FillColor.W > 0.01f)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 6;
-                for (int band = 1; band <= bands; band++)
-                {
-                    float ringRadius = radius * band / bands;
-                    DrawGroundArcLoop(center, ringRadius, start, end, segments, fillColor);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                DrawGroundArcLoop(center, radius, start, end, segments, border);
-                var left = new Vector3(center.X + MathF.Cos(start) * radius, center.Y, center.Z + MathF.Sin(start) * radius);
-                var right = new Vector3(center.X + MathF.Cos(end) * radius, center.Y, center.Z + MathF.Sin(end) * radius);
-                Rl.DrawLine3D(center, left, border);
-                Rl.DrawLine3D(center, right, border);
-            }
-        }
-
-        private static void DrawGroundLine(in GroundOverlayItem item)
-        {
-            float length = item.Length > 0f ? item.Length : item.Radius;
-            if (length <= 0f)
-            {
-                return;
-            }
-
-            float dx = MathF.Cos(item.Rotation) * length;
-            float dz = MathF.Sin(item.Rotation) * length;
-            var a = item.Center;
-            var b = new Vector3(a.X + dx, a.Y, a.Z + dz);
-            float halfWidth = MathF.Max(0f, item.Width) * 0.5f;
-            var normal = new Vector3(-MathF.Sin(item.Rotation), 0f, MathF.Cos(item.Rotation));
-
-            if (item.FillColor.W > 0.01f)
-            {
-                var fill = ToRaylibColor(item.FillColor);
-                int stripes = halfWidth > 0.001f ? Math.Clamp((int)MathF.Ceiling(halfWidth / 0.12f), 1, 8) : 1;
-                for (int stripe = -stripes; stripe <= stripes; stripe++)
-                {
-                    float offset = stripes == 0 ? 0f : halfWidth * stripe / Math.Max(stripes, 1);
-                    var delta = normal * offset;
-                    Rl.DrawLine3D(a + delta, b + delta, fill);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                Rl.DrawLine3D(a, b, border);
-                if (halfWidth > 0.001f)
-                {
-                    var delta = normal * halfWidth;
-                    Rl.DrawLine3D(a + delta, b + delta, border);
-                    Rl.DrawLine3D(a - delta, b - delta, border);
-                }
-            }
-        }
-
-        private static void DrawGroundArcLoop(Vector3 center, float radius, float startAngle, float endAngle, int segments, Color color)
-        {
-            if (segments <= 0 || radius <= 0f)
-            {
-                return;
-            }
-
-            float step = (endAngle - startAngle) / segments;
-            for (int s = 0; s < segments; s++)
-            {
-                float a0 = startAngle + s * step;
-                float a1 = startAngle + (s + 1) * step;
-                var p0 = new Vector3(center.X + MathF.Cos(a0) * radius, center.Y, center.Z + MathF.Sin(a0) * radius);
-                var p1 = new Vector3(center.X + MathF.Cos(a1) * radius, center.Y, center.Z + MathF.Sin(a1) * radius);
-                Rl.DrawLine3D(p0, p1, color);
-            }
-        }
-
-        private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
     }
 }

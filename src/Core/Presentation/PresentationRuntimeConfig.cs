@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation
         private int? _visualProxyBufferCapacity;
         private int? _skinnedVisualBatchCapacity;
         private int? _presentationRequestCapacity;
+        private int? _clearTransientVisualProjectionCapacity;
         private int? _instancedBatchRequestCapacity;
         private int? _instancedBatchOperationCapacity;
         private int? _globalFieldVisualRecordCapacity;
@@ -45,6 +46,7 @@ namespace Ludots.Core.Presentation
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
         public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
         public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
+        public int ClearTransientVisualProjectionCapacity { get => _clearTransientVisualProjectionCapacity ?? 0; set => _clearTransientVisualProjectionCapacity = value; }
         public int InstancedBatchRequestCapacity { get => _instancedBatchRequestCapacity ?? 0; set => _instancedBatchRequestCapacity = value; }
         public int InstancedBatchOperationCapacity { get => _instancedBatchOperationCapacity ?? 0; set => _instancedBatchOperationCapacity = value; }
         public int GlobalFieldVisualRecordCapacity { get => _globalFieldVisualRecordCapacity ?? 0; set => _globalFieldVisualRecordCapacity = value; }
@@ -84,6 +86,7 @@ namespace Ludots.Core.Presentation
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
             RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
             RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
+            RequirePositive(_clearTransientVisualProjectionCapacity, "presentation.clearTransientVisualProjectionCapacity");
             RequirePositive(_instancedBatchRequestCapacity, "presentation.instancedBatchRequestCapacity");
             RequirePositive(_instancedBatchOperationCapacity, "presentation.instancedBatchOperationCapacity");
             RequirePositive(_globalFieldVisualRecordCapacity, "presentation.globalFieldVisualRecordCapacity");
