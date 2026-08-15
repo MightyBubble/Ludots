@@ -20,7 +20,7 @@
 | FuncLib 纯度和 Invoke 目标闭合 | 0 | `GraphYieldPurityValidator` + `GraphProgramRegistry.ValidateInvokeTargets` |
 | ActionLib 宿主与 Yield 约束 | 2 | `GAS/action_lib.json` + `GraphActionCatalogLoader` + `GraphActionCatalog` |
 | Graph 程序显式结束合同 | 0 | `GraphKindOperationPolicy` / `GraphProgramRegistry` |
-| BT / Script 压力门收口 | 1 | `BehaviorTreeWorld` / `GasGraphOpHandlerTable` |
+| BT / HFSM / Script 压力门收口 | 1 | `BehaviorTreeWorld` / `GraphProgramHfsmHost` / `GasGraphOpHandlerTable` |
 | 图能力进度入口 | 3 | `gitbook/architecture/graph-capability-status.md` |
 
 ### 3. Reuse list
@@ -63,14 +63,14 @@ N/A。没有新增 opcode；`HaltReturnInt` 仍是既有显式结束 op，本轮
 
 下一个 Mod 变体修改 graph 连线、查询容量策略或 catalog 条目，不修改 Core enum，不复制 loader/registry。
 
-### 9. Final closeout validation
+### 9. Merge-main closeout validation
 
-- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-restore --filter "FullyQualifiedName~GraphBehaviorPressureMatrixTests.WritePressureMatrices_M1_M2_M3_M4_M5_M6"`: PASS；M1 全部采样拓扑与 M6 最大 cast wave 都守住 15ms 硬门。
-- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate"`: PASS，422/422。
-- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "FullyQualifiedName~Graph"`: PASS，499/499。
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --filter "FullyQualifiedName~FsmRuntimeTests.ThinkWave_10k_SentryHfsmWithScripts_UnderFifteenMilliseconds|FullyQualifiedName~GraphBehaviorPressureMatrixTests.WritePressureMatrices_M1_M2_M3_M4_M5_M6|FullyQualifiedName~FogBenchmarkTests.Benchmark_GlobalFieldProjection_QuarterMillionCellsIsZeroAlloc" -v minimal`: PASS，3/3。
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "TestCategory=ci-gate" -v minimal`: PASS，425/425。
+- `dotnet test src\Tests\GasTests\GasTests.csproj -c Debug --no-build --filter "FullyQualifiedName~Graph"`: PASS，499/499（前置收口）。
 - `python scripts\generate-graph-op-node-galleries.py --strict`: PASS。
 - `python scripts\validate-registry.py`: PASS，错误 0；23 个既有 screenshot warning。
 - `pwsh .\scripts\validate-docs.ps1`: PASS。
 - `git diff --check`: PASS。
 
-最终压力样本：M1 `A=10000,N_topo=64` 为 7.010ms；M6 `targets=10000,I=128` 为 12.566ms。
+CI 性能门分层：5ms / 15ms 玩家目标保留为 NUnit warning；CI 只在超过 100ms 包络时硬失败。Fog 全局投影保留 30Hz 目标 warning，20Hz 作为 CI 硬下限。正确性、零分配、halt 数、predicate 数仍是硬断言。

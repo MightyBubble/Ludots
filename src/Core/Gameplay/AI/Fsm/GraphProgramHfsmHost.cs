@@ -48,6 +48,10 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
     private GraphSliceResult ExecuteHalt(int graphId, string hostLabel)
     {
         GraphInstruction[] program = ResolveScriptProgram(graphId, hostLabel);
+        if (TryExecuteImmediateHalt(program, out int immediateReturn))
+        {
+            return new GraphSliceResult(GraphExecutionStatus.Halted, immediateReturn, steps: 2);
+        }
 
         Array.Clear(_ints, 0, _ints.Length);
         Array.Clear(_bools, 0, _bools.Length);
@@ -69,6 +73,32 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         }
 
         return result;
+    }
+
+    private static bool TryExecuteImmediateHalt(GraphInstruction[] program, out int returnInt)
+    {
+        returnInt = 0;
+        if (program.Length != 2)
+        {
+            return false;
+        }
+
+        ref readonly GraphInstruction first = ref program[0];
+        ref readonly GraphInstruction second = ref program[1];
+        if (first.Op != (ushort)GraphNodeOp.ConstInt ||
+            second.Op != (ushort)GraphNodeOp.HaltReturnInt)
+        {
+            return false;
+        }
+
+        if ((uint)first.Dst >= GraphVmLimits.MaxIntRegisters ||
+            (uint)second.A >= GraphVmLimits.MaxIntRegisters)
+        {
+            return false;
+        }
+
+        returnInt = second.A == first.Dst ? first.Imm : 0;
+        return true;
     }
 
     private GraphInstruction[] ResolveScriptProgram(int graphId, string hostLabel)
