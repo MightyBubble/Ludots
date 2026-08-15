@@ -1,5 +1,5 @@
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.AdapterSync
@@ -23,6 +23,8 @@ namespace Ludots.Core.Presentation.AdapterSync
 
         public static bool Supports(in PrimitiveDrawItem item) =>
             item.AssetKind != AssetKind.Surface &&
+            item.AssetKind != AssetKind.Decal &&
+            item.AssetKind != AssetKind.VFX &&
             item.Mobility == VisualMobility.Static &&
             Supports(item.RenderPath);
 

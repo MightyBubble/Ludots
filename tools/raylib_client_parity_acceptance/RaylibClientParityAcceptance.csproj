@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Libraries\Raylib-cs\Raylib-cs.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\src\Platforms\Desktop\skinning_instanced.vs" CopyToOutputDirectory="PreserveNewest" Link="skinning_instanced.vs" />
+    <None Include="..\..\src\Platforms\Desktop\skinning_instanced.fs" CopyToOutputDirectory="PreserveNewest" Link="skinning_instanced.fs" />
+    <None Include="..\..\src\Platforms\Desktop\instancing.vs" CopyToOutputDirectory="PreserveNewest" Link="instancing.vs" />
+    <None Include="..\..\src\Platforms\Desktop\instancing.fs" CopyToOutputDirectory="PreserveNewest" Link="instancing.fs" />
+    <None Include="..\..\src\Platforms\Desktop\vfx_unlit_tint.vs" CopyToOutputDirectory="PreserveNewest" Link="vfx_unlit_tint.vs" />
+    <None Include="..\..\src\Platforms\Desktop\vfx_unlit_tint.fs" CopyToOutputDirectory="PreserveNewest" Link="vfx_unlit_tint.fs" />
+    <None Include="..\..\src\Platforms\Desktop\vegetation_cutout.vs" CopyToOutputDirectory="PreserveNewest" Link="vegetation_cutout.vs" />
+    <None Include="..\..\src\Platforms\Desktop\vegetation_cutout.fs" CopyToOutputDirectory="PreserveNewest" Link="vegetation_cutout.fs" />
+  </ItemGroup>
+
+</Project>

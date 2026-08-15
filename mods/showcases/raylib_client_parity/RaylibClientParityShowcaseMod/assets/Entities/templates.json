@@ -1,0 +1,43 @@
+[
+  {
+    "id": "raylib_client_parity_crowd_agent",
+    "components": {
+      "Name": { "Value": "RaylibClientParityCrowdAgent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_client_parity_albedo_demo",
+    "components": {
+      "Name": { "Value": "RaylibClientParityAlbedoDemo" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_client_parity_vfx_demo",
+    "components": {
+      "Name": { "Value": "RaylibClientParityVfxDemo" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

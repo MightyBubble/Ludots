@@ -41,7 +41,7 @@ PlayerInputHandler.Update()
   -> WorldToVisualSyncSystem
   -> CameraPresenter(cameraManager, alpha)
   -> CameraCullingSystem
-  -> Performer / Adapter
+  -> Presenter / Adapter
 ```
 
 关键约束：

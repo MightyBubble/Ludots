@@ -35,6 +35,7 @@ namespace Ludots.Core.Presentation.Config
 
                 MaterialAssetDomain domain = ParseDomain(node["domain"], key);
                 MaterialAssetFlags flags = ParseFlags(node["flags"], key);
+                MaterialBlendModeResolver.Resolve(flags);
                 _materials.Register(key, domain, Array.Empty<string>(), flags);
             }
         }
@@ -82,9 +83,26 @@ namespace Ludots.Core.Presentation.Config
             {
                 string value = arr[i]?.GetValue<string>() ?? string.Empty;
                 RequireNoBoundaryWhitespace(value, $"Presentation material asset '{key}' flags[{i}]");
-                if (string.IsNullOrWhiteSpace(value) ||
-                    !Enum.TryParse(value, ignoreCase: false, out MaterialAssetFlags parsed) ||
-                    !Enum.IsDefined(typeof(MaterialAssetFlags), parsed))
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation material asset '{key}' has invalid flag '{value}' at index {i}.");
+                }
+
+                if (string.Equals(value, "AlphaBlend", StringComparison.Ordinal))
+                {
+                    flags |= MaterialAssetFlags.Transparent;
+                    continue;
+                }
+
+                if (string.Equals(value, "Opaque", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!Enum.TryParse(value, ignoreCase: false, out MaterialAssetFlags parsed) ||
+                    !Enum.IsDefined(typeof(MaterialAssetFlags), parsed) ||
+                    parsed == MaterialAssetFlags.None)
                 {
                     throw new InvalidOperationException(
                         $"Presentation material asset '{key}' has invalid flag '{value}' at index {i}.");

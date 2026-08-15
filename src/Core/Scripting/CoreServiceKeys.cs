@@ -68,7 +68,8 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Surfaces;
@@ -308,20 +309,18 @@ namespace Ludots.Core.Scripting
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
         public static readonly ServiceKey<PresentationOwnerChangeBuffer> PresentationOwnerChangeBuffer = new("PresentationOwnerChangeBuffer");
-        public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
-        public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
+        public static readonly ServiceKey<PresenterCommandBuffer> PresenterCommandBuffer = new("PresenterCommandBuffer");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
+        public static readonly ServiceKey<ParticleVfxRegistry> PresentationParticleVfxRegistry = new("PresentationParticleVfxRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
         public static readonly ServiceKey<InstancedBatchAssetRegistry> InstancedBatchAssetRegistry = new("InstancedBatchAssetRegistry");
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");
         public static readonly ServiceKey<InstancedBatchOperationBuffer> InstancedBatchOperationBuffer = new("InstancedBatchOperationBuffer");
-        public static readonly ServiceKey<PresentationBehaviorRegistry> PresentationBehaviorRegistry = new("PresentationBehaviorRegistry");
-        public static readonly ServiceKey<PresentationBehaviorResolver> PresentationBehaviorResolver = new("PresentationBehaviorResolver");
         public static readonly ServiceKey<AnimatorControllerRegistry> AnimatorControllerRegistry = new("AnimatorControllerRegistry");
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");
         public static readonly ServiceKey<PresentationStableIdAllocator> PresentationStableIdAllocator = new("PresentationStableIdAllocator");
-        public static readonly ServiceKey<PerformerVisualStableIdTable> PerformerVisualStableIdTable = new("PerformerVisualStableIdTable");
+        public static readonly ServiceKey<PresenterVisualStableIdTable> PresenterVisualStableIdTable = new("PresenterVisualStableIdTable");
         public static readonly ServiceKey<StableDrawCache> PresentationStableDrawCache = new("PresentationStableDrawCache");
         public static readonly ServiceKey<PresentationTargetGeneration> PresentationTargetGeneration = new("PresentationTargetGeneration");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
@@ -356,13 +355,13 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
         public static readonly ServiceKey<GlobalPresentationEventBuffer> GlobalPresentationEventBuffer = new("GlobalPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
-        public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
+        public static readonly ServiceKey<SplineRibbonBuffer> SplineRibbonBuffer = new("SplineRibbonBuffer");
         public static readonly ServiceKey<SoundRequestBuffer> SoundRequestBuffer = new("SoundRequestBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
-        // --- Performers ---
-        public static readonly ServiceKey<PerformerDefinitionRegistry> PerformerDefinitionRegistry = new("PerformerDefinitionRegistry");
-        public static readonly ServiceKey<PerformerEntityRuntime> PerformerEntityRuntime = new("PerformerEntityRuntime");
-        public static readonly ServiceKey<PerformerAnimatorStateBuffer> PerformerAnimatorStateBuffer = new("PerformerAnimatorStateBuffer");
+        // --- Presenters ---
+        public static readonly ServiceKey<PresenterDefinitionRegistry> PresenterDefinitionRegistry = new("PresenterDefinitionRegistry");
+        public static readonly ServiceKey<PresenterEntityRuntime> PresenterEntityRuntime = new("PresenterEntityRuntime");
+        public static readonly ServiceKey<PresenterAnimatorStateBuffer> PresenterAnimatorStateBuffer = new("PresenterAnimatorStateBuffer");
         public static readonly ServiceKey<SurfaceSourcePayloadRegistry> SurfaceSourcePayloadRegistry = new("SurfaceSourcePayloadRegistry");
         public static readonly ServiceKey<SurfaceSourceRuntimeRegistry> SurfaceSourceRuntimeRegistry = new("SurfaceSourceRuntimeRegistry");
 

@@ -5,7 +5,7 @@ namespace PerformanceVisualizationMod
 {
     public static class VisualBenchmarkIds
     {
-        public const string BenchmarkCubePerformerId = "performance_visualization.benchmark_cube";
+        public const string BenchmarkCubePresenterId = "performance_visualization.benchmark_cube";
         public const string InstalledKey = "PerformanceVisualizationMod.Installed";
         public const string RuntimeServiceKey = "PerformanceVisualizationMod.Runtime";
         public const string StartupMapId = "entry";
@@ -15,7 +15,7 @@ namespace PerformanceVisualizationMod
         public const string ScenarioTag = "visual_benchmark_subject";
         public const string ScenarioLabel = "VisualBenchmark.Subject";
         public const string PanelOwnerId = "performance-visualization.showcase";
-        public const string DefaultScenarioName = "Performer HUD Sweep";
+        public const string DefaultScenarioName = "Presenter HUD Sweep";
 
         public static readonly MapId VisualBenchmarkMap = new(MapId);
         public static readonly MapId VisualBenchmarkHud100kMap = new(Hud100kMapId);

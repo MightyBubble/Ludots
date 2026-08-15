@@ -252,7 +252,7 @@ namespace Ludots.Tests.GAS.Production
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
             AssertCatalogEntry(document.RootElement, ShowcaseConfigRelativePath, "Replace", null);
             AssertCatalogEntry(document.RootElement, "Entities/templates.json", "ArrayById", "id");
-            AssertCatalogEntry(document.RootElement, "Presentation/performers.json", "ArrayById", "id");
+            AssertCatalogEntry(document.RootElement, "Presentation/presenters.json", "ArrayById", "id");
         }
 
         private static void AssertCatalogEntry(JsonElement catalog, string path, string policy, string? idField)

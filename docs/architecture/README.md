@@ -54,7 +54,7 @@
 - [Narrative Frontend Kit](narrative_frontend_kit.md)
 - [Interaction Architecture](interaction/README.md)
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
-- [Presentation Performer](presentation_performer.md)
+- [Presentation Presenter](presentation_presenter.md)
 - [Presentation Snapshot Contract](presentation_snapshot_contract.md)
 - [Entity Selection Architecture](entity_selection_architecture.md)
 

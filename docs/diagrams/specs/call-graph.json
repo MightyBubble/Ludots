@@ -36,7 +36,7 @@
     { "id": "s05", "title": "OrderSystem", "tint": "slate", "x": 730, "y": 460, "w": 155, "h": 85 },
     { "id": "s06", "title": "MovePlanningSystem", "tint": "steel", "x": 897, "y": 460, "w": 155, "h": 85 },
     { "id": "s07", "title": "EffectSystem", "tint": "sage", "x": 1064, "y": 460, "w": 155, "h": 85 },
-    { "id": "s08", "title": "PerformerSystem", "tint": "stone", "x": 1231, "y": 460, "w": 155, "h": 85 },
+    { "id": "s08", "title": "PresenterSystem", "tint": "stone", "x": 1231, "y": 460, "w": 155, "h": 85 },
     { "id": "s09", "title": "ActSystem", "tint": "stone", "x": 1398, "y": 460, "w": 155, "h": 85 },
     { "id": "s10", "title": "DataSystem", "tint": "stone", "x": 1565, "y": 460, "w": 155, "h": 85 },
     { "id": "s11", "title": "AdapterSystem", "tint": "teal", "x": 1732, "y": 460, "w": 155, "h": 85 },
@@ -65,7 +65,7 @@
 
     { "id": "registry", "title": "Registry", "tint": "clay", "border_w": 1.6,
       "x": 950, "y": 1180, "w": 500, "h": 100,
-      "items": ["StringIntRegistry -> Ability/Performer/..."] }
+      "items": ["StringIntRegistry -> Ability/Presenter/..."] }
   ],
 
   "edges": [

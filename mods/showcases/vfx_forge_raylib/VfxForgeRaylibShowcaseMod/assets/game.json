@@ -1,0 +1,19 @@
+{
+  "startupMapId": "vfx_forge_raylib_showcase",
+  "targetFps": 0,
+  "presentation": {
+    "presenterInstanceCapacity": 4096,
+    "presentationEventStreamCapacity": 8192,
+    "presentationOwnerChangeCapacity": 8192,
+    "presenterCommandCapacity": 8192,
+    "primitiveDrawBufferCapacity": 8192,
+    "visualSnapshotBufferCapacity": 8192,
+    "visualProxyBufferCapacity": 8192,
+    "presentationRequestCapacity": 8192,
+    "cameraCulling": {
+      "highLodDistanceCm": 12000.0,
+      "mediumLodDistanceCm": 26000.0,
+      "lowLodDistanceCm": 52000.0
+    }
+  }
+}

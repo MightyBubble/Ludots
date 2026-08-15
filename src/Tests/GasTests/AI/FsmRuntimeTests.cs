@@ -13,6 +13,9 @@ namespace Ludots.Tests.Gas.AI
     [Category("ci-gate")]
     public sealed class FsmRuntimeTests
     {
+        private const double FrameBudgetMs = 5.0;
+        private const double ScriptBudgetMs = 15.0;
+
         [Test]
         public void SentryHfsm_StimulusEntersAlertingSubtree_ThenCyclesToIdle()
         {
@@ -101,7 +104,7 @@ namespace Ludots.Tests.Gas.AI
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
             TestContext.WriteLine($"A={stats.Agents} preds={stats.PredicatesChecked} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
-            Assert.That(ms, Is.LessThan(5.0), $"HFSM think wave exceeded 5ms: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(FrameBudgetMs), $"HFSM think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
         }
 
         [Test]
@@ -155,8 +158,7 @@ namespace Ludots.Tests.Gas.AI
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
             TestContext.WriteLine($"scripted A={stats.Agents} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
-            // Registry Script host on CI can exceed 5ms; keep hard gate under 15ms.
-            Assert.That(ms, Is.LessThan(15.0), $"Scripted HFSM think wave exceeded 15ms: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(ScriptBudgetMs), $"Scripted HFSM think wave exceeded {ScriptBudgetMs:F0}ms: {ms:F3}ms");
         }
 
         private sealed class RecordingHost : IHfsmGraphHost

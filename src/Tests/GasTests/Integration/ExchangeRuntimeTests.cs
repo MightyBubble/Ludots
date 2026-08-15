@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Modding;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -31,6 +32,7 @@ namespace Ludots.Tests.GAS
         public void SetUp()
         {
             AttributeRegistry.Clear();
+            ModRegistryAmbient.Reset();
             EffectParamKeys.Initialize();
         }
 
@@ -38,6 +40,7 @@ namespace Ludots.Tests.GAS
         public void TearDown()
         {
             AttributeRegistry.Clear();
+            ModRegistryAmbient.Reset();
         }
 
         [Test]

@@ -5,6 +5,10 @@
   "Focus": {
     "min": 0
   },
+  "Health": {
+    "clampToBase": true,
+    "min": 0
+  },
   "Morale": {
     "min": 0
   }

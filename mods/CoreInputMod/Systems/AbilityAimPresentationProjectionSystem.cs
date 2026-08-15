@@ -8,7 +8,7 @@ using Ludots.Core.Scripting;
 namespace CoreInputMod.Systems
 {
     /// <summary>
-    /// Publishes ability aim preview collections and performer state from the current input aim session.
+    /// Publishes ability aim preview collections and presenter state from the current input aim session.
     /// </summary>
     public sealed class AbilityAimPresentationProjectionSystem : ISystem<float>
     {

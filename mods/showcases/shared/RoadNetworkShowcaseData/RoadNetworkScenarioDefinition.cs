@@ -15,7 +15,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private static readonly Vector4 RoadBorder = new(0.96f, 0.82f, 0.52f, 0.94f);
 
         private readonly Dictionary<long, GraphChunkData> _graphChunks;
-        private readonly Dictionary<long, RoadSplineSpec[]> _roadSplineChunks;
+        private readonly Dictionary<long, RoadRibbonSpec[]> _splineRibbonChunks;
         private readonly Dictionary<byte, WorldPoint> _landmarks;
 
         public int ChunkSizeCm { get; }
@@ -25,13 +25,13 @@ namespace RoadNetworkShowcaseMod.Runtime
             int chunkSizeCm,
             int streamingRadiusCm,
             Dictionary<long, GraphChunkData> graphChunks,
-            Dictionary<long, RoadSplineSpec[]> roadSplineChunks,
+            Dictionary<long, RoadRibbonSpec[]> splineRibbonChunks,
             Dictionary<byte, WorldPoint> landmarks)
         {
             ChunkSizeCm = chunkSizeCm;
             StreamingRadiusCm = streamingRadiusCm;
             _graphChunks = graphChunks;
-            _roadSplineChunks = roadSplineChunks;
+            _splineRibbonChunks = splineRibbonChunks;
             _landmarks = landmarks;
         }
 
@@ -40,9 +40,9 @@ namespace RoadNetworkShowcaseMod.Runtime
             return _graphChunks.TryGetValue(chunkKey, out chunk!);
         }
 
-        public bool TryGetRoadSplineChunk(long chunkKey, out RoadSplineSpec[] segments)
+        public bool TryGetRoadRibbonChunk(long chunkKey, out RoadRibbonSpec[] segments)
         {
-            return _roadSplineChunks.TryGetValue(chunkKey, out segments!);
+            return _splineRibbonChunks.TryGetValue(chunkKey, out segments!);
         }
 
         public bool TryGetLandmarkWorldCm(RoadLandmarkId id, out Vector3 worldCm)
@@ -82,15 +82,15 @@ namespace RoadNetworkShowcaseMod.Runtime
             TransportNetworkBakedAsset baked = new TransportNetworkBaker().Bake(asset, chunkSizeCm);
 
             var graphChunks = new Dictionary<long, GraphChunkData>(baked.GraphChunks);
-            var ribbonChunks = new Dictionary<long, RoadSplineSpec[]>(baked.RibbonChunks.Count);
+            var ribbonChunks = new Dictionary<long, RoadRibbonSpec[]>(baked.RibbonChunks.Count);
             int nextStableId = 1;
             foreach ((long chunkKey, SurfaceSplineSegment[] segments) in baked.RibbonChunks)
             {
-                var specs = new RoadSplineSpec[segments.Length];
+                var specs = new RoadRibbonSpec[segments.Length];
                 for (int i = 0; i < segments.Length; i++)
                 {
                     SurfaceSplineSegment segment = segments[i];
-                    specs[i] = new RoadSplineSpec(
+                    specs[i] = new RoadRibbonSpec(
                         nextStableId++,
                         segment.P0,
                         segment.P1,
@@ -99,8 +99,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                         segment.WidthMeters,
                         RoadFill,
                         RoadBorder,
-                        borderWidth: 0.08f,
-                        style: 0);
+                        borderWidth: 0.08f);
                 }
 
                 ribbonChunks.Add(chunkKey, specs);
@@ -211,7 +210,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             SouthWatch = 9,
         }
 
-        public readonly struct RoadSplineSpec
+        public readonly struct RoadRibbonSpec
         {
             public readonly int StableId;
             public readonly Vector3 P0;
@@ -222,9 +221,8 @@ namespace RoadNetworkShowcaseMod.Runtime
             public readonly Vector4 Fill;
             public readonly Vector4 Border;
             public readonly float BorderWidth;
-            public readonly byte Style;
 
-            public RoadSplineSpec(
+            public RoadRibbonSpec(
                 int stableId,
                 in Vector3 p0,
                 in Vector3 p1,
@@ -233,8 +231,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 float width,
                 in Vector4 fill,
                 in Vector4 border,
-                float borderWidth,
-                byte style)
+                float borderWidth)
             {
                 StableId = stableId;
                 P0 = p0;
@@ -245,7 +242,6 @@ namespace RoadNetworkShowcaseMod.Runtime
                 Fill = fill;
                 Border = border;
                 BorderWidth = borderWidth;
-                Style = style;
             }
         }
 

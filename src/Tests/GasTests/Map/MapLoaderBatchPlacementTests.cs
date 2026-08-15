@@ -16,7 +16,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -37,7 +37,7 @@ namespace GasTests
         [TestCase("position", true, false, 0f)]
         [TestCase("facing", true, true, 1.25f)]
         [TestCase("position-facing", true, true, 2.5f)]
-        [TestCase("position-facing-performer-param", true, true, 2.5f)]
+        [TestCase("position-facing-presenter-param", true, true, 2.5f)]
         [TestCase("position-facing-health", false, false, 0f)]
         public void TryBuildBatchRequest_ClassifiesPlacementOverrides(
             string? overrideShape,
@@ -56,7 +56,7 @@ namespace GasTests
 
             That(GetRequestBool(request, "HasFacing"), Is.EqualTo(expectedHasFacing));
             That(GetRequestParamOverrideCount(request), Is.EqualTo(
-                overrideShape == "position-facing-performer-param" ? 1 : 0));
+                overrideShape == "position-facing-presenter-param" ? 1 : 0));
             if (expectedHasFacing)
             {
                 That(GetRequestFloat(request, "FacingAngleRad"), Is.EqualTo(expectedFacing).Within(0.0001f));
@@ -120,10 +120,10 @@ namespace GasTests
         }
 
         [Test]
-        public void TryBuildBatchRequest_PerformerParamOverride_RequiresExplicitLane()
+        public void TryBuildBatchRequest_PresenterParamOverride_RequiresExplicitLane()
         {
             var spawn = CreateSpawn(CreateOverrides("position-facing"));
-            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            spawn.PresenterParamOverrides.Add(new ParamOverrideData
             {
                 ParamKey = "test.map.batch.slope",
                 FloatValue = 0.5f,
@@ -135,10 +135,10 @@ namespace GasTests
         }
 
         [Test]
-        public void TryBuildBatchRequest_VectorPerformerParamOverride_RequiresExactlyFourValues()
+        public void TryBuildBatchRequest_VectorPresenterParamOverride_RequiresExactlyFourValues()
         {
             var spawn = CreateSpawn(CreateOverrides("position-facing"));
-            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            spawn.PresenterParamOverrides.Add(new ParamOverrideData
             {
                 ParamKey = "test.map.batch.vector",
                 Lane = ParamLane.Vector,
@@ -151,59 +151,59 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadEntities_PerformerParamOverride_RequiresPresentationRuntime()
+        public void LoadEntities_PresenterParamOverride_RequiresPresentationRuntime()
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing"), 0.25f));
+            map.Entities.Add(CreateSpawnWithPresenterParam(CreateOverrides("position-facing"), 0.25f));
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
             That(ex.Message, Does.Contain("presentation runtime is not installed"));
         }
 
         [Test]
-        public void LoadEntities_PerformerParamOverride_RequiresDirectPerformerBootstrap()
+        public void LoadEntities_PresenterParamOverride_RequiresDirectPresenterBootstrap()
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
-            var definitions = new PerformerDefinitionRegistry();
+            var definitions = new PresenterDefinitionRegistry();
             loader.SetPresentationRuntime(
                 new PresentationStableIdAllocator(),
-                new PerformerEntityRuntime(world),
+                new PresenterEntityRuntime(world),
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing"), 0.25f));
+            map.Entities.Add(CreateSpawnWithPresenterParam(CreateOverrides("position-facing"), 0.25f));
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
-            That(ex.Message, Does.Contain("has no direct performer bootstrap"));
+            That(ex.Message, Does.Contain("has no direct presenter bootstrap"));
         }
 
         [Test]
-        public void LoadEntities_PerformerParamOverride_RequiresBatchPath()
+        public void LoadEntities_PresenterParamOverride_RequiresBatchPath()
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing-health"), 0.25f));
+            map.Entities.Add(CreateSpawnWithPresenterParam(CreateOverrides("position-facing-health"), 0.25f));
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
             That(ex.Message, Does.Contain("not compatible with the map template batch path"));
         }
 
         [Test]
-        public void LoadEntities_BatchTemplate_AppliesPerInstancePerformerParamOverrides()
+        public void LoadEntities_BatchTemplate_AppliesPerInstancePresenterParamOverrides()
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
-            var performerRuntime = new PerformerEntityRuntime(world);
-            var definitions = new PerformerDefinitionRegistry();
-            int slopeParamKey = PerformerParamKeyRegistry.Register("test.map.batch.slope");
+            var presenterRuntime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int slopeParamKey = PresenterParamKeyRegistry.Register("test.map.batch.slope");
             int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
             int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.root");
-            definitions.Register("test.map.batch.root", new PerformerDefinition
+            definitions.Register("test.map.batch.root", new PresenterDefinition
             {
                 ParamDefaults =
                 [
@@ -216,36 +216,36 @@ namespace GasTests
                 ],
                 Rules =
                 [
-                    new PerformerRule
+                    new PresenterRule
                     {
                         Event = new EventFilter
                         {
                             Kind = PresentationEventKind.EntitySpawned,
                             KeyId = templateKeyId,
                         },
-                        Command = new PerformerCommand
+                        Command = new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rootDefinitionId,
-                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rootDefinitionId,
+                            ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                             AnchorKind = PresentationAnchorKind.Entity,
                         },
                     },
                 ],
             });
-            performerRuntime.BindDefinitions(definitions);
+            presenterRuntime.BindDefinitions(definitions);
             loader.SetPresentationRuntime(
                 new PresentationStableIdAllocator(),
-                performerRuntime,
+                presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
 
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPerformerParam(
+            map.Entities.Add(CreateSpawnWithPresenterParam(
                 CreateOverrides("position-facing"),
                 -0.375f));
-            map.Entities.Add(CreateSpawnWithPerformerParam(
+            map.Entities.Add(CreateSpawnWithPresenterParam(
                 new Dictionary<string, JsonNode>
                 {
                     ["WorldPositionCm"] = WorldPosition(1200, -800),
@@ -257,20 +257,20 @@ namespace GasTests
 
             var owners = FindTemplateEntities(world);
             That(owners.Count, Is.EqualTo(2));
-            Entity rootA = world.Get<PresentationOwnerHasPerformerPayload>(owners[0]).SingleRootPerformer;
-            Entity rootB = world.Get<PresentationOwnerHasPerformerPayload>(owners[1]).SingleRootPerformer;
+            Entity rootA = world.Get<PresentationOwnerHasPresenterPayload>(owners[0]).SingleRootPresenter;
+            Entity rootB = world.Get<PresentationOwnerHasPresenterPayload>(owners[1]).SingleRootPresenter;
             That(world.IsAlive(rootA), Is.True);
             That(world.IsAlive(rootB), Is.True);
-            That(world.Get<PerformerState>(rootA).DefId, Is.EqualTo(rootDefinitionId));
-            That(world.Get<PerformerState>(rootB).DefId, Is.EqualTo(rootDefinitionId));
-            That(performerRuntime.TryResolveFloat(rootA, slopeParamKey, out float slopeA), Is.True);
-            That(performerRuntime.TryResolveFloat(rootB, slopeParamKey, out float slopeB), Is.True);
+            That(world.Get<PresenterState>(rootA).DefId, Is.EqualTo(rootDefinitionId));
+            That(world.Get<PresenterState>(rootB).DefId, Is.EqualTo(rootDefinitionId));
+            That(presenterRuntime.TryResolveFloat(rootA, slopeParamKey, out float slopeA), Is.True);
+            That(presenterRuntime.TryResolveFloat(rootB, slopeParamKey, out float slopeB), Is.True);
             That(slopeA, Is.EqualTo(-0.375f).Within(0.0001f));
             That(slopeB, Is.EqualTo(0.875f).Within(0.0001f));
         }
 
         [Test]
-        public void LoadEntities_DynamicHeightBatch_BootstrapsPerformerFromMapAuthoredPlacement()
+        public void LoadEntities_DynamicHeightBatch_BootstrapsPresenterFromMapAuthoredPlacement()
         {
             const int authoredXCm = 125_000;
             const int authoredYCm = -87_000;
@@ -279,12 +279,12 @@ namespace GasTests
 
             using var world = World.Create();
             var loader = CreateLoader(world, includeDynamicHeightSampling: true);
-            var performerRuntime = new PerformerEntityRuntime(world);
-            var definitions = new PerformerDefinitionRegistry();
-            int slopeParamKey = PerformerParamKeyRegistry.Register("test.map.batch.slope");
+            var presenterRuntime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            int slopeParamKey = PresenterParamKeyRegistry.Register("test.map.batch.slope");
             int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
             int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.dynamic.height.root");
-            definitions.Register("test.map.batch.dynamic.height.root", new PerformerDefinition
+            definitions.Register("test.map.batch.dynamic.height.root", new PresenterDefinition
             {
                 ParamDefaults =
                 [
@@ -297,33 +297,33 @@ namespace GasTests
                 ],
                 Rules =
                 [
-                    new PerformerRule
+                    new PresenterRule
                     {
                         Event = new EventFilter
                         {
                             Kind = PresentationEventKind.EntitySpawned,
                             KeyId = templateKeyId,
                         },
-                        Command = new PerformerCommand
+                        Command = new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rootDefinitionId,
-                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rootDefinitionId,
+                            ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                             AnchorKind = PresentationAnchorKind.Entity,
                         },
                     },
                 ],
             });
-            performerRuntime.BindDefinitions(definitions);
+            presenterRuntime.BindDefinitions(definitions);
             loader.SetPresentationRuntime(
                 new PresentationStableIdAllocator(),
-                performerRuntime,
+                presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-200_000, -200_000, 400_000, 400_000), 100));
 
             var map = new MapConfig { Id = MapId };
-            map.Entities.Add(CreateSpawnWithPerformerParam(
+            map.Entities.Add(CreateSpawnWithPresenterParam(
                 new Dictionary<string, JsonNode>
                 {
                     ["WorldPositionCm"] = WorldPosition(authoredXCm, authoredYCm),
@@ -344,15 +344,15 @@ namespace GasTests
             That(ownerVisual.X, Is.EqualTo(authoredXCm * 0.01f).Within(0.0001f));
             That(ownerVisual.Z, Is.EqualTo(authoredYCm * 0.01f).Within(0.0001f));
 
-            Entity root = world.Get<PresentationOwnerHasPerformerPayload>(owner).SingleRootPerformer;
+            Entity root = world.Get<PresentationOwnerHasPresenterPayload>(owner).SingleRootPresenter;
             That(world.IsAlive(root), Is.True);
-            Vector3 rootPosition = world.Get<PerformerWorldPosition>(root).Value;
+            Vector3 rootPosition = world.Get<PresenterWorldPosition>(root).Value;
             That(rootPosition.X, Is.EqualTo(authoredXCm * 0.01f).Within(0.0001f));
             That(rootPosition.Z, Is.EqualTo(authoredYCm * 0.01f).Within(0.0001f));
             That(
-                world.Get<PerformerWorldPlanePosition>(root).ValueCm,
+                world.Get<PresenterWorldPlanePosition>(root).ValueCm,
                 Is.EqualTo(new Vector2(authoredXCm, authoredYCm)));
-            That(performerRuntime.TryResolveFloat(root, slopeParamKey, out float slope), Is.True);
+            That(presenterRuntime.TryResolveFloat(root, slopeParamKey, out float slope), Is.True);
             That(slope, Is.EqualTo(slopeOverride).Within(0.0001f));
         }
 
@@ -361,11 +361,11 @@ namespace GasTests
         {
             using var world = World.Create();
             var loader = CreateLoader(world);
-            var performerRuntime = new PerformerEntityRuntime(world);
-            var definitions = new PerformerDefinitionRegistry();
+            var presenterRuntime = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
             int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
             int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.ownerpayload.root");
-            definitions.Register("test.map.batch.ownerpayload.root", new PerformerDefinition
+            definitions.Register("test.map.batch.ownerpayload.root", new PresenterDefinition
             {
                 Behaviors =
                 [
@@ -386,27 +386,27 @@ namespace GasTests
                 ],
                 Rules =
                 [
-                    new PerformerRule
+                    new PresenterRule
                     {
                         Event = new EventFilter
                         {
                             Kind = PresentationEventKind.EntitySpawned,
                             KeyId = templateKeyId,
                         },
-                        Command = new PerformerCommand
+                        Command = new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rootDefinitionId,
-                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rootDefinitionId,
+                            ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                             AnchorKind = PresentationAnchorKind.Entity,
                         },
                     },
                 ],
             });
-            performerRuntime.BindDefinitions(definitions);
+            presenterRuntime.BindDefinitions(definitions);
             loader.SetPresentationRuntime(
                 new PresentationStableIdAllocator(),
-                performerRuntime,
+                presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
                 new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
@@ -421,17 +421,17 @@ namespace GasTests
             loader.LoadEntities(map);
 
             That(
-                performerRuntime.LastRootBatchOwnerPayloadCount,
+                presenterRuntime.LastRootBatchOwnerPayloadCount,
                 Is.EqualTo(2),
-                "MapLoader direct bootstrap batches must preseed owner payload markers so the performer root batch writes transform-sync payloads in bulk.");
+                "MapLoader direct bootstrap batches must preseed owner payload markers so the presenter root batch writes transform-sync payloads in bulk.");
             var owners = FindTemplateEntities(world);
             That(owners.Count, Is.EqualTo(2));
             Entity owner = owners[0];
-            That(world.Has<PresentationOwnerHasPerformerPayload>(owner), Is.True);
-            ref readonly PresentationOwnerHasPerformerPayload payload = ref world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            That(world.Has<PresentationOwnerHasPresenterPayload>(owner), Is.True);
+            ref readonly PresentationOwnerHasPresenterPayload payload = ref world.Get<PresentationOwnerHasPresenterPayload>(owner);
             That(payload.RootCount, Is.EqualTo(1));
             That(payload.SingleRootTransformSync, Is.EqualTo(1));
-            Entity root = payload.SingleRootPerformer;
+            Entity root = payload.SingleRootPresenter;
             That(world.IsAlive(root), Is.True);
             That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
 
@@ -439,11 +439,11 @@ namespace GasTests
             world.Get<WorldPositionCm>(owner).Value = movedWorld;
             world.Get<VisualTransform>(owner).Position = new Vector3(18f, 0f, -6f);
 
-            using var transformSync = new PerformerEntityTransformSyncSystem(world, performerRuntime, definitions);
+            using var transformSync = new PresenterEntityTransformSyncSystem(world, presenterRuntime, definitions);
             transformSync.Update(0.016f);
 
-            That(world.Get<PerformerWorldPosition>(root).Value, Is.EqualTo(new Vector3(18f, 0f, -6f)));
-            That(world.Get<PerformerWorldPlanePosition>(root).ValueCm, Is.EqualTo(new Vector2(1800f, -600f)));
+            That(world.Get<PresenterWorldPosition>(root).Value, Is.EqualTo(new Vector3(18f, 0f, -6f)));
+            That(world.Get<PresenterWorldPlanePosition>(root).ValueCm, Is.EqualTo(new Vector2(1800f, -600f)));
         }
 
         [Test]
@@ -524,12 +524,12 @@ namespace GasTests
             return spawn;
         }
 
-        private static EntitySpawnData CreateSpawnWithPerformerParam(
+        private static EntitySpawnData CreateSpawnWithPresenterParam(
             Dictionary<string, JsonNode>? overrides,
             float value = 0.25f)
         {
             var spawn = CreateSpawn(overrides);
-            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            spawn.PresenterParamOverrides.Add(new ParamOverrideData
             {
                 ParamKey = "test.map.batch.slope",
                 Lane = ParamLane.Float,
@@ -556,7 +556,7 @@ namespace GasTests
                     ["WorldPositionCm"] = WorldPosition(-300, 400),
                     ["FacingDirection"] = Facing(2.5f),
                 },
-                "position-facing-performer-param" => new Dictionary<string, JsonNode>
+                "position-facing-presenter-param" => new Dictionary<string, JsonNode>
                 {
                     ["WorldPositionCm"] = WorldPosition(-300, 400),
                     ["FacingDirection"] = Facing(2.5f),
@@ -573,8 +573,8 @@ namespace GasTests
 
         private static EntitySpawnData CreateSpawnForShape(string? shape)
         {
-            return shape == "position-facing-performer-param"
-                ? CreateSpawnWithPerformerParam(CreateOverrides(shape))
+            return shape == "position-facing-presenter-param"
+                ? CreateSpawnWithPresenterParam(CreateOverrides(shape))
                 : CreateSpawn(CreateOverrides(shape));
         }
 
@@ -623,7 +623,7 @@ namespace GasTests
 
         private static int GetRequestParamOverrideCount(object request)
         {
-            PropertyInfo property = request.GetType().GetProperty("PerformerParamOverrides")!;
+            PropertyInfo property = request.GetType().GetProperty("PresenterParamOverrides")!;
             That(property, Is.Not.Null);
             var overrides = (ParamDefault[])property.GetValue(request)!;
             return overrides.Length;

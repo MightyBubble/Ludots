@@ -8,7 +8,7 @@ using Ludots.Core.Presentation.Components;
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Grants gameplay entities a presentation stable id so performer lifecycle rules
+    /// Grants gameplay entities a presentation stable id so presenter lifecycle rules
     /// can observe entity spawn/destroy without depending on visual authoring side channels.
     /// </summary>
     public sealed class PresentationStableIdBootstrapSystem : BaseSystem<World, float>

@@ -68,7 +68,6 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                         break;
                     case GraphNodeOp.HaltReturnInt:
                         usedInt.Add(ins.A);
-                        resultRegister = ins.A;
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -151,7 +150,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                             .Append(ins.A.ToString(CultureInfo.InvariantCulture))
                             .AppendLine("];");
                         stateBody.AppendLine("            state.Status = Ludots.Core.GraphRuntime.GraphExecutionStatus.Halted;");
-                        AppendGoto(stateBody, program.Length);
+                        stateBody.AppendLine("            return;");
                         tightBody.Append("            return r")
                             .Append(ins.A.ToString(CultureInfo.InvariantCulture))
                             .AppendLine(";");
