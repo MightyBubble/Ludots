@@ -370,6 +370,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int pc = cursor.Pc;
             int callStackCount = cursor.CallStackCount;
             int returnInt = cursor.ReturnInt;
+            int invokeDepth = cursor.InvokeDepth;
             int treeSteps = state.TreeSteps < cursor.Steps ? cursor.Steps : state.TreeSteps;
             int stepsThisSlice = 0;
             bool statePrepared = false;
@@ -381,20 +382,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 if (treeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
                 {
-                    state.CallStackCount = callStackCount;
-                    state.ReturnInt = returnInt;
-                    cursor.Pc = pc;
-                    cursor.CallStackCount = callStackCount;
-                    cursor.ReturnInt = returnInt;
-                    cursor.Steps = treeSteps;
-                    cursor.Status = GraphExecutionStatus.BudgetSuspended;
-                    state.TreeSteps = treeSteps;
-                    state.Status = GraphExecutionStatus.BudgetSuspended;
-                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.BudgetSuspended);
+                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, treeSteps);
                 }
 
                 if ((uint)pc >= (uint)program.Length)
                 {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
                     throw new InvalidOperationException(
                         $"{GraphKindOperationPolicy.PcOutOfRangeError}: pc={pc}, length={program.Length}. 程序计数器越界；掉出程序尾部不再算成功，必须用 HaltReturnInt 显式结束。");
                 }
@@ -408,7 +420,60 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ushort op = ins.Op;
                 if (op == moveIntOp)
                 {
-                    if (ins.Dst != ins.A)
+                    if (ins.Dst == ins.A)
+                    {
+                        if ((uint)ins.Dst >= (uint)ints.Length)
+                        {
+                            PersistSliceState(
+                                ref state,
+                                ref cursor,
+                                pc,
+                                callStackCount,
+                                returnInt,
+                                treeSteps,
+                                program.Length,
+                                invokeDepth,
+                                GraphExecutionStatus.Running);
+                            throw new InvalidOperationException(
+                                $"Graph MoveInt int register {ins.Dst} exceeds int register capacity ({ints.Length}).");
+                        }
+
+                        while (stepsThisSlice < budgetSteps && treeSteps < GraphVmLimits.MaxInstructionsPerExecution)
+                        {
+                            if ((uint)pc >= (uint)program.Length)
+                            {
+                                break;
+                            }
+
+                            ref readonly var next = ref program[pc];
+                            if (next.Op != moveIntOp || next.Dst != next.A)
+                            {
+                                break;
+                            }
+
+                            pc++;
+                            treeSteps++;
+                            stepsThisSlice++;
+                            if ((uint)next.Dst >= (uint)ints.Length)
+                            {
+                                PersistSliceState(
+                                    ref state,
+                                    ref cursor,
+                                    pc,
+                                    callStackCount,
+                                    returnInt,
+                                    treeSteps,
+                                    program.Length,
+                                    invokeDepth,
+                                    GraphExecutionStatus.Running);
+                                throw new InvalidOperationException(
+                                    $"Graph MoveInt int register {next.Dst} exceeds int register capacity ({ints.Length}).");
+                            }
+                        }
+
+                        continue;
+                    }
+                    else
                     {
                         ints[ins.Dst] = ints[ins.A];
                     }
@@ -425,15 +490,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (op == haltReturnIntOp)
                 {
                     returnInt = ints[ins.A];
-                    state.CallStackCount = callStackCount;
-                    state.ReturnInt = returnInt;
-                    state.Status = GraphExecutionStatus.Halted;
-                    cursor.Pc = instructionIndex + 1;
-                    cursor.CallStackCount = callStackCount;
-                    cursor.ReturnInt = returnInt;
-                    cursor.Steps = treeSteps;
-                    cursor.Status = GraphExecutionStatus.Halted;
-                    state.TreeSteps = treeSteps;
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        instructionIndex + 1,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Halted);
                     return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
                 }
 
@@ -444,6 +510,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (op >= table.Length)
                 {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
                     throw new InvalidOperationException(
                         $"Graph op {op} exceeds handler table capacity ({table.Length}).");
                 }
@@ -451,6 +527,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 var handler = table[op];
                 if (handler == null)
                 {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
                     throw new InvalidOperationException(
                         $"No handler registered for graph op {op}.");
                 }
@@ -461,7 +547,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     state.ReturnInt = returnInt;
                     state.Status = GraphExecutionStatus.Running;
                     state.ProgramLength = program.Length;
-                    state.InvokeDepth = cursor.InvokeDepth;
+                    state.InvokeDepth = invokeDepth;
                     statePrepared = true;
                 }
 
@@ -476,35 +562,71 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (state.Status == GraphExecutionStatus.Yielded)
                 {
-                    cursor.Pc = pc;
-                    cursor.CallStackCount = callStackCount;
-                    cursor.ReturnInt = returnInt;
-                    cursor.Steps = treeSteps;
-                    cursor.Status = GraphExecutionStatus.Yielded;
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Yielded);
                     return new GraphSliceResult(GraphExecutionStatus.Yielded, returnInt, cursor.Steps);
                 }
 
                 if (state.Status == GraphExecutionStatus.Halted)
                 {
-                    cursor.Pc = instructionIndex + 1;
-                    cursor.CallStackCount = callStackCount;
-                    cursor.ReturnInt = returnInt;
-                    cursor.Steps = treeSteps;
-                    cursor.Status = GraphExecutionStatus.Halted;
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        instructionIndex + 1,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Halted);
                     return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
                 }
             }
 
+            PersistSliceState(
+                ref state,
+                ref cursor,
+                pc,
+                callStackCount,
+                returnInt,
+                treeSteps,
+                program.Length,
+                invokeDepth,
+                GraphExecutionStatus.BudgetSuspended);
+            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
+        }
+
+        private static void PersistSliceState(
+            ref GraphExecutionState state,
+            ref GraphExecutionCursor cursor,
+            int pc,
+            int callStackCount,
+            int returnInt,
+            int treeSteps,
+            int programLength,
+            int invokeDepth,
+            GraphExecutionStatus status)
+        {
             state.CallStackCount = callStackCount;
             state.ReturnInt = returnInt;
+            state.ProgramLength = programLength;
+            state.InvokeDepth = invokeDepth;
+            state.TreeSteps = treeSteps;
+            state.Status = status;
             cursor.Pc = pc;
             cursor.CallStackCount = callStackCount;
             cursor.ReturnInt = returnInt;
             cursor.Steps = treeSteps;
-            cursor.Status = GraphExecutionStatus.BudgetSuspended;
-            state.TreeSteps = treeSteps;
-            state.Status = GraphExecutionStatus.BudgetSuspended;
-            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
+            cursor.InvokeDepth = invokeDepth;
+            cursor.Status = status;
         }
 
         private void RegisterBuiltins()
