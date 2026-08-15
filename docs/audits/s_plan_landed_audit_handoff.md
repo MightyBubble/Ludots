@@ -53,7 +53,7 @@
 | S11 覆盖表假绿 | [#950](https://github.com/MightyBubble/Ludots/pull/950) | 错指针先修；生成器失败关闭 | 第二批：**可关单** |
 | S12 格子与前门同一张表 | [#956](https://github.com/MightyBubble/Ludots/pull/956) | 分配器发放格子；前门 ⊆ 策略 | **从未独立审过** |
 | S13 数据写行为 | [#960](https://github.com/MightyBubble/Ludots/pull/960) | JSON 树/机；叶子自己读血；HFSM 禁 Yield | **从未独立审过** |
-| S14 分层 | [#954](https://github.com/MightyBubble/Ludots/pull/954) 设计 + [#957](https://github.com/MightyBubble/Ludots/pull/957) Wave 1 | 设计答六问；顺序只认枚举；拿引擎标过时；**不搬家** | 设计未审；Wave 1 未审。第 2–6 波不在范围 |
+| S14 分层 | [#954](https://github.com/MightyBubble/Ludots/pull/954) 设计 + [#957](https://github.com/MightyBubble/Ludots/pull/957) Wave 1；后续 #964 合入 Wave 2–4 脚手架 | 设计答六问；顺序只认枚举；拿引擎标过时；**不搬家** | 当时设计与 Wave 1 未审；现在 Wave 2–4 已合，Wave 5–6 仍未做 |
 | S15 验收页一份 | [#948](https://github.com/MightyBubble/Ludots/pull/948) | 一个 H1；没做的写成没做 | 第二批：**可关单** |
 
 ---
@@ -153,7 +153,7 @@ gitbook/architecture/graph-funclib-actionlib-contract.md §3.4。
 不要再按「八条 retired binding」取证。
 当前证伪：登记表没有 capability_standard_graph_ops_*；
 mods/ 没有 CapabilityStandardGraphOps{Rel,Query,Attr,Spatial,Event,Float,Script,Blackboard}Mod；
-启动器没有退役卡片。单节点画廊留下。
+启动器没有这些图能力家族旧房间的退役卡片。单节点画廊留下。
 ```
 
 **领域 K · S7 血条**
@@ -358,7 +358,7 @@ docs/audits/s_plan_landed_architecture_audit.md
 1. 我写了一张只会调用自己的图：登记必须当场失败，游戏还在。  
 2. 我给一个不夹上限的属性写了当前值：过几拍再看，数还在。  
 3. 我在查询图里填了一个巡逻动作的图号：编译失败，不能靠查询偷偷等一拍。  
-4. 启动器里没有家族大杂烩，也没有退役卡片。  
+4. 启动器里没有家族大杂烩，也没有这些图能力家族旧房间的退役卡片。
 5. 我点进「派事件改血」那一类短剧：血条跟结算走；打到零不会无声回满。  
 6. 镜头抬高、单位被挡住：我仍然能点到他、能下令。  
 7. 我在配置里写了一棵巡逻-追击-攻击树：代理按树走，我不用改引擎 C#。  

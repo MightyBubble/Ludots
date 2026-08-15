@@ -72,7 +72,7 @@
 2. FuncLib = 纯（无 Yield）；ActionLib = 可挂起；同名跨库失败关闭。  
 3. Effect 可分支 + 调 FuncLib；不得调 ActionLib。  
 4. 一种作者边模型 + 一台 VM；禁止平行编译器、平行程序宇宙。  
-5. 图节点玩家门是 **单节点展厅**；八个家族大杂烩退役，不是第二套玩家入口。  
+5. 图节点玩家门是 **单节点展厅**；八个家族大杂烩当时先退役，后来已删除，不是第二套玩家入口。
 6. 人从地图刷；血条走 WorldHud / 生命披露；禁止 C# 改血演戏驱动 HUD。  
 7. NO FALLBACK：缺清单、空表、未知符号、引擎空，全部失败关闭。
 
@@ -84,7 +84,7 @@
 |------|----------|
 | 每节点一间展厅，标题说人话 | `showcase.registry.json` 中 `capability_standard_graph_op_*` |
 | 启动项是预设，不是默认写死 | `launcher.presets.json`、`launcher.config.json` bindings |
-| 家族八条 `status=retired`，玩家 preset 已删 | 同登记表 + 生成器 `scripts/generate-graph-op-node-galleries.py` |
+| 家族八间已删除，玩家 preset 与 binding 都不再指向它们 | 同登记表 + 生成器 `scripts/generate-graph-op-node-galleries.py` |
 | 分镜 JSON 拥有人、字幕、featured 节点 | `…/GraphOpsNodeGalleryMod/assets/Vignettes/{Op}.json` |
 | 薄入口 Mod 由生成器写出，禁止手改 | `mods/showcases/capability_standard/graph_op_entries/` |
 
@@ -142,7 +142,7 @@
 scripts/generate-graph-op-node-galleries.py。
 证伪：
 1) 启动器是否写死默认只开某一间图展厅？（应否：玩家从列表点 binding/preset）
-2) capability_standard_graph_ops_* 八条是否 status=retired，且玩家 preset 已删？
+2) capability_standard_graph_ops_* 八条是否已从登记表与启动器玩家入口删除，而不是只标成 retired？
 3) capability_standard_graph_op_* 是否每条都有中文 title/summary、binding、preset、acceptanceTest？
 4) 生成器是否是这些条目的唯一写入源？有无手改漂移（生成戳 vs 手工补丁）？
 5) 退役家族 binding 是否仍出现在玩家可点的 preset 列表？

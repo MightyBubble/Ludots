@@ -59,10 +59,12 @@ namespace Ludots.Tests.Gas.Graph
             GraphInstruction[] programA =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 30 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
             GraphInstruction[] programB =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 7 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             WeakReference weakAssembly = LoadHotReloadAndDrop(programA, programB);
@@ -101,6 +103,7 @@ namespace Ludots.Tests.Gas.Graph
             GraphInstruction[] goodProgram =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 42 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             using var host = new GraphRoslynAlcCompilerHost();
@@ -306,6 +309,7 @@ namespace Ludots.Tests.Gas.Graph
                 new() { Op = (ushort)GraphNodeOp.AddInt, Dst = 2, A = 0, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.AddInt, Dst = 3, A = 2, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.AddInt, Dst = 4, A = 3, B = 0 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 4 },
             ];
         }
 
@@ -324,6 +328,7 @@ namespace Ludots.Tests.Gas.Graph
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 10 },
                 new() { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 20 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 2 },
             ];
         }
 
@@ -341,6 +346,7 @@ namespace Ludots.Tests.Gas.Graph
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 1 },
                 new() { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 0 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 2 },
             ];
         }
 

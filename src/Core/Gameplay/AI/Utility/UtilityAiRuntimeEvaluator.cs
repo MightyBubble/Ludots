@@ -856,7 +856,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind, _graphs);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

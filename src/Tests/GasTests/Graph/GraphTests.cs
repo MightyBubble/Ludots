@@ -133,7 +133,8 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryLimit, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.AggMinByDistance, Dst = 2 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10.0f },
-                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = 0 }
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             };
 
             GraphExecutor.Execute(world, caster, default, new IntVector2(0, 0), program, api);

@@ -66,10 +66,14 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                         usedBool.Add(ins.A);
                         ValidateJumpTarget(i, ins.Imm, program.Length);
                         break;
+                    case GraphNodeOp.HaltReturnInt:
+                        usedInt.Add(ins.A);
+                        resultRegister = ins.A;
+                        break;
                     default:
                         throw new InvalidOperationException(
                             $"R0/Track C codegen rejects unsupported op '{op}' at instruction index {i}. " +
-                            "Only None/ConstInt/AddInt/CompareLtInt/CompareEqInt/Jump/JumpIfFalse are whitelisted; " +
+                            "Only None/ConstInt/AddInt/CompareLtInt/CompareEqInt/Jump/JumpIfFalse/HaltReturnInt are whitelisted; " +
                             "widen via explicit emitter work, not silent skip.");
                 }
             }
@@ -140,6 +144,16 @@ namespace Ludots.Tests.Gas.Graph.Codegen
                             .Append(ins.A.ToString(CultureInfo.InvariantCulture))
                             .Append(" == 0) goto ")
                             .Append(LabelName(falseTarget))
+                            .AppendLine(";");
+                        break;
+                    case GraphNodeOp.HaltReturnInt:
+                        stateBody.Append("            state.ReturnInt = state.I[")
+                            .Append(ins.A.ToString(CultureInfo.InvariantCulture))
+                            .AppendLine("];");
+                        stateBody.AppendLine("            state.Status = Ludots.Core.GraphRuntime.GraphExecutionStatus.Halted;");
+                        AppendGoto(stateBody, program.Length);
+                        tightBody.Append("            return r")
+                            .Append(ins.A.ToString(CultureInfo.InvariantCulture))
                             .AppendLine(";");
                         break;
                     default:

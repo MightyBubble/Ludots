@@ -79,6 +79,7 @@ namespace Ludots.Core.GraphRuntime
             try
             {
                 EnsureProgramValid(graphId, program, kind);
+                EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -132,6 +133,7 @@ namespace Ludots.Core.GraphRuntime
             try
             {
                 EnsureProgramValid(graphId, program, kind);
+                EnsureInvokeTargetsAreScript(allowMissingTargets: true, allowUnpatchedFuncLibNames: true);
                 EnsureNoInvokeCycle(graphId);
             }
             catch
@@ -175,15 +177,91 @@ namespace Ludots.Core.GraphRuntime
         }
 
         private void EnsureNoInvokeCycle(int graphId)
+            => EnsureNoInvokeCycle(graphId, allowMissingTargets: true);
+
+        private void EnsureNoInvokeCycle(int graphId, bool allowMissingTargets)
         {
             if (!GraphYieldPurityValidator.TryValidateNoInvokeCycle(
                     this,
                     graphId,
                     GraphYieldPurityTarget.DescribeGraph(graphId),
                     out string diagnostic,
-                    allowMissingTargets: true))
+                    allowMissingTargets: allowMissingTargets))
             {
                 throw new InvalidOperationException($"{GraphYieldPurityValidator.InvokeCycleError}: {diagnostic}");
+            }
+        }
+
+        public void ValidateInvokeTargets()
+        {
+            EnsureInvokeTargetsAreScript(allowMissingTargets: false, allowUnpatchedFuncLibNames: false);
+            foreach (int graphId in _programs.Keys)
+            {
+                EnsureNoInvokeCycle(graphId, allowMissingTargets: false);
+            }
+        }
+
+        private void EnsureInvokeTargetsAreScript(bool allowMissingTargets, bool allowUnpatchedFuncLibNames)
+        {
+            foreach (KeyValuePair<int, GraphProgramRegistration> pair in _programs)
+            {
+                ValidateProgramInvokeTargets(
+                    pair.Key,
+                    pair.Value,
+                    allowMissingTargets,
+                    allowUnpatchedFuncLibNames);
+            }
+        }
+
+        private void ValidateProgramInvokeTargets(
+            int graphId,
+            GraphProgramRegistration registration,
+            bool allowMissingTargets,
+            bool allowUnpatchedFuncLibNames)
+        {
+            ReadOnlySpan<GraphInstruction> program = registration.Program;
+            for (int i = 0; i < program.Length; i++)
+            {
+                GraphInstruction ins = program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                {
+                    continue;
+                }
+
+                if ((ins.Flags & GraphInstructionFlags.FuncLibName) != 0)
+                {
+                    if (allowUnpatchedFuncLibNames)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeScript.functionName remains unresolved in graph id {graphId} at pc={i}.");
+                }
+
+                int targetGraphId = ins.Imm;
+                if (targetGraphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeScript.graphId in graph id {graphId} at pc={i} requires a positive graph id.");
+                }
+
+                if (!_programs.TryGetValue(targetGraphId, out GraphProgramRegistration target))
+                {
+                    if (allowMissingTargets)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"InvokeScript target graph id {targetGraphId} is not registered.");
+                }
+
+                if (target.Kind != GraphKind.Script)
+                {
+                    throw new InvalidOperationException(
+                        $"InvokeScript target graph id {targetGraphId} must be Script, but is '{target.Kind}'.");
+                }
             }
         }
 

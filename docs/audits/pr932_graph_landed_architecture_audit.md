@@ -8,7 +8,7 @@
 
 本文件是**当时那一轮**的结论，不是当前进度。九个领域（A–H2）的分头取证已在此合成。
 
-**事后更正（主干 `d1b8f5f4d7`）：** 当时 B2 写「退役的八间家族展厅玩家仍点得进去」。后来 #941 锁门，#968 **删掉**这些房间。现在启动器里没有退役卡片，也没有家族大杂烩。查询口、血条回卷等当时红线，后续 S 票已关。分层墙仍未立完。和现状页打架，以现状页为准。
+**事后更正（主干 `d1b8f5f4d7`）：** 当时 B2 写「退役的八间家族展厅玩家仍点得进去」。后来 #941 锁门，#968 **删掉**这些房间。现在启动器里没有这八间图能力家族退役卡，也没有家族大杂烩。仓库里别的 retired 追溯卡不是本轮图能力入口。查询口、血条回卷等当时红线，后续 S 票已关。分层墙仍未立完。和现状页打架，以现状页为准。
 
 ---
 
@@ -18,11 +18,11 @@
 
 **不是 HOLD MAIN，也不是 REGRESS。** 玩家门这件事本身是真做成了：120 个还能运行的图节点，每个有一间自己的展厅、一份自己的分镜、一张自己的地图、一间自己的薄入口，人是地图刷的，字幕模板是分镜给的，全量 GAS 测试 2453 条全绿。这不是「仓库变大了」，是能玩的东西真的多了 120 间。
 
-但有四条必须在「合同改回已落地」和「再合任何新图能力」之前关掉，其中三条是红线：作者今天就能从纯查询管道里调起可挂起动作；已经宣布退役的八间大杂烩玩家照样点得进去，而其中五间进门就会清空引擎的图编号表；玩家看到的血条，数字是真图算的，但落到世界上那一步是 C# 直接摆的，还带一条「掉到 0 就偷偷回满」的暗规则。
+当时有四条必须在「合同改回已落地」和「再合任何新图能力」之前关掉，其中三条是红线：作者能从纯查询管道里调起可挂起动作；已经宣布退役的八间大杂烩玩家照样点得进去，而其中五间进门就会清空引擎的图编号表；玩家看到的血条，数字是真图算的，但落到世界上那一步是 C# 直接摆的，还带一条「掉到 0 就偷偷回满」的暗规则。后续 S 票已修查询口和血条回卷，#968 已删除家族房间；当前进度只看现状页。
 
 ### 玩家一句话
 
-打开启动器，你看到的是一长串能点的展示，不是被塞进某一关；点「两段伤害叠在一起」，场上真有施法者和木桩，字幕真是策划写在分镜里的那句话。但那根血条只在少数几间里代表「真被打掉的血」，多数时候它是「有事发生了」的通用指示灯；而目录里划掉的八间旧展厅，门牌摘了，门没锁。
+当时打开启动器，你看到的是一长串能点的展示，不是被塞进某一关；点「两段伤害叠在一起」，场上真有施法者和木桩，字幕真是策划写在分镜里的那句话。但那根血条只在少数几间里代表「真被打掉的血」，多数时候它是「有事发生了」的通用指示灯；而目录里划掉的八间旧展厅，当时门牌摘了，门没锁。
 
 ---
 
@@ -50,7 +50,7 @@
 | # | 问题 | 证据 | 为什么是阻断 |
 |---|------|------|--------------|
 | **B1** | **Query 前门允许 `InvokeScript.graphId`，作者可从 L1 纯管道直接调起 ActionLib 动作。** 线性方言（Effect/Score/Validation/Derived）明确拒绝 `graphId`；Query 方言只拒绝「两个都给」和「两个都不给」，只给 `graphId` 一路放行并原样编译成 `Imm = node.GraphId; Flags = 0`。运行期 `RequireKind(Script)` 对 ActionLib 条目天然通过，`RequireNoYield` 只拦得住含 Yield 的那 2 张图，`action_lib.json` 里另外 **9 个条目不含 Yield**，全部可被一张 Query 图调起 | `src/Core/NodeLibraries/GASGraph/GraphControlFlowCompiler.Query.cs`（`ValidateQueryNode` 的 `InvokeScript` 分支；`CompileQueryNode` 的 `else` 分支）对照 `GraphControlFlowCompiler.Linear.cs`（`cannot use graphId in linear FuncLib authoring`）；`assets/Configs/GAS/action_lib.json` | 直接违反合同 §3.4「**Effect / Score / Validation / Query / Derived 前门不得出现** Action 调用」。这是作者今天就能写出来的，且零测试覆盖——`FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed` 的参数列表里没有 `Query`，也没有 `Effect` |
-| **B2** | **退役的八间家族展厅玩家仍点得进去，而其中五间进门就清空引擎图编号表。** 登记表这边做干净了（`status=retired`、`preset=null`），但 `binding` 八条全留着，`launcher.config.json` 里八条 binding 全是活的；启动器 `launchHint()` **先看 `binding`、完全不看 `status`**，于是每张退役卡照样吐出可复制的 `ludots launch $capability_standard_graph_ops_attr --adapter raylib`。而 Rel / Query 两间在 `GameStart` 上对活引擎直呼 `BindStandaloneFromModAssets()`，落到 bootstrap 的 `GraphIdRegistry.Clear()`；Attr / Spatial / Event 三间的 bootstrap 里也有同一句 | `src/Tools/Ludots.Launcher.React/src/lib/showcase.ts`（`launchHint` 先 `if (entry.binding)`）；`src/Tools/Ludots.Launcher.React/src/components/ShowcasePanel.tsx`（retired 只加灰徽章，可见性只按 tier/搜索词过滤）；`launcher.config.json`；`CapabilityStandardGraphOpsRelModEntry.cs` / `CapabilityStandardGraphOpsQueryModEntry.cs` 的 `GameEvents.GameStart` → `BindStandaloneFromModAssets()`；`GraphOpsRelShowcaseBootstrap.cs` / `GraphOpsQueryCatalogBootstrap.cs` / `GraphOpsAttrGraphBootstrap.cs` / `GraphOpsSpatialCatalogBootstrap.cs` / `GraphOpsEventGraphBootstrap.cs` 的 `GraphIdRegistry.Clear()`；`src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs`（`Clear()` 连 `_frozen` 一起复位、`_nextId` 归 1） | 「八个家族大杂烩退役，不是第二套玩家入口」是已裁决共识。现在它既没退役到玩家碰不到，进去还会把引擎在 init 期注册好的全部图编号清掉、把 1..N 重新分给家族自己的图，而引擎的 `GraphProgramRegistry` 仍按旧编号存程序——同进程两套编号打架。**「玩家点得进」与「进去就破坏核心注册表」这两条单独看都是 Major，叠在一起才是阻断** |
+| **B2** | **当时退役的八间家族展厅玩家仍点得进去，而其中五间进门就清空引擎图编号表。** 登记表这边做干净了（`status=retired`、`preset=null`），但 `binding` 八条全留着，`launcher.config.json` 里八条 binding 全是活的；启动器 `launchHint()` **先看 `binding`、完全不看 `status`**，于是每张退役卡照样吐出可复制的 `ludots launch $capability_standard_graph_ops_attr --adapter raylib`。而 Rel / Query 两间在 `GameStart` 上对活引擎直呼 `BindStandaloneFromModAssets()`，落到 bootstrap 的 `GraphIdRegistry.Clear()`；Attr / Spatial / Event 三间的 bootstrap 里也有同一句。**后续 #941 锁门，#968 已删除这些房间；这条只保留为当时证据。** | `src/Tools/Ludots.Launcher.React/src/lib/showcase.ts`（`launchHint` 先 `if (entry.binding)`）；`src/Tools/Ludots.Launcher.React/src/components/ShowcasePanel.tsx`（retired 只加灰徽章，可见性只按 tier/搜索词过滤）；`launcher.config.json`；`CapabilityStandardGraphOpsRelModEntry.cs` / `CapabilityStandardGraphOpsQueryModEntry.cs` 的 `GameEvents.GameStart` → `BindStandaloneFromModAssets()`；`GraphOpsRelShowcaseBootstrap.cs` / `GraphOpsQueryCatalogBootstrap.cs` / `GraphOpsAttrGraphBootstrap.cs` / `GraphOpsSpatialCatalogBootstrap.cs` / `GraphOpsEventGraphBootstrap.cs` 的 `GraphIdRegistry.Clear()`；`src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs`（`Clear()` 连 `_frozen` 一起复位、`_nextId` 归 1） | 「八个家族大杂烩退役，不是第二套玩家入口」是已裁决共识。当时它既没退役到玩家碰不到，进去还会把引擎在 init 期注册好的全部图编号清掉、把 1..N 重新分给家族自己的图，而引擎的 `GraphProgramRegistry` 仍按旧编号存程序——同进程两套编号打架。**「玩家点得进」与「进去就破坏核心注册表」这两条单独看都是 Major，叠在一起才是阻断** |
 | **B3** | **玩家看到的血条，数字来自真图，落地那一步是 C# 摆的，还带一条暗规则。** 每间展厅先跑真 VM（`GasGraphOpHandlerTable.Execute`，全 `stackalloc`、真 `BuiltinHandlerRegistry` / `EffectTemplateRegistry` / `EffectRequestQueue` 根），取出寄存器里的数——这一半是真的。但把这个数变成血条的那一步是 `next -= 图返回值` 之后 `AttributeMutationOps.SetBase/SetCurrent` **直接写属性**，不走任何效果结算；且 `if (next <= 0f) next = opening;`——血要掉到 0 就静默回卷成开局值。C# 影子数组 `ctx.ActorHealth` 每 tick 被 `SyncHud` 无条件刷回世界 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/Runtime/Drivers/LinearNodeDriver.cs`（`next <= 0f` 回卷 + `WriteHealth`）；同目录 `BlackboardNodeDriver.cs` / `EventNodeDriver.cs` / `ScriptNodeDriver.cs`（`ctx.ActorHealth[i] = …` 直接赋值，Script 那间写的是「茶水量」）；`Runtime/GraphOpsNodeActorBinding.cs`（`SyncHud` → `WriteHealth`、`WriteHealth` → `AttributeMutationOps`）；`Runtime/IGraphOpsNodeDriver.cs`（`ActorHealth` 影子数组） | 违反已裁决共识第 6 条「血条走 WorldHud / 生命披露；**禁止 C# 改血演戏驱动 HUD**」。而且登记表当着玩家的面写「血条按总和往下掉」（`showcase.registry.json` 的 `AddFloat` summary），玩家没法区分哪根条是真结算、哪根是指示灯。**回卷那一句是 NO FALLBACK 红线**：本该「打死了」的时刻被静默改写成「满血重来」，且这条规则不在任何分镜数据里 |
 
 **B3 的另一半必须同时讲清，否则会误伤**：披露这一侧是真的。`graphops.hud.health_bar` 从 `entity_health_bar` 继承 `AttributeBinding(Health)`，`WorldHudPerformBehavior` 按 `KnowledgeProjectionStore` 的属性掩码决定发不发这根条，`PerformPhaseResolver` 的 `allowWorldHudProjection` 是真门。六角圈人那三间的语义完全干净：圈外的人还站在场上、世界血量仍是作者数据 100、只是 HUD 不披露，且有测试逐档断言（`GraphOpsNodeGallerySpatialAcceptanceTests.QueryHexRing_LightsOnlyTheRing_NotInsideOrOutside`）。**问题在数值来源，不在披露管道。**
@@ -150,7 +150,7 @@
 
 **实际：** 没有硬编码默认关——全仓 `src/Tools/` 下搜 `capability_standard_graph_op` 零命中，下拉直接映射 `launcher.presets.json`。**这条声称成立。**
 
-**但：** 同一个列表里躺着 8 张打灰徽章的退役家族卡，卡底照样有可复制的启动命令，因为 `launchHint()` 先读 `binding` 且不看 `status`。玩家复制粘贴就能把「已经关了」的门重新打开，界面上除了一枚灰徽章没有任何东西拦他（B2）。
+**当时的红线：** 同一个列表里躺着 8 张打灰徽章的退役家族卡，卡底照样有可复制的启动命令，因为 `launchHint()` 先读 `binding` 且不看 `status`。玩家复制粘贴就能把「已经关了」的门重新打开，界面上除了一枚灰徽章没有任何东西拦他（B2）。**现在这八间房间已删除，不再按这段派修复。**
 
 ### 4.2 点「两段伤害叠在一起」
 
@@ -198,7 +198,7 @@ UI 面板图（#886 / #893 及查表 / TagDisplay 面板债）、表现层改名
 
 ### 5.2 已裁决共识（本轮未重开）
 
-Duration / Period 在效果壳上；FuncLib 纯、ActionLib 可挂起、同名跨库失败关闭；Effect 可分支 + 调 FuncLib、不得调 ActionLib；一种作者边模型 + 一台 VM；图节点玩家门是单节点展厅、八家族退役；人从地图刷、血条走 WorldHud / 生命披露；NO FALLBACK。
+Duration / Period 在效果壳上；FuncLib 纯、ActionLib 可挂起、同名跨库失败关闭；Effect 可分支 + 调 FuncLib、不得调 ActionLib；一种作者边模型 + 一台 VM；图节点玩家门是单节点展厅，八家族从当时退役推进到后续删除；人从地图刷、血条走 WorldHud / 生命披露；NO FALLBACK。
 
 本报告的三条阻断都是**按这些共识去量**得出的，不是对共识的挑战。
 
@@ -335,7 +335,7 @@ Duration / Period 在效果壳上；FuncLib 纯、ActionLib 可挂起、同名�
 | Query L1 纳入 FuncLib 调用 | **关** |
 | P3「线性 `graphId` 拒绝 / Effect→ActionLib 名补测试」 | **实质已关，清单勾选滞后**。两条测试都在树上；剩余缺口是参数列表漏 Effect 与 Query（m6） |
 | 加载顺序文档偏差 | **关**，合同 §3.7 与分层页现在与 `GameEngine` 加载段逐字一致 |
-| 旁路票 #916 / #917 / #918 | **三张全关**（见 §5.3） |
+| 旁路票 #916 / #917 / #918 | **代码侧已关；GitHub 票面待关单**（见 §5.3） |
 
 ### 8.2 仍开
 
@@ -343,7 +343,7 @@ Duration / Period 在效果壳上；FuncLib 纯、ActionLib 可挂起、同名�
 
 ### 8.3 新债（#914 之后新增或此前未记录）
 
-B1（Query 前门开口）、B2（退役门未锁 + 五处 `GraphIdRegistry.Clear`）、B3（血条数值 C# 摆放 + 静默回卷）、M1（`Clear()` 不真清）、M2（`InvokeBuiltin` 无界 materialize）、M3 / M4（覆盖表错误归因 + 守卫闭环自证）、M6 / M7（`AllowTruncated` 与 `validOutput` 写不出来）、M8（tag-display 文档门面不可作者化）、M9（热改会话层非原子）、M10 / M11（L2 调不到 FuncLib；HFSM Yield 与合同冲突）、M17（静态注册表跨引擎污染）、M18（生成器只 upsert 不删除 + 无 CI 闸门）、M19（sandbox 第二套展示人）、M25（LSW 登记表验收映射失真）。
+B1（Query 前门开口）、B2（当时退役门未锁 + 五处 `GraphIdRegistry.Clear`，#941/#968 后不再按现状派修）、B3（血条数值 C# 摆放 + 静默回卷）、M1（`Clear()` 不真清）、M2（`InvokeBuiltin` 无界 materialize）、M3 / M4（覆盖表错误归因 + 守卫闭环自证）、M6 / M7（`AllowTruncated` 与 `validOutput` 写不出来）、M8（tag-display 文档门面不可作者化）、M9（热改会话层非原子）、M10 / M11（L2 调不到 FuncLib；HFSM Yield 与合同冲突）、M17（静态注册表跨引擎污染）、M18（生成器只 upsert 不删除 + 无 CI 闸门）、M19（sandbox 第二套展示人）、M25（LSW 登记表验收映射失真）。
 
 ---
 
@@ -370,10 +370,11 @@ TypeMismatch「cannot use graphId in linear FuncLib authoring」。
 禁止：改合同措辞来迁就实现；新增 opcode；碰线性方言。
 ```
 
-### 9.2 修 B2（玩家门 + 核心注册表）
+### 9.2 修 B2（历史提示，#968 后不要执行）
 
 ```text
-只做一件事：把八间退役家族展厅的门真锁上，并停止清空引擎图编号表。
+历史提示：当时要把八间退役家族展厅的门真锁上，并停止清空引擎图编号表。
+当前不要按本段派工；这八间房间已由 #968 删除，现状只看图能力唯一入口。
 第一步（锁门）：
 1) showcase.registry.json 里八条 capability_standard_graph_ops_* 的 binding 置 null
    （preset 已经是 null）。参照正确先例 physics2d_playground。

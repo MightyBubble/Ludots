@@ -187,6 +187,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -3.3f },
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);

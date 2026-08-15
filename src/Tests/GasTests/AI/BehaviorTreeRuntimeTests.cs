@@ -67,7 +67,7 @@ namespace Ludots.Tests.Gas.AI
             var world = new BehaviorTreeWorld(tree, capacity: agents);
             for (int i = 0; i < agents; i++) world.AddAgent();
             world.TickAll();
-            for (int i = 0; i < agents; i++) world.ResetAgent(i);
+            world.RestartAllThinking();
             var sw = Stopwatch.StartNew();
             BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
@@ -184,8 +184,8 @@ namespace Ludots.Tests.Gas.AI
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
-                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy");
-                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange");
+                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)

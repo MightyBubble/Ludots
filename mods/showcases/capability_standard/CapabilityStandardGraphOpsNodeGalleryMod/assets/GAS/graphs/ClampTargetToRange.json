@@ -5,7 +5,7 @@
   "nodes": [
     { "id": "caster", "op": "LoadCaster" },
     { "id": "range", "op": "ConstFloat", "floatValue": 500 },
-    { "id": "clamp", "op": "ClampTargetToRange", "validOutput": "inRange" }
+    { "id": "clamp", "op": "ClampTargetToRange" }
   ],
   "controlEdges": [
     { "from": "caster", "fromPort": "next", "to": "range" },

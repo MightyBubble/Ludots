@@ -30,7 +30,7 @@ namespace Ludots.Tests.Gas.AI
             HfsmDefinition hfsm = behavior.RequireHfsm("hfsm.sentry");
             LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial(
                 "arena.level",
-                GraphRegistryScriptResolver.RequireActionId(actions, "level.phaseAdvance"));
+                GraphRegistryScriptResolver.RequireActionId(actions, "level.phaseAdvance", GraphActionHost.Level));
 
             var btWorld = new BehaviorTreeWorld(bt, agents);
             var hfsmWorld = new HfsmWorld(hfsm, agents);
@@ -44,40 +44,40 @@ namespace Ludots.Tests.Gas.AI
                 }
             }
 
-            void RestartReady()
-            {
-                for (int i = 0; i < agents; i++)
-                {
-                    if (btWorld.Statuses[i] == BehaviorTreeStatus.Success)
-                    {
-                        btWorld.RestartThinking(i);
-                    }
-                }
-            }
-
             for (int w = 0; w < 8; w++)
             {
-                RestartReady();
+                btWorld.RestartAllThinking();
                 btWorld.TickAll(32);
                 hfsmWorld.TickAll();
                 level.TickThinkWave();
             }
 
             var samples = new double[waves];
-            for (int w = 0; w < waves; w++)
+            if (!GC.TryStartNoGCRegion(16 * 1024 * 1024))
             {
-                RestartReady();
-                var sw = Stopwatch.StartNew();
-                btWorld.TickAll(32);
-                hfsmWorld.TickAll();
-                level.TickThinkWave();
-                if (w == 5)
-                {
-                    level.AddCounter(10);
-                }
+                throw new InvalidOperationException("Graph behavior acceptance timing requires a no-GC region.");
+            }
 
-                sw.Stop();
-                samples[w] = sw.Elapsed.TotalMilliseconds;
+            try
+            {
+                for (int w = 0; w < waves; w++)
+                {
+                    btWorld.RestartAllThinking();
+                    long start = Stopwatch.GetTimestamp();
+                    btWorld.TickAll(32);
+                    hfsmWorld.TickAll();
+                    level.TickThinkWave();
+                    if (w == 5)
+                    {
+                        level.AddCounter(10);
+                    }
+
+                    samples[w] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+                }
+            }
+            finally
+            {
+                GC.EndNoGCRegion();
             }
 
             double sumMs = 0;

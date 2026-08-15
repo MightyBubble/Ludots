@@ -193,7 +193,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.Call, ScriptOnlyMask, scriptPorts: noPorts, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.Return, ScriptOnlyMask, scriptPorts: noPorts);
             Add(rows, GraphNodeOp.Yield, ScriptOnlyMask, scriptPorts: noPorts, scriptOnly: true);
-            Add(rows, GraphNodeOp.HaltReturnInt, ScriptOnlyMask, scriptPorts: portValue, scriptOut: GraphValueType.Void);
+            Add(rows, GraphNodeOp.HaltReturnInt, LinearQueryScript, linearPorts: portValue, queryPorts: portValue, scriptPorts: portValue, scriptOut: GraphValueType.Void);
             Add(rows, GraphNodeOp.InvokeScript, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, flags: GraphOperandRole.FuncLibNameFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.MoveInt, ScriptOnlyMask, GraphValueType.Int, scriptPorts: portValue, scriptOut: GraphValueType.Int);
 

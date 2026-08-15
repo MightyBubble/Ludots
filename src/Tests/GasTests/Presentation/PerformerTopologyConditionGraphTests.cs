@@ -141,6 +141,7 @@ namespace Ludots.Tests.Presentation
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ControlDomainResolve, A = 0, Dst = 3 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Validation);
 
             // graph.cond.viewer_controls_row_domain: controls-reachable but not the row domain itself
@@ -151,6 +152,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 1, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Validation);
 
             // graph.cond.viewer_has_knowledge_grant: knowledge projection without controls reachability
@@ -160,6 +162,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ControlDomainControls, A = 2, B = 0, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 1, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Validation);
 
             _defs.Register("test.selection_marker.rules", new PerformerDefinition
@@ -272,6 +275,7 @@ namespace Ludots.Tests.Presentation
             _programs.Register(ViewerIsRowDomainProgramId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 2, B = 0, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Validation);
             _defs.Register("test.viewer_register", new PerformerDefinition
             {
@@ -301,6 +305,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadEventPayloadFloat, Imm = 3, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, ImmF = 0.5f, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareGtFloat, A = 0, B = 1, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Validation);
             _defs.Register("test.payload_registers", new PerformerDefinition
             {
@@ -346,6 +351,7 @@ namespace Ludots.Tests.Presentation
                 new() { Op = (ushort)GraphNodeOp.ControlDomainResolve, A = 0, Dst = 3 },
                 new() { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 0 },
                 new() { Op = (ushort)GraphNodeOp.RelationshipHasLink, A = 2, B = 1, Dst = 1, Flags = 0 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
             GraphProgramSymbolPatcher.Patch(symbols, program, new StubSymbolResolver(_controlsTypeId));

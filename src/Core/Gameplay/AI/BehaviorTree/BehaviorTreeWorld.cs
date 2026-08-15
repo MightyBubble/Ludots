@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -82,9 +83,65 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         public void RestartThinking(int agent)
         {
             ValidateAgent(agent);
+            RestartThinkingUnchecked(agent);
+        }
+
+        /// <summary>Restarts every agent topology stack without clearing ScriptSlice registers.</summary>
+        public void RestartAllThinking()
+        {
+            int root = _tree.RootIndex;
+            int stackBase = 0;
+            int[] stack = _stack;
+            byte[] stackCount = _stackCount;
+            byte[] childCursor = _childCursor;
+            BehaviorTreeStatus[] status = _status;
+            for (int agent = 0; agent < _count; agent++)
+            {
+                stackCount[agent] = 1;
+                stack[stackBase] = root;
+                childCursor[stackBase] = 0;
+                status[agent] = BehaviorTreeStatus.Running;
+                stackBase += BehaviorTreeLimits.MaxStackDepth;
+            }
+        }
+
+        /// <summary>Restarts agents that reached Success/Failure without clearing ScriptSlice registers.</summary>
+        public int RestartFinishedThinking()
+        {
+            int root = _tree.RootIndex;
+            int stackBase = 0;
+            int[] stack = _stack;
+            byte[] stackCount = _stackCount;
+            byte[] childCursor = _childCursor;
+            BehaviorTreeStatus[] status = _status;
+            int restarted = 0;
+            for (int agent = 0; agent < _count; agent++)
+            {
+                BehaviorTreeStatus current = status[agent];
+                if (current != BehaviorTreeStatus.Success && current != BehaviorTreeStatus.Failure)
+                {
+                    stackBase += BehaviorTreeLimits.MaxStackDepth;
+                    continue;
+                }
+
+                stackCount[agent] = 1;
+                stack[stackBase] = root;
+                childCursor[stackBase] = 0;
+                status[agent] = BehaviorTreeStatus.Running;
+                restarted++;
+                stackBase += BehaviorTreeLimits.MaxStackDepth;
+            }
+
+            return restarted;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void RestartThinkingUnchecked(int agent)
+        {
+            int stackBase = agent * BehaviorTreeLimits.MaxStackDepth;
             _stackCount[agent] = 1;
-            _stack[agent * BehaviorTreeLimits.MaxStackDepth] = _tree.RootIndex;
-            _childCursor[agent * BehaviorTreeLimits.MaxStackDepth] = 0;
+            _stack[stackBase] = _tree.RootIndex;
+            _childCursor[stackBase] = 0;
             _status[agent] = BehaviorTreeStatus.Running;
         }
 
@@ -155,34 +212,53 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                 return;
             }
 
+            int stackBase = agent * BehaviorTreeLimits.MaxStackDepth;
+            BehaviorTreeNode[] nodes = _tree.Nodes;
             while (depth > 0)
             {
-                int stackBase = agent * BehaviorTreeLimits.MaxStackDepth;
                 int nodeIndex = _stack[stackBase + depth - 1];
-                BehaviorTreeNode node = _tree.Nodes[nodeIndex];
+                BehaviorTreeNode node = nodes[nodeIndex];
                 visited++;
 
-                if (node.Kind is BehaviorTreeNodeKind.Condition or BehaviorTreeNodeKind.Action)
+                if (node.Kind == BehaviorTreeNodeKind.Condition || node.Kind == BehaviorTreeNodeKind.Action)
                 {
-                    BehaviorTreeStatus leaf = EvalLeaf(
-                        agent,
-                        node,
-                        programs,
-                        scriptBudgetSteps,
-                        sensors,
-                        world,
-                        caster,
-                        explicitTarget,
-                        api,
-                        ref scriptSlices,
-                        ref scriptSteps);
+                    BehaviorTreeLeafBinding binding = node.Leaf;
+                    BehaviorTreeStatus leaf;
+                    if (binding == BehaviorTreeLeafBinding.AlwaysSuccess)
+                    {
+                        leaf = BehaviorTreeStatus.Success;
+                    }
+                    else if (binding == BehaviorTreeLeafBinding.AlwaysFailure)
+                    {
+                        leaf = BehaviorTreeStatus.Failure;
+                    }
+                    else if (binding == BehaviorTreeLeafBinding.HoldRunning)
+                    {
+                        leaf = BehaviorTreeStatus.Running;
+                    }
+                    else
+                    {
+                        leaf = EvalLeaf(
+                            agent,
+                            node,
+                            programs,
+                            scriptBudgetSteps,
+                            sensors,
+                            world,
+                            caster,
+                            explicitTarget,
+                            api,
+                            ref scriptSlices,
+                            ref scriptSteps);
+                    }
+
                     if (leaf == BehaviorTreeStatus.Running)
                     {
                         _status[agent] = BehaviorTreeStatus.Running;
                         return;
                     }
 
-                    depth = PopAndPropagate(agent, depth, leaf);
+                    depth = PopAndPropagate(agent, stackBase, depth, leaf);
                     _stackCount[agent] = (byte)depth;
                     if (depth == 0)
                     {
@@ -200,7 +276,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     BehaviorTreeStatus done = node.Kind == BehaviorTreeNodeKind.Sequence
                         ? BehaviorTreeStatus.Success
                         : BehaviorTreeStatus.Failure;
-                    depth = PopAndPropagate(agent, depth, done);
+                    depth = PopAndPropagate(agent, stackBase, depth, done);
                     _stackCount[agent] = (byte)depth;
                     if (depth == 0)
                     {
@@ -225,7 +301,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             }
         }
 
-        private int PopAndPropagate(int agent, int depth, BehaviorTreeStatus childStatus)
+        private int PopAndPropagate(int agent, int stackBase, int depth, BehaviorTreeStatus childStatus)
         {
             depth--;
             _stackCount[agent] = (byte)depth;
@@ -234,18 +310,17 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                 return 0;
             }
 
-            int stackBase = agent * BehaviorTreeLimits.MaxStackDepth;
             int parentIndex = _stack[stackBase + depth - 1];
             BehaviorTreeNode parent = _tree.Nodes[parentIndex];
 
             if (parent.Kind == BehaviorTreeNodeKind.Sequence && childStatus == BehaviorTreeStatus.Failure)
             {
-                return PopAndPropagate(agent, depth, BehaviorTreeStatus.Failure);
+                return PopAndPropagate(agent, stackBase, depth, BehaviorTreeStatus.Failure);
             }
 
             if (parent.Kind == BehaviorTreeNodeKind.Selector && childStatus == BehaviorTreeStatus.Success)
             {
-                return PopAndPropagate(agent, depth, BehaviorTreeStatus.Success);
+                return PopAndPropagate(agent, stackBase, depth, BehaviorTreeStatus.Success);
             }
 
             // Sequence success or Selector failure → try next sibling on subsequent loop.

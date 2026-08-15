@@ -310,6 +310,19 @@ namespace Ludots.Tests.Gas.Graph
             }
         }
 
+        [Test]
+        public void ActionCatalog_RejectsWrongHostLookup()
+        {
+            var actions = new GraphActionCatalog();
+            actions.Register("bt.patrol", graphId: 7, GraphKind.Script, GraphActionHost.BehaviorTree);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                actions.Require("bt.patrol", GraphActionHost.Hfsm));
+
+            Assert.That(ex!.Message, Does.Contain("BehaviorTree"));
+            Assert.That(ex.Message, Does.Contain("Hfsm"));
+        }
+
         private static (ConfigPipeline Pipeline, ConfigCatalog Catalog, string TempRoot) CreateCatalogPipeline(
             string relativePath,
             string? json = null,

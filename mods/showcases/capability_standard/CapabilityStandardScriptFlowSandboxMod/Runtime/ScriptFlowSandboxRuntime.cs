@@ -43,7 +43,7 @@ public sealed class ScriptFlowSandboxRuntime
             throw new InvalidOperationException("ScriptFlowSandboxRuntime.Bind(Registry, ActionCatalog) required.");
         }
 
-        _drinkGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, DrinkActionName);
+        _drinkGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, DrinkActionName, GraphActionHost.Script);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _drinkGraphId);
         Metrics.AgentCount = 1;
         Metrics.Detail = "Script drink-until-full from ActionLib";
