@@ -202,6 +202,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<LiveEditModSaveService> LiveEditModSaveService = new("LiveEditModSaveService");
         public static readonly ServiceKey<GasGraphRuntimeProductionServices> GasGraphRuntimeProductionServices = new("GasGraphRuntimeProductionServices");
         public static readonly ServiceKey<GasGraphRuntimeApi> GasGraphRuntimeApi = new("GasGraphRuntimeApi");
+        public static readonly ServiceKey<GasGraphOpHandlerTable> GasGraphOpHandlerTable = new("GasGraphOpHandlerTable");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");
         public static readonly ServiceKey<StringIntRegistry> GraphOutputValueKeyRegistry = new("GraphOutputValueKeyRegistry");
         public static readonly ServiceKey<GraphOutputValueStore> GraphOutputValueStore = new("GraphOutputValueStore");

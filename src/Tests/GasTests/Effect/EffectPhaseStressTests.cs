@@ -21,6 +21,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class EffectPhaseStressTests
     {
+        private static readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable ZeroAllocHandlers = new();
         /// <summary>
         /// Stress test: execute Phase graphs for N effects × all 8 phases.
         /// Each phase runs a trivial 3-instruction graph (ConstFloat + AddFloat + WriteBlackboard).
@@ -36,7 +37,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -222,7 +223,7 @@ namespace Ludots.Tests.GAS
                         CallStack = callStack,
                         CallStackCount = 0,
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                 }
 
                 GC.Collect();
@@ -245,7 +246,7 @@ namespace Ludots.Tests.GAS
                         CallStack = callStack,
                         CallStackCount = 0,
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                 }
 
                 sw.Stop();
@@ -324,7 +325,7 @@ namespace Ludots.Tests.GAS
                             CallStack = callStack,
                             CallStackCount = 0,
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                     }
                 }
 
@@ -352,7 +353,7 @@ namespace Ludots.Tests.GAS
                             CallStack = callStack,
                             CallStackCount = 0,
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                     }
                 }
 

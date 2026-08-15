@@ -281,7 +281,7 @@ namespace Ludots.Tests.GAS
                 world,
                 graph.Programs,
                 graph.OutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 graph.Collections,
                 graph.OutputValues);
 
@@ -412,7 +412,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             Assert.That(state.TargetList.Count, Is.EqualTo(2));
             Assert.That(targets[0], Is.EqualTo(first));

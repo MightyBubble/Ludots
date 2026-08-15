@@ -171,7 +171,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(
@@ -274,7 +274,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(
@@ -654,7 +654,9 @@ namespace Ludots.Tests.GasTests
                 new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
-            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver);
+            var lifecycleBuiltinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();
+            Ludots.Core.Gameplay.GAS.BuiltinHandlers.RegisterAll(lifecycleBuiltinHandlers);
+            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver, builtinHandlers: lifecycleBuiltinHandlers);
             programs.Register(graphId, package.Value.Program, package.Value.Kind);
             return graphId;
         }

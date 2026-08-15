@@ -265,6 +265,38 @@
       }
     },
     {
+      "name": "capability_standard_config_shards_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod",
+        "projectPath": "CapabilityStandardConfigShardsShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_effect_preset_type_code_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardEffectPresetTypeCodeShowcaseMod",
+        "projectPath": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_performer_behavior_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_performer_command_extension_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPerformerCommandExtensionShowcaseMod",
+        "projectPath": "CapabilityStandardPerformerCommandExtensionShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_transport_network",
       "target": {
         "type": "path",

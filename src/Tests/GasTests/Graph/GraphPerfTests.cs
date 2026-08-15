@@ -9,6 +9,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Tests.GAS
 {
@@ -16,6 +17,7 @@ namespace Ludots.Tests.GAS
     [Category("benchmark")]
     public class GraphPerfTests
     {
+        private static readonly GasGraphOpHandlerTable ZeroAllocHandlers = new();
         [Test]
         public void Benchmark_GraphExecutor_SmallProgram()
         {
@@ -51,7 +53,7 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, ZeroAllocHandlers);
                     effectRequests.Clear();
                     eventBus.Update();
                 }
@@ -66,7 +68,7 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < iterations; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, ZeroAllocHandlers);
                     effectRequests.Clear();
                     eventBus.Update();
                 }

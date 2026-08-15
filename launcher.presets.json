@@ -261,6 +261,42 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_config_shards_showcase_raylib",
+      "name": "Capability Standard Config Shards Raylib",
+      "selectors": [
+        "$capability_standard_config_shards_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_effect_preset_type_code_showcase_raylib",
+      "name": "Capability Standard Effect Preset Type Code Raylib",
+      "selectors": [
+        "$capability_standard_effect_preset_type_code_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_behavior_extension_showcase_raylib",
+      "name": "Capability Standard Performer Behavior Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_behavior_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_performer_command_extension_showcase_raylib",
+      "name": "Capability Standard Performer Command Extension Raylib",
+      "selectors": [
+        "$capability_standard_performer_command_extension_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_transport_network_raylib",
       "name": "Capability Standard Transport Network Raylib",
       "selectors": [

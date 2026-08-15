@@ -34,6 +34,8 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
+        private readonly PerformerCommandKindRegistry? _commandKinds;
+        private readonly PerformerBehaviorKindRegistry? _behaviorKinds;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -48,7 +50,9 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveAnimationProfileId = null,
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
             Func<string, int> resolveInstancedBatchAssetId = null,
-            Func<string, int> resolveEntityCollectionKeyId = null)
+            Func<string, int> resolveEntityCollectionKeyId = null,
+            PerformerCommandKindRegistry? commandKinds = null,
+            PerformerBehaviorKindRegistry? behaviorKinds = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -63,12 +67,14 @@ namespace Ludots.Core.Presentation.Config
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
+            _commandKinds = commandKinds;
+            _behaviorKinds = behaviorKinds;
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id");
-            var fragments = _configs.CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = _configs.CollectFragmentsWithSources(in entry);
             ValidateRawDefinitionIds(fragments, entry.RelativePath);
             var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
             if (report != null)
@@ -909,16 +915,39 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
 
-            PresenterCommandKind commandKind = ParseRequiredNonNoneEnum<PresenterCommandKind>(obj["kind"], $"{context}.kind");
+            string kindText = ParseRequiredSemanticString(obj["kind"], $"{context}.kind");
+            if (!TryParseDefinedEnum(kindText, out PresenterCommandKind commandKind))
+            {
+                if (_commandKinds == null)
+                {
+                    throw new InvalidOperationException($"{context}.kind has invalid value '{kindText}'.");
+                }
+
+                return ParseExtensionPresenterCommand(obj, kindText, context);
+            }
+
+            if (commandKind == PresenterCommandKind.None)
+            {
+                throw new InvalidOperationException($"{context}.kind must not be 'None'.");
+            }
+
+            if (commandKind == PresenterCommandKind.Extension)
+            {
+                throw new InvalidOperationException($"{context}.kind must be a concrete built-in command or mod-qualified extension key.");
+            }
+
             ParamLane paramLane = ParseCommandParamLane(obj, commandKind, context);
             PresenterCommandValueSource valueSource = ParseCommandValueSource(obj, commandKind, context);
             int paramGraphProgramId = ParseCommandParamGraphProgramId(obj, commandKind, valueSource, context);
             int presenterDefinitionId = ParseCommandDefinitionId(obj, commandKind, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
+            PerformerCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
+                CommandKindId = (byte)commandKind,
+                RouteStrategy = routeStrategy,
                 PresenterDefinitionId = presenterDefinitionId,
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(obj["scopeTag"]),
@@ -943,6 +972,153 @@ namespace Ludots.Core.Presentation.Config
                     ? ParseRequiredBehaviorSlot(obj["targetBehaviorSlot"], "Presenter command targetBehaviorSlot")
                     : ParseOptionalBehaviorSlot(obj["targetBehaviorSlot"], "Presenter command targetBehaviorSlot"),
             };
+        }
+
+        private PresenterCommand ParseExtensionPresenterCommand(JsonObject obj, string kindText, string context)
+        {
+            int commandKindId = _commandKinds?.GetId(kindText) ?? 0;
+            if (commandKindId < PerformerCommandKindRegistry.FirstModCommandKindId)
+            {
+                throw new InvalidOperationException($"{context}.kind references unregistered presenter command kind '{kindText}'.");
+            }
+
+            if (!_commandKinds!.TryGetDescriptor(commandKindId, out PerformerCommandExtensionDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"{context}.kind references presenter command kind '{kindText}' without a registered descriptor.");
+            }
+
+            PerformerCommandRouteStrategy routeStrategy =
+                ParseRequiredEnum<PerformerCommandRouteStrategy>(obj["route"], $"{context}.route");
+            if (routeStrategy != descriptor.RouteStrategy)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.route '{routeStrategy}' does not match registered route '{descriptor.RouteStrategy}' for '{kindText}'.");
+            }
+
+            bool hasParamPayload = HasAnyCommandParamPayload(obj);
+            ParamLane paramLane = hasParamPayload
+                ? ParseRequiredEnum<ParamLane>(obj["paramLane"], $"{context}.paramLane")
+                : ParamLane.Float;
+            PresenterCommandValueSource valueSource = hasParamPayload
+                ? ParseRequiredEnum<PresenterCommandValueSource>(obj["valueSource"], $"{context}.valueSource")
+                : PresenterCommandValueSource.Fixed;
+            int paramGraphProgramId = ParseExtensionCommandParamGraphProgramId(obj, hasParamPayload, valueSource, context);
+            bool hasVectorSources = HasCommandVectorSources(obj);
+
+            return new PresenterCommand
+            {
+                CommandKind = PresenterCommandKind.Extension,
+                CommandKindId = commandKindId,
+                RouteStrategy = routeStrategy,
+                PresenterDefinitionId = obj["definitionId"] != null
+                    ? ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"{context}.definitionId")
+                    : 0,
+                ParentEntity = Entity.Null,
+                ScopeTag = ParseScopeTag(obj["scopeTag"]),
+                ScopeSource = obj["scopeSource"] != null
+                    ? ParseRequiredEnum<PresenterCommandScopeSource>(obj["scopeSource"], $"{context}.scopeSource")
+                    : PresenterCommandScopeSource.Fixed,
+                OwnerSource = obj["ownerSource"] != null
+                    ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
+                    : PresenterCommandEntitySource.EventSource,
+                UseEventPosition = obj["useEventPosition"] != null &&
+                    ParseRequiredBool(obj["useEventPosition"], $"{context}.useEventPosition"),
+                HasParamPayload = hasParamPayload,
+                ParamKey = hasParamPayload
+                    ? ParseRequiredParamKey(obj["paramKey"], "Presenter extension command paramKey")
+                    : ParseOptionalCommandParamKey(obj["paramKey"], "Presenter extension command paramKey"),
+                ParamLane = paramLane,
+                ParamValue = hasParamPayload
+                    ? ParseCommandParamValue(obj, PresenterCommandKind.SetParam, paramLane, valueSource, paramGraphProgramId, context)
+                    : 0f,
+                IntValue = hasParamPayload
+                    ? ParseCommandIntValue(obj, PresenterCommandKind.SetParam, paramLane, valueSource, paramGraphProgramId, context)
+                    : 0,
+                VectorValue = hasParamPayload
+                    ? ParseCommandVectorValue(obj, PresenterCommandKind.SetParam, paramLane, valueSource, hasVectorSources, paramGraphProgramId, context)
+                    : Vector4.Zero,
+                ValueSource = valueSource,
+                VectorXSource = hasParamPayload
+                    ? ParseCommandVectorSource(obj["vectorXSource"], PresenterCommandKind.SetParam, paramLane, hasVectorSources, $"{context}.vectorXSource")
+                    : PresenterCommandValueSource.Fixed,
+                VectorYSource = hasParamPayload
+                    ? ParseCommandVectorSource(obj["vectorYSource"], PresenterCommandKind.SetParam, paramLane, hasVectorSources, $"{context}.vectorYSource")
+                    : PresenterCommandValueSource.Fixed,
+                VectorZSource = hasParamPayload
+                    ? ParseCommandVectorSource(obj["vectorZSource"], PresenterCommandKind.SetParam, paramLane, hasVectorSources, $"{context}.vectorZSource")
+                    : PresenterCommandValueSource.Fixed,
+                VectorWSource = hasParamPayload
+                    ? ParseCommandVectorSource(obj["vectorWSource"], PresenterCommandKind.SetParam, paramLane, hasVectorSources, $"{context}.vectorWSource")
+                    : PresenterCommandValueSource.Fixed,
+                ParamGraphProgramId = paramGraphProgramId,
+                TargetBehaviorSlot = ParseOptionalBehaviorSlot(obj["targetBehaviorSlot"], "Presenter extension command targetBehaviorSlot"),
+            };
+        }
+
+        private static PerformerCommandRouteStrategy ResolveBuiltinCommandRoute(
+            PresenterCommandKind commandKind,
+            int presenterDefinitionId)
+        {
+            return commandKind switch
+            {
+                PresenterCommandKind.CreatePresenter => PerformerCommandRouteStrategy.CreatePerformer,
+                PresenterCommandKind.DestroyPresenterScope => PerformerCommandRouteStrategy.DestroyScope,
+                PresenterCommandKind.DestroyScopedPresenter => PerformerCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam when presenterDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                _ => throw new InvalidOperationException($"Unsupported presenter command kind '{commandKind}'."),
+            };
+        }
+
+        private static bool HasAnyCommandParamPayload(JsonObject obj)
+        {
+            return obj["paramKey"] != null ||
+                   obj["paramLane"] != null ||
+                   obj["valueSource"] != null ||
+                   obj["paramValue"] != null ||
+                   obj["intValue"] != null ||
+                   obj["vectorValue"] != null ||
+                   obj["paramGraphProgramId"] != null ||
+                   obj["vectorXSource"] != null ||
+                   obj["vectorYSource"] != null ||
+                   obj["vectorZSource"] != null ||
+                   obj["vectorWSource"] != null;
+        }
+
+        private static int ParseExtensionCommandParamGraphProgramId(
+            JsonObject obj,
+            bool hasParamPayload,
+            PresenterCommandValueSource valueSource,
+            string context)
+        {
+            JsonNode? node = obj["paramGraphProgramId"];
+            if (node == null)
+            {
+                return 0;
+            }
+
+            if (!hasParamPayload)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId requires param payload fields.");
+            }
+
+            if (valueSource != PresenterCommandValueSource.Fixed)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId requires valueSource '{PresenterCommandValueSource.Fixed}'.");
+            }
+
+            int graphProgramId = ParseRequiredInt(node, $"{context}.paramGraphProgramId");
+            if (graphProgramId <= 0)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId must be positive.");
+            }
+
+            return graphProgramId;
         }
 
         private static bool HasCommandParamPayload(JsonObject obj, PresenterCommandKind commandKind)
@@ -1701,7 +1877,49 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Presenter behavior[{i}] must be an object.");
                 }
 
-                BehaviorKind kind = ParseRequiredEnum<BehaviorKind>(obj["kind"], $"Presenter '{ownerKey}' behavior[{i}].kind");
+                string kindText = ParseRequiredSemanticString(obj["kind"], $"Presenter '{ownerKey}' behavior[{i}].kind");
+                bool parsedBuiltinKind = TryParseDefinedEnum(kindText, out BehaviorKind kind);
+                if (parsedBuiltinKind && kind is BehaviorKind.None or BehaviorKind.Extension)
+                {
+                    throw new InvalidOperationException($"Presenter '{ownerKey}' behavior[{i}].kind must be a concrete built-in behavior or mod-qualified extension key.");
+                }
+
+                bool isBuiltinKind = parsedBuiltinKind;
+                int kindId;
+                PerformerBehaviorExecutionLane extensionLane = PerformerBehaviorExecutionLane.None;
+                int extensionTriggerId = 0;
+                if (isBuiltinKind)
+                {
+                    kindId = (byte)kind;
+                }
+                else
+                {
+                    if (_behaviorKinds == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{ownerKey}' behavior[{i}].kind has invalid value '{kindText}'.");
+                    }
+
+                    kindId = _behaviorKinds?.GetId(kindText) ?? 0;
+                    if (kindId < PerformerBehaviorKindRegistry.FirstModBehaviorKindId)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{ownerKey}' behavior[{i}].kind references unregistered presenter behavior kind '{kindText}'.");
+                    }
+
+                    if (!_behaviorKinds!.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{ownerKey}' behavior[{i}].kind references presenter behavior kind '{kindText}' without a registered descriptor.");
+                    }
+
+                    (extensionLane, extensionTriggerId) = ParseExtensionBehaviorExecution(
+                        obj,
+                        descriptor,
+                        $"Presenter '{ownerKey}' behavior[{i}]");
+                    kind = BehaviorKind.Extension;
+                }
+
                 int slotIndex = ParseRequiredBehaviorSlot(obj["slot"], $"Presenter '{ownerKey}' behavior[{i}].slot");
                 if (slotIndex is < 0 or >= 32)
                 {
@@ -1725,6 +1943,9 @@ namespace Ludots.Core.Presentation.Config
                 {
                     SlotIndex = slotIndex,
                     Kind = kind,
+                    KindId = kindId,
+                    ExtensionLane = extensionLane,
+                    ExtensionTriggerId = extensionTriggerId,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
                 };
 
@@ -1787,6 +2008,8 @@ namespace Ludots.Core.Presentation.Config
                         RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource");
                         slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, i);
                         break;
+                    case BehaviorKind.Extension:
+                        break;
                     default:
                         throw new InvalidOperationException($"Unsupported presenter behavior kind '{kind}'.");
                 }
@@ -1795,6 +2018,70 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return slots;
+        }
+
+        private (PerformerBehaviorExecutionLane Lane, int TriggerId) ParseExtensionBehaviorExecution(
+            JsonObject obj,
+            in PerformerBehaviorExtensionDescriptor descriptor,
+            string context)
+        {
+            if (obj["execution"] is not JsonObject execution)
+            {
+                throw new InvalidOperationException($"{context}.execution is required for extension presenter behavior.");
+            }
+
+            PerformerBehaviorExecutionLane lane =
+                ParseRequiredEnum<PerformerBehaviorExecutionLane>(execution["lane"], $"{context}.execution.lane");
+            if (lane != descriptor.Lane)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.execution.lane '{lane}' does not match registered lane '{descriptor.Lane}'.");
+            }
+
+            return lane switch
+            {
+                PerformerBehaviorExecutionLane.Bootstrap => (lane, 0),
+                PerformerBehaviorExecutionLane.ContinuousTick => (lane, 0),
+                PerformerBehaviorExecutionLane.OwnerAttributeDirty => (lane, ParseExtensionAttributeTrigger(execution, context)),
+                PerformerBehaviorExecutionLane.OwnerTagDirty => (lane, ParseExtensionTagTrigger(execution, context)),
+                _ => throw new InvalidOperationException(
+                    $"{context}.execution.lane '{lane}' is not supported by the current presenter runtime."),
+            };
+        }
+
+        private int ParseExtensionAttributeTrigger(JsonObject execution, string context)
+        {
+            if (execution["trigger"] is not JsonObject trigger)
+            {
+                throw new InvalidOperationException($"{context}.execution.trigger is required for OwnerAttributeDirty.");
+            }
+
+            int attributeId = ResolveRegisteredId(
+                _resolveAttributeName,
+                trigger["attributeId"],
+                $"{context}.execution.trigger.attributeId");
+            if (attributeId <= 0)
+            {
+                throw new InvalidOperationException($"{context}.execution.trigger.attributeId must resolve to a positive attribute id.");
+            }
+
+            return attributeId;
+        }
+
+        private static int ParseExtensionTagTrigger(JsonObject execution, string context)
+        {
+            if (execution["trigger"] is not JsonObject trigger)
+            {
+                throw new InvalidOperationException($"{context}.execution.trigger is required for OwnerTagDirty.");
+            }
+
+            int tagId = ResolveTagId(trigger["tagId"]);
+            if (tagId <= 0)
+            {
+                throw new InvalidOperationException($"{context}.execution.trigger.tagId must resolve to a positive tag id.");
+            }
+
+            return tagId;
         }
 
         private static void RejectBehaviorScopedFields(JsonObject obj, string ownerKey, int behaviorIndex, params string[] fieldNames)

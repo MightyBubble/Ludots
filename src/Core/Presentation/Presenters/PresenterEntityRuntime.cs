@@ -1383,6 +1383,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool hasAnimator = false;
             bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
             bool hasMinimapMarker = false;
+            bool hasExtensionBehavior = false;
 
             for (int i = 0; i < behaviors.Length; i++)
             {
@@ -1410,6 +1411,11 @@ namespace Ludots.Core.Presentation.Presenters
 
                         break;
                     case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                    case BehaviorKind.Extension:
+                        hasExtensionBehavior |=
+                            (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PerformerBehaviorKindRegistry.FirstModBehaviorKindId &&
+                            slot.ExtensionLane == PerformerBehaviorExecutionLane.ContinuousTick;
+                        break;
                 }
             }
 
@@ -1426,6 +1432,7 @@ namespace Ludots.Core.Presentation.Presenters
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
+            SyncTickBehaviorMarker<PerfHasExtensionBehavior>(entity, hasExtensionBehavior);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
             SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
@@ -1578,6 +1585,11 @@ namespace Ludots.Core.Presentation.Presenters
             if (_world.Has<PerfHasMinimapMarker>(entity))
             {
                 RemoveMarker<PerfHasMinimapMarker>(entity);
+            }
+
+            if (_world.Has<PerfHasExtensionBehavior>(entity))
+            {
+                RemoveMarker<PerfHasExtensionBehavior>(entity);
             }
 
             if (_world.Has<PerfTransformSyncTick>(entity))
@@ -2466,6 +2478,7 @@ namespace Ludots.Core.Presentation.Presenters
                 bool hasAnimator = false;
                 bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
                 bool hasMinimapMarker = false;
+                bool hasExtensionBehavior = false;
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
@@ -2491,6 +2504,11 @@ namespace Ludots.Core.Presentation.Presenters
                                                  DefinitionHasAttachmentTransformConsumers(definition);
                             break;
                         case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
+                        case BehaviorKind.Extension:
+                            hasExtensionBehavior |=
+                                (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PerformerBehaviorKindRegistry.FirstModBehaviorKindId &&
+                                slot.ExtensionLane == PerformerBehaviorExecutionLane.ContinuousTick;
+                            break;
                     }
                 }
 
@@ -2506,6 +2524,7 @@ namespace Ludots.Core.Presentation.Presenters
                 if (hasGrounding) signature += Component<PerfHasGrounding>.Signature;
                 if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
                 if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
+                if (hasExtensionBehavior) signature += Component<PerfHasExtensionBehavior>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
                     !definition.UsesEventDrivenStaticEmit &&
                     !definition.UsesRetainedPresentationRequest)
@@ -2556,6 +2575,7 @@ namespace Ludots.Core.Presentation.Presenters
             if (definition.HasSurfaceAuthoring ||
                 definition.HasOwnerTagBindingWork ||
                 definition.MaterialBehaviorIndices.Length != 0 ||
+                definition.ExtensionBootstrapBehaviorIndices.Length != 0 ||
                 definition.BootstrapGroundingBehaviorIndices.Length != 0 ||
                 !CanInlineInitialParamBindings(definition) ||
                 !CanInlineInitialAttributeBehaviors(definition) ||

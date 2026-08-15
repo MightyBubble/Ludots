@@ -326,6 +326,13 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public int TagId;
         public EffectPresetType PresetType;
+        public int PresetTypeId;
+
+        /// <summary>
+        /// Loader-compiled templates carry the registry id; programmatically built templates
+        /// may only set the builtin enum. Execution paths must use this, not the raw fields.
+        /// </summary>
+        public int EffectivePresetTypeId => PresetTypeId != 0 ? PresetTypeId : (int)PresetType;
         public int PresetAttribute0;
         public int PresetAttribute1;
 

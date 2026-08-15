@@ -50,11 +50,14 @@ public static class GraphOpsNodeGraphCompiler
 
         GraphProgramPackage package = compiled.Package.Value;
         IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone(assetsRoot);
+        var builtinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();
+        Ludots.Core.Gameplay.GAS.BuiltinHandlers.RegisterAll(builtinHandlers);
         GraphProgramSymbolPatcher.Patch(
             package.Symbols,
             package.Program,
             resolver,
-            collections ?? CreateCompileTimeCollections());
+            collections ?? CreateCompileTimeCollections(),
+            builtinHandlers);
 
         GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
         _ = RequireFeaturedDest(compiled, vignette);

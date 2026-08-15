@@ -53,6 +53,30 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
+        internal readonly struct ExtensionOwnerAttributeWorkItem
+        {
+            public readonly int AttributeId;
+            public readonly int[] BehaviorIndices;
+
+            public ExtensionOwnerAttributeWorkItem(int attributeId, int[] behaviorIndices)
+            {
+                AttributeId = attributeId;
+                BehaviorIndices = behaviorIndices ?? System.Array.Empty<int>();
+            }
+        }
+
+        internal readonly struct ExtensionOwnerTagWorkItem
+        {
+            public readonly int TagId;
+            public readonly int[] BehaviorIndices;
+
+            public ExtensionOwnerTagWorkItem(int tagId, int[] behaviorIndices)
+            {
+                TagId = tagId;
+                BehaviorIndices = behaviorIndices ?? System.Array.Empty<int>();
+            }
+        }
+
         internal readonly struct MinimapMarkerWorkItem
         {
             public readonly int SlotIndex;
@@ -98,6 +122,7 @@ namespace Ludots.Core.Presentation.Presenters
         internal bool HasAnimatorBehavior;
         internal bool HasSoundBehavior;
         internal bool HasMinimapMarkerBehavior;
+        internal bool HasExtensionBehavior;
         internal bool HasSurfaceAuthoring;
         internal int SurfaceSourceBehaviorIndex;
         internal bool RequiresBootstrapProcessing;
@@ -125,6 +150,11 @@ namespace Ludots.Core.Presentation.Presenters
         internal int[] BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
         internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
         internal int[] MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+        internal int[] ExtensionBehaviorIndices = System.Array.Empty<int>();
+        internal int[] ExtensionBootstrapBehaviorIndices = System.Array.Empty<int>();
+        internal int[] ExtensionTickBehaviorIndices = System.Array.Empty<int>();
+        internal ExtensionOwnerAttributeWorkItem[] ExtensionOwnerAttributeWork = System.Array.Empty<ExtensionOwnerAttributeWorkItem>();
+        internal ExtensionOwnerTagWorkItem[] ExtensionOwnerTagWork = System.Array.Empty<ExtensionOwnerTagWorkItem>();
         internal MinimapMarkerWorkItem[] MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
         internal bool HasEveryFrameGroundingWork;
         internal bool TickBehaviorsAreGroundingOnly;
@@ -297,6 +327,7 @@ namespace Ludots.Core.Presentation.Presenters
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
+            HasExtensionBehavior = false;
             HasSurfaceAuthoring = Surface != null;
             SurfaceSourceBehaviorIndex = -1;
             RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring || HasInstancedBatchBindings;
@@ -323,6 +354,11 @@ namespace Ludots.Core.Presentation.Presenters
             BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
             MaterialBehaviorIndices = System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+            ExtensionBehaviorIndices = System.Array.Empty<int>();
+            ExtensionBootstrapBehaviorIndices = System.Array.Empty<int>();
+            ExtensionTickBehaviorIndices = System.Array.Empty<int>();
+            ExtensionOwnerAttributeWork = System.Array.Empty<ExtensionOwnerAttributeWorkItem>();
+            ExtensionOwnerTagWork = System.Array.Empty<ExtensionOwnerTagWorkItem>();
             MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
             HasEveryFrameGroundingWork = false;
             TickBehaviorsAreGroundingOnly = false;
@@ -337,6 +373,8 @@ namespace Ludots.Core.Presentation.Presenters
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeCompiledMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagCompiledMap = null;
             System.Collections.Generic.List<CompiledBinding>? compiledBindings = null;
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? extensionAttributeBehaviorMap = null;
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? extensionTagBehaviorMap = null;
             System.Collections.Generic.List<int>? ownerFacingParamBindingIndices = null;
             var staticFloatParams = new System.Collections.Generic.HashSet<int>();
             var staticIntParams = new System.Collections.Generic.HashSet<int>();
@@ -344,6 +382,9 @@ namespace Ludots.Core.Presentation.Presenters
             var materialSourceFloatParams = new System.Collections.Generic.HashSet<int>();
             System.Collections.Generic.List<int>? materialBehaviorIndices = null;
             System.Collections.Generic.List<int>? minimapMarkerBehaviorIndices = null;
+            System.Collections.Generic.List<int>? extensionBehaviorIndices = null;
+            System.Collections.Generic.List<int>? extensionBootstrapBehaviorIndices = null;
+            System.Collections.Generic.List<int>? extensionTickBehaviorIndices = null;
             System.Collections.Generic.List<MinimapMarkerWorkItem>? minimapMarkerWorkItems = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
@@ -395,6 +436,8 @@ namespace Ludots.Core.Presentation.Presenters
 
                 uint bit = 1u << slot.SlotIndex;
                 BehaviorPresenceMask |= bit;
+                int kindId = slot.KindId != 0 ? slot.KindId : (byte)slot.Kind;
+                ValidateBehaviorSlotKind(in slot, kindId);
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
@@ -554,6 +597,54 @@ namespace Ludots.Core.Presentation.Presenters
                         minimapMarkerWorkItems ??= new System.Collections.Generic.List<MinimapMarkerWorkItem>(2);
                         minimapMarkerWorkItems.Add(new MinimapMarkerWorkItem(slot.SlotIndex, in slot.MinimapMarker));
                         break;
+                    case BehaviorKind.Extension:
+                        HasExtensionBehavior = true;
+                        extensionBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                        extensionBehaviorIndices.Add(i);
+                        switch (slot.ExtensionLane)
+                        {
+                            case PerformerBehaviorExecutionLane.Bootstrap:
+                                RequiresBootstrapProcessing = true;
+                                extensionBootstrapBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                                extensionBootstrapBehaviorIndices.Add(i);
+                                break;
+                            case PerformerBehaviorExecutionLane.ContinuousTick:
+                                tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                                tickBehaviorIndices.Add(i);
+                                extensionTickBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                                extensionTickBehaviorIndices.Add(i);
+                                blocksEventDrivenStaticEmit = true;
+                                hasStaticOnlyVisuals = false;
+                                break;
+                            case PerformerBehaviorExecutionLane.OwnerAttributeDirty:
+                                if (slot.ExtensionTriggerId <= 0)
+                                {
+                                    throw new System.InvalidOperationException(
+                                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner attribute trigger id.");
+                                }
+
+                                HasOwnerAttributeBindingWork = true;
+                                NeedsByOwnerDefinitionIndex = true;
+                                extensionAttributeBehaviorMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+                                AddIndex(extensionAttributeBehaviorMap, slot.ExtensionTriggerId, i);
+                                break;
+                            case PerformerBehaviorExecutionLane.OwnerTagDirty:
+                                if (slot.ExtensionTriggerId <= 0)
+                                {
+                                    throw new System.InvalidOperationException(
+                                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} requires a positive owner tag trigger id.");
+                                }
+
+                                HasOwnerTagBindingWork = true;
+                                NeedsByOwnerDefinitionIndex = true;
+                                extensionTagBehaviorMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+                                AddIndex(extensionTagBehaviorMap, slot.ExtensionTriggerId, i);
+                                break;
+                            default:
+                                throw new System.InvalidOperationException(
+                                    $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} has unsupported execution lane '{slot.ExtensionLane}'.");
+                        }
+                        break;
                 }
             }
 
@@ -563,6 +654,11 @@ namespace Ludots.Core.Presentation.Presenters
             BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = minimapMarkerBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            ExtensionBehaviorIndices = extensionBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            ExtensionBootstrapBehaviorIndices = extensionBootstrapBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            ExtensionTickBehaviorIndices = extensionTickBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            ExtensionOwnerAttributeWork = BuildExtensionOwnerAttributeWork(extensionAttributeBehaviorMap);
+            ExtensionOwnerTagWork = BuildExtensionOwnerTagWork(extensionTagBehaviorMap);
             MinimapMarkerWorkItems = minimapMarkerWorkItems?.ToArray() ?? System.Array.Empty<MinimapMarkerWorkItem>();
             TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
                                            TickBehaviorIndices.Length != 0 &&
@@ -639,6 +735,45 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             return -1;
+        }
+
+        private void ValidateBehaviorSlotKind(in BehaviorSlot slot, int kindId)
+        {
+            if (!System.Enum.IsDefined(typeof(BehaviorKind), slot.Kind))
+            {
+                throw new System.InvalidOperationException(
+                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} has unsupported behavior kind '{slot.Kind}'.");
+            }
+
+            if (slot.Kind == BehaviorKind.Extension)
+            {
+                if (kindId < PerformerBehaviorKindRegistry.FirstModBehaviorKindId)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} must use a registered mod behavior kind id.");
+                }
+
+                if (slot.ExtensionLane == PerformerBehaviorExecutionLane.None)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Performer definition '{Key}' extension behavior slot {slot.SlotIndex} must declare an execution lane.");
+                }
+
+                return;
+            }
+
+            int builtinKindId = (byte)slot.Kind;
+            if (slot.KindId != 0 && slot.KindId != builtinKindId)
+            {
+                throw new System.InvalidOperationException(
+                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} kind id {slot.KindId} does not match builtin kind '{slot.Kind}'.");
+            }
+
+            if (slot.ExtensionLane != PerformerBehaviorExecutionLane.None || slot.ExtensionTriggerId != 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"Performer definition '{Key}' behavior slot {slot.SlotIndex} uses extension execution data without BehaviorKind.Extension.");
+            }
         }
 
         private static bool IsPowerOfTwo(uint value)
@@ -964,6 +1099,64 @@ namespace Ludots.Core.Presentation.Presenters
             return false;
         }
 
+        internal bool TryGetExtensionOwnerAttributeWork(int attributeId, out ExtensionOwnerAttributeWorkItem work)
+        {
+            ExtensionOwnerAttributeWorkItem[] entries = ExtensionOwnerAttributeWork;
+            int lo = 0;
+            int hi = entries.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                ref readonly ExtensionOwnerAttributeWorkItem candidate = ref entries[mid];
+                if (candidate.AttributeId == attributeId)
+                {
+                    work = candidate;
+                    return true;
+                }
+
+                if (candidate.AttributeId < attributeId)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            work = default;
+            return false;
+        }
+
+        internal bool TryGetExtensionOwnerTagWork(int tagId, out ExtensionOwnerTagWorkItem work)
+        {
+            ExtensionOwnerTagWorkItem[] entries = ExtensionOwnerTagWork;
+            int lo = 0;
+            int hi = entries.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                ref readonly ExtensionOwnerTagWorkItem candidate = ref entries[mid];
+                if (candidate.TagId == tagId)
+                {
+                    work = candidate;
+                    return true;
+                }
+
+                if (candidate.TagId < tagId)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            work = default;
+            return false;
+        }
+
         private static void AddIndex(
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>> map,
             int key,
@@ -1026,6 +1219,50 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 int key = sortedKeys[i];
                 items[i] = new OwnerTagWorkItem(key, behaviorMap[key].ToArray());
+            }
+
+            return items;
+        }
+
+        private static ExtensionOwnerAttributeWorkItem[] BuildExtensionOwnerAttributeWork(
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? behaviorMap)
+        {
+            if (behaviorMap == null || behaviorMap.Count == 0)
+            {
+                return System.Array.Empty<ExtensionOwnerAttributeWorkItem>();
+            }
+
+            int[] sortedKeys = new int[behaviorMap.Count];
+            behaviorMap.Keys.CopyTo(sortedKeys, 0);
+            System.Array.Sort(sortedKeys);
+
+            var items = new ExtensionOwnerAttributeWorkItem[sortedKeys.Length];
+            for (int i = 0; i < sortedKeys.Length; i++)
+            {
+                int key = sortedKeys[i];
+                items[i] = new ExtensionOwnerAttributeWorkItem(key, behaviorMap[key].ToArray());
+            }
+
+            return items;
+        }
+
+        private static ExtensionOwnerTagWorkItem[] BuildExtensionOwnerTagWork(
+            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? behaviorMap)
+        {
+            if (behaviorMap == null || behaviorMap.Count == 0)
+            {
+                return System.Array.Empty<ExtensionOwnerTagWorkItem>();
+            }
+
+            int[] sortedKeys = new int[behaviorMap.Count];
+            behaviorMap.Keys.CopyTo(sortedKeys, 0);
+            System.Array.Sort(sortedKeys);
+
+            var items = new ExtensionOwnerTagWorkItem[sortedKeys.Length];
+            for (int i = 0; i < sortedKeys.Length; i++)
+            {
+                int key = sortedKeys[i];
+                items[i] = new ExtensionOwnerTagWorkItem(key, behaviorMap[key].ToArray());
             }
 
             return items;

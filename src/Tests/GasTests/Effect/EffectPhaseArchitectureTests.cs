@@ -121,7 +121,7 @@ namespace Ludots.Tests.GAS
         {
             var cp = new EffectConfigParams();
             That(cp.TryAddEffectTemplateId(keyId: 50, templateId: 3001), Is.True);
-            // EffectTemplateId is stored as int — retrieved via TryGetInt
+            // EffectTemplateId is stored as int �?retrieved via TryGetInt
             That(cp.TryGetInt(50, out int v), Is.True);
             That(v, Is.EqualTo(3001));
         }
@@ -146,11 +146,11 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  EffectPhaseExecutor — Pre/Main/Post ordering
+        //  EffectPhaseExecutor �?Pre/Main/Post ordering
         // ════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Verifies that EffectPhaseExecutor calls Pre → Main → Post in the correct order
+        /// Verifies that EffectPhaseExecutor calls Pre �?Main �?Post in the correct order
         /// by building 3 trivial Graph programs that each write a different float register
         /// to a sequential counter value via ConstFloat.
         /// </summary>
@@ -164,7 +164,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
 
                 // Graph programs that write BB floats to prove Pre → Main → Post ordering.
                 int preGraphId = 1;
@@ -222,7 +222,7 @@ namespace Ludots.Tests.GAS
                 // Result: Pre writes 10, Main reads 10+20=30, Post reads 30+30=60
                 ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
                 That(bb.TryGet(1, out float finalVal), Is.True);
-                That(finalVal, Is.EqualTo(60f).Within(1e-6f), "Pre(10) → Main(+20=30) → Post(+30=60)");
+                That(finalVal, Is.EqualTo(60f).Within(1e-6f), "Pre(10) �?Main(+20=30) �?Post(+30=60)");
             }
             finally
             {
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
 
                 var target = world.Create(new BlackboardFloatBuffer());
                 var caster = world.Create();
@@ -294,7 +294,7 @@ namespace Ludots.Tests.GAS
                 // Pre writes 5, Main skipped, Post reads 5+100=105
                 ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
                 That(bb.TryGet(1, out float val), Is.True);
-                That(val, Is.EqualTo(105f).Within(1e-6f), "Pre(5) → Main(skipped) → Post(+100=105)");
+                That(val, Is.EqualTo(105f).Within(1e-6f), "Pre(5) �?Main(skipped) �?Post(+100=105)");
             }
             finally
             {
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -340,7 +340,7 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var behavior = new EffectPhaseGraphBindings();
@@ -449,7 +449,7 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
             var caster = world.Create();
             var target = world.Create();
@@ -748,7 +748,7 @@ namespace Ludots.Tests.GAS
                 That(world.Has<BlackboardFloatBuffer>(entityNoBB), Is.False,
                     "WriteBlackboardFloat must not auto-add BB component");
 
-                // Entity WITH pre-added BB component — write should succeed
+                // Entity WITH pre-added BB component �?write should succeed
                 var entityWithBB = world.Create(new BlackboardFloatBuffer());
                 ExecuteProgram(world, api, entityWithBB, entityWithBB, program);
 

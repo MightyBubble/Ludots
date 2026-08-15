@@ -14,6 +14,7 @@ namespace Ludots.Core.Modding
         FunctionRegistry FunctionRegistry { get; }
         SystemFactoryRegistry SystemFactoryRegistry { get; }
         TriggerDecoratorRegistry TriggerDecorators { get; }
+        IModExtensionRegistration Extensions { get; }
         LogChannel LogChannel { get; }
 
         /// <summary>

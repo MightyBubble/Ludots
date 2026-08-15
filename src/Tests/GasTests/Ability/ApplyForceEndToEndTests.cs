@@ -220,9 +220,9 @@ namespace Ludots.Tests.GAS
             EffectTemplateRegistry templates)
         {
             var presetTypes = new PresetTypeRegistry();
-            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
+            new PresetTypeLoader(pipeline, presetTypes, builtinHandlers).Load(catalog);
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,

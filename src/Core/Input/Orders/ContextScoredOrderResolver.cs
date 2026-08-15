@@ -41,6 +41,7 @@ namespace Ludots.Core.Input.Orders
         private readonly ContextGroupRegistry _contextGroups;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable _graphHandlers;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly ContextScoredCandidateGate _candidateGate;
         private readonly Entity[] _queryBuffer = new Entity[256];
@@ -51,7 +52,8 @@ namespace Ludots.Core.Input.Orders
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
-            ContextScoredCandidateGate candidateGate)
+            ContextScoredCandidateGate candidateGate,
+            Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable graphHandlers)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
@@ -59,6 +61,7 @@ namespace Ludots.Core.Input.Orders
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
             _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
+            _graphHandlers = graphHandlers ?? throw new ArgumentNullException(nameof(graphHandlers));
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -240,7 +243,8 @@ namespace Ludots.Core.Input.Orders
                         default,
                         preconditionProgram,
                         _graphApi,
-                        preconditionKind))
+                        preconditionKind,
+                        _graphHandlers))
                 {
                     return false;
                 }
@@ -261,7 +265,8 @@ namespace Ludots.Core.Input.Orders
                     default,
                     scoreProgram,
                     _graphApi,
-                    scoreKind);
+                    scoreKind,
+                    _graphHandlers);
             }
 
             return true;

@@ -527,7 +527,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 registry.Invoke(
-                    (BuiltinHandlerId)builtinHandlerId,
+                    builtinHandlerId,
                     _world,
                     default,
                     ref context,

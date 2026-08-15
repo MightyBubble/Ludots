@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
         }
 
         private static string CreateTempRoot(string prefix)

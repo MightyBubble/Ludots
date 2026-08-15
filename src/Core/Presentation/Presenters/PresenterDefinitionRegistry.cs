@@ -41,6 +41,7 @@ namespace Ludots.Core.Presentation.Presenters
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;
+            ValidateRuleCommands(key, definition);
             StampRuleOwners(definition, id);
             definition.BuildBindingIndex();
             definition.BuildRequiredAttributeIds();
@@ -132,6 +133,59 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < rules.Length; i++)
             {
                 rules[i].OwnerDefinitionId = id;
+            }
+        }
+
+        private static void ValidateRuleCommands(string definitionKey, PresenterDefinition definition)
+        {
+            PresenterRule[] rules = definition.Rules;
+            if (rules == null || rules.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ValidateCommand(definitionKey, i, in rules[i].Command);
+            }
+        }
+
+        private static void ValidateCommand(string definitionKey, int ruleIndex, in PresenterCommand command)
+        {
+            if (!Enum.IsDefined(typeof(PresenterCommandKind), command.CommandKind))
+            {
+                throw new InvalidOperationException(
+                    $"Performer definition '{definitionKey}' rule {ruleIndex} has unsupported command kind '{command.CommandKind}'.");
+            }
+
+            if (command.CommandKind == PresenterCommandKind.None)
+            {
+                throw new InvalidOperationException(
+                    $"Performer definition '{definitionKey}' rule {ruleIndex} must declare a performer command kind.");
+            }
+
+            if (command.CommandKind == PresenterCommandKind.Extension)
+            {
+                if (command.CommandKindId < PerformerCommandKindRegistry.FirstModCommandKindId)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer definition '{definitionKey}' rule {ruleIndex} extension command must use a registered mod command kind id.");
+                }
+
+                if (command.RouteStrategy == PerformerCommandRouteStrategy.None)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer definition '{definitionKey}' rule {ruleIndex} extension command must declare route strategy.");
+                }
+
+                return;
+            }
+
+            int builtinKindId = (byte)command.CommandKind;
+            if (command.CommandKindId != 0 && command.CommandKindId != builtinKindId)
+            {
+                throw new InvalidOperationException(
+                    $"Performer definition '{definitionKey}' rule {ruleIndex} command kind id {command.CommandKindId} does not match builtin command kind '{command.CommandKind}'.");
             }
         }
 

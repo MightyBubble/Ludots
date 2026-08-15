@@ -844,9 +844,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
         private float ExecuteScoreGraph(Entity actor, Entity target, int graphId)
         {
-            if (graphId <= 0 || _graphs == null || _graphApi == null)
+            if (graphId <= 0)
             {
                 return 0f;
+            }
+
+            if (_graphs == null || _graphApi == null)
+            {
+                throw new InvalidOperationException($"AI score graph id {graphId} cannot run because graph services are not configured.");
             }
 
             if (!_graphs.TryGetProgram(graphId, out var program))

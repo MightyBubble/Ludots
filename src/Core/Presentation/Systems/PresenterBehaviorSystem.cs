@@ -59,6 +59,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
+        private readonly PerformerBehaviorKindRegistry? _extensionBehaviors;
+        private readonly PerformerBehaviorOps _extensionBehaviorOps;
         private readonly PresentPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
@@ -69,7 +71,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresenterState, PresenterBootstrapPending>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PresenterState, PresenterWorldPosition, PresenterWorldPlanePosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding, PerfHasExtensionBehavior>()
             .WithNone<PresenterBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PresenterState, PerfMaterialDirty>()
@@ -110,9 +112,10 @@ namespace Ludots.Core.Presentation.Systems
             SoundRequestBuffer soundRequests,
             IVisualHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            PerformerBehaviorKindRegistry? extensionBehaviors = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
-                () => heightmap, boneTransformProvider, timingDiagnostics)
+                () => heightmap, boneTransformProvider, timingDiagnostics, extensionBehaviors)
         {
         }
 
@@ -125,7 +128,8 @@ namespace Ludots.Core.Presentation.Systems
             SoundRequestBuffer soundRequests,
             Func<IVisualHeightmap?> heightmapProvider,
             IBoneTransformProvider? boneTransformProvider = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            PerformerBehaviorKindRegistry? extensionBehaviors = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -135,6 +139,8 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
+            _extensionBehaviors = extensionBehaviors;
+            _extensionBehaviorOps = new PerformerBehaviorOps(_runtime);
             RefreshDefinitionIndexes();
             _timingDiagnostics = timingDiagnostics;
             _runtime.BindDefinitions(_definitions);
@@ -429,13 +435,28 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ref readonly PresenterState state = ref World.Get<PresenterState>(presenter);
-            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
-                !definition.TryGetOwnerAttributeWork(attributeId, out PresenterDefinition.OwnerAttributeWorkItem work))
+            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition))
             {
                 return;
             }
 
-            ApplyOwnerAttributeWork(presenter, definition, ref attributes, in work);
+            if (definition.TryGetOwnerAttributeWork(attributeId, out PresenterDefinition.OwnerAttributeWorkItem work))
+            {
+                ApplyOwnerAttributeWork(presenter, definition, ref attributes, in work);
+            }
+
+            if (definition.TryGetExtensionOwnerAttributeWork(attributeId, out PresenterDefinition.ExtensionOwnerAttributeWorkItem extensionWork))
+            {
+                ProcessExtensionBehaviors(
+                    presenter,
+                    in state,
+                    definition,
+                    definition.Behaviors,
+                    extensionWork.BehaviorIndices,
+                    PerformerBehaviorExecutionLane.OwnerAttributeDirty,
+                    firstFrame: false,
+                    tickDt: 0f);
+            }
         }
 
         private void ProcessOwnerTagWorkForPresenter(Entity presenter, int tagId, bool tagActive)
@@ -446,13 +467,28 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ref readonly PresenterState state = ref World.Get<PresenterState>(presenter);
-            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
-                !definition.TryGetOwnerTagWork(tagId, out PresenterDefinition.OwnerTagWorkItem work))
+            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition))
             {
                 return;
             }
 
-            ApplyOwnerTagWork(presenter, definition, in work, tagActive);
+            if (definition.TryGetOwnerTagWork(tagId, out PresenterDefinition.OwnerTagWorkItem work))
+            {
+                ApplyOwnerTagWork(presenter, definition, in work, tagActive);
+            }
+
+            if (definition.TryGetExtensionOwnerTagWork(tagId, out PresenterDefinition.ExtensionOwnerTagWorkItem extensionWork))
+            {
+                ProcessExtensionBehaviors(
+                    presenter,
+                    in state,
+                    definition,
+                    definition.Behaviors,
+                    extensionWork.BehaviorIndices,
+                    PerformerBehaviorExecutionLane.OwnerTagDirty,
+                    firstFrame: false,
+                    tickDt: 0f);
+            }
         }
 
         private int ProcessTickDrivenPresenters(float tickDt)
@@ -636,6 +672,47 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private sealed class PerformerBehaviorOps : IPerformerBehaviorOps
+        {
+            private readonly PresenterEntityRuntime _runtime;
+            private Entity _performer;
+
+            public PerformerBehaviorOps(PresenterEntityRuntime runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public void Bind(Entity performer)
+            {
+                _performer = performer;
+            }
+
+            public bool TryResolveFloat(int paramKey, out float value)
+            {
+                return _runtime.TryResolveFloat(_performer, paramKey, out value);
+            }
+
+            public bool TryResolveInt(int paramKey, out int value)
+            {
+                return _runtime.TryResolveInt(_performer, paramKey, out value);
+            }
+
+            public bool TryResolveVector(int paramKey, out Vector4 value)
+            {
+                return _runtime.TryResolveVector(_performer, paramKey, out value);
+            }
+
+            public void SetParam(int paramKey, ParamLane lane, float floatValue = 0f, int intValue = 0, Vector4 vectorValue = default)
+            {
+                _runtime.SetParamAndPropagateToAffectedChildren(_performer, paramKey, lane, floatValue, intValue, vectorValue);
+            }
+
+            public void ClearParam(int paramKey, ParamLane lane)
+            {
+                _runtime.ClearParamAndPropagateToAffectedChildren(_performer, paramKey, lane);
+            }
+        }
+
         public override void Dispose()
         {
             _commandBuffer.Dispose();
@@ -772,6 +849,99 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            if (tickDrivenOnly)
+            {
+                ProcessExtensionBehaviors(
+                    entity,
+                    in state,
+                    definition,
+                    behaviors,
+                    definition.ExtensionTickBehaviorIndices,
+                    PerformerBehaviorExecutionLane.ContinuousTick,
+                    firstFrame: false,
+                    tickDt);
+            }
+            else if (firstFrame)
+            {
+                ProcessExtensionBehaviors(
+                    entity,
+                    in state,
+                    definition,
+                    behaviors,
+                    definition.ExtensionBootstrapBehaviorIndices,
+                    PerformerBehaviorExecutionLane.Bootstrap,
+                    firstFrame: true,
+                    tickDt);
+            }
+        }
+
+        private void ProcessExtensionBehaviors(
+            Entity entity,
+            in PresenterState state,
+            PresenterDefinition definition,
+            BehaviorSlot[] behaviors,
+            int[] indices,
+            PerformerBehaviorExecutionLane lane,
+            bool firstFrame,
+            float tickDt)
+        {
+            if (!definition.HasExtensionBehavior || behaviors == null || indices == null || indices.Length == 0)
+            {
+                return;
+            }
+
+            if (_extensionBehaviors == null)
+            {
+                throw new InvalidOperationException(
+                    $"Performer definition '{definition.Key}' has extension behaviors, but performer behavior extension registry is not configured.");
+            }
+
+            for (int i = 0; i < indices.Length; i++)
+            {
+                int behaviorIndex = indices[i];
+                if ((uint)behaviorIndex >= (uint)behaviors.Length)
+                {
+                    continue;
+                }
+
+                BehaviorSlot slot = behaviors[behaviorIndex];
+                if (slot.ExtensionLane != lane)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} is compiled for lane {slot.ExtensionLane}, but runtime lane is {lane}.");
+                }
+
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                int kindId = slot.KindId;
+                if (kindId <= 0 || !_extensionBehaviors.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} references unregistered extension behavior id {kindId}.");
+                }
+
+                if (descriptor.Lane != lane)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} runtime lane {lane} does not match registered lane {descriptor.Lane}.");
+                }
+
+                _extensionBehaviorOps.Bind(entity);
+                var view = new PerformerBehaviorView(
+                    entity,
+                    state.OwnerEntity,
+                    state.DefId,
+                    slot.SlotIndex,
+                    kindId,
+                    lane,
+                    firstFrame,
+                    tickDt);
+                var context = new PerformerBehaviorExecutionContext(in view, _extensionBehaviorOps);
+                descriptor.Handler(in context);
+            }
         }
 
         private void ProcessMaterialBehaviors(Entity entity, in PresenterState state, PresenterDefinition definition)
@@ -2113,6 +2283,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (definition.Bindings.Length != 0 ||
                 definition.MaterialBehaviorIndices.Length != 0 ||
+                definition.ExtensionBootstrapBehaviorIndices.Length != 0 ||
                 definition.HasOwnerAttributeBindingWork ||
                 definition.HasOwnerTagBindingWork ||
                 definition.HasSurfaceAuthoring)

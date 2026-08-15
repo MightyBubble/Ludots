@@ -41,6 +41,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Builds a table with built-in opcodes and optionally installs mod-registered
+        /// extension graph ops into the free opcode slots.
+        /// </summary>
+        public GasGraphOpHandlerTable(GasGraphOpRegistry? extensions = null)
+            : this()
+        {
+            if (extensions != null)
+            {
+                InstallExtensions(extensions);
+            }
+        }
+
+        /// <summary>
+        /// Installs mod-registered extension graph ops into this table's free opcode slots
+        /// (ids at or above <see cref="GasGraphOpRegistry.FirstModOpCode"/>). Built-in opcodes
+        /// must already be registered; extension installs reject occupied slots.
+        /// </summary>
+        public void InstallExtensions(GasGraphOpRegistry extensions)
+        {
+            if (extensions == null) throw new ArgumentNullException(nameof(extensions));
+            extensions.InstallHandlers(Handlers);
+        }
+
+        /// <summary>
         /// Registers an executable opcode. Requires a non-empty description and rejects duplicates.
         /// </summary>
         public void Register(GraphNodeOp op, GasGraphOpHandler handler, string description)

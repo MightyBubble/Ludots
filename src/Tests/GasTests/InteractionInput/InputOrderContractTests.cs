@@ -365,7 +365,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new FunctionRegistry(),
                     new TriggerManager(),
                     new Ludots.Core.Engine.SystemFactoryRegistry(),
-                    new TriggerDecoratorRegistry());
+                    new TriggerDecoratorRegistry(),
+                    new ModExtensionHub());
                 var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
 

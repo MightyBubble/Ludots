@@ -23,10 +23,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const int MaxInstructionsPerExecution = 4096;
 
         /// <summary>
-        /// Size of the opcode handler table. Must be greater than the highest GraphNodeOp value.
-        /// Increased from 256 to 512 to accommodate Blackboard (300-305) and Config (310-312) ops.
+        /// Size of the opcode handler table. Must be greater than the highest GraphNodeOp value
+        /// and leave room for startup-registered mod graph ops.
         /// </summary>
-        public const int HandlerTableSize = 512;
+        public const int HandlerTableSize = 2048;
     }
 }
-

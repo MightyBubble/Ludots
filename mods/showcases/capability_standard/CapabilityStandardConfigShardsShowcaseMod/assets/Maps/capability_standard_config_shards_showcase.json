@@ -1,0 +1,14 @@
+{
+  "Id": "capability_standard_config_shards_showcase",
+  "Tags": ["showcase", "capability-standard", "config-shards"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 850,
+    "TargetYCm": 600,
+    "DistanceCm": 8500,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

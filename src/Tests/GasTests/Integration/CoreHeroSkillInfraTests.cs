@@ -165,7 +165,7 @@ namespace Ludots.Tests.GAS
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -370,7 +370,7 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext { Relationships = relationships };
 

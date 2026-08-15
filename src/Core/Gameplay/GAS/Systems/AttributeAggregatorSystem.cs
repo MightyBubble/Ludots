@@ -77,7 +77,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (graphPrograms == null || graphApi == null)
             {
                 throw new InvalidOperationException(
-                    "AttributeDerivedGraphBinding requires configured graph program registry and graph runtime API.");
+                    "AttributeDerivedGraphBinding requires configured graph program registry, graph runtime API, and graph handler table.");
             }
             if (graphApi is not IDerivedAttributeGraphRuntimeApi derivedAttributeApi)
             {

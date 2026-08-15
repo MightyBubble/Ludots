@@ -26,6 +26,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterAnimatorStateBuffer? _animatorStates;
         private readonly StableDrawCache? _stableDrawCache;
         private readonly PresenterVisualStableIdTable? _visualStableIds;
+        private readonly PerformerCommandKindRegistry? _extensionCommands;
+        private readonly PerformerCommandOps _extensionCommandOps;
         private Entity[] _ownerDestroyScratch = Array.Empty<Entity>();
         private int _lastCullSyncStructureVersion = -1;
 
@@ -40,7 +42,8 @@ namespace Ludots.Core.Presentation.Systems
             PresenterDefinitionRegistry definitions,
             PresenterAnimatorStateBuffer? animatorStates = null,
             StableDrawCache? stableDrawCache = null,
-            PresenterVisualStableIdTable? visualStableIds = null)
+            PresenterVisualStableIdTable? visualStableIds = null,
+            PerformerCommandKindRegistry? extensionCommands = null)
             : base(world)
         {
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -53,6 +56,8 @@ namespace Ludots.Core.Presentation.Systems
             _animatorStates = animatorStates;
             _stableDrawCache = stableDrawCache;
             _visualStableIds = visualStableIds;
+            _extensionCommands = extensionCommands;
+            _extensionCommandOps = new PerformerCommandOps(World, _runtime, _definitions, MarkHierarchyForBootstrap);
             _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
@@ -157,6 +162,14 @@ namespace Ludots.Core.Presentation.Systems
                     case PresenterCommandKind.InitializeTransform:
                         HandleInitializeTransform(in cmd);
                         break;
+
+                    case PresenterCommandKind.Extension:
+                        HandleExtensionCommand(in cmd);
+                        break;
+
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unsupported performer command kind '{cmd.CommandKind}' (id={ResolveCommandKindId(in cmd)}).");
                 }
             }
             _commands.Clear();
@@ -186,6 +199,122 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 DestroyPresentersOwnedBy(evt.Source);
+            }
+        }
+
+        private void HandleExtensionCommand(in PresenterCommand cmd)
+        {
+            int commandKindId = ResolveCommandKindId(in cmd);
+            if (commandKindId <= 0)
+            {
+                throw new InvalidOperationException("Performer extension command requires a positive CommandKindId.");
+            }
+
+            if (_extensionCommands == null || !_extensionCommands.TryGetDescriptor(commandKindId, out PerformerCommandExtensionDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"No extension performer command handler registered for id {commandKindId}.");
+            }
+
+            if (descriptor.RouteStrategy != cmd.RouteStrategy)
+            {
+                throw new InvalidOperationException(
+                    $"Extension performer command id {commandKindId} was routed as {cmd.RouteStrategy}, but registered route is {descriptor.RouteStrategy}.");
+            }
+
+            if (RouteRequiresRoutedPerformer(cmd.RouteStrategy) &&
+                (!World.IsAlive(cmd.PresenterEntity) || !World.Has<PresenterState>(cmd.PresenterEntity)))
+            {
+                throw new InvalidOperationException(
+                    $"Extension performer command id {commandKindId} route {cmd.RouteStrategy} requires a routed performer entity.");
+            }
+
+            _extensionCommandOps.Bind(cmd.PresenterEntity);
+            var context = new PerformerCommandExecutionContext(in cmd, _extensionCommandOps);
+            descriptor.Handler(in context);
+        }
+
+        private static int ResolveCommandKindId(in PresenterCommand cmd)
+        {
+            return cmd.CommandKindId != 0 ? cmd.CommandKindId : (byte)cmd.CommandKind;
+        }
+
+        private static bool RouteRequiresRoutedPerformer(PerformerCommandRouteStrategy route)
+        {
+            return route is PerformerCommandRouteStrategy.ExistingInstances
+                or PerformerCommandRouteStrategy.ScopedInstance;
+        }
+
+        private sealed class PerformerCommandOps : IPerformerCommandOps
+        {
+            private readonly World _world;
+            private readonly PresenterEntityRuntime _runtime;
+            private readonly PresenterDefinitionRegistry _definitions;
+            private readonly Action<Entity> _markHierarchyForBootstrap;
+            private Entity _performer;
+
+            public PerformerCommandOps(
+                World world,
+                PresenterEntityRuntime runtime,
+                PresenterDefinitionRegistry definitions,
+                Action<Entity> markHierarchyForBootstrap)
+            {
+                _world = world;
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+                _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+                _markHierarchyForBootstrap = markHierarchyForBootstrap ?? throw new ArgumentNullException(nameof(markHierarchyForBootstrap));
+            }
+
+            public bool HasRoutedPerformer =>
+                _world.IsAlive(_performer) && _world.Has<PresenterState>(_performer);
+
+            public void Bind(Entity performer)
+            {
+                _performer = performer;
+            }
+
+            public void SetParam(int paramKey, ParamLane lane, float floatValue = 0f, int intValue = 0, Vector4 vectorValue = default)
+            {
+                RequireRoutedPerformer();
+                _runtime.SetParamAndPropagateToAffectedChildren(_performer, paramKey, lane, floatValue, intValue, vectorValue);
+            }
+
+            public void ClearParam(int paramKey, ParamLane lane)
+            {
+                RequireRoutedPerformer();
+                _runtime.ClearParamAndPropagateToAffectedChildren(_performer, paramKey, lane);
+            }
+
+            public void ActivateBehavior(int slotIndex)
+            {
+                SetBehaviorActive(slotIndex, active: true);
+            }
+
+            public void DeactivateBehavior(int slotIndex)
+            {
+                SetBehaviorActive(slotIndex, active: false);
+            }
+
+            private void SetBehaviorActive(int slotIndex, bool active)
+            {
+                RequireRoutedPerformer();
+                ref PresenterState state = ref _world.Get<PresenterState>(_performer);
+                if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition))
+                {
+                    throw new InvalidOperationException($"Performer definition id={state.DefId} is not registered.");
+                }
+
+                if (_runtime.SetBehaviorActive(_performer, definition, slotIndex, active))
+                {
+                    _markHierarchyForBootstrap(_performer);
+                }
+            }
+
+            private void RequireRoutedPerformer()
+            {
+                if (!HasRoutedPerformer)
+                {
+                    throw new InvalidOperationException("Performer extension command operation requires a routed performer entity.");
+                }
             }
         }
 

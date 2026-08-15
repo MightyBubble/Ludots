@@ -69,7 +69,8 @@ namespace Ludots.Core.Presentation.Systems
             PresenterEntityRuntime? runtime,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
-            Dictionary<string, object> globals)
+            Dictionary<string, object> globals,
+            GasGraphOpHandlerTable? handlers = null)
             : base(world)
         {
             _events = events;
@@ -79,6 +80,7 @@ namespace Ludots.Core.Presentation.Systems
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
+            _handlers = handlers ?? GasGraphOpHandlerTable.Instance;
             _runtime?.BindDefinitions(_definitions);
         }
 
@@ -280,7 +282,7 @@ namespace Ludots.Core.Presentation.Systems
         private bool TryGetConditionTargetDefinition(in IndexedRule rule, out PresenterDefinition definition)
         {
             definition = null!;
-            int definitionId = rule.Command.CommandKind == PresenterCommandKind.CreatePresenter
+            int definitionId = ResolveRouteStrategy(in rule.Command) == PerformerCommandRouteStrategy.CreatePerformer
                 ? rule.Command.PresenterDefinitionId
                 : rule.OwnerDefinitionId;
             if (definitionId > 0)
@@ -398,7 +400,7 @@ namespace Ludots.Core.Presentation.Systems
                     return;
                 }
 
-                if (CommandTargetsScopedPresenter(rule.Command.CommandKind))
+                if (CommandTargetsScopedPresenter(ResolveRouteStrategy(in rule.Command)))
                 {
                     if (ScopedCommandRequiresOwnerDefinitionInstance(
                         rule.OwnerDefinitionId,
@@ -498,6 +500,7 @@ namespace Ludots.Core.Presentation.Systems
             };
 
             var emitted = cmd;
+            emitted.RouteStrategy = ResolveRouteStrategy(in cmd);
             emitted.ScopeTag = scopeId;
             emitted.ScopeSource = PresenterCommandScopeSource.Fixed;
             emitted.AnchorKind = cmd.UseEventPosition
@@ -606,24 +609,39 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool CommandTargetsExistingPresenterInstances(in PresenterCommand command)
         {
-            if (command.CommandKind == PresenterCommandKind.SetParam &&
-                command.PresenterDefinitionId > 0)
-            {
-                return false;
-            }
-
-            return command.CommandKind is PresenterCommandKind.SetParam
-                or PresenterCommandKind.ActivateBehavior
-                or PresenterCommandKind.DeactivateBehavior
-                or PresenterCommandKind.InitializeTransform
-                or PresenterCommandKind.DestroyPresenter;
+            return ResolveRouteStrategy(in command) == PerformerCommandRouteStrategy.ExistingInstances;
         }
 
-        private static bool CommandTargetsScopedPresenter(PresenterCommandKind kind)
+        private static bool CommandTargetsScopedPresenter(PerformerCommandRouteStrategy route)
         {
-            return kind is PresenterCommandKind.CreatePresenter
-                or PresenterCommandKind.DestroyPresenterScope
-                or PresenterCommandKind.DestroyScopedPresenter;
+            return route is PerformerCommandRouteStrategy.CreatePerformer
+                or PerformerCommandRouteStrategy.DestroyScope
+                or PerformerCommandRouteStrategy.ScopedInstance;
+        }
+
+        private static PerformerCommandRouteStrategy ResolveRouteStrategy(in PresenterCommand command)
+        {
+            if (command.RouteStrategy != PerformerCommandRouteStrategy.None)
+            {
+                return command.RouteStrategy;
+            }
+
+            return command.CommandKind switch
+            {
+                PresenterCommandKind.CreatePresenter => PerformerCommandRouteStrategy.CreatePerformer,
+                PresenterCommandKind.DestroyPresenterScope => PerformerCommandRouteStrategy.DestroyScope,
+                PresenterCommandKind.DestroyScopedPresenter => PerformerCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam when command.PresenterDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                PresenterCommandKind.Extension => throw new InvalidOperationException(
+                    $"Extension presenter command id {command.CommandKindId} must declare routeStrategy before rule routing."),
+                _ => throw new InvalidOperationException($"Unsupported presenter command kind '{command.CommandKind}'."),
+            };
         }
 
         private int ResolveStableId(Entity source, string scopeSourceName)
