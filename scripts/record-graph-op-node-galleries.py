@@ -21,9 +21,20 @@ from pathlib import Path
 PREFIX = "capability_standard_graph_op_"
 CLI_PROJECT = "src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj"
 CLI_DLL = "src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll"
-AUTO_EXIT_FRAME = 120
-# One still every 8 frames from first caption beat through auto-exit.
-STILL_FRAMES = list(range(24, AUTO_EXIT_FRAME + 1, 8))
+# Expressive-beat timeline (Epic #990): setup -> action waves -> result hold.
+# One think wave = 0.35s @ 60fps = 21 frames; wave k settles at frame 21k.
+WAVE_FRAMES = 21
+AUTO_EXIT_FRAME = 21 * 8 + 6
+# (frame, per-still duration seconds, segment). Anchors sit at wave boundary +4/+12
+# so soft-renderer dt stretch cannot land a still before the wave settles.
+STILL_PLAN: list[tuple[int, float, str]] = (
+    [(8, 0.9, "setup"), (20, 0.9, "setup")]
+    + [(WAVE_FRAMES * k + offset, 0.15, "action") for k in range(1, 7) for offset in (4, 12)]
+    + [(151, 1.1, "hold"), (159, 1.1, "hold"), (172, 1.1, "hold"), (174, 1.1, "hold")]
+)
+STILL_FRAMES = [frame for frame, _, _ in STILL_PLAN]
+STILL_DURATIONS = {frame: duration for frame, duration, _ in STILL_PLAN}
+assert STILL_FRAMES == sorted(STILL_FRAMES) and STILL_FRAMES[-1] <= AUTO_EXIT_FRAME
 
 
 def main() -> int:
@@ -41,9 +52,8 @@ def main() -> int:
         default="first-settlement",
         choices=("first-settlement", "last"),
         help=(
-            "Which still becomes poster.png. first-settlement = second still "
-            "(frame 32: first think beat settled, launch animation done); "
-            "last = legacy loop-tail frame."
+            "Which still becomes poster.png. first-settlement = first action-segment "
+            "still (wave 1 settled, detail caption visible); last = final hold frame."
         ),
     )
     args = parser.parse_args()
@@ -170,9 +180,8 @@ def record_one(
     if not play.is_file() or play.stat().st_size < 20_000:
         raise RuntimeError(f"play.mp4 missing or empty: {play}")
 
-    poster_src = (
-        pngs[1] if (poster_frame == "first-settlement" and len(pngs) >= 2) else pngs[-1]
-    )
+    # STILL_PLAN order: 2 setup stills, then action stills; first action still = pngs[2].
+    poster_src = pngs[2] if (poster_frame == "first-settlement" and len(pngs) >= 3) else pngs[-1]
     poster = out / "poster.png"
     shutil.copy2(poster_src, poster)
     if not poster.is_file() or poster.stat().st_size < 1_000:
@@ -235,10 +244,14 @@ def wait_for_pid(pid: int, timeout_s: float) -> None:
 def stitch_stills(pngs: list[Path], play: Path) -> None:
     list_file = play.parent / "frames.concat.txt"
     lines: list[str] = []
-    for png in pngs:
+    for index, png in enumerate(pngs):
+        frame = STILL_FRAMES[index] if index < len(STILL_FRAMES) else STILL_FRAMES[-1]
+        duration = STILL_DURATIONS.get(frame, 0.12)
         lines.append(f"file '{png.as_posix()}'")
-        lines.append("duration 0.12")
+        lines.append(f"duration {duration:g}")
     lines.append(f"file '{pngs[-1].as_posix()}'")
+    duration = STILL_DURATIONS.get(STILL_FRAMES[-1], 0.12)
+    lines.append(f"duration {duration:g}")
     list_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     cmd = [
         "ffmpeg",
@@ -253,6 +266,8 @@ def stitch_stills(pngs: list[Path], play: Path) -> None:
         "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
         "-pix_fmt",
         "yuv420p",
+        "-tune",
+        "stillimage",
         "-an",
         str(play),
     ]
