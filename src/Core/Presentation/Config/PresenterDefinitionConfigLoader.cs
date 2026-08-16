@@ -1612,6 +1612,11 @@ namespace Ludots.Core.Presentation.Config
 
         private ChildPresenterRef[] ParseChildren(JsonNode? node)
         {
+            return ParseChildren(node, "children");
+        }
+
+        private ChildPresenterRef[] ParseChildren(JsonNode? node, string arrayContext)
+        {
             if (node is not JsonArray arr || arr.Count == 0)
             {
                 return Array.Empty<ChildPresenterRef>();
@@ -1622,58 +1627,83 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (arr[i] is not JsonObject obj)
                 {
-                    throw new InvalidOperationException($"Presenter child[{i}] must be an object.");
+                    throw new InvalidOperationException($"{arrayContext}[{i}] must be an object.");
                 }
 
+                string entryContext = $"{arrayContext}[{i}]";
                 if (obj["paramOverrides"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses removed field 'paramOverrides'. Author 'overrides.params'.");
+                        $"{entryContext} uses removed field 'paramOverrides'. Author 'overrides.params'.");
                 }
 
                 if (obj["local_position"] != null || obj["local_rotation"] != null || obj["local_scale"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
+                        $"{entryContext} uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
                 }
 
                 if (obj["children_mode"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses snake_case field 'children_mode'. Author 'childrenMode'.");
+                        $"{entryContext} uses snake_case field 'children_mode'. Author 'childrenMode'.");
                 }
 
                 if (obj["runtime_behaviors"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors'.");
-                }
-
-                if (obj["childrenMode"] != null || obj["instanceChildren"] != null)
-                {
-                    throw new InvalidOperationException(
-                        $"children[{i}] declares 'childrenMode'/'instanceChildren', but child instance subtree override is not implemented yet.");
+                        $"{entryContext} uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors'.");
                 }
 
                 if (obj["instanceBehaviors"] != null)
                 {
                     throw new InvalidOperationException(
-                        $"children[{i}] declares 'instanceBehaviors', but child instance behaviors are not implemented yet.");
+                        $"{entryContext} declares 'instanceBehaviors', but child instance behaviors are not implemented yet.");
                 }
 
                 children[i] = new ChildPresenterRef
                 {
-                    DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"children[{i}].definitionId"),
+                    DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"{entryContext}.definitionId"),
                     ScopeTag = ParseScopeTag(obj["scopeTag"]),
-                    ParamOverrides = ParseChildParamOverrides(obj["overrides"], i),
-                    TransformOverride = ParseChildTransformOverride(obj["overrides"], i),
+                    ParamOverrides = ParseChildParamOverrides(obj["overrides"], entryContext),
+                    TransformOverride = ParseChildTransformOverride(obj["overrides"], entryContext),
+                    InstanceOverride = ParseChildInstanceOverride(obj, entryContext),
                 };
             }
 
             return children;
         }
 
-        private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, int childIndex)
+        private PresenterChildInstanceOverride? ParseChildInstanceOverride(JsonObject obj, string entryContext)
+        {
+            PresenterChildrenMode childrenMode =
+                ParseRequiredEnumOrDefault(obj["childrenMode"], PresenterChildrenMode.Definition, $"{entryContext}.childrenMode");
+            JsonNode? instanceChildrenNode = obj["instanceChildren"];
+            if (childrenMode == PresenterChildrenMode.Definition)
+            {
+                if (instanceChildrenNode != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext} declares 'instanceChildren', but childrenMode is 'Definition'. Author childrenMode 'Instance'.");
+                }
+
+                return null;
+            }
+
+            if (instanceChildrenNode == null)
+            {
+                throw new InvalidOperationException(
+                    $"{entryContext} declares childrenMode 'Instance' without 'instanceChildren'. Author the instance-owned child array.");
+            }
+
+            return new PresenterChildInstanceOverride
+            {
+                ChildrenMode = PresenterChildrenMode.Instance,
+                InstanceChildren = ParseChildren(instanceChildrenNode, $"{entryContext}.instanceChildren"),
+            };
+        }
+
+        private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, string entryContext)
         {
             if (overridesNode == null)
             {
@@ -1682,14 +1712,14 @@ namespace Ludots.Core.Presentation.Config
 
             if (overridesNode is not JsonObject obj)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides must be an object.");
             }
 
-            RejectUnknownOverrideKeys(obj, childIndex);
+            RejectUnknownOverrideKeys(obj, entryContext);
             return ParseParamDefaults(obj["params"]);
         }
 
-        private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, int childIndex)
+        private static PresenterInstanceTransformOverride ParseChildTransformOverride(JsonNode? overridesNode, string entryContext)
         {
             if (overridesNode == null)
             {
@@ -1698,10 +1728,10 @@ namespace Ludots.Core.Presentation.Config
 
             if (overridesNode is not JsonObject obj)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides must be an object.");
             }
 
-            RejectUnknownOverrideKeys(obj, childIndex);
+            RejectUnknownOverrideKeys(obj, entryContext);
             JsonNode? transformNode = obj["transform"];
             if (transformNode == null)
             {
@@ -1710,7 +1740,7 @@ namespace Ludots.Core.Presentation.Config
 
             if (transformNode is not JsonObject transform)
             {
-                throw new InvalidOperationException($"children[{childIndex}].overrides.transform must be an object.");
+                throw new InvalidOperationException($"{entryContext}.overrides.transform must be an object.");
             }
 
             foreach (var property in transform)
@@ -1718,29 +1748,29 @@ namespace Ludots.Core.Presentation.Config
                 if (property.Key is not ("localPosition" or "localRotation" or "localScale"))
                 {
                     throw new InvalidOperationException(
-                        $"children[{childIndex}].overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
+                        $"{entryContext}.overrides.transform field '{property.Key}' is unsupported. Expected localPosition, localRotation (XYZ degrees), localScale.");
                 }
             }
 
             if (transform["local_position"] != null || transform["local_rotation"] != null || transform["local_scale"] != null)
             {
                 throw new InvalidOperationException(
-                    $"children[{childIndex}].overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
+                    $"{entryContext}.overrides.transform uses snake_case. Author localPosition/localRotation/localScale.");
             }
 
             Vector3 localPosition = ParseRequiredVector3(
                 transform["localPosition"],
-                $"children[{childIndex}].overrides.transform.localPosition",
+                $"{entryContext}.overrides.transform.localPosition",
                 Vector3.Zero,
                 required: false);
             Vector3 eulerDegrees = ParseRequiredVector3(
                 transform["localRotation"],
-                $"children[{childIndex}].overrides.transform.localRotation",
+                $"{entryContext}.overrides.transform.localRotation",
                 Vector3.Zero,
                 required: false);
             Vector3 localScale = ParseRequiredVector3(
                 transform["localScale"],
-                $"children[{childIndex}].overrides.transform.localScale",
+                $"{entryContext}.overrides.transform.localScale",
                 Vector3.One,
                 required: false);
 
@@ -1753,14 +1783,14 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static void RejectUnknownOverrideKeys(JsonObject obj, int childIndex)
+        private static void RejectUnknownOverrideKeys(JsonObject obj, string entryContext)
         {
             foreach (var property in obj)
             {
                 if (property.Key is not ("transform" or "params"))
                 {
                     throw new InvalidOperationException(
-                        $"children[{childIndex}].overrides field '{property.Key}' is unsupported. Expected transform and/or params.");
+                        $"{entryContext}.overrides field '{property.Key}' is unsupported. Expected transform and/or params.");
                 }
             }
         }

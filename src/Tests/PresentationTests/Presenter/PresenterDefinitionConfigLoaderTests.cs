@@ -2958,7 +2958,7 @@ namespace Ludots.Tests.Presentation
                   { "id": "child_a" },
                   {
                     "id": "root",
-                    "childrenMode": "instance",
+                    "childrenMode": "Instance",
                     "children": [ { "definitionId": "child_a" } ]
                   }
                 ]
@@ -2974,22 +2974,102 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_RejectsChildInstanceSubtreeOverrideUntilImplemented()
+        public void Load_ParsesChildInstanceSubtreeOverrideWithoutTouchingSharedDefinition()
         {
             WriteCatalog();
             WritePresenters(
                 """
                 [
-                  { "id": "child_b" },
-                  { "id": "child_a", "children": [ { "definitionId": "child_b" } ] },
+                  { "id": "leaf_b" },
+                  { "id": "leaf_c" },
+                  { "id": "leaf_nested" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b" } ] },
                   {
                     "id": "root",
                     "children": [
                       {
                         "definitionId": "child_a",
-                        "childrenMode": "instance",
-                        "instanceChildren": [ { "definitionId": "child_b" } ]
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_c",
+                            "scopeTag": "swapped",
+                            "overrides": { "transform": { "localPosition": [1, 2, 3] } },
+                            "childrenMode": "Instance",
+                            "instanceChildren": [ { "definitionId": "leaf_nested" } ]
+                          }
+                        ]
                       }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(pipeline, registry).Load(catalog);
+
+            int childAId = registry.GetId("child_a");
+            int leafBId = registry.GetId("leaf_b");
+            int leafCId = registry.GetId("leaf_c");
+            int leafNestedId = registry.GetId("leaf_nested");
+
+            PresenterDefinition childA = registry.Get(childAId);
+            Assert.That(childA.Children.Length, Is.EqualTo(1));
+            Assert.That(childA.Children[0].DefinitionId, Is.EqualTo(leafBId));
+            Assert.That(childA.Children[0].InstanceOverride, Is.Null);
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData, Is.Not.Null);
+            Assert.That(overrideData.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(overrideData.InstanceChildren.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceChildren[0].DefinitionId, Is.EqualTo(leafCId));
+            Assert.That(overrideData.InstanceChildren[0].ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("swapped")));
+            Assert.That(overrideData.InstanceChildren[0].TransformOverride.HasOverride, Is.True);
+            PresenterChildInstanceOverride nestedOverride = overrideData.InstanceChildren[0].InstanceOverride!;
+            Assert.That(nestedOverride.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(nestedOverride.InstanceChildren[0].DefinitionId, Is.EqualTo(leafNestedId));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenModeWithoutInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [ { "definitionId": "child_a", "childrenMode": "Instance" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode 'Instance' without 'instanceChildren'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenUnderDefinitionMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "childrenMode": "Definition", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
                     ]
                   }
                 ]
@@ -3001,7 +3081,63 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("children[0]"));
-            Assert.That(ex.Message, Does.Contain("child instance subtree override"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenWithoutExplicitMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenReferencingUnknownDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "missing_leaf" } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("unknown definition 'missing_leaf'"));
         }
 
         [Test]

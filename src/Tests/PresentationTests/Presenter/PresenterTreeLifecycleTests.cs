@@ -573,6 +573,154 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("exceeds the max 32 behaviors"));
         }
 
+        [Test]
+        public void ChildInstanceChildren_OverrideReplacesDefinitionSubtreeForThatInstanceOnly()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_b" },
+                  { "id": "leaf_c" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b", "scopeTag": "default" } ] },
+                  {
+                    "id": "root_override",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "leaf_c", "scopeTag": "swapped" } ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "root_plain",
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+            var (definitions, world, runtime) = LoadAndBindDefinitions();
+
+            int childAId = definitions.GetId("child_a");
+            int leafBId = definitions.GetId("leaf_b");
+            int leafCId = definitions.GetId("leaf_c");
+
+            Entity owner = world.Create();
+            Entity overrideRoot = runtime.CreateHierarchy(
+                definitions, definitions.GetId("root_override"), owner, 1, PresentationAnchorKind.Entity, Vector3.Zero, 1, Entity.Null, null);
+            Entity overrideChildA = world.Get<PresenterChildren>(overrideRoot).Get(0);
+
+            Assert.That(world.Has<PresenterInstanceChildren>(overrideChildA), Is.True);
+            PresenterChildren overrideSubtree = world.Get<PresenterChildren>(overrideChildA);
+            Assert.That(overrideSubtree.Count, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterState>(overrideSubtree.Get(0)).DefId, Is.EqualTo(leafCId));
+            Assert.That(world.Get<PresenterState>(overrideSubtree.Get(0)).ScopeId, Is.EqualTo(PresenterScopeTagRegistry.GetId("swapped")));
+
+            PresenterDefinition sharedChildA = definitions.Get(childAId);
+            Assert.That(sharedChildA.Children.Length, Is.EqualTo(1));
+            Assert.That(sharedChildA.Children[0].DefinitionId, Is.EqualTo(leafBId));
+
+            Entity plainRoot = runtime.CreateHierarchy(
+                definitions, definitions.GetId("root_plain"), owner, 2, PresentationAnchorKind.Entity, Vector3.Zero, 2, Entity.Null, null);
+            Entity plainChildA = world.Get<PresenterChildren>(plainRoot).Get(0);
+
+            Assert.That(world.Has<PresenterInstanceChildren>(plainChildA), Is.False);
+            PresenterChildren plainSubtree = world.Get<PresenterChildren>(plainChildA);
+            Assert.That(plainSubtree.Count, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterState>(plainSubtree.Get(0)).DefId, Is.EqualTo(leafBId));
+            Assert.That(world.Get<PresenterState>(plainSubtree.Get(0)).ScopeId, Is.EqualTo(PresenterScopeTagRegistry.GetId("default")));
+
+            world.Dispose();
+        }
+
+        [Test]
+        public void ChildInstanceChildren_NestedInstanceEntriesKeepOverridingDownTheTree()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_b" },
+                  { "id": "leaf_c" },
+                  { "id": "leaf_nested" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b" } ] },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_c",
+                            "childrenMode": "Instance",
+                            "instanceChildren": [ { "definitionId": "leaf_nested" } ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+            var (definitions, world, runtime) = LoadAndBindDefinitions();
+
+            Entity owner = world.Create();
+            Entity root = runtime.CreateHierarchy(
+                definitions, definitions.GetId("root"), owner, 1, PresentationAnchorKind.Entity, Vector3.Zero, 1, Entity.Null, null);
+            Entity childA = world.Get<PresenterChildren>(root).Get(0);
+            Entity leafC = world.Get<PresenterChildren>(childA).Get(0);
+
+            Assert.That(world.Get<PresenterState>(leafC).DefId, Is.EqualTo(definitions.GetId("leaf_c")));
+            Assert.That(world.Has<PresenterInstanceChildren>(leafC), Is.True);
+            PresenterChildren nestedSubtree = world.Get<PresenterChildren>(leafC);
+            Assert.That(nestedSubtree.Count, Is.EqualTo(1));
+            Assert.That(world.Get<PresenterState>(nestedSubtree.Get(0)).DefId, Is.EqualTo(definitions.GetId("leaf_nested")));
+
+            world.Dispose();
+        }
+
+        [Test]
+        public void ChildInstanceChildren_EmptyOverrideRemovesSubtreeForThatInstance()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_b" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b" } ] },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "childrenMode": "Instance", "instanceChildren": [] }
+                    ]
+                  }
+                ]
+                """);
+            var (definitions, world, runtime) = LoadAndBindDefinitions();
+
+            Entity owner = world.Create();
+            Entity root = runtime.CreateHierarchy(
+                definitions, definitions.GetId("root"), owner, 1, PresentationAnchorKind.Entity, Vector3.Zero, 1, Entity.Null, null);
+            Entity childA = world.Get<PresenterChildren>(root).Get(0);
+
+            Assert.That(world.Has<PresenterInstanceChildren>(childA), Is.True);
+            Assert.That(world.Get<PresenterChildren>(childA).Count, Is.EqualTo(0));
+            Assert.That(definitions.Get(definitions.GetId("child_a")).Children.Length, Is.EqualTo(1));
+
+            world.Dispose();
+        }
+
+        private (PresenterDefinitionRegistry Definitions, World World, PresenterEntityRuntime Runtime) LoadAndBindDefinitions()
+        {
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(pipeline, registry).Load(catalog);
+            var world = Arch.Core.World.Create();
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(registry);
+            return (registry, world, runtime);
+        }
+
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()
         {
             var vfs = new VirtualFileSystem();

@@ -2132,7 +2132,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
-            ChildPresenterRef[] children = parentDefinition.Children;
+            ChildPresenterRef[] children = ResolveEffectiveChildren(parentEntity, parentDefinition);
             if (children == null || children.Length == 0)
             {
                 return;
@@ -2159,6 +2159,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 ref PresenterState childState = ref _world.Get<PresenterState>(childEntity);
                 childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
+                AttachInstanceChildren(childEntity, in child);
                 SyncTickBehaviorMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
                 SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
                 SetParamDefault(childDefinition, childEntity);
@@ -2175,6 +2176,31 @@ namespace Ludots.Core.Presentation.Presenters
 
                 CreateChildrenRecursive(definitions, childEntity, owner, childScopeId, anchorKind, allocateStableId);
             }
+        }
+
+        private ChildPresenterRef[] ResolveEffectiveChildren(Entity parentEntity, PresenterDefinition parentDefinition)
+        {
+            return _world.Has<PresenterInstanceChildren>(parentEntity)
+                ? _world.Get<PresenterInstanceChildren>(parentEntity).Children
+                : parentDefinition.Children;
+        }
+
+        private void AttachInstanceChildren(Entity childEntity, in ChildPresenterRef child)
+        {
+            PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+            if (instanceOverride == null || instanceOverride.ChildrenMode != PresenterChildrenMode.Instance)
+            {
+                return;
+            }
+
+            ChildPresenterRef[] instanceChildren = instanceOverride.InstanceChildren;
+            if (instanceChildren == null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter child definition id={child.DefinitionId} declares instance children mode without an instance children payload.");
+            }
+
+            _world.Add(childEntity, new PresenterInstanceChildren { Children = instanceChildren });
         }
 
         private void CreateChildrenRecursiveBatch(
@@ -2379,7 +2405,8 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < children.Length; i++)
             {
                 ref readonly ChildPresenterRef child = ref children[i];
-                if ((child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
+                if (child.InstanceOverride != null ||
+                    (child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
                     child.TransformOverride.HasOverride ||
                     !definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition) ||
                     RequiresDeferredBootstrapAfterBatchCreate(childDefinition) ||

@@ -4,12 +4,29 @@ using Ludots.Core.Presentation.Instancing;
 
 namespace Ludots.Core.Presentation.Presenters
 {
+    public enum PresenterChildrenMode
+    {
+        Definition = 0,
+        Instance = 1,
+    }
+
+    /// <summary>
+    /// Instance-owned overrides attached to a single child reference. Lives beside the referenced
+    /// definition; the shared definition is never mutated by instance authoring.
+    /// </summary>
+    public sealed class PresenterChildInstanceOverride
+    {
+        public PresenterChildrenMode ChildrenMode = PresenterChildrenMode.Definition;
+        public ChildPresenterRef[] InstanceChildren = System.Array.Empty<ChildPresenterRef>();
+    }
+
     public struct ChildPresenterRef
     {
         public int DefinitionId;
         public int ScopeTag;
         public ParamDefault[] ParamOverrides;
         public PresenterInstanceTransformOverride TransformOverride;
+        public PresenterChildInstanceOverride InstanceOverride;
     }
 
     public struct ParamDefault
