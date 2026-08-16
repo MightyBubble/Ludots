@@ -9,7 +9,7 @@ Writes/upserts (do not hand-edit these outputs):
   - launcher.config.json bindings
   - launcher.presets.json raylib presets
   - showcase.registry.json entries + gallery csproj exemption
-  - assets/Configs/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestRefs
+  - assets/GAS/graph_node_op_coverage.registry.json showcaseId + gallery unitTestRefs
   - family capability_standard_graph_ops_* registry rows, launcher bindings, and presets removed
 
 Subagents own vignettes and FrontDoor graphs only.
@@ -30,7 +30,8 @@ from graph_op_coverage_index import coverage_refs_for_op, index_gas_tests
 PREFIX = "capability_standard_graph_op_"
 GALLERY_REL = "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod"
 ENTRY_ROOT_REL = "mods/showcases/capability_standard/graph_op_entries"
-COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
+COVERAGE_REL = "assets/GAS/graph_node_op_coverage.registry.json"
+DEFAULT_CAMERA_PROFILE = "Camera.Profile.GraphOpsGallery"
 ACCEPTANCE = "GraphOpsNodeGalleryAcceptanceTests"
 WIKI_DOCS = "gitbook/reference/graph-node-op-wiki"
 FAMILY_PREFIX = "capability_standard_graph_ops_"
@@ -142,7 +143,7 @@ def write_map(
         "Id": map_id,
         "Tags": MAP_TAGS,
         "DefaultCamera": {
-            "VirtualCameraId": cam.get("virtualCameraId", "Camera.Profile.Tactical"),
+            "VirtualCameraId": cam.get("virtualCameraId", DEFAULT_CAMERA_PROFILE),
             "TargetXCm": int(cam.get("targetXCm", 0)),
             "TargetYCm": int(cam.get("targetYCm", 0)),
             "DistanceCm": int(cam.get("distanceCm", 2600)),
