@@ -1,6 +1,6 @@
-# 写死的一刀
+# 刻死的一刀
 
-这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。
+台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ConstFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 这一刀写死是 {result} 点；血条从 {healthBefore} 变成 {healthAfter}。
+> 铭牌上刻死的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 写死的一刀
+Feature: 刻死的一刀
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ConstFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

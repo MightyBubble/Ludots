@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_RandomFloat01",
-  "windowTitle": "Ludots - 这一刀带随机抖动",
+  "windowTitle": "Ludots - 骰子决定这一刀",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
-# 伤害钳在上下限里
+# 撞到上限就停
 
-算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
+90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ClampFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 钳在上下限里后这一刀是 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
+> 撞墙停下的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 伤害钳在上下限里
+Feature: 撞到上限就停
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ClampFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ClampFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

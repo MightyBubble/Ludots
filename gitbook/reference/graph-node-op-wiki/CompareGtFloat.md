@@ -1,6 +1,6 @@
-# 有没有打出暴击
+# 砍不砍得死，比一下
 
-伤害 30 对比暴击线 15，过线就是暴击。
+同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_CompareGtFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_CompareGtFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_CompareGtFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 暴击判定：{result}。
+> 对血薄木桩的判定：{result}；它从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 有没有打出暴击
+Feature: 砍不砍得死，比一下
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_CompareGtFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_CompareGtFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「伤害 30 对比暴击线 15，过线就是暴击。」这类人话
+    Then 字幕讲的是「同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

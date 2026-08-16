@@ -1,14 +1,14 @@
 {
   "op": "ConstBool",
   "driver": "linear",
-  "title": "出手许可",
-  "beat": "这一刀有没有被允许打出去，看许可开关；开着才能打。",
-  "detailTemplate": "出手许可：{result}。",
+  "title": "永远放行的许可",
+  "beat": "门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。",
+  "detailTemplate": "这一拍的许可：{result}；放行的刀落下，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "许可"
   ],
   "featuredNodeId": "permit",
-  "graphKind": "Validation",
+  "graphKind": "Effect",
   "actors": [
     {
       "id": "caster",
@@ -33,6 +33,6 @@
   ],
   "linear": {
     "resultKind": "bool",
-    "applyTo": "none"
+    "applyTo": "graphSettled"
   }
 }

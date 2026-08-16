@@ -15,19 +15,20 @@ namespace Ludots.Tests.Gas.Production;
 public sealed class GraphOpsNodeGalleryAcceptanceTests
 {
     [Test]
-    public void ConstFloat_SetsTargetHealthToAuthoredConstant()
+    public void ConstFloat_SettlesAuthoredConstantThroughGraphTail()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
         runtime.BindOp("ConstFloat");
         runtime.EnsureWorld();
+        float before = runtime.Context.ActorHealth[1];
         runtime.Tick(0.35f);
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("写死的一刀"));
-        Assert.That(runtime.Metrics.Detail, Does.Contain("写死"));
+        Assert.That(runtime.Title, Is.EqualTo("刻死的一刀"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("刻死"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("42"));
         Assert.That(runtime.Metrics.ThinkWaves, Is.EqualTo(1));
-        Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(42f).Within(0.01f));
+        Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(before - 42f).Within(0.01f));
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
@@ -44,9 +45,9 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
         runtime.Tick(0.35f);
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("两段伤害叠在一起"));
-        Assert.That(runtime.Metrics.Detail, Does.Contain("加上"));
-        Assert.That(runtime.Metrics.Detail, Does.Contain("一共"));
+        Assert.That(runtime.Title, Is.EqualTo("两段伤害叠成一刀"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("接起来"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("42"));
         Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(before - 42f).Within(0.01f));
     }
 

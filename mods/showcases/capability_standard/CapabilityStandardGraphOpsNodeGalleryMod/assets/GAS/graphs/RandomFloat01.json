@@ -7,9 +7,88 @@
       {
         "id": "variance",
         "op": "RandomFloat01"
+      },
+      {
+        "id": "scale",
+        "op": "ConstFloat",
+        "floatValue": 30
+      },
+      {
+        "id": "scaled",
+        "op": "MulFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
       }
     ],
-    "controlEdges": [],
-    "valueEdges": []
+    "controlEdges": [
+      {
+        "from": "variance",
+        "fromPort": "next",
+        "to": "scale"
+      },
+      {
+        "from": "scale",
+        "fromPort": "next",
+        "to": "scaled"
+      },
+      {
+        "from": "scaled",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "variance",
+        "fromPort": "value",
+        "to": "scaled",
+        "toPort": "a"
+      },
+      {
+        "from": "scale",
+        "fromPort": "value",
+        "to": "scaled",
+        "toPort": "b"
+      },
+      {
+        "from": "scaled",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
   }
 ]

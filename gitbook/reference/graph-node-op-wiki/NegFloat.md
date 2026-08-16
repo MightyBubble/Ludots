@@ -1,6 +1,6 @@
-# 减益翻成正数
+# 负债翻面成正数
 
-减益 -8 翻成 +8 再打出去。
+负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_NegFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_NegFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_NegFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 减益翻成正数后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 翻面后的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 减益翻成正数
+Feature: 负债翻面成正数
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_NegFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_NegFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「减益 -8 翻成 +8 再打出去。」这类人话
+    Then 字幕讲的是「负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 
