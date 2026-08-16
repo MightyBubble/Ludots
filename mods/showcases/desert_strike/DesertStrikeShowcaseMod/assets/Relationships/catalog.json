@@ -1,0 +1,14 @@
+{
+  "types": [
+    {
+      "id": "DesertStrike.Participant",
+      "isSymmetric": false
+    }
+  ],
+  "metrics": [],
+  "flags": [],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

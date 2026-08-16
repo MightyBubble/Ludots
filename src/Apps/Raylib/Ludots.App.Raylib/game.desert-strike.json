@@ -1,0 +1,13 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine — Desert Strike Tug of War",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/showcases/rts_demo/RtsDemoMod",
+    "../../../../../../../mods/showcases/desert_strike/DesertStrikeShowcaseMod"
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "Id": "desert_strike",
+  "Tags": ["rts_showcase", "desert_strike"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 14000,
+    "FovYDeg": 60
+  },
+  "Entities": [
+    {
+      "Template": "ds_base_player",
+      "InstanceId": "desert_strike_base_p1",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -12000, "Y": 0 } },
+        "Name": { "Value": "Command Center P1" }
+      }
+    },
+    {
+      "Template": "ds_base_ai",
+      "InstanceId": "desert_strike_base_p2",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12000, "Y": 0 } },
+        "Name": { "Value": "Command Center P2" }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p1_l0",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -9000, "Y": 3500 } },
+        "Name": { "Value": "Spawn P1 L0" }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p1_l1",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+        "Name": { "Value": "Spawn P1 L1" }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p1_l2",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -9000, "Y": -3500 } },
+        "Name": { "Value": "Spawn P1 L2" }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p2_l0",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9000, "Y": 3500 } },
+        "Name": { "Value": "Spawn P2 L0" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p2_l1",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+        "Name": { "Value": "Spawn P2 L1" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "ds_spawn_marker",
+      "InstanceId": "desert_strike_spawn_p2_l2",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9000, "Y": -3500 } },
+        "Name": { "Value": "Spawn P2 L2" },
+        "Team": { "Id": 2 }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "desert_strike_base_p1" },
+    { "TeamId": 2, "RepresentativeInstanceId": "desert_strike_base_p2" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "desert_strike_base_p1" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "desert_strike_base_p2" }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "DesertStrike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "DesertStrike.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "DesertStrike.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "DesertStrike.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "DesertStrike.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "DesertStrike.Participant", "Symmetric": false }
+    ]
+  }
+}

@@ -1,0 +1,138 @@
+[
+  {
+    "id": "Ability.Ds.Attack.Marine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Ds.Attack" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Ds.Damage.Marine" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Ds.Attack"] },
+    "presentation": {
+      "displayName": "Gauss Rifle",
+      "iconGlyph": "MG",
+      "accentColor": "#2563EB"
+    }
+  },
+  {
+    "id": "Ability.Ds.Attack.Firebat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 40, "tag": "Cooldown.Ds.Attack" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Ds.Damage.Firebat" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Ds.Attack"] },
+    "presentation": {
+      "displayName": "Flame Burst",
+      "iconGlyph": "FB",
+      "accentColor": "#F97316"
+    }
+  },
+  {
+    "id": "Ability.Ds.Attack.Goliath",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 60, "tag": "Cooldown.Ds.Attack" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Ds.Damage.Goliath" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Ds.Attack"] },
+    "presentation": {
+      "displayName": "Twin Autocannons",
+      "iconGlyph": "GL",
+      "accentColor": "#8B5CF6"
+    }
+  },
+  {
+    "id": "Ability.Ds.Attack.Tank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Ds.Attack" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Ds.Damage.Tank" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Ds.Attack"] },
+    "presentation": {
+      "displayName": "Arclite Cannon",
+      "iconGlyph": "TK",
+      "accentColor": "#EF4444"
+    }
+  },
+  {
+    "id": "Ability.Ds.Buy.Marine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "Command.Ds.Buy.Marine" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Status.Ds.GameOver"] },
+    "presentation": {
+      "displayName": "Marine",
+      "iconGlyph": "M",
+      "accentColor": "#2563EB",
+      "hintText": "75 minerals. Fast rifle infantry for the next wave."
+    }
+  },
+  {
+    "id": "Ability.Ds.Buy.Firebat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "Command.Ds.Buy.Firebat" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Status.Ds.GameOver"] },
+    "presentation": {
+      "displayName": "Firebat",
+      "iconGlyph": "F",
+      "accentColor": "#F97316",
+      "hintText": "150 minerals. Short-range heavy damage for the next wave."
+    }
+  },
+  {
+    "id": "Ability.Ds.Buy.Goliath",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "Command.Ds.Buy.Goliath" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Status.Ds.GameOver"] },
+    "presentation": {
+      "displayName": "Goliath",
+      "iconGlyph": "G",
+      "accentColor": "#8B5CF6",
+      "hintText": "300 minerals. Mid-range walker for the next wave."
+    }
+  },
+  {
+    "id": "Ability.Ds.Buy.Tank",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "Command.Ds.Buy.Tank" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Status.Ds.GameOver"] },
+    "presentation": {
+      "displayName": "Siege Tank",
+      "iconGlyph": "T",
+      "accentColor": "#EF4444",
+      "hintText": "450 minerals. Long-range artillery for the next wave."
+    }
+  }
+]
