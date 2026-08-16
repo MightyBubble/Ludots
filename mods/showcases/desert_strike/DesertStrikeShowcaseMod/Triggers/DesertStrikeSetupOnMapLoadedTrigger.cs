@@ -29,7 +29,7 @@ namespace DesertStrikeShowcaseMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var engine = context.GetEngine();
+            var engine = context.Get(CoreServiceKeys.Engine);
             if (engine == null)
             {
                 return Task.CompletedTask;
