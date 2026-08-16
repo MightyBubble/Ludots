@@ -1,6 +1,6 @@
-# 只看花名册上的人
+# 照着名册点名
 
-小队花名册里的人亮，册外的不亮。
+名册板六格点亮，点名线拉向场上六人。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFromCollection/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFromCollection/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFromCollection/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 小队花名册里亮了{count}人，册外的没有点名。
+> 名册上{count}人被点名线牵住，不在册的{rest}个退成灰影。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 只看花名册上的人
+Feature: 照着名册点名
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryFromCollection
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryFromCollection/play.mp4
     When 短剧演完
-    Then 字幕讲的是「小队花名册里的人亮，册外的不亮。」这类人话
+    Then 字幕讲的是「名册板六格点亮，点名线拉向场上六人。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

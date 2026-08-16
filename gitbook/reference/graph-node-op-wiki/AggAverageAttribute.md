@@ -1,6 +1,6 @@
-# 平均生命多少
+# 全场平均血量
 
-字幕报平均。
+十三个人的血条凑上台面，台面亮出平均数。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 平均生命是{avg}。
+> {count}人生命合计{sum}，除完平均{avg}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 平均生命多少
+Feature: 全场平均血量
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggAverageAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggAverageAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「字幕报平均。」这类人话
+    Then 字幕讲的是「十三个人的血条凑上台面，台面亮出平均数。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

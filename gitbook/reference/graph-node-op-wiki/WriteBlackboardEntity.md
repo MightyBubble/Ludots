@@ -1,6 +1,6 @@
-# 把点名的人写到记事板
+# 把要盯的人记上板
 
-木桩被记到板上。
+从木桩身上揭张画像，贴进点名格。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把{named}记到板上。
+> 点名格贴上了{named}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把点名的人写到记事板
+Feature: 把要盯的人记上板
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_WriteBlackboardEntity
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_WriteBlackboardEntity/play.mp4
     When 短剧演完
-    Then 字幕讲的是「木桩被记到板上。」这类人话
+    Then 字幕讲的是「从木桩身上揭张画像，贴进点名格。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

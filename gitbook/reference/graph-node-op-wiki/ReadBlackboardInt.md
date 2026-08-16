@@ -1,6 +1,6 @@
-# 从记事板读出层数
+# 照记事板上的层数挂印
 
-板上层数 4。
+板上 4 层，木桩头顶落满 4 层印。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从记事板读出层数 {result}。
+> 板上层数 {result}，落在木桩头顶。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从记事板读出层数
+Feature: 照记事板上的层数挂印
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ReadBlackboardInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ReadBlackboardInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「板上层数 4。」这类人话
+    Then 字幕讲的是「板上 4 层，木桩头顶落满 4 层印。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

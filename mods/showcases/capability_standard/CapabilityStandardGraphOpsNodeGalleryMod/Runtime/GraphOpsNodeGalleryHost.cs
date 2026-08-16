@@ -40,8 +40,11 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     internal const uint AllyLayer = 0b0001;
     internal const uint EnemyLayer = 0b0010;
 
+    private const int SettlementTickLimit = 8;
+
     private World? _world;
     private bool _ownsWorld;
+    private GameEngine? _ownedEngine;
     private DataRegistry<EntityTemplate>? _templateRegistry;
     private EffectTemplateRegistry _effectTemplates = null!;
     private BuiltinHandlerRegistry _builtinHandlers = null!;
@@ -87,7 +90,50 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         string repoRoot = GraphOpsHeadlessGameEngine.FindRepoRoot(assetsRoot);
         GameEngine engine = GraphOpsHeadlessGameEngine.SharedGallery(repoRoot);
         GraphOpsHeadlessGameEngine.LoadExclusiveMap(engine, mapId);
-        return FromEngine(engine, assetsRoot, mapId);
+        var host = FromEngine(engine, assetsRoot, mapId);
+        host._ownedEngine = engine;
+        return host;
+    }
+
+    /// <summary>
+    /// Advances the headless-owned engine until the registered production
+    /// EffectProcessingLoopSystem (plus AttributeCalculation) closes its slice and drains
+    /// EffectRequests. Engine ticks are cooperative (4ms budget per frame), so a single tick
+    /// can leave the settlement transaction open — swapping maps then would orphan half-settled
+    /// effects. No-op when the gallery runs inside an externally ticked engine: that engine's
+    /// own loop settles the queue, and ticking it here would double-settle.
+    /// </summary>
+    public void SettleEffectRequests()
+    {
+        if (_ownedEngine == null)
+        {
+            return;
+        }
+
+        for (int tick = 0; EffectSettlementOpen(); tick++)
+        {
+            if (tick >= SettlementTickLimit)
+            {
+                throw new InvalidOperationException(
+                    $"Gallery effect settlement did not close within {SettlementTickLimit} engine ticks "
+                    + $"(pendingRequests={EffectRequests.Count}).");
+            }
+
+            _ownedEngine.Tick(Time.FixedDeltaTime);
+        }
+    }
+
+    private bool EffectSettlementOpen()
+    {
+        if (EffectRequests.Count > 0)
+        {
+            return true;
+        }
+
+        var stateQuery = new QueryDescription().WithAll<GasRuntimeState>();
+        bool loopInSlice = false;
+        World.Query(in stateQuery, (Entity _, ref GasRuntimeState state) => loopInSlice |= state.EffectLoopInSlice);
+        return loopInSlice;
     }
 
     public GraphOpsNodeDriverContext BindContext(

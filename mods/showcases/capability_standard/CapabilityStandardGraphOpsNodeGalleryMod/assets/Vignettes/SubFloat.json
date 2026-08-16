@@ -1,11 +1,11 @@
 {
   "op": "SubFloat",
   "driver": "linear",
-  "title": "距离把伤害削掉一截",
-  "beat": "走远了，50 点里被削掉 12 点，头顶那根条按剩下的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
-  "detailTemplate": "走远之后被削掉一截，这一刀剩下 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "格挡先咬掉一截",
+  "beat": "50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。",
+  "detailTemplate": "咬掉一截后剩下 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "削掉"
+    "咬掉"
   ],
   "featuredNodeId": "decay",
   "graphKind": "Effect",
@@ -33,6 +33,6 @@
   ],
   "linear": {
     "resultKind": "float",
-    "applyTo": "targetHealthSubtract"
+    "applyTo": "graphSettled"
   }
 }

@@ -1,9 +1,9 @@
 {
   "op": "AggAverageAttribute",
   "driver": "query",
-  "title": "平均生命多少",
-  "beat": "字幕报平均。",
-  "detailTemplate": "平均生命是{avg}。",
+  "title": "全场平均血量",
+  "beat": "十三个人的血条凑上台面，台面亮出平均数。",
+  "detailTemplate": "{count}人生命合计{sum}，除完平均{avg}。",
   "assertDetailContains": [
     "平均"
   ],

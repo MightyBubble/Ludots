@@ -1,6 +1,6 @@
 # 谁把我当朋友
 
-指向自己的链，亮出那些把我当朋友的人。
+箭头指着自己的链亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 谁把我当朋友
     Given 玩家打开 capability_standard_graph_op_RelationshipQueryIncoming
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipQueryIncoming/play.mp4
     When 短剧演完
-    Then 字幕讲的是「指向自己的链，亮出那些把我当朋友的人。」这类人话
+    Then 字幕讲的是「箭头指着自己的链亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

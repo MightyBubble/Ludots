@@ -2,8 +2,8 @@
   "op": "RelationshipAggMinMetric",
   "driver": "rel",
   "title": "最低好感是多少",
-  "beat": "最弱那条。",
-  "detailTemplate": "最低好感是 {min}，最弱的是{friend}。",
+  "beat": "四块数值牌里最矮的浮出来。",
+  "detailTemplate": "最低好感 {min}，是{friend}。",
   "assertDetailContains": [
     "最低"
   ],

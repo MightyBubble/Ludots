@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_BeginLifecycleTransaction",
-  "windowTitle": "Ludots - 开一笔生命周期事务",
+  "windowTitle": "Ludots - 先开生命台账再动土",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

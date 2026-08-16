@@ -1,11 +1,11 @@
 {
   "op": "ReadBlackboardEntity",
   "driver": "blackboard",
-  "title": "从记事板读出点名的人",
-  "beat": "板上记着木桩，读出来锁定他。",
-  "detailTemplate": "从记事板读出点名的人，锁定了{named}。",
+  "title": "照记事板点名叫阵",
+  "beat": "板上那格贴着木桩的画像，读出来就套住他。",
+  "detailTemplate": "点名格指向{named}。",
   "assertDetailContains": [
-    "点名"
+    "点名格"
   ],
   "featuredNodeId": "readE",
   "graphKind": "Effect",

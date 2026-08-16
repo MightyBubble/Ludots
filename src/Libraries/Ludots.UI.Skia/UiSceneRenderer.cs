@@ -667,20 +667,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private static float ResolveBackgroundAxisOffset(UiLength length, float available)
 	{
-		UiLengthUnit unit = length.Unit;
-		if (1 == 0)
+		if (length.IsAuto)
 		{
+			return 0f;
 		}
-		float result = unit switch
-		{
-			UiLengthUnit.Percent => available * (length.Value / 100f), 
-			UiLengthUnit.Pixel => length.Value, 
-			_ => 0f, 
-		};
-		if (1 == 0)
-		{
-		}
-		return result;
+		float resolved = length.Resolve(available);
+		return float.IsNaN(resolved) ? 0f : resolved;
 	}
 
 	private static float NormalizeRepeatStart(float start, float tileSize, float min, float max)
@@ -794,20 +786,12 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private static float ResolveLength(UiLength length, float available)
 	{
-		UiLengthUnit unit = length.Unit;
-		if (1 == 0)
+		if (length.IsAuto)
 		{
+			return 0f;
 		}
-		float result = unit switch
-		{
-			UiLengthUnit.Pixel => length.Value, 
-			UiLengthUnit.Percent => available * (length.Value / 100f), 
-			_ => length.Value, 
-		};
-		if (1 == 0)
-		{
-		}
-		return result;
+		float resolved = length.Resolve(available);
+		return float.IsNaN(resolved) ? 0f : resolved;
 	}
 
 	private static SKRect ResolveObjectFitRect(SKRect contentRect, float sourceWidth, float sourceHeight, UiObjectFit objectFit)

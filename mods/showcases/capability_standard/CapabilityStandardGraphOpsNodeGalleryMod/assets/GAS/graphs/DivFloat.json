@@ -10,25 +10,81 @@
         "floatValue": 40
       },
       {
-        "id": "distance",
+        "id": "divisor",
         "op": "ConstFloat",
         "floatValue": 2
       },
       {
         "id": "attenuation",
         "op": "DivFloat"
+      },
+      {
+        "id": "explicitA",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "flipA",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hitA",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "contextB",
+        "op": "LoadContextTargetContext"
+      },
+      {
+        "id": "flipB",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hitB",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
       }
     ],
     "controlEdges": [
       {
         "from": "base",
         "fromPort": "next",
-        "to": "distance"
+        "to": "divisor"
       },
       {
-        "from": "distance",
+        "from": "divisor",
         "fromPort": "next",
         "to": "attenuation"
+      },
+      {
+        "from": "attenuation",
+        "fromPort": "next",
+        "to": "explicitA"
+      },
+      {
+        "from": "explicitA",
+        "fromPort": "next",
+        "to": "flipA"
+      },
+      {
+        "from": "flipA",
+        "fromPort": "next",
+        "to": "hitA"
+      },
+      {
+        "from": "hitA",
+        "fromPort": "next",
+        "to": "contextB"
+      },
+      {
+        "from": "contextB",
+        "fromPort": "next",
+        "to": "flipB"
+      },
+      {
+        "from": "flipB",
+        "fromPort": "next",
+        "to": "hitB"
       }
     ],
     "valueEdges": [
@@ -39,10 +95,46 @@
         "toPort": "a"
       },
       {
-        "from": "distance",
+        "from": "divisor",
         "fromPort": "value",
         "to": "attenuation",
         "toPort": "b"
+      },
+      {
+        "from": "attenuation",
+        "fromPort": "value",
+        "to": "flipA",
+        "toPort": "value"
+      },
+      {
+        "from": "explicitA",
+        "fromPort": "value",
+        "to": "hitA",
+        "toPort": "target"
+      },
+      {
+        "from": "flipA",
+        "fromPort": "value",
+        "to": "hitA",
+        "toPort": "value"
+      },
+      {
+        "from": "attenuation",
+        "fromPort": "value",
+        "to": "flipB",
+        "toPort": "value"
+      },
+      {
+        "from": "contextB",
+        "fromPort": "value",
+        "to": "hitB",
+        "toPort": "target"
+      },
+      {
+        "from": "flipB",
+        "fromPort": "value",
+        "to": "hitB",
+        "toPort": "value"
       }
     ]
   }

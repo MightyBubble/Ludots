@@ -1,11 +1,11 @@
 {
   "op": "QueryFromCollection",
   "driver": "query",
-  "title": "只看花名册上的人",
-  "beat": "小队花名册里的人亮，册外的不亮。",
-  "detailTemplate": "小队花名册里亮了{count}人，册外的没有点名。",
+  "title": "照着名册点名",
+  "beat": "名册板六格点亮，点名线拉向场上六人。",
+  "detailTemplate": "名册上{count}人被点名线牵住，不在册的{rest}个退成灰影。",
   "assertDetailContains": [
-    "花名册"
+    "点名线"
   ],
   "featuredNodeId": "fromCol",
   "graphKind": "Query",

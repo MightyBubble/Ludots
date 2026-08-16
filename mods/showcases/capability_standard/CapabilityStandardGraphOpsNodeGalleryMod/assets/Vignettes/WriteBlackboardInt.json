@@ -1,11 +1,11 @@
 {
   "op": "WriteBlackboardInt",
   "driver": "blackboard",
-  "title": "把层数写到记事板",
-  "beat": "记下 4 层。",
-  "detailTemplate": "层数写上 {result}。",
+  "title": "把层数记上板",
+  "beat": "四枚层印叠进层数格。",
+  "detailTemplate": "层数格记下 {result}。",
   "assertDetailContains": [
-    "层数写"
+    "层数格"
   ],
   "featuredNodeId": "writeI",
   "graphKind": "Effect",

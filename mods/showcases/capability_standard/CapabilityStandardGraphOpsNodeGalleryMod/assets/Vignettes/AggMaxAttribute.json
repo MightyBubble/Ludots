@@ -1,9 +1,9 @@
 {
   "op": "AggMaxAttribute",
   "driver": "query",
-  "title": "最高生命是多少",
-  "beat": "最高值+对应人高亮。",
-  "detailTemplate": "最高生命是{max}，对应{label}。",
+  "title": "全场最高血量",
+  "beat": "台面翻出最高一格，亮出的数顶着满格血条。",
+  "detailTemplate": "全场最高生命{max}，没有一条血条比它更长。",
   "assertDetailContains": [
     "最高生命"
   ],
