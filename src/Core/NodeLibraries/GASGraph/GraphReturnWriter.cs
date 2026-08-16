@@ -145,6 +145,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 primaryEntity: caster,
                 title: binding.Title,
                 summary: binding.Summary);
+            if (binding.CollectionKeyId > 0)
+            {
+                _collections.Replace(owner, binding.CollectionKeyId, descriptor, state.TargetList.Span);
+                return;
+            }
+
             _collections.Replace(owner, descriptor, state.TargetList.Span);
         }
 
