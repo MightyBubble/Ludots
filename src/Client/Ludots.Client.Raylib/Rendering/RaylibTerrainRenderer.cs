@@ -345,7 +345,11 @@ namespace Ludots.Client.Raylib.Rendering
             int locWaterReflection = Rl.GetShaderLocation(_waterShader, "texture0");
             int locWaterRefraction = Rl.GetShaderLocation(_waterShader, "texture1");
             int locWaterDudv = Rl.GetShaderLocation(_waterShader, "texture2");
-            if (_locWaterSampleReflection < 0 ||
+            if (_locWaterLightPos < 0 ||
+                _locWaterViewPos < 0 ||
+                _locWaterAmbient < 0 ||
+                _locWaterIntensity < 0 ||
+                _locWaterSampleReflection < 0 ||
                 _locWaterUseDudv < 0 ||
                 _locWaterMoveFactor < 0 ||
                 _locWaterWaveStrength < 0 ||
@@ -354,7 +358,7 @@ namespace Ludots.Client.Raylib.Rendering
                 locWaterDudv < 0)
             {
                 throw new InvalidOperationException(
-                    "Water shader is missing reflective uniforms/samplers (uSampleReflection/uUseDudv/uMoveFactor/uWaveStrength/texture0/texture1/texture2).");
+                    "Water shader is missing reflective uniforms/samplers (uLightPos/uViewPos/uAmbient/uLightIntensity/uSampleReflection/uUseDudv/uMoveFactor/uWaveStrength/texture0/texture1/texture2).");
             }
 
             _waterShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locWaterReflection;

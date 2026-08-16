@@ -466,9 +466,9 @@ namespace GasTests
             string root = Path.Combine(Path.GetTempPath(), "Ludots_MapLoaderBatchPlacementTests", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Entities"));
+                Directory.CreateDirectory(Path.Combine(root, "Entities"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 string dynamicHeightComponent = includeDynamicHeightSampling
                     ? """
@@ -476,7 +476,7 @@ namespace GasTests
                     """
                     : string.Empty;
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Entities", "templates.json"),
+                    Path.Combine(root, "Entities", "templates.json"),
                     $$"""
                     [
                       {

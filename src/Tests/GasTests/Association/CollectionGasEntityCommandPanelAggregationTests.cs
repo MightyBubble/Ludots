@@ -389,7 +389,7 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             // EntityCommandPanelMod loads through the real ModLoader so its
-            // assets/Configs/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
+            // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
             // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),

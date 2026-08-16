@@ -1,15 +1,34 @@
-{
-  "id": "showcase.graph_op.SelectTagInMask",
-  "kind": "Effect",
-  "entry": "scout",
-  "nodes": [
-    { "id": "scout", "op": "LoadExplicitTarget" },
-    { "id": "selectTag", "op": "SelectTagInMask", "displayTable": "graphops.sandbox.status.display", "tagSelectPolicy": "RequireOne" }
-  ],
-  "controlEdges": [
-    { "from": "scout", "fromPort": "next", "to": "selectTag" }
-  ],
-  "valueEdges": [
-    { "from": "scout", "fromPort": "value", "to": "selectTag", "toPort": "source" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.SelectTagInMask",
+    "kind": "Effect",
+    "entry": "scout",
+    "nodes": [
+      {
+        "id": "scout",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "selectTag",
+        "op": "SelectTagInMask",
+        "displayTable": "graphops.sandbox.status.display",
+        "tagSelectPolicy": "RequireOne"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scout",
+        "fromPort": "next",
+        "to": "selectTag"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scout",
+        "fromPort": "value",
+        "to": "selectTag",
+        "toPort": "source"
+      }
+    ]
+  }
+]

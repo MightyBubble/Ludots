@@ -45,7 +45,7 @@ namespace Ludots.Tests.Gas.Production
             var save = new LiveEditModSaveService();
 
             string modRoot = Path.Combine(Path.GetTempPath(), "lsw-showcase-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(modRoot, "assets/Configs/GAS"));
+            Directory.CreateDirectory(Path.Combine(modRoot, "assets/GAS"));
 
             try
             {
@@ -96,7 +96,7 @@ namespace Ludots.Tests.Gas.Production
                 LiveEditSavePreview preview = save.Preview(aiSession, "ShowcaseMod", modRoot);
                 Assert.That(preview.CanSave, Is.True);
                 Assert.That(save.Save(aiSession, preview).Succeeded, Is.True);
-                Assert.That(File.Exists(Path.Combine(modRoot, "assets/Configs/GAS/graphs.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(modRoot, "assets/GAS/graphs.json")), Is.True);
             }
             finally
             {

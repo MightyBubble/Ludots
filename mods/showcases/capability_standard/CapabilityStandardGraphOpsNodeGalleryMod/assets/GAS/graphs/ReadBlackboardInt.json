@@ -1,15 +1,33 @@
-{
-  "id": "showcase.graph_op.ReadBlackboardInt",
-  "kind": "Effect",
-  "entry": "src",
-  "nodes": [
-    { "id": "src", "op": "LoadContextSource" },
-    { "id": "readI", "op": "ReadBlackboardInt", "blackboardKey": "showcase.bb.stacks" }
-  ],
-  "controlEdges": [
-    { "from": "src", "fromPort": "next", "to": "readI" }
-  ],
-  "valueEdges": [
-    { "from": "src", "fromPort": "value", "to": "readI", "toPort": "source" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.ReadBlackboardInt",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "readI",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "showcase.bb.stacks"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "readI"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "readI",
+        "toPort": "source"
+      }
+    ]
+  }
+]

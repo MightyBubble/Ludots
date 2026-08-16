@@ -1027,7 +1027,7 @@ public sealed class LauncherService
         IReadOnlyList<CatalogEntry> ordered)
     {
         var fragments = new List<GameConfigFragment>();
-        AppendGameConfigFragment(fragments, Path.Combine(_repoRoot, "assets", "Configs", "game.json"), ownerModId: null, isRootSelection: false);
+        AppendGameConfigFragment(fragments, Path.Combine(_repoRoot, "assets", "game.json"), ownerModId: null, isRootSelection: false);
         AppendGameConfigFragment(fragments, Path.Combine(_repoRoot, "assets", "game.json"), ownerModId: null, isRootSelection: false);
 
         var rootPaths = new HashSet<string>(
@@ -1044,7 +1044,7 @@ public sealed class LauncherService
                 isRootSelection);
             AppendGameConfigFragment(
                 fragments,
-                Path.Combine(entry.Info.RootPath, "assets", "Configs", "game.json"),
+                Path.Combine(entry.Info.RootPath, "assets", "game.json"),
                 entry.Info.Id,
                 isRootSelection);
         }

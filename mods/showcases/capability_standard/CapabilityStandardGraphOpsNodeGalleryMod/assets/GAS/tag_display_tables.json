@@ -1,0 +1,9 @@
+[
+  {
+    "id": "graphops.sandbox.status.display",
+    "entries": [
+      { "tag": "State.Sandbox.Burning", "token": 1 },
+      { "tag": "State.Sandbox.Marked", "token": 2 }
+    ]
+  }
+]

@@ -1,18 +1,47 @@
-{
-  "id": "showcase.graph_op.ControlDomainControls",
-  "kind": "Validation",
-  "entry": "captain",
-  "nodes": [
-    { "id": "captain", "op": "LoadCaster" },
-    { "id": "member", "op": "LoadExplicitTarget" },
-    { "id": "controls", "op": "ControlDomainControls" }
-  ],
-  "controlEdges": [
-    { "from": "captain", "fromPort": "next", "to": "member" },
-    { "from": "member", "fromPort": "next", "to": "controls" }
-  ],
-  "valueEdges": [
-    { "from": "captain", "fromPort": "value", "to": "controls", "toPort": "a" },
-    { "from": "member", "fromPort": "value", "to": "controls", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.ControlDomainControls",
+    "kind": "Validation",
+    "entry": "captain",
+    "nodes": [
+      {
+        "id": "captain",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "member",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "controls",
+        "op": "ControlDomainControls"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "captain",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "controls"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "captain",
+        "fromPort": "value",
+        "to": "controls",
+        "toPort": "a"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "controls",
+        "toPort": "b"
+      }
+    ]
+  }
+]

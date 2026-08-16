@@ -816,13 +816,16 @@ namespace Ludots.Core.Engine
                 visionFogFieldStore,
                 visionResolver,
                 fogKnowledgeProjector);
+            var tagDisplayTables = new TagDisplayTableRegistry();
+            new TagDisplayTableConfigLoader(ConfigPipeline, tagDisplayTables).Load(ConfigCatalog, ConfigConflictReport);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
-                MapLoader.EntityTemplateKeys);
+                MapLoader.EntityTemplateKeys,
+                tagDisplayTables);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -928,7 +931,6 @@ namespace Ludots.Core.Engine
             var graphOutputValueStore = new GraphOutputValueStore(
                 graphOutputValueKeyRegistry,
                 gasRuntimeCapacity.GraphOutputValueCapacity);
-            var tagDisplayTables = new TagDisplayTableRegistry();
             var gasGraphProductionServices = new GasGraphRuntimeProductionServices(
                 World,
                 SpatialQueries,

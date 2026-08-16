@@ -1,15 +1,32 @@
-{
-  "id": "showcase.graph_op.ControlDomainResolve",
-  "kind": "Validation",
-  "entry": "member",
-  "nodes": [
-    { "id": "member", "op": "LoadExplicitTarget" },
-    { "id": "resolve", "op": "ControlDomainResolve" }
-  ],
-  "controlEdges": [
-    { "from": "member", "fromPort": "next", "to": "resolve" }
-  ],
-  "valueEdges": [
-    { "from": "member", "fromPort": "value", "to": "resolve", "toPort": "source" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.ControlDomainResolve",
+    "kind": "Validation",
+    "entry": "member",
+    "nodes": [
+      {
+        "id": "member",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "resolve",
+        "op": "ControlDomainResolve"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "resolve"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "resolve",
+        "toPort": "source"
+      }
+    ]
+  }
+]

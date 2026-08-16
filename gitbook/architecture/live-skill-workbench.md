@@ -1,4 +1,4 @@
-# 实时技能工作台（LSW）架构契约
+# 实时技能工作台架构契约
 
 Parent: [Epic #615](https://github.com/MightyBubble/Ludots/issues/615)。本页是 Real-time Skill Workbench（LSW-1，[#616](https://github.com/MightyBubble/Ludots/issues/616)）的正式架构 SSOT。后续实现单 #617–#625 必须遵守本页；不得在 `docs/adr/` 另建平行 ADR。
 

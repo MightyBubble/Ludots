@@ -8,7 +8,7 @@
     "per-op"
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
     "TargetXCm": 0,
     "TargetYCm": 0,
     "DistanceCm": 3400,

@@ -1,10 +1,15 @@
-{
-  "id": "showcase.graph_op.LoadTargetPosX",
-  "kind": "Validation",
-  "entry": "posX",
-  "nodes": [
-    { "id": "posX", "op": "LoadTargetPosX" }
-  ],
-  "controlEdges": [],
-  "valueEdges": []
-}
+[
+  {
+    "id": "showcase.graph_op.LoadTargetPosX",
+    "kind": "Validation",
+    "entry": "posX",
+    "nodes": [
+      {
+        "id": "posX",
+        "op": "LoadTargetPosX"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

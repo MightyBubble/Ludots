@@ -1,6 +1,6 @@
 # 两段伤害叠在一起
 
-左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。
+左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AddFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 两段伤害叠在一起
     Given 玩家打开 capability_standard_graph_op_AddFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。」这类人话
+    Then 字幕讲的是「左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

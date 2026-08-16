@@ -1,15 +1,33 @@
-{
-  "id": "showcase.graph_op.HaltReturnInt",
-  "kind": "Script",
-  "entry": "seven",
-  "nodes": [
-    { "id": "seven", "op": "ConstInt", "intValue": 7 },
-    { "id": "halt", "op": "HaltReturnInt" }
-  ],
-  "controlEdges": [
-    { "from": "seven", "fromPort": "next", "to": "halt" }
-  ],
-  "valueEdges": [
-    { "from": "seven", "fromPort": "value", "to": "halt", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.HaltReturnInt",
+    "kind": "Script",
+    "entry": "seven",
+    "nodes": [
+      {
+        "id": "seven",
+        "op": "ConstInt",
+        "intValue": 7
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "seven",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "seven",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

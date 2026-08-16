@@ -1,45 +1,188 @@
-{
-  "id": "showcase.graph_op.JumpIfFalse",
-  "kind": "Script",
-  "entry": "zeroWater",
-  "nodes": [
-    { "id": "zeroWater", "op": "ConstInt", "intValue": 0, "pinRegister": 0 },
-    { "id": "limitValue", "op": "ConstInt", "intValue": 3, "pinRegister": 1 },
-    { "id": "oneValue", "op": "ConstInt", "intValue": 1, "pinRegister": 2 },
-    { "id": "readWater", "op": "MoveInt" },
-    { "id": "readLimit", "op": "MoveInt" },
-    { "id": "waterBelowLimit", "op": "CompareLtInt" },
-    { "id": "jif", "op": "JumpIfFalse" },
-    { "id": "sipReadWater", "op": "MoveInt" },
-    { "id": "sipReadOne", "op": "MoveInt" },
-    { "id": "sipAdd", "op": "AddInt", "pinRegister": 0 },
-    { "id": "sipYield", "op": "Yield" },
-    { "id": "done", "op": "HaltReturnInt" }
-  ],
-  "controlEdges": [
-    { "from": "zeroWater", "fromPort": "next", "to": "limitValue" },
-    { "from": "limitValue", "fromPort": "next", "to": "oneValue" },
-    { "from": "oneValue", "fromPort": "next", "to": "readWater" },
-    { "from": "readWater", "fromPort": "next", "to": "readLimit" },
-    { "from": "readLimit", "fromPort": "next", "to": "waterBelowLimit" },
-    { "from": "waterBelowLimit", "fromPort": "next", "to": "jif" },
-    { "from": "jif", "fromPort": "true", "to": "sipReadWater" },
-    { "from": "jif", "fromPort": "false", "to": "done" },
-    { "from": "sipReadWater", "fromPort": "next", "to": "sipReadOne" },
-    { "from": "sipReadOne", "fromPort": "next", "to": "sipAdd" },
-    { "from": "sipAdd", "fromPort": "next", "to": "sipYield" },
-    { "from": "sipYield", "fromPort": "next", "to": "readWater" }
-  ],
-  "valueEdges": [
-    { "from": "zeroWater", "fromPort": "value", "to": "readWater", "toPort": "value" },
-    { "from": "limitValue", "fromPort": "value", "to": "readLimit", "toPort": "value" },
-    { "from": "readWater", "fromPort": "value", "to": "waterBelowLimit", "toPort": "a" },
-    { "from": "readLimit", "fromPort": "value", "to": "waterBelowLimit", "toPort": "b" },
-    { "from": "waterBelowLimit", "fromPort": "value", "to": "jif", "toPort": "condition" },
-    { "from": "zeroWater", "fromPort": "value", "to": "sipReadWater", "toPort": "value" },
-    { "from": "oneValue", "fromPort": "value", "to": "sipReadOne", "toPort": "value" },
-    { "from": "sipReadWater", "fromPort": "value", "to": "sipAdd", "toPort": "a" },
-    { "from": "sipReadOne", "fromPort": "value", "to": "sipAdd", "toPort": "b" },
-    { "from": "zeroWater", "fromPort": "value", "to": "done", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.JumpIfFalse",
+    "kind": "Script",
+    "entry": "zeroWater",
+    "nodes": [
+      {
+        "id": "zeroWater",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 0
+      },
+      {
+        "id": "limitValue",
+        "op": "ConstInt",
+        "intValue": 3,
+        "pinRegister": 1
+      },
+      {
+        "id": "oneValue",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 2
+      },
+      {
+        "id": "readWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "readLimit",
+        "op": "MoveInt"
+      },
+      {
+        "id": "waterBelowLimit",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "jif",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "sipReadWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "sipReadOne",
+        "op": "MoveInt"
+      },
+      {
+        "id": "sipAdd",
+        "op": "AddInt",
+        "pinRegister": 0
+      },
+      {
+        "id": "sipYield",
+        "op": "Yield"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "next",
+        "to": "limitValue"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "next",
+        "to": "oneValue"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "next",
+        "to": "readLimit"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "next",
+        "to": "waterBelowLimit"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "next",
+        "to": "jif"
+      },
+      {
+        "from": "jif",
+        "fromPort": "true",
+        "to": "sipReadWater"
+      },
+      {
+        "from": "jif",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "sipReadWater",
+        "fromPort": "next",
+        "to": "sipReadOne"
+      },
+      {
+        "from": "sipReadOne",
+        "fromPort": "next",
+        "to": "sipAdd"
+      },
+      {
+        "from": "sipAdd",
+        "fromPort": "next",
+        "to": "sipYield"
+      },
+      {
+        "from": "sipYield",
+        "fromPort": "next",
+        "to": "readWater"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "readWater",
+        "toPort": "value"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "value",
+        "to": "readLimit",
+        "toPort": "value"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "a"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "b"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "value",
+        "to": "jif",
+        "toPort": "condition"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "sipReadWater",
+        "toPort": "value"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "value",
+        "to": "sipReadOne",
+        "toPort": "value"
+      },
+      {
+        "from": "sipReadWater",
+        "fromPort": "value",
+        "to": "sipAdd",
+        "toPort": "a"
+      },
+      {
+        "from": "sipReadOne",
+        "fromPort": "value",
+        "to": "sipAdd",
+        "toPort": "b"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

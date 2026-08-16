@@ -22,7 +22,7 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Collects and deep-merges all game.json fragments into a single GameConfig.
-        /// Merge order: Core:Configs/game.json -> Mods (by priority) -> Final
+        /// Merge order: Core:game.json -> Mods (by priority) -> Final
         /// </summary>
         public GameConfig MergeGameConfig()
         {
@@ -212,14 +212,10 @@ namespace Ludots.Core.Config
 
         private void LoadFromAllSources(string relativePath, Action<Stream, string> onStreamOpened)
         {
-            // Normalize path
-            if (relativePath.StartsWith("/") || relativePath.StartsWith("\\"))
-                relativePath = relativePath.Substring(1);
+            relativePath = NormalizeRelativePath(relativePath);
 
-            // 1. Core Configs (highest priority - engine defaults)
-            TryLoad(ConfigSourcePaths.CoreConfig(relativePath), onStreamOpened);
-            // Also try Core:{path} directly (for Maps/ and other non-Configs paths)
-            TryLoad($"Core:{relativePath}", onStreamOpened);
+            // 1. Core (highest priority - engine defaults)
+            TryLoad(ConfigSourcePaths.CoreAsset(relativePath), onStreamOpened);
 
             // 2. Mods (in dependency/priority order)
             if (_modLoader != null && _modLoader.LoadedModIds != null)
@@ -227,7 +223,6 @@ namespace Ludots.Core.Config
                 foreach (var modId in _modLoader.LoadedModIds)
                 {
                     TryLoad(ConfigSourcePaths.ModAssets(modId, relativePath), onStreamOpened);
-                    TryLoad(ConfigSourcePaths.ModConfigs(modId, relativePath), onStreamOpened);
                 }
             }
         }
@@ -237,15 +232,13 @@ namespace Ludots.Core.Config
             string relativePath = NormalizeRelativePath(entry.RelativePath);
             string[] shardDirectories = entry.ShardDirectories ?? Array.Empty<string>();
 
-            LoadFromCoreSource(relativePath, shardDirectories, configsRoot: true, onStreamOpened);
-            LoadFromCoreSource(relativePath, shardDirectories, configsRoot: false, onStreamOpened);
+            LoadFromCoreSource(relativePath, shardDirectories, onStreamOpened);
 
             if (_modLoader != null && _modLoader.LoadedModIds != null)
             {
                 foreach (var modId in _modLoader.LoadedModIds)
                 {
-                    LoadFromModSource(modId, relativePath, shardDirectories, configsRoot: false, onStreamOpened);
-                    LoadFromModSource(modId, relativePath, shardDirectories, configsRoot: true, onStreamOpened);
+                    LoadFromModSource(modId, relativePath, shardDirectories, onStreamOpened);
                 }
             }
         }
@@ -253,23 +246,14 @@ namespace Ludots.Core.Config
         private void LoadFromCoreSource(
             string relativePath,
             string[] shardDirectories,
-            bool configsRoot,
             Action<Stream, string> onStreamOpened)
         {
-            string mainUri = configsRoot
-                ? ConfigSourcePaths.CoreConfig(relativePath)
-                : $"Core:{relativePath}";
-            TryLoad(mainUri, onStreamOpened);
-
-            if (!configsRoot)
-            {
-                return;
-            }
+            TryLoad(ConfigSourcePaths.CoreAsset(relativePath), onStreamOpened);
 
             for (int i = 0; i < shardDirectories.Length; i++)
             {
                 string dir = NormalizeRelativePath(shardDirectories[i]);
-                string dirUri = ConfigSourcePaths.CoreConfig(dir);
+                string dirUri = ConfigSourcePaths.CoreAsset(dir);
                 LoadShardDirectory(dirUri, onStreamOpened);
             }
         }
@@ -278,23 +262,14 @@ namespace Ludots.Core.Config
             string modId,
             string relativePath,
             string[] shardDirectories,
-            bool configsRoot,
             Action<Stream, string> onStreamOpened)
         {
-            string mainUri = configsRoot
-                ? ConfigSourcePaths.ModConfigs(modId, relativePath)
-                : ConfigSourcePaths.ModAssets(modId, relativePath);
-            TryLoad(mainUri, onStreamOpened);
-
-            if (!configsRoot)
-            {
-                return;
-            }
+            TryLoad(ConfigSourcePaths.ModAssets(modId, relativePath), onStreamOpened);
 
             for (int i = 0; i < shardDirectories.Length; i++)
             {
                 string dir = NormalizeRelativePath(shardDirectories[i]);
-                string dirUri = ConfigSourcePaths.ModConfigs(modId, dir);
+                string dirUri = ConfigSourcePaths.ModAssets(modId, dir);
                 LoadShardDirectory(dirUri, onStreamOpened);
             }
         }

@@ -1,15 +1,34 @@
-{
-  "id": "showcase.graph_op.SnapToNearestGraphEdge",
-  "kind": "Validation",
-  "entry": "radius",
-  "nodes": [
-    { "id": "radius", "op": "ConstFloat", "floatValue": 200 },
-    { "id": "snapEdge", "op": "SnapToNearestGraphEdge", "validOutput": "edgeValid" }
-  ],
-  "controlEdges": [
-    { "from": "radius", "fromPort": "next", "to": "snapEdge" }
-  ],
-  "valueEdges": [
-    { "from": "radius", "fromPort": "value", "to": "snapEdge", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.SnapToNearestGraphEdge",
+    "kind": "Validation",
+    "entry": "radius",
+    "nodes": [
+      {
+        "id": "radius",
+        "op": "ConstFloat",
+        "floatValue": 200
+      },
+      {
+        "id": "snapEdge",
+        "op": "SnapToNearestGraphEdge",
+        "validOutput": "edgeValid"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "radius",
+        "fromPort": "next",
+        "to": "snapEdge"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "radius",
+        "fromPort": "value",
+        "to": "snapEdge",
+        "toPort": "value"
+      }
+    ]
+  }
+]

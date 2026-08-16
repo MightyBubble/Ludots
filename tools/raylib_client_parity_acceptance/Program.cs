@@ -51,7 +51,7 @@ internal static class Program
 
         string buildingPath = Path.Combine(
             repoRoot,
-            "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/Models/building_blacksmith_blue.gltf");
+            "mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/Models/building_blacksmith_blue.gltf");
         string mannequinPath = Path.Combine(
             repoRoot,
             "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod/assets/Models/mannequin_large_walk.glb");

@@ -404,13 +404,13 @@ public static class NavObstacleAuthoringCatalog
 
     private static IEnumerable<string> MapCandidates(string rootPath, string mapId)
     {
-        yield return Path.Combine(rootPath, "assets", "Configs", "Maps", $"{mapId}.json");
+        yield return Path.Combine(rootPath, "assets", "Maps", $"{mapId}.json");
         yield return Path.Combine(rootPath, "assets", "Maps", $"{mapId}.json");
     }
 
     private static IEnumerable<string> TemplateCandidates(string rootPath)
     {
-        yield return Path.Combine(rootPath, "assets", "Configs", "Entities", "templates.json");
+        yield return Path.Combine(rootPath, "assets", "Entities", "templates.json");
         yield return Path.Combine(rootPath, "assets", "Entities", "templates.json");
     }
 

@@ -1,18 +1,47 @@
-{
-  "id": "showcase.graph_op.KnowledgeHasProjection",
-  "kind": "Validation",
-  "entry": "viewer",
-  "nodes": [
-    { "id": "viewer", "op": "LoadViewer" },
-    { "id": "target", "op": "LoadExplicitTarget" },
-    { "id": "knows", "op": "KnowledgeHasProjection" }
-  ],
-  "controlEdges": [
-    { "from": "viewer", "fromPort": "next", "to": "target" },
-    { "from": "target", "fromPort": "next", "to": "knows" }
-  ],
-  "valueEdges": [
-    { "from": "viewer", "fromPort": "value", "to": "knows", "toPort": "a" },
-    { "from": "target", "fromPort": "value", "to": "knows", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.KnowledgeHasProjection",
+    "kind": "Validation",
+    "entry": "viewer",
+    "nodes": [
+      {
+        "id": "viewer",
+        "op": "LoadViewer"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "knows",
+        "op": "KnowledgeHasProjection"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "viewer",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "knows"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "viewer",
+        "fromPort": "value",
+        "to": "knows",
+        "toPort": "a"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "knows",
+        "toPort": "b"
+      }
+    ]
+  }
+]

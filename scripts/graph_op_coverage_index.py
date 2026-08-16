@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
+COVERAGE_REL = "assets/GAS/graph_node_op_coverage.registry.json"
 GAS_TESTS_REL = "src/Tests/GasTests"
 GALLERY_PREFIX = "GraphOpsNodeGallery"
 

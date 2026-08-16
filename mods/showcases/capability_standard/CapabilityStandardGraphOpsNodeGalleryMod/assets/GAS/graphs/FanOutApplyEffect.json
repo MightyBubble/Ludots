@@ -1,13 +1,28 @@
-{
-  "id": "showcase.graph_op.FanOutApplyEffect",
-  "kind": "Effect",
-  "entry": "radius",
-  "nodes": [
-    { "id": "radius", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 800 },
-    { "id": "fanOut", "op": "FanOutApplyEffect", "effectTemplate": "Effect.GraphOpsSandbox.Mark" }
-  ],
-  "controlEdges": [
-    { "from": "radius", "fromPort": "next", "to": "fanOut" }
-  ],
-  "valueEdges": []
-}
+[
+  {
+    "id": "showcase.graph_op.FanOutApplyEffect",
+    "kind": "Effect",
+    "entry": "radius",
+    "nodes": [
+      {
+        "id": "radius",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 800
+      },
+      {
+        "id": "fanOut",
+        "op": "FanOutApplyEffect",
+        "effectTemplate": "Effect.GraphOpsSandbox.Mark"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "radius",
+        "fromPort": "next",
+        "to": "fanOut"
+      }
+    ],
+    "valueEdges": []
+  }
+]

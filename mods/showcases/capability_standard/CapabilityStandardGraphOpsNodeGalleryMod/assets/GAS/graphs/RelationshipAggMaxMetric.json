@@ -1,54 +1,56 @@
-{
-  "id": "showcase.graph_op.RelationshipAggMaxMetric",
-  "kind": "Query",
-  "entry": "source",
-  "nodes": [
-    {
-      "id": "source",
-      "op": "LoadCaster"
-    },
-    {
-      "id": "outgoing",
-      "op": "RelationshipQueryOutgoing",
-      "relationshipType": "SocialBond"
-    },
-    {
-      "id": "max",
-      "op": "RelationshipAggMaxMetric",
-      "relationshipType": "SocialBond",
-      "metric": "Loyalty"
-    }
-  ],
-  "controlEdges": [
-    {
-      "from": "source",
-      "fromPort": "next",
-      "to": "outgoing"
-    },
-    {
-      "from": "outgoing",
-      "fromPort": "next",
-      "to": "max"
-    }
-  ],
-  "valueEdges": [
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "outgoing",
-      "toPort": "source"
-    },
-    {
-      "from": "outgoing",
-      "fromPort": "list",
-      "to": "max",
-      "toPort": "list"
-    },
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "max",
-      "toPort": "source"
-    }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.RelationshipAggMaxMetric",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "outgoing",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "max",
+        "op": "RelationshipAggMaxMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "outgoing"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "next",
+        "to": "max"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoing",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "list",
+        "to": "max",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "max",
+        "toPort": "source"
+      }
+    ]
+  }
+]

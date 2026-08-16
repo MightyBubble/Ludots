@@ -1,10 +1,16 @@
-{
-  "id": "showcase.graph_op.ConstFloat",
-  "kind": "Effect",
-  "entry": "fixed",
-  "nodes": [
-    { "id": "fixed", "op": "ConstFloat", "floatValue": 42 }
-  ],
-  "controlEdges": [],
-  "valueEdges": []
-}
+[
+  {
+    "id": "showcase.graph_op.ConstFloat",
+    "kind": "Effect",
+    "entry": "fixed",
+    "nodes": [
+      {
+        "id": "fixed",
+        "op": "ConstFloat",
+        "floatValue": 42
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

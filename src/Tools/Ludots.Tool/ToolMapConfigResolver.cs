@@ -326,7 +326,7 @@ namespace Ludots.Tool
 
         private static IEnumerable<string> MapCandidates(string rootPath, string mapId)
         {
-            yield return Path.Combine(rootPath, "assets", "Configs", "Maps", $"{mapId}.json");
+            yield return Path.Combine(rootPath, "assets", "Maps", $"{mapId}.json");
             yield return Path.Combine(rootPath, "assets", "Maps", $"{mapId}.json");
         }
 

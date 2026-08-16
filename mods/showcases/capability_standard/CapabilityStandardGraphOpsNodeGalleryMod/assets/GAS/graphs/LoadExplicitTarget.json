@@ -1,18 +1,49 @@
-{
-  "id": "showcase.graph_op.LoadExplicitTarget",
-  "kind": "Effect",
-  "entry": "loadTarget",
-  "nodes": [
-    { "id": "loadTarget", "op": "LoadExplicitTarget" },
-    { "id": "wound", "op": "ConstFloat", "floatValue": -15 },
-    { "id": "hit", "op": "ModifyAttributeAdd", "attribute": "Health" }
-  ],
-  "controlEdges": [
-    { "from": "loadTarget", "fromPort": "next", "to": "wound" },
-    { "from": "wound", "fromPort": "next", "to": "hit" }
-  ],
-  "valueEdges": [
-    { "from": "loadTarget", "fromPort": "value", "to": "hit", "toPort": "target" },
-    { "from": "wound", "fromPort": "value", "to": "hit", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.LoadExplicitTarget",
+    "kind": "Effect",
+    "entry": "loadTarget",
+    "nodes": [
+      {
+        "id": "loadTarget",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "wound",
+        "op": "ConstFloat",
+        "floatValue": -15
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "loadTarget",
+        "fromPort": "next",
+        "to": "wound"
+      },
+      {
+        "from": "wound",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "loadTarget",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "wound",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

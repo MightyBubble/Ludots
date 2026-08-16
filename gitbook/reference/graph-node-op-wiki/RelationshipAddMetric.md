@@ -1,6 +1,6 @@
 # 好感再加一截
 
-好感从 40 加到 70，条往上涨。
+好感从 40 加到 70。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 好感再加一截
     Given 玩家打开 capability_standard_graph_op_RelationshipAddMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「好感从 40 加到 70，条往上涨。」这类人话
+    Then 字幕讲的是「好感从 40 加到 70。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

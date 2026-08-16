@@ -1,41 +1,43 @@
-{
-  "id": "showcase.graph_op.QueryHexRing",
-  "kind": "Effect",
-  "entry": "hexRing",
-  "nodes": [
-    {
-      "id": "hexRing",
-      "op": "QueryHexRing",
-      "queryCapacityPolicy": "RequireComplete",
-      "hexRadius": 2
-    },
-    {
-      "id": "self",
-      "op": "LoadCaster"
-    },
-    {
-      "id": "notSelf",
-      "op": "QueryFilterNotEntity"
-    }
-  ],
-  "controlEdges": [
-    {
-      "from": "hexRing",
-      "fromPort": "next",
-      "to": "self"
-    },
-    {
-      "from": "self",
-      "fromPort": "next",
-      "to": "notSelf"
-    }
-  ],
-  "valueEdges": [
-    {
-      "from": "self",
-      "fromPort": "value",
-      "to": "notSelf",
-      "toPort": "source"
-    }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.QueryHexRing",
+    "kind": "Effect",
+    "entry": "hexRing",
+    "nodes": [
+      {
+        "id": "hexRing",
+        "op": "QueryHexRing",
+        "queryCapacityPolicy": "RequireComplete",
+        "hexRadius": 2
+      },
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "notSelf",
+        "op": "QueryFilterNotEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "hexRing",
+        "fromPort": "next",
+        "to": "self"
+      },
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "notSelf"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "source"
+      }
+    ]
+  }
+]

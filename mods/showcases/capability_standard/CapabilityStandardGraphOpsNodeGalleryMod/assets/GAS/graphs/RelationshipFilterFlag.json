@@ -1,54 +1,56 @@
-{
-  "id": "showcase.graph_op.RelationshipFilterFlag",
-  "kind": "Query",
-  "entry": "source",
-  "nodes": [
-    {
-      "id": "source",
-      "op": "LoadCaster"
-    },
-    {
-      "id": "outgoing",
-      "op": "RelationshipQueryOutgoing",
-      "relationshipType": "SocialBond"
-    },
-    {
-      "id": "trusted",
-      "op": "RelationshipFilterFlag",
-      "relationshipType": "SocialBond",
-      "flag": "Trusted"
-    }
-  ],
-  "controlEdges": [
-    {
-      "from": "source",
-      "fromPort": "next",
-      "to": "outgoing"
-    },
-    {
-      "from": "outgoing",
-      "fromPort": "next",
-      "to": "trusted"
-    }
-  ],
-  "valueEdges": [
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "outgoing",
-      "toPort": "source"
-    },
-    {
-      "from": "outgoing",
-      "fromPort": "list",
-      "to": "trusted",
-      "toPort": "list"
-    },
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "trusted",
-      "toPort": "source"
-    }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.RelationshipFilterFlag",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "outgoing",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "trusted",
+        "op": "RelationshipFilterFlag",
+        "relationshipType": "SocialBond",
+        "flag": "Trusted"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "outgoing"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "next",
+        "to": "trusted"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoing",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "list",
+        "to": "trusted",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "trusted",
+        "toPort": "source"
+      }
+    ]
+  }
+]

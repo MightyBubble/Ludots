@@ -1,6 +1,6 @@
 # 写死的一刀
 
-这一刀不读装备、不算距离，伤害就是写死的 42。目标血条直接变成这个数。
+这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ConstFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 写死的一刀
     Given 玩家打开 capability_standard_graph_op_ConstFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ConstFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「这一刀不读装备、不算距离，伤害就是写死的 42。目标血条直接变成这个数。」这类人话
+    Then 字幕讲的是「这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

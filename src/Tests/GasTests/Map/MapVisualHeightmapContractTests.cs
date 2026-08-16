@@ -22,15 +22,15 @@ namespace Ludots.Tests.Gas
             _root = Path.Combine(Path.GetTempPath(), "Ludots_MapVisualHeightmapContractTests", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_root, "assets");
             _modRoot = Path.Combine(_root, "mods", "TestMapMod");
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Maps"));
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Navigation"));
-            Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Configs", "Maps"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Maps"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Navigation"));
+            Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Maps"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "terrain"));
 
             string repoRoot = FindRepoRoot();
-            CopyDirectory(Path.Combine(repoRoot, "assets", "Configs"), Path.Combine(_coreRoot, "Configs"));
+            CopyDirectory(Path.Combine(repoRoot, "assets"), _coreRoot);
 
-            string gameConfigPath = Path.Combine(_coreRoot, "Configs", "game.json");
+            string gameConfigPath = Path.Combine(_coreRoot, "game.json");
             JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
                 ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
             gameConfig["startupMapId"] = "outer_map";
@@ -39,7 +39,7 @@ namespace Ludots.Tests.Gas
             gameConfig["gridCellSizeCm"] = 100;
             File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "agent_profiles.json"), """
+            File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "agent_profiles.json"), """
             [
               {
                 "id": "Small",
@@ -54,7 +54,7 @@ namespace Ludots.Tests.Gas
             ]
             """);
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "pathing.json"), """
+            File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "pathing.json"), """
             {
               "agentTypes": [
                 {
@@ -321,7 +321,7 @@ namespace Ludots.Tests.Gas
 
         private void WriteMap(string mapId, string json)
         {
-            File.WriteAllText(Path.Combine(_modRoot, "assets", "Configs", "Maps", $"{mapId}.json"), json);
+            File.WriteAllText(Path.Combine(_modRoot, "assets", "Maps", $"{mapId}.json"), json);
         }
 
         private void WriteHeightmap(string fileName, short heightCm)

@@ -326,19 +326,19 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            string vsPath = Path.Combine(_shaderBaseDirectory, "skybox.vs");
-            string fsPath = Path.Combine(_shaderBaseDirectory, "skybox.fs");
+            string vsPath = Path.Combine(_shaderBaseDirectory, "sky_daynight.vs");
+            string fsPath = Path.Combine(_shaderBaseDirectory, "sky_daynight.fs");
             if (!File.Exists(vsPath))
             {
                 throw new FileNotFoundException(
-                    $"{nameof(RaylibSkyEnvironment)} missing skybox vertex shader at '{vsPath}'.",
+                    $"{nameof(RaylibSkyEnvironment)} missing sky day/night vertex shader at '{vsPath}'.",
                     vsPath);
             }
 
             if (!File.Exists(fsPath))
             {
                 throw new FileNotFoundException(
-                    $"{nameof(RaylibSkyEnvironment)} missing skybox fragment shader at '{fsPath}'.",
+                    $"{nameof(RaylibSkyEnvironment)} missing sky day/night fragment shader at '{fsPath}'.",
                     fsPath);
             }
 
@@ -346,7 +346,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_shader.id == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibSkyEnvironment)} failed to compile skybox shader from '{vsPath}' + '{fsPath}'.");
+                    $"{nameof(RaylibSkyEnvironment)} failed to compile sky day/night shader from '{vsPath}' + '{fsPath}'.");
             }
 
             EnsureShaderLocations();
@@ -374,27 +374,27 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (locVertexPosition < 0)
             {
-                throw new InvalidOperationException("skybox shader is missing attrib 'vertexPosition'.");
+                throw new InvalidOperationException("sky day/night shader is missing attrib 'vertexPosition'.");
             }
 
             if (_locMatView < 0)
             {
-                throw new InvalidOperationException("skybox shader is missing uniform 'matView'.");
+                throw new InvalidOperationException("sky day/night shader is missing uniform 'matView'.");
             }
 
             if (_locMatProjection < 0)
             {
-                throw new InvalidOperationException("skybox shader is missing uniform 'matProjection'.");
+                throw new InvalidOperationException("sky day/night shader is missing uniform 'matProjection'.");
             }
 
             if (_locDayPhase < 0)
             {
-                throw new InvalidOperationException("skybox shader is missing uniform 'uDayPhase'.");
+                throw new InvalidOperationException("sky day/night shader is missing uniform 'uDayPhase'.");
             }
 
             if (locMapAlbedo < 0)
             {
-                throw new InvalidOperationException("skybox shader is missing sampler 'texture0'.");
+                throw new InvalidOperationException("sky day/night shader is missing sampler 'texture0'.");
             }
 
             if (_shader.locs != null)

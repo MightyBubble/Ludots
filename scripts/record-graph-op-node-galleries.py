@@ -33,8 +33,18 @@ def main() -> int:
     parser.add_argument("--build", default="auto", choices=("auto", "always", "never"))
     parser.add_argument(
         "--publish-dir",
-        default="/opt/cursor/artifacts/graph-op-galleries",
-        help="Copy finished play.mp4 here for the cloud artifact viewer.",
+        default=None,
+        help="Copy finished play.mp4 here for the cloud artifact viewer. Skipped when omitted.",
+    )
+    parser.add_argument(
+        "--poster-frame",
+        default="first-settlement",
+        choices=("first-settlement", "last"),
+        help=(
+            "Which still becomes poster.png. first-settlement = second still "
+            "(frame 32: first think beat settled, launch animation done); "
+            "last = legacy loop-tail frame."
+        ),
     )
     args = parser.parse_args()
     repo = Path(args.repo).resolve()
@@ -49,8 +59,9 @@ def main() -> int:
         print("No vignettes to record.", file=sys.stderr)
         return 1
 
-    publish = Path(args.publish_dir)
-    publish.mkdir(parents=True, exist_ok=True)
+    publish = Path(args.publish_dir).resolve() if args.publish_dir else None
+    if publish is not None:
+        publish.mkdir(parents=True, exist_ok=True)
 
     failed: list[str] = []
     build_mode = args.build
@@ -59,7 +70,7 @@ def main() -> int:
         out = repo / "artifacts" / "evidence" / sid
         print(f"[{index + 1}/{len(ops)}] Recording {sid}", flush=True)
         try:
-            record_one(repo, sid, op, out, publish, build_mode)
+            record_one(repo, sid, op, out, publish, build_mode, args.poster_frame)
         except Exception as exc:
             print(f"FAILED {sid}: {exc}", file=sys.stderr, flush=True)
             failed.append(sid)
@@ -81,6 +92,7 @@ def record_one(
     out: Path,
     publish: Path,
     build_mode: str,
+    poster_frame: str = "first-settlement",
 ) -> None:
     if out.exists():
         shutil.rmtree(out)
@@ -88,9 +100,10 @@ def record_one(
     screens.mkdir(parents=True)
     still_path = screens / "still.png"
     env = os.environ.copy()
-    env["DISPLAY"] = ":99"
-    env["LIBGL_ALWAYS_SOFTWARE"] = "1"
-    env["GALLIUM_DRIVER"] = "llvmpipe"
+    if os.name == "posix":
+        env["DISPLAY"] = ":99"
+        env["LIBGL_ALWAYS_SOFTWARE"] = "1"
+        env["GALLIUM_DRIVER"] = "llvmpipe"
     env["LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY"] = "1"
     env["LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY"] = "1"
     env["LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE"] = "immediate"
@@ -156,29 +169,64 @@ def record_one(
     if not play.is_file() or play.stat().st_size < 20_000:
         raise RuntimeError(f"play.mp4 missing or empty: {play}")
 
+    poster_src = (
+        pngs[1] if (poster_frame == "first-settlement" and len(pngs) >= 2) else pngs[-1]
+    )
     poster = out / "poster.png"
-    shutil.copy2(pngs[-1], poster)
+    shutil.copy2(poster_src, poster)
     if not poster.is_file() or poster.stat().st_size < 1_000:
         raise RuntimeError(f"poster.png missing or empty: {poster}")
 
-    dest = publish / f"{op}.mp4"
-    shutil.copy2(play, dest)
-    print(
-        f"  wrote {play} ({play.stat().st_size} bytes), {poster.name}, and {dest}",
-        flush=True,
-    )
+    if publish is not None:
+        dest = publish / f"{op}.mp4"
+        shutil.copy2(play, dest)
+        print(
+            f"  wrote {play} ({play.stat().st_size} bytes), {poster.name}, and {dest}",
+            flush=True,
+        )
+    else:
+        print(
+            f"  wrote {play} ({play.stat().st_size} bytes), {poster.name}",
+            flush=True,
+        )
+
+
+def _pid_alive_windows(pid: int) -> bool:
+    import ctypes
+
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    STILL_ACTIVE = 259
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid)
+    if not handle:
+        # ERROR_ACCESS_DENIED (5): process exists but owned elsewhere.
+        return ctypes.get_last_error() == 5
+    try:
+        exit_code = ctypes.c_ulong()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            return True
+        return exit_code.value == STILL_ACTIVE
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def pid_alive(pid: int) -> bool:
+    if os.name == "nt":
+        return _pid_alive_windows(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def wait_for_pid(pid: int, timeout_s: float) -> None:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
+        if not pid_alive(pid):
             return
-        except PermissionError:
-            time.sleep(0.2)
-            continue
         time.sleep(0.2)
     raise RuntimeError(f"gallery process {pid} did not exit within {timeout_s}s")
 

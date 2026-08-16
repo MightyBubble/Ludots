@@ -1,10 +1,15 @@
-{
-  "id": "showcase.graph_op.LoadContextTargetContext",
-  "kind": "Effect",
-  "entry": "tgtCtx",
-  "nodes": [
-    { "id": "tgtCtx", "op": "LoadContextTargetContext" }
-  ],
-  "controlEdges": [],
-  "valueEdges": []
-}
+[
+  {
+    "id": "showcase.graph_op.LoadContextTargetContext",
+    "kind": "Effect",
+    "entry": "tgtCtx",
+    "nodes": [
+      {
+        "id": "tgtCtx",
+        "op": "LoadContextTargetContext"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

@@ -1,6 +1,6 @@
 # 续一杯歇一口气
 
-每续一口歇一下，茶水一格格涨，水位往上走。
+每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Yield/poster.png" src="artifacts/evidence/capability_standard_graph_op_Yield/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Yield/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 续一杯歇一口气
     Given 玩家打开 capability_standard_graph_op_Yield
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_Yield/play.mp4
     When 短剧演完
-    Then 字幕讲的是「每续一口歇一下，茶水一格格涨，水位往上走。」这类人话
+    Then 字幕讲的是「每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

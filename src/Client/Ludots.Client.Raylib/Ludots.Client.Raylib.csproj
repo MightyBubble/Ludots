@@ -42,14 +42,6 @@
       <Link>vfx_unlit_tint.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\Platforms\Desktop\decal_unlit.vs">
-      <Link>decal_unlit.vs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\Platforms\Desktop\decal_unlit.fs">
-      <Link>decal_unlit.fs</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\Platforms\Desktop\decal_project.vs">
       <Link>decal_project.vs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -72,6 +64,14 @@
     </None>
     <None Include="..\..\Platforms\Desktop\skybox.fs">
       <Link>skybox.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\sky_daynight.vs">
+      <Link>sky_daynight.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\sky_daynight.fs">
+      <Link>sky_daynight.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Resources\ambient_day_ramp.json">

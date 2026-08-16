@@ -92,6 +92,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
+        private readonly List<GpuSkinnedInstanceBatchKey> _idleGpuSkinnedBatchKeys = new(16);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibVfxRenderer _vfxRenderer;
@@ -665,27 +666,46 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void FlushGpuSkinnedInstanceBatches()
         {
-            if (_activeGpuSkinnedInstanceBatches.Count == 0)
+            if (_activeGpuSkinnedInstanceBatches.Count != 0)
             {
-                return;
-            }
-
-            EnsureInitialized();
-            EnsureSkinningShaderInitialized();
-            long drawStart = Stopwatch.GetTimestamp();
-            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
-            {
-                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
-                if (batch.Count == 0)
+                EnsureInitialized();
+                EnsureSkinningShaderInitialized();
+                long drawStart = Stopwatch.GetTimestamp();
+                for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
                 {
-                    continue;
+                    GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                    if (batch.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    LastGpuSkinnedInstances += batch.Count;
+                    LastGpuSkinnedBatches += DrawGpuSkinnedInstanceBatch(batch);
                 }
 
-                LastGpuSkinnedInstances += batch.Count;
-                LastGpuSkinnedBatches += DrawGpuSkinnedInstanceBatch(batch);
+                LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
             }
 
-            LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
+            EvictIdleGpuSkinnedInstanceBatches();
+        }
+
+        private void EvictIdleGpuSkinnedInstanceBatches()
+        {
+            // Batches are only reused when their (mesh, material, color, clip, frame) key reappears
+            // this frame, so entries left at count 0 are dropped to keep the map bounded.
+            _idleGpuSkinnedBatchKeys.Clear();
+            foreach (KeyValuePair<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> pair in _gpuSkinnedInstanceBatches)
+            {
+                if (pair.Value.Count == 0)
+                {
+                    _idleGpuSkinnedBatchKeys.Add(pair.Key);
+                }
+            }
+
+            for (int i = 0; i < _idleGpuSkinnedBatchKeys.Count; i++)
+            {
+                _gpuSkinnedInstanceBatches.Remove(_idleGpuSkinnedBatchKeys[i]);
+            }
         }
 
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)

@@ -1,18 +1,48 @@
-{
-  "id": "showcase.graph_op.WriteBlackboardEntity",
-  "kind": "Effect",
-  "entry": "src",
-  "nodes": [
-    { "id": "src", "op": "LoadContextSource" },
-    { "id": "tgt", "op": "LoadExplicitTarget" },
-    { "id": "writeE", "op": "WriteBlackboardEntity", "blackboardKey": "showcase.bb.named" }
-  ],
-  "controlEdges": [
-    { "from": "src", "fromPort": "next", "to": "tgt" },
-    { "from": "tgt", "fromPort": "next", "to": "writeE" }
-  ],
-  "valueEdges": [
-    { "from": "src", "fromPort": "value", "to": "writeE", "toPort": "source" },
-    { "from": "tgt", "fromPort": "value", "to": "writeE", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.WriteBlackboardEntity",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "tgt",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "writeE",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "showcase.bb.named"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "tgt"
+      },
+      {
+        "from": "tgt",
+        "fromPort": "next",
+        "to": "writeE"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "writeE",
+        "toPort": "source"
+      },
+      {
+        "from": "tgt",
+        "fromPort": "value",
+        "to": "writeE",
+        "toPort": "value"
+      }
+    ]
+  }
+]

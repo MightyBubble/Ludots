@@ -1,15 +1,33 @@
-{
-  "id": "showcase.graph_op.QueryFilterTagAny",
-  "kind": "Query",
-  "entry": "all",
-  "nodes": [
-    { "id": "all", "op": "QueryAllMapEntities" },
-    { "id": "tagAny", "op": "QueryFilterTagAny", "tag": "Enemy" }
-  ],
-  "controlEdges": [
-    { "from": "all", "fromPort": "next", "to": "tagAny" }
-  ],
-  "valueEdges": [
-    { "from": "all", "fromPort": "list", "to": "tagAny", "toPort": "list" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.QueryFilterTagAny",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "tagAny",
+        "op": "QueryFilterTagAny",
+        "tag": "Enemy"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "tagAny"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "tagAny",
+        "toPort": "list"
+      }
+    ]
+  }
+]
