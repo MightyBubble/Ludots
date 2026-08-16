@@ -1769,8 +1769,154 @@ namespace Ludots.Tests.Presentation
             Assert.That(worldPos.Value.X, Is.EqualTo(0.5f).Within(0.001f));
         }
 
+        [Test]
+        public void InstanceBehaviors_OnlyTheDeclaringChildInstanceExecutesThem()
+        {
+            _instanceBehaviorDispatches.Clear();
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            var behaviorKinds = new PresenterBehaviorKindRegistry();
+            int behaviorKindId = behaviorKinds.Register(
+                "ExampleMod.InstanceTick",
+                new PresenterBehaviorExtensionDescriptor(
+                    PresenterBehaviorExecutionLane.ContinuousTick,
+                    RecordInstanceBehaviorDispatch));
+
+            int childDefId = definitions.Register("behavior.instance-child", new PresenterDefinition());
+            int rootDefId = definitions.Register("behavior.instance-root", new PresenterDefinition
+            {
+                Children =
+                [
+                    new ChildPresenterRef
+                    {
+                        DefinitionId = childDefId,
+                        ScopeTag = PresenterScopeTagRegistry.Register("first"),
+                        InstanceOverride = new PresenterChildInstanceOverride
+                        {
+                            InstanceBehaviors =
+                            [
+                                new BehaviorSlot
+                                {
+                                    SlotIndex = 7,
+                                    Kind = BehaviorKind.Extension,
+                                    KindId = behaviorKindId,
+                                    ExtensionLane = PresenterBehaviorExecutionLane.ContinuousTick,
+                                    ActiveByDefault = true,
+                                },
+                            ],
+                        },
+                    },
+                    new ChildPresenterRef
+                    {
+                        DefinitionId = childDefId,
+                        ScopeTag = PresenterScopeTagRegistry.Register("second"),
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity root = instances.CreateHierarchy(
+                definitions, rootDefId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9001, Entity.Null, null);
+            Entity firstChild = world.Get<PresenterChildren>(root).Get(0);
+            Entity secondChild = world.Get<PresenterChildren>(root).Get(1);
+
+            using var system = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer(),
+                extensionBehaviors: behaviorKinds);
+
+            system.Update(0.016f);
+            system.Update(0.016f);
+            system.Update(0.016f);
+
+            Assert.That(_instanceBehaviorDispatches.Count, Is.EqualTo(2));
+            Assert.That(_instanceBehaviorDispatches[0], Is.EqualTo(firstChild));
+            Assert.That(_instanceBehaviorDispatches[1], Is.EqualTo(firstChild));
+            Assert.That(world.Has<PresenterInstanceBehaviors>(secondChild), Is.False);
+            Assert.That(world.Get<PresenterState>(secondChild).DefId, Is.EqualTo(childDefId));
+            Assert.That(definitions.Get(childDefId).Behaviors.Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void InstanceBehaviors_SoundExecutesOnlyOnDeclaringInstance()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+
+            int childDefId = definitions.Register("behavior.instance-sound-child", new PresenterDefinition());
+            int rootDefId = definitions.Register("behavior.instance-sound-root", new PresenterDefinition
+            {
+                Children =
+                [
+                    new ChildPresenterRef
+                    {
+                        DefinitionId = childDefId,
+                        ScopeTag = PresenterScopeTagRegistry.Register("first"),
+                        InstanceOverride = new PresenterChildInstanceOverride
+                        {
+                            InstanceBehaviors =
+                            [
+                                new BehaviorSlot
+                                {
+                                    SlotIndex = 6,
+                                    Kind = BehaviorKind.Sound,
+                                    ActiveByDefault = true,
+                                    Sound = new SoundConfig { SoundAssetId = 55 },
+                                },
+                            ],
+                        },
+                    },
+                    new ChildPresenterRef
+                    {
+                        DefinitionId = childDefId,
+                        ScopeTag = PresenterScopeTagRegistry.Register("second"),
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity root = instances.CreateHierarchy(
+                definitions, rootDefId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9101, Entity.Null, null);
+            Entity firstChild = world.Get<PresenterChildren>(root).Get(0);
+            Entity secondChild = world.Get<PresenterChildren>(root).Get(1);
+
+            var soundRequests = new SoundRequestBuffer();
+            using var system = new PresenterBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                soundRequests);
+
+            system.Update(0.016f);
+
+            ReadOnlySpan<SoundRequest> requests = soundRequests.GetSpan();
+            Assert.That(requests.Length, Is.EqualTo(1));
+            Assert.That(requests[0].SoundAssetId, Is.EqualTo(55));
+            Assert.That(
+                requests[0].StableId,
+                Is.EqualTo(PresenterBehaviorRuntimeUtility.ComposeBehaviorStableId(world.Get<PresenterState>(firstChild).StableId, 6)));
+            Assert.That(world.Has<PresenterInstanceBehaviors>(secondChild), Is.False);
+            Assert.That(definitions.Get(childDefId).Behaviors.Length, Is.EqualTo(0));
+        }
+
         private static int _extensionCommandCalls;
         private static int _extensionBehaviorCalls;
+        private static readonly List<Entity> _instanceBehaviorDispatches = new();
+
+        private static void RecordInstanceBehaviorDispatch(in PresenterBehaviorExecutionContext context)
+        {
+            _instanceBehaviorDispatches.Add(context.Behavior.Presenter);
+        }
 
         private static void CountExtensionCommand(in PresenterCommandExecutionContext context)
         {

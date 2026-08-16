@@ -130,6 +130,7 @@ namespace Ludots.Core.Presentation.Config
                 PresenterDefinition definition = validByKey[key];
                 ValidateRuleReferences(key, definition, validByKey);
                 ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
+                ValidateChildInstanceBehaviorSlots(key, definition, validByKey);
             }
 
             for (int i = 0; i < parsedOrder.Count; i++)
@@ -1655,12 +1656,6 @@ namespace Ludots.Core.Presentation.Config
                         $"{entryContext} uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors'.");
                 }
 
-                if (obj["instanceBehaviors"] != null)
-                {
-                    throw new InvalidOperationException(
-                        $"{entryContext} declares 'instanceBehaviors', but child instance behaviors are not implemented yet.");
-                }
-
                 children[i] = new ChildPresenterRef
                 {
                     DefinitionId = ResolveRequiredPresenterDefinitionId(obj["definitionId"], $"{entryContext}.definitionId"),
@@ -1687,7 +1682,17 @@ namespace Ludots.Core.Presentation.Config
                         $"{entryContext} declares 'instanceChildren', but childrenMode is 'Definition'. Author childrenMode 'Instance'.");
                 }
 
-                return null;
+                if (obj["instanceBehaviors"] == null)
+                {
+                    return null;
+                }
+
+                return new PresenterChildInstanceOverride
+                {
+                    ChildrenMode = PresenterChildrenMode.Definition,
+                    InstanceChildren = Array.Empty<ChildPresenterRef>(),
+                    InstanceBehaviors = ParseChildInstanceBehaviors(obj["instanceBehaviors"], entryContext),
+                };
             }
 
             if (instanceChildrenNode == null)
@@ -1700,7 +1705,45 @@ namespace Ludots.Core.Presentation.Config
             {
                 ChildrenMode = PresenterChildrenMode.Instance,
                 InstanceChildren = ParseChildren(instanceChildrenNode, $"{entryContext}.instanceChildren"),
+                InstanceBehaviors = ParseChildInstanceBehaviors(obj["instanceBehaviors"], entryContext),
             };
+        }
+
+        private BehaviorSlot[] ParseChildInstanceBehaviors(JsonNode? node, string entryContext)
+        {
+            if (node == null)
+            {
+                return Array.Empty<BehaviorSlot>();
+            }
+
+            BehaviorSlot[] behaviors = ParseBehaviors(node, entryContext);
+            ValidateInstanceBehaviorKinds(behaviors, entryContext);
+            return behaviors;
+        }
+
+        private static void ValidateInstanceBehaviorKinds(BehaviorSlot[] behaviors, string entryContext)
+        {
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                bool supported = slot.Kind switch
+                {
+                    BehaviorKind.Material => true,
+                    BehaviorKind.Attachment => true,
+                    BehaviorKind.Grounding => true,
+                    BehaviorKind.Sound => true,
+                    BehaviorKind.Spline => true,
+                    BehaviorKind.Extension => slot.ExtensionLane is PresenterBehaviorExecutionLane.Bootstrap
+                        or PresenterBehaviorExecutionLane.ContinuousTick,
+                    _ => false,
+                };
+
+                if (!supported)
+                {
+                    throw new InvalidOperationException(
+                        $"{entryContext}.instanceBehaviors[{i}] kind '{slot.Kind}' is definition-scoped and cannot attach to a child instance. Instance behaviors support Material, Attachment, Grounding, Sound, Spline, and Extension behaviors on Bootstrap/ContinuousTick lanes.");
+                }
+            }
         }
 
         private ParamDefault[] ParseChildParamOverrides(JsonNode? overridesNode, string entryContext)
@@ -1880,6 +1923,81 @@ namespace Ludots.Core.Presentation.Config
                 path.RemoveAt(path.Count - 1);
                 pathIds.Remove(definition.Id);
             }
+        }
+
+        private static void ValidateChildInstanceBehaviorSlots(
+            string key,
+            PresenterDefinition definition,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            ChildPresenterRef[] children = definition.Children;
+            if (children == null || children.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ValidateInstanceBehaviorSlotsForEntry(key, $"children[{i}]", children[i], parsedByKey);
+            }
+        }
+
+        private static void ValidateInstanceBehaviorSlotsForEntry(
+            string key,
+            string entryContext,
+            in ChildPresenterRef child,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+            if (instanceOverride == null)
+            {
+                return;
+            }
+
+            if (!TryGetDefinitionById(parsedByKey, child.DefinitionId, out PresenterDefinition referenced))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' {entryContext} references definition id={child.DefinitionId} that failed to load.");
+            }
+
+            BehaviorSlot[] instanceBehaviors = instanceOverride.InstanceBehaviors;
+            BehaviorSlot[] referencedBehaviors = referenced.Behaviors;
+            for (int i = 0; i < instanceBehaviors.Length; i++)
+            {
+                int slotIndex = instanceBehaviors[i].SlotIndex;
+                for (int j = 0; j < referencedBehaviors.Length; j++)
+                {
+                    if (referencedBehaviors[j].SlotIndex == slotIndex)
+                    {
+                        throw new InvalidOperationException(
+                            $"Presenter '{key}' {entryContext}.instanceBehaviors[{i}] slot {slotIndex} collides with a behavior slot of referenced definition '{referenced.Key}'. Choose a slot the referenced definition does not use.");
+                    }
+                }
+            }
+
+            ChildPresenterRef[] instanceChildren = instanceOverride.InstanceChildren;
+            for (int i = 0; i < instanceChildren.Length; i++)
+            {
+                ValidateInstanceBehaviorSlotsForEntry(key, $"{entryContext}.instanceChildren[{i}]", instanceChildren[i], parsedByKey);
+            }
+        }
+
+        private static bool TryGetDefinitionById(
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey,
+            int definitionId,
+            out PresenterDefinition definition)
+        {
+            foreach ((string _, PresenterDefinition parsedDefinition) in parsedByKey)
+            {
+                if (parsedDefinition.Id == definitionId)
+                {
+                    definition = parsedDefinition;
+                    return true;
+                }
+            }
+
+            definition = null!;
+            return false;
         }
 
         private static void ValidateRuleReferences(

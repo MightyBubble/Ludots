@@ -220,6 +220,11 @@ namespace Ludots.Core.Presentation.Systems
                     Span<PresenterState> states = chunk.GetSpan<PresenterState>();
                     bool processedChunk = false;
                     bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
+                    if (singleDefinitionChunk && chunk.Has<PresenterInstanceBehaviors>())
+                    {
+                        singleDefinitionChunk = false;
+                    }
+
                     if (singleDefinitionChunk &&
                         _definitions.TryGet(chunkDefId, out PresenterDefinition chunkDefinition))
                     {
@@ -501,7 +506,7 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PresenterWorldPlanePosition> planePositions = chunk.GetSpan<PresenterWorldPlanePosition>();
                 PresenterDefinition? chunkDefinition = null;
                 bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
-                if (singleDefinitionChunk && !_definitions.TryGet(chunkDefId, out chunkDefinition))
+                if (singleDefinitionChunk && (chunk.Has<PresenterInstanceBehaviors>() || !_definitions.TryGet(chunkDefId, out chunkDefinition)))
                 {
                     singleDefinitionChunk = false;
                 }
@@ -647,6 +652,11 @@ namespace Ludots.Core.Presentation.Systems
                         ProcessMaterialBehaviors(entity, in state, definition);
                     }
 
+                    if (World.Has<PresenterInstanceBehaviors>(entity))
+                    {
+                        ApplyInstanceMaterialBehaviors(entity, in state);
+                    }
+
                     _materialDirtyClearList.Add(entity);
                 }
             }
@@ -741,6 +751,10 @@ namespace Ludots.Core.Presentation.Systems
 
             Entity owner = state.OwnerEntity;
             BehaviorSlot[] behaviors = definition.Behaviors;
+            bool hasInstanceBehaviors = World.Has<PresenterInstanceBehaviors>(entity);
+            PresenterInstanceBehaviors instanceBehaviors = hasInstanceBehaviors
+                ? World.Get<PresenterInstanceBehaviors>(entity)
+                : default;
             ResolveDefaultTransformSource(entity, ref state);
             if (!tickDrivenOnly)
             {
@@ -758,7 +772,7 @@ namespace Ludots.Core.Presentation.Systems
                 ApplyOwnerFacingBindings(entity, owner, definition);
             }
 
-            bool hasSoundBehavior = definition.HasSoundBehavior;
+            bool hasSoundBehavior = definition.HasSoundBehavior || (hasInstanceBehaviors && instanceBehaviors.HasSound);
             if (hasSoundBehavior)
             {
                 HandleReusedSoundSlot(entity, in state, behaviors);
@@ -831,9 +845,72 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
+            if (hasInstanceBehaviors)
+            {
+                BehaviorSlot[] instanceSlots = instanceBehaviors.Slots;
+                for (int i = 0; i < instanceSlots.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref instanceSlots[i];
+                    if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        continue;
+                    if (tickDrivenOnly)
+                    {
+                        switch (slot.Kind)
+                        {
+                            case BehaviorKind.Attachment:
+                                ApplyAttachment(entity, in slot.Attachment);
+                                break;
+                            case BehaviorKind.Grounding:
+                                if (!skipGroundingBehaviors)
+                                {
+                                    ApplyGrounding(entity, in slot.Grounding);
+                                }
+                                break;
+                            case BehaviorKind.Sound:
+                                ApplySound(entity, in state, slot);
+                                currentSoundMask |= 1u << slot.SlotIndex;
+                                break;
+                            case BehaviorKind.Spline:
+                                ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        switch (slot.Kind)
+                        {
+                            case BehaviorKind.Material:
+                                ApplyMaterialBinding(entity, slot.Material);
+                                break;
+                            case BehaviorKind.Attachment:
+                                ApplyAttachment(entity, in slot.Attachment);
+                                break;
+                            case BehaviorKind.Grounding:
+                                if (!skipGroundingBehaviors)
+                                {
+                                    ApplyGrounding(entity, in slot.Grounding);
+                                }
+                                break;
+                            case BehaviorKind.Sound:
+                                ApplySound(entity, in state, slot);
+                                currentSoundMask |= 1u << slot.SlotIndex;
+                                break;
+                            case BehaviorKind.Spline:
+                                ApplySpline(entity, ref state, slot.Spline, tickDt);
+                                break;
+                        }
+                    }
+                }
+            }
+
             if (hasSoundBehavior)
             {
                 StopInactiveSounds(entity, in state, behaviors, currentSoundMask);
+                if (hasInstanceBehaviors)
+                {
+                    StopInactiveSounds(entity, in state, instanceBehaviors.Slots, currentSoundMask);
+                }
+
                 if (currentSoundMask != 0u)
                 {
                     _soundTracking[entity.Id] = new SoundTrackingState
@@ -860,6 +937,18 @@ namespace Ludots.Core.Presentation.Systems
                     PresenterBehaviorExecutionLane.ContinuousTick,
                     firstFrame: false,
                     tickDt);
+                if (hasInstanceBehaviors)
+                {
+                    ProcessExtensionBehaviors(
+                        entity,
+                        in state,
+                        definition,
+                        instanceBehaviors.Slots,
+                        instanceBehaviors.ExtensionTickIndices,
+                        PresenterBehaviorExecutionLane.ContinuousTick,
+                        firstFrame: false,
+                        tickDt);
+                }
             }
             else if (firstFrame)
             {
@@ -872,6 +961,18 @@ namespace Ludots.Core.Presentation.Systems
                     PresenterBehaviorExecutionLane.Bootstrap,
                     firstFrame: true,
                     tickDt);
+                if (hasInstanceBehaviors)
+                {
+                    ProcessExtensionBehaviors(
+                        entity,
+                        in state,
+                        definition,
+                        instanceBehaviors.Slots,
+                        instanceBehaviors.ExtensionBootstrapIndices,
+                        PresenterBehaviorExecutionLane.Bootstrap,
+                        firstFrame: true,
+                        tickDt);
+                }
             }
         }
 
@@ -885,7 +986,7 @@ namespace Ludots.Core.Presentation.Systems
             bool firstFrame,
             float tickDt)
         {
-            if (!definition.HasExtensionBehavior || behaviors == null || indices == null || indices.Length == 0)
+            if (behaviors == null || indices == null || indices.Length == 0)
             {
                 return;
             }
@@ -963,6 +1064,19 @@ namespace Ludots.Core.Presentation.Systems
 
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
                 if (IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    ApplyMaterialBinding(entity, slot.Material);
+                }
+            }
+        }
+
+        private void ApplyInstanceMaterialBehaviors(Entity entity, in PresenterState state)
+        {
+            BehaviorSlot[] instanceSlots = World.Get<PresenterInstanceBehaviors>(entity).Slots;
+            for (int i = 0; i < instanceSlots.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref instanceSlots[i];
+                if (slot.Kind == BehaviorKind.Material && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                 {
                     ApplyMaterialBinding(entity, slot.Material);
                 }

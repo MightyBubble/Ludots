@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Presenters
     {
         public PresenterChildrenMode ChildrenMode = PresenterChildrenMode.Definition;
         public ChildPresenterRef[] InstanceChildren = System.Array.Empty<ChildPresenterRef>();
+        public BehaviorSlot[] InstanceBehaviors = System.Array.Empty<BehaviorSlot>();
     }
 
     public struct ChildPresenterRef
