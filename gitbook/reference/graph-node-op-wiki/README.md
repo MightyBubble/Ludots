@@ -8,11 +8,11 @@
 
 - [从观众自己看](LoadViewer.md) — 镜头和观众实体被读出，字幕说从自己这侧看。
 - [吸到花名册里最近的人](SnapToNearestInCollection.md) — 落点吸到最近单位身上。
-- [吸到路上最近的边](SnapToNearestGraphEdge.md) — 落点吸到路网边上。
 - [打出一记并广播出去](SendEvent.md) — 木桩挨打，同时这件事被广播给听事件的人。
 - [找出谁说了算](ControlDomainResolve.md) — 单位归属到控制域代表，字幕说了算的是队长。
 - [按预设把效果派给圈里的人](FanOutDispatchEffect.md) — 圈中单位同时挨打、挂上派发出来的状态。
 - [模板号读出来再派发](FanOutDispatchEffectDynamic.md) — 先从事件里读出模板号，再按这个号把效果扇出给圈里的人。
+- [离路太远就拽回路边](SnapToNearestGraphEdge.md) — X 从半空掉到路上，原位留下残影。
 - [落点拉回够得着的地方](ClampTargetToRange.md) — 点太远会被拉回射程圈内。
 - [观众知不知道那个人](KnowledgeHasProjection.md) — 观众对木桩有知识投影就显示看得见。
 - [读出事件里的小数](LoadEventPayloadFloat.md) — 事件带来的小数载荷显示在字幕。
@@ -30,14 +30,14 @@
 - [好感落在区间里的人](RelationshipFilterMetricRange.md) — 只留好感 30~80 的。
 - [我主动交的朋友](RelationshipQueryOutgoing.md) — 从自己出发的链，亮出那些朋友。
 - [我们有没有连着](RelationshipHasLink.md) — 有链显示连着，无链显示没连。
-- [打上失和标记](RelationshipSetFlag.md) — 断链或失和后插上失和旗。
+- [打上失和标记](RelationshipSetFlag.md) — 最弱那条链上插起失和旗。
 - [把好感加总](RelationshipAggSumMetric.md) — 字幕报好感总和。
 - [把最弱的那条链拆掉](RelationshipRemoveLink.md) — 好感最低的朋友断链，条掉光、人变灰。
 - [按好感排个序](RelationshipSortByMetric.md) — 最高好感排前面，字幕点名第一。
 - [最低好感是多少](RelationshipAggMinMetric.md) — 最弱那条。
 - [最高好感是多少](RelationshipAggMaxMetric.md) — 字幕报最高值，对应的人条最满。
 - [读出这个人的好感](RelationshipGetMetric.md) — 点名好友，字幕和好感条显示读到的数。
-- [谁把我当朋友](RelationshipQueryIncoming.md) — 指向自己的链，亮出那些把我当朋友的人。
+- [谁把我当朋友](RelationshipQueryIncoming.md) — 箭头指着自己的链亮。
 - [谁是好感最低的人](RelationshipAggMinEntityByMetric.md) — 最弱的人被点名。
 - [谁是好感最高的人](RelationshipAggMaxEntityByMetric.md) — 那个人被点名高亮。
 - [这两人之间有没有链](RelationshipQueryBetweenPair.md) — 自己和某好友之间查到链。
@@ -51,7 +51,7 @@
 - [平均生命多少](AggAverageAttribute.md) — 字幕报平均。
 - [把场上的人都找出来](QueryAllMapEntities.md) — 全图搜到一圈人，字幕报人数。
 - [把生命加总](AggSumAttribute.md) — 字幕报生命总和。
-- [按生命排个序](QuerySortByAttribute.md) — 血最多的排前面。
+- [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
 - [最低生命是多少](AggMinAttribute.md) — 最低值。
 - [最高生命是多少](AggMaxAttribute.md) — 最高值+对应人高亮。
 - [没有阵亡标记的人](QueryFilterTagNone.md) — 死掉的被滤掉。
@@ -70,7 +70,7 @@
 - [有条件就换目标](SelectEntity.md) — 条件成立时改打木桩，不成立打自己。
 - [直接扣血](ModifyAttributeAdd.md) — 不绕圈子，木桩血条按加算结果往下掉。
 - [看自己还剩多少血](LoadSelfAttribute.md) — 不靠情境，施法者读自己生命，字幕报出。
-- [给木桩挂上状态](ApplyEffectTemplate.md) — 木桩被挂上一层可见状态，字幕说挂上了标记。
+- [给木桩挂上看得见的状态](ApplyEffectTemplate.md) — 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 - [给自己回一口](WriteSelfAttribute.md) — 施法者血从 60 写回 90，金块血条涨上去。
 - [血量够不够打全力](CompareLtInt.md) — 木桩血低于 80 就打全力，否则轻击。
 - [认出自己](LoadCaster.md) — 图从施法者自己读起，确认出手的人是台上这个金块。
@@ -97,7 +97,7 @@
 - [两刀取更大的那一刀](MaxFloat.md) — 左边 12、右边 28，打出去的是更大的 28。
 - [两刀取更小的那一刀](MinFloat.md) — 左边 30、右边 18，打出去的是更小的 18。
 - [两段伤害叠在一起](AddFloat.md) — 左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。
-- [伤害乘倍率](MulFloat.md) — 基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
+- [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
 - [伤害钳在上下限里](ClampFloat.md) — 算出来 90，但这一刀最多 40、最少 10，头顶那根条按钳住后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
 - [写死的一刀](ConstFloat.md) — 这一刀不读装备、不算距离，算式写死是 42。头顶示意条变成这个数，不是结算出来的伤。
 - [减益翻成正数](NegFloat.md) — 减益 -8 翻成 +8 再打出去。
@@ -132,7 +132,7 @@
 - [把数字挪到下一个格子](MoveInt.md) — 3 被挪到结果槽，字幕报 3。
 - [没满就再续一杯](JumpIfFalse.md) — 茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。
 - [算出一个整数就收工](HaltReturnInt.md) — 管线算出 7 就停，字幕报 7。
-- [续一杯歇一口气](Yield.md) — 每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。
+- [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 - [跳过这一口](Jump.md) — 茶杯已经满了，直接跳到收束，不再续杯。
 
 ## 黑板与配置
@@ -146,7 +146,7 @@
 - [从记事板读出点名的人](ReadBlackboardEntity.md) — 板上记着木桩，读出来锁定他。
 - [从配置读出要放的效果](LoadConfigEffectId.md) — 配置指着某效果再打出去。
 - [开一笔生命周期事务](BeginLifecycleTransaction.md) — 先开账再做事，字幕说事务已开。
-- [把威力写到记事板](WriteBlackboardFloat.md) — 算完 35 写上去，下一眼能读到。
 - [把层数写到记事板](WriteBlackboardInt.md) — 记下 4 层。
 - [把点名的人写到记事板](WriteBlackboardEntity.md) — 木桩被记到板上。
+- [把这一拳的威力记上板](WriteBlackboardFloat.md) — 35 落进威力格，格子亮了。
 - [跑一个内置步骤](InvokeBuiltin.md) — 事务里先生成新身体，再清掉新身体上的残留效果。

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.GAS;
@@ -27,6 +28,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
     private int _stacksKey;
     private int _namedKey;
     private bool _seeded;
+    private float _writtenPower;
+    private bool _powerWriteVerified;
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
@@ -79,12 +82,71 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
+        if (ctx.Vignette.Op is "WriteBlackboardFloat")
+        {
+            DrawPowerBoard(ctx, debugDraw, caster);
+            return;
+        }
+
         GraphShowcaseStagePresenter.DrawAggroLine(
             debugDraw,
             ctx.Vignette.Actors[caster].X,
             ctx.Vignette.Actors[caster].Y,
             ctx.Vignette.Actors[target].X,
             ctx.Vignette.Actors[target].Y);
+    }
+
+    /// <summary>
+    /// Three-slot memo board at the caster's right hand (power / stacks / named); this op fills only
+    /// the power slot, with the written value dashed in from the hand and a check once read-back passes.
+    /// </summary>
+    private void DrawPowerBoard(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        const float boardWidth = 1.6f;
+        const float boardHeight = 2.4f;
+        GraphOpsNodeActor actor = ctx.Vignette.Actors[caster];
+        float boardX = actor.X + 2.1f;
+        float boardY = actor.Y + 1.6f;
+
+        GraphShowcaseStagePresenter.DrawPanelBox(
+            debugDraw, boardX, boardY, boardWidth, boardHeight, slots: 3, GraphShowcaseStagePresenter.GateColor);
+
+        float powerSlotCenterY = boardY + boardHeight / 3f;
+        GraphShowcaseStagePresenter.DrawDashedDirectedLine(
+            debugDraw,
+            actor.X + 0.4f,
+            actor.Y + 0.6f,
+            boardX - boardWidth * 0.5f,
+            powerSlotCenterY,
+            0.06f,
+            GraphShowcaseStagePresenter.CasterColor,
+            arrowStart: false);
+
+        if (!_powerWriteVerified)
+        {
+            return;
+        }
+
+        GraphShowcaseStagePresenter.DrawNumber(
+            debugDraw, boardX + 0.35f, boardY + boardHeight * 0.5f + 0.35f, (int)_writtenPower, 0.5f, GraphShowcaseStagePresenter.CasterColor);
+        if (ctx.Wave % 2 == 0)
+        {
+            debugDraw.Boxes.Add(new DebugDrawBox2D
+            {
+                Center = new System.Numerics.Vector2(boardX, powerSlotCenterY),
+                HalfWidth = boardWidth * 0.5f - 0.1f,
+                HalfHeight = boardHeight / 6f - 0.08f,
+                Thickness = 0.08f,
+                Color = GraphShowcaseStagePresenter.CasterColor
+            });
+        }
+
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            boardX + boardWidth * 0.5f + 0.35f,
+            boardY + boardHeight * 0.5f + 0.1f,
+            GraphShowcaseStagePresenter.BadgeKind.Check,
+            DebugDrawColor.Green);
     }
 
     private void SeedBlackboard(GraphOpsNodeDriverContext ctx)
@@ -133,6 +195,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             case "WriteBlackboardFloat":
                 float writtenPower = ReadFloat(ctx, ctx.Caster, _powerKey);
                 RequireNonZeroFloat(ctx, writtenPower, "记下威力");
+                _writtenPower = writtenPower;
+                _powerWriteVerified = true;
                 break;
             case "WriteBlackboardInt":
                 int writtenStacks = ReadInt(ctx, ctx.Caster, _stacksKey);

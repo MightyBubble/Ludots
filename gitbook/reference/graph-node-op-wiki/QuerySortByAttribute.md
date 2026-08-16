@@ -1,6 +1,6 @@
-# 按生命排个序
+# 按血量从厚到薄排队
 
-血最多的排前面。
+最厚的顶着三道杠，箭头顺着血条一路排下去。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按生命从高到低排，最前面是{label}，生命{hp}。
+> 头名{label}血{hp}顶着三道杠，箭头一路指向更薄的血条。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 按生命排个序
+Feature: 按血量从厚到薄排队
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QuerySortByAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QuerySortByAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「血最多的排前面。」这类人话
+    Then 字幕讲的是「最厚的顶着三道杠，箭头顺着血条一路排下去。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

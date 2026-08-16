@@ -844,8 +844,8 @@
       "id": "capability_standard_graph_op_ApplyEffectTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyEffectTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpApplyEffectTemplateEntryMod.csproj",
-      "title": "给木桩挂上状态",
-      "summary": "木桩被挂上一层可见状态，字幕说挂上了标记。",
+      "title": "给木桩挂上看得见的状态",
+      "summary": "红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2113,8 +2113,8 @@
       "id": "capability_standard_graph_op_MulFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMulFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpMulFloatEntryMod.csproj",
-      "title": "伤害乘倍率",
-      "summary": "基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
+      "title": "伤害拉长一半",
+      "summary": "20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2653,8 +2653,8 @@
       "id": "capability_standard_graph_op_QuerySortByAttribute",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpQuerySortByAttributeEntryMod",
       "projectPath": "CapabilityStandardGraphOpQuerySortByAttributeEntryMod.csproj",
-      "title": "按生命排个序",
-      "summary": "血最多的排前面。",
+      "title": "按血量从厚到薄排队",
+      "summary": "最厚的顶着三道杠，箭头顺着血条一路排下去。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3194,7 +3194,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryIncomingEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipQueryIncomingEntryMod.csproj",
       "title": "谁把我当朋友",
-      "summary": "指向自己的链，亮出那些把我当朋友的人。",
+      "summary": "箭头指着自己的链亮。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3302,7 +3302,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSetFlagEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipSetFlagEntryMod.csproj",
       "title": "打上失和标记",
-      "summary": "断链或失和后插上失和旗。",
+      "summary": "最弱那条链上插起失和旗。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3517,8 +3517,8 @@
       "id": "capability_standard_graph_op_SnapToNearestGraphEdge",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSnapToNearestGraphEdgeEntryMod",
       "projectPath": "CapabilityStandardGraphOpSnapToNearestGraphEdgeEntryMod.csproj",
-      "title": "吸到路上最近的边",
-      "summary": "落点吸到路网边上。",
+      "title": "离路太远就拽回路边",
+      "summary": "X 从半空掉到路上，原位留下残影。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3652,8 +3652,8 @@
       "id": "capability_standard_graph_op_WriteBlackboardFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteBlackboardFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpWriteBlackboardFloatEntryMod.csproj",
-      "title": "把威力写到记事板",
-      "summary": "算完 35 写上去，下一眼能读到。",
+      "title": "把这一拳的威力记上板",
+      "summary": "35 落进威力格，格子亮了。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3733,8 +3733,8 @@
       "id": "capability_standard_graph_op_Yield",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
       "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj",
-      "title": "续一杯歇一口气",
-      "summary": "每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。",
+      "title": "续一杯，歇一口气",
+      "summary": "每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。",
       "tier": "T2",
       "category": "capability",
       "tags": [

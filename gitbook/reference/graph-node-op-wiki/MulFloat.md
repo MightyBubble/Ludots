@@ -1,6 +1,6 @@
-# 伤害乘倍率
+# 伤害拉长一半
 
-基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
+20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_MulFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 乘过倍率后这一刀是 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
+> 拉长后的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 伤害乘倍率
+Feature: 伤害拉长一半
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_MulFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_MulFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「基础伤害再乘 1.5 倍，头顶那根条按放大后的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

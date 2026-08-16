@@ -73,6 +73,19 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
+        if (GraphNodeOpParser.TryParse(ctx.Vignette.Op, out GraphNodeOp op))
+        {
+            switch (op)
+            {
+                case GraphNodeOp.RelationshipQueryIncoming:
+                    DrawIncomingOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipSetFlag:
+                    DrawSetFlagOverlay(ctx, debugDraw, caster);
+                    return;
+            }
+        }
+
         GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
         for (int i = 0; i < _friends.Length; i++)
         {
@@ -89,6 +102,78 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
                 actors[actorIndex].X,
                 actors[actorIndex].Y);
         }
+    }
+
+    private void DrawIncomingOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        GraphOpsNodeLink[] links = ctx.Vignette.Links;
+        for (int i = 0; i < links.Length; i++)
+        {
+            int from = GraphOpsNodeActorBinding.IndexOfId(ctx.Vignette, links[i].From);
+            int to = GraphOpsNodeActorBinding.IndexOfId(ctx.Vignette, links[i].To);
+            GraphShowcaseStagePresenter.DrawDashedDirectedLine(
+                debugDraw,
+                actors[from].X,
+                actors[from].Y,
+                actors[to].X,
+                actors[to].Y,
+                0.08f,
+                GraphShowcaseStagePresenter.GhostColor);
+        }
+
+        for (int i = 0; i < ctx.HitTargetCount; i++)
+        {
+            int hit = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.HitTargets[i]);
+            if (hit < 0 || hit == caster)
+            {
+                continue;
+            }
+
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[hit].X,
+                actors[hit].Y,
+                actors[caster].X,
+                actors[caster].Y,
+                0.14f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+    }
+
+    private void DrawSetFlagOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        if (ctx.Target == Entity.Null ||
+            !ctx.Relationships!.HasFlag(ctx.Caster, ctx.Target, _socialBondTypeId, _estrangedFlagId))
+        {
+            return;
+        }
+
+        int target = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.Target);
+        if (target < 0)
+        {
+            return;
+        }
+
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        float ax = actors[caster].X;
+        float ay = actors[caster].Y;
+        float bx = actors[target].X;
+        float by = actors[target].Y;
+        GraphShowcaseStagePresenter.DrawDirectedLine(
+            debugDraw,
+            ax,
+            ay,
+            bx,
+            by,
+            0.12f,
+            GraphShowcaseStagePresenter.SentryIdle);
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            (ax + bx) * 0.5f,
+            (ay + by) * 0.5f,
+            GraphShowcaseStagePresenter.BadgeKind.Flag,
+            GraphShowcaseStagePresenter.EnemyColor);
     }
 
     private void CollectFriends(GraphOpsNodeDriverContext ctx)

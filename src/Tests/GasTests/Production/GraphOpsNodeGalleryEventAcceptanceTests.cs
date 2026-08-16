@@ -95,7 +95,7 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
     {
         using var runtime = BindAndTick("SnapToNearestGraphEdge");
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("吸到路上最近的边"));
+        Assert.That(runtime.Title, Is.EqualTo("离路太远就拽回路边"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("路边"));
     }
 

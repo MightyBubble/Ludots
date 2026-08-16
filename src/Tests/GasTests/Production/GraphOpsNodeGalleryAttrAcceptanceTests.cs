@@ -96,7 +96,9 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
         runtime.Tick(0.35f);
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("给木桩挂上看得见的状态"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("挂上"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("血量"));
         Assert.That(runtime.Driver, Is.TypeOf<AttrNodeDriver>());
         Assert.That(((AttrNodeDriver)runtime.Driver).PendingEffectRequests, Is.EqualTo(0));
 

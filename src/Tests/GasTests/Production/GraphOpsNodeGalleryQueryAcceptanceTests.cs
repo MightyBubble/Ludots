@@ -1,6 +1,7 @@
 using System;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
+using Ludots.Core.Presentation.DebugDraw;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -78,6 +79,17 @@ public sealed class GraphOpsNodeGalleryQueryAcceptanceTests
         Assert.That(driver.StrongestIndex, Is.GreaterThanOrEqualTo(0));
         Assert.That(driver.StrongestIndex, Is.LessThan(driver.UnitCount));
         Assert.That(driver.LastTargetCount, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void SortByAttribute_OverlayCrownsTopThreeWithRankPipsAndCommanderArrow()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("QuerySortByAttribute");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(runtime.Title, Is.EqualTo("按血量从厚到薄排队"));
+        Assert.That(debugDraw.Boxes.Count, Is.GreaterThanOrEqualTo(6), "top three ranks wear 3+2+1 pips over their heads");
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "commander seat must aim a bright arrow at the champion's head");
     }
 
     [Test]

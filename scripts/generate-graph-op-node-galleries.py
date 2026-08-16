@@ -142,7 +142,7 @@ def write_map(
         "Id": map_id,
         "Tags": MAP_TAGS,
         "DefaultCamera": {
-            "VirtualCameraId": cam.get("virtualCameraId", "Camera.Profile.Tactical"),
+            "VirtualCameraId": cam.get("virtualCameraId", "Camera.Profile.GraphOpsGallery"),
             "TargetXCm": int(cam.get("targetXCm", 0)),
             "TargetYCm": int(cam.get("targetYCm", 0)),
             "DistanceCm": int(cam.get("distanceCm", 2600)),

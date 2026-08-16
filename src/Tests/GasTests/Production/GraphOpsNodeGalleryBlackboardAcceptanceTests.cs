@@ -29,9 +29,19 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
     {
         using var write = TickOp("WriteBlackboardFloat");
         AssertBannedPlayerCopy(write);
+        Assert.That(write.Title, Is.EqualTo("把这一拳的威力记上板"));
         Assert.That(write.Metrics.Detail, Does.Contain("记下"));
         Assert.That(write.Metrics.Detail, Does.Contain("35"));
         Assert.That(write.Context.ActorHealth[1], Is.EqualTo(write.Vignette.Actors[1].Health).Within(0.01f));
+
+        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        write.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "write board must draw the dashed hand-to-slot line");
+
+        write.Tick(0.35f);
+        debugDraw.Clear();
+        write.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Boxes.Count, Is.GreaterThan(0), "write board must blink the power slot highlight on even waves");
 
         using var read = TickOp("ReadBlackboardFloat");
         AssertBannedPlayerCopy(read);

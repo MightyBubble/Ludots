@@ -69,7 +69,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         }
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("续一杯歇一口气"));
+        Assert.That(runtime.Title, Is.EqualTo("续一杯，歇一口气"));
         Assert.That(runtime.Context.ActorHealth[0], Is.EqualTo(opening).Within(0.01f));
         Assert.That(int.Parse(runtime.Context.CaptionValues["water"]), Is.GreaterThan(0));
         Assert.That(runtime.Metrics.Detail, Does.Contain("茶水"));

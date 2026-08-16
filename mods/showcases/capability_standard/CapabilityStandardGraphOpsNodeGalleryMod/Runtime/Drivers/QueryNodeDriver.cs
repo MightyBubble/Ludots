@@ -12,6 +12,9 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
     public const string SquadCollectionKey = GraphOpsNodeGalleryHost.SquadCollectionKey;
     public const float ResidualHealthMax = 40f;
 
+    // Head-top anchor: 0.85m unit radius plus clearance so pips clear both the roster circle and the health bar.
+    private const float HeadTopYOffset = 1.2f;
+
     private Entity[] _units = Array.Empty<Entity>();
     private byte[] _unitInRange = Array.Empty<byte>();
     private bool _seeded;
@@ -63,6 +66,12 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
+        if (string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.QuerySortByAttribute), StringComparison.Ordinal))
+        {
+            DrawSortRankOverlay(ctx, debugDraw, caster);
+            return;
+        }
+
         float casterX = ctx.Vignette.Actors[caster].X;
         float casterY = ctx.Vignette.Actors[caster].Y;
         for (int i = 0; i < _units.Length; i++)
@@ -102,6 +111,41 @@ public sealed class QueryNodeDriver : IGraphOpsNodeDriver
                 casterY,
                 ctx.Vignette.Actors[actorIndex].X,
                 ctx.Vignette.Actors[actorIndex].Y);
+        }
+    }
+
+    private void DrawSortRankOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        int ranked = Math.Min(3, ctx.HitTargetCount);
+        for (int i = 0; i < ranked; i++)
+        {
+            int actorIndex = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.HitTargets[i]);
+            if (actorIndex < 0)
+            {
+                continue;
+            }
+
+            // Rank 1 wears three chevrons; pip count descends with rank so the caption's 三道杠 stays honest.
+            float headX = actors[actorIndex].X;
+            float headY = actors[actorIndex].Y + HeadTopYOffset;
+            GraphShowcaseStagePresenter.DrawRankPips(
+                debugDraw,
+                headX,
+                headY,
+                3 - i,
+                GraphShowcaseStagePresenter.SentryAlert);
+            if (i == 0)
+            {
+                GraphShowcaseStagePresenter.DrawDirectedLine(
+                    debugDraw,
+                    actors[caster].X,
+                    actors[caster].Y,
+                    headX,
+                    headY,
+                    0.14f,
+                    GraphShowcaseStagePresenter.SentryAlert);
+            }
         }
     }
 

@@ -57,10 +57,31 @@ public sealed class GraphOpsNodeGalleryFloatAcceptanceTests
     [Test]
     public void CompareGtFloat_CriticalCheckHolds()
     {
-        using GraphOpsNodeGalleryRuntime runtime = Play("CompareGtFloat");
+        using var runtime = Play("CompareGtFloat");
         Assert.That(runtime.Metrics.Detail, Does.Contain("暴击"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("成立"));
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
+    }
+
+    [Test]
+    public void MulFloat_SettlesRealWorldDamageThroughGraphTail()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("MulFloat");
+        runtime.EnsureWorld();
+        float before = runtime.Context.ActorHealth[1];
+        runtime.Tick(0.35f);
+
+        AssertBannedPlayerCopy(runtime.Metrics.Detail);
+        Assert.That(runtime.Title, Is.EqualTo("伤害拉长一半"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("拉长"));
+        Assert.That(runtime.Metrics.Detail, Does.Contain("30"));
+        Assert.That(before, Is.EqualTo(100f).Within(0.01f));
+        Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(70f).Within(0.01f));
+
+        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "settle bench must draw the stretched-damage track");
     }
 
     [Test]

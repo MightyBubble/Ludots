@@ -11,6 +11,10 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
 {
     public const string MarkEffectId = "Effect.GraphOpsAttr.Mark";
 
+    private const float MarkHaloRadius = 0.9f;
+    private const float MarkBadgeLift = 2.4f;
+    private static readonly DebugDrawColor MarkViolet = new(198, 0, 255);
+
     private int _markTemplateId;
     private Entity _seededMark = Entity.Null;
 
@@ -81,6 +85,56 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             ctx.Vignette.Actors[caster].Y,
             ctx.Vignette.Actors[target].X,
             ctx.Vignette.Actors[target].Y);
+        DrawLiveMark(ctx, debugDraw, target);
+    }
+
+    private void DrawLiveMark(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int targetIndex)
+    {
+        if (!TargetHasLiveMark(ctx))
+        {
+            return;
+        }
+
+        GraphOpsNodeActor target = ctx.Vignette.Actors[targetIndex];
+        GraphShowcaseStagePresenter.DrawThickOutlineCircle(
+            debugDraw,
+            target.X,
+            target.Y,
+            MarkHaloRadius,
+            GraphShowcaseStagePresenter.OutlineDark,
+            MarkViolet);
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            target.X,
+            target.Y + MarkBadgeLift,
+            GraphShowcaseStagePresenter.BadgeKind.Diamond,
+            MarkViolet);
+    }
+
+    private bool TargetHasLiveMark(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Target == Entity.Null ||
+            !ctx.SimWorld.IsAlive(ctx.Target) ||
+            !ctx.SimWorld.Has<ActiveEffectContainer>(ctx.Target))
+        {
+            return false;
+        }
+
+        ActiveEffectContainer container = ctx.SimWorld.Get<ActiveEffectContainer>(ctx.Target);
+        for (int i = 0; i < container.Count; i++)
+        {
+            Entity effect = container.GetEntity(i);
+            if (ctx.SimWorld.IsAlive(effect) &&
+                ctx.SimWorld.Has<GameplayEffect>(effect) &&
+                !ctx.SimWorld.Get<GameplayEffect>(effect).CancelRequested &&
+                ctx.SimWorld.Has<EffectTemplateRef>(effect) &&
+                ctx.SimWorld.Get<EffectTemplateRef>(effect).TemplateId == _markTemplateId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void EnsureMarkOnTarget(GraphOpsNodeDriverContext ctx)

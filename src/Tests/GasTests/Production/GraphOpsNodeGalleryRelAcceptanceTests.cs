@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
+using Ludots.Core.Presentation.DebugDraw;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -78,6 +79,60 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
         using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggMaxEntityByMetric");
         Assert.That(runtime.Metrics.Detail, Does.Contain("最高的人"));
         AssertBannedEnglish(runtime.Metrics.Detail);
+    }
+
+    [Test]
+    public void QueryIncoming_OverlayDrawsGrayFieldThenYellowArrowsPointingAtMe()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipQueryIncoming");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int gray = 0;
+        int yellow = 0;
+        CountLineColors(debugDraw, DebugDrawColor.Gray, ref gray, DebugDrawColor.Yellow, ref yellow);
+        Assert.That(gray, Is.GreaterThan(0), "incoming overlay must keep the whole gray dashed field of chains");
+        Assert.That(yellow, Is.GreaterThan(0), "incoming overlay must light the chains whose arrows point at me");
+    }
+
+    [Test]
+    public void SetFlag_OverlayPlantsFlagBadgeOnlyAfterTheGraphPlantsIt()
+    {
+        var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("RelationshipSetFlag");
+        runtime.EnsureWorld();
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.EqualTo(0), "flag badge must not draw before the graph really plants Estranged");
+
+        runtime.Tick(0.35f);
+        debugDraw.Clear();
+        runtime.DrawOverlay(debugDraw);
+        int cyan = 0;
+        int red = 0;
+        CountLineColors(debugDraw, DebugDrawColor.Cyan, ref cyan, DebugDrawColor.Red, ref red);
+        Assert.That(cyan, Is.GreaterThan(0), "planted estranged chain must draw as a cyan directed line");
+        Assert.That(red, Is.GreaterThanOrEqualTo(3), "flag badge glyph needs its pole plus two cloth edges");
+    }
+
+    private static void CountLineColors(
+        DebugDrawCommandBuffer debugDraw,
+        DebugDrawColor first,
+        ref int firstCount,
+        DebugDrawColor second,
+        ref int secondCount)
+    {
+        foreach (DebugDrawLine2D line in debugDraw.Lines)
+        {
+            if (line.Color.Equals(first))
+            {
+                firstCount++;
+            }
+
+            if (line.Color.Equals(second))
+            {
+                secondCount++;
+            }
+        }
     }
 
     [TestCaseSource(nameof(RelFamilyOps))]
