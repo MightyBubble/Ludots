@@ -91,6 +91,105 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Replace_KeyIdOverload_RepeatedCallsDoNotGrowKeyRegistry()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            Entity first = world.Create();
+            var registry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+            var store = new EntityCollectionStore(registry, initialCollectionCapacity: 2, initialRowCapacity: 4);
+            int keyId = registry.Register("tests.keyid.repeat");
+            var descriptor = EntityCollectionDescriptor.Create(
+                "tests.keyid.repeat",
+                EntityCollectionSourceKind.Debug,
+                EntityCollectionRoleKind.Display,
+                owner,
+                first,
+                "Repeat",
+                "same");
+
+            for (int i = 0; i < 100; i++)
+            {
+                store.Replace(owner, keyId, descriptor, new[] { first });
+            }
+
+            Assert.That(registry.Count, Is.EqualTo(1));
+            Assert.That(store.CollectionCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Replace_KeyIdOverload_ProducesSameContentAsStringPath()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            Entity otherOwner = world.Create();
+            Entity first = world.Create();
+            Entity second = world.Create();
+            var registry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+            var store = new EntityCollectionStore(registry, initialCollectionCapacity: 2, initialRowCapacity: 4);
+            int keyId = registry.Register("tests.keyid.parity");
+            var descriptor = EntityCollectionDescriptor.Create(
+                "tests.keyid.parity",
+                EntityCollectionSourceKind.Debug,
+                EntityCollectionRoleKind.Display,
+                owner,
+                first,
+                "Parity",
+                "2 entities");
+            Span<int> rowRoleIds = stackalloc int[2];
+            rowRoleIds[0] = 1;
+            rowRoleIds[1] = 0;
+            Span<EntityCollectionRowFlags> rowFlags = stackalloc EntityCollectionRowFlags[2];
+            rowFlags[0] = EntityCollectionRowFlags.Primary;
+            rowFlags[1] = EntityCollectionRowFlags.None;
+
+            EntityCollectionHandle keyIdHandle = store.Replace(
+                owner, keyId, descriptor, new[] { first, second }, rowRoleIds, rowFlags);
+            EntityCollectionHandle stringHandle = store.Replace(
+                otherOwner, descriptor, new[] { first, second }, rowRoleIds, rowFlags);
+
+            Assert.That(store.TryGetView(keyIdHandle, out EntityCollectionView keyIdView), Is.True);
+            Assert.That(store.TryGetView(stringHandle, out EntityCollectionView stringView), Is.True);
+            Assert.That(keyIdView.KeyId, Is.EqualTo(stringView.KeyId));
+            Assert.That(keyIdView.Key, Is.EqualTo(stringView.Key));
+            Assert.That(keyIdView.SourceKind, Is.EqualTo(stringView.SourceKind));
+            Assert.That(keyIdView.Role, Is.EqualTo(stringView.Role));
+            Assert.That(keyIdView.PrimaryEntity, Is.EqualTo(stringView.PrimaryEntity));
+            Assert.That(keyIdView.Count, Is.EqualTo(stringView.Count));
+            Assert.That(keyIdView.Title, Is.EqualTo(stringView.Title));
+            Assert.That(keyIdView.Summary, Is.EqualTo(stringView.Summary));
+            Assert.That(keyIdView.Signature, Is.EqualTo(stringView.Signature));
+
+            Span<Entity> keyIdEntities = stackalloc Entity[2];
+            Span<Entity> stringEntities = stackalloc Entity[2];
+            Assert.That(store.CopyEntities(keyIdHandle, 0, keyIdEntities), Is.EqualTo(2));
+            Assert.That(store.CopyEntities(stringHandle, 0, stringEntities), Is.EqualTo(2));
+            Assert.That(keyIdEntities[0], Is.EqualTo(stringEntities[0]));
+            Assert.That(keyIdEntities[1], Is.EqualTo(stringEntities[1]));
+
+            Assert.That(store.Remove(owner, keyId), Is.True);
+            Assert.That(store.TryGet(owner, "tests.keyid.parity", out _), Is.False);
+            Assert.That(store.Remove(otherOwner, keyId), Is.True);
+        }
+
+        [Test]
+        public void Replace_KeyIdOverload_RejectsUnregisteredKeyId()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var store = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal));
+            var descriptor = EntityCollectionDescriptor.Create(
+                "tests.keyid.unregistered",
+                EntityCollectionSourceKind.Debug,
+                EntityCollectionRoleKind.Debug,
+                owner);
+
+            Assert.That(
+                () => store.Replace(owner, 999, descriptor, ReadOnlySpan<Entity>.Empty),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
         public void CopyWindow_ReturnsRowsRolesAndFlags_WithoutAllocatingAfterWarmup()
         {
             using var world = World.Create();

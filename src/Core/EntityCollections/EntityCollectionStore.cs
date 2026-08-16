@@ -95,6 +95,7 @@ namespace Ludots.Core.EntityCollections
             return written;
         }
 
+        /// <summary>Registers the descriptor key through the key registry on every call; load/init-time entry — per-frame writers resolve the key id once and use the keyId overloads.</summary>
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,
@@ -103,7 +104,7 @@ namespace Ludots.Core.EntityCollections
             return Replace(owner, descriptor, entities, default, default, Entity.Null);
         }
 
-        /// <summary>Replace tagging every row with the maintaining writer domain (RFC-0065 PROV-1b).</summary>
+        /// <summary>Replace tagging every row with the maintaining writer domain (RFC-0065 PROV-1b). Registers the descriptor key on every call; prefer the keyId overloads on per-frame paths.</summary>
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,
@@ -113,6 +114,7 @@ namespace Ludots.Core.EntityCollections
             return Replace(owner, descriptor, entities, default, default, writerDomain);
         }
 
+        /// <summary>Registers the descriptor key through the key registry on every call; load/init-time entry — per-frame writers resolve the key id once and use the keyId overloads.</summary>
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,
@@ -123,7 +125,7 @@ namespace Ludots.Core.EntityCollections
             return Replace(owner, descriptor, entities, rowRoleIds, rowFlags, Entity.Null);
         }
 
-        /// <summary>Full replace with per-row role/flag data and the maintaining writer domain (RFC-0065 PROV-1b).</summary>
+        /// <summary>Full replace with per-row role/flag data and the maintaining writer domain (RFC-0065 PROV-1b). Registers the descriptor key on every call; prefer the keyId overloads on per-frame paths.</summary>
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,
@@ -142,17 +144,76 @@ namespace Ludots.Core.EntityCollections
                 throw new ArgumentException("Entity collection descriptor key is required.", nameof(descriptor));
             }
 
-            if (!rowRoleIds.IsEmpty && rowRoleIds.Length < entities.Length)
+            ValidateRowSpans(entities, rowRoleIds, rowFlags);
+            return ReplaceCore(owner, _keyRegistry.Register(descriptor.Key), in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
+        }
+
+        /// <summary>Per-frame entry: <paramref name="keyId"/> must be registered in <see cref="KeyRegistry"/>; the descriptor key is authoring metadata and is not looked up.</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            int keyId,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities)
+        {
+            return Replace(owner, keyId, descriptor, entities, default, default, Entity.Null);
+        }
+
+        /// <summary>Per-frame replace with the maintaining writer domain: <paramref name="keyId"/> must be registered in <see cref="KeyRegistry"/>; the descriptor key is authoring metadata and is not looked up.</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            int keyId,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            Entity writerDomain)
+        {
+            return Replace(owner, keyId, descriptor, entities, default, default, writerDomain);
+        }
+
+        /// <summary>Per-frame entry: <paramref name="keyId"/> must be registered in <see cref="KeyRegistry"/>; the descriptor key is authoring metadata and is not looked up.</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            int keyId,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            ReadOnlySpan<int> rowRoleIds,
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags)
+        {
+            return Replace(owner, keyId, descriptor, entities, rowRoleIds, rowFlags, Entity.Null);
+        }
+
+        /// <summary>Full per-frame replace with per-row role/flag data and the maintaining writer domain: <paramref name="keyId"/> must be registered in <see cref="KeyRegistry"/>; the descriptor key is authoring metadata and is not looked up.</summary>
+        public EntityCollectionHandle Replace(
+            Entity owner,
+            int keyId,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            ReadOnlySpan<int> rowRoleIds,
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags,
+            Entity writerDomain)
+        {
+            if (owner == Entity.Null)
             {
-                throw new ArgumentException("Row role id span must be empty or cover every entity row.", nameof(rowRoleIds));
+                throw new ArgumentException("Entity collection owner is required.", nameof(owner));
             }
 
-            if (!rowFlags.IsEmpty && rowFlags.Length < entities.Length)
+            if (keyId <= 0 || string.IsNullOrEmpty(_keyRegistry.GetName(keyId)))
             {
-                throw new ArgumentException("Row flag span must be empty or cover every entity row.", nameof(rowFlags));
+                throw new ArgumentOutOfRangeException(nameof(keyId), keyId, "Entity collection key id must be registered in the key registry.");
             }
 
-            int keyId = _keyRegistry.Register(descriptor.Key);
+            ValidateRowSpans(entities, rowRoleIds, rowFlags);
+            return ReplaceCore(owner, keyId, in descriptor, entities, rowRoleIds, rowFlags, writerDomain);
+        }
+
+        private EntityCollectionHandle ReplaceCore(
+            Entity owner,
+            int keyId,
+            in EntityCollectionDescriptor descriptor,
+            ReadOnlySpan<Entity> entities,
+            ReadOnlySpan<int> rowRoleIds,
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags,
+            Entity writerDomain)
+        {
             EntityKeyedSoaKey tableKey = EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId);
             int slot = _collections.EnsureSlot(tableKey);
             EnsureSlotCapacity(slot + 1);
@@ -236,11 +297,17 @@ namespace Ludots.Core.EntityCollections
             return new EntityCollectionHandle(slot, _revisions[slot]);
         }
 
+        /// <summary>String-key removal; resolve the key id once on per-frame paths and call the keyId overload.</summary>
         public bool Remove(Entity owner, string key)
         {
+            return !string.IsNullOrWhiteSpace(key) &&
+                   _keyRegistry.TryGetId(key, out int keyId) &&
+                   Remove(owner, keyId);
+        }
+
+        public bool Remove(Entity owner, int keyId)
+        {
             if (owner == Entity.Null ||
-                string.IsNullOrWhiteSpace(key) ||
-                !_keyRegistry.TryGetId(key, out int keyId) ||
                 keyId <= 0 ||
                 !TryFindSlot(owner, keyId, out int slot))
             {
@@ -258,21 +325,13 @@ namespace Ludots.Core.EntityCollections
             return true;
         }
 
+        /// <summary>String-key lookup; resolve the key id once on per-frame paths and call the keyId overload.</summary>
         public bool TryGet(Entity owner, string key, out EntityCollectionHandle handle)
         {
             handle = EntityCollectionHandle.Invalid;
-            if (owner == Entity.Null ||
-                string.IsNullOrWhiteSpace(key) ||
-                !_keyRegistry.TryGetId(key, out int keyId) ||
-                keyId <= 0 ||
-                !TryFindSlot(owner, keyId, out int slot) ||
-                !_active[slot])
-            {
-                return false;
-            }
-
-            handle = new EntityCollectionHandle(slot, _revisions[slot]);
-            return true;
+            return !string.IsNullOrWhiteSpace(key) &&
+                   _keyRegistry.TryGetId(key, out int keyId) &&
+                   TryGet(owner, keyId, out handle);
         }
 
         public bool TryGet(Entity owner, int keyId, out EntityCollectionHandle handle)
@@ -290,6 +349,7 @@ namespace Ludots.Core.EntityCollections
             return true;
         }
 
+        /// <summary>String-key view lookup; resolve the key id once on per-frame paths and call the handle overload.</summary>
         public bool TryGetView(Entity owner, string key, out EntityCollectionView view)
         {
             view = default;
@@ -332,6 +392,7 @@ namespace Ludots.Core.EntityCollections
             return true;
         }
 
+        /// <summary>String-key entity copy; resolve the key id once on per-frame paths and call the keyId overload.</summary>
         public int CopyEntities(Entity owner, string key, Span<Entity> destination)
         {
             return TryGet(owner, key, out EntityCollectionHandle handle)
@@ -493,6 +554,22 @@ namespace Ludots.Core.EntityCollections
             }
 
             return written;
+        }
+
+        private static void ValidateRowSpans(
+            ReadOnlySpan<Entity> entities,
+            ReadOnlySpan<int> rowRoleIds,
+            ReadOnlySpan<EntityCollectionRowFlags> rowFlags)
+        {
+            if (!rowRoleIds.IsEmpty && rowRoleIds.Length < entities.Length)
+            {
+                throw new ArgumentException("Row role id span must be empty or cover every entity row.", nameof(rowRoleIds));
+            }
+
+            if (!rowFlags.IsEmpty && rowFlags.Length < entities.Length)
+            {
+                throw new ArgumentException("Row flag span must be empty or cover every entity row.", nameof(rowFlags));
+            }
         }
 
         private bool TryFindSlot(Entity owner, int keyId, out int slot)

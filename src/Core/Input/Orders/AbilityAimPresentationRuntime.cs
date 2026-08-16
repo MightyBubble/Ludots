@@ -92,6 +92,8 @@ namespace Ludots.Core.Input.Orders
         private readonly AbilityDefinitionRegistry _abilities;
         private readonly EffectTemplateRegistry _effects;
         private readonly EntityCollectionStore _collections;
+        private readonly int _aimHoverCollectionKeyId;
+        private readonly int _aimAffectedCollectionKeyId;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly PresentationEventStream _events;
         private readonly GameSession? _session;
@@ -145,6 +147,8 @@ namespace Ludots.Core.Input.Orders
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            _aimHoverCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimHover);
+            _aimAffectedCollectionKeyId = _collections.KeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _session = session;
@@ -217,8 +221,8 @@ namespace Ludots.Core.Input.Orders
             }
 
             Entity viewer = ResolveActiveViewer(actor);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimAffected);
-            _collections.Remove(actor, EntityCollectionKeys.AbilityAimHover);
+            _collections.Remove(actor, _aimAffectedCollectionKeyId);
+            _collections.Remove(actor, _aimHoverCollectionKeyId);
             ClearAimSessionState(actor);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.Range, RangeScopeOffset);
             PublishEnded(actor, viewer, AbilityAimPresentationEventKeys.AreaCircle, AreaScopeOffset);
@@ -249,6 +253,7 @@ namespace Ludots.Core.Input.Orders
             {
                 _collections.Replace(
                     actor,
+                    _aimAffectedCollectionKeyId,
                     EntityCollectionDescriptor.Create(
                         EntityCollectionKeys.AbilityAimAffected,
                         EntityCollectionSourceKind.Explicit,
@@ -288,6 +293,7 @@ namespace Ludots.Core.Input.Orders
 
             _collections.Replace(
                 actor,
+                _aimAffectedCollectionKeyId,
                 EntityCollectionDescriptor.Create(
                     EntityCollectionKeys.AbilityAimAffected,
                     ResolveCollectionSourceKind(in impact),
@@ -659,11 +665,11 @@ namespace Ludots.Core.Input.Orders
                 rowRoleIds[0] = PrimaryAimTargetRoleId;
                 Span<EntityCollectionRowFlags> rowFlags = stackalloc EntityCollectionRowFlags[1];
                 rowFlags[0] = EntityCollectionRowFlags.Primary;
-                _collections.Replace(actor, descriptor, single, rowRoleIds, rowFlags);
+                _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, single, rowRoleIds, rowFlags);
                 return;
             }
 
-            _collections.Replace(actor, descriptor, ReadOnlySpan<Entity>.Empty);
+            _collections.Replace(actor, _aimHoverCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
         private void PublishLifecycleEvents(

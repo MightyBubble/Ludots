@@ -136,7 +136,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
-                        ? ResolveOutputValueKeys(pendingSchema)
+                        ? ResolveOutputBindingKeys(pendingSchema)
                         : GraphOutputSchema.Empty;
                     _outputSchemas.Register(id, schema);
                 }
@@ -160,7 +160,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
         }
 
-        private GraphOutputSchema ResolveOutputValueKeys(GraphOutputSchema schema)
+        private GraphOutputSchema ResolveOutputBindingKeys(GraphOutputSchema schema)
         {
             if (!schema.HasBindings)
             {
@@ -172,6 +172,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < source.Length; i++)
             {
                 GraphOutputBinding binding = source[i];
+                if (binding.Destination == GraphOutputDestinationKind.EntityCollection)
+                {
+                    resolved[i] = _entityCollections != null && !string.IsNullOrWhiteSpace(binding.CollectionKey)
+                        ? binding.WithResolvedCollectionKeyId(_entityCollections.KeyRegistry.Register(binding.CollectionKey))
+                        : binding;
+                    continue;
+                }
+
                 if (binding.Destination != GraphOutputDestinationKind.Summary)
                 {
                     resolved[i] = binding;

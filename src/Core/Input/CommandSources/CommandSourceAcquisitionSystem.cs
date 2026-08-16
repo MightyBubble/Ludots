@@ -29,6 +29,10 @@ namespace Ludots.Core.Input.CommandSources
         private readonly CommandSourceAcquisitionConfig _config;
         private readonly Ludots.Core.Gameplay.Teams.RelationshipFilter _targetRelationFilter;
         private readonly EntityCollectionStore _entityCollections;
+        private readonly int _hoveredEntityCollectionKeyId;
+        private readonly int _commandSourceCollectionKeyId;
+        private string _hoverTitleSource;
+        private string _hoverTitleComposed;
         private Entity[] _boxAcquisitionScratch = new Entity[16];
         private Entity[] _commandSourceScratch = new Entity[16];
         private bool _suppressConfirmRelease;
@@ -49,6 +53,8 @@ namespace Ludots.Core.Input.CommandSources
             _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
                 "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            _hoveredEntityCollectionKeyId = _entityCollections.KeyRegistry.Register(EntityCollectionKeys.HoveredEntity);
+            _commandSourceCollectionKeyId = _entityCollections.KeyRegistry.Register(EntityCollectionKeys.CommandSource);
         }
 
         public CommandSourceAcquisitionSystem(
@@ -64,14 +70,8 @@ namespace Ludots.Core.Input.CommandSources
             World world,
             Dictionary<string, object> globals,
             CommandSourceOwnerProvider commandSourceOwnerProvider)
+            : this(world, globals, commandSourceOwnerProvider, ResolveCommandSourceAcquisitionConfig(globals))
         {
-            _world = world;
-            _globals = globals;
-            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new ArgumentNullException(nameof(commandSourceOwnerProvider));
-            _config = ResolveCommandSourceAcquisitionConfig(globals);
-            _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
-                "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
-            _entityCollections = ResolveEntityCollectionStore(globals);
         }
 
         public void Initialize() { }
@@ -208,18 +208,31 @@ namespace Ludots.Core.Input.CommandSources
                 EntityCollectionRoleKind.Display,
                 owner,
                 _world.IsAlive(hovered) ? hovered : Entity.Null,
-                string.IsNullOrWhiteSpace(acquisition.Title) ? "Hover target" : $"{acquisition.Title} hover",
+                ResolveHoverTitle(acquisition.Title),
                 _world.IsAlive(hovered) ? "hover" : "hover-empty");
 
             if (_world.IsAlive(hovered))
             {
                 Span<Entity> single = stackalloc Entity[1];
                 single[0] = hovered;
-                _entityCollections.Replace(owner, descriptor, single);
+                _entityCollections.Replace(owner, _hoveredEntityCollectionKeyId, descriptor, single);
                 return;
             }
 
-            _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
+            _entityCollections.Replace(owner, _hoveredEntityCollectionKeyId, descriptor, ReadOnlySpan<Entity>.Empty);
+        }
+
+        private string ResolveHoverTitle(string acquisitionTitle)
+        {
+            if (!ReferenceEquals(_hoverTitleSource, acquisitionTitle))
+            {
+                _hoverTitleSource = acquisitionTitle;
+                _hoverTitleComposed = string.IsNullOrWhiteSpace(acquisitionTitle)
+                    ? "Hover target"
+                    : $"{acquisitionTitle} hover";
+            }
+
+            return _hoverTitleComposed;
         }
 
         private void ApplyClickAcquisition(Entity owner, Entity clicked, CommandSourceAcquisitionMode acquisitionMode)
@@ -367,12 +380,12 @@ namespace Ludots.Core.Input.CommandSources
                 members.Length > 0 ? members[0] : Entity.Null,
                 "Command source",
                 $"{mode} | {members.Length} actor(s)");
-            _entityCollections.Replace(owner, descriptor, members, owner);
+            _entityCollections.Replace(owner, _commandSourceCollectionKeyId, descriptor, members, owner);
         }
 
         private int CopyCurrentCommandSource(Entity owner)
         {
-            if (!_entityCollections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle) ||
+            if (!_entityCollections.TryGet(owner, _commandSourceCollectionKeyId, out EntityCollectionHandle handle) ||
                 !_entityCollections.TryGetView(handle, out EntityCollectionView view) ||
                 view.Count <= 0)
             {
