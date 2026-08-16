@@ -1419,7 +1419,40 @@ namespace Ludots.Core.Presentation.Presenters
                 }
             }
 
-            bool canUseOwnerPayloadAttachedTransformSync =
+            bool hasInstanceBehaviors = _world.Has<PresenterInstanceBehaviors>(entity);
+            if (hasInstanceBehaviors)
+            {
+                BehaviorSlot[] instanceSlots = _world.Get<PresenterInstanceBehaviors>(entity).Slots;
+                for (int i = 0; i < instanceSlots.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref instanceSlots[i];
+                    if (slot.SlotIndex is < 0 or >= 32 ||
+                        (activeBehaviorMask & (1u << slot.SlotIndex)) == 0)
+                    {
+                        continue;
+                    }
+
+                    switch (slot.Kind)
+                    {
+                        case BehaviorKind.Sound: hasSound = true; break;
+                        case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.Grounding:
+                            hasGrounding |= GroundingRequiresPresenterTick(entity, in state, in slot.Grounding);
+                            break;
+                        case BehaviorKind.Attachment:
+                            hasAttachment = true;
+                            hasAttachmentTick = true;
+                            break;
+                        case BehaviorKind.Extension:
+                            hasExtensionBehavior |=
+                                (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PresenterBehaviorKindRegistry.FirstModBehaviorKindId &&
+                                slot.ExtensionLane == PresenterBehaviorExecutionLane.ContinuousTick;
+                            break;
+                    }
+                }
+            }
+
+            bool canUseOwnerPayloadAttachedTransformSync = !hasInstanceBehaviors &&
                 CanUseOwnerPayloadAttachedTransformSync(entity, definition, activeBehaviorMask);
             bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
                 PresenterTransformRequiresTick(entity, depth: 0);
@@ -1490,7 +1523,7 @@ namespace Ludots.Core.Presentation.Presenters
                 MarkRetainedPresentationRequestDirty(entity);
             }
 
-            bool canUseOwnerPayloadAttachedTransformSync =
+            bool canUseOwnerPayloadAttachedTransformSync = !_world.Has<PresenterInstanceBehaviors>(entity) &&
                 CanUseOwnerPayloadAttachedTransformSync(entity, definition, activeBehaviorMask);
             bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
                 PresenterTransformRequiresTick(entity, depth: 0);
@@ -1509,7 +1542,13 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             uint bit = 1u << slotIndex;
-            if ((definition.BehaviorPresenceMask & bit) == 0)
+            uint presenceMask = definition.BehaviorPresenceMask;
+            if (_world.Has<PresenterInstanceBehaviors>(entity))
+            {
+                presenceMask |= _world.Get<PresenterInstanceBehaviors>(entity).PresenceMask;
+            }
+
+            if ((presenceMask & bit) == 0)
             {
                 return false;
             }
@@ -2132,7 +2171,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
-            ChildPresenterRef[] children = parentDefinition.Children;
+            ChildPresenterRef[] children = ResolveEffectiveChildren(parentEntity, parentDefinition);
             if (children == null || children.Length == 0)
             {
                 return;
@@ -2159,6 +2198,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 ref PresenterState childState = ref _world.Get<PresenterState>(childEntity);
                 childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
+                AttachChildInstanceOverride(childEntity, ref childState, in child);
                 SyncTickBehaviorMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
                 SyncEmitWorkMarkers(childEntity, childDefinition, childState.BehaviorActiveMask);
                 SetParamDefault(childDefinition, childEntity);
@@ -2174,6 +2214,48 @@ namespace Ludots.Core.Presentation.Presenters
                 }
 
                 CreateChildrenRecursive(definitions, childEntity, owner, childScopeId, anchorKind, allocateStableId);
+            }
+        }
+
+        private ChildPresenterRef[] ResolveEffectiveChildren(Entity parentEntity, PresenterDefinition parentDefinition)
+        {
+            return _world.Has<PresenterInstanceChildren>(parentEntity)
+                ? _world.Get<PresenterInstanceChildren>(parentEntity).Children
+                : parentDefinition.Children;
+        }
+
+        private void AttachChildInstanceOverride(Entity childEntity, ref PresenterState childState, in ChildPresenterRef child)
+        {
+            PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+            if (instanceOverride == null)
+            {
+                return;
+            }
+
+            if (instanceOverride.ChildrenMode == PresenterChildrenMode.Instance)
+            {
+                ChildPresenterRef[] instanceChildren = instanceOverride.InstanceChildren;
+                if (instanceChildren == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Presenter child definition id={child.DefinitionId} declares instance children mode without an instance children payload.");
+                }
+
+                _world.Add(childEntity, new PresenterInstanceChildren { Children = instanceChildren });
+            }
+
+            BehaviorSlot[] instanceBehaviors = instanceOverride.InstanceBehaviors;
+            if (instanceBehaviors == null || instanceBehaviors.Length == 0)
+            {
+                return;
+            }
+
+            PresenterInstanceBehaviors compiled = PresenterInstanceBehaviors.Compile(instanceBehaviors);
+            childState.BehaviorActiveMask |= compiled.DefaultActiveMask;
+            _world.Add(childEntity, compiled);
+            if (!_world.Has<PresenterBootstrapPending>(childEntity))
+            {
+                AddMarker<PresenterBootstrapPending>(childEntity);
             }
         }
 
@@ -2379,7 +2461,8 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < children.Length; i++)
             {
                 ref readonly ChildPresenterRef child = ref children[i];
-                if ((child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
+                if (child.InstanceOverride != null ||
+                    (child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
                     child.TransformOverride.HasOverride ||
                     !definitions.TryGet(child.DefinitionId, out PresenterDefinition childDefinition) ||
                     RequiresDeferredBootstrapAfterBatchCreate(childDefinition) ||

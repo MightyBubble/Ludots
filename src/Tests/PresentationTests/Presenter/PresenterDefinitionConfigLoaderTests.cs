@@ -2848,6 +2848,472 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
+        [Test]
+        public void Load_RejectsSnakeCaseChildrenModeOnChildEntry()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "children_mode": "instance" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'children_mode'"));
+            Assert.That(ex.Message, Does.Contain("'childrenMode'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseRuntimeBehaviorsOnChildEntry()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "runtime_behaviors": [] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(ex.Message, Does.Contain("'instanceBehaviors'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseChildInstanceFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_mode",
+                    "children_mode": "instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException modeEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(modeEx.Message, Does.Contain("'children_mode'"));
+            Assert.That(modeEx.Message, Does.Contain("children[] entries"));
+
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+            var (_, _, pipeline2, catalog2) = BuildPipeline();
+
+            InvalidOperationException runtimeEx = Assert.Throws<InvalidOperationException>(() =>
+                new PresenterDefinitionConfigLoader(pipeline2, registry).Load(catalog2))!;
+            Assert.That(runtimeEx.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(runtimeEx.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_RejectsChildInstanceCanonicalFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "childrenMode": "Instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("definition level"));
+            Assert.That(ex.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_ParsesChildInstanceSubtreeOverrideWithoutTouchingSharedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_b" },
+                  { "id": "leaf_c" },
+                  { "id": "leaf_nested" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf_b" } ] },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf_c",
+                            "scopeTag": "swapped",
+                            "overrides": { "transform": { "localPosition": [1, 2, 3] } },
+                            "childrenMode": "Instance",
+                            "instanceChildren": [ { "definitionId": "leaf_nested" } ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(pipeline, registry).Load(catalog);
+
+            int childAId = registry.GetId("child_a");
+            int leafBId = registry.GetId("leaf_b");
+            int leafCId = registry.GetId("leaf_c");
+            int leafNestedId = registry.GetId("leaf_nested");
+
+            PresenterDefinition childA = registry.Get(childAId);
+            Assert.That(childA.Children.Length, Is.EqualTo(1));
+            Assert.That(childA.Children[0].DefinitionId, Is.EqualTo(leafBId));
+            Assert.That(childA.Children[0].InstanceOverride, Is.Null);
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData, Is.Not.Null);
+            Assert.That(overrideData.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(overrideData.InstanceChildren.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceChildren[0].DefinitionId, Is.EqualTo(leafCId));
+            Assert.That(overrideData.InstanceChildren[0].ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("swapped")));
+            Assert.That(overrideData.InstanceChildren[0].TransformOverride.HasOverride, Is.True);
+            PresenterChildInstanceOverride nestedOverride = overrideData.InstanceChildren[0].InstanceOverride!;
+            Assert.That(nestedOverride.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Instance));
+            Assert.That(nestedOverride.InstanceChildren[0].DefinitionId, Is.EqualTo(leafNestedId));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenModeWithoutInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [ { "definitionId": "child_a", "childrenMode": "Instance" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode 'Instance' without 'instanceChildren'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenUnderDefinitionMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "childrenMode": "Definition", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenWithoutExplicitMode()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf_c" },
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "instanceChildren": [ { "definitionId": "leaf_c" } ] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("childrenMode is 'Definition'"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildrenReferencingUnknownDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [ { "definitionId": "missing_leaf" } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("unknown definition 'missing_leaf'"));
+        }
+
+        [Test]
+        public void Load_ParsesChildInstanceBehaviorsWithoutTouchingSharedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          { "slot": "sound", "kind": "Sound", "activeByDefault": true, "sound": { "soundAssetId": "sfx_hit" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) => string.Equals(key, "sfx_hit", StringComparison.Ordinal) ? 7 : 0).Load(catalog);
+
+            PresenterDefinition childA = registry.Get(registry.GetId("child_a"));
+            Assert.That(childA.Behaviors.Length, Is.EqualTo(0));
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData, Is.Not.Null);
+            Assert.That(overrideData.ChildrenMode, Is.EqualTo(PresenterChildrenMode.Definition));
+            Assert.That(overrideData.InstanceChildren.Length, Is.EqualTo(0));
+            Assert.That(overrideData.InstanceBehaviors.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceBehaviors[0].Kind, Is.EqualTo(BehaviorKind.Sound));
+            Assert.That(overrideData.InstanceBehaviors[0].SlotIndex, Is.EqualTo(6));
+            Assert.That(overrideData.InstanceBehaviors[0].ActiveByDefault, Is.True);
+            Assert.That(overrideData.InstanceBehaviors[0].Sound.SoundAssetId, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Load_RejectsDefinitionScopedKindOnInstanceBehaviors()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          {
+                            "slot": "body",
+                            "kind": "AssetBinding",
+                            "assetBinding": {
+                              "assetKind": "Mesh",
+                              "assetId": "cube",
+                              "materialId": "knight_base",
+                              "renderPath": "StaticMesh",
+                              "mobility": "Static"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: _ => 101,
+                resolveBehaviorAssetId: (kind, key) => 42);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0].instanceBehaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("definition-scoped"));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceBehaviorSlotCollisionWithReferencedDefinition()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "child_a",
+                    "behaviors": [
+                      { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_def" } }
+                    ]
+                  },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_inst" } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (_, _) => 9);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0].instanceBehaviors[0]"));
+            Assert.That(ex.Message, Does.Contain("collides with a behavior slot of referenced definition 'child_a'"));
+        }
+
+        [Test]
+        public void Load_ParsesInstanceBehaviorsInsideInstanceChildren()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "leaf" },
+                  { "id": "child_a", "children": [ { "definitionId": "leaf" } ] },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "leaf",
+                            "instanceBehaviors": [
+                              { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "sfx_nested" } }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) => string.Equals(key, "sfx_nested", StringComparison.Ordinal) ? 3 : 0).Load(catalog);
+
+            PresenterDefinition leaf = registry.Get(registry.GetId("leaf"));
+            Assert.That(leaf.Behaviors.Length, Is.EqualTo(0));
+
+            PresenterDefinition root = registry.Get(registry.GetId("root"));
+            PresenterChildInstanceOverride overrideData = root.Children[0].InstanceOverride!;
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride, Is.Not.Null);
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride!.InstanceBehaviors.Length, Is.EqualTo(1));
+            Assert.That(overrideData.InstanceChildren[0].InstanceOverride!.InstanceBehaviors[0].Sound.SoundAssetId, Is.EqualTo(3));
+        }
+
         private static void NoOpExtensionCommand(in PresenterCommandExecutionContext context)
         {
         }
