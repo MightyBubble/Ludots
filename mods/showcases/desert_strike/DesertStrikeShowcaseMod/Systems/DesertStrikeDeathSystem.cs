@@ -6,6 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Presentation.Components;
 using DesertStrikeShowcaseMod.Runtime;
 
 namespace DesertStrikeShowcaseMod.Systems
@@ -46,8 +47,10 @@ namespace DesertStrikeShowcaseMod.Systems
                         continue;
                     }
 
-                    _commands.Destroy(entity);
-                    _state.UnitsDestroyed++;
+                    if (TryQueueDestroy(entity))
+                    {
+                        _state.UnitsDestroyed++;
+                    }
                 }
             }
 
@@ -65,7 +68,7 @@ namespace DesertStrikeShowcaseMod.Systems
                     }
 
                     _destroyedBaseTeam = teams[index].Id;
-                    _commands.Destroy(entity);
+                    TryQueueDestroy(entity);
                 }
             }
 
@@ -80,6 +83,23 @@ namespace DesertStrikeShowcaseMod.Systems
                 _state.DestroyedBaseTeam = _destroyedBaseTeam;
                 _state.WinnerPlayerId = _destroyedBaseTeam == _state.PlayerTeam ? 2 : 1;
             }
+        }
+
+        private bool TryQueueDestroy(Entity entity)
+        {
+            if (World.Has<PresentationDestroyPending>(entity))
+            {
+                return false;
+            }
+
+            if (!World.Has<PresentationStableId>(entity))
+            {
+                _commands.Destroy(entity);
+                return true;
+            }
+
+            _commands.Add(entity, new PresentationDestroyPending());
+            return true;
         }
 
         private static int EnsureAttributeId(string attributeName)
