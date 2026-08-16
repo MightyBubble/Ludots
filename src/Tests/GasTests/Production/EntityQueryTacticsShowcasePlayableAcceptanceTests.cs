@@ -862,7 +862,7 @@ namespace Ludots.Tests.GAS.Production
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
             ref WorldPositionCm position = ref engine.World.Get<WorldPositionCm>(entity);
-            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
         private static void CaptureSnapshot(

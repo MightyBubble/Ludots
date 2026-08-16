@@ -1908,7 +1908,7 @@ namespace Ludots.Tests.Presentation
             var projector = new UnavailableGroundProjector();
             var heightmap = new VisualHeightmapRuntime(
                 VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new short[]
@@ -1949,7 +1949,7 @@ namespace Ludots.Tests.Presentation
 
             var heightmap = new VisualHeightmapRuntime(
                 VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new short[]

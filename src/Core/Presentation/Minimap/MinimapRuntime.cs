@@ -1405,7 +1405,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private bool TryProjectCameraCorner(
             Vector2 screenCorner,
-            in Ludots.Core.Presentation.Camera.CameraRenderState3D camera,
+            in Ludots.Platform.Abstractions.CameraRenderState3D camera,
             Vector2 resolution,
             float aspect,
             int index)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {

@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

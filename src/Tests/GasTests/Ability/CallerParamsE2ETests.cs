@@ -17,6 +17,7 @@ using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

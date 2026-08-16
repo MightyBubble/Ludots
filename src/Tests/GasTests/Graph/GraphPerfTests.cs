@@ -10,6 +10,7 @@ using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
 using Ludots.Core.GraphRuntime;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

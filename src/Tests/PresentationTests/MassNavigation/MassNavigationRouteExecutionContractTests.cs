@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

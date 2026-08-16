@@ -1,6 +1,7 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
 {
@@ -890,7 +891,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static bool AssetBindingSupportsEventDrivenStaticEmit(in AssetBindingConfig asset)
         {
-            return asset.Mobility == Components.VisualMobility.Static;
+            return asset.Mobility == VisualMobility.Static;
         }
 
         internal bool AffectsStaticVisualParam(int paramKey, ParamLane lane)

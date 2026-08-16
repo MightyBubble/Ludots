@@ -23,6 +23,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Features.EffectExecution
 {
@@ -1030,7 +1031,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(transform.Scale, Is.EqualTo(System.Numerics.Vector3.One));
                 That(cull.IsVisible, Is.False);
-                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.Low));
+                That(cull.LOD, Is.EqualTo(Ludots.Platform.Abstractions.LODLevel.Low));
             });
 
             That(spawnCount, Is.EqualTo(1));

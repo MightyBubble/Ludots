@@ -2004,7 +2004,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             ref var position = ref engine.World.Get<WorldPositionCm>(entity);
-            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
         private static Vector2 GetGroundScreenFromWorld(GameEngine engine, Vector2 worldCm)

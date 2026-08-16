@@ -16,6 +16,7 @@ using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.TransportNetwork;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

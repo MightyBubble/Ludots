@@ -9,6 +9,7 @@ using Ludots.Presentation.Skia;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using SkiaSharp;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

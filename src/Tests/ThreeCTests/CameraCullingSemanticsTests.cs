@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {

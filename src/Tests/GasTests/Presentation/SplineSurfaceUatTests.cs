@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

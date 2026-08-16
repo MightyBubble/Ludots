@@ -3,6 +3,7 @@ using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using NUnit.Framework;
 using Raylib_cs;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.RaylibAdapter;
 

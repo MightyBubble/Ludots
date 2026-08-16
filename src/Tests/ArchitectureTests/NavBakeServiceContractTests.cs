@@ -12,6 +12,7 @@ using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {
@@ -305,9 +306,9 @@ namespace Ludots.Tests.Architecture
                 queryServices,
                 navProfiles);
 
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(50, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(0));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(50, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(1));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(450, 50, 20, 20), includeNeighbors: false), Is.EqualTo(0));
             Assert.That(queue.PendingTileCount, Is.EqualTo(2));
 
             RuntimeNavMeshRebuildBatch first = queue.ProcessBudget(1);
@@ -347,8 +348,8 @@ namespace Ludots.Tests.Architecture
                 queryServices,
                 navProfiles);
 
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(-500, -500, 20, 20), includeNeighbors: true), Is.EqualTo(0));
-            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Core.Mathematics.WorldAabbCm(405, 405, 10, 10), includeNeighbors: true), Is.EqualTo(4));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(-500, -500, 20, 20), includeNeighbors: true), Is.EqualTo(0));
+            Assert.That(queue.EnqueueDirtyAabb(new Ludots.Platform.Abstractions.WorldAabbCm(405, 405, 10, 10), includeNeighbors: true), Is.EqualTo(4));
 
             RuntimeNavMeshRebuildBatch batch = queue.ProcessBudget(4);
             Assert.That(batch.FailedEntryCount, Is.EqualTo(0));

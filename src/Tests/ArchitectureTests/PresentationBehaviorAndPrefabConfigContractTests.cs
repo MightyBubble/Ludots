@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using System.Linq;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {

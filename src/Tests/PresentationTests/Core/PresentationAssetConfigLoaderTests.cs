@@ -6,6 +6,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {

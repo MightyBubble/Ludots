@@ -1,5 +1,7 @@
 using Ludots.Core.Mathematics;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Navigation.GraphWorld
 {
     public static class GraphChunkKey

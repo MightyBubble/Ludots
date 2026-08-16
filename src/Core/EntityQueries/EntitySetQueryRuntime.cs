@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.EntityQueries
 {

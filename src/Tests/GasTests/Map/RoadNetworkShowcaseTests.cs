@@ -2266,7 +2266,7 @@ namespace Ludots.Tests.GAS
             Assert.That(entity, Is.Not.EqualTo(Entity.Null), $"Entity instance '{instanceId}' was not found.");
 
             ref WorldPositionCm position = ref engine.World.Get<WorldPositionCm>(entity);
-            return GetScreenPositionForWorld(engine, WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return GetScreenPositionForWorld(engine, WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
         private static Vector2 GetScreenPositionForWorld(GameEngine engine, Vector3 worldMeters)

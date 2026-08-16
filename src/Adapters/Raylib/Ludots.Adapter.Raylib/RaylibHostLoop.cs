@@ -21,7 +21,6 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
-using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
@@ -1917,7 +1916,7 @@ namespace Ludots.Adapter.Raylib
                     }
                     else if (engine.World.TryGet(entity, out WorldPositionCm position))
                     {
-                        screen = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+                        screen = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
                         source = "world";
                     }
                     else

@@ -5,6 +5,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using NUnit.Framework;
 using VisualTerrainEditorMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -168,7 +169,7 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         }
     }
 
-    private static Vector3 ReadPosition(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    private static Vector3 ReadPosition(Ludots.Platform.Abstractions.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         int floatOffset = vertexIndex * 3;
         return new Vector3(
@@ -177,7 +178,7 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
             proceduralMesh.Positions[floatOffset + 2]);
     }
 
-    private static Vector4 ReadTangent(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    private static Vector4 ReadTangent(Ludots.Platform.Abstractions.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         int floatOffset = vertexIndex * 4;
         return new Vector4(

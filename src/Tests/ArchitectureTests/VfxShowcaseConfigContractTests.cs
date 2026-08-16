@@ -18,6 +18,7 @@ using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {

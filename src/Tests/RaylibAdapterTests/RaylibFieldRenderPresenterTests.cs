@@ -6,6 +6,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Vision;
 using NUnit.Framework;
 using Raylib_cs;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.RaylibAdapter;
 
@@ -184,7 +185,7 @@ public sealed class RaylibFieldRenderPresenterTests
         var descriptor = new GlobalFieldVisualDescriptor(
             new GlobalFieldVisualId(GlobalFieldVisualKind.Fog, field.ScopeKeyId, field.LayerId.Value, surfaceKeyId: 0),
             field.CellSizeCm,
-            Ludots.Core.Mathematics.WorldCmInt2.Zero,
+            Ludots.Platform.Abstractions.WorldCmInt2.Zero,
             new Ludots.Core.Mathematics.IntRect(0, 0, 16, 16),
             GlobalFieldVisualValueKind.Byte);
         buffer.BeginFrame();

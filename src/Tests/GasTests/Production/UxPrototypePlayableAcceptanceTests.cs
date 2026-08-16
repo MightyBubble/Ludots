@@ -446,7 +446,7 @@ namespace Ludots.Tests.GAS.Production
             Entity entity = FindEntityByName(engine.World, entityName);
             Vector3 expectedPosition = engine.World.TryGet(entity, out VisualTransform transform)
                 ? transform.Position
-                : WorldUnits.WorldCmToVisualMeters(engine.World.Get<WorldPositionCm>(entity).Value, yMeters: 0f);
+                : WorldUnitsFix64.WorldCmToVisualMeters(engine.World.Get<WorldPositionCm>(entity).Value, yMeters: 0f);
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
@@ -669,7 +669,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             ref var position = ref engine.World.Get<WorldPositionCm>(entity);
-            Vector2 fallback = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            Vector2 fallback = projector.WorldToScreen(WorldUnitsFix64.WorldCmToVisualMeters(position.Value, yMeters: 0f));
             Assert.That(float.IsFinite(fallback.X) && float.IsFinite(fallback.Y), Is.True,
                 $"Fallback projected screen position for entity #{entity.Id} must stay finite.");
             return fallback;

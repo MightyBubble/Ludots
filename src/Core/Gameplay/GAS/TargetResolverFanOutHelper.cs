@@ -8,6 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using System;
 using System.Runtime.CompilerServices;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS
 {

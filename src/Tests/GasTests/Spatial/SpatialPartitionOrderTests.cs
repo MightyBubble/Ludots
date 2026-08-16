@@ -8,6 +8,7 @@ using Ludots.Core.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
 
 namespace GasTests
 {

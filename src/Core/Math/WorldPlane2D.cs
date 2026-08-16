@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Mathematics.FixedPoint;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Mathematics
 {
     /// <summary>
@@ -216,7 +218,7 @@ namespace Ludots.Core.Mathematics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 LogicCmToVisualMeters(in Fix64Vec2 logicCm, float heightMeters = 0f)
         {
-            return WorldUnits.WorldCmToVisualMeters(in logicCm, heightMeters);
+            return WorldUnitsFix64.WorldCmToVisualMeters(in logicCm, heightMeters);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

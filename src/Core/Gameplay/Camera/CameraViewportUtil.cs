@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 
@@ -148,14 +147,7 @@ namespace Ludots.Core.Gameplay.Camera
 
         public static CameraClipPlanes ResolveClipPlanes(in CameraRenderState3D camera)
         {
-            float distanceMeters = Vector3.Distance(camera.Position, camera.Target);
-            float farMeters = DefaultFarPlaneMeters;
-            if (float.IsFinite(distanceMeters) && distanceMeters > 0f)
-            {
-                farMeters = MathF.Max(farMeters, distanceMeters * FarPlaneDistanceMultiplier);
-            }
-
-            return new CameraClipPlanes(DefaultNearPlaneMeters, farMeters);
+            return camera.ResolveClipPlanes();
         }
 
         /// <summary>

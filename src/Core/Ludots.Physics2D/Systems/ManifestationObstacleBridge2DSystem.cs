@@ -7,6 +7,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Physics2D.Systems
 {

@@ -25,6 +25,7 @@ using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using PresenterBlacksmithShowcaseMod.Runtime;
 using SkiaSharp;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

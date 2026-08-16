@@ -26,6 +26,7 @@ using Ludots.Core.Systems;
 using NUnit.Framework;
 using Schedulers;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {

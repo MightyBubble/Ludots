@@ -20,6 +20,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {

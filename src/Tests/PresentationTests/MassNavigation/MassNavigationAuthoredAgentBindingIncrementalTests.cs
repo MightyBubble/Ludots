@@ -20,6 +20,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
