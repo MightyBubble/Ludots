@@ -86,27 +86,6 @@ public static class UiShowcaseFactory
         return new NineSlicePanelShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
     }
 
-    public static UiScene CreateWebParityFixtureScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
-    {
-        return new UiMarkupLoader().LoadScene(
-            textMeasurer,
-            imageSizeProvider,
-            UiShowcaseAssets.GetParityMenuHtml(),
-            UiShowcaseAssets.GetParityMenuCss());
-    }
-
-    public static UiScene CreateWebParityShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
-    {
-        return new WebParityShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
-    }
-
-    public static UiSurfaceContribution CreateWebParityContribution(
-        IUiTextMeasurer textMeasurer,
-        IUiImageSizeProvider imageSizeProvider,
-        Action requestRebuild)
-    {
-        return new WebParityShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
-    }
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return UiSkinShowcaseSceneFactory.CreateScene(textMeasurer, imageSizeProvider);

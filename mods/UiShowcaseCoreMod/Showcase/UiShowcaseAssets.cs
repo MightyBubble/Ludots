@@ -17,14 +17,6 @@ internal static class UiShowcaseAssets
 
 	private static readonly Lazy<string> MarkupShowcaseHtml = new Lazy<string>(() => ReadRequiredText("markup_showcase.html"));
 
-	private static readonly Lazy<string> ParityMenuHtml = new Lazy<string>(() => ReadRequiredText("parity_menu.html"));
-
-	private static readonly Lazy<string> ParityMenuCss = new Lazy<string>(() => ReadRequiredText("parity_menu.css"));
-
-	private static readonly Lazy<string> WebParityShowcaseHtml = new Lazy<string>(() => ReadRequiredText("web_parity_showcase.html"));
-
-	private static readonly Lazy<string> WebParityShowcaseCss = new Lazy<string>(() => ReadRequiredText("web_parity_showcase.css"));
-
 	private static readonly Lazy<string> ShowcaseBadgeSvg = new Lazy<string>(() => ReadRequiredText("showcase_badge.svg"));
 
 	private static readonly Lazy<string> InkSealSvg = new Lazy<string>(() => ReadRequiredText("ink_seal.svg"));
@@ -48,26 +40,6 @@ internal static class UiShowcaseAssets
 	internal static string GetMarkupShowcaseHtmlTemplate()
 	{
 		return MarkupShowcaseHtml.Value;
-	}
-
-	internal static string GetParityMenuHtml()
-	{
-		return ParityMenuHtml.Value;
-	}
-
-	internal static string GetParityMenuCss()
-	{
-		return ParityMenuCss.Value;
-	}
-
-	internal static string GetWebParityShowcaseHtmlTemplate()
-	{
-		return WebParityShowcaseHtml.Value;
-	}
-
-	internal static string GetWebParityShowcaseCss()
-	{
-		return WebParityShowcaseCss.Value;
 	}
 
 	internal static string GetShowcaseBadgeSvg()
