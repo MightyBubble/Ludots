@@ -101,15 +101,12 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(runtime.Metrics.Detail, Does.Contain("巡逻查一圈"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("挂状态"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("加好感"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("状态牌"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("token="));
             });
             Assert.That(runtime.TargetCount, Is.EqualTo(8));
             Assert.That(runtime.NearbyCount, Is.EqualTo(AbilityGraphSandboxGraphKeys.QueryLimit));
             Assert.That(runtime.EffectApplications, Is.GreaterThan(0));
             Assert.That(runtime.RelationshipScore, Is.EqualTo(13));
             Assert.That(runtime.TrustedFlag, Is.True);
-            Assert.That(runtime.StatusToken, Is.AnyOf("鼓舞", "标记"));
             Assert.That(runtime.Metrics.Detail, Does.Not.Contain("耗时"));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
         }

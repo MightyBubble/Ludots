@@ -896,14 +896,6 @@
       }
     },
     {
-      "name": "capability_standard_graph_op_LookupTagDisplayToken",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod",
-        "projectPath": "CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod.csproj"
-      }
-    },
-    {
       "name": "capability_standard_graph_op_MaxFloat",
       "target": {
         "type": "path",
@@ -1333,14 +1325,6 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectEntityEntryMod",
         "projectPath": "CapabilityStandardGraphOpSelectEntityEntryMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_graph_op_SelectTagInMask",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectTagInMaskEntryMod",
-        "projectPath": "CapabilityStandardGraphOpSelectTagInMaskEntryMod.csproj"
       }
     },
     {

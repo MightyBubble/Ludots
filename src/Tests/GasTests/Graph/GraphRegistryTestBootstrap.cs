@@ -119,7 +119,6 @@ namespace Ludots.Tests.Gas.Graph
             public int ResolveRelationshipReason(string name) => throw Unsupported(name);
             public int ResolveTargetDispatchPreset(string name) => throw Unsupported(name);
             public int ResolveEntityTemplate(string name) => throw Unsupported(name);
-            public int ResolveTagDisplayTable(string name) => throw Unsupported(name);
 
             private static InvalidOperationException Unsupported(string name)
                 => new($"GraphRegistryTestBootstrap only resolves FuncLib invokes; symbol '{name}' requires the production graph config loader path.");

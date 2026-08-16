@@ -100,8 +100,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.CompareEqInt, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.HasTag, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.CompareEqEntity, LinearAndQuery, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB);
-            Add(rows, GraphNodeOp.SelectTagInMask, LinearAndQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.LookupTagDisplayToken, LinearAndQuery, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SelectEntity, LinearAll, GraphValueType.Entity, portConditionAB);
             Add(rows, GraphNodeOp.QueryRadius, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, flags: GraphOperandRole.SpatialCapacityFlags, imm: GraphOperandRole.ImmediateFloat);
             Add(rows, GraphNodeOp.QuerySortStable, LinearQueryScript, GraphValueType.Void, queryOut: GraphValueType.TargetList, queryPorts: portList);

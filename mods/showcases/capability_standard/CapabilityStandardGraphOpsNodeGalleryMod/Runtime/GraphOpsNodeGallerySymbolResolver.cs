@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.Presentation.TagDisplay;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
@@ -26,7 +25,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly RelationshipFlagRegistry _flags;
     private readonly RelationshipReasonRegistry _reasons;
     private readonly TargetDispatchPresetRegistry _dispatchPresets;
-    private readonly TagDisplayTableRegistry? _tagDisplay;
 
     public GraphOpsNodeGallerySymbolResolver(
         EntityTemplateKeyRegistry templates,
@@ -34,8 +32,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         RelationshipMetricRegistry metrics,
         RelationshipFlagRegistry flags,
         RelationshipReasonRegistry reasons,
-        TargetDispatchPresetRegistry dispatchPresets,
-        TagDisplayTableRegistry? tagDisplay = null)
+        TargetDispatchPresetRegistry dispatchPresets)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -43,7 +40,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _flags = flags ?? throw new ArgumentNullException(nameof(flags));
         _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
-        _tagDisplay = tagDisplay;
     }
 
     public static GraphOpsNodeGallerySymbolResolver CreateStandalone(string assetsRoot)
@@ -75,21 +71,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
                 PayloadTarget = ContextSlot.ResolvedEntity,
                 PayloadTargetContext = ContextSlot.OriginalSource
             });
-        var tagDisplay = new TagDisplayTableRegistry();
-        BindSandboxDisplayTable(tagDisplay, assetsRoot);
         RegisterAuthoredCompileSymbols(assetsRoot);
-        return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets, tagDisplay);
-    }
-
-    internal static void BindSandboxDisplayTable(TagDisplayTableRegistry tagDisplay, string assetsRoot)
-    {
-        string path = Path.Combine(assetsRoot, "GAS", "tag_display_tables.json");
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException("Gallery requires assets/GAS/tag_display_tables.json.", path);
-        }
-
-        TagDisplayTableConfigLoader.LoadFromJson(tagDisplay, File.ReadAllText(path));
+        return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets);
     }
 
     public int ResolveTag(string name)
@@ -152,17 +135,6 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         }
 
         return id;
-    }
-
-    public int ResolveTagDisplayTable(string name)
-    {
-        if (_tagDisplay == null)
-        {
-            throw new InvalidOperationException(
-                $"Graph references tag display table '{name}', but no TagDisplayTableRegistry is bound.");
-        }
-
-        return _tagDisplay.GetTableId(name);
     }
 
     internal static void RegisterAuthoredCompileSymbols(string assetsRoot)

@@ -40,10 +40,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         CompareEqInt      = 32,   // B[Dst] = I[A] == I[B] ? 1 : 0
         HasTag            = 33,   // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
         CompareEqEntity   = 35,   // B[Dst] = E[A] == E[B] ? 1 : 0
-        /// <summary>I[Dst] = SelectEffectiveTagInMask(E[A], Imm=tableId); Flags=TagSelectPolicy. Authoring alias: ReadGameplayTag.</summary>
-        SelectTagInMask   = 36,
-        /// <summary>I[Dst] = LookupTagDisplayToken(Imm=tableId, I[A]=tagId). Authoring alias: LookupTagDisplayText.</summary>
-        LookupTagDisplayToken = 37,
 
         SelectEntity = 40,
         QueryRadius = 100,
@@ -182,19 +178,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 string.Equals(v.ToString(), trimmed, StringComparison.Ordinal))
             {
                 parsed = v;
-                return true;
-            }
-
-            // L1 authoring sugar → L0 opcodes (see design-tag-display-lookup).
-            if (string.Equals(trimmed, "ReadGameplayTag", StringComparison.Ordinal))
-            {
-                parsed = GraphNodeOp.SelectTagInMask;
-                return true;
-            }
-
-            if (string.Equals(trimmed, "LookupTagDisplayText", StringComparison.Ordinal))
-            {
-                parsed = GraphNodeOp.LookupTagDisplayToken;
                 return true;
             }
 

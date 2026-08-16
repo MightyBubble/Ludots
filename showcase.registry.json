@@ -1975,33 +1975,6 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
-      "id": "capability_standard_graph_op_LookupTagDisplayToken",
-      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod",
-      "projectPath": "CapabilityStandardGraphOpLookupTagDisplayTokenEntryMod.csproj",
-      "title": "把状态牌翻成面板字",
-      "summary": "选中的牌变成玩家能读的字。",
-      "tier": "T2",
-      "category": "capability",
-      "tags": [
-        "graph",
-        "capability-standard",
-        "gas",
-        "graph-ops",
-        "per-op",
-        "LookupTagDisplayToken"
-      ],
-      "binding": "capability_standard_graph_op_LookupTagDisplayToken",
-      "preset": "capability_standard_graph_op_LookupTagDisplayToken_raylib",
-      "docsPath": "gitbook/reference/graph-node-op-wiki/LookupTagDisplayToken.md",
-      "readmePath": null,
-      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken",
-      "screenshot": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken/poster.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_LookupTagDisplayToken/play.mp4",
-      "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
-    },
-    {
       "id": "capability_standard_graph_op_MaxFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMaxFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpMaxFloatEntryMod.csproj",
@@ -3456,33 +3429,6 @@
       "artifactDir": "artifacts/evidence/capability_standard_graph_op_SelectEntity",
       "screenshot": "artifacts/evidence/capability_standard_graph_op_SelectEntity/poster.png",
       "video": "artifacts/evidence/capability_standard_graph_op_SelectEntity/play.mp4",
-      "status": "active",
-      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
-    },
-    {
-      "id": "capability_standard_graph_op_SelectTagInMask",
-      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSelectTagInMaskEntryMod",
-      "projectPath": "CapabilityStandardGraphOpSelectTagInMaskEntryMod.csproj",
-      "title": "读出当前状态牌",
-      "summary": "从状态掩码里选出当前牌。",
-      "tier": "T2",
-      "category": "capability",
-      "tags": [
-        "graph",
-        "capability-standard",
-        "gas",
-        "graph-ops",
-        "per-op",
-        "SelectTagInMask"
-      ],
-      "binding": "capability_standard_graph_op_SelectTagInMask",
-      "preset": "capability_standard_graph_op_SelectTagInMask_raylib",
-      "docsPath": "gitbook/reference/graph-node-op-wiki/SelectTagInMask.md",
-      "readmePath": null,
-      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask",
-      "screenshot": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask/poster.png",
-      "video": "artifacts/evidence/capability_standard_graph_op_SelectTagInMask/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },

@@ -11,7 +11,6 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.DebugDraw;
-using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Spatial;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
@@ -41,7 +40,6 @@ public sealed class GraphOpsNodeDriverContext
     public RelationshipFlagRegistry? RelationshipFlags { get; set; }
     public EntityCollectionStore? Collections { get; set; }
     public TagOps? TagOps { get; set; }
-    public TagDisplayTableRegistry? TagDisplay { get; set; }
     public GameplayEventBus? EventBus { get; set; }
     public OwnershipResolver? Ownership { get; set; }
     public KnowledgeProjectionStore? Knowledge { get; set; }
