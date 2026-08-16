@@ -35,11 +35,11 @@ namespace Ludots.Tests.Presentation
             _repoRoot = FindRepoRoot();
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_CameraAcceptancePresenterTree", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_tempRoot, "Core");
-            Directory.CreateDirectory(_coreRoot);
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(_coreRoot, "config_catalog.json"),
-                File.ReadAllText(Path.Combine(_repoRoot, "assets", "config_catalog.json")));
+                Path.Combine(_coreRoot, "Configs", "config_catalog.json"),
+                File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "config_catalog.json")));
             string cameraPresentation = Path.Combine(
                 _repoRoot,
                 "mods",
@@ -52,7 +52,7 @@ namespace Ludots.Tests.Presentation
             {
                 File.Copy(
                     Path.Combine(cameraPresentation, fileName),
-                    Path.Combine(_coreRoot, "Presentation", fileName),
+                    Path.Combine(_coreRoot, "Configs", "Presentation", fileName),
                     overwrite: true);
             }
             TagRegistry.Clear();

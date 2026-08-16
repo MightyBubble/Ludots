@@ -40,9 +40,9 @@ public sealed class AiShowcaseHardcodingGuardTests
                 },
                 RequiredDataFiles: new[]
                 {
-                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decision_makers.json",
-                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decisions.json",
-                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/target_filters.json",
+                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Configs/AI/decision_makers.json",
+                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Configs/AI/decisions.json",
+                    "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Configs/AI/target_filters.json",
                     "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/GAS/abilities.json",
                     "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Entities/templates.json",
                     "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/Maps/utility_autocast_showcase.json"

@@ -247,6 +247,7 @@ namespace Ludots.Tests.GAS.Production
                 "static_obstacle_physics",
                 "StaticObstaclePhysicsShowcaseMod",
                 "assets",
+                "Configs",
                 "config_catalog.json");
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
             AssertCatalogEntry(document.RootElement, ShowcaseConfigRelativePath, "Replace", null);

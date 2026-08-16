@@ -396,7 +396,7 @@ namespace Ludots.Tests.GAS.Graph
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphContractTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "GAS");
+            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 

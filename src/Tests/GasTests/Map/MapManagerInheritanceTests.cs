@@ -302,7 +302,7 @@ namespace GasTests
 
         private static void WriteMapConfig(string root, string mapId, string json)
         {
-            var mapsDir = Path.Combine(root, "Maps");
+            var mapsDir = Path.Combine(root, "Configs", "Maps");
             Directory.CreateDirectory(mapsDir);
             File.WriteAllText(Path.Combine(mapsDir, $"{mapId}.json"), json);
         }

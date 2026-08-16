@@ -45,8 +45,8 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/GAS/abilities/capability_standard.config_shards.ember_bolt.json",
-            "assets/GAS/effects/capability_standard.config_shards.ember_bolt_damage.json");
+            "assets/Configs/GAS/abilities/capability_standard.config_shards.ember_bolt.json",
+            "assets/Configs/GAS/effects/capability_standard.config_shards.ember_bolt_damage.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
@@ -87,8 +87,8 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/GAS/preset_types/capability_standard.effect_preset_type_code.heat_mark.json",
-            "assets/GAS/effects/capability_standard.effect_preset_type_code.heat_mark.json");
+            "assets/Configs/GAS/preset_types/capability_standard.effect_preset_type_code.heat_mark.json",
+            "assets/Configs/GAS/effects/capability_standard.effect_preset_type_code.heat_mark.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
@@ -129,7 +129,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/Presentation/presenters/capability_standard.performer_behavior_extension.cloud_banner.json");
+            "assets/Configs/Presentation/presenters/capability_standard.performer_behavior_extension.cloud_banner.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
@@ -169,7 +169,7 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
         string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
 
         AssertRootShowcaseAssets(repoRoot, modId, mapId, bindingName, presetId,
-            "assets/Presentation/presenters/capability_standard.performer_command_extension.signal_rules.json");
+            "assets/Configs/Presentation/presenters/capability_standard.performer_command_extension.signal_rules.json");
 
         using var engine = CreateEngine(repoRoot, modId);
         engine.LoadEntryMap(engine.MergedConfig.StartupMapId);

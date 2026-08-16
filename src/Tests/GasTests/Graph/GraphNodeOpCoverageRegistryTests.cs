@@ -12,7 +12,7 @@ namespace Ludots.Tests.GAS
     [Category("ci-gate")]
     public sealed class GraphNodeOpCoverageRegistryTests
     {
-        private const string RegistryRelativePath = "assets/GAS/graph_node_op_coverage.registry.json";
+        private const string RegistryRelativePath = "assets/Configs/GAS/graph_node_op_coverage.registry.json";
         private const string GalleryMapsRelative =
             "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Maps";
         private const string EntryRootRelative =

@@ -432,7 +432,7 @@ namespace Ludots.Tests.Presentation
 
         private static void WriteKinematicBudgetOverrideMod(string modDir, int kinematicBodyCapacity)
         {
-            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Physics2D"));
+            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Configs", "Physics2D"));
             File.WriteAllText(
                 Path.Combine(modDir, "mod.json"),
                 "{\n" +
@@ -446,7 +446,7 @@ namespace Ludots.Tests.Presentation
                 "  \"author\": \"ProductionPathTests\"\n" +
                 "}\n");
             File.WriteAllText(
-                Path.Combine(modDir, "assets", "Physics2D", "kinematic.json"),
+                Path.Combine(modDir, "assets", "Configs", "Physics2D", "kinematic.json"),
                 $"{{\n  \"kinematicBodyCapacity\": {kinematicBodyCapacity}\n}}\n");
         }
 

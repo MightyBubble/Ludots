@@ -736,8 +736,8 @@ namespace Ludots.Tests.GAS
 
         private static void WriteAbilities(string root, string json)
         {
-            Directory.CreateDirectory(Path.Combine(root, "GAS"));
-            File.WriteAllText(Path.Combine(root, "GAS", "abilities.json"), json);
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "abilities.json"), json);
         }
 
         private static string CreateTempRoot()

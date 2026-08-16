@@ -15,9 +15,9 @@ namespace Ludots.Tests.Presentation
         public void MeshAssetConfigLoader_WhenModelDeclaresSourceUris_ThrowsExplicitHostAssetError()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 """
                 [
                   {
@@ -41,9 +41,9 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenBackendMatches_InjectsHostUrisIntoExistingMeshDescriptor()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" },
@@ -51,7 +51,7 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "host_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -99,16 +99,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenHostAssetTargetsUnknownMesh_ThrowsExplicitly()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "host_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -147,16 +147,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenHostAssetSchemaIsNotCanonical_Throws(string hostAssetRowJson, string expectedMessage)
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "host_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
                 $"[ {hostAssetRowJson} ]");
 
             var pipeline = BuildCorePipeline(root);
@@ -174,16 +174,16 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenRequestedBackendHasBoundaryWhitespace_Throws()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 """
                 [
                   { "id": "test.model", "type": "Model" }
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "host_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
                 """
                 [
                   {
@@ -211,9 +211,9 @@ namespace Ludots.Tests.Presentation
         public void MaterialAssetConfigLoader_WhenMaterialDeclaresSourceUris_ThrowsExplicitHostAssetError()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "material_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
                 """
                 [
                   {
@@ -237,12 +237,12 @@ namespace Ludots.Tests.Presentation
         public void Apply_WhenMaterialBackendMatches_InjectsHostUrisIntoExistingMaterialDescriptor()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "mesh_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
                 "[]");
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "material_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
                 """
                 [
                   {
@@ -253,7 +253,7 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
             File.WriteAllText(
-                Path.Combine(root, "Presentation", "host_assets.json"),
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
                 """
                 [
                   {

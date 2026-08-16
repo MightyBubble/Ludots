@@ -2554,11 +2554,11 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             var json = "[" + effectJson + "]";
             var root = Path.Combine(Path.GetTempPath(), $"TagEffectTest_{Guid.NewGuid():N}");
-            var gasDir = Path.Combine(root, "GAS");
+            var gasDir = Path.Combine(root, "Configs", "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), json);
             File.WriteAllText(
-                Path.Combine(root, "config_catalog.json"),
+                Path.Combine(root, "Configs", "config_catalog.json"),
                 @"[
   { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
   { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }

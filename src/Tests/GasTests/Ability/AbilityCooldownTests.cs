@@ -19,29 +19,8 @@ namespace Ludots.Tests.GAS
     /// - Multiple abilities have independent CD tracking
     /// </summary>
     [TestFixture]
-    [NonParallelizable]
     public class AbilityCooldownTests
     {
-        private const int CountdownAttributeId = 8;
-        private const int ResetAttributeId = 9;
-        private const int ReductionAttributeId = 10;
-        private const int ClampAttributeId = 11;
-        private const int MultiAttributeA = 12;
-        private const int MultiAttributeB = 13;
-        private const int MultiAttributeC = 14;
-
-        [SetUp]
-        public void SetUp()
-        {
-            AttributeRegistry.Clear();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            AttributeRegistry.Clear();
-        }
-
         [Test]
         public void AbilityCooldown_Component_StoresAttributeAndTagIds()
         {
@@ -61,18 +40,19 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Countdown");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetCurrent(CountdownAttributeId, 10f);
+            buf.SetCurrent(cdAttrId, 10f);
 
             // Simulate 10 ticks of CD reduction
             for (int i = 0; i < 10; i++)
             {
-                float remaining = buf.GetCurrent(CountdownAttributeId);
+                float remaining = buf.GetCurrent(cdAttrId);
                 if (remaining > 0f)
-                    buf.SetCurrent(CountdownAttributeId, remaining - 1f);
+                    buf.SetCurrent(cdAttrId, remaining - 1f);
             }
 
-            That(buf.GetCurrent(CountdownAttributeId), Is.EqualTo(0f),
+            That(buf.GetCurrent(cdAttrId), Is.EqualTo(0f),
                 "After full tick-down, cooldown attribute should be zero");
         }
 
@@ -82,12 +62,13 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reset");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetCurrent(ResetAttributeId, 5f); // mid-cooldown
-            That(buf.GetCurrent(ResetAttributeId), Is.EqualTo(5f));
+            buf.SetCurrent(cdAttrId, 5f); // mid-cooldown
+            That(buf.GetCurrent(cdAttrId), Is.EqualTo(5f));
 
-            buf.SetCurrent(ResetAttributeId, 60f); // reset to full
-            That(buf.GetCurrent(ResetAttributeId), Is.EqualTo(60f),
+            buf.SetCurrent(cdAttrId, 60f); // reset to full
+            That(buf.GetCurrent(cdAttrId), Is.EqualTo(60f),
                 "CD reset should set remaining to full value");
         }
 
@@ -97,16 +78,17 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reduction");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetCurrent(ReductionAttributeId, 30f);
+            buf.SetCurrent(cdAttrId, 30f);
 
             // External effect reduces CD by 10
-            float remaining = buf.GetCurrent(ReductionAttributeId);
+            float remaining = buf.GetCurrent(cdAttrId);
             float reduced = remaining - 10f;
             if (reduced < 0f) reduced = 0f;
-            buf.SetCurrent(ReductionAttributeId, reduced);
+            buf.SetCurrent(cdAttrId, reduced);
 
-            That(buf.GetCurrent(ReductionAttributeId), Is.EqualTo(20f),
+            That(buf.GetCurrent(cdAttrId), Is.EqualTo(20f),
                 "CD reduction should subtract from remaining");
         }
 
@@ -116,15 +98,16 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Clamp");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetCurrent(ClampAttributeId, 5f);
+            buf.SetCurrent(cdAttrId, 5f);
 
-            float remaining = buf.GetCurrent(ClampAttributeId);
+            float remaining = buf.GetCurrent(cdAttrId);
             float reduced = remaining - 100f;
             if (reduced < 0f) reduced = 0f;
-            buf.SetCurrent(ClampAttributeId, reduced);
+            buf.SetCurrent(cdAttrId, reduced);
 
-            That(buf.GetCurrent(ClampAttributeId), Is.EqualTo(0f),
+            That(buf.GetCurrent(cdAttrId), Is.EqualTo(0f),
                 "CD reduction should not go below zero");
         }
 
@@ -134,19 +117,23 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
+            int cdAttrA = AttributeRegistry.Register("Test.Cooldown.Multi.A");
+            int cdAttrB = AttributeRegistry.Register("Test.Cooldown.Multi.B");
+            int cdAttrC = AttributeRegistry.Register("Test.Cooldown.Multi.C");
+
             ref var buf = ref world.Get<AttributeBuffer>(entity);
-            buf.SetCurrent(MultiAttributeA, 10f);
-            buf.SetCurrent(MultiAttributeB, 20f);
-            buf.SetCurrent(MultiAttributeC, 30f);
+            buf.SetCurrent(cdAttrA, 10f);
+            buf.SetCurrent(cdAttrB, 20f);
+            buf.SetCurrent(cdAttrC, 30f);
 
-            That(buf.GetCurrent(MultiAttributeA), Is.EqualTo(10f));
-            That(buf.GetCurrent(MultiAttributeB), Is.EqualTo(20f));
-            That(buf.GetCurrent(MultiAttributeC), Is.EqualTo(30f));
+            That(buf.GetCurrent(cdAttrA), Is.EqualTo(10f));
+            That(buf.GetCurrent(cdAttrB), Is.EqualTo(20f));
+            That(buf.GetCurrent(cdAttrC), Is.EqualTo(30f));
 
-            buf.SetCurrent(MultiAttributeB, 0f);
-            That(buf.GetCurrent(MultiAttributeA), Is.EqualTo(10f), "Ability A CD unaffected");
-            That(buf.GetCurrent(MultiAttributeB), Is.EqualTo(0f), "Ability B CD reset");
-            That(buf.GetCurrent(MultiAttributeC), Is.EqualTo(30f), "Ability C CD unaffected");
+            buf.SetCurrent(cdAttrB, 0f);
+            That(buf.GetCurrent(cdAttrA), Is.EqualTo(10f), "Ability A CD unaffected");
+            That(buf.GetCurrent(cdAttrB), Is.EqualTo(0f), "Ability B CD reset");
+            That(buf.GetCurrent(cdAttrC), Is.EqualTo(30f), "Ability C CD unaffected");
         }
     }
 }

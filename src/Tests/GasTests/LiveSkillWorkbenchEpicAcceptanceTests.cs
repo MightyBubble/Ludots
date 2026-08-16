@@ -199,7 +199,7 @@ namespace Ludots.Tests.GAS
         public void Lsw624_SavePreviewAndWrite_ExcludesImmediateAttrs()
         {
             string modRoot = Path.Combine(Path.GetTempPath(), "lsw-save-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(modRoot, "assets/GAS"));
+            Directory.CreateDirectory(Path.Combine(modRoot, "assets/Configs/GAS"));
             try
             {
                 int graphId = GraphIdRegistry.Register("Graph.Save.Demo");
@@ -248,8 +248,8 @@ namespace Ludots.Tests.GAS
                 That(preview.ExcludedImmediateOps.Count, Is.EqualTo(1));
                 LiveEditSaveResult result = save.Save(session, preview);
                 That(result.Succeeded, Is.True);
-                That(File.Exists(Path.Combine(modRoot, "assets/GAS/graphs.json")), Is.True);
-                string text = File.ReadAllText(Path.Combine(modRoot, "assets/GAS/graphs.json"));
+                That(File.Exists(Path.Combine(modRoot, "assets/Configs/GAS/graphs.json")), Is.True);
+                string text = File.ReadAllText(Path.Combine(modRoot, "assets/Configs/GAS/graphs.json"));
                 That(text, Does.Contain("Graph.Save.Demo"));
                 That(text, Does.Contain("9"));
             }

@@ -637,16 +637,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeRelGate", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "config_catalog.json"),
+                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
                     """
                     [
                       {
@@ -730,16 +730,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeAttributeCost", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "config_catalog.json"),
+                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
                     """
                     [
                       {

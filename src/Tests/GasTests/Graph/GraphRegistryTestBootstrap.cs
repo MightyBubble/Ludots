@@ -57,7 +57,7 @@ namespace Ludots.Tests.Gas.Graph
 
         private static void LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot)
         {
-            string graphsPath = Path.Combine(repoRoot, "assets", "GAS", "graphs.json");
+            string graphsPath = Path.Combine(repoRoot, "assets", "Configs", "GAS", "graphs.json");
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
             using var doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
             foreach (JsonElement el in doc.RootElement.EnumerateArray())

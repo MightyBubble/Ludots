@@ -44,12 +44,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_FogLayers");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Vision"));
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Vision"));
                 File.WriteAllText(
-                    Path.Combine(root, "config_catalog.json"),
+                    Path.Combine(root, "Configs", "config_catalog.json"),
                     @"[{ ""Path"": ""Vision/fog_layers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Vision", "fog_layers.json"),
+                    Path.Combine(root, "Configs", "Vision", "fog_layers.json"),
                     @"[
   { ""id"": ""ground"", ""cellSizeCm"": 100, ""updateHz"": 10 },
   { ""id"": ""detection"", ""cellSizeCm"": 125, ""updateHz"": 5 }
@@ -218,12 +218,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaEffect");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "config_catalog.json"),
+                    Path.Combine(root, "Configs", "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "GAS", "effects.json"),
+                    Path.Combine(root, "Configs", "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
@@ -291,12 +291,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaMissingLayer");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "config_catalog.json"),
+                    Path.Combine(root, "Configs", "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "GAS", "effects.json"),
+                    Path.Combine(root, "Configs", "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
@@ -397,12 +397,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RelationEnsureLink");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "config_catalog.json"),
+                    Path.Combine(root, "Configs", "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "GAS", "effects.json"),
+                    Path.Combine(root, "Configs", "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""capture_link"",

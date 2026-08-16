@@ -76,7 +76,7 @@ namespace Ludots.Tests.Architecture
         public void NavigationProfileConfigs_DoNotOwnDuplicateGeometryFields()
         {
             string repoRoot = FindRepoRoot();
-            JsonObject navmesh = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "navmesh.json"));
+            JsonObject navmesh = ReadObject(Path.Combine(repoRoot, "assets", "Configs", "Navigation", "navmesh.json"));
             JsonArray navProfiles = navmesh["profiles"]?.AsArray()
                 ?? throw new InvalidOperationException("Navigation/navmesh.json profiles missing.");
             foreach (JsonNode? node in navProfiles)
@@ -87,7 +87,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(profile.ContainsKey("heightCm"), Is.False);
             }
 
-            JsonObject pathing = ReadObject(Path.Combine(repoRoot, "assets", "Navigation", "pathing.json"));
+            JsonObject pathing = ReadObject(Path.Combine(repoRoot, "assets", "Configs", "Navigation", "pathing.json"));
             JsonArray agentTypes = pathing["agentTypes"]?.AsArray()
                 ?? throw new InvalidOperationException("Navigation/pathing.json agentTypes missing.");
             foreach (JsonNode? node in agentTypes)
@@ -102,7 +102,7 @@ namespace Ludots.Tests.Architecture
         public void AgentProfileRegistry_RejectsUnknownFieldsStrictly()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-agent-profile-contract-" + Guid.NewGuid().ToString("N"));
-            string coreConfigs = tempRoot;
+            string coreConfigs = Path.Combine(tempRoot, "Configs");
             Directory.CreateDirectory(Path.Combine(coreConfigs, "Navigation"));
             File.WriteAllText(Path.Combine(coreConfigs, "config_catalog.json"),
                 "[{ \"Path\": \"Navigation/agent_profiles.json\", \"Policy\": \"ArrayById\", \"IdField\": \"id\" }]");
@@ -274,7 +274,7 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempNavigationConfig(string navmeshJson, string pathingJson)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-contract-" + Guid.NewGuid().ToString("N"));
-            string coreConfigs = tempRoot;
+            string coreConfigs = Path.Combine(tempRoot, "Configs");
             Directory.CreateDirectory(Path.Combine(coreConfigs, "Navigation"));
             File.WriteAllText(Path.Combine(coreConfigs, "config_catalog.json"),
                 """
@@ -319,7 +319,7 @@ namespace Ludots.Tests.Architecture
 
         private static void RewriteTempNavmeshMode(string tempAssetsRoot, string mode, string algorithm)
         {
-            string path = Path.Combine(tempAssetsRoot, "Navigation", "navmesh.json");
+            string path = Path.Combine(tempAssetsRoot, "Configs", "Navigation", "navmesh.json");
             JsonObject navmesh = ReadObject(path);
             navmesh["mode"] = mode;
             navmesh["algorithm"] = algorithm;
@@ -329,8 +329,8 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempAssetsRootWithNavTiles(string repoRoot, string mapId)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bootstrap-contract-" + Guid.NewGuid().ToString("N"));
-            string configSource = Path.Combine(repoRoot, "assets");
-            string configTarget = tempRoot;
+            string configSource = Path.Combine(repoRoot, "assets", "Configs");
+            string configTarget = Path.Combine(tempRoot, "Configs");
             CopyDirectory(configSource, configTarget);
 
             var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);

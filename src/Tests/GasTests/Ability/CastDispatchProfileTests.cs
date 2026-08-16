@@ -300,7 +300,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DefaultConfigFile_DeserializesValidatesAndInstalls()
         {
-            string configPath = Path.Combine(FindRepoRoot(), "assets", "Input", "cast_dispatch_profiles.json");
+            string configPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "Input", "cast_dispatch_profiles.json");
             Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
 
             var config = JsonSerializer.Deserialize<CastDispatchProfilesConfig>(

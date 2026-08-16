@@ -340,7 +340,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(heavy.ContainsKey("bodyRadiusCm"), Is.False,
                 "MassNavigation execution profiles must not own geometry or solver radius.");
 
-            JsonArray geometryProfiles = ReadArray(Path.Combine(FindRepoRoot(), "assets", "Navigation", "agent_profiles.json"));
+            JsonArray geometryProfiles = ReadArray(Path.Combine(FindRepoRoot(), "assets", "Configs", "Navigation", "agent_profiles.json"));
             JsonObject heavyGeometry = FindObjectById(geometryProfiles, "heavy");
             Assert.That(heavyGeometry["mass"]?.GetValue<float>(), Is.GreaterThan(1f));
             Assert.That(heavyGeometry["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
@@ -381,7 +381,7 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             string modRoot = MassNavigationModRoot();
 
-            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "config_catalog.json"));
+            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "Configs", "config_catalog.json"));
             JsonObject massNavigationConfigSource = catalog
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(source => string.Equals(source?["Path"]?.GetValue<string>(), "MassNavigationConfig.json", StringComparison.Ordinal))
@@ -561,7 +561,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(0f));
             Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(0f));
 
-            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "config_catalog.json"));
+            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "Configs", "config_catalog.json"));
             Assert.That(
                 catalog.Select(node => node?.AsObject()).Any(entry =>
                     string.Equals(entry?["Path"]?.GetValue<string>(), "Camera/virtual_cameras.json", StringComparison.Ordinal) &&
@@ -570,7 +570,7 @@ namespace Ludots.Tests.Presentation
                 Is.True,
                 "MassNavigation camera profiles must be registered through ConfigPipeline, not by host-loop defaults.");
 
-            JsonArray cameras = ReadArray(Path.Combine(modRoot, "assets", "Camera", "virtual_cameras.json"));
+            JsonArray cameras = ReadArray(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json"));
             JsonObject camera = FindObjectById(cameras, LargeWorldCameraId);
             Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("VisualHeightmap"));
             Assert.That(camera["targetHeightLayerIndex"]?.GetValue<int>(), Is.EqualTo(0));

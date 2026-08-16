@@ -531,7 +531,7 @@ public sealed class ParticleVfxConfigTests
     private static string CreateCoreRoot(string label)
     {
         string core = Path.Combine(Path.GetTempPath(), label, Guid.NewGuid().ToString("N"), "Core");
-        Directory.CreateDirectory(Path.Combine(core, "Presentation"));
+        Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
         return core;
     }
 
@@ -542,7 +542,7 @@ public sealed class ParticleVfxConfigTests
             throw new ArgumentException("Catalog entries must be path/policy/idField triples.", nameof(triples));
         }
 
-        Directory.CreateDirectory(coreRoot);
+        Directory.CreateDirectory(Path.Combine(coreRoot, "Configs"));
         using var writer = new StringWriter();
         writer.WriteLine("[");
         for (int i = 0; i < triples.Length; i += 3)
@@ -563,17 +563,17 @@ public sealed class ParticleVfxConfigTests
 
         writer.WriteLine();
         writer.WriteLine("]");
-        File.WriteAllText(Path.Combine(coreRoot, "config_catalog.json"), writer.ToString(), Utf8NoBom);
+        File.WriteAllText(Path.Combine(coreRoot, "Configs", "config_catalog.json"), writer.ToString(), Utf8NoBom);
     }
 
     private static void WriteParticleVfx(string coreRoot, string json)
     {
-        File.WriteAllText(Path.Combine(coreRoot, "Presentation", "particle_vfx.json"), json, Utf8NoBom);
+        File.WriteAllText(Path.Combine(coreRoot, "Configs", "Presentation", "particle_vfx.json"), json, Utf8NoBom);
     }
 
     private static void WriteMeshAssets(string coreRoot, string json)
     {
-        File.WriteAllText(Path.Combine(coreRoot, "Presentation", "mesh_assets.json"), json, Utf8NoBom);
+        File.WriteAllText(Path.Combine(coreRoot, "Configs", "Presentation", "mesh_assets.json"), json, Utf8NoBom);
     }
 
     private static string MeshAssetReferencingParticleVfxJson()

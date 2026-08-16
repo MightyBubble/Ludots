@@ -1149,7 +1149,7 @@ namespace Ludots.Tests.Presentation
         public void PresenterLoader_ParsesInstancedBatchReferencesAndRejectsUnknownAssets()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             WritePresentationFile(root, "presenters.json",
                 """
                 [
@@ -1502,13 +1502,13 @@ namespace Ludots.Tests.Presentation
         private static string CreateTempCoreRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_InstancedBatchTests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
             return root;
         }
 
         private static void WritePresentationFile(string root, string fileName, string content)
         {
-            File.WriteAllText(Path.Combine(root, "Presentation", fileName), content);
+            File.WriteAllText(Path.Combine(root, "Configs", "Presentation", fileName), content);
         }
 
         private static ConfigPipeline BuildCorePipeline(string coreRoot)

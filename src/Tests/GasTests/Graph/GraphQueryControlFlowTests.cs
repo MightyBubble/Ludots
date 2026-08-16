@@ -210,7 +210,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryControlFlowTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "GAS");
+            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), AggregateGraphJson);
 

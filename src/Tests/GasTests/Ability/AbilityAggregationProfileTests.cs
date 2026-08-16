@@ -253,10 +253,10 @@ namespace Ludots.Tests.GAS
         {
             string repoRoot = FindRepoRoot();
             // Core default carries only structural profiles (identity keys, no cast-family vocabulary).
-            string corePath = Path.Combine(repoRoot, "assets", "UI", "ability_aggregation_profiles.json");
+            string corePath = Path.Combine(repoRoot, "assets", "Configs", "UI", "ability_aggregation_profiles.json");
             // aggregation.by_family is EntityCommandPanelMod data, merged as an additive ArrayById fragment.
             string modPath = Path.Combine(
-                repoRoot, "mods", "EntityCommandPanelMod", "assets", "UI", "ability_aggregation_profiles.json");
+                repoRoot, "mods", "EntityCommandPanelMod", "assets", "Configs", "UI", "ability_aggregation_profiles.json");
             Assert.That(File.Exists(corePath), Is.True, $"Missing {corePath}");
             Assert.That(File.Exists(modPath), Is.True, $"Missing {modPath}");
 

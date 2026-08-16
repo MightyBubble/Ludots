@@ -190,7 +190,7 @@ namespace Ludots.Tests.GAS
                 "Ludots_ConfigCatalogStrictnessTests",
                 Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
@@ -201,7 +201,7 @@ namespace Ludots.Tests.GAS
 
         private static void WriteCatalog(string root, string contents)
         {
-            string path = Path.Combine(root, "Core", "config_catalog.json");
+            string path = Path.Combine(root, "Core", "Configs", "config_catalog.json");
             File.WriteAllText(path, contents);
         }
 

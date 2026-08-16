@@ -40,13 +40,13 @@ namespace Ludots.Tests.Architecture
             _repoRoot = FindRepoRoot();
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_VfxShowcaseConfigContracts", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_tempRoot, "Core");
-            Directory.CreateDirectory(_coreRoot);
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs"));
             File.WriteAllText(
-                Path.Combine(_coreRoot, "config_catalog.json"),
-                File.ReadAllText(Path.Combine(_repoRoot, "assets", "config_catalog.json")));
+                Path.Combine(_coreRoot, "Configs", "config_catalog.json"),
+                File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "config_catalog.json")));
             File.WriteAllText(
-                Path.Combine(_coreRoot, "game.json"),
-                File.ReadAllText(Path.Combine(_repoRoot, "assets", "game.json")));
+                Path.Combine(_coreRoot, "Configs", "game.json"),
+                File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "game.json")));
             TagRegistry.Clear();
             PresenterScopeTagRegistry.Clear();
             AttributeRegistry.Clear();

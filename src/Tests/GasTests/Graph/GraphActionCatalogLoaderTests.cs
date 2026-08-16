@@ -323,7 +323,7 @@ namespace Ludots.Tests.Gas.Graph
             Directory.CreateDirectory(coreRoot);
             if (writeJson)
             {
-                string fullPath = Path.Combine(coreRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                string fullPath = Path.Combine(coreRoot, "Configs", relativePath.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
                 File.WriteAllText(fullPath, json!);
             }

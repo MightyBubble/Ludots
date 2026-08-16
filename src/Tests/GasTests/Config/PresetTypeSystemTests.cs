@@ -792,7 +792,7 @@ namespace Ludots.Tests.GAS
         public void PresetTypeLoader_FullPresetTypesJson_LoadsAllConfiguredTypes()
         {
             string json = System.IO.File.ReadAllText(
-                System.IO.Path.Combine(FindRepoRoot(), "assets", "GAS", "preset_types.json"));
+                System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
             int lifecycleGraphId = GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
 
@@ -861,11 +861,11 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "GAS", "preset_types.json")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))
                     return dir;
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
-            throw new InvalidOperationException("Cannot find repo root (looking for assets/GAS/preset_types.json).");
+            throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
         }
     }
 }

@@ -76,7 +76,7 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
     {
         string repoRoot = FindRepoRoot();
         string assets = Path.Combine(repoRoot, GraphOpsNodeIds.ModAssetsRelative);
-        string coveragePath = Path.Combine(repoRoot, "assets/GAS/graph_node_op_coverage.registry.json");
+        string coveragePath = Path.Combine(repoRoot, "assets/Configs/GAS/graph_node_op_coverage.registry.json");
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(coveragePath));
         var coverageIds = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())

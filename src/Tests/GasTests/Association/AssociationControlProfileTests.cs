@@ -364,7 +364,7 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                string relationshipsDir = Path.Combine(root, "Relationships");
+                string relationshipsDir = Path.Combine(root, "Configs", "Relationships");
                 Directory.CreateDirectory(relationshipsDir);
                 File.WriteAllText(Path.Combine(relationshipsDir, "control_profiles.json"), """
                 {
@@ -398,9 +398,9 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                // Fragment 1: Core:... (engine defaults). Fragment 2: Core:... (loaded after,
+                // Fragment 1: Core:Configs/... (engine defaults). Fragment 2: Core:... (loaded after,
                 // same position as a mod override in LoadFromAllSources order).
-                string defaultsDir = Path.Combine(root, "Relationships");
+                string defaultsDir = Path.Combine(root, "Configs", "Relationships");
                 string overrideDir = Path.Combine(root, "Relationships");
                 Directory.CreateDirectory(defaultsDir);
                 Directory.CreateDirectory(overrideDir);
@@ -450,7 +450,7 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                string relationshipsDir = Path.Combine(root, "Relationships");
+                string relationshipsDir = Path.Combine(root, "Configs", "Relationships");
                 Directory.CreateDirectory(relationshipsDir);
                 File.WriteAllText(Path.Combine(relationshipsDir, "control_profiles.json"), """
                 {

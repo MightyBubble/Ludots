@@ -860,7 +860,7 @@ namespace Ludots.Tests.Presentation
 
         private void WriteFile(string modId, string relativePath, string content)
         {
-            string dir = Path.Combine(_root, modId, Path.GetDirectoryName(relativePath) ?? string.Empty);
+            string dir = Path.Combine(_root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? string.Empty);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }

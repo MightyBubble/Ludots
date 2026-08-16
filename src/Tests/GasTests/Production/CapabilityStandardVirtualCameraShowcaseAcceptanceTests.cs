@@ -558,7 +558,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string root = EnsureTempRoot();
             string relativeDir = Path.GetDirectoryName(relativePath) ?? string.Empty;
-            string dir = Path.Combine(root, modId, relativeDir);
+            string dir = Path.Combine(root, modId, "Configs", relativeDir);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }

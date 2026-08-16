@@ -179,7 +179,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
         {
             string repoRoot = FindRepoRoot();
-            string configPath = Path.Combine(repoRoot, "assets", "game.json");
+            string configPath = Path.Combine(repoRoot, "assets", "Configs", "game.json");
             string json = File.ReadAllText(configPath);
             GameConfig config = JsonSerializer.Deserialize<GameConfig>(
                 json,
@@ -1069,7 +1069,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             while (directory != null)
             {
                 string gitPath = Path.Combine(directory.FullName, ".git");
-                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "game.json");
+                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "Configs", "game.json");
                 if ((File.Exists(gitPath) || Directory.Exists(gitPath)) &&
                     File.Exists(defaultConfigPath) &&
                     Directory.Exists(Path.Combine(directory.FullName, "mods")))

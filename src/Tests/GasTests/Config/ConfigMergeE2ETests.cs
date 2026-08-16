@@ -66,14 +66,14 @@ namespace Ludots.Tests.GAS
 
         private void WriteFile(string modId, string relativePath, string content)
         {
-            string dir = Path.Combine(_root, modId, Path.GetDirectoryName(relativePath) ?? "");
+            string dir = Path.Combine(_root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? "");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }
 
         private void WriteAssetFile(string modId, string relativePath, string content)
         {
-            string dir = Path.Combine(_root, modId, "assets", Path.GetDirectoryName(relativePath) ?? "");
+            string dir = Path.Combine(_root, modId, "assets", "Configs", Path.GetDirectoryName(relativePath) ?? "");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }

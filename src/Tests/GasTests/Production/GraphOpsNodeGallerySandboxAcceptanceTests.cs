@@ -129,7 +129,7 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
         Assert.That(File.Exists(Path.Combine(assets, "GAS", "sandbox", "catalog.json")), Is.True);
         Assert.That(File.Exists(Path.Combine(assets, "GAS", "graphs.json")), Is.False);
         string repoRoot = FindRepoRoot();
-        string engineGraphs = Path.Combine(repoRoot, "assets", "GAS", "graphs.json");
+        string engineGraphs = Path.Combine(repoRoot, "assets", "Configs", "GAS", "graphs.json");
         if (File.Exists(engineGraphs))
         {
             string text = File.ReadAllText(engineGraphs);

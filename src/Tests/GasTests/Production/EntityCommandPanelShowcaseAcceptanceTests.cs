@@ -297,6 +297,7 @@ namespace Ludots.Tests.GAS.Production
                 "mods",
                 "EntityCommandPanelMod",
                 "assets",
+                "Configs",
                 "UI",
                 "ability_aggregation_profiles.json");
             Assert.That(File.Exists(fragmentPath), Is.True, "EntityCommandPanelMod should provide the by-family profile fragment.");

@@ -664,11 +664,11 @@ namespace Ludots.Tests.GasTests
         private static ConfigPipeline CreateEffectsPipeline(string effectsJson)
         {
             var root = Path.Combine(Path.GetTempPath(), $"LifecycleEffects_{Guid.NewGuid():N}");
-            var gasDir = Path.Combine(root, "GAS");
+            var gasDir = Path.Combine(root, "Configs", "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), effectsJson);
             File.WriteAllText(
-                Path.Combine(root, "config_catalog.json"),
+                Path.Combine(root, "Configs", "config_catalog.json"),
                 @"[
   { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
 ]");
@@ -682,11 +682,11 @@ namespace Ludots.Tests.GasTests
         private static ConfigPipeline CreateTemplatesPipeline(string templatesJson)
         {
             var root = Path.Combine(Path.GetTempPath(), $"LifecycleTest_{Guid.NewGuid():N}");
-            var entityDir = Path.Combine(root, "Entities");
+            var entityDir = Path.Combine(root, "Configs", "Entities");
             Directory.CreateDirectory(entityDir);
             File.WriteAllText(Path.Combine(entityDir, "templates.json"), templatesJson);
             File.WriteAllText(
-                Path.Combine(root, "config_catalog.json"),
+                Path.Combine(root, "Configs", "config_catalog.json"),
                 @"[
   { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
 ]");

@@ -793,7 +793,7 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
 
     private static void AssertShowcaseCatalog(string modDir)
     {
-        string catalogPath = Path.Combine(modDir, "assets", "config_catalog.json");
+        string catalogPath = Path.Combine(modDir, "assets", "Configs", "config_catalog.json");
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
         AssertCatalogEntry(document.RootElement, ShowcaseConfigPath, "Replace");
         AssertCatalogEntry(document.RootElement, "Physics2D/clock.json", "DeepObject");
