@@ -108,7 +108,7 @@ public sealed class ExtensibleRuntimeShowcaseRuntime : IBenchmarkSceneController
 
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
-        GameEngine? engine = context.GetEngine();
+        GameEngine? engine = context.Get(CoreServiceKeys.Engine);
         if (engine == null)
         {
             return Task.CompletedTask;
@@ -128,7 +128,7 @@ public sealed class ExtensibleRuntimeShowcaseRuntime : IBenchmarkSceneController
 
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
-        GameEngine? engine = context.GetEngine();
+        GameEngine? engine = context.Get(CoreServiceKeys.Engine);
         string? mapId = context.TryGet(CoreServiceKeys.MapId, out var contextMapId)
             ? contextMapId.Value
             : engine?.CurrentMapSession?.MapId.Value;
@@ -578,7 +578,7 @@ public static class ExtensibleRuntimeShowcaseBootstrap
         context.Log($"[{logName}] Loaded");
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
-            GameEngine? engine = ctx.GetEngine();
+            GameEngine? engine = ctx.Get(CoreServiceKeys.Engine);
             if (engine != null)
             {
                 engine.SetService(CoreServiceKeys.BenchmarkSceneController, runtime);

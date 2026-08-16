@@ -46,13 +46,16 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
             var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
                 ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
+            var skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+                ?? throw new InvalidOperationException("PresentationSkinnedVisualBatchBuffer missing.");
 
             var activeDefinitions = CollectActiveDefinitionKeys(engine.World, presenters, definitions);
             Assert.That(activeDefinitions.Count, Is.GreaterThanOrEqualTo(2), "Projection fixture should bootstrap skinned + static presenter definitions.");
-            Assert.That(FindPresenterOwners(engine.World, presenters).Count, Is.EqualTo(3), "Projection fixture should bootstrap one presenter-backed actor per map entity.");
+            Assert.That(FindPresenterOwners(engine.World, presenters).Count, Is.EqualTo(4), "Projection fixture should bootstrap one presenter-backed actor per map entity, including the off-camera team representative.");
 
-            Assert.That(primitives.Count, Is.EqualTo(3), "Projection fixture should emit one visible primitive per visible presenter-backed actor.");
-            Assert.That(snapshot.Count, Is.EqualTo(3), "Adapter-facing snapshot should expose all visible projection fixture outputs.");
+            Assert.That(primitives.Count, Is.EqualTo(2), "Projection fixture should emit visible static presenters on the primitive lane.");
+            Assert.That(snapshot.Count, Is.EqualTo(2), "Adapter-facing primitive snapshot should expose the visible static projection outputs.");
+            Assert.That(skinnedBatch.Count, Is.EqualTo(1), "Projection hero fixture should emit its skinned presenter on the skinned batch lane.");
 
             int skinnedCount = 0;
             int staticCount = 0;
@@ -62,12 +65,6 @@ namespace Ludots.Tests.Presentation
                 Assert.That(item.StableId, Is.GreaterThan(0), "Presenter-emitted primitives must expose stable ids.");
                 Assert.That(item.TemplateId, Is.GreaterThan(0), "Presenter-emitted primitives must expose definition-backed template ids.");
                 stableIds.Add(item.StableId);
-
-                if (item.RenderPath == VisualRenderPath.SkinnedMesh)
-                {
-                    skinnedCount++;
-                    Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0), "Skinned presenter output must carry animator payload.");
-                }
 
                 if (item.RenderPath == VisualRenderPath.StaticMesh)
                 {
@@ -80,6 +77,17 @@ namespace Ludots.Tests.Presentation
             {
                 Assert.That(item.StableId, Is.GreaterThan(0));
                 Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+            }
+
+            foreach (ref readonly SkinnedVisualBatchItem item in skinnedBatch.GetSpan())
+            {
+                Assert.That(item.StableId, Is.GreaterThan(0), "Skinned presenter output must expose a stable id.");
+                Assert.That(item.TemplateId, Is.GreaterThan(0), "Skinned presenter output must expose a definition-backed template id.");
+                Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
+                Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0), "Skinned presenter output must carry animator payload.");
+                Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+                stableIds.Add(item.StableId);
+                skinnedCount++;
             }
 
             Assert.That(stableIds.Count, Is.EqualTo(3), "Each visible presenter-backed fixture should keep a unique stable id.");
@@ -99,13 +107,16 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
             var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
                 ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
+            var skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+                ?? throw new InvalidOperationException("PresentationSkinnedVisualBatchBuffer missing.");
 
-            Assert.That(presenters.ActiveCount, Is.GreaterThanOrEqualTo(3));
-            Assert.That(primitives.Count, Is.EqualTo(3));
-            Assert.That(snapshot.Count, Is.EqualTo(3));
+            Assert.That(presenters.ActiveCount, Is.GreaterThanOrEqualTo(4));
+            Assert.That(primitives.Count, Is.EqualTo(2));
+            Assert.That(snapshot.Count, Is.EqualTo(2));
+            Assert.That(skinnedBatch.Count, Is.EqualTo(1));
 
             var owners = FindPresenterOwners(engine.World, presenters);
-            Assert.That(owners.Count, Is.EqualTo(3), "Projection fixture should have three live presenter owners before teardown.");
+            Assert.That(owners.Count, Is.EqualTo(4), "Projection fixture should have four live presenter owners before teardown.");
             for (int i = 0; i < owners.Count; i++)
             {
                 engine.World.Destroy(owners[i]);
@@ -116,6 +127,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(presenters.ActiveCount, Is.EqualTo(0), "Dead entity anchors should release their presenter subtree on the next runtime tick.");
             Assert.That(primitives.Count, Is.EqualTo(0), "Visible draw buffer must be rebuilt after presenter owners are destroyed.");
             Assert.That(snapshot.Count, Is.EqualTo(0), "Snapshot buffer must not retain visuals from released presenter instances.");
+            Assert.That(skinnedBatch.Count, Is.EqualTo(0), "Skinned batch buffer must not retain visuals from released presenter instances.");
         }
 
         [Test]
@@ -154,6 +166,8 @@ namespace Ludots.Tests.Presentation
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            var skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+                ?? throw new InvalidOperationException("PresentationSkinnedVisualBatchBuffer missing.");
 
             int skinnedCount = 0;
             int staticCount = 0;
@@ -165,19 +179,30 @@ namespace Ludots.Tests.Presentation
 
             foreach (ref readonly var item in primitives.GetSpan())
             {
-                bool isSkinned = item.RenderPath.IsSkinnedLane();
-                if (isSkinned)
-                {
-                    skinnedCount++;
-                    heroStableId = item.StableId;
-                    heroControllerId = item.Animator.GetControllerId();
-                }
-                else if (item.RenderPath.IsStaticInstanceLane())
+                if (item.RenderPath.IsStaticInstanceLane())
                 {
                     staticCount++;
                     staticStableIds.Add(item.StableId);
                 }
 
+                traceLines.Add(JsonSerializer.Serialize(new
+                {
+                    event_id = $"projection_map_{eventId++}",
+                    tick = 5,
+                    lane = item.RenderPath.ToString(),
+                    stable_id = item.StableId,
+                    template_id = item.TemplateId,
+                    mesh_asset_id = item.MeshAssetId,
+                    animator_controller_id = item.Animator.GetControllerId(),
+                    source = "presenter_emit",
+                }));
+            }
+
+            foreach (ref readonly var item in skinnedBatch.GetSpan())
+            {
+                skinnedCount++;
+                heroStableId = item.StableId;
+                heroControllerId = item.Animator.GetControllerId();
                 traceLines.Add(JsonSerializer.Serialize(new
                 {
                     event_id = $"projection_map_{eventId++}",

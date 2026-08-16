@@ -25,6 +25,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterEntityRuntime? _presenterRuntime;
         private readonly PresenterDefinitionRegistry? _definitions;
         private readonly PresentationStableIdAllocator? _stableIds;
+        private readonly PresenterCommandBuffer? _presenterCommands;
         private readonly bool _createBootstrappedPresenters;
         private readonly CommandBuffer _commandBuffer = new();
         private readonly List<SpawnBootstrapWork> _spawnBootstrapWork = new(256);
@@ -54,7 +55,7 @@ namespace Ludots.Core.Presentation.Systems
         public PresentationEntityLifecycleSystem(
             World world,
             PresentationEventStream events)
-            : this(world, events, null, null, null, createBootstrappedPresenters: false)
+            : this(world, events, null, null, null, null, createBootstrappedPresenters: false)
         {
         }
 
@@ -63,8 +64,9 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PresenterEntityRuntime presenterRuntime,
             PresenterDefinitionRegistry definitions,
-            PresentationStableIdAllocator stableIds)
-            : this(world, events, presenterRuntime, definitions, stableIds, createBootstrappedPresenters: true)
+            PresentationStableIdAllocator stableIds,
+            PresenterCommandBuffer? presenterCommands = null)
+            : this(world, events, presenterRuntime, definitions, stableIds, presenterCommands, createBootstrappedPresenters: true)
         {
         }
 
@@ -74,6 +76,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterEntityRuntime? presenterRuntime,
             PresenterDefinitionRegistry? definitions,
             PresentationStableIdAllocator? stableIds,
+            PresenterCommandBuffer? presenterCommands,
             bool createBootstrappedPresenters)
             : base(world)
         {
@@ -81,6 +84,7 @@ namespace Ludots.Core.Presentation.Systems
             _presenterRuntime = presenterRuntime;
             _definitions = definitions;
             _stableIds = stableIds;
+            _presenterCommands = presenterCommands;
             _createBootstrappedPresenters = createBootstrappedPresenters;
             if (_createBootstrappedPresenters)
             {
@@ -248,12 +252,55 @@ namespace Ludots.Core.Presentation.Systems
                         ? World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId
                         : 0;
 
-                    if (!TryPublish(PresentationEventKind.EntityDestroyed, entity, stableIds[i].Value, templateKeyId))
+                    int stableId = stableIds[i].Value;
+                    if (!TryPublish(PresentationEventKind.EntityDestroyed, entity, stableId, templateKeyId))
                     {
                         throw new InvalidOperationException("PresentationEventStream is full while publishing EntityDestroyed.");
                     }
 
+                    QueueBootstrapDestroyCommands(entity, stableId, templateKeyId);
                     _commandBuffer.Add<PresentationDestroyEventPublished>(in entity);
+                }
+            }
+        }
+
+        private void QueueBootstrapDestroyCommands(Entity entity, int stableId, int templateKeyId)
+        {
+            if (!_createBootstrappedPresenters ||
+                templateKeyId <= 0 ||
+                !_definitions!.BootstrapRegistry.TryGetEntityDestroyedDestroys(
+                    templateKeyId,
+                    out CompiledPresenterBootstrapRegistry.BootstrapDestroyRule[] rules))
+            {
+                return;
+            }
+
+            if (_presenterCommands == null)
+            {
+                throw new InvalidOperationException(
+                    "Compiled presenter bootstrap destroy rules require a PresenterCommandBuffer.");
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly CompiledPresenterBootstrapRegistry.BootstrapDestroyRule rule = ref rules[i];
+                int scopeId = rule.ResolveScopeTag(stableId);
+                if (scopeId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Compiled presenter bootstrap destroy resolved non-positive scopeTag={scopeId} for templateKeyId={templateKeyId}.");
+                }
+
+                if (!_presenterCommands.TryAdd(new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.DestroyPresenterScope,
+                        ScopeTag = scopeId,
+                        Source = entity,
+                        Target = entity,
+                    }))
+                {
+                    throw new InvalidOperationException(
+                        $"PresenterCommandBuffer is full while queueing bootstrap destroy for templateKeyId={templateKeyId}, scopeTag={scopeId}.");
                 }
             }
         }

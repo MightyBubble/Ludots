@@ -504,7 +504,7 @@ namespace Ludots.Tests.Presentation
                 var stableIds = new PresentationStableIdAllocator();
                 var visualStableIds = new PresenterVisualStableIdTable(stableIds, capacity: 512);
 
-                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions, stableIds);
+                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions, stableIds, commands);
                 var globalProjection = new GlobalPresentationEventProjectionSystem(world, globalEvents, events, gameSession);
                 var rules = new PresenterRuleSystem(world, events, commands, definitions, instances, graphPrograms, graphApi, new Dictionary<string, object>());
                 var runtime = new PresenterRuntimeSystem(

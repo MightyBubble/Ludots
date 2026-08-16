@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
@@ -36,10 +37,13 @@ namespace Ludots.Core.Gameplay.GAS
 
         public EffectRequestQueue(int initialCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
         {
-            int capacity = initialCapacity;
-            if (capacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME) capacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME;
-            _items = new EffectRequest[capacity];
-            _overflow = new EffectRequest[capacity];
+            if (initialCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(initialCapacity), "EffectRequestQueue capacity must be positive.");
+            }
+
+            _items = new EffectRequest[initialCapacity];
+            _overflow = new EffectRequest[initialCapacity];
         }
 
         public int Count => _count;

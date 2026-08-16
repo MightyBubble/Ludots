@@ -201,8 +201,6 @@ namespace Ludots.Tests.Presentation
 
         private static void FillScreenHud(ScreenHudBatchBuffer screenHud, FrameConfig config)
         {
-            screenHud.Clear();
-
             const int columns = 64;
             const float baseBarX = 14f;
             const float baseBarY = 12f;
@@ -214,61 +212,83 @@ namespace Ludots.Tests.Presentation
             Vector4 barBackground = new(0.10f, 0.12f, 0.16f, 0.88f);
             Vector4 barForeground = new(0.15f, 0.82f, 0.46f, 0.96f);
             Vector4 textColor = new(0.96f, 0.96f, 0.90f, 1f);
+            int projectedBarCount = 0;
+            int projectedTextCount = 0;
 
-            for (int i = 0; i < VisibleEntityCount; i++)
+            screenHud.BeginProjectedBuild(retained: true);
+            try
             {
-                int row = i / columns;
-                int column = i % columns;
-                float x = baseBarX + (column * colSpacing) + config.PositionOffsetX;
-                float y = baseBarY + (row * rowSpacing) + config.PositionOffsetY;
-
-                float fill = config.PulseFill
-                    ? 0.18f + (((i + config.ValueOffset) % 12) * 0.06f)
-                    : 0.22f + ((i % 9) * 0.07f);
-                if (fill > 0.98f)
+                for (int i = 0; i < VisibleEntityCount; i++)
                 {
-                    fill = 0.98f;
-                }
+                    int row = i / columns;
+                    int column = i % columns;
+                    float x = baseBarX + (column * colSpacing) + config.PositionOffsetX;
+                    float y = baseBarY + (row * rowSpacing) + config.PositionOffsetY;
 
-                int numericValue = 100 + ((i + config.ValueOffset) % 900);
-
-                if (config.EmitBars)
-                {
-                    screenHud.TryAddBar(new ScreenHudBarItem
+                    float fill = config.PulseFill
+                        ? 0.18f + (((i + config.ValueOffset) % 12) * 0.06f)
+                        : 0.22f + ((i % 9) * 0.07f);
+                    if (fill > 0.98f)
                     {
-                        StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
-                        DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
-                        ScreenX = x,
-                        ScreenY = y,
-                        Width = barWidth,
-                        Height = barHeight,
-                        Value0 = fill,
-                        Color0 = barBackground,
-                        Color1 = barForeground,
-                    });
-                }
+                        fill = 0.98f;
+                    }
 
-                if (config.EmitText)
-                {
-                    screenHud.TryAddText(new ScreenHudTextItem
+                    int numericValue = 100 + ((i + config.ValueOffset) % 900);
+
+                    if (config.EmitBars)
                     {
-                        StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
-                        DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
-                            fontSize,
-                            stringTableId: 0,
-                            valueModeId: (int)WorldHudValueMode.AttributeCurrent,
-                            value0: numericValue,
-                            value1: 0f,
-                            color: textColor,
-                            packet: default),
-                        ScreenX = x + 1f,
-                        ScreenY = y - 9f,
-                        FontSize = fontSize,
-                        Color0 = textColor,
-                        Value0 = numericValue,
-                        Id1 = (int)WorldHudValueMode.AttributeCurrent,
-                    });
+                        var item = new ScreenHudBarItem
+                        {
+                            StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
+                            DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
+                            ScreenX = x,
+                            ScreenY = y,
+                            Width = barWidth,
+                            Height = barHeight,
+                            Value0 = fill,
+                            Color0 = barBackground,
+                            Color1 = barForeground,
+                        };
+                        if (!screenHud.TryUpsertProjectedBar(in item))
+                        {
+                            throw new InvalidOperationException("Screen HUD bar benchmark buffer overflowed.");
+                        }
+
+                        projectedBarCount++;
+                    }
+
+                    if (config.EmitText)
+                    {
+                        var item = new ScreenHudTextItem
+                        {
+                            StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
+                            DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
+                                fontSize,
+                                stringTableId: 0,
+                                valueModeId: (int)WorldHudValueMode.AttributeCurrent,
+                                value0: numericValue,
+                                value1: 0f,
+                                color: textColor,
+                                packet: default),
+                            ScreenX = x + 1f,
+                            ScreenY = y - 9f,
+                            FontSize = fontSize,
+                            Color0 = textColor,
+                            Value0 = numericValue,
+                            Id1 = (int)WorldHudValueMode.AttributeCurrent,
+                        };
+                        if (!screenHud.TryUpsertProjectedText(in item))
+                        {
+                            throw new InvalidOperationException("Screen HUD text benchmark buffer overflowed.");
+                        }
+
+                        projectedTextCount++;
+                    }
                 }
+            }
+            finally
+            {
+                screenHud.EndProjectedBuild(true, projectedBarCount, projectedTextCount);
             }
         }
 

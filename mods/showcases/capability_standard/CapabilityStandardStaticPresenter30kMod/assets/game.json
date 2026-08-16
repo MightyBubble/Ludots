@@ -3,7 +3,8 @@
   "targetFps": 0,
   "gasRuntimeCapacity": {
     "effectLifetimeSnapshotCapacity": 32768,
-    "deferredTriggerActiveEntityCapacity": 32768
+    "deferredTriggerActiveEntityCapacity": 32768,
+    "effectRequestQueueCapacity": 50000
   },
   "presentation": {
     "presenterInstanceCapacity": 1048576,

@@ -1017,15 +1017,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_graph_op_LookupTagDisplayToken_raylib",
-      "name": "Graph Op LookupTagDisplayToken Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_LookupTagDisplayToken"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
       "id": "capability_standard_graph_op_MaxFloat_raylib",
       "name": "Graph Op MaxFloat Raylib",
       "selectors": [
@@ -1507,15 +1498,6 @@
       "name": "Graph Op SelectEntity Raylib",
       "selectors": [
         "$capability_standard_graph_op_SelectEntity"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "capability_standard_graph_op_SelectTagInMask_raylib",
-      "name": "Graph Op SelectTagInMask Raylib",
-      "selectors": [
-        "$capability_standard_graph_op_SelectTagInMask"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

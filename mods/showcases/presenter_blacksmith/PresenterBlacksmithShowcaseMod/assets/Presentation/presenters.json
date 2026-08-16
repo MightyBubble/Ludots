@@ -306,6 +306,13 @@
           "mobility": "Static"
         }
       }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "blacksmith.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      }
     ]
   },
   {

@@ -9,6 +9,7 @@ using Ludots.Core.MassNavigation;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Presentation;
 
 namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 
@@ -134,9 +135,12 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
             ref ManifestationObstacleIntent2D intent = ref World.Get<ManifestationObstacleIntent2D>(entity);
             intent.SinkPhysicsCollider = 0;
             intent.SinkNavigationObstacle = 0;
-            // 开门 = 视觉门消失：销毁 door 实体（物理/导航由 ManifestationObstacleBridge 清理，
-            // presenter 随 EntityDestroyed 销毁），玩家看到门消失。
-            World.Destroy(entity);
+            if (!World.Has<ManifestationObstacleBridge2DDirty>(entity))
+            {
+                World.Add(entity, new ManifestationObstacleBridge2DDirty());
+            }
+
+            PresentationEntityLifecycle.RequestDestroy(World, entity, "Crowd Physics Arena door");
             OpenedDoorCount++;
         }
     }
