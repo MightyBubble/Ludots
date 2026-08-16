@@ -1,6 +1,6 @@
 # cfg-07 reference · 合并规则案例集
 
-> 现状参考。产品承诺见 [cfg-07 prd](../prd/cfg-07-merge-rules.md)；目标实现见 [cfg-07 spec](../spec-runtime/cfg-07-merge-rules.md)。
+> 现状参考。第一性需求见 [cfg-07 PRD](../prd/cfg-07-merge-rules.md)；配置说明见 [cfg-07 配置说明](../config/cfg-07-merge-rules.md)；目标实现见 [cfg-07 runtime spec](../spec-runtime/cfg-07-merge-rules.md)。
 
 ## 1. 现状快照
 

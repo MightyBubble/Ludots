@@ -1,10 +1,10 @@
 # cfg-04 spec · 配置目录
 
-> 理想技术实现。现状见 [cfg-04 reference](../reference/cfg-04-config-tables.md)；产品承诺见 [cfg-04 prd](../prd/cfg-04-config-tables.md)。
+> 引擎实现任务书。第一性需求见 [cfg-04 PRD](../prd/cfg-04-config-tables.md)；配置说明见 [cfg-04 配置说明](../config/cfg-04-config-tables.md)；现状见 [cfg-04 reference](../reference/cfg-04-config-tables.md)。
 
 ## 1. 概述
 
-目录条目保持四字段封闭 schema 与严格校验；新增"登记必须绑定消费方"约束，消灭无加载器消费的死条目；编辑器侧提供目录投影与新类型审批流的数据合同。
+目录条目保持六字段封闭 schema（含分片两字段）与严格校验；新增"登记必须绑定消费方"约束，消灭无加载器消费的死条目；编辑器侧提供目录投影与新类型审批流的数据合同。
 
 ## 2. 设计
 

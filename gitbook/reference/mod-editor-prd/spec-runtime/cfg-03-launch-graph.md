@@ -1,6 +1,6 @@
 # cfg-03 spec · 启动计划
 
-> 理想技术实现。现状见 [cfg-03 reference](../reference/cfg-03-launch-graph.md)；产品承诺见 [cfg-03 prd](../prd/cfg-03-launch-graph.md)。
+> 引擎实现任务书。第一性需求见 [cfg-03 PRD](../prd/cfg-03-launch-graph.md)；配置说明见 [cfg-03 配置说明](../config/cfg-03-launch-graph.md)；现状见 [cfg-03 reference](../reference/cfg-03-launch-graph.md)。
 
 ## 1. 概述
 

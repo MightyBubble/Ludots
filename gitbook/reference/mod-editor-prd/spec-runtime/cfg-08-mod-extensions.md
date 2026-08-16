@@ -1,6 +1,6 @@
 # cfg-08 spec · mod 代码扩展面
 
-> 理想技术实现。现状见 [cfg-08 reference](../reference/cfg-08-mod-extensions.md)；产品承诺见 [cfg-08 prd](../prd/cfg-08-mod-extensions.md)。
+> 引擎实现任务书。第一性需求见 [cfg-08 PRD](../prd/cfg-08-mod-extensions.md)；配置说明见 [cfg-08 配置说明](../config/cfg-08-mod-extensions.md)；现状见 [cfg-08 reference](../reference/cfg-08-mod-extensions.md)。
 
 ## 1. 概述
 

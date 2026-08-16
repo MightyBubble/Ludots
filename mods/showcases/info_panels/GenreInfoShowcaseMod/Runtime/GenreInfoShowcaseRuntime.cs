@@ -532,7 +532,8 @@ namespace GenreInfoShowcaseMod.Runtime
                     selectedTarget.Value,
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopRight, 16f, 16f, 484f, 636f),
                     EntityInfoGasDetailFlags.None,
-                    true));
+                    true,
+                    EntityInfoPanelTemplateCatalog.CompactInsightTemplateId));
         }
 
         private static void EnsureInsightPanelTarget(GameEngine engine)

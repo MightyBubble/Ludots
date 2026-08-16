@@ -1,7 +1,7 @@
 # MOD 编辑器 PRD · 总篇
 
-> 状态：结构已定，分篇撰写中（目录见第 5 节，状态列同步更新）。进度与决策 SSOT：仓库 issue #986。
-> 视角：**MOD 编辑器产品需求文档**。每个原子功能点（命题）三件套——`prd/` 是冻结的产品配置预期，`spec/` 是可跟踪的理想技术实现，`reference/` 是现状参考（行业通用的 Reference 层：如实描述系统现状）。
+> 状态：结构已定，分篇撰写中（目录见第 6 节，状态列同步更新）。进度与决策 SSOT：仓库 issue #986。
+> 视角：**MOD 编辑器产品需求文档**。每个原子功能点（命题）六件套——`prd/` 第一性需求、`config/` 配置说明、`uxd/` 编辑器需求、`spec-runtime/` 引擎实现任务书、`spec-editor/` 编辑器实现任务书、`reference/` 现状参考。
 > 三层合同共同约束手册与编辑器：不发明 schema、不新增配置类型；字段最终依据是代码，行为正本在 `gitbook/architecture/`。
 
 ## 1. 读者与用法
@@ -9,7 +9,7 @@
 | 读者 | 读哪层 |
 |---|---|
 | MOD 作者 | `prd/` 各篇：配置怎么写、承诺的行为是什么，读完即可动手 |
-| MOD 编辑器开发 | `prd/` 给需求承诺，`config/` 给字段合同，`uxd/` 给界面需求，`spec/` 给理想实现，`reference/` 给当下的事实 |
+| MOD 编辑器开发 | `prd/` 给需求承诺，`config/` 给字段合同，`uxd/` 给界面需求，`spec-runtime/` 与 `spec-editor/` 给理想实现，`reference/` 给当下的事实 |
 | 引擎开发 | `spec/` 是设计目标，`reference/` 是现行实现的事实清单 |
 | 编辑器产品 | 卷 10 的 `prd/` 篇是需求清单本体 |
 
@@ -18,6 +18,7 @@
 ```
 gitbook/reference/mod-editor-prd/
   README.md             总篇（本页）
+  facts.md              事实与取值表（脚本生成，勿手改）
   prd/<编号>-<名>.md      第一性需求——定稿后冻结，永不修改
   config/<编号>-<名>.md   配置说明——字段表、示例、书写通则（随 schema 演进）
   uxd/<编号>-<名>.md      编辑器需求——界面功能、数据存储、易用性（逐命题成套）
@@ -26,7 +27,7 @@ gitbook/reference/mod-editor-prd/
   reference/<编号>-<名>.md 现状参考——如实记录现状与代码锚点
 ```
 
-编号规则：`卷前缀-序号`（`fx-05` = 效果卷第 5 篇）。引用格式：`见 fx-05`（指 prd 篇）、`见 fx-05 spec`、`见 fx-05 reference`。
+编号规则：`卷前缀-序号`（`fx-05` = 效果卷第 5 篇）。引用格式：`见 fx-05`（指 prd 篇）、`见 fx-05 config`、`见 fx-05 uxd`、`见 fx-05 spec-runtime`、`见 fx-05 spec-editor`、`见 fx-05 reference`。
 
 ## 2. 演示场景与示例纪律
 
@@ -44,7 +45,7 @@ gitbook/reference/mod-editor-prd/
 
 示例纪律：cfg-01 起各命题的示例统一取自本场景的真实文件（现阶段锚定仓库 `mods/showcases/rts_red_alert_like/`，治理拆分后切换到 `mods/handbook/` 族），禁止零散杜撰；已有实现与文档合同冲突时，**治理实现**，不顺着错误实现写文档。
 
-## 2. 概念模型
+## 3. 概念模型
 
 ```
 输入映射 ─→ Order（命令意图：admission → 实体队列 → 终态）
@@ -67,14 +68,14 @@ Graph 不是第六个框，而是**贯穿 Effect、Ability、AI 的可编程面*
 配置资产与加载顺序——谁必须先注册，谁才能引用：
 
 ```
-target_dispatch_presets → clock → attribute_constraints → graphs → func_lib/action_lib
-→ preset_types → order_types → effects → abilities → ability_form_sets → tag_rules
-→ context_groups → attribute_bindings      （+ AI/*.json、Input/input_order_mappings）
+target_dispatch_presets → clock → attribute_constraints → graphs → preset_types → order_types
+→ effects → abilities → ability_form_sets → tag_rules → func_lib → action_lib
+→ context_groups → attribute_bindings      （+ AI/*.json、Input/input_order_mappings；此链是引用许可序）
 ```
 
 跨 mod 合并：同名文件按 `config_catalog.json` 声明的策略合并，主力是"同 id 深合并"——后加载的 mod 赢，但只赢它写到的字段；`__delete:true` 可删条目。详见 `cfg-05`。
 
-## 3. 五层模板
+## 4. 六层模板
 
 每个配置命题六件：**第一性 PRD、配置说明、UXD、runtime spec、editor spec、reference**（全部与命题同名成套、逐层同构跳转）。
 
@@ -102,9 +103,9 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | 5. 异常处理 | 异常情形与系统响应 |
 | 6. 实例 | 仓库真实路径 |
 
-**UXD 篇**——编辑器需求，`uxd/<编号>-<名>.md`（与其余层同构，逐命题成套）：
+**UXD 篇**——编辑器需求（高保真规格），`uxd/<编号>-<名>.md`（逐命题成套）：
 
-> 生命周期：随产品迭代。每页三块：**界面功能、数据存储、易用性设计**——该命题对应的编辑器界面怎么长、数据怎么落、怎么好用。
+> 生命周期：随产品迭代。固定六节：**界面定位 / 布局线框（文字线框图）/ 控件与数据源（每控件的取值来源，数值引用事实页）/ 关键交互流（逐步含校验）/ 状态设计（空·错误·冲突·待生效）/ 易用性验收口径（可测）**。
 
 **Runtime Spec 篇**——引擎实现任务书，`spec-runtime/<编号>-<名>.md`：
 
@@ -142,14 +143,16 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 - **标题只用简短名词短语，不带括号补充说明**；补充说明放该节第一句。
 - PRD 零字段表、零示例、零界面；配置说明零编辑器叙事、示例只取演示场景；UXD 零配置字段表；Spec 零产品叙事、零现行代码位置；Reference 零对照、零评价、零展望。
 - 每篇开头一行互链其余各层。
+- **数值纪律**：一切计数/默认值/上限不手抄，引用 [事实与取值表](facts.md)（`python scripts/generate-prd-facts.py` 再生成）。
 - 热应用级别标注在配置说明与 UXD：下次施放生效、重进地图生效、重启生效。
-- 目录状态列"已写"= 五件齐备（UXD 页按承载命题合并计）。
+- 目录状态列"已写"= 六件齐备（UXD 页按承载命题合并计）。
 
-## 4. 阅读路线
+## 5. 阅读路线
 
 | 我想做… | 读这几篇的 prd 层 |
 |---|---|
-| 搞懂 mod 的组成与启动 | 按卷 1 顺序通读：cfg-01 → cfg-02 → cfg-03 → cfg-04 → cfg-05 → cfg-06 → cfg-07 |
+| 搞懂 mod 的组成与启动 | 按卷 1 顺序通读：cfg-01 → cfg-02 → cfg-03 → cfg-04 → cfg-05 → cfg-06 → cfg-07 → cfg-08 |
+| 有一张能进游戏的地图 | cfg-06（启动地图）→ map-01 → map-02 → ent-01（卷 2） |
 | 一个伤害或治疗技能 | cfg-05 → fx-02/03/04 → ab-01/02/04 → fx-09/10/11 |
 | Buff、Debuff 或状态流 | tag-01/02 → fx-12/13 → fx-05 → attr-02/03 |
 | 自定义伤害公式或复杂逻辑 | gr-01/02/03 → gr-op-02/04/10 → fx-05/06 |
@@ -160,9 +163,9 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | 配引擎与平台基建（物理/导航/视野/界面） | infra-01 到 infra-04（卷 13） |
 | 编辑器该做成什么样 | 全目录 prd 层 + ed-01 到 ed-03 |
 
-## 5. 分篇目录
+## 6. 分篇目录
 
-共 118 个命题，分 14 卷，每个命题一套 prd / spec / reference 三件（下表文件名为三层共用编号名）。优先级 P1 为第一期，P2 为第二期。
+共 119 个命题，分 14 卷，每个命题一套 prd / spec / reference 三件（下表文件名为三层共用编号名）。优先级 P1 为第一期，P2 为第二期。
 
 ### 卷 1 · 配置基础
 
@@ -177,15 +180,23 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `cfg-07-merge-rules.md` | 合并规则案例集 | 十种意图的写法与结果、危险数组清单、删除时序 | P1 | **已写** |
 | `cfg-08-mod-extensions.md` | mod 代码扩展面 | 四类扩展注册、加载窗口与枢纽冻结、与配置编译的时序 | P1 | **已写** |
 
-### 卷 2 · Tag
+### 卷 2 · 地图与触发器
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `tag-01-basics.md` | Tag 表示与状态 | 位图、层数、定时、快照、有效缓存、惰性注册 | P1 | 未写 |
-| `tag-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | 未写 |
-| `tag-03-changed-events.md` | Tag 变化与事件 | 延迟触发器、变化事件、一帧延迟语义 | P1 | 未写 |
+| `map-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线、跨 mod 地图合并 | P1 | **已写** |
+| `map-02-triggers.md` | 地图触发器 | 地图内触发器与棋盘、剧情与胜负判定 | P1 | **已写** |
+| `ent-01-templates.md` | 实体模板 | Entities/templates.json、组件与初始值、出生效果 | P1 | **已写** |
 
-### 卷 3 · Attribute
+### 卷 3 · Tag
+
+| 文件 | 篇名 | 范围 | 优先级 | 状态 |
+|---|---|---|---|---|
+| `tag-01-basics.md` | Tag 表示与状态 | 位图、层数、定时、快照、有效缓存、惰性注册 | P1 | **已写** |
+| `tag-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | **已写** |
+| `tag-03-changed-events.md` | Tag 变化与事件 | 延迟触发器、变化事件、一帧延迟语义 | P1 | **已写** |
+
+### 卷 4 · Attribute
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -196,7 +207,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `attr-05-bindings.md` | 属性绑定与 Sink | attribute_bindings.json、物理力与相机通道、脉冲式清零 | P1 | 未写 |
 | `attr-06-events.md` | 属性事件 | 属性变化发布事件、变化位、表现层读取 | P1 | 未写 |
 
-### 卷 4 · Effect
+### 卷 5 · Effect
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -224,7 +235,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `fx-22-submit-order.md` | 出生下单 | submitOrderFromBlackboard、五个黑板键、提交模式 | P1 | 未写 |
 | `fx-23-lifecycle-atomic.md` | 生命周期原子操作 | DeployConsumeSource 链、六个生命周期内建操作 | P1 | 未写 |
 
-### 卷 5 · Ability
+### 卷 6 · Ability
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -239,7 +250,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `ab-09-targeting.md` | Targeting 与组合命令 | castRangeCm、超射程自动走近、投影排队 | P1 | 未写 |
 | `ab-10-context-groups.md` | 上下文组 | context_groups.json、candidate 评分、两张图 | P1 | 未写 |
 
-### 卷 6 · Order 与输入
+### 卷 7 · Order 与输入
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -255,7 +266,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `input-04-cast-commit.md` | 施法提交档案 | cast_commit_profiles 与 locks、提交确认与锁 | P2 | 未写 |
 | `input-05-filters-and-schemes.md` | 过滤与输入方案 | default_input、filter_profiles、control_schemes、动作属性绑定 | P2 | 未写 |
 
-### 卷 7 · Graph
+### 卷 8 · Graph
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -270,7 +281,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `gr-09-outputs.md` | Query 图输出 | outputs 声明、实体集合与摘要标量、槽位清理 | P1 | 未写 |
 | `gr-op-01-context.md` | 节点：常量与上下文 | Const 三件、LoadCaster/Target/Viewer、Context 三件、EventPayload、TargetPos | P1 | 未写 |
 | `gr-op-02-math.md` | 节点：数学与比较 | 四则、clamp、abs、random、比较、SelectEntity | P1 | 未写 |
-| `gr-op-03-tags.md` | 节点：标签 | HasTag、SelectTagInMask、LookupTagDisplayToken | P1 | 未写 |
+| `gr-op-03-tags.md` | 节点：标签 | HasTag；查表一律走通用用户表（ADR #876）；"纯读选 tag"节点按 ADR 活口可重立（输入绑通用 tag 集/用户表，禁绑专表） | P1 | 未写 |
 | `gr-op-04-attributes.md` | 节点：属性与配置 | LoadAttribute、LoadSelfAttribute、WriteSelfAttribute、LoadConfig 三件 | P1 | 未写 |
 | `gr-op-05-blackboard.md` | 节点：黑板 | Read 与 Write × Float/Int/Entity | P1 | 未写 |
 | `gr-op-06-spatial.md` | 节点：空间查询 | Circle/Cone/Rectangle/Line/Hex、Sort/Limit/Filter | P1 | 未写 |
@@ -282,8 +293,9 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `gr-op-12-placement.md` | 节点：放置校验 | ClampTargetToRange、IsPointInCircle、两种吸附 | P1 | 未写 |
 | `gr-op-13-topology.md` | 节点：拓扑谓词 | 控制域解析与可控性、知识投影 | P1 | 未写 |
 | `gr-op-14-control-flow.md` | 节点：Script 控制流 | Jump、Call、Return、Yield、HaltReturnInt、InvokeScript、MoveInt、作者糖 | P1 | 未写 |
+| `rel-01-catalog.md` | 关系目录 | Relationships/catalog.json、类型/度量/旗标/姿态（图节点关系族依赖） | P2 | 未写 |
 
-### 卷 8 · AI 行为层
+### 卷 9 · AI 行为层
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -299,7 +311,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `ai-10-hfsm.md` | 层次状态机 | hfsm.json、三个生命周期钩子、转移谓词 | P2 | 未写 |
 | `ai-11-goap-htn.md` | GOAP 与 HTN | 旧栈五文件、256 位世界状态 | P2 | 未写 |
 
-### 卷 9 · 运行时横切
+### 卷 10 · 运行时横切
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
@@ -309,21 +321,13 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `rt-04-presentation.md` | 表现事件 | 施法与效果九种事件、属性增量、溢出报错 | P1 | 未写 |
 | `rt-05-events.md` | 事件总线与帧延迟 | 双缓冲、一帧延迟语义、Reaction 消费 | P1 | 未写 |
 
-### 卷 10 · 编辑器能力与需求
+### 卷 11 · 编辑器能力与需求
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
 | `ed-01-workbench-base.md` | 实时技能工作台编辑基座 | 会话、三段式流水线、四级应用分级、安全帧回滚 | P1 | 未写 |
 | `ed-02-hot-apply.md` | 热应用白名单与边界 | 热字段清单、重载与重启边界、身份扩张禁热 | P1 | 未写 |
 | `ed-03-gap-roadmap.md` | 编辑器缺口与路线图 | 文档投影源、撤销重做、图编辑器、冷编辑流 | P1 | 未写 |
-
-### 卷 11 · 实体与地图
-
-| 文件 | 篇名 | 范围 | 优先级 | 状态 |
-|---|---|---|---|---|
-| `ent-01-templates.md` | 实体模板 | Entities/templates.json、组件与初始值、出生效果 | P1 | 未写 |
-| `map-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线（不走目录）、重进地图语义 | P1 | 未写 |
-| `rel-01-catalog.md` | 关系目录 | Relationships/catalog.json、类型/度量/旗标/姿态 | P2 | 未写 |
 
 ### 卷 12 · 表现资产
 
@@ -352,16 +356,16 @@ target_dispatch_presets → clock → attribute_constraints → graphs → func_
 | `misc-03-narrative.md` | 叙事与任务 | variables、quests、dialogues、cinematics | P3 | 未写 |
 | `misc-04-entity-info.md` | 实体信息档案 | insight_profiles | P3 | 未写 |
 
-## 6. 写作顺序与纪律
+## 7. 写作顺序与纪律
 
 - 顺序：卷 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 10 → 8。效果卷先写 fx-01 总览再写分块。每个命题三件同一次治理节点交付。
 - 纪律一，防幻觉：reference 的每张锚点表逐项对照代码；prd 的每个 JSON 骨架必须能在仓库找到同构实例或通过 loader 校验逻辑推演；未接线的实现显式标注状态。
-- 纪律二，分层：PRD 冻结产品预期，Spec 是可跟踪的实现任务书，Reference 只记现状；规则见第 3 节。
+- 纪律二，分层：PRD 冻结产品预期，Spec 是可跟踪的实现任务书，Reference 只记现状；规则见第 4 节。
 - 纪律三，职责边界：本手册只改文档；引擎与编辑器代码变更由独立任务执行，spec 篇即其任务书，落地后回写 reference。
 - 与现有文档关系：`architecture/` 各契约文档是行为合同正本，分篇链接它们而不复述全文；`reference/graph-node-op-wiki/` 是玩家视角节点短剧，节点家族篇互链它作为"这个节点玩起来是什么样"。
 - 治理红线：手册与编辑器都不得催生新 JSON schema、新 preset 枚举或平行 loader（GAS 组合门禁）。
 
-## 7. 开放决策
+## 8. 开放决策
 
 1. 节点文档粒度：当前方案是 14 个家族命题，篇内逐节点表格。若需要逐节点一个命题（约 120 对），扩展点在卷 7，不影响其他卷。
 2. AI 卷目前排第二期。若编辑器第一期就要做 AI 面板，可以提前。

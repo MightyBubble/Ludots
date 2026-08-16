@@ -69,9 +69,8 @@
 RtsRedAlertLikeShowcaseMod/        ← mod 根：有 mod.json 即 mod
 ├── mod.json                       ← 身份数据（本篇）
 ├── assets/                        ← 内容根，一切从这里寻址（cfg-02）
-│   ├── GAS/                       ← 配置表（cfg-04/05）
-│   ├── Configs/GAS/               ← 配置表的第二个合法位置
-│   ├── Entities/  Maps/           ← 实体模板、地图（卷 11）
+│   ├── GAS/                       ← 配置表与同根分片目录（cfg-04/05）
+│   ├── Entities/  Maps/           ← 实体模板、地图（卷 2）
 │   ├── Presentation/              ← 表现资产（卷 12）
 │   └── game.json                  ← 游戏配置覆盖（cfg-06）
 └── bin/                           ← 代码构建产物（main 指向这里；发现期被忽略）
@@ -103,6 +102,6 @@ RtsRedAlertLikeShowcaseMod/        ← mod 根：有 mod.json 即 mod
 ## 6. 实例
 
 - 演示场景 RTS 根 mod：`mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/mod.json`（入口见同目录 `RtsRedAlertLikeShowcaseModEntry.cs`，轻入口活样例）
-- 最简核心 mod：`mods/LudotsCoreMod/mod.json`（被所有 mod 依赖，实际最先加载）
+- 无依赖的轻量 mod：`mods/CombatStanceBehaviorMod/mod.json`（只声明自身与少量扩展）
 
 **相关文档**：[cfg-01 PRD](../prd/cfg-01-mod-manifest.md) · [cfg-01 UXD](../uxd/cfg-01-mod-manifest.md) · [cfg-02](../prd/cfg-02-vfs.md) · [cfg-08](../prd/cfg-08-mod-extensions.md)

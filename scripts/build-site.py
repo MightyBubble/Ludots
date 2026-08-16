@@ -12,7 +12,6 @@ Ludots GitHub Pages 门户站点组装脚本（纯标准库，无第三方依赖
 输出：
   _site/                    完整静态站点（含 .nojekyll），供 Pages 流水线原样发布
   _site/site-assets/docs-nav.js       由 gitbook/SUMMARY.md 解析生成的文档目录树
-  _site/site-assets/prd-nav.js        由 mod-editor-prd/README.md 分篇目录解析生成的 PRD 页目录
   _site/site-assets/gallery-data.js   由 showcase.registry.json 注入的画廊数据
   _site/site-assets/evidence-data.js  由 artifacts/acceptance/ 实扫生成的证据索引
 
@@ -108,34 +107,28 @@ def parse_summary(summary_path: Path) -> tuple[list[dict], int]:
 
 
 # ---------------------------------------------------------------------------
-# 1b. mod-editor-prd/README.md 分篇目录 → prd-nav.js
+# 1b. mod-editor-prd/README.md 分篇目录 -> prd-nav.js
 # ---------------------------------------------------------------------------
 
 PRD_VOLUME_HEADING = re.compile(r"^### (卷 \d+ · .+?)\s*$")
-PRD_TABLE_ROW = re.compile(
-    r"^\|\s*`(?P<file>[^`|]+\.md)`\s*\|(?P<rest>.+)\|$"
-)
+PRD_TABLE_ROW = re.compile(r"^\|\s*`(?P<file>[^`|]+\.md)`\s*\|(?P<rest>.+)\|$")
 
 
 def parse_prd_catalog(readme_path: Path) -> dict:
-    """解析 PRD 总篇 README 的『## 5. 分篇目录』区块为卷/篇树。
-
-    README 的分篇目录表是目录与写作状态的 SSOT：本函数把它投影成 prd-nav.js，
-    站点侧栏不手写。表结构被改动导致解析失败时 fail-closed 告警。
-    """
+    """解析 PRD 总篇 README 的分篇目录区块为卷/篇树（站点侧栏数据源）。"""
     nav: dict = {"volumes": [], "total": 0, "written": 0}
     if not readme_path.exists():
-        warn("mod-editor-prd/README.md 不存在 → PRD 页目录为空")
+        warn("mod-editor-prd/README.md 不存在 -> PRD 页目录为空")
         return nav
 
     lines = readme_path.read_text(encoding="utf-8").splitlines()
     in_section = False
-    current_volume: dict | None = None
+    current_volume = None
 
     for raw in lines:
-        line = raw.rstrip("\r")
+        line = raw.rstrip()
         if line.startswith("## "):
-            in_section = line.startswith("## 5.")
+            in_section = "分篇目录" in line
             continue
         if not in_section:
             continue
@@ -172,7 +165,7 @@ def parse_prd_catalog(readme_path: Path) -> dict:
             nav["written"] += 1
 
     if nav["total"] == 0:
-        warn("PRD 分篇目录解析结果为 0 篇 → 检查 README §5 表格格式")
+        warn("PRD 分篇目录解析结果为 0 篇 -> 检查 README 目录表格式")
     return nav
 
 
@@ -388,7 +381,7 @@ def build(out_dir: Path) -> int:
         "tree": nav_tree,
     }
 
-    print("-- 解析 mod-editor-prd/README.md 分篇目录 → prd-nav.js")
+    print("-- 解析 mod-editor-prd/README.md 分篇目录 -> prd-nav.js")
     prd_catalog = parse_prd_catalog(PRD_README)
     prd_nav = {
         "generatedAt": now,
@@ -444,10 +437,9 @@ def build(out_dir: Path) -> int:
     # --- 结构自验 ---
     print("-- 结构自验")
     required = [
-        "index.html", "gallery.html", "tests.html", "diagrams.html", "mod-editor-prd.html",
+        "index.html", "gallery.html", "tests.html", "diagrams.html",
         "site-assets/site.css", "site-assets/site.js",
-        "site-assets/docs-nav.js", "site-assets/prd-nav.js",
-        "site-assets/gallery-data.js", "site-assets/evidence-data.js",
+        "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
     ]
     missing = [r for r in required if not (out_dir / r).exists()]
@@ -475,7 +467,7 @@ def build(out_dir: Path) -> int:
     print(f"  acceptance/ 文件    : {n_acc}")
     print(f"  GraphOp 媒体文件    : {n_graph_media}")
     print(f"  文档目录树 md 条目  : {md_count}")
-    print(f"  PRD 手册篇目        : {prd_nav['written']}/{prd_nav['total']} 已写（{len(prd_nav['volumes'])} 卷）")
+    print('  PRD 手册篇目        : {}/{} 已写（{} 卷）'.format(prd_nav['written'], prd_nav['total'], len(prd_nav['volumes'])))
     print(f"  注册 showcase       : {len(showcases)}")
     print(f"  验收证据条目        : {len(evidence)}（目录 {sum(1 for e in evidence if e['kind'] == 'dir')} + 散装报告 {sum(1 for e in evidence if e['kind'] == 'report')}）")
     print(f"  diagrams SVG        : {svg_count}")

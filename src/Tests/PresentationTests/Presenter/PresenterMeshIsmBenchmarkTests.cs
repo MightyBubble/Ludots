@@ -64,7 +64,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void BenchmarkMeshAssetBinding_WithoutSwapParam_UsesBaseAsset()
+        public void BenchmarkMeshAssetBinding_DefaultSwapParam_UsesBaseAsset()
         {
             using GameEngine engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
             PresenterBlacksmithShowcaseTestHarness.LoadMap(engine, PresenterBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
@@ -99,8 +99,8 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(emitted.HasValue, Is.True, "Benchmark presenter should emit one production primitive.");
-            Assert.That(emitted!.Value.MeshAssetId, Is.EqualTo(northIntactMeshId), "Missing assetSwap param must keep the configured base asset.");
-            Assert.That(emitted.Value.MeshAssetId, Is.Not.EqualTo(ruinedMeshId), "Missing assetSwap param must not be interpreted as a swap-table state value.");
+            Assert.That(emitted!.Value.MeshAssetId, Is.EqualTo(northIntactMeshId), "The benchmark presenter must author an explicit default assetSwap value for the base asset.");
+            Assert.That(emitted.Value.MeshAssetId, Is.Not.EqualTo(ruinedMeshId), "The default assetSwap value must not be interpreted as a ruined state.");
         }
 
         [Test]

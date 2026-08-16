@@ -1,6 +1,6 @@
 # cfg-08 reference · mod 代码扩展面
 
-> 现状参考。产品承诺见 [cfg-08 prd](../prd/cfg-08-mod-extensions.md)；目标实现见 [cfg-08 spec](../spec-runtime/cfg-08-mod-extensions.md)。
+> 现状参考。第一性需求见 [cfg-08 PRD](../prd/cfg-08-mod-extensions.md)；配置说明见 [cfg-08 配置说明](../config/cfg-08-mod-extensions.md)；目标实现见 [cfg-08 runtime spec](../spec-runtime/cfg-08-mod-extensions.md)。
 
 ## 1. 现状快照
 

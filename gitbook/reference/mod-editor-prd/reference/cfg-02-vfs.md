@@ -1,12 +1,12 @@
 # cfg-02 reference · 虚拟文件系统
 
-> 现状参考。产品承诺见 [cfg-02 prd](../prd/cfg-02-vfs.md)；目标实现见 [cfg-02 spec](../spec-runtime/cfg-02-vfs.md)。
+> 现状参考。第一性需求见 [cfg-02 PRD](../prd/cfg-02-vfs.md)；配置说明见 [cfg-02 配置说明](../config/cfg-02-vfs.md)；目标实现见 [cfg-02 runtime spec](../spec-runtime/cfg-02-vfs.md)。
 
 ## 1. 现状快照
 
 - 接口四个操作：挂载、卸载、取流、URI 到物理路径解析。
 - URI 按第一个冒号切分挂载点与相对路径。
-- 挂载点：`Core` 挂引擎资产根（`Core:Configs/...` 实为其下 Configs 子目录）；每个已加载 mod 挂其根目录，挂载点名 = mod.json 的 name。
+- 挂载点：`Core` 挂引擎资产根（assets/）；每个已加载 mod 挂其根目录，挂载点名 = mod.json 的 name。
 - 安全：相对路径做逃逸前缀校验，越界、未挂载、文件缺失分别抛对应异常。
 
 ## 2. 代码锚点

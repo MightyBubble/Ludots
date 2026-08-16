@@ -1,6 +1,6 @@
 # cfg-03 reference · 启动计划
 
-> 现状参考。产品承诺见 [cfg-03 prd](../prd/cfg-03-launch-graph.md)；目标实现见 [cfg-03 spec](../spec-runtime/cfg-03-launch-graph.md)。
+> 现状参考。第一性需求见 [cfg-03 PRD](../prd/cfg-03-launch-graph.md)；配置说明见 [cfg-03 配置说明](../config/cfg-03-launch-graph.md)；目标实现见 [cfg-03 runtime spec](../spec-runtime/cfg-03-launch-graph.md)。
 
 ## 1. 现状快照
 

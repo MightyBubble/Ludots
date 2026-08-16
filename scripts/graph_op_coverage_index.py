@@ -15,6 +15,9 @@ from pathlib import Path
 COVERAGE_REL = "assets/GAS/graph_node_op_coverage.registry.json"
 GAS_TESTS_REL = "src/Tests/GasTests"
 GALLERY_PREFIX = "GraphOpsNodeGallery"
+NON_EXECUTING_GALLERY_CLASSES = {
+    "GraphOpsNodeGallerySyncGateTests",
+}
 
 UNIVERSAL_GALLERY_METHODS = (
     "EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
@@ -155,6 +158,8 @@ class TestMethodIndex:
         refs: list[str] = []
         for (cls, method), executed in sorted(self.executed.items()):
             if not cls.startswith(GALLERY_PREFIX):
+                continue
+            if cls in NON_EXECUTING_GALLERY_CLASSES:
                 continue
             if method in UNIVERSAL_GALLERY_METHODS:
                 continue

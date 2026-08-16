@@ -234,7 +234,7 @@ namespace Ludots.Tests.Presentation
                     $"plateEnd={plate.AgentContactEndCount}, centroid={ComputeCentroid(engine, squad)}, " +
                     $"lastActivation={DescribeLastActivation(engine)}");
             Assert.That(plate.AgentContactBeginCount, Is.GreaterThanOrEqualTo(20));
-            AssertDoorObstacleSinksCleared(engine);
+            AssertOpenedDoorRemoved(engine);
         }
 
         [Test]
@@ -741,17 +741,15 @@ namespace Ludots.Tests.Presentation
             return threshold;
         }
 
-        private static void AssertDoorObstacleSinksCleared(GameEngine engine)
+        private static void AssertOpenedDoorRemoved(GameEngine engine)
         {
             int doors = 0;
-            var query = new QueryDescription().WithAll<CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>();
-            engine.World.Query(in query, (ref CrowdPhysicsArenaDoor _, ref ManifestationObstacleIntent2D intent) =>
+            var query = new QueryDescription().WithAll<CrowdPhysicsArenaDoor>();
+            engine.World.Query(in query, (ref CrowdPhysicsArenaDoor _) =>
             {
                 doors++;
-                Assert.That(intent.SinkPhysicsCollider, Is.Zero, "Opened door must sink no physics collider.");
-                Assert.That(intent.SinkNavigationObstacle, Is.Zero, "Opened door must sink no navigation obstacle.");
             });
-            Assert.That(doors, Is.EqualTo(1), "The arena map authors exactly one door.");
+            Assert.That(doors, Is.EqualTo(0), "Opened door must leave no live blocking/visible door entity behind.");
         }
 
         private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> members)

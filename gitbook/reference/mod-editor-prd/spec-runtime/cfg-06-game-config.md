@@ -1,6 +1,6 @@
 # cfg-06 spec · 游戏配置
 
-> 理想技术实现。现状见 [cfg-06 reference](../reference/cfg-06-game-config.md)；产品承诺见 [cfg-06 prd](../prd/cfg-06-game-config.md)。
+> 引擎实现任务书。第一性需求见 [cfg-06 PRD](../prd/cfg-06-game-config.md)；配置说明见 [cfg-06 配置说明](../config/cfg-06-game-config.md)；现状见 [cfg-06 reference](../reference/cfg-06-game-config.md)。
 
 ## 1. 概述
 

@@ -363,7 +363,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            engine.World.Destroy(_buildingEntity);
+            PresentationEntityLifecycle.RequestDestroy(engine.World, _buildingEntity, "Blacksmith showcase root");
             _buildingEntity = Entity.Null;
             _destroyed = true;
             _isWorking = false;
@@ -1126,7 +1126,7 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             {
                 if (engine.World.IsAlive(toDestroy[i]))
                 {
-                    engine.World.Destroy(toDestroy[i]);
+                    PresentationEntityLifecycle.RequestDestroy(engine.World, toDestroy[i], "Blacksmith showcase scatter");
                 }
             }
         }

@@ -1,13 +1,13 @@
 # cfg-05 reference · 配置管线与跨 mod 合并
 
-> 现状参考。产品承诺见 [cfg-05 prd](../prd/cfg-05-config-pipeline.md)；目标实现见 [cfg-05 spec](../spec-runtime/cfg-05-config-pipeline.md)。
+> 现状参考。第一性需求见 [cfg-05 PRD](../prd/cfg-05-config-pipeline.md)；配置说明见 [cfg-05 配置说明](../config/cfg-05-config-pipeline.md)；目标实现见 [cfg-05 runtime spec](../spec-runtime/cfg-05-config-pipeline.md)。
 
 ## 1. 现状快照
 
 - mod 加载顺序的唯一事实来源是启动计划的有序清单：引擎按 `ModLoader.LoadResolvedPlan` 逐项加载，顺序在生成期烘焙；`priority` 不参与该路径排序，仅影响启动器目录索引的展示顺序。
 - 引擎本地回退路径仅在显式传入 mod 路径且无启动计划时启用（调试、无头直启）：本地拓扑排序，就绪候选按 priority 降序、发现序升序。
-- 每个 mod 对每个 relativePath 固定收集两个候选片段：`assets/{path}` 先、`assets/Configs/{path}` 后；后者后到，同 id 时覆盖前者。
-- 该双候选顺序以硬编码存在于两处：配置管线的路径构造与收集循环，以及实时技能工作台保存服务的写回路径探测。
+- 每个 mod 对每个 relativePath 从唯一根 `assets/{path}` 收集片段（单一根约定）；分片表先主文件后同根分片目录。
+- 路径构造与收集集中于 ConfigSourcePaths 与 ConfigPipeline（单根 + 分片目录枚举）。
 - 引擎默认片段来自仓库 `assets/Configs/`；catalog 文件自身也按 Path 同 id 跨源合并。
 - 冲突报告记录片段列表、id 级赢家与删除记录；无字段级溯源。
 - 文件缺失静默跳过；JSON 解析错误、条目缺 id、路径未登记、依赖问题均启动失败。
@@ -41,17 +41,17 @@
 
 | 机制 | 位置 |
 |---|---|
-| 重载入口（重载 catalog 后按组重建：AI / Narrative / Quests，空组=全部） | src/Core/Engine/GameEngine.cs:582 起 |
+| 重载入口（重载 catalog 后按组重建：AI / Narrative / Quests，空组=全部） | src/Core/Engine/GameEngine.cs:587 起 |
 | 唯一触发器 Config.Reload（上下文键 ConfigGroup / ConfigRelativePath），注册处 | src/Core/Config/ReloadConfigTrigger.cs；src/Core/Engine/GameEngine.cs:527 |
 
 ### 引擎接线与特例
 
 | 机制 | 位置 |
 |---|---|
-| 引擎初始化建管线、合并 game.json、载入 catalog | src/Core/Engine/GameEngine.cs:463-470 |
-| 配置重载入口 ReloadConfigs（重载 catalog 后按 group 选择性重建运行时） | src/Core/Engine/GameEngine.cs:582-595 |
+| 引擎初始化建管线、合并 game.json、载入 catalog | src/Core/Engine/GameEngine.cs:467-473 |
+| 配置重载入口 ReloadConfigs（重载 catalog 后按 group 选择性重建运行时） | src/Core/Engine/GameEngine.cs:587-600 |
 | game.json 特例：不走 catalog，恒为深合并后反序列化为 GameConfig | src/Core/Config/ConfigPipeline.cs:27-51 |
 | graphs.json 合并后按 id 忽略大小写排序，保证注册顺序确定 | src/Core/NodeLibraries/GASGraph/Host/GraphProgramConfigLoader.cs:57 |
-| LSW 保存服务：四类 GAS 文件按"先 `assets/Configs/` 再 `assets/` 根、都不存在默认 Configs"探测写回路径——跟随 mod 已有布局 | src/Core/Gameplay/GAS/LiveSkillWorkbench/LiveEditModSaveService.cs:254-288 |
+| LSW 保存服务：四类 GAS 文件固定写回 `assets/GAS/*.json` 常量路径，无布局探测 | src/Core/Gameplay/GAS/LiveSkillWorkbench/LiveEditModSaveService.cs:254-288 |
 
 **相关文档**：[cfg-05 prd](../prd/cfg-05-config-pipeline.md) · [cfg-05 spec](../spec-runtime/cfg-05-config-pipeline.md) · [总篇](../README.md)

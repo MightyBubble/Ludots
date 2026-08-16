@@ -1,6 +1,6 @@
 # cfg-07 spec · 合并规则案例集
 
-> 理想技术实现。现状见 [cfg-07 reference](../reference/cfg-07-merge-rules.md)；产品承诺见 [cfg-07 prd](../prd/cfg-07-merge-rules.md)。
+> 引擎实现任务书。第一性需求见 [cfg-07 PRD](../prd/cfg-07-merge-rules.md)；配置说明见 [cfg-07 配置说明](../config/cfg-07-merge-rules.md)；现状见 [cfg-07 reference](../reference/cfg-07-merge-rules.md)。
 
 ## 1. 概述
 

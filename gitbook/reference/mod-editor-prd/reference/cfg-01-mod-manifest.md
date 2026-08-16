@@ -1,6 +1,6 @@
 # cfg-01 reference · mod 数据
 
-> 现状参考。第一性需求见 [cfg-01 PRD](../prd/cfg-01-mod-manifest.md)；配置说明见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；目标实现见 [cfg-01 spec](../spec-runtime/cfg-01-mod-manifest.md)。
+> 现状参考。第一性需求见 [cfg-01 PRD](../prd/cfg-01-mod-manifest.md)；配置说明见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；目标实现见 [cfg-01 runtime spec](../spec-runtime/cfg-01-mod-manifest.md)。
 
 ## 1. 现状快照
 

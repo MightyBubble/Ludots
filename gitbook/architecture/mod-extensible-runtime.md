@@ -99,7 +99,7 @@ Builtin commands and behaviors cannot carry mod ids or extension lane metadata.
 
 ### Split an ability file
 
-A mod may add a shard like `mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod/assets/Configs/GAS/abilities/capability_standard.config_shards.ember_bolt.json` after `GAS/abilities.json` declares `ShardDirectories: [ "GAS/abilities" ]`. The loader merges that shard into the same `GAS/abilities.json` logical config.
+A mod may add a shard like `mods/showcases/capability_standard/CapabilityStandardConfigShardsShowcaseMod/assets/GAS/abilities/capability_standard.config_shards.ember_bolt.json` after `GAS/abilities.json` declares `ShardDirectories: [ "GAS/abilities" ]`. The loader merges that shard into the same `GAS/abilities.json` logical config.
 
 ### Reuse another mod's graph op
 
@@ -124,7 +124,7 @@ Feature: Split config and mod runtime extensions
 
   Scenario: A mod contributes an ability shard
     Given the catalog entry for "GAS/abilities.json" declares shard directory "GAS/abilities"
-    And a mod contains "assets/Configs/GAS/abilities/fireball.json"
+    And a mod contains "assets/GAS/abilities/fireball.json"
     When the game starts
     Then the fireball ability is loaded as part of "GAS/abilities.json"
 

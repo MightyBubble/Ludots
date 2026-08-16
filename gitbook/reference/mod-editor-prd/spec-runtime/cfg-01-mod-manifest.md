@@ -1,6 +1,6 @@
 # cfg-01 spec · mod 数据
 
-> 理想技术实现。第一性需求见 [cfg-01 PRD](../prd/cfg-01-mod-manifest.md)；配置说明见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；现状见 [cfg-01 reference](../reference/cfg-01-mod-manifest.md)。
+> 引擎实现任务书。第一性需求见 [cfg-01 PRD](../prd/cfg-01-mod-manifest.md)；配置说明见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；现状见 [cfg-01 reference](../reference/cfg-01-mod-manifest.md)。
 
 ## 1. 概述
 
@@ -27,7 +27,7 @@
 
 ## 3. 精确语义与不变量
 
-- 字符串比较 Ordinal；name 大小写敏感且全局唯一。
+- 清单字段白名单与本地回退拓扑序用 Ordinal；启动器侧 mod/依赖/绑定解析为忽略大小写（治理项：统一大小写策略，见开放决策）。
 - priority 必须是整数（JSON number），不接受字符串数字。
 - dependencies 值必须是字符串；`dependencies` 本身必须是对象。
 - processSharedAssemblies 元素非空、写入前 Trim。

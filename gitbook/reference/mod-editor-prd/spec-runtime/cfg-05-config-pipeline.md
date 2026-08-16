@@ -1,6 +1,6 @@
 # cfg-05 spec · 配置管线与跨 mod 合并
 
-> 理想技术实现。现状见 [cfg-05 reference](../reference/cfg-05-config-pipeline.md)；产品承诺见 [cfg-05 prd](../prd/cfg-05-config-pipeline.md)。
+> 引擎实现任务书。第一性需求见 [cfg-05 PRD](../prd/cfg-05-config-pipeline.md)；配置说明见 [cfg-05 配置说明](../config/cfg-05-config-pipeline.md)；现状见 [cfg-05 reference](../reference/cfg-05-config-pipeline.md)。
 
 ## 1. 概述
 
