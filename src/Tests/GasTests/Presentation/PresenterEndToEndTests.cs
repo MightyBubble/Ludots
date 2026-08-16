@@ -130,7 +130,8 @@ namespace Ludots.Tests.Presentation
                 _presEvents,
                 _instances,
                 _defs,
-                _stableIds);
+                _stableIds,
+                _commands);
             _finalizeDestroy = new PresentationEntityFinalizeDestroySystem(_world);
             _ruleSystem = new PresenterRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
             _runtimeSystem = new PresenterRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);

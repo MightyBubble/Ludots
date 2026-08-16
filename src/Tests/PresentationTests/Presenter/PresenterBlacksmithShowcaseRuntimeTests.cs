@@ -573,7 +573,7 @@ namespace Ludots.Tests.Presentation
             int rightId = ResolvePresenterDefId(engine, PresenterBlacksmithShowcaseIds.WorkshopRightDefinitionId);
             int chimneyId = ResolvePresenterDefId(engine, PresenterBlacksmithShowcaseIds.ChimneyDefinitionId);
 
-            engine.World.Destroy(building);
+            PresentationEntityLifecycle.RequestDestroy(engine.World, building, "Blacksmith showcase test root");
             PresenterBlacksmithShowcaseTestHarness.Tick(engine, 8);
 
             Assert.That(CountPresentersByDef(engine, rootId), Is.EqualTo(0));

@@ -84,6 +84,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresEffectRequestQueueCapacityAtOrAboveEngineFloor()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 1;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectRequestQueueCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveOrderAdmissionRejectionCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -1047,6 +1057,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
                 EffectFanOutCommandCapacity = 64,
+                EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 OrderQueueCapacity = 64,
                 ResponseChainOrderQueueCapacity = 64,
                 OrderAdmissionResultCapacity = 128,

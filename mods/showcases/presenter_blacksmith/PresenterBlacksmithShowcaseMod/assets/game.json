@@ -4,7 +4,8 @@
   "gasRuntimeCapacity": {
     "effectLifetimeSnapshotCapacity": 32768,
     "effectFanOutCommandCapacity": 32768,
-    "deferredTriggerActiveEntityCapacity": 32768
+    "deferredTriggerActiveEntityCapacity": 32768,
+    "effectRequestQueueCapacity": 50000
   },
   "presentation": {
     "presenterInstanceCapacity": 1048576,

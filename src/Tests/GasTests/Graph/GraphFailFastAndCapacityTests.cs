@@ -122,6 +122,47 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectRequestQueue_ConfiguredShowcaseCapacity_AcceptsThirtyThousandSpawnBatch()
+        {
+            var q = new EffectRequestQueue(initialCapacity: 50_000);
+            That(q.TotalCapacity, Is.GreaterThanOrEqualTo(30_000));
+
+            Assert.DoesNotThrow(() =>
+                q.RequireAvailable(30_000, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawn"));
+        }
+
+        [Test]
+        public void EffectRequestQueue_DefaultCapacity_RejectsThirtyThousandSpawnBatchWithCapacityError()
+        {
+            var q = new EffectRequestQueue();
+            That(q.TotalCapacity, Is.LessThan(30_000));
+
+            var error = Throws<InvalidOperationException>(() =>
+                q.RequireAvailable(30_000, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawn"));
+
+            That(error!.Message, Does.StartWith(EffectRequestQueue.CapacityExceededError));
+            That(error.Message, Does.Contain("source=RuntimeEntitySpawnSystem.TemplateBatchOnSpawn"));
+            That(error.Message, Does.Contain("needed=30000"));
+        }
+
+        [Test]
+        public void EffectRequestQueue_ExplicitCapacity_IsHonoredWithoutSilentExpansion()
+        {
+            var q = new EffectRequestQueue(initialCapacity: 8);
+
+            That(q.Capacity, Is.EqualTo(8));
+            That(q.TotalCapacity, Is.EqualTo(16));
+        }
+
+        [Test]
+        public void EffectRequestQueue_NonPositiveCapacity_Throws()
+        {
+            var error = Throws<ArgumentOutOfRangeException>(() => new EffectRequestQueue(initialCapacity: 0));
+
+            That(error!.ParamName, Is.EqualTo("initialCapacity"));
+        }
+
+        [Test]
         public void EffectRequestQueue_Clear_DiscardsOverflowInsteadOfRefilling()
         {
             var q = new EffectRequestQueue();

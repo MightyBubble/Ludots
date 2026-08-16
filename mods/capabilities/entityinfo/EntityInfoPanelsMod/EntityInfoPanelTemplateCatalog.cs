@@ -40,6 +40,14 @@ public sealed class EntityInfoPanelTemplateCatalog : IEntityInfoPanelTemplateCat
             Sections = EntityInfoPanelTemplateSectionFlags.Title | EntityInfoPanelTemplateSectionFlags.Subtitle | EntityInfoPanelTemplateSectionFlags.Stats,
             RequireInsightProfile = false
         });
+        Register(new EntityInfoPanelTemplateDescriptor
+        {
+            Id = CompactInsightTemplateId,
+            BindingKind = EntityInfoPanelTemplateBindingKind.TargetEntity,
+            LayoutMode = EntityInfoPanelTemplateLayoutMode.Compact,
+            Sections = EntityInfoPanelTemplateSectionFlags.All,
+            RequireInsightProfile = true
+        });
     }
 
     public void Register(EntityInfoPanelTemplateDescriptor descriptor)

@@ -840,7 +840,7 @@ namespace Ludots.Core.Engine
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes, builtinHandlers);
             presetTypeLoader.Load(ConfigCatalog, ConfigConflictReport);
             presetTypes.Freeze();
-            var effectRequestQueue = new EffectRequestQueue();
+            var effectRequestQueue = new EffectRequestQueue(gasRuntimeCapacity.EffectRequestQueueCapacity);
             var clock = new DiscreteClock();
             var gasClocks = new GasClocks(clock);
             var abilityDefinitions = new AbilityDefinitionRegistry();
@@ -1143,7 +1143,8 @@ namespace Ludots.Core.Engine
                 presentationEventStream,
                 presenterRuntime,
                 presenterDefinitions,
-                presentationStableIds);
+                presentationStableIds,
+                presenterCommandBuffer);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var presenterRuntimeSystem = new PresenterRuntimeSystem(
                 World,

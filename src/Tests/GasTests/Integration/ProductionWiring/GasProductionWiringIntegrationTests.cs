@@ -272,6 +272,12 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             Assert.That(
                 engine.GetService(CoreServiceKeys.ChainOrderQueue).Capacity,
                 Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.ResponseChainOrderQueueCapacity));
+            EffectRequestQueue effectRequestQueue = engine.GetService(CoreServiceKeys.EffectRequestQueue);
+            Assert.That(effectRequestQueue, Is.Not.Null);
+            Assert.That(
+                effectRequestQueue.Capacity,
+                Is.EqualTo(engine.MergedConfig.GasRuntimeCapacity.EffectRequestQueueCapacity),
+                "EffectRequestQueue must be sized from gasRuntimeCapacity.effectRequestQueueCapacity, not the presentation capacity.");
             Assert.That(engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer), Is.Not.Null);
             DirtyEntityQueue dirtyEntities = engine.GetService(CoreServiceKeys.DirtyEntityQueue);
             Assert.That(dirtyEntities, Is.Not.Null);
