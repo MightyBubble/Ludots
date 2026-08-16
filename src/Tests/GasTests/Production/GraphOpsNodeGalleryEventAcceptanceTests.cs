@@ -32,6 +32,14 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
         }
     }
 
+    [TestCase("FanOutDispatchEffect")]
+    [TestCase("FanOutDispatchEffectDynamic")]
+    public void FanOutDispatch_SettlesQueuedEffectRequests(string op)
+    {
+        using var runtime = BindAndTick(op);
+        Assert.That(runtime.Context.EffectRequests!.Count, Is.EqualTo(0), op);
+    }
+
     [Test]
     public void SnapToNearestInCollection_SucceedsWithPlayerCaption()
     {

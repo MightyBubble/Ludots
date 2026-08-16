@@ -144,6 +144,18 @@ public sealed class GraphOpsNodeGalleryRuntime : IDisposable
         }
 
         Metrics.ThinkWaves++;
+        SettlePendingEffectRequests();
+    }
+
+    private void SettlePendingEffectRequests()
+    {
+        if (_ctx!.EffectRequests is not { Count: > 0 })
+        {
+            return;
+        }
+
+        _host!.SettleEffectRequests();
+        GraphOpsNodeActorBinding.SyncActorHealthFromWorld(_ctx);
     }
 
     public void DrawOverlay(DebugDrawCommandBuffer debugDraw)

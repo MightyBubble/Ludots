@@ -1,5 +1,7 @@
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -86,7 +88,7 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
     }
 
     [Test]
-    public void ApplyEffectTemplate_EnqueuesMark()
+    public void ApplyEffectTemplate_SettlesMarkOntoTarget()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
         runtime.BindOp("ApplyEffectTemplate");
@@ -96,7 +98,28 @@ public sealed class GraphOpsNodeGalleryAttrAcceptanceTests
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
         Assert.That(runtime.Metrics.Detail, Does.Contain("挂上"));
         Assert.That(runtime.Driver, Is.TypeOf<AttrNodeDriver>());
-        Assert.That(((AttrNodeDriver)runtime.Driver).PendingEffectRequests, Is.GreaterThan(0));
+        Assert.That(((AttrNodeDriver)runtime.Driver).PendingEffectRequests, Is.EqualTo(0));
+
+        int markTemplateId = EffectTemplateIdRegistry.GetId(AttrNodeDriver.MarkEffectId);
+        var world = runtime.Context.SimWorld;
+        var target = runtime.Context.Target;
+        Assert.That(world.Has<ActiveEffectContainer>(target), Is.True);
+        var container = world.Get<ActiveEffectContainer>(target);
+        int liveMarks = 0;
+        for (int i = 0; i < container.Count; i++)
+        {
+            var effect = container.GetEntity(i);
+            if (world.IsAlive(effect) &&
+                world.Has<GameplayEffect>(effect) &&
+                !world.Get<GameplayEffect>(effect).CancelRequested &&
+                world.Has<EffectTemplateRef>(effect) &&
+                world.Get<EffectTemplateRef>(effect).TemplateId == markTemplateId)
+            {
+                liveMarks++;
+            }
+        }
+
+        Assert.That(liveMarks, Is.GreaterThan(0), "Settlement must attach a live mark effect to the target.");
     }
 
     [Test]

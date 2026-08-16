@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
+using Ludots.Core.Gameplay.GAS.Components;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
@@ -104,6 +105,30 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
         Assert.That(runtime.Context.ActorHealth[ally], Is.EqualTo(100f).Within(0.01f));
         Assert.That(runtime.Context.ActorHudLit[ally], Is.True);
         Assert.That(runtime.Metrics.Detail, Does.Contain("80"));
+    }
+
+    [Test]
+    public void FanOutApplyEffect_SettlesActiveEffectsOntoLitUnits()
+    {
+        using var runtime = TickOp("FanOutApplyEffect");
+        var ctx = runtime.Context;
+        var world = ctx.SimWorld;
+        Assert.That(ctx.EffectRequests!.Count, Is.EqualTo(0), "settlement must consume the effect request queue");
+        int caster = GraphOpsNodeActorBinding.FindRole(runtime.Vignette, "caster");
+        int settled = 0;
+        for (int i = 0; i < ctx.ActorHudLit.Length; i++)
+        {
+            if (i == caster || !ctx.ActorHudLit[i])
+            {
+                continue;
+            }
+
+            Assert.That(world.Has<ActiveEffectContainer>(ctx.SimActors[i]), Is.True, runtime.Vignette.Actors[i].Id);
+            Assert.That(world.Get<ActiveEffectContainer>(ctx.SimActors[i]).Count, Is.GreaterThan(0), runtime.Vignette.Actors[i].Id);
+            settled++;
+        }
+
+        Assert.That(settled, Is.GreaterThan(0), "fan-out must light at least one unit beyond the caster");
     }
 
     [Test]

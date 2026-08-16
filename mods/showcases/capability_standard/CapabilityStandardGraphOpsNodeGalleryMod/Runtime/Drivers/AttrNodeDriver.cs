@@ -51,7 +51,6 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         }
 
         GraphOpsNodeActorBinding.RestoreVignetteHealth(ctx);
-        ctx.EffectRequests.Clear();
         int casterIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float targetBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;

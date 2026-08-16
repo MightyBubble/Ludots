@@ -78,7 +78,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Event driver for {ctx.Vignette.Op} was not seeded.");
         }
 
-        ctx.EffectRequests.Clear();
         ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;

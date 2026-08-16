@@ -4,9 +4,9 @@
 - command: `dotnet test src/Tests/GasTests/GasTests.csproj --filter EntityQueryTactics_ProductionBenchmark_WritesReport --no-restore`
 - runtime: `.NET 8.0.25`
 - os: `Microsoft Windows 10.0.26220`
-- generated UTC: `2026-08-16T07:24:08.7866035Z`
+- generated UTC: `2026-08-16T09:23:19.8579787Z`
 - preset: `entity_query_tactics_raylib`
-- plan fingerprint: `1e0e75d5a9992029beb4e6caf18d4be835561073da210f3e3571c11ee96aa1b1`
+- plan fingerprint: `8e69549f3ab028744f7191eaa08fbd4f028e9d893612ba6c0231738a0ec51dd1`
 - ordered mods: `LudotsCoreMod -> CoreInputMod -> CameraProfilesMod -> NarrativeFrontendMod -> EntityQueryTacticsShowcaseMod`
 - graph ids: `entityquery.tactics.graph.selectedFriendliesFromUiBox, entityquery.tactics.graph.hostileThreatBoard, entityquery.tactics.graph.formationCache`
 - graph node counts: selected `14`, hostile `15`, formation `13`
@@ -35,18 +35,18 @@
 ## Hot Path Measurements
 | path | iterations | total ms | per iteration us | allocated bytes |
 |---|---:|---:|---:|---:|
-| GraphReturnWriter execute x3 stable inputs | 20000 | 508.192 | 25.410 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 161.007 | 8.050 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 240.018 | 12.001 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 157.853 | 7.893 | 0 |
-| Retained diff execute x3 stable inputs | 2000 | 53.470 | 26.735 | 0 |
-| Relationship AddMetric + graph execute x3 | 1000 | 26.613 | 26.613 | 0 |
+| GraphReturnWriter execute x3 stable inputs | 20000 | 494.826 | 24.741 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 145.987 | 7.299 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 192.673 | 9.634 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 136.844 | 6.842 | 0 |
+| Retained diff execute x3 stable inputs | 2000 | 52.269 | 26.134 | 0 |
+| Relationship AddMetric + graph execute x3 | 1000 | 25.472 | 25.472 | 0 |
 - stable allocation sample attempts: graph x3 `1`, single graphs `entityquery.tactics.graph.selectedFriendliesFromUiBox:1, entityquery.tactics.graph.hostileThreatBoard:1, entityquery.tactics.graph.formationCache:1`, retained diff `1`, pressure `1`
 
 ## Production Tick Loop
 | path | frames | action frames | total ms | median ms | p95 ms | max ms | allocated bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 206.607 | 0.170 | 1.732 | 4.457 | 119514504 |
+| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 217.040 | 0.199 | 1.753 | 4.581 | 119505928 |
 - production pressure summary: `entityquery.summary.threat.max` `95` -> `605` during the tick loop.
 
 ## Retained Diff

@@ -61,7 +61,6 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Sandbox driver for {ctx.Vignette.Op} is not seeded.");
         }
 
-        ctx.EffectRequests.Clear();
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         if (ProgramHasQueryRadius(ctx.Compiled.Program) && result.TargetCount <= 0)
         {
