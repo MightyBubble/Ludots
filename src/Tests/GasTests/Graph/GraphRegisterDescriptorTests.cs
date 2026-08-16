@@ -11,7 +11,6 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.TagDisplay;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -159,8 +158,7 @@ namespace Ludots.Tests.Gas.Graph
                 new RelationshipFlagRegistry(),
                 new RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
-                new EntityTemplateKeyRegistry(),
-                tagDisplayTables: new TagDisplayTableRegistry());
+                new EntityTemplateKeyRegistry());
 
             GraphProgramSymbolPatcher.Patch(symbols, program, resolver);
             GraphInstruction[] first = Clone(program);

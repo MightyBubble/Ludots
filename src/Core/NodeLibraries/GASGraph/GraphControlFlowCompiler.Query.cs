@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -94,25 +93,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CompareEqEntity:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.SelectTagInMask:
-                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
-                    }
-
-                    _ = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.LookupTagDisplayToken:
-                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
-                    }
-
                     break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -381,19 +361,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
-                case GraphNodeOp.SelectTagInMask:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
-                    instruction.Flags = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.LookupTagDisplayToken:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.A, GraphValueType.Int,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
-                    break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Min, GraphValueType.Float,
@@ -622,29 +589,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
-        }
-
-        private static byte ParseQueryTagSelectPolicy(
-            string? policy,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(policy))
-            {
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            if (!Enum.TryParse(policy, ignoreCase: false, out TagSelectPolicy parsed) ||
-                !Enum.IsDefined(typeof(TagSelectPolicy), parsed))
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                    $"Node '{node.Id}' has unsupported tagSelectPolicy '{policy}'. Supported: RequireOne, AllowNone, LowestId.",
-                    node.Id));
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            return (byte)parsed;
         }
     }
 }

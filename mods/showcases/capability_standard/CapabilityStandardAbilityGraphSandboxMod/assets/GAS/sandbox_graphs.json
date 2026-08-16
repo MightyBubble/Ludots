@@ -12,11 +12,8 @@
       { "id": "count", "op": "AggCount" },
       { "id": "nearest", "op": "AggMinByDistance" },
       { "id": "hasInspired", "op": "HasTag", "tag": "State.Sandbox.Inspired" },
-      { "id": "readTag", "op": "ReadGameplayTag", "displayTable": "sandbox.status.display", "tagSelectPolicy": "RequireOne" },
-      { "id": "lookup", "op": "LookupTagDisplayText", "displayTable": "sandbox.status.display" },
       { "id": "writeCount", "op": "WriteBlackboardInt", "blackboardKey": "sandbox.scout.nearbyCount" },
-      { "id": "writeNearest", "op": "WriteBlackboardEntity", "blackboardKey": "sandbox.scout.nearest" },
-      { "id": "writeToken", "op": "WriteBlackboardInt", "blackboardKey": "sandbox.scout.statusToken" }
+      { "id": "writeNearest", "op": "WriteBlackboardEntity", "blackboardKey": "sandbox.scout.nearest" }
     ],
     "controlEdges": [
       { "from": "caster", "fromPort": "next", "to": "radius" },
@@ -26,23 +23,16 @@
       { "from": "limit", "fromPort": "next", "to": "count" },
       { "from": "count", "fromPort": "next", "to": "nearest" },
       { "from": "nearest", "fromPort": "next", "to": "hasInspired" },
-      { "from": "hasInspired", "fromPort": "next", "to": "readTag" },
-      { "from": "readTag", "fromPort": "next", "to": "lookup" },
-      { "from": "lookup", "fromPort": "next", "to": "writeCount" },
-      { "from": "writeCount", "fromPort": "next", "to": "writeNearest" },
-      { "from": "writeNearest", "fromPort": "next", "to": "writeToken" }
+      { "from": "hasInspired", "fromPort": "next", "to": "writeCount" },
+      { "from": "writeCount", "fromPort": "next", "to": "writeNearest" }
     ],
     "valueEdges": [
       { "from": "caster", "fromPort": "value", "to": "notSelf", "toPort": "source" },
       { "from": "nearest", "fromPort": "value", "to": "hasInspired", "toPort": "source" },
-      { "from": "nearest", "fromPort": "value", "to": "readTag", "toPort": "source" },
-      { "from": "readTag", "fromPort": "value", "to": "lookup", "toPort": "a" },
       { "from": "caster", "fromPort": "value", "to": "writeCount", "toPort": "source" },
       { "from": "count", "fromPort": "value", "to": "writeCount", "toPort": "value" },
       { "from": "caster", "fromPort": "value", "to": "writeNearest", "toPort": "source" },
-      { "from": "nearest", "fromPort": "value", "to": "writeNearest", "toPort": "value" },
-      { "from": "caster", "fromPort": "value", "to": "writeToken", "toPort": "source" },
-      { "from": "lookup", "fromPort": "value", "to": "writeToken", "toPort": "value" }
+      { "from": "nearest", "fromPort": "value", "to": "writeNearest", "toPort": "value" }
     ]
   },
   {

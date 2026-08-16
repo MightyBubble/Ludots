@@ -61,7 +61,6 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Particles;
@@ -816,16 +815,13 @@ namespace Ludots.Core.Engine
                 visionFogFieldStore,
                 visionResolver,
                 fogKnowledgeProjector);
-            var tagDisplayTables = new TagDisplayTableRegistry();
-            new TagDisplayTableConfigLoader(ConfigPipeline, tagDisplayTables).Load(ConfigCatalog, ConfigConflictReport);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
-                MapLoader.EntityTemplateKeys,
-                tagDisplayTables);
+                MapLoader.EntityTemplateKeys);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -948,8 +944,7 @@ namespace Ludots.Core.Engine
                 entitySetQueryRuntime,
                 controlDomainQuery,
                 knowledgeProjectionResolver,
-                clock,
-                tagDisplayTables);
+                clock);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
@@ -1486,7 +1481,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
-            SetService(CoreServiceKeys.TagDisplayTableRegistry, tagDisplayTables);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);

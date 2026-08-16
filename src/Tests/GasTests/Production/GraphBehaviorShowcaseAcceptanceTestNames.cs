@@ -84,10 +84,8 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(runtime.Metrics.Detail, Does.Contain("查一圈"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("挂状态"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("加好感"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("状态牌"));
                 Assert.That(runtime.EffectApplications, Is.GreaterThan(0));
                 Assert.That(runtime.RelationshipScore, Is.GreaterThan(0));
-                Assert.That(runtime.StatusToken, Is.Not.EqualTo("无"));
                 Assert.That(runtime.NearbyCount, Is.EqualTo(AbilityGraphSandboxGraphKeys.QueryLimit));
             });
         }
@@ -101,8 +99,6 @@ namespace Ludots.Tests.Gas.Production
             GraphNodeOp[] required =
             [
                 GraphNodeOp.HasTag,
-                GraphNodeOp.SelectTagInMask,
-                GraphNodeOp.LookupTagDisplayToken,
                 GraphNodeOp.QueryRadius,
                 GraphNodeOp.QuerySortStable,
                 GraphNodeOp.QueryLimit,

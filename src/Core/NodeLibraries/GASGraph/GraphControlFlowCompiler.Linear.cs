@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -118,17 +117,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CompareEqEntity:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    break;
-
-                case GraphNodeOp.SelectTagInMask:
-                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    RequireNonEmpty(node.DisplayTable, "displayTable", node, graphId, diagnostics);
-                    _ = ParseTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-
-                case GraphNodeOp.LookupTagDisplayToken:
-                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    RequireNonEmpty(node.DisplayTable, "displayTable", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadAttribute:
@@ -561,21 +549,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
-                case GraphNodeOp.SelectTagInMask:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
-                    instruction.Flags = ParseTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-
-                case GraphNodeOp.LookupTagDisplayToken:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.A, GraphValueType.Int,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
-                    break;
-
                 case GraphNodeOp.LoadAttribute:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
@@ -980,29 +953,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 EmitExplicitHalt(program, sources, bodyIndex + 1, graphId, node);
             }
-        }
-
-        private static byte ParseTagSelectPolicy(
-            string? policy,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(policy))
-            {
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            if (!Enum.TryParse(policy, ignoreCase: false, out TagSelectPolicy parsed) ||
-                !Enum.IsDefined(typeof(TagSelectPolicy), parsed))
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                    $"Node '{node.Id}' has unsupported tagSelectPolicy '{policy}'. Supported: RequireOne, AllowNone, LowestId.",
-                    node.Id));
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            return (byte)parsed;
         }
 
         private static int ParseLinearRelationshipFilterMode(

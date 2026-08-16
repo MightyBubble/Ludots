@@ -24,7 +24,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
-using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -61,9 +60,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     public RelationshipReasonRegistry RelationshipReasons { get; private set; } = null!;
     public EntityCollectionStore Collections { get; private set; } = null!;
     public EffectRequestQueue EffectRequests { get; private set; } = null!;
-    public TagOps TagOps { get; private set; } = null!;
-    public TagDisplayTableRegistry TagDisplay { get; private set; } = null!;
-    public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
+        public TagOps TagOps { get; private set; } = null!;
+        public TargetDispatchPresetRegistry DispatchPresets { get; private set; } = null!;
     public ISpatialQueryService SpatialQueries { get; private set; } = null!;
     public OwnershipResolver? Ownership { get; private set; }
     public KnowledgeProjectionStore Knowledge { get; private set; } = null!;
@@ -81,7 +79,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
         host.FinishResolver();
         GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
-        host.LoadSandboxDisplayTable(assetsRoot);
         return host;
     }
 
@@ -123,7 +120,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Relationships = Relationships,
             Collections = Collections,
             TagOps = TagOps,
-            TagDisplay = TagDisplay,
             EventBus = EventBus,
             Ownership = Ownership,
             Knowledge = Knowledge,
@@ -197,7 +193,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
         _templateRegistry = engine.MapLoader.TemplateRegistry;
-        TagDisplay = RequireEngineService(engine, CoreServiceKeys.TagDisplayTableRegistry);
         _effectTemplates = RequireEngineService(engine, CoreServiceKeys.EffectTemplateRegistry);
         Api = RequireEngineService(engine, CoreServiceKeys.GasGraphRuntimeApi);
         EnsureGalleryRelationshipCatalog();
@@ -223,8 +218,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipMetrics,
             RelationshipFlags,
             RelationshipReasons,
-            DispatchPresets,
-            TagDisplay);
+            DispatchPresets);
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)
@@ -413,15 +407,6 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Relationships = Relationships,
             SpatialQueries = SpatialQueries
         };
-    }
-
-    private void LoadSandboxDisplayTable(string assetsRoot)
-    {
-        GraphOpsNodeGallerySymbolResolver.BindSandboxDisplayTable(TagDisplay, assetsRoot);
-        if (_ownsWorld && !TagDisplay.IsFrozen)
-        {
-            TagDisplay.Freeze();
-        }
     }
 
     private void EnsureGalleryRelationshipCatalog()

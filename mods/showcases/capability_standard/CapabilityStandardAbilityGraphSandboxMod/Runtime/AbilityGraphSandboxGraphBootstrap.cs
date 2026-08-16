@@ -11,7 +11,6 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Registry;
 
 namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
@@ -25,14 +24,10 @@ public static class AbilityGraphSandboxGraphKeys
     public const string BuffEffect = "Effect.AbilityGraphSandbox.Buff";
     public const string InspiredTag = "State.Sandbox.Inspired";
     public const string MarkedTag = "State.Sandbox.Marked";
-    public const string StatusDisplayTable = "sandbox.status.display";
     public const string NearbyCountKey = "sandbox.scout.nearbyCount";
     public const string NearestKey = "sandbox.scout.nearest";
-    public const string StatusTokenKey = "sandbox.scout.statusToken";
     public const string BuffTemplateKey = "sandbox.apply.buffTemplate";
     public const string LoyaltyKey = "sandbox.bond.loyalty";
-    public const int InspiredTokenId = 1;
-    public const int MarkedTokenId = 2;
     public const int QueryLimit = 5;
 }
 
@@ -40,7 +35,6 @@ public sealed class AbilityGraphSandboxBundle
 {
     public required GraphProgramRegistry Programs { get; init; }
     public required IReadOnlyDictionary<string, int> GraphIds { get; init; }
-    public required TagDisplayTableRegistry TagDisplay { get; init; }
     public required RelationshipTypeRegistry Types { get; init; }
     public required RelationshipMetricRegistry Metrics { get; init; }
     public required RelationshipFlagRegistry Flags { get; init; }
@@ -60,20 +54,17 @@ internal sealed class AbilityGraphSandboxSymbolResolver : IGraphSymbolResolver
     private readonly RelationshipMetricRegistry _metrics;
     private readonly RelationshipFlagRegistry _flags;
     private readonly RelationshipReasonRegistry _reasons;
-    private readonly TagDisplayTableRegistry _tables;
 
     public AbilityGraphSandboxSymbolResolver(
         RelationshipTypeRegistry types,
         RelationshipMetricRegistry metrics,
         RelationshipFlagRegistry flags,
-        RelationshipReasonRegistry reasons,
-        TagDisplayTableRegistry tables)
+        RelationshipReasonRegistry reasons)
     {
         _types = types;
         _metrics = metrics;
         _flags = flags;
         _reasons = reasons;
-        _tables = tables;
     }
 
     public int ResolveTag(string name) => TagRegistry.Register(name);
@@ -85,7 +76,6 @@ internal sealed class AbilityGraphSandboxSymbolResolver : IGraphSymbolResolver
     public int ResolveRelationshipReason(string name) => _reasons.Register(name);
     public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
     public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
-    public int ResolveTagDisplayTable(string name) => _tables.GetTableId(name);
 }
 
 public static class AbilityGraphSandboxGraphBootstrap
@@ -98,7 +88,7 @@ public static class AbilityGraphSandboxGraphBootstrap
         }
 
         // Not assets/GAS/graphs.json: ConfigPipeline merges that path with GetId-only
-        // GasGraphSymbolResolver, which cannot Register sandbox tags/display tables.
+        // GasGraphSymbolResolver, which cannot Register sandbox tags.
         string graphsPath = Path.Combine(modAssetsRoot, "GAS", "sandbox_graphs.json");
         if (!File.Exists(graphsPath))
         {
@@ -107,19 +97,6 @@ public static class AbilityGraphSandboxGraphBootstrap
 
         int inspiredTagId = TagRegistry.Register(AbilityGraphSandboxGraphKeys.InspiredTag);
         int markedTagId = TagRegistry.Register(AbilityGraphSandboxGraphKeys.MarkedTag);
-        var mask = new GameplayTagContainer();
-        mask.AddTag(inspiredTagId);
-        mask.AddTag(markedTagId);
-        var tables = new TagDisplayTableRegistry();
-        tables.RegisterTable(
-            AbilityGraphSandboxGraphKeys.StatusDisplayTable,
-            in mask,
-            new (int, int)[]
-            {
-                (inspiredTagId, AbilityGraphSandboxGraphKeys.InspiredTokenId),
-                (markedTagId, AbilityGraphSandboxGraphKeys.MarkedTokenId)
-            });
-        tables.Freeze();
 
         int markTemplateId = EffectTemplateIdRegistry.Register(AbilityGraphSandboxGraphKeys.MarkEffect);
         int buffTemplateId = EffectTemplateIdRegistry.Register(AbilityGraphSandboxGraphKeys.BuffEffect);
@@ -136,7 +113,7 @@ public static class AbilityGraphSandboxGraphBootstrap
         var programs = new GraphProgramRegistry();
         var graphIds = new Dictionary<string, int>(StringComparer.Ordinal);
         int nextGraphId = 1;
-        var resolver = new AbilityGraphSandboxSymbolResolver(types, metrics, flags, reasons, tables);
+        var resolver = new AbilityGraphSandboxSymbolResolver(types, metrics, flags, reasons);
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
 
@@ -181,7 +158,6 @@ public static class AbilityGraphSandboxGraphBootstrap
         {
             Programs = programs,
             GraphIds = graphIds,
-            TagDisplay = tables,
             Types = types,
             Metrics = metrics,
             Flags = flags,
