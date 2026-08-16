@@ -113,12 +113,6 @@
     ]
   },
   {
-    "Path": "GAS/tag_display_tables.json",
-    "Policy": "ArrayById",
-    "IdField": "id",
-    "AllowEmpty": true
-  },
-  {
     "Path": "GAS/abilities.json",
     "Policy": "ArrayById",
     "IdField": "id",

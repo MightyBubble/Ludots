@@ -7,7 +7,7 @@
       {
         "id": "invoke",
         "op": "InvokeScript",
-        "graphId": 9001
+        "functionName": "demo.const.seven"
       },
       {
         "id": "done",
