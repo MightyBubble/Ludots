@@ -271,11 +271,11 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
 
-            var commandKinds = new PerformerCommandKindRegistry();
+            var commandKinds = new PresenterCommandKindRegistry();
             int commandKindId = commandKinds.Register(
                 "ExampleMod.MarkCommand",
-                new PerformerCommandExtensionDescriptor(
-                    PerformerCommandRouteStrategy.SingleRuntime,
+                new PresenterCommandExtensionDescriptor(
+                    PresenterCommandRouteStrategy.SingleRuntime,
                     NoOpExtensionCommand));
             var (_, _, pipeline, catalog) = BuildPipeline();
             var registry = new PresenterDefinitionRegistry();
@@ -286,7 +286,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
             Assert.That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.Extension));
             Assert.That(definition.Rules[0].Command.CommandKindId, Is.EqualTo(commandKindId));
-            Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PerformerCommandRouteStrategy.SingleRuntime));
+            Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PresenterCommandRouteStrategy.SingleRuntime));
             Assert.That(definition.Rules[0].Command.ScopeTag, Is.EqualTo(PresenterScopeTagRegistry.GetId("extensionScope")));
         }
 
@@ -311,11 +311,11 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
 
-            var behaviorKinds = new PerformerBehaviorKindRegistry();
+            var behaviorKinds = new PresenterBehaviorKindRegistry();
             int behaviorKindId = behaviorKinds.Register(
                 "ExampleMod.TickBehavior",
-                new PerformerBehaviorExtensionDescriptor(
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                new PresenterBehaviorExtensionDescriptor(
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     NoOpExtensionBehavior));
             var (_, _, pipeline, catalog) = BuildPipeline();
             var registry = new PresenterDefinitionRegistry();
@@ -326,7 +326,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
             Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Extension));
             Assert.That(definition.Behaviors[0].KindId, Is.EqualTo(behaviorKindId));
-            Assert.That(definition.Behaviors[0].ExtensionLane, Is.EqualTo(PerformerBehaviorExecutionLane.ContinuousTick));
+            Assert.That(definition.Behaviors[0].ExtensionLane, Is.EqualTo(PresenterBehaviorExecutionLane.ContinuousTick));
             Assert.That(definition.Behaviors[0].ActiveByDefault, Is.True);
         }
 
@@ -2848,11 +2848,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
-        private static void NoOpExtensionCommand(in PerformerCommandExecutionContext context)
+        private static void NoOpExtensionCommand(in PresenterCommandExecutionContext context)
         {
         }
 
-        private static void NoOpExtensionBehavior(in PerformerBehaviorExecutionContext context)
+        private static void NoOpExtensionBehavior(in PresenterBehaviorExecutionContext context)
         {
         }
 

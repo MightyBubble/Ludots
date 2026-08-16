@@ -301,16 +301,16 @@ public enum PresenterCommandKind : byte
 
 ### 4.5.1 Mod extension commands and behaviors
 
-Performer extensions are startup-registered semantic keys, not new Core enum values.
+Presenter extensions are startup-registered semantic keys, not new Core enum values.
 
-- A Mod registers command keys through `IModContext.Extensions.Presentation.RegisterPerformerCommand`.
-- A Mod registers behavior keys through `IModContext.Extensions.Presentation.RegisterPerformerBehavior`.
-- Extension commands must use `PerformerCommandKind.Extension`, carry the resolved `CommandKindId`, and declare an explicit `RouteStrategy`.
+- A Mod registers command keys through `IModContext.Extensions.Presentation.RegisterPresenterCommand`.
+- A Mod registers behavior keys through `IModContext.Extensions.Presentation.RegisterPresenterBehavior`.
+- Extension commands must use `PresenterCommandKind.Extension`, carry the resolved `CommandKindId`, and declare an explicit `RouteStrategy`.
 - Extension behaviors must use `BehaviorKind.Extension`, carry the resolved `KindId`, and declare an explicit execution lane.
 - Builtin commands and behaviors must not carry mod ids, extension route data, or extension lane data.
 
-The Performer runtime consumes extension handlers through the same `PerformerCommandBuffer`,
-`PerformerRuntimeSystem`, and `PerformerBehaviorSystem` pipeline as builtins. Mods must not add a parallel
+The Presenter runtime consumes extension handlers through the same `PresenterCommandBuffer`,
+`PresenterRuntimeSystem`, and `PresenterBehaviorSystem` pipeline as builtins. Mods must not add a parallel
 presentation command or behavior pipeline.
 
 ### 4.6 PresentationEventKind（扩展）

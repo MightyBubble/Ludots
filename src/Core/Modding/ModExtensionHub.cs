@@ -31,13 +31,13 @@ namespace Ludots.Core.Modding
 
     public interface IPresentationModExtensionRegistration
     {
-        int RegisterPerformerCommand(
+        int RegisterPresenterCommand(
             string key,
-            in PerformerCommandExtensionDescriptor descriptor);
+            in PresenterCommandExtensionDescriptor descriptor);
 
-        int RegisterPerformerBehavior(
+        int RegisterPresenterBehavior(
             string key,
-            in PerformerBehaviorExtensionDescriptor descriptor);
+            in PresenterBehaviorExtensionDescriptor descriptor);
     }
 
     /// <summary>
@@ -98,19 +98,19 @@ namespace Ludots.Core.Modding
 
     internal sealed class PresentationModExtensions
     {
-        public PerformerCommandKindRegistry PerformerCommands { get; } = new();
-        public PerformerBehaviorKindRegistry PerformerBehaviors { get; } = new();
+        public PresenterCommandKindRegistry PresenterCommands { get; } = new();
+        public PresenterBehaviorKindRegistry PresenterBehaviors { get; } = new();
 
         internal void Reset()
         {
-            PerformerCommands.Clear();
-            PerformerBehaviors.Clear();
+            PresenterCommands.Clear();
+            PresenterBehaviors.Clear();
         }
 
         internal void Freeze()
         {
-            PerformerCommands.Freeze();
-            PerformerBehaviors.Freeze();
+            PresenterCommands.Freeze();
+            PresenterBehaviors.Freeze();
         }
     }
 
@@ -181,20 +181,20 @@ namespace Ludots.Core.Modding
             _hub = hub ?? throw new ArgumentNullException(nameof(hub));
         }
 
-        public int RegisterPerformerCommand(
+        public int RegisterPresenterCommand(
             string key,
-            in PerformerCommandExtensionDescriptor descriptor)
+            in PresenterCommandExtensionDescriptor descriptor)
         {
             ModExtensionKeyOwnership.RequireOwnedKey(_modId, key);
-            return _hub.Presentation.PerformerCommands.Register(key, in descriptor);
+            return _hub.Presentation.PresenterCommands.Register(key, in descriptor);
         }
 
-        public int RegisterPerformerBehavior(
+        public int RegisterPresenterBehavior(
             string key,
-            in PerformerBehaviorExtensionDescriptor descriptor)
+            in PresenterBehaviorExtensionDescriptor descriptor)
         {
             ModExtensionKeyOwnership.RequireOwnedKey(_modId, key);
-            return _hub.Presentation.PerformerBehaviors.Register(key, in descriptor);
+            return _hub.Presentation.PresenterBehaviors.Register(key, in descriptor);
         }
     }
 

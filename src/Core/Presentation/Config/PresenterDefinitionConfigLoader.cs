@@ -34,8 +34,8 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
-        private readonly PerformerCommandKindRegistry? _commandKinds;
-        private readonly PerformerBehaviorKindRegistry? _behaviorKinds;
+        private readonly PresenterCommandKindRegistry? _commandKinds;
+        private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -51,8 +51,8 @@ namespace Ludots.Core.Presentation.Config
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null,
-            PerformerCommandKindRegistry? commandKinds = null,
-            PerformerBehaviorKindRegistry? behaviorKinds = null)
+            PresenterCommandKindRegistry? commandKinds = null,
+            PresenterBehaviorKindRegistry? behaviorKinds = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -942,7 +942,7 @@ namespace Ludots.Core.Presentation.Config
             int presenterDefinitionId = ParseCommandDefinitionId(obj, commandKind, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
-            PerformerCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
+            PresenterCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
@@ -977,18 +977,18 @@ namespace Ludots.Core.Presentation.Config
         private PresenterCommand ParseExtensionPresenterCommand(JsonObject obj, string kindText, string context)
         {
             int commandKindId = _commandKinds?.GetId(kindText) ?? 0;
-            if (commandKindId < PerformerCommandKindRegistry.FirstModCommandKindId)
+            if (commandKindId < PresenterCommandKindRegistry.FirstModCommandKindId)
             {
                 throw new InvalidOperationException($"{context}.kind references unregistered presenter command kind '{kindText}'.");
             }
 
-            if (!_commandKinds!.TryGetDescriptor(commandKindId, out PerformerCommandExtensionDescriptor descriptor))
+            if (!_commandKinds!.TryGetDescriptor(commandKindId, out PresenterCommandExtensionDescriptor descriptor))
             {
                 throw new InvalidOperationException($"{context}.kind references presenter command kind '{kindText}' without a registered descriptor.");
             }
 
-            PerformerCommandRouteStrategy routeStrategy =
-                ParseRequiredEnum<PerformerCommandRouteStrategy>(obj["route"], $"{context}.route");
+            PresenterCommandRouteStrategy routeStrategy =
+                ParseRequiredEnum<PresenterCommandRouteStrategy>(obj["route"], $"{context}.route");
             if (routeStrategy != descriptor.RouteStrategy)
             {
                 throw new InvalidOperationException(
@@ -1055,22 +1055,22 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static PerformerCommandRouteStrategy ResolveBuiltinCommandRoute(
+        private static PresenterCommandRouteStrategy ResolveBuiltinCommandRoute(
             PresenterCommandKind commandKind,
             int presenterDefinitionId)
         {
             return commandKind switch
             {
-                PresenterCommandKind.CreatePresenter => PerformerCommandRouteStrategy.CreatePerformer,
-                PresenterCommandKind.DestroyPresenterScope => PerformerCommandRouteStrategy.DestroyScope,
-                PresenterCommandKind.DestroyScopedPresenter => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam when presenterDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
-                PresenterCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.DestroyPresenter => PerformerCommandRouteStrategy.ExistingInstances,
-                PresenterCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                PresenterCommandKind.CreatePresenter => PresenterCommandRouteStrategy.CreatePresenter,
+                PresenterCommandKind.DestroyPresenterScope => PresenterCommandRouteStrategy.DestroyScope,
+                PresenterCommandKind.DestroyScopedPresenter => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam when presenterDefinitionId > 0 => PresenterCommandRouteStrategy.ScopedInstance,
+                PresenterCommandKind.SetParam => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.ActivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DeactivateBehavior => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.InitializeTransform => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.DestroyPresenter => PresenterCommandRouteStrategy.ExistingInstances,
+                PresenterCommandKind.SinkParamToAsset => PresenterCommandRouteStrategy.SingleRuntime,
                 _ => throw new InvalidOperationException($"Unsupported presenter command kind '{commandKind}'."),
             };
         }
@@ -1886,7 +1886,7 @@ namespace Ludots.Core.Presentation.Config
 
                 bool isBuiltinKind = parsedBuiltinKind;
                 int kindId;
-                PerformerBehaviorExecutionLane extensionLane = PerformerBehaviorExecutionLane.None;
+                PresenterBehaviorExecutionLane extensionLane = PresenterBehaviorExecutionLane.None;
                 int extensionTriggerId = 0;
                 if (isBuiltinKind)
                 {
@@ -1901,13 +1901,13 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     kindId = _behaviorKinds?.GetId(kindText) ?? 0;
-                    if (kindId < PerformerBehaviorKindRegistry.FirstModBehaviorKindId)
+                    if (kindId < PresenterBehaviorKindRegistry.FirstModBehaviorKindId)
                     {
                         throw new InvalidOperationException(
                             $"Presenter '{ownerKey}' behavior[{i}].kind references unregistered presenter behavior kind '{kindText}'.");
                     }
 
-                    if (!_behaviorKinds!.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                    if (!_behaviorKinds!.TryGetDescriptor(kindId, out PresenterBehaviorExtensionDescriptor descriptor))
                     {
                         throw new InvalidOperationException(
                             $"Presenter '{ownerKey}' behavior[{i}].kind references presenter behavior kind '{kindText}' without a registered descriptor.");
@@ -2020,9 +2020,9 @@ namespace Ludots.Core.Presentation.Config
             return slots;
         }
 
-        private (PerformerBehaviorExecutionLane Lane, int TriggerId) ParseExtensionBehaviorExecution(
+        private (PresenterBehaviorExecutionLane Lane, int TriggerId) ParseExtensionBehaviorExecution(
             JsonObject obj,
-            in PerformerBehaviorExtensionDescriptor descriptor,
+            in PresenterBehaviorExtensionDescriptor descriptor,
             string context)
         {
             if (obj["execution"] is not JsonObject execution)
@@ -2030,8 +2030,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context}.execution is required for extension presenter behavior.");
             }
 
-            PerformerBehaviorExecutionLane lane =
-                ParseRequiredEnum<PerformerBehaviorExecutionLane>(execution["lane"], $"{context}.execution.lane");
+            PresenterBehaviorExecutionLane lane =
+                ParseRequiredEnum<PresenterBehaviorExecutionLane>(execution["lane"], $"{context}.execution.lane");
             if (lane != descriptor.Lane)
             {
                 throw new InvalidOperationException(
@@ -2040,10 +2040,10 @@ namespace Ludots.Core.Presentation.Config
 
             return lane switch
             {
-                PerformerBehaviorExecutionLane.Bootstrap => (lane, 0),
-                PerformerBehaviorExecutionLane.ContinuousTick => (lane, 0),
-                PerformerBehaviorExecutionLane.OwnerAttributeDirty => (lane, ParseExtensionAttributeTrigger(execution, context)),
-                PerformerBehaviorExecutionLane.OwnerTagDirty => (lane, ParseExtensionTagTrigger(execution, context)),
+                PresenterBehaviorExecutionLane.Bootstrap => (lane, 0),
+                PresenterBehaviorExecutionLane.ContinuousTick => (lane, 0),
+                PresenterBehaviorExecutionLane.OwnerAttributeDirty => (lane, ParseExtensionAttributeTrigger(execution, context)),
+                PresenterBehaviorExecutionLane.OwnerTagDirty => (lane, ParseExtensionTagTrigger(execution, context)),
                 _ => throw new InvalidOperationException(
                     $"{context}.execution.lane '{lane}' is not supported by the current presenter runtime."),
             };

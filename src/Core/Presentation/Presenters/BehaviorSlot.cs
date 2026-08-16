@@ -10,7 +10,7 @@ namespace Ludots.Core.Presentation.Presenters
         public int SlotIndex;
         public BehaviorKind Kind;
         public int KindId;
-        public PerformerBehaviorExecutionLane ExtensionLane;
+        public PresenterBehaviorExecutionLane ExtensionLane;
         public int ExtensionTriggerId;
         public bool ActiveByDefault;
         public ConditionRef ActivationCondition;

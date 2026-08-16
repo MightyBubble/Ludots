@@ -59,8 +59,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
-        private readonly PerformerBehaviorKindRegistry? _extensionBehaviors;
-        private readonly PerformerBehaviorOps _extensionBehaviorOps;
+        private readonly PresenterBehaviorKindRegistry? _extensionBehaviors;
+        private readonly PresenterBehaviorOps _extensionBehaviorOps;
         private readonly PresentPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
@@ -113,7 +113,7 @@ namespace Ludots.Core.Presentation.Systems
             IVisualHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            PerformerBehaviorKindRegistry? extensionBehaviors = null)
+            PresenterBehaviorKindRegistry? extensionBehaviors = null)
             : this(world, runtime, definitions, events, ownerChanges, soundRequests,
                 () => heightmap, boneTransformProvider, timingDiagnostics, extensionBehaviors)
         {
@@ -129,7 +129,7 @@ namespace Ludots.Core.Presentation.Systems
             Func<IVisualHeightmap?> heightmapProvider,
             IBoneTransformProvider? boneTransformProvider = null,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            PerformerBehaviorKindRegistry? extensionBehaviors = null)
+            PresenterBehaviorKindRegistry? extensionBehaviors = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -140,7 +140,7 @@ namespace Ludots.Core.Presentation.Systems
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
             _extensionBehaviors = extensionBehaviors;
-            _extensionBehaviorOps = new PerformerBehaviorOps(_runtime);
+            _extensionBehaviorOps = new PresenterBehaviorOps(_runtime);
             RefreshDefinitionIndexes();
             _timingDiagnostics = timingDiagnostics;
             _runtime.BindDefinitions(_definitions);
@@ -453,7 +453,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     definition.Behaviors,
                     extensionWork.BehaviorIndices,
-                    PerformerBehaviorExecutionLane.OwnerAttributeDirty,
+                    PresenterBehaviorExecutionLane.OwnerAttributeDirty,
                     firstFrame: false,
                     tickDt: 0f);
             }
@@ -485,7 +485,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     definition.Behaviors,
                     extensionWork.BehaviorIndices,
-                    PerformerBehaviorExecutionLane.OwnerTagDirty,
+                    PresenterBehaviorExecutionLane.OwnerTagDirty,
                     firstFrame: false,
                     tickDt: 0f);
             }
@@ -672,44 +672,44 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private sealed class PerformerBehaviorOps : IPerformerBehaviorOps
+        private sealed class PresenterBehaviorOps : IPresenterBehaviorOps
         {
             private readonly PresenterEntityRuntime _runtime;
-            private Entity _performer;
+            private Entity _presenter;
 
-            public PerformerBehaviorOps(PresenterEntityRuntime runtime)
+            public PresenterBehaviorOps(PresenterEntityRuntime runtime)
             {
                 _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             }
 
-            public void Bind(Entity performer)
+            public void Bind(Entity presenter)
             {
-                _performer = performer;
+                _presenter = presenter;
             }
 
             public bool TryResolveFloat(int paramKey, out float value)
             {
-                return _runtime.TryResolveFloat(_performer, paramKey, out value);
+                return _runtime.TryResolveFloat(_presenter, paramKey, out value);
             }
 
             public bool TryResolveInt(int paramKey, out int value)
             {
-                return _runtime.TryResolveInt(_performer, paramKey, out value);
+                return _runtime.TryResolveInt(_presenter, paramKey, out value);
             }
 
             public bool TryResolveVector(int paramKey, out Vector4 value)
             {
-                return _runtime.TryResolveVector(_performer, paramKey, out value);
+                return _runtime.TryResolveVector(_presenter, paramKey, out value);
             }
 
             public void SetParam(int paramKey, ParamLane lane, float floatValue = 0f, int intValue = 0, Vector4 vectorValue = default)
             {
-                _runtime.SetParamAndPropagateToAffectedChildren(_performer, paramKey, lane, floatValue, intValue, vectorValue);
+                _runtime.SetParamAndPropagateToAffectedChildren(_presenter, paramKey, lane, floatValue, intValue, vectorValue);
             }
 
             public void ClearParam(int paramKey, ParamLane lane)
             {
-                _runtime.ClearParamAndPropagateToAffectedChildren(_performer, paramKey, lane);
+                _runtime.ClearParamAndPropagateToAffectedChildren(_presenter, paramKey, lane);
             }
         }
 
@@ -857,7 +857,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     behaviors,
                     definition.ExtensionTickBehaviorIndices,
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     firstFrame: false,
                     tickDt);
             }
@@ -869,7 +869,7 @@ namespace Ludots.Core.Presentation.Systems
                     definition,
                     behaviors,
                     definition.ExtensionBootstrapBehaviorIndices,
-                    PerformerBehaviorExecutionLane.Bootstrap,
+                    PresenterBehaviorExecutionLane.Bootstrap,
                     firstFrame: true,
                     tickDt);
             }
@@ -881,7 +881,7 @@ namespace Ludots.Core.Presentation.Systems
             PresenterDefinition definition,
             BehaviorSlot[] behaviors,
             int[] indices,
-            PerformerBehaviorExecutionLane lane,
+            PresenterBehaviorExecutionLane lane,
             bool firstFrame,
             float tickDt)
         {
@@ -893,7 +893,7 @@ namespace Ludots.Core.Presentation.Systems
             if (_extensionBehaviors == null)
             {
                 throw new InvalidOperationException(
-                    $"Performer definition '{definition.Key}' has extension behaviors, but performer behavior extension registry is not configured.");
+                    $"Presenter definition '{definition.Key}' has extension behaviors, but presenter behavior extension registry is not configured.");
             }
 
             for (int i = 0; i < indices.Length; i++)
@@ -908,7 +908,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (slot.ExtensionLane != lane)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} is compiled for lane {slot.ExtensionLane}, but runtime lane is {lane}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} is compiled for lane {slot.ExtensionLane}, but runtime lane is {lane}.");
                 }
 
                 if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
@@ -917,20 +917,20 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 int kindId = slot.KindId;
-                if (kindId <= 0 || !_extensionBehaviors.TryGetDescriptor(kindId, out PerformerBehaviorExtensionDescriptor descriptor))
+                if (kindId <= 0 || !_extensionBehaviors.TryGetDescriptor(kindId, out PresenterBehaviorExtensionDescriptor descriptor))
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} references unregistered extension behavior id {kindId}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} references unregistered extension behavior id {kindId}.");
                 }
 
                 if (descriptor.Lane != lane)
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' behavior slot {slot.SlotIndex} runtime lane {lane} does not match registered lane {descriptor.Lane}.");
+                        $"Presenter definition '{definition.Key}' behavior slot {slot.SlotIndex} runtime lane {lane} does not match registered lane {descriptor.Lane}.");
                 }
 
                 _extensionBehaviorOps.Bind(entity);
-                var view = new PerformerBehaviorView(
+                var view = new PresenterBehaviorView(
                     entity,
                     state.OwnerEntity,
                     state.DefId,
@@ -939,7 +939,7 @@ namespace Ludots.Core.Presentation.Systems
                     lane,
                     firstFrame,
                     tickDt);
-                var context = new PerformerBehaviorExecutionContext(in view, _extensionBehaviorOps);
+                var context = new PresenterBehaviorExecutionContext(in view, _extensionBehaviorOps);
                 descriptor.Handler(in context);
             }
         }

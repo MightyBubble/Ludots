@@ -78,18 +78,18 @@ namespace Ludots.Tests.Presentation
             var requests = new PresentationRequestBuffer();
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
-            var commandKinds = new PerformerCommandKindRegistry();
+            var commandKinds = new PresenterCommandKindRegistry();
             int commandKindId = commandKinds.Register(
                 "ExampleMod.MarkCommand",
-                new PerformerCommandExtensionDescriptor(
-                    PerformerCommandRouteStrategy.SingleRuntime,
+                new PresenterCommandExtensionDescriptor(
+                    PresenterCommandRouteStrategy.SingleRuntime,
                     CountExtensionCommand));
 
             Assert.That(commands.TryAdd(new PresenterCommand
             {
                 CommandKind = PresenterCommandKind.Extension,
                 CommandKindId = commandKindId,
-                RouteStrategy = PerformerCommandRouteStrategy.SingleRuntime,
+                RouteStrategy = PresenterCommandRouteStrategy.SingleRuntime,
             }), Is.True);
 
             using var system = new PresenterRuntimeSystem(
@@ -117,11 +117,11 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create();
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
-            var behaviorKinds = new PerformerBehaviorKindRegistry();
+            var behaviorKinds = new PresenterBehaviorKindRegistry();
             int behaviorKindId = behaviorKinds.Register(
                 "ExampleMod.TickBehavior",
-                new PerformerBehaviorExtensionDescriptor(
-                    PerformerBehaviorExecutionLane.ContinuousTick,
+                new PresenterBehaviorExtensionDescriptor(
+                    PresenterBehaviorExecutionLane.ContinuousTick,
                     CountExtensionBehavior));
             int defId = definitions.Register("behavior.extension", new PresenterDefinition
             {
@@ -132,16 +132,16 @@ namespace Ludots.Tests.Presentation
                         SlotIndex = 0,
                         Kind = BehaviorKind.Extension,
                         KindId = behaviorKindId,
-                        ExtensionLane = PerformerBehaviorExecutionLane.ContinuousTick,
+                        ExtensionLane = PresenterBehaviorExecutionLane.ContinuousTick,
                         ActiveByDefault = true,
                     },
                 ],
             });
 
             instances.BindDefinitions(definitions);
-            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7008, Entity.Null, definitions.Get(defId));
-            world.Add(performer, new PresenterBootstrapPending());
-            world.Get<PresenterState>(performer).BehaviorActiveMask = 1u;
+            Entity presenter = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7008, Entity.Null, definitions.Get(defId));
+            world.Add(presenter, new PresenterBootstrapPending());
+            world.Get<PresenterState>(presenter).BehaviorActiveMask = 1u;
 
             using var system = new PresenterBehaviorSystem(
                 world,
@@ -174,7 +174,7 @@ namespace Ludots.Tests.Presentation
                             Command = new PresenterCommand
                             {
                                 CommandKind = PresenterCommandKind.SetParam,
-                                CommandKindId = PerformerCommandKindRegistry.FirstModCommandKindId,
+                                CommandKindId = PresenterCommandKindRegistry.FirstModCommandKindId,
                             },
                         },
                     ],
@@ -198,7 +198,7 @@ namespace Ludots.Tests.Presentation
                         {
                             SlotIndex = 0,
                             Kind = BehaviorKind.AssetBinding,
-                            KindId = PerformerBehaviorKindRegistry.FirstModBehaviorKindId,
+                            KindId = PresenterBehaviorKindRegistry.FirstModBehaviorKindId,
                         },
                     ],
                 }));
@@ -1772,16 +1772,16 @@ namespace Ludots.Tests.Presentation
         private static int _extensionCommandCalls;
         private static int _extensionBehaviorCalls;
 
-        private static void CountExtensionCommand(in PerformerCommandExecutionContext context)
+        private static void CountExtensionCommand(in PresenterCommandExecutionContext context)
         {
-            Assert.That(context.Command.CommandKindId, Is.GreaterThanOrEqualTo(PerformerCommandKindRegistry.FirstModCommandKindId));
+            Assert.That(context.Command.CommandKindId, Is.GreaterThanOrEqualTo(PresenterCommandKindRegistry.FirstModCommandKindId));
             _extensionCommandCalls++;
         }
 
-        private static void CountExtensionBehavior(in PerformerBehaviorExecutionContext context)
+        private static void CountExtensionBehavior(in PresenterBehaviorExecutionContext context)
         {
-            Assert.That(context.Behavior.KindId, Is.GreaterThanOrEqualTo(PerformerBehaviorKindRegistry.FirstModBehaviorKindId));
-            Assert.That(context.Behavior.Lane, Is.EqualTo(PerformerBehaviorExecutionLane.ContinuousTick));
+            Assert.That(context.Behavior.KindId, Is.GreaterThanOrEqualTo(PresenterBehaviorKindRegistry.FirstModBehaviorKindId));
+            Assert.That(context.Behavior.Lane, Is.EqualTo(PresenterBehaviorExecutionLane.ContinuousTick));
             _extensionBehaviorCalls++;
         }
 

@@ -58,7 +58,7 @@ CapabilityStandardConfigShardsShowcaseMod/
 - shard 文件必须使用正式 schema，不能定义 showcase 私有字段。
 - 找不到非空正式配置时必须启动失败，除非 catalog 明确 `AllowEmpty: true`。
 - 同一个 `id` 的覆盖语义由 catalog policy 决定，loader 不能私自解释。
-- root mod 不负责展示 effect preset type、graph op 或 performer 扩展。
+- root mod 不负责展示 effect preset type、graph op 或 presenter 扩展。
 
 ## UAT
 

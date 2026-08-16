@@ -10,8 +10,8 @@
 |------|----------|--------------|
 | 配置拆分 | `CapabilityStandardConfigShardsShowcaseMod` | 点击按钮后，面板显示来自独立 ability/effect shard 的技能被加载并触发 |
 | Effect preset type 代码扩展 | `CapabilityStandardEffectPresetTypeCodeShowcaseMod` | 点击按钮后，Heat Mark 被正式执行，面板显示调用次数 |
-| Performer behavior 扩展 | `CapabilityStandardPerformerBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
-| Performer command 扩展 | `CapabilityStandardPerformerCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
+| Presenter behavior 扩展 | `CapabilityStandardPerformerBehaviorExtensionShowcaseMod` | 进入地图后 CloudDrift 持续 tick，点击按钮时面板显示行为仍在运行 |
+| Presenter command 扩展 | `CapabilityStandardPerformerCommandExtensionShowcaseMod` | 点击按钮发送信号，面板显示信号被处理的次数 |
 
 > Graph op 扩展（`RegisterGraphOp` + JSON 图引用 mod 算子）尚未迁移到 L1 control-flow 编译 SSOT（issue #861 之后的作者形态），
 > 对应 showcase 暂缓合入；hub 级注册 API 与执行侧 handler table 支持已在 Core 中保留。
@@ -36,7 +36,7 @@ mods/showcases/capability_standard/
 
 1. Mod 在 `IMod.OnLoad` 注册自己拥有的扩展 key。
 2. 配置文件通过 `config_catalog.json` 和 `ConfigPipeline` 加载。
-3. GAS 和 Performer 编译阶段消费已经冻结的注册表。
+3. GAS 和 Presenter 编译阶段消费已经冻结的注册表。
 4. 玩家进入地图后，UI 面板和按钮只调用正式 runtime 服务。
 5. 缺 key、缺 shard、命名空间不归属、route 或 lane 不匹配时，启动直接失败。
 
@@ -56,8 +56,8 @@ mods/showcases/capability_standard/
 1. 用配置拆分把 `Ember Bolt` 的 ability 和 effect 放进自己的 shard。
 2. 用 effect preset type 代码扩展定义 `Heat Mark` 的 C# phase handler。
 3. 用 graph op provider 给其他 Mod 暴露威胁评分。
-4. 用 performer behavior 让火焰标记持续动起来。
-5. 用 performer command 在命中事件后生成一次性提示。
+4. 用 presenter behavior 让火焰标记持续动起来。
+5. 用 presenter command 在命中事件后生成一次性提示。
 
 玩家看到的是可操作的技能、评分变化、持续表现和事件反馈；作者看到的是五条可以单独复用的扩展链路。
 
