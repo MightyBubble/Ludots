@@ -58,14 +58,6 @@
     }
   },
   {
-    "id": "ds_spawn_marker",
-    "components": {
-      "Name": { "Value": "Spawn Marker" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
-    }
-  },
-  {
     "id": "ds_marine",
     "components": {
       "Name": { "Value": "Marine" },

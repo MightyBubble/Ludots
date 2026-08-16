@@ -81,7 +81,7 @@
       "displayName": "Marine",
       "iconGlyph": "M",
       "accentColor": "#2563EB",
-      "hintText": "75 minerals. Fast rifle infantry for the next wave."
+      "hintText": "75 水晶 · 快速步枪兵（射程 300 / 攻速快）"
     }
   },
   {
@@ -98,7 +98,7 @@
       "displayName": "Firebat",
       "iconGlyph": "F",
       "accentColor": "#F97316",
-      "hintText": "150 minerals. Short-range heavy damage for the next wave."
+      "hintText": "150 水晶 · 短程喷火兵（射程 220 / 伤害高）"
     }
   },
   {
@@ -115,7 +115,7 @@
       "displayName": "Goliath",
       "iconGlyph": "G",
       "accentColor": "#8B5CF6",
-      "hintText": "300 minerals. Mid-range walker for the next wave."
+      "hintText": "300 水晶 · 中程步行机甲（射程 560）"
     }
   },
   {
@@ -132,7 +132,7 @@
       "displayName": "Siege Tank",
       "iconGlyph": "T",
       "accentColor": "#EF4444",
-      "hintText": "450 minerals. Long-range artillery for the next wave."
+      "hintText": "450 水晶 · 远程攻城坦克（射程 920 / 移速慢）"
     }
   }
 ]

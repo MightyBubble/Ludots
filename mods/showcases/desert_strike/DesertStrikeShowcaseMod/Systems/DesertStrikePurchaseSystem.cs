@@ -68,7 +68,7 @@ namespace DesertStrikeShowcaseMod.Systems
                 }
 
                 AttributeMutationOps.SetCurrent(World, shop, _mineralsAttributeId, minerals - unit.Cost, _tagOps);
-                int laneCount = player ? _state.PlayerSpawnMarkers.Count : _state.AiSpawnMarkers.Count;
+                int laneCount = player ? _config.Lanes.PlayerSpawns.Count : _config.Lanes.AiSpawns.Count;
                 int lane = player ? _state.PlayerNextLane : _state.AiNextLane;
                 queue.Add(new DesertStrikePurchase(unitId, lane));
                 int nextLane = laneCount > 0 ? (lane + 1) % laneCount : 0;
