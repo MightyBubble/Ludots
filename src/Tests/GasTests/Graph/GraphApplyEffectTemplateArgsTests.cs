@@ -74,8 +74,9 @@ namespace Ludots.Tests.GAS
             GraphInstruction i0 = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 12.5f };
             GraphInstruction i1 = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -7.0f };
             GraphInstruction i2 = new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 123 };
+            GraphInstruction i3 = new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt };
 
-            GraphInstruction[] program = { i0, i1, i2 };
+            GraphInstruction[] program = { i0, i1, i2, i3 };
 
             GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 

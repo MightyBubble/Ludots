@@ -193,14 +193,6 @@ namespace Ludots.Core.Presentation.Presenters
             Vector3 position = WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, parentScale, in localOffset);
             Quaternion rotation = WorldPlane2D.ComposeVisualRotation(baseRotation, localRotation);
 
-            if (transformSource == TransformSource.BoneAttached ||
-                transformSource == TransformSource.AttachedToParent)
-            {
-                resolvedScale = WorldPlane2D.NormalizeScale(baseScale * (instanceOverride.HasOverride
-                    ? WorldPlane2D.NormalizeScale(instanceOverride.LocalScale)
-                    : Vector3.One));
-            }
-
             return CreateResolvedTransform(position, rotation, resolvedScale, baseFacing);
         }
 

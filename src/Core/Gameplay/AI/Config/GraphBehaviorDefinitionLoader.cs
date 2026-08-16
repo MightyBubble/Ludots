@@ -156,7 +156,10 @@ namespace Ludots.Core.Gameplay.AI.Config
                 int graphId = 0;
                 if (src.Leaf == BehaviorTreeLeafBinding.ScriptSlice)
                 {
-                    graphId = RequireAction(src.Action, $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
+                    graphId = RequireAction(
+                        src.Action,
+                        GraphActionHost.BehaviorTree,
+                        $"AI/behavior_trees.json:{treeId}.{src.Id}.action");
                 }
                 else if (!string.IsNullOrWhiteSpace(src.Action))
                 {
@@ -366,7 +369,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             return transitions;
         }
 
-        private int RequireAction(string? name, string path)
+        private int RequireAction(string? name, GraphActionHost expectedHost, string path)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -378,11 +381,11 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "ActionLib catalog is required to resolve behavior bindings.");
             }
 
-            return _actions.Require(name);
+            return _actions.Require(name, expectedHost);
         }
 
         private int ResolveOptionalAction(string? name, string path)
-            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, path);
+            => string.IsNullOrWhiteSpace(name) ? 0 : RequireAction(name, GraphActionHost.Hfsm, path);
 
         private static ConfigCatalogEntry GetEntry(ConfigCatalog catalog, string relativePath)
         {

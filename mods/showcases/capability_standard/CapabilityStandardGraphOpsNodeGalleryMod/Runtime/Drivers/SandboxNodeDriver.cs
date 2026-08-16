@@ -20,10 +20,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
 
     private bool _seeded;
     private GraphOpsNodeGallerySandboxCatalog _catalog = new();
-    private int _burningTagId;
     private int _markedTagId;
-    private int _burningTokenId;
-    private int _markedTokenId;
     private int _buffTemplateId;
     private int _buffKeyId;
     private int _socialBondTypeId;
@@ -56,7 +53,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
-        if (!_seeded || ctx.EffectRequests == null || ctx.Relationships == null || ctx.TagDisplay == null)
+        if (!_seeded || ctx.EffectRequests == null || ctx.Relationships == null)
         {
             throw new InvalidOperationException($"Sandbox driver for {ctx.Vignette.Op} is not seeded.");
         }
@@ -130,21 +127,13 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Sandbox catalog '{path}' deserialized to null.");
         }
 
-        RequireText(catalog.DisplayTable, "displayTable", path);
-        RequireText(catalog.BurningTag, "burningTag", path);
         RequireText(catalog.MarkedTag, "markedTag", path);
-        RequireText(catalog.BurningCaption, "burningCaption", path);
-        RequireText(catalog.MarkedCaption, "markedCaption", path);
         RequireText(catalog.MarkEffect, "markEffect", path);
         RequireText(catalog.BuffEffect, "buffEffect", path);
         RequireText(catalog.BuffBlackboardKey, "buffBlackboardKey", path);
         RequireText(catalog.RelationshipType, "relationshipType", path);
         RequireText(catalog.LoyaltyMetric, "loyaltyMetric", path);
         RequireText(catalog.TrustedFlag, "trustedFlag", path);
-        if (catalog.BurningTokenId <= 0 || catalog.MarkedTokenId <= 0)
-        {
-            throw new InvalidOperationException($"Sandbox catalog '{path}' token ids must be positive.");
-        }
 
         _catalog = catalog;
     }
@@ -156,12 +145,8 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Sandbox gallery '{ctx.Vignette.Op}' requires host tag and relationship services.");
         }
 
-        _burningTagId = TagRegistry.Register(_catalog.BurningTag);
         _markedTagId = TagRegistry.Register(_catalog.MarkedTag);
-        _burningTokenId = _catalog.BurningTokenId;
-        _markedTokenId = _catalog.MarkedTokenId;
-        _buffTemplateId = EffectTemplateIdRegistry.GetId(_catalog.BuffEffect);
-        if (_buffTemplateId <= 0)
+        _buffTemplateId = EffectTemplateIdRegistry.GetId(_catalog.BuffEffect);        if (_buffTemplateId <= 0)
         {
             throw new InvalidOperationException(
                 $"Sandbox gallery requires effect '{_catalog.BuffEffect}' loaded through EffectTemplateLoader.");
@@ -183,7 +168,6 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         int tagId = ctx.Vignette.Op switch
         {
             "HasTag" => _markedTagId,
-            "SelectTagInMask" or "LookupTagDisplayToken" => _burningTagId,
             _ => 0
         };
         if (tagId <= 0)
@@ -244,14 +228,6 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
                 }
 
                 ctx.CaptionValues["result"] = "有";
-                LightTarget(ctx);
-                break;
-            case "SelectTagInMask":
-                ctx.CaptionValues["card"] = CaptionForTagId(result.IntValue);
-                LightTarget(ctx);
-                break;
-            case "LookupTagDisplayToken":
-                ctx.CaptionValues["token"] = CaptionForTokenId(result.IntValue);
                 LightTarget(ctx);
                 break;
             case "QueryRadius":
@@ -361,36 +337,6 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         {
             throw new InvalidOperationException($"Sandbox {ctx.Vignette.Op} did not ensure a SocialBond link.");
         }
-    }
-
-    private string CaptionForTagId(int tagId)
-    {
-        if (tagId == _burningTagId)
-        {
-            return _catalog.BurningCaption;
-        }
-
-        if (tagId == _markedTagId)
-        {
-            return _catalog.MarkedCaption;
-        }
-
-        throw new InvalidOperationException($"SelectTagInMask returned unmapped tag {tagId}.");
-    }
-
-    private string CaptionForTokenId(int tokenId)
-    {
-        if (tokenId == _burningTokenId)
-        {
-            return _catalog.BurningCaption;
-        }
-
-        if (tokenId == _markedTokenId)
-        {
-            return _catalog.MarkedCaption;
-        }
-
-        throw new InvalidOperationException($"LookupTagDisplayToken returned unmapped token {tokenId}.");
     }
 
     private string JoinHitNames(GraphOpsNodeDriverContext ctx)

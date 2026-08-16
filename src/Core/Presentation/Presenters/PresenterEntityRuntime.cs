@@ -244,6 +244,7 @@ namespace Ludots.Core.Presentation.Presenters
             PresenterDefinition? definition)
         {
             definition = ResolveDefinition(defId, definition);
+            EnsureParentCanAcceptChild(parent, defId);
 
             var state = new PresenterState
             {
@@ -294,9 +295,10 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (parent != Entity.Null && _world.IsAlive(parent))
             {
-                ref var parentChildren = ref _world.Get<PresenterChildren>(parent);
-                parentChildren.Add(entity);
-                _nonRootCount++;
+                if (AttachChildToParent(parent, entity, defId))
+                {
+                    _nonRootCount++;
+                }
             }
 
             _activeCount++;
@@ -2236,6 +2238,8 @@ namespace Ludots.Core.Presentation.Presenters
                     throw new InvalidOperationException($"Presenter child definition id={child.DefinitionId} is not registered.");
                 }
 
+                EnsureParentsCanAcceptChild(parentEntities, child.DefinitionId);
+
                 bool hasParamDefaults = childDefinition.ParamDefaults != null && childDefinition.ParamDefaults.Length != 0;
                 long stableIdStart = Stopwatch.GetTimestamp();
                 int childScopeCount = 0;
@@ -3353,10 +3357,61 @@ namespace Ludots.Core.Presentation.Presenters
                 Entity parent = parentEntities.IsEmpty ? Entity.Null : parentEntities[i];
                 if (parent != Entity.Null && _world.IsAlive(parent))
                 {
-                    ref PresenterChildren parentChildren = ref _world.Get<PresenterChildren>(parent);
-                    parentChildren.Add(presenter);
+                    AttachChildToParent(parent, presenter, defId);
                 }
             }
+        }
+
+        private void EnsureParentsCanAcceptChild(ReadOnlySpan<Entity> parents, int childDefinitionId)
+        {
+            for (int i = 0; i < parents.Length; i++)
+            {
+                EnsureParentCanAcceptChild(parents[i], childDefinitionId);
+            }
+        }
+
+        private void EnsureParentCanAcceptChild(Entity parent, int childDefinitionId)
+        {
+            if (parent == Entity.Null || !_world.IsAlive(parent))
+            {
+                return;
+            }
+
+            if (!_world.Has<PresenterChildren>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter parent entity {parent.Id} cannot attach child definition id={childDefinitionId} because it has no PresenterChildren component.");
+            }
+
+            ref readonly PresenterChildren children = ref _world.Get<PresenterChildren>(parent);
+            if (children.Count >= PresenterChildren.MAX_CHILDREN)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter parent entity {parent.Id} exceeded child capacity while attaching child definition id={childDefinitionId}; capacity={PresenterChildren.MAX_CHILDREN}.");
+            }
+        }
+
+        private bool AttachChildToParent(Entity parent, Entity child, int childDefinitionId)
+        {
+            if (parent == Entity.Null || !_world.IsAlive(parent))
+            {
+                return false;
+            }
+
+            if (!_world.Has<PresenterChildren>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter parent entity {parent.Id} cannot attach child definition id={childDefinitionId} because it has no PresenterChildren component.");
+            }
+
+            ref PresenterChildren parentChildren = ref _world.Get<PresenterChildren>(parent);
+            if (!parentChildren.Add(child))
+            {
+                throw new InvalidOperationException(
+                    $"Presenter parent entity {parent.Id} exceeded child capacity while attaching child definition id={childDefinitionId}; capacity={PresenterChildren.MAX_CHILDREN}.");
+            }
+
+            return true;
         }
 
         private bool OwnersHavePreseededPayloadMarkers(ReadOnlySpan<Entity> owners)
@@ -4681,7 +4736,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 return index switch
                 {
-                    0 => Count == 1 ? Single : Single,
+                    0 => Single,
                     1 => Inline1,
                     2 => Inline2,
                     3 => Inline3,

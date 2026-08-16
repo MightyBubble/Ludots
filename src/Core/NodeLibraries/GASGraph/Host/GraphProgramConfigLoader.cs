@@ -158,6 +158,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var (_, symbols, program, _) = packages[i];
                 GraphProgramSymbolPatcher.PatchFuncLib(symbols, program, catalog);
             }
+
+            _registry.ValidateInvokeTargets();
         }
 
         private GraphOutputSchema ResolveOutputBindingKeys(GraphOutputSchema schema)

@@ -1,6 +1,6 @@
-# 两段伤害叠成一刀
+# 两段伤害叠在一起
 
-30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。
+左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AddFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 接起来的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
+> 基础伤害加上额外伤害，这一刀一共 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 两段伤害叠成一刀
+Feature: 两段伤害叠在一起
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AddFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AddFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「30 的一段先摆上，12 的一段接在尾巴上，接成的一整段有多长，木桩就掉多少血。」这类人话
+    Then 字幕讲的是「左边先算出一刀，右边再叠一截。头顶那根条按总和往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -47,9 +47,6 @@ namespace Ludots.Core.Presentation.Systems
         private bool _warnedMissingHeightmap;
         private int _sampledThisFrame;
 
-        /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
-        public float HeightScale { get; set; } = 2.0f;
-
         public TerrainHeightSyncSystem(
             World world,
             IReadOnlyDictionary<string, object> globals,

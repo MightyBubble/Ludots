@@ -10,7 +10,8 @@ out vec4 finalColor;
 void main()
 {
     vec3 direction = normalize(fragDirection);
-    // Gradient rows run zenith (v=0) to horizon (v=1); below-horizon directions keep the horizon color.
-    float v = 1.0 - clamp(direction.y, 0.0, 1.0);
-    finalColor = texture(texture0, vec2(uDayPhase, v));
+    float gradientV = clamp(direction.y * 0.5 + 0.5, 0.0, 1.0);
+    float phase = clamp(uDayPhase, 0.0, 1.0);
+    vec3 color = texture(texture0, vec2(phase, gradientV)).rgb;
+    finalColor = vec4(color, 1.0);
 }

@@ -44,8 +44,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock,
-            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null)
+            IClock clock)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -64,7 +63,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
-            TagDisplayTables = tagDisplayTables;
         }
 
         public World World { get; }
@@ -84,7 +82,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
-        public Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? TagDisplayTables { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
@@ -97,7 +94,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
         private readonly TagOps? _tagOps;
-        private readonly Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? _tagDisplayTables;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
@@ -180,8 +176,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries,
-                services.TagDisplayTables);
+                services.EntityQueries);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -213,8 +208,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
-            EntitySetQueryRuntime? entityQueries = null,
-            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null)
+            EntitySetQueryRuntime? entityQueries = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -226,7 +220,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
-            _tagDisplayTables = tagDisplayTables;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -594,63 +587,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
-        }
-
-        public int SelectEffectiveTagInMask(Entity entity, int tableId, byte policy)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplaySelectUnavailable");
-
-            if (!_world.IsAlive(entity))
-            {
-                throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
-            }
-
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                throw new InvalidOperationException(TagOps.MissingGameplayTagContainerError);
-            }
-
-            GameplayTagContainer mask = tables.GetMask(tableId);
-
-            // 0Alloc: scan dense tag id space (≤255). Uses HasTag so staged side-effects stay in sync.
-            int matchCount = 0;
-            int firstTagId = 0;
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
-            {
-                if (!mask.HasTag(tagId) || !HasTag(entity, tagId))
-                {
-                    continue;
-                }
-
-                matchCount++;
-                if (firstTagId == 0)
-                {
-                    firstTagId = tagId;
-                }
-            }
-
-            var selectPolicy = (Ludots.Core.Presentation.TagDisplay.TagSelectPolicy)policy;
-            return selectPolicy switch
-            {
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectRequireOneFailed: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 0 => 0,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectAmbiguous: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.LowestId => firstTagId,
-                _ => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.UnknownTagSelectPolicy: {(byte)selectPolicy}."),
-            };
-        }
-
-        public int LookupTagDisplayToken(int tableId, int tagId)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
-            return tables.LookupToken(tableId, tagId);
         }
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)

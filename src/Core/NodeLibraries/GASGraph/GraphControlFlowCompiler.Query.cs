@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -95,25 +94,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
-                case GraphNodeOp.SelectTagInMask:
-                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
-                    }
-
-                    _ = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.LookupTagDisplayToken:
-                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
-                    }
-
-                    break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Min, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -153,6 +133,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                     break;
                 }
+                case GraphNodeOp.HaltReturnInt:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
                 case GraphNodeOp.AggSumAttribute:
                 case GraphNodeOp.AggAverageAttribute:
                 case GraphNodeOp.AggMaxAttribute:
@@ -229,12 +216,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             List<GraphDiagnostic> diagnostics)
         {
             if (string.IsNullOrWhiteSpace(node.QueryCapacityPolicy) ||
-                string.Equals(node.QueryCapacityPolicy, "RequireComplete", StringComparison.Ordinal))
+                IsRequireComplete(node))
             {
+                if (!string.IsNullOrWhiteSpace(node.DroppedOutput))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"Node '{node.Id}' droppedOutput is only valid with queryCapacityPolicy 'AllowTruncated'.",
+                        node.Id));
+                }
+
                 return;
             }
 
-            if (!string.Equals(node.QueryCapacityPolicy, "AllowTruncated", StringComparison.Ordinal))
+            if (!IsAllowTruncated(node))
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
                     $"Node '{node.Id}' must declare queryCapacityPolicy as 'RequireComplete' or 'AllowTruncated'.",
@@ -247,12 +241,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
                     $"Node '{node.Id}' AllowTruncated requires a non-empty droppedOutput.",
                     node.Id));
-                return;
             }
-
-            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                $"Node '{node.Id}' AllowTruncated droppedOutput is not yet authorable on ControlFlow Query kinds.",
-                node.Id));
         }
 
         private static void RequireRelationshipFields(
@@ -287,6 +276,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp op,
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, int> nodeIndices,
@@ -319,6 +310,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryRadius:
                     instruction.Flags = 0;
                     instruction.ImmF = node.RadiusCm;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
                     break;
                 case GraphNodeOp.QuerySortStable:
                     break;
@@ -330,7 +322,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryFromCollection:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterTeam:
@@ -338,7 +330,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     {
                         instruction.A = ResolveValueInput(
                             node, GraphControlFlowPorts.TeamId, GraphValueType.Int,
-                            valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                         instruction.Flags = 1;
                     }
                     else
@@ -358,37 +350,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.HasTag:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.CompareEqEntity:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.SelectTagInMask:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
-                    instruction.Flags = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
-                    break;
-                case GraphNodeOp.LookupTagDisplayToken:
-                    instruction.A = ResolveValueInput(
-                        node, GraphControlFlowPorts.A, GraphValueType.Int,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Min, GraphValueType.Float,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.C = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QuerySortByAttribute:
@@ -400,6 +379,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.InvokeScript:
                     instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Flags = GraphInstructionFlags.FuncLibName;
+                    break;
+                case GraphNodeOp.HaltReturnInt:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        instruction.A = ResolveValueInput(
+                            node,
+                            GraphControlFlowPorts.Value,
+                            GraphValueType.Int,
+                            valueEdges,
+                            nodeIndices,
+                            outputTypes,
+                            outputRegisters,
+                            boolScratches,
+                            droppedRegisters,
+                            definedInts,
+                            definedBools,
+                            graphId,
+                            diagnostics);
+                    }
+
                     break;
                 case GraphNodeOp.AggSumAttribute:
                 case GraphNodeOp.AggAverageAttribute:
@@ -413,66 +412,69 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.RelationshipQueryIncoming:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     instruction.Flags = 0;
+                    ApplyRelationshipCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
                     break;
                 case GraphNodeOp.RelationshipQueryMutual:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     instruction.Flags = 0;
+                    ApplyRelationshipCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
                     break;
                 case GraphNodeOp.RelationshipQueryBetweenPair:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     instruction.Flags = 0;
+                    ApplyRelationshipCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
                     break;
                 case GraphNodeOp.RelationshipFilterMetricRange:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Min, GraphValueType.Float,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.C = ResolveValueInput(
                         node, GraphControlFlowPorts.Max, GraphValueType.Float,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipHasFlag:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Flag);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipHasLink:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipFilterFlag:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = 0;
                     instruction.Flags = 1;
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Flag);
@@ -481,7 +483,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.RelationshipSortByMetric:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     instruction.Flags = node.Descending ? (byte)1 : (byte)0;
@@ -494,7 +496,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.RelationshipAggMinEntityByMetric:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
-                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
@@ -587,29 +589,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
-        }
-
-        private static byte ParseQueryTagSelectPolicy(
-            string? policy,
-            GraphControlFlowNode node,
-            string graphId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(policy))
-            {
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            if (!Enum.TryParse(policy, ignoreCase: false, out TagSelectPolicy parsed) ||
-                !Enum.IsDefined(typeof(TagSelectPolicy), parsed))
-            {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
-                    $"Node '{node.Id}' has unsupported tagSelectPolicy '{policy}'. Supported: RequireOne, AllowNone, LowestId.",
-                    node.Id));
-                return (byte)TagSelectPolicy.RequireOne;
-            }
-
-            return (byte)parsed;
         }
     }
 }

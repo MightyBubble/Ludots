@@ -98,7 +98,8 @@ public sealed class EffectCompositionSsotTests
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = value },
             new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-            new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 }
+            new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
         ];
     }
 

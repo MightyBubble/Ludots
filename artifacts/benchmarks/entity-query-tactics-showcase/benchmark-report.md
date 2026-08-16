@@ -4,9 +4,9 @@
 - command: `dotnet test src/Tests/GasTests/GasTests.csproj --filter EntityQueryTactics_ProductionBenchmark_WritesReport --no-restore`
 - runtime: `.NET 8.0.25`
 - os: `Microsoft Windows 10.0.26220`
-- generated UTC: `2026-08-16T09:23:19.8579787Z`
+- generated UTC: `2026-08-16T13:59:59.6923270Z`
 - preset: `entity_query_tactics_raylib`
-- plan fingerprint: `8e69549f3ab028744f7191eaa08fbd4f028e9d893612ba6c0231738a0ec51dd1`
+- plan fingerprint: `ce12ad65460a80e775a39627c5b7217af3170c7cc9081186c834feebfc8f3eb6`
 - ordered mods: `LudotsCoreMod -> CoreInputMod -> CameraProfilesMod -> NarrativeFrontendMod -> EntityQueryTacticsShowcaseMod`
 - graph ids: `entityquery.tactics.graph.selectedFriendliesFromUiBox, entityquery.tactics.graph.hostileThreatBoard, entityquery.tactics.graph.formationCache`
 - graph node counts: selected `14`, hostile `15`, formation `13`
@@ -35,26 +35,26 @@
 ## Hot Path Measurements
 | path | iterations | total ms | per iteration us | allocated bytes |
 |---|---:|---:|---:|---:|
-| GraphReturnWriter execute x3 stable inputs | 20000 | 494.826 | 24.741 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 145.987 | 7.299 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 192.673 | 9.634 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 136.844 | 6.842 | 0 |
-| Retained diff execute x3 stable inputs | 2000 | 52.269 | 26.134 | 0 |
-| Relationship AddMetric + graph execute x3 | 1000 | 25.472 | 25.472 | 0 |
+| GraphReturnWriter execute x3 stable inputs | 20000 | 479.393 | 23.970 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 167.724 | 8.386 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 190.075 | 9.504 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 136.617 | 6.831 | 0 |
+| Retained diff execute x3 stable inputs | 2000 | 48.153 | 24.077 | 0 |
+| Relationship AddMetric + graph execute x3 | 1000 | 24.648 | 24.648 | 0 |
 - stable allocation sample attempts: graph x3 `1`, single graphs `entityquery.tactics.graph.selectedFriendliesFromUiBox:1, entityquery.tactics.graph.hostileThreatBoard:1, entityquery.tactics.graph.formationCache:1`, retained diff `1`, pressure `1`
 
 ## Production Tick Loop
 | path | frames | action frames | total ms | median ms | p95 ms | max ms | allocated bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 217.040 | 0.199 | 1.753 | 4.581 | 119505928 |
+| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 187.173 | 0.153 | 1.431 | 3.313 | 119505640 |
 - production pressure summary: `entityquery.summary.threat.max` `95` -> `605` during the tick loop.
 
 ## Retained Diff
 - stable formation revisions: `2000/2000`
-- stable probe before: rev `2`, sig `0xE629279DEA02EE84`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
-- stable probe after: rev `2`, sig `0xE629279DEA02EE84`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
-- rotation input: `entityquery.collection.formation.primary` rev `3` -> `4`, sig `0xC8D53CA7A381C3B5` -> `0xFFE05AA25FD5262`
-- rotation output: `entityquery.collection.graph.formationCache` rev `2` -> `2`, sig `0xE629279DEA02EE84` -> `0xE629279DEA02EE84`
+- stable probe before: rev `2`, sig `0xA4AB60DAA05C58FA`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
+- stable probe after: rev `2`, sig `0xA4AB60DAA05C58FA`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
+- rotation input: `entityquery.collection.formation.primary` rev `3` -> `4`, sig `0x6C08F8856DFB9CA7` -> `0xE0DBE7BA16A23314`
+- rotation output: `entityquery.collection.graph.formationCache` rev `2` -> `2`, sig `0xA4AB60DAA05C58FA` -> `0xA4AB60DAA05C58FA`
 - expected: stable inputs keep `entityquery.collection.graph.formationCache` revision unchanged; order-only source rotation is normalized by graph sorting and retained output signature.
 
 ## Relationship Pressure Buffer

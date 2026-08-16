@@ -33,10 +33,16 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [SetUp]
+        public void SetUp()
+        {
+            ModRegistryAmbient.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Reset();
 
             if (!string.IsNullOrWhiteSpace(_tempRoot))
             {
@@ -772,6 +778,10 @@ namespace Ludots.Tests.GAS
         "id": "bestProductionCity",
         "op": "AggMaxEntityByAttribute",
         "attribute": "Health"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -829,6 +839,11 @@ namespace Ludots.Tests.GAS
         "from": "sumGold",
         "fromPort": "next",
         "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [
@@ -957,6 +972,10 @@ namespace Ludots.Tests.GAS
         "id": "fromCollection",
         "op": "QueryFromCollection",
         "collectionKey": "tests.graph.collection.cities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -964,6 +983,11 @@ namespace Ludots.Tests.GAS
         "from": "owner",
         "fromPort": "next",
         "to": "fromCollection"
+      },
+      {
+        "from": "fromCollection",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [

@@ -165,10 +165,23 @@ namespace Ludots.Core.Presentation.Presenters
 
         private static Dictionary<int, string> CreateWellKnownNames()
         {
-            var names = new Dictionary<int, string>();
+            var grouped = new Dictionary<int, List<string>>();
             foreach (var kvp in WellKnown)
             {
-                names[kvp.Value] = kvp.Key;
+                if (!grouped.TryGetValue(kvp.Value, out List<string>? namesForId))
+                {
+                    namesForId = new List<string>();
+                    grouped[kvp.Value] = namesForId;
+                }
+
+                namesForId.Add(kvp.Key);
+            }
+
+            var names = new Dictionary<int, string>();
+            foreach (var kvp in grouped)
+            {
+                kvp.Value.Sort(StringComparer.Ordinal);
+                names[kvp.Key] = string.Join(", ", kvp.Value);
             }
 
             return names;

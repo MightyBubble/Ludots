@@ -17,10 +17,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit"
       ]
     },
@@ -40,9 +37,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -62,10 +57,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAcceptanceTests.ConstFloat_SettlesAuthoredConstantThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAcceptanceTests.ConstFloat_SetsTargetHealthToAuthoredConstant"
       ]
     },
     {
@@ -85,9 +77,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -106,9 +96,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -124,8 +112,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps"
       ]
     },
@@ -143,8 +129,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.JumpIfFalse_TeaFillsAcrossTicks",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps"
       ]
     },
@@ -165,9 +149,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadAttribute_CaptionContainsNumber",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.LoadAttribute_CaptionContainsNumber"
       ]
     },
     {
@@ -185,10 +167,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAcceptanceTests.AddFloat_SubtractsSumFromTargetHealth",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAcceptanceTests.AddFloat_SubtractsSumFromTargetHealth"
       ]
     },
     {
@@ -206,10 +185,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.MulFloat_SettlesRealWorldDamageThroughGraphTail",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -227,10 +203,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -248,10 +221,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -269,10 +239,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -290,10 +257,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -311,11 +275,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
         "GraphOpsNodeGalleryFloatAcceptanceTests.ClampFloat_SubtractsClampedForty",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -333,10 +294,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -354,10 +312,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.ArithmeticOp_SettlesRealDamageThroughGraphTail",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -376,9 +331,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.RandomFloat01_RollsAndSettlesScaledDamageAcrossWaves",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.RandomFloat01_ResultStaysInUnitIntervalAcrossWaves"
       ]
     },
     {
@@ -397,9 +350,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -418,10 +369,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.CompareGtFloat_ThinStakeClearedWhileThickStakeWithstands",
-        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryFloatAcceptanceTests.CompareGtFloat_CriticalCheckHolds",
+        "GraphOpsNodeGalleryFloatAcceptanceTests.FloatFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -440,9 +389,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -460,9 +407,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -483,10 +428,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.HasTag_ScoutCarriesEnemyMark",
-        "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
-        "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit"
+        "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions"
       ]
     },
     {
@@ -505,55 +447,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
-      ]
-    },
-    {
-      "op": "SelectTagInMask",
-      "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
-      ],
-      "showcaseId": "capability_standard_graph_op_SelectTagInMask",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
-        "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
-        "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit"
-      ]
-    },
-    {
-      "op": "LookupTagDisplayToken",
-      "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
-      ],
-      "showcaseId": "capability_standard_graph_op_LookupTagDisplayToken",
-      "status": "covered",
-      "unitTestRefs": [
-        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
-        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
-        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
-        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
-        "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
-        "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -571,9 +465,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -595,8 +487,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.QueryRadius_LightsInRangeAndLeavesFarUnits",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy"
@@ -620,8 +510,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit"
       ]
@@ -644,8 +532,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit"
       ]
@@ -666,9 +552,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.QueryCone_LightsPeopleInsideTheFan",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -686,9 +570,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -706,9 +588,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -727,9 +607,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.QueryFilterNotEntity_LeavesSelfOffTheList",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -747,9 +625,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -767,9 +643,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -789,9 +663,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -811,9 +683,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -833,9 +703,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.TargetListGet_NamesTheFirstPerson",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.TargetListGet_NamesTheFirstPerson"
       ]
     },
     {
@@ -854,9 +722,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.QueryHexRange_LightsPeopleInsideTwoHexes_NotTheOuterOne",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -875,9 +741,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.QueryHexRing_LightsOnlyTheRing_NotInsideOrOutside",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -896,9 +760,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySpatialAcceptanceTests.QueryHexNeighbors_LightsTheSixAdjacentPeople_NotTheOuterOne",
-        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGallerySpatialAcceptanceTests.SpatialGalleries_PlayerCopyStaysChinese_AndTargetListIsNonEmpty"
       ]
     },
     {
@@ -913,10 +775,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.ApplyEffectTemplate_SettlesMarkOntoTarget",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.ApplyEffectTemplate_EnqueuesMark",
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -931,10 +791,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGallerySandboxAcceptanceTests.FanOutApplyEffect_SettlesActiveEffectsOntoLitUnits",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate"
       ]
@@ -952,8 +809,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs"
       ]
@@ -971,8 +826,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput"
       ]
@@ -990,9 +843,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.RemoveEffectTemplate_CaptionUnloadsMark",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.RemoveEffectTemplate_CaptionUnloadsMark"
       ]
     },
     {
@@ -1008,9 +859,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryEventAcceptanceTests.FanOutDispatch_SettlesQueuedEffectRequests",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit"
       ]
     },
@@ -1027,9 +875,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryEventAcceptanceTests.FanOutDispatch_SettlesQueuedEffectRequests",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit"
       ]
     },
@@ -1048,9 +893,7 @@
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGalleryAttrAcceptanceTests.EnsureWorld_HeadlessWithoutStage_DoesNotThrow",
         "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeAdd_DropsTargetHealth",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeAdd_SecondThinkStillDropsFromOpening",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.ModifyAttributeAdd_SecondThinkStillDropsFromOpening"
       ]
     },
     {
@@ -1066,8 +909,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.SendEvent_BroadcastsPlayerReadableHit",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -1087,10 +928,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.ReadBlackboardFloat_SettlesBoardValueOnTarget",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption"
       ]
     },
     {
@@ -1109,9 +947,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1130,9 +966,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1147,9 +981,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.WriteThenReadFloat_VisibleOnHealthAndCaption"
       ]
     },
     {
@@ -1164,9 +996,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1181,9 +1011,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1201,9 +1029,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigFloat_SettlesConfigPowerOnTarget",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigFloat_NotZero_CaptionContainsConfigPower"
       ]
     },
     {
@@ -1221,10 +1047,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigInt_TierCaptionAndShieldOverlay",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1242,9 +1065,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.LoadConfigEffectId_SettlesTicketDamageEachWave_NoConstFloatStandIn",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase"
       ]
     },
     {
@@ -1263,8 +1084,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -1283,9 +1102,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -1304,8 +1121,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryBlackboardAcceptanceTests.BlackboardOp_CaptionContainsAssertPhrase",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -1325,9 +1140,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions"
       ]
     },
     {
@@ -1345,9 +1158,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryAttrAcceptanceTests.AttrFamilyOps_RenderPlayerCaptions",
         "GraphOpsNodeGalleryAttrAcceptanceTests.WriteSelfAttribute_RaisesCasterHealth",
-        "GraphOpsNodeGalleryAttrAcceptanceTests.WriteSelfAttribute_SecondThinkStillHealsFromOpening",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryAttrAcceptanceTests.WriteSelfAttribute_SecondThinkStillHealsFromOpening"
       ]
     },
     {
@@ -1363,8 +1174,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
       ]
@@ -1383,10 +1192,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_DecreasesLinks",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_OverlayKeepsGhostsOfSeveredChains",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_SecondThinkStillBreaksALink",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_SecondThinkStillBreaksALink"
       ]
     },
     {
@@ -1403,8 +1209,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.RelationshipSetMetric_MapsLoyaltyEightyOntoAllyBar",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
       ]
@@ -1422,8 +1226,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit"
       ]
     },
@@ -1443,10 +1245,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.GetMetric_CaptionContainsNumber",
-        "GraphOpsNodeGalleryRelAcceptanceTests.GetMetric_OverlayDrawsReadingCardWithTrueLoyalty",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1466,8 +1265,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGallerySandboxAcceptanceTests.SandboxVignettes_TickWithChineseCaptions",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols"
@@ -1485,10 +1282,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryRelAcceptanceTests.SetFlag_OverlayPlantsFlagBadgeOnlyAfterTheGraphPlantsIt",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1504,10 +1298,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.QueryOutgoing_FriendCountGreaterThanZero",
-        "GraphOpsNodeGalleryRelAcceptanceTests.QueryOutgoing_OverlayKeepsGrayFieldAndLightsOutgoingArrows",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1522,10 +1313,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.QueryIncoming_OverlayDrawsGrayFieldThenYellowArrowsPointingAtMe",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1540,10 +1328,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.QueryMutual_OverlayKeepsGrayFieldAndLightsDoubleArrowsOnly",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1558,10 +1343,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.QueryBetweenPair_OverlayDrawsDoubleArrowAndChainLinkWithCountOne",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1576,10 +1358,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.FilterMetricRange_OverlayDrawsGateAndHeadClipboards",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1594,10 +1373,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.FilterFlag_OverlayDrawsTrustFlagsOnGreenChains",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1612,10 +1388,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGalleryRelAcceptanceTests.SortByMetric_OverlayDrawsRankBadgesAboveHeads",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1630,10 +1403,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggSumMetric_OverlayDrawsBenchWithGraphSum",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1648,10 +1418,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxMetric_NamesStrongestFriendAndBenchLiftsItsCard",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1666,10 +1433,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggAverageMetric_OverlayDrawsBenchWithTruncatedAverage",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1685,9 +1449,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_CountMatchesSeededMapEntities",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_CountMatchesSeededMapEntities"
       ]
     },
     {
@@ -1703,9 +1465,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFromCollection_LightsTheRoster",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFromCollection_LightsTheRoster"
       ]
     },
     {
@@ -1721,9 +1481,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTeam_KeepsHostileCamp",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTeam_KeepsHostileCamp"
       ]
     },
     {
@@ -1738,9 +1496,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1755,9 +1511,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1772,9 +1526,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1789,9 +1541,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1806,10 +1556,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.SortByAttribute_OverlayCrownsTopThreeWithRankPipsAndCommanderArrow",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1824,9 +1571,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1841,9 +1586,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1858,9 +1601,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1875,9 +1616,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1893,9 +1632,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.AggMaxEntityByAttribute_NamesTheThickest",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1910,9 +1647,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount"
       ]
     },
     {
@@ -1927,10 +1662,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggMinMetric_NamesWeakestFriendAndBenchLiftsItsCard",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1946,10 +1678,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxEntityByMetric_NamesHighestPerson",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxEntityByMetric_OverlayLightsOnlyTheStrongestPerson",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1964,10 +1693,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.AggMinEntityByMetric_OverlayLightsOnlyTheWeakestPerson",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -1986,10 +1712,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryRelAcceptanceTests.HasLink_OverlayDrawsChainLinkOnlyWhileTheLinkIsLive",
-        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption"
       ]
     },
     {
@@ -2004,9 +1727,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BeginLifecycleTransaction_MaterializesBodyAndOpensLedger",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.BeginLifecycleTransaction_CaptionContainsTransaction"
       ]
     },
     {
@@ -2021,9 +1742,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryBlackboardAcceptanceTests.InvokeBuiltin_BindsBody_ClearsRack_NoMarkStandIn",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryBlackboardAcceptanceTests.InvokeBuiltin_ClearsMark_CaptionIsPlayerChinese"
       ]
     },
     {
@@ -2042,8 +1761,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2063,8 +1780,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2084,8 +1799,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.ClampTargetToRange_PullsLandingPointInRange",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2105,8 +1818,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2126,8 +1837,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestInCollection_SucceedsWithPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2147,8 +1856,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.SnapToNearestGraphEdge_SnapsOntoTheRoad",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit"
       ]
     },
@@ -2167,9 +1874,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryEventAcceptanceTests.LoadViewer_ReadsTheAudience",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryEventAcceptanceTests.LoadViewer_ReadsTheAudience"
       ]
     },
     {
@@ -2188,8 +1893,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -2209,8 +1912,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -2230,8 +1931,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -2251,8 +1950,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.EventFamilyOp_RendersPlayerCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -2272,8 +1969,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryEventAcceptanceTests.KnowledgeHasProjection_ShowsVisible",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
       ]
     },
@@ -2289,9 +1984,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption"
       ]
     },
     {
@@ -2306,9 +1999,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption"
       ]
     },
     {
@@ -2323,15 +2014,18 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryScriptAcceptanceTests.Yield_FillsWaterAcrossTicks_AndCaptionRests"
       ]
     },
     {
       "op": "HaltReturnInt",
       "authorableKinds": [
-        "Script"
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_HaltReturnInt",
       "status": "covered",
@@ -2340,9 +2034,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryScriptAcceptanceTests.HaltReturnInt_CaptionReportsSeven",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryScriptAcceptanceTests.HaltReturnInt_CaptionReportsSeven"
       ]
     },
     {
@@ -2363,8 +2055,6 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib"
       ]
     },
@@ -2380,9 +2070,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
-        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption",
-        "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
-        "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
+        "GraphOpsNodeGalleryScriptAcceptanceTests.ScriptOps_SmokeTick_SubstitutesCaption"
       ]
     }
   ]

@@ -133,7 +133,7 @@ namespace Ludots.Tests.Gas.Graph
                     new[]
                     {
                         new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                     },
                     GraphKind.Script);
 
@@ -178,7 +178,7 @@ namespace Ludots.Tests.Gas.Graph
                     new[]
                     {
                         new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                     },
                     GraphKind.Script);
                 programs.Register(
@@ -238,7 +238,7 @@ namespace Ludots.Tests.Gas.Graph
                     new[]
                     {
                         new GraphInstruction { Op = (ushort)GraphNodeOp.Yield },
-                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
                     },
                     GraphKind.Script);
                 programs.Register(

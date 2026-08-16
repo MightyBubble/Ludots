@@ -118,6 +118,7 @@ namespace Ludots.Tests.GAS
                     B = 1,
                     Dst = 0,
                 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
@@ -158,6 +159,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 500f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ClampTargetToRange, A = 0, B = 1, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             bool passedNear = GasGraphExecutor.ExecuteValidation(
@@ -274,6 +276,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 100f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.SnapToNearestGraphEdge, A = 1, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];

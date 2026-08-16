@@ -61,7 +61,6 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Particles;
@@ -948,8 +947,7 @@ namespace Ludots.Core.Engine
                 entitySetQueryRuntime,
                 controlDomainQuery,
                 knowledgeProjectionResolver,
-                clock,
-                tagDisplayTables);
+                clock);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
@@ -1077,6 +1075,7 @@ namespace Ludots.Core.Engine
             var presenterRuntime = new PresenterEntityRuntime(World);
             var presenterAnimatorStates = new PresenterAnimatorStateBuffer(presentationConfig.PresenterInstanceCapacity);
             presenterRuntime.BindAnimatorStates(presenterAnimatorStates);
+            var presentationLodProfiles = new PresentationLodProfileRegistry();
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
@@ -1107,6 +1106,7 @@ namespace Ludots.Core.Engine
                 };
             }
 
+            new PresentationLodProfileConfigLoader(ConfigPipeline, presentationLodProfiles).Load(ConfigCatalog, ConfigConflictReport);
             new ParticleVfxConfigLoader(ConfigPipeline, particleVfx).Load(ConfigCatalog, ConfigConflictReport);
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, particleVfx).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
@@ -1184,7 +1184,15 @@ namespace Ludots.Core.Engine
                 presenterVisualStableIds);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
             var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, presenterCommandBuffer);
-            var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, presenterDefinitions, presenterCommandBuffer, presenterRuntime);
+            var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(
+                World,
+                surfaceRuntime,
+                meshAssets,
+                materialAssets,
+                presentationLodProfiles,
+                presenterDefinitions,
+                presenterCommandBuffer,
+                presenterRuntime);
             var presentationRequestFlushSystem = new PresentationRequestFlushSystem(
                 World,
                 presentationRequestBuffer,
@@ -1475,7 +1483,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
-            SetService(CoreServiceKeys.TagDisplayTableRegistry, tagDisplayTables);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
@@ -1591,6 +1598,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationParticleVfxRegistry, particleVfx);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
+            SetService(CoreServiceKeys.PresentationLodProfileRegistry, presentationLodProfiles);
             SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);
             SetService(CoreServiceKeys.InstancedBatchOperationBuffer, instancedBatchOperations);

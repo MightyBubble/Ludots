@@ -35,7 +35,8 @@ namespace Ludots.Core.Presentation.Config
         private void LoadMeshAssets(ConfigCatalog catalog, ConfigConflictReport report)
         {
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id");
-            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = PresentationAssetConfigIdGuard.CollectUniqueArrayByIdFragments(_configs, in entry);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
             {

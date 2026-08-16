@@ -1,6 +1,6 @@
-# 续一杯，歇一口气
+# 续一杯歇一口气
 
-每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
+每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Yield/poster.png" src="artifacts/evidence/capability_standard_graph_op_Yield/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Yield/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 续一杯歇一口气。茶水 {water}/{limit}，歇的次数就是涨的格数。
+> 续一杯歇一口气。茶水 {water}/{limit}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 续一杯，歇一口气
+Feature: 续一杯歇一口气
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_Yield
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_Yield/play.mp4
     When 短剧演完
-    Then 字幕讲的是「每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。」这类人话
+    Then 字幕讲的是「每续一口歇一下，茶水一格格涨。头顶那根条是水位示意，不是血量。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

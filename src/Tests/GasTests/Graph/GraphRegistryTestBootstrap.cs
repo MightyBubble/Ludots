@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -46,19 +47,22 @@ namespace Ludots.Tests.Gas.Graph
             configCatalog.Add(new ConfigCatalogEntry("AI/behavior_trees.json", ConfigMergePolicy.ArrayById, "id"));
             configCatalog.Add(new ConfigCatalogEntry("AI/hfsm.json", ConfigMergePolicy.ArrayById, "id"));
 
-            LoadScriptGraphs(programs, repoRoot);
+            List<GraphProgramPackage> graphPackages = LoadScriptGraphs(programs, repoRoot);
 
+            var graphConfigLoader = new GraphProgramConfigLoader(pipeline, programs, new BootstrapGraphSymbolResolver());
             new GraphFunctionCatalogLoader(pipeline, catalog, programs).Load(configCatalog);
+            graphConfigLoader.ResolveFuncLibInvokes(graphPackages, catalog);
             new GraphActionCatalogLoader(pipeline, actions, programs, catalog).Load(configCatalog);
             behavior = new GraphBehaviorDefinitionLoader(pipeline, actions).Load(configCatalog);
 
             return programs;
         }
 
-        private static void LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot)
+        private static List<GraphProgramPackage> LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot)
         {
             string graphsPath = Path.Combine(repoRoot, "assets", "GAS", "graphs.json");
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
+            var packages = new List<GraphProgramPackage>();
             using var doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
             foreach (JsonElement el in doc.RootElement.EnumerateArray())
             {
@@ -87,7 +91,10 @@ namespace Ludots.Tests.Gas.Graph
 
                 int graphId = GraphIdRegistry.Register(id);
                 programs.Register(graphId, pkg.Value.Program, GraphKind.Script, GraphInstructionSourceMap.Empty, pkg.Value.Symbols);
+                packages.Add(pkg.Value);
             }
+
+            return packages;
         }
 
         private static string FindRepoRoot()
@@ -99,6 +106,22 @@ namespace Ludots.Tests.Gas.Graph
             }
 
             return dir?.FullName ?? throw new InvalidOperationException("repo root not found");
+        }
+
+        private sealed class BootstrapGraphSymbolResolver : IGraphSymbolResolver
+        {
+            public int ResolveTag(string name) => throw Unsupported(name);
+            public int ResolveAttribute(string name) => throw Unsupported(name);
+            public int ResolveEffectTemplate(string name) => throw Unsupported(name);
+            public int ResolveRelationshipType(string name) => throw Unsupported(name);
+            public int ResolveRelationshipMetric(string name) => throw Unsupported(name);
+            public int ResolveRelationshipFlag(string name) => throw Unsupported(name);
+            public int ResolveRelationshipReason(string name) => throw Unsupported(name);
+            public int ResolveTargetDispatchPreset(string name) => throw Unsupported(name);
+            public int ResolveEntityTemplate(string name) => throw Unsupported(name);
+
+            private static InvalidOperationException Unsupported(string name)
+                => new($"GraphRegistryTestBootstrap only resolves FuncLib invokes; symbol '{name}' requires the production graph config loader path.");
         }
     }
 }

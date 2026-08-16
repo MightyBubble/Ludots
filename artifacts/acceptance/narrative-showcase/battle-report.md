@@ -3,7 +3,7 @@
 ## Header
 - scenario: `narrative-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-08-16T09:23:37.5936441+00:00`
+- execution_timestamp_utc: `2026-08-16T14:00:22.2387104+00:00`
 - map: `narrative_showcase_hub`
 - clock: `fixed 1/60s`
 
@@ -66,6 +66,6 @@
 ## Summary Stats
 - total_actions: `8`
 - snapshots captured: `8`
-- median headless tick: `0.164ms`
-- max headless tick: `8.291ms`
+- median headless tick: `0.116ms`
+- max headless tick: `8.388ms`
 - final_ui_excerpt: `Quest Tracker | Ashen Oath | Awaiting quest | Quest, stage, objective, and hint all come from NarrativeDirector state plus showcase config.`

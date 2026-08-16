@@ -331,6 +331,11 @@
     "AllowEmpty": true
   },
   {
+    "Path": "Presentation/lod_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Items/shapes.json",
     "Policy": "ArrayById",
     "IdField": "id"

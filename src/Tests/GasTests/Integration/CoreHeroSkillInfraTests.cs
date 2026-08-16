@@ -137,7 +137,8 @@ namespace Ludots.Tests.GAS
                 {
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.RevealArea
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             ], GraphKind.Effect);
             programs.Register(decayGraphId,
             [
@@ -145,7 +146,8 @@ namespace Ludots.Tests.GAS
                 {
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.DecayRevealArea
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             ], GraphKind.Effect);
 
             var behavior = new EffectPhaseGraphBindings();

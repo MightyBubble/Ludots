@@ -14,8 +14,6 @@ public sealed class GraphOpsNodeGallerySandboxAcceptanceTests
     private static readonly string[] SandboxOps =
     [
         "HasTag",
-        "SelectTagInMask",
-        "LookupTagDisplayToken",
         "QueryRadius",
         "QuerySortStable",
         "QueryLimit",

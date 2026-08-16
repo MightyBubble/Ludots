@@ -40,7 +40,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
     private Entity[] _targets = Array.Empty<Entity>();
     private int _nearbyCountKeyId;
     private int _nearestKeyId;
-    private int _statusTokenKeyId;
     private int _buffTemplateKeyId;
     private int _loyaltyKeyId;
     private float _accum;
@@ -53,7 +52,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
     private int _effectApplications;
     private int _relationshipScore;
     private bool _trustedFlag;
-    private string _statusToken = "无";
 
     public float CasterX => 0f;
     public float CasterY => 0f;
@@ -66,7 +64,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
     public int EffectApplications => _effectApplications;
     public int RelationshipScore => _relationshipScore;
     public bool TrustedFlag => _trustedFlag;
-    public string StatusToken => _statusToken;
     public GraphProgramRegistry? Programs => _programs;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_ability_graph_sandbox" };
 
@@ -82,7 +79,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         _programs = _bundle.Programs;
         _nearbyCountKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearbyCountKey);
         _nearestKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.NearestKey);
-        _statusTokenKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.StatusTokenKey);
         _buffTemplateKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.BuffTemplateKey);
         _loyaltyKeyId = ConfigKeyRegistry.Register(AbilityGraphSandboxGraphKeys.LoyaltyKey);
     }
@@ -106,7 +102,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         RequireGraph(AbilityGraphSandboxGraphKeys.Bond);
         RequireBoundKey(_nearbyCountKeyId, AbilityGraphSandboxGraphKeys.NearbyCountKey);
         RequireBoundKey(_nearestKeyId, AbilityGraphSandboxGraphKeys.NearestKey);
-        RequireBoundKey(_statusTokenKeyId, AbilityGraphSandboxGraphKeys.StatusTokenKey);
         RequireBoundKey(_buffTemplateKeyId, AbilityGraphSandboxGraphKeys.BuffTemplateKey);
         RequireBoundKey(_loyaltyKeyId, AbilityGraphSandboxGraphKeys.LoyaltyKey);
 
@@ -144,8 +139,7 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             metricRegistry: _bundle.Metrics,
             flagRegistry: _bundle.Flags,
             reasonRegistry: _bundle.Reasons,
-            entityQueries: entityQueries,
-            tagDisplayTables: _bundle.TagDisplay);
+            entityQueries: entityQueries);
 
         _caster = SpawnCombatant(0, 0, CasterTeamId, CasterLayer, inspired: false);
         ref BlackboardIntBuffer casterBb = ref _world.Get<BlackboardIntBuffer>(_caster);
@@ -169,7 +163,7 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = "巡逻队就位：查一圈找目标，命中后挂状态、加好感，并读状态牌。";
+        Metrics.Detail = "巡逻队就位：查一圈找目标，命中后挂状态、加好感。";
         SpawnStageVisuals();
     }
 
@@ -224,8 +218,8 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"巡逻查一圈：{_nearbyCount}个目标；对{_lastHit + 1}号挂状态「{_statusToken}」；" +
-            $"加好感+3={_relationshipScore}；状态牌读到「{_statusToken}」(token={StatusTokenId})；" +
+            $"巡逻查一圈：{_nearbyCount}个目标；对{_lastHit + 1}号挂状态；" +
+            $"加好感+3={_relationshipScore}；" +
             $"信任旗{(_trustedFlag ? "已点亮" : "未点亮")}；本波效果申请{_requests.Count}条。";
     }
 
@@ -233,15 +227,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
     {
         _world?.Dispose();
         _world = null;
-    }
-
-    private int StatusTokenId
-    {
-        get
-        {
-            ref BlackboardIntBuffer ints = ref _world!.Get<BlackboardIntBuffer>(_caster);
-            return ints.TryGet(_statusTokenKeyId, out int token) ? token : 0;
-        }
     }
 
     private void ExecuteEffectGraph(string graphKey, Entity explicitTarget, IntVector2 originCm)
@@ -268,12 +253,6 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             throw new InvalidOperationException("Scout graph did not write nearest target.");
         }
 
-        if (!ints.TryGet(_statusTokenKeyId, out int token) || token <= 0)
-        {
-            throw new InvalidOperationException("Scout graph did not write LookupTagDisplayToken.");
-        }
-
-        _statusToken = TokenDisplayName(token);
         _lastHit = IndexOf(nearest);
         if (_lastHit >= 0)
         {
@@ -381,12 +360,4 @@ public sealed class AbilityGraphSandboxRuntime : IDisposable
             throw new InvalidOperationException($"Blackboard key '{key}' was not registered during BindStandaloneFromModAssets.");
         }
     }
-
-    private static string TokenDisplayName(int tokenId)
-        => tokenId switch
-        {
-            AbilityGraphSandboxGraphKeys.InspiredTokenId => "鼓舞",
-            AbilityGraphSandboxGraphKeys.MarkedTokenId => "标记",
-            _ => throw new InvalidOperationException($"LookupTagDisplayToken returned unmapped token {tokenId}.")
-        };
 }
