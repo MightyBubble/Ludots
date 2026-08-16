@@ -7,7 +7,7 @@ internal static class RaylibClientParityShowcaseIds
     public const string RendererServiceKey = "Platform.RaylibBenchmarkRenderer";
 
     public const string CrowdTemplateId = "raylib_client_parity_crowd_agent";
-    public const string CrowdPerformerId = "raylib_client_parity_crowd_actor";
+    public const string CrowdPresenterId = "raylib_client_parity_crowd_actor";
     public const string MannequinMeshKey = "raylib_client_parity.mannequin";
     public const string AlbedoMaterialKey = "raylib_client_parity.albedo_demo";
     public const string VfxPrefabMeshKey = "raylib_client_parity.vfx_marker";

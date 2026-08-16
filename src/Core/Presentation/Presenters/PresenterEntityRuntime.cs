@@ -1413,8 +1413,8 @@ namespace Ludots.Core.Presentation.Presenters
                     case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
                     case BehaviorKind.Extension:
                         hasExtensionBehavior |=
-                            (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PerformerBehaviorKindRegistry.FirstModBehaviorKindId &&
-                            slot.ExtensionLane == PerformerBehaviorExecutionLane.ContinuousTick;
+                            (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PresenterBehaviorKindRegistry.FirstModBehaviorKindId &&
+                            slot.ExtensionLane == PresenterBehaviorExecutionLane.ContinuousTick;
                         break;
                 }
             }
@@ -2506,8 +2506,8 @@ namespace Ludots.Core.Presentation.Presenters
                         case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
                         case BehaviorKind.Extension:
                             hasExtensionBehavior |=
-                                (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PerformerBehaviorKindRegistry.FirstModBehaviorKindId &&
-                                slot.ExtensionLane == PerformerBehaviorExecutionLane.ContinuousTick;
+                                (slot.KindId != 0 ? slot.KindId : (byte)slot.Kind) >= PresenterBehaviorKindRegistry.FirstModBehaviorKindId &&
+                                slot.ExtensionLane == PresenterBehaviorExecutionLane.ContinuousTick;
                             break;
                     }
                 }

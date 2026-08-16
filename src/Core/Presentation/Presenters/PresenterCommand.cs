@@ -17,7 +17,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public PresenterCommandKind CommandKind;
         public int CommandKindId;
-        public PerformerCommandRouteStrategy RouteStrategy;
+        public PresenterCommandRouteStrategy RouteStrategy;
         public int PresenterDefinitionId;
         public Entity PresenterEntity;
         public Entity ParentEntity;

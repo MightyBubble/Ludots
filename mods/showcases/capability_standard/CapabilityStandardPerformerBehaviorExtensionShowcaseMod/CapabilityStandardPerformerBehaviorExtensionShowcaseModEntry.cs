@@ -13,7 +13,7 @@ namespace CapabilityStandardPerformerBehaviorExtensionShowcaseMod;
 public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry : IMod
 {
     public const string BehaviorKey = "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.CloudDrift";
-    public const string PerformerDefinitionKey = "capability_standard.performer_behavior_extension.cloud_banner";
+    public const string PresenterDefinitionKey = "capability_standard.performer_behavior_extension.cloud_banner";
     private const string MapId = "capability_standard_performer_behavior_extension_showcase";
     private const string DriftParamKey = "capability_standard.performer_behavior_extension.drift";
     private int _registeredBehaviorId;
@@ -23,10 +23,10 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
 
     public void OnLoad(IModContext context)
     {
-        _registeredBehaviorId = context.Extensions.Presentation.RegisterPerformerBehavior(
+        _registeredBehaviorId = context.Extensions.Presentation.RegisterPresenterBehavior(
             BehaviorKey,
-            new PerformerBehaviorExtensionDescriptor(
-                PerformerBehaviorExecutionLane.ContinuousTick,
+            new PresenterBehaviorExtensionDescriptor(
+                PresenterBehaviorExecutionLane.ContinuousTick,
                 RunCloudDrift));
         _driftParamId = PresenterParamKeyRegistry.Register(DriftParamKey);
 
@@ -36,7 +36,7 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             PanelElementId = "capability-standard-performer-behavior-extension-panel",
             PrimaryButtonElementId = "capability-standard-performer-behavior-extension-focus",
             SurfaceOwnerId = "Showcase.CapabilityStandardPerformerBehaviorExtension.Panel",
-            Title = "Performer Behavior Extension",
+            Title = "Presenter Behavior Extension",
             FeatureLabel = "Behavior kind",
             PrimaryButtonLabel = "Focus Cloud Drift",
             AccentColor = "#57D9D2",
@@ -44,8 +44,8 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             ProofLines =
             [
                 $"Behavior key: {BehaviorKey}",
-                "Performer shard: Presentation/performers/capability_standard.performer_behavior_extension.cloud_banner.json",
-                "The performer runtime ticks the Mod behavior through the registered dynamic kind."
+                "Presenter shard: Presentation/performers/capability_standard.performer_behavior_extension.cloud_banner.json",
+                "The presenter runtime ticks the Mod behavior through the registered dynamic kind."
             ],
             OnActivated = ActivateShowcase,
             OnUpdate = UpdateMetrics,
@@ -65,7 +65,7 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
         _ownerEntity = CreateOwnerEntity(engine);
 
         int definitionId = VerifyDefinitionLoaded(engine);
-        EnqueuePerformerCreate(engine, definitionId);
+        EnqueuePresenterCreate(engine, definitionId);
 
         runtime.SetMetricA("Behavior", _registeredBehaviorId > 0 ? $"id {_registeredBehaviorId}" : "missing");
         runtime.SetMetricB("Ticks", "0");
@@ -93,18 +93,18 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
     private int VerifyDefinitionLoaded(GameEngine engine)
     {
         var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
-            ?? throw new InvalidOperationException("Performer behavior extension showcase requires PresenterDefinitionRegistry.");
-        int definitionId = definitions.GetId(PerformerDefinitionKey);
+            ?? throw new InvalidOperationException("Presenter behavior extension showcase requires PresenterDefinitionRegistry.");
+        int definitionId = definitions.GetId(PresenterDefinitionKey);
         if (definitionId <= 0 || !definitions.TryGet(definitionId, out PresenterDefinition definition))
         {
-            throw new InvalidOperationException($"Performer definition '{PerformerDefinitionKey}' is not registered.");
+            throw new InvalidOperationException($"Presenter definition '{PresenterDefinitionKey}' is not registered.");
         }
 
         if (definition.Behaviors.Length != 1 ||
             definition.Behaviors[0].Kind != BehaviorKind.Extension ||
             definition.Behaviors[0].KindId != _registeredBehaviorId)
         {
-            throw new InvalidOperationException($"Performer definition '{PerformerDefinitionKey}' did not compile to the registered behavior extension.");
+            throw new InvalidOperationException($"Presenter definition '{PresenterDefinitionKey}' did not compile to the registered behavior extension.");
         }
 
         return definitionId;
@@ -122,18 +122,18 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             new PresentationStableId { Value = 50101 });
     }
 
-    private void EnqueuePerformerCreate(GameEngine engine, int definitionId)
+    private void EnqueuePresenterCreate(GameEngine engine, int definitionId)
     {
         if (engine.GetService(CoreServiceKeys.PresenterCommandBuffer) is not PresenterCommandBuffer commands)
         {
-            throw new InvalidOperationException("Performer behavior extension showcase requires PresenterCommandBuffer.");
+            throw new InvalidOperationException("Presenter behavior extension showcase requires PresenterCommandBuffer.");
         }
 
         if (!commands.TryAdd(new PresenterCommand
         {
             CommandKind = PresenterCommandKind.CreatePresenter,
             CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
-            RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+            RouteStrategy = PresenterCommandRouteStrategy.CreatePresenter,
             PresenterDefinitionId = definitionId,
             ScopeTag = 50101,
             ScopeSource = PresenterCommandScopeSource.Fixed,
@@ -141,11 +141,11 @@ public sealed class CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry
             Source = _ownerEntity
         }))
         {
-            throw new InvalidOperationException("PresenterCommandBuffer overflowed while creating the behavior extension showcase performer.");
+            throw new InvalidOperationException("PresenterCommandBuffer overflowed while creating the behavior extension showcase presenter.");
         }
     }
 
-    private void RunCloudDrift(in PerformerBehaviorExecutionContext context)
+    private void RunCloudDrift(in PresenterBehaviorExecutionContext context)
     {
         _behaviorTickCount++;
         context.Ops.SetParam(_driftParamId, ParamLane.Float, _behaviorTickCount);
