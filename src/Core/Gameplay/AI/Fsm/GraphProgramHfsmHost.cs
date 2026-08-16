@@ -7,12 +7,17 @@ namespace Ludots.Core.Gameplay.AI.Fsm;
 
 public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 {
+    private const int ScriptCacheCapacity = 8;
     private readonly GraphProgramRegistry _programs;
     private readonly World? _world;
     private readonly IGraphRuntimeApi? _api;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
+    private readonly int[] _cachedGraphIds = new int[ScriptCacheCapacity];
+    private readonly int[] _cachedVersions = new int[ScriptCacheCapacity];
+    private readonly GraphInstruction[]?[] _cachedPrograms = new GraphInstruction[ScriptCacheCapacity][];
+    private int _nextCacheSlot;
 
     public GraphProgramHfsmHost(
         GraphProgramRegistry programs,
@@ -42,19 +47,19 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 
     private GraphSliceResult ExecuteHalt(int graphId, string hostLabel)
     {
-        _programs.RequireHostKind(graphId, GraphKind.Script, hostLabel);
-        if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+        GraphInstruction[] program = ResolveScriptProgram(graphId, hostLabel);
+        if (TryExecuteImmediateHalt(program, out int immediateReturn))
         {
-            throw new InvalidOperationException($"HFSM graph id {graphId} is not registered in GraphProgramRegistry.");
+            return new GraphSliceResult(GraphExecutionStatus.Halted, immediateReturn, steps: 2);
         }
 
         Array.Clear(_ints, 0, _ints.Length);
         Array.Clear(_bools, 0, _bools.Length);
         Array.Clear(_callStack, 0, _callStack.Length);
         var cursor = new GraphExecutionCursor();
-        GraphSliceResult result = GraphExecutor.ExecuteRegisteredSlice(
+        GraphSliceResult result = GraphExecutor.ExecuteResolvedRegisteredScriptSlice(
             _programs,
-            graphId,
+            program,
             _ints,
             _bools,
             _callStack,
@@ -68,5 +73,57 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         }
 
         return result;
+    }
+
+    private static bool TryExecuteImmediateHalt(GraphInstruction[] program, out int returnInt)
+    {
+        returnInt = 0;
+        if (program.Length != 2)
+        {
+            return false;
+        }
+
+        ref readonly GraphInstruction first = ref program[0];
+        ref readonly GraphInstruction second = ref program[1];
+        if (first.Op != (ushort)GraphNodeOp.ConstInt ||
+            second.Op != (ushort)GraphNodeOp.HaltReturnInt)
+        {
+            return false;
+        }
+
+        if ((uint)first.Dst >= GraphVmLimits.MaxIntRegisters ||
+            (uint)second.A >= GraphVmLimits.MaxIntRegisters)
+        {
+            return false;
+        }
+
+        returnInt = second.A == first.Dst ? first.Imm : 0;
+        return true;
+    }
+
+    private GraphInstruction[] ResolveScriptProgram(int graphId, string hostLabel)
+    {
+        int version = _programs.Version;
+        for (int i = 0; i < ScriptCacheCapacity; i++)
+        {
+            if (_cachedGraphIds[i] != graphId || _cachedVersions[i] != version)
+            {
+                continue;
+            }
+
+            GraphInstruction[]? cached = _cachedPrograms[i];
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+
+        GraphInstruction[] program = _programs.RequireProgramArray(graphId, GraphKind.Script, hostLabel);
+        int slot = _nextCacheSlot;
+        _nextCacheSlot = (slot + 1) % ScriptCacheCapacity;
+        _cachedGraphIds[slot] = graphId;
+        _cachedVersions[slot] = version;
+        _cachedPrograms[slot] = program;
+        return program;
     }
 }

@@ -109,7 +109,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         entity,
                         program,
                         graphApi,
-                        kind);
+                        kind,
+                        graphPrograms);
                 }
 
                 commit = true;

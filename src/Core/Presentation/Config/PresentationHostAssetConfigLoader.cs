@@ -32,7 +32,8 @@ namespace Ludots.Core.Presentation.Config
 
             RequireNoBoundaryWhitespace(backendId, "Host asset backendId");
             var entry = ConfigPipeline.RequireEntry(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = PresentationAssetConfigIdGuard.CollectUniqueArrayByIdFragments(_configs, in entry);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
             {

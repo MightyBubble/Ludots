@@ -852,15 +852,14 @@ namespace Ludots.Client.Raylib.Rendering
 
         private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
         {
-            int columns = chunk.SampleColumns;
-            int rows = chunk.SampleRows;
+            ResolveChunkRenderSampling(
+                chunk.SampleColumns,
+                chunk.SampleRows,
+                out int columns,
+                out int rows,
+                out int sampleStride);
             int vertexCount = checked(columns * rows);
             int indexCount = checked((columns - 1) * (rows - 1) * 6);
-            if (vertexCount > ushort.MaxValue)
-            {
-                throw new InvalidOperationException(
-                    $"Raylib visual heightmap chunk ({chunk.ChunkX},{chunk.ChunkY}) has {vertexCount} vertices, exceeding the platform mesh index limit. Reduce samples per chunk.");
-            }
 
             Mesh mesh = new()
             {
@@ -883,13 +882,15 @@ namespace Ludots.Client.Raylib.Rendering
             float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             for (int y = 0; y < rows; y++)
             {
+                int sourceY = ResolveChunkSourceSampleIndex(y, chunk.SampleRows, sampleStride);
                 for (int x = 0; x < columns; x++)
                 {
+                    int sourceX = ResolveChunkSourceSampleIndex(x, chunk.SampleColumns, sampleStride);
                     int vertex = (y * columns) + x;
-                    float worldXCm = chunk.Bounds.Left + (x * stepXCm);
-                    float worldYCm = chunk.Bounds.Top + (y * stepYCm);
-                    chunk.TryReadHeightCm(x, y, out float heightCm);
-                    Vector3 normal = ComputeNormal(in chunk, x, y, stepXCm, stepYCm);
+                    float worldXCm = chunk.Bounds.Left + (sourceX * stepXCm);
+                    float worldYCm = chunk.Bounds.Top + (sourceY * stepYCm);
+                    chunk.TryReadHeightCm(sourceX, sourceY, out float heightCm);
+                    Vector3 normal = ComputeNormal(in chunk, sourceX, sourceY, stepXCm, stepYCm);
                     int f = vertex * 3;
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
                     mesh.vertices[f + 1] = heightCm * 0.01f;
@@ -1113,6 +1114,24 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return stride;
+        }
+
+        internal static void ResolveChunkRenderSampling(
+            int sampleColumns,
+            int sampleRows,
+            out int renderColumns,
+            out int renderRows,
+            out int sampleStride)
+        {
+            sampleStride = ResolveChunkSampleStride(sampleColumns, sampleRows);
+            renderColumns = ResolveChunkSampleAxisPointCount(sampleColumns, sampleStride);
+            renderRows = ResolveChunkSampleAxisPointCount(sampleRows, sampleStride);
+            int renderVertexCount = checked(renderColumns * renderRows);
+            if (renderVertexCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib visual heightmap render sampling resolved {renderVertexCount} vertices, exceeding the platform mesh index limit.");
+            }
         }
 
         internal static int ResolveChunkSampleAxisPointCount(int sampleCount, int stride)

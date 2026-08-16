@@ -28,7 +28,8 @@ namespace Ludots.Tests.GAS
                     Op = (ushort)GraphNodeOp.ConstFloat,
                     Dst = 31,
                     ImmF = 5f,
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
             programs.Register(2, new[]
             {
@@ -38,7 +39,8 @@ namespace Ludots.Tests.GAS
                     A = 1,
                     B = 31,
                     Imm = attributeId,
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
 
             var executor = new EffectPhaseExecutor(
@@ -75,7 +77,8 @@ namespace Ludots.Tests.GAS
                     Op = (ushort)GraphNodeOp.ConstFloat,
                     Dst = 0,
                     ImmF = 1f,
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
 
             var executor = new EffectPhaseExecutor(

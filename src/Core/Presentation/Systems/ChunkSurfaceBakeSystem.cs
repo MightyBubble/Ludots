@@ -21,6 +21,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SurfaceSourceRuntimeRegistry _runtime;
         private readonly MeshAssetRegistry _meshes;
         private readonly PresentationMaterialRegistry _materials;
+        private readonly PresentationLodProfileRegistry _lodProfiles;
         private readonly PresenterDefinitionRegistry _presenterDefinitions;
         private readonly PresenterCommandBuffer _commands;
         private readonly PresenterEntityRuntime _presenterRuntime;
@@ -31,6 +32,7 @@ namespace Ludots.Core.Presentation.Systems
             SurfaceSourceRuntimeRegistry runtime,
             MeshAssetRegistry meshes,
             PresentationMaterialRegistry materials,
+            PresentationLodProfileRegistry lodProfiles,
             PresenterDefinitionRegistry presenterDefinitions,
             PresenterCommandBuffer commands,
             PresenterEntityRuntime presenterRuntime)
@@ -39,6 +41,7 @@ namespace Ludots.Core.Presentation.Systems
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
+            _lodProfiles = lodProfiles ?? throw new ArgumentNullException(nameof(lodProfiles));
             _presenterDefinitions = presenterDefinitions ?? throw new ArgumentNullException(nameof(presenterDefinitions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _presenterRuntime = presenterRuntime ?? throw new ArgumentNullException(nameof(presenterRuntime));
@@ -337,15 +340,12 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException("SurfaceSource authoring must declare a non-empty lodProfileId.");
             }
 
-            if (!string.Equals(authoring.LodProfileId, "default_surface_lod", StringComparison.Ordinal))
+            if (!_lodProfiles.TryGet(authoring.LodProfileId, out PresentationLodProfile profile))
             {
                 throw new InvalidOperationException($"SurfaceSource authoring references unknown lodProfileId '{authoring.LodProfileId}'.");
             }
 
-            return new PresentationLodProfile(
-                new PresentationLodEntry(maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
-                new PresentationLodEntry(maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
-                new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
+            return profile;
         }
 
         private int ResolvePrimaryMaterialId(SurfaceAuthoringBlock authoring)

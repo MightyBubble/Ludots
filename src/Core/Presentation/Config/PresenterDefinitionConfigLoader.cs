@@ -503,6 +503,8 @@ namespace Ludots.Core.Presentation.Config
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
             PresenterDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
+            ChildPresenterRef[] children = ParseChildren(node["children"]);
+            ValidateChildrenCapacity(key, children);
 
             var def = new PresenterDefinition
             {
@@ -518,7 +520,7 @@ namespace Ludots.Core.Presentation.Config
                 VisibilityCondition = ParseDefinitionVisibility(node["visibility"], key),
                 Rules = ParseRules(node["rules"]),
                 Bindings = ParseBindings(node["bindings"]),
-                Children = ParseChildren(node["children"]),
+                Children = children,
                 Behaviors = behaviors,
                 InstancedBatches = behaviorFacts.InstancedBatches,
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
@@ -529,6 +531,17 @@ namespace Ludots.Core.Presentation.Config
 
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
+        }
+
+        private static void ValidateChildrenCapacity(string key, ChildPresenterRef[] children)
+        {
+            if (children == null || children.Length <= PresenterChildren.MAX_CHILDREN)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Presenter '{key}' declares {children.Length} direct children; capacity={PresenterChildren.MAX_CHILDREN}.");
         }
 
         private static void RejectRemovedFields(JsonNode node, string key)
@@ -2315,6 +2328,12 @@ namespace Ludots.Core.Presentation.Config
             }
 
             AssetKind assetKind = ParseRequiredEnum<AssetKind>(obj["assetKind"], "AssetBinding.assetKind");
+            if (assetKind == AssetKind.Sound)
+            {
+                throw new InvalidOperationException(
+                    "AssetBinding.assetKind 'Sound' has been removed from presenter config. Author behavior kind 'Sound' with sound.soundAssetId, loop, volume, and volumeParamKey.");
+            }
+
             VisualRenderPath renderPath = ParseRequiredEnum<VisualRenderPath>(obj["renderPath"], "AssetBinding.renderPath");
             ValidateAssetBindingRenderPath(assetKind, renderPath);
             int assetIdParamKey = ParseOptionalParamKey(obj["assetIdParamKey"], "AssetBinding.assetIdParamKey");

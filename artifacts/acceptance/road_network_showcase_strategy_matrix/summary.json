@@ -1,0 +1,52 @@
+{
+  "scenario": "road_network_showcase_strategy_matrix",
+  "rows": [
+    {
+      "ActorName": "Blue Vanguard",
+      "PlannerLabel": "Grand Road",
+      "ExecutionLabel": "Vanguard",
+      "AcceptedStatus": "Grand Road selected Direct corridor with 32 sampled point(s).",
+      "PointCount": 32,
+      "DirectBiasCm": -4000,
+      "NorthBiasCm": 6000,
+      "SouthBiasCm": 6000,
+      "SpeedMultiplier": 1,
+      "WaypointRadiusCm": 45,
+      "FinalArrivalRadiusCm": 75,
+      "MaxAbsPathYcm": 0
+    },
+    {
+      "ActorName": "Blue North Column",
+      "PlannerLabel": "North Scout",
+      "ExecutionLabel": "Courier",
+      "AcceptedStatus": "North Scout selected North corridor with 56 sampled point(s).",
+      "PointCount": 56,
+      "DirectBiasCm": 18000,
+      "NorthBiasCm": -6000,
+      "SouthBiasCm": 26000,
+      "SpeedMultiplier": 1.22,
+      "WaypointRadiusCm": 30,
+      "FinalArrivalRadiusCm": 55,
+      "MaxAbsPathYcm": 10125
+    },
+    {
+      "ActorName": "Blue South Column",
+      "PlannerLabel": "South Guard",
+      "ExecutionLabel": "Siege Train",
+      "AcceptedStatus": "South Guard selected South corridor with 56 sampled point(s).",
+      "PointCount": 56,
+      "DirectBiasCm": 18000,
+      "NorthBiasCm": 26000,
+      "SouthBiasCm": -6000,
+      "SpeedMultiplier": 0.68,
+      "WaypointRadiusCm": 34,
+      "FinalArrivalRadiusCm": 80,
+      "MaxAbsPathYcm": 10125
+    }
+  ],
+  "advances": {
+    "blue_vanguard_cm": 3416.021,
+    "blue_north_column_cm": 2790.0374,
+    "blue_south_column_cm": 2705.2883
+  }
+}

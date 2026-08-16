@@ -15,8 +15,7 @@
       },
       {
         "id": "inCircle",
-        "op": "IsPointInCircle",
-        "validOutput": "inCircle"
+        "op": "IsPointInCircle"
       }
     ],
     "controlEdges": [

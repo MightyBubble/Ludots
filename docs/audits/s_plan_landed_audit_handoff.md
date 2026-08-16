@@ -1,12 +1,10 @@
-# 审计需求：GAS + Graph 修复计划落地后（#942 全票合入）
+# 审计需求：GAS + Graph 修复计划落地后（#942 全票合入 · 当时需求）
 
 **给审计 / 接手 Agent。**  
-这是一次**独立架构审计请求**。对象是已经 squash 进 `main` 的 [#942](https://github.com/MightyBubble/Ludots/pull/942) 计划全票，不是某一张还开着的 PR tip。  
-不要只扫 diff 文件名；必须对照计划任务书与玩家/作者会撞到的事，问「说的和进游戏看到的是不是同一件事」。
+这是当时的独立架构审计请求。对象是已经 squash 进 `main` 的 [#942](https://github.com/MightyBubble/Ludots/pull/942) 计划全票。  
+结论当时写在 [`s_plan_landed_architecture_audit.md`](s_plan_landed_architecture_audit.md)。**当前进度只认** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)。禁止借本需求夹带实现修复，也不要再按本页开一轮新审计。
 
-本文件**不含结论**。结论另开一份 SSOT 报告。禁止借本需求夹带实现修复。
-
-**刻意不审：** UI 面板图（#886 / #893）、[#723](https://github.com/MightyBubble/Ludots/pull/723) GraphScore、[#947](https://github.com/MightyBubble/Ludots/pull/947) Pi、表现层改名/客户端座椅、删掉八个家族 Mod（S6 关门之后的独立票）、S14 第 2–6 波搬家（尚未开工）。
+**事后更正（主干 `d1b8f5f4d7`）：** 八间家族房间已删除（#968），不是「S6 之后另开删房票」。分层 Wave 2–4 脚手架已合（#964），Wave 5–6 仍未做。「残血的分更高」已合（#963）。本页里「尚未开工 / 退役当玩家门」的句子已按现状改。
 
 ---
 
@@ -47,7 +45,7 @@
 | S3 查询口偷跑可挂起动作 | [#941](https://github.com/MightyBubble/Ludots/pull/941) | 查询 `InvokeScript` 只许函数名，拒 `graphId` | **从未独立审过** |
 | S4 回滚自己会抛 | [#959](https://github.com/MightyBubble/Ludots/pull/959)（#943 已关） | 回滚走完；提交按属性走正式写入面 | 第一批当时：**合入，不关单**。声称收口已进 #959 |
 | S5 容量到顶不说话 | [#945](https://github.com/MightyBubble/Ludots/pull/945) | 满了就抛；假计数整套删掉 | 第一批：**可关单**。旁系死计数是已知债 |
-| S6 退役门没锁 | [#941](https://github.com/MightyBubble/Ludots/pull/941) | 退役不再给启动命令；生产 mod 不再 `GraphIdRegistry.Clear` | **从未独立审过** |
+| S6 退役门没锁 | [#941](https://github.com/MightyBubble/Ludots/pull/941) 后 [#968](https://github.com/MightyBubble/Ludots/pull/968) 删房 | 当时退役锁门；现在房间已删除 | **已审且事后删房** |
 | S7 血条演戏 | [#941](https://github.com/MightyBubble/Ludots/pull/941) | 真结算走图；驱动只回读世界血；茶水不当血 | **从未独立审过** |
 | S8 假防线 | [#951](https://github.com/MightyBubble/Ludots/pull/951) | 只打印的补成真断言 | 第二批：**可关单** |
 | S9 图执行走同一道门 | [#953](https://github.com/MightyBubble/Ludots/pull/953) | 七宿主走 `GraphExecutor` | 第二批：**可关单**（typed 图号、展厅内部入口是已知缺口） |
@@ -55,7 +53,7 @@
 | S11 覆盖表假绿 | [#950](https://github.com/MightyBubble/Ludots/pull/950) | 错指针先修；生成器失败关闭 | 第二批：**可关单** |
 | S12 格子与前门同一张表 | [#956](https://github.com/MightyBubble/Ludots/pull/956) | 分配器发放格子；前门 ⊆ 策略 | **从未独立审过** |
 | S13 数据写行为 | [#960](https://github.com/MightyBubble/Ludots/pull/960) | JSON 树/机；叶子自己读血；HFSM 禁 Yield | **从未独立审过** |
-| S14 分层 | [#954](https://github.com/MightyBubble/Ludots/pull/954) 设计 + [#957](https://github.com/MightyBubble/Ludots/pull/957) Wave 1 | 设计答六问；顺序只认枚举；拿引擎标过时；**不搬家** | 设计未审；Wave 1 未审。第 2–6 波不在范围 |
+| S14 分层 | [#954](https://github.com/MightyBubble/Ludots/pull/954) 设计 + [#957](https://github.com/MightyBubble/Ludots/pull/957) Wave 1；后续 #964 合入 Wave 2–4 脚手架 | 设计答六问；顺序只认枚举；拿引擎标过时；**不搬家** | 当时设计与 Wave 1 未审；现在 Wave 2–4 已合，Wave 5–6 仍未做 |
 | S15 验收页一份 | [#948](https://github.com/MightyBubble/Ludots/pull/948) | 一个 H1；没做的写成没做 | 第二批：**可关单** |
 
 ---
@@ -99,7 +97,7 @@
 2. FuncLib = 纯（无 Yield）；ActionLib = 可挂起；同名跨库失败关闭。  
 3. Effect 可分支 + 调 FuncLib；不得调 ActionLib。查询方言与线性方言同一条红线。  
 4. 一种作者边模型 + 一台 VM；禁止平行编译器、平行程序宇宙。  
-5. 图节点玩家门是**单节点展厅**；八个家族大杂烩退役，不是第二套玩家入口。  
+5. 图节点玩家门是**单节点展厅**；八个家族大杂烩已删除，不是第二套玩家入口。  
 6. 人从地图刷；血条走 WorldHud / 生命披露；禁止 C# 改血演戏驱动 HUD。  
 7. 选中、点选、下达命令读战场坐标与情报，不读镜头裁剪。  
 8. NO FALLBACK：缺清单、空表、未知符号、引擎空、容量满、调用成环，全部失败关闭。  
@@ -120,7 +118,7 @@
 1) docs/audits/gas_graph_architecture_fix_plan.md 依赖图与「不在本计划内」
 2) gitbook/architecture/graph-funclib-actionlib-contract.md 首页状态与三条边界
 3) docs/audits/s_plan_landed_audit_handoff.md 阶段划分：哪些从未审、哪些只复验
-刻意不审：#886/#893 UI 面板、#723 GraphScore、#947 Pi、S14 第 2–6 波、删八家族 Mod。
+刻意不审：#886/#893 UI 面板、#723 GraphScore、#947 Pi。家族房间已删，不要再审「退役锁门」。分层续做只对照设计 Wave 5–6。
 完成后停，等阶段任务。
 ```
 
@@ -148,25 +146,14 @@ gitbook/architecture/graph-funclib-actionlib-contract.md §3.4。
 产出：阻断/Major/Minor，每条给路径。不要写总 Verdict。
 ```
 
-**领域 J · S6 退役门**
+**领域 J · S6 退役门（事后：房间已删）**
 
 ```text
-阶段 1 / 领域 J。只审划掉的门和清图号。
-对象：origin/main @ 46fcd9dcda。
-计划任务书：gas_graph_architecture_fix_plan.md §S6。
-必读：showcase.registry.json 八条 capability_standard_graph_ops_*、
-launcher.config.json、src/Tools/Ludots.Launcher.React/src/lib/showcase.ts、
-ShowcasePanel.tsx、scripts/validate-registry.py、
-CapabilityStandardGraphOps{Rel,Query,Attr,Spatial,Event}* 的 Entry/Bootstrap。
-证伪：
-1) 八条退役条目 binding 是否为 null？启动器 launchHint / 预设列表是否仍吐可复制命令？
-2) 登记表 binding 与 launcher binding 是否双向一致？retired 允许 binding=null 是改了规则还是留了静默特例？
-3) 五个生产 bootstrap 是否还调用 GraphIdRegistry.Clear()？Rel/Query 是否还在 GameStart 对活引擎 BindStandaloneFromModAssets？
-4) 测试夹具清表是否标了 NonParallelizable？不要把测试清表当成生产清表。
-5) 八个家族 Mod 目录是否还在？（应该还在。本票禁止删 Mod；还在不是缺陷。）
-该跑：python3 scripts/validate-registry.py；
---filter "FullyQualifiedName~GraphOpsRelShowcaseAcceptanceTests|FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests|FullyQualifiedName~GraphOpsAttrShowcaseAcceptanceTests|FullyQualifiedName~GraphOpsSpatialShowcaseAcceptanceTests|FullyQualifiedName~GraphOpsEventShowcaseAcceptanceTests|FullyQualifiedName~GraphOpsNodeGallery"
-产出：残留表。家族场缺陷若不影响玩家门，标 Major/债务，不要自动升阻断。不要写总 Verdict。
+当时审的是退役锁门。现在八间家族房间已按 #968 删除。
+不要再按「八条 retired binding」取证。
+当前证伪：登记表没有 capability_standard_graph_ops_*；
+mods/ 没有 CapabilityStandardGraphOps{Rel,Query,Attr,Spatial,Event,Float,Script,Blackboard}Mod；
+启动器没有这些图能力家族旧房间的退役卡片。单节点画廊留下。
 ```
 
 **领域 K · S7 血条**
@@ -360,7 +347,7 @@ docs/audits/s_plan_landed_architecture_audit.md
 | Script 查询列表沿用 Effect 隐式 TargetList | S13 实现方 | Query* 是否另开 script `list` 端口 |
 | `GraphActionCatalog` 加载后不持久化 `host` | S13 实现方 | 宿主 Yield 策略是否只在装载期跑一次 |
 | S5 事件总线旁系死计数恒为 0 | 第一批 | 不要当 S5 回归 |
-| S14 第 2–6 波未开工 | 设计明文 | 发现大搬家才是越界 |
+| S14 Wave 5–6 未做 | Wave 2–4 脚手架已在 #964 | 发现大搬家才是越界 |
 
 ---
 
@@ -371,7 +358,7 @@ docs/audits/s_plan_landed_architecture_audit.md
 1. 我写了一张只会调用自己的图：登记必须当场失败，游戏还在。  
 2. 我给一个不夹上限的属性写了当前值：过几拍再看，数还在。  
 3. 我在查询图里填了一个巡逻动作的图号：编译失败，不能靠查询偷偷等一拍。  
-4. 启动器里翻到已划掉的家族大杂烩：没有可复制的启动命令。  
+4. 启动器里没有家族大杂烩，也没有这些图能力家族旧房间的退役卡片。
 5. 我点进「派事件改血」那一类短剧：血条跟结算走；打到零不会无声回满。  
 6. 镜头抬高、单位被挡住：我仍然能点到他、能下令。  
 7. 我在配置里写了一棵巡逻-追击-攻击树：代理按树走，我不用改引擎 C#。  
@@ -394,7 +381,7 @@ docs/audits/s_plan_landed_architecture_audit.md
 **不做**
 
 - 改生产代码、顺手修 UI 面板、重开 Duration/Yield 产品争论  
-- 把 S14 第 2–6 波、删八家族 Mod、typed 图号、#723、#947 升成本次唯一目标  
+- 把 typed 图号、#723、#947 升成本次唯一目标；家族房间已删，不要再派删房票  
 - 用「合同缩编」或改测试门槛掩盖  
 - 发明新 graph op / profile enum / 第二套加载器  
 - 把第一批/第二批报告复制粘贴改个日期交差
@@ -408,7 +395,7 @@ docs/audits/s_plan_landed_architecture_audit.md
 | #943 已关 | 被 #959 取代，不要按 #943 tip 复读 |
 | #939 / #955 已关 | 旧审计需求与重复审计，内容分别进了 #941 与 #958 |
 | GetEngine 过时警告 | Wave 1 故意标过时，205 处警告不是回归 |
-| 八家族 Mod 还在 | S6 禁止删除 |
+| 八家族房间 | 当时 S6 禁止删除；#968 已删。不要再当「还在」 |
 
 ---
 
@@ -447,16 +434,16 @@ Feature: 纯查询里不能偷偷跑起会等一拍的动作
     When 这张图通过作者前门编译
     Then 编译必须失败，理由与线性方言一致
 
-Feature: 划掉的门要真的锁上
+Feature: 家族大杂烩不能再当玩家入口
   作为玩家
-  我希望退役展厅不能再被点进去
+  我希望按家族打包的房间不存在
   以便我不会走进一间会弄坏别的展厅的房间
 
-  Scenario: 退役展厅不再给出可点的入口
-    Given 登记表里某个家族展厅已经标成退役
-    When 我在启动器里翻到它
-    Then 卡片上不得出现可复制的启动命令
-    And 顶栏的预设列表里也翻不到它
+  Scenario: 启动器里没有这些房间
+    Given 每个图节点都有自己的短剧
+    When 我打开启动器
+    Then 我看不到属性族、查询族这类大杂烩入口
+    And 登记表里也没有这些房间的退役卡片
 
 Feature: 血条要么代表真被打掉的血，要么别装成那样
   作为新玩家

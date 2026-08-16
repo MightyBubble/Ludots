@@ -33,10 +33,16 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [SetUp]
+        public void SetUp()
+        {
+            ModRegistryAmbient.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Reset();
 
             if (!string.IsNullOrWhiteSpace(_tempRoot))
             {
@@ -523,7 +529,7 @@ namespace Ludots.Tests.GAS
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 
@@ -772,6 +778,10 @@ namespace Ludots.Tests.GAS
         "id": "bestProductionCity",
         "op": "AggMaxEntityByAttribute",
         "attribute": "Health"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -829,6 +839,11 @@ namespace Ludots.Tests.GAS
         "from": "sumGold",
         "fromPort": "next",
         "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [
@@ -957,6 +972,10 @@ namespace Ludots.Tests.GAS
         "id": "fromCollection",
         "op": "QueryFromCollection",
         "collectionKey": "tests.graph.collection.cities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -964,6 +983,11 @@ namespace Ludots.Tests.GAS
         "from": "owner",
         "fromPort": "next",
         "to": "fromCollection"
+      },
+      {
+        "from": "fromCollection",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [

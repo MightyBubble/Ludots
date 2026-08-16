@@ -51,7 +51,7 @@ public sealed class LevelBlueprintTrialRuntime
 
         _director = LevelBlueprintFactory.CreateTwoPhaseTrial(
             "showcase.level.trial",
-            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance"));
+            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance", GraphActionHost.Level));
         _scriptHost = new GraphProgramLevelHost(_programs);
         _markerX = 0f;
         _markerY = -10f;

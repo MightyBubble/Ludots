@@ -327,14 +327,49 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_BoneAttached_SkipsGrounding()
+        public void ResolveTransform_BoneAttached_ComposesAssetAndInstanceScale()
         {
             var instance = new PresenterTransformSnapshot
             {
                 TransformSource = TransformSource.BoneAttached,
                 WorldPosition = new Vector3(5f, 6f, 7f),
                 WorldRotation = Quaternion.Identity,
-                WorldScale = Vector3.One,
+                WorldScale = new Vector3(1.5f, 2f, 2.5f),
+            };
+
+            var asset = new AssetBindingConfig
+            {
+                LocalScale = new Vector3(2f, 3f, 4f),
+            };
+
+            var instanceOverride = new PresenterInstanceTransformOverride
+            {
+                LocalScale = new Vector3(0.5f, 2f, 1f),
+                HasOverride = true,
+            };
+
+            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
+                instance,
+                default,
+                hasParent: false,
+                ownerTransform: default,
+                hasOwnerTransform: false,
+                asset,
+                instanceOverride);
+
+            Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(1.5f, 12f, 10f)));
+        }
+
+        [Test]
+        public void ResolveTransform_AttachedToParent_ComposesAttachmentAndAssetScale()
+        {
+            var instance = new PresenterTransformSnapshot
+            {
+                TransformSource = TransformSource.AttachedToParent,
+                WorldPosition = new Vector3(2f, 3f, 4f),
+                WorldRotation = Quaternion.Identity,
+                WorldScale = new Vector3(1.5f, 2f, 2.5f),
             };
 
             var asset = new AssetBindingConfig
@@ -351,35 +386,7 @@ namespace Ludots.Tests.Presentation
                 asset);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
-        }
-
-        [Test]
-        public void ResolveTransform_AttachedToParent_SkipsGrounding()
-        {
-            var instance = new PresenterTransformSnapshot
-            {
-                TransformSource = TransformSource.AttachedToParent,
-                WorldPosition = new Vector3(2f, 3f, 4f),
-                WorldRotation = Quaternion.Identity,
-                WorldScale = new Vector3(1.5f, 1.5f, 1.5f),
-            };
-
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = Vector3.One,
-            };
-
-            PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
-                instance,
-                default,
-                hasParent: false,
-                ownerTransform: default,
-                hasOwnerTransform: false,
-                asset);
-
-            Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(3f, 6f, 10f)));
         }
 
         [Test]

@@ -15,8 +15,7 @@
       },
       {
         "id": "clamp",
-        "op": "ClampTargetToRange",
-        "validOutput": "inRange"
+        "op": "ClampTargetToRange"
       }
     ],
     "controlEdges": [

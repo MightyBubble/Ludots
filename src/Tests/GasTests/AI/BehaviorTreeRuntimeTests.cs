@@ -13,7 +13,7 @@ namespace Ludots.Tests.Gas.AI
     public sealed class BehaviorTreeRuntimeTests
     {
         private const double FrameBudgetMs = 15.0;
-        private const double CiTimingEnvelopeMs = 100.0;
+        private const double LatchedWaveBudgetMs = 1.5;
 
         private GraphProgramRegistry? _programs;
         private GraphActionCatalog? _actions;
@@ -63,6 +63,27 @@ namespace Ludots.Tests.Gas.AI
         }
 
         [Test]
+        public void TickAll_FlatSequenceHoldRunning_ResumesRunningLeaf()
+        {
+            var nodes = new[]
+            {
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Sequence, 1, 2, BehaviorTreeLeafBinding.None, 0),
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.AlwaysSuccess, 0),
+                new BehaviorTreeNode(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HoldRunning, 0),
+            };
+            var tree = new BehaviorTreeDefinition("bt.flat-hold", nodes, rootIndex: 0);
+            var world = new BehaviorTreeWorld(tree, capacity: 1);
+            world.AddAgent();
+
+            BehaviorTreeThinkStats first = world.TickAll();
+            BehaviorTreeThinkStats second = world.TickAll();
+
+            Assert.That(first.NodesVisited, Is.EqualTo(3));
+            Assert.That(second.NodesVisited, Is.EqualTo(1));
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+        }
+
+        [Test]
         public void ThinkWave_10k_AlwaysSuccess16_UnderFifteenMilliseconds()
         {
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("bt.perf", leafCount: 15);
@@ -70,15 +91,13 @@ namespace Ludots.Tests.Gas.AI
             var world = new BehaviorTreeWorld(tree, capacity: agents);
             for (int i = 0; i < agents; i++) world.AddAgent();
             world.TickAll();
-            for (int i = 0; i < agents; i++) world.ResetAgent(i);
+            world.RestartAllThinking();
             var sw = Stopwatch.StartNew();
             BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-            Warn.If(ms, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+            Assert.That(ms, Is.LessThan(FrameBudgetMs),
                 $"AlwaysSuccess-16 think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs),
-                $"AlwaysSuccess-16 think wave exceeded CI envelope: {ms:F3}ms");
             Assert.That(stats.Agents, Is.EqualTo(agents));
         }
 
@@ -94,8 +113,8 @@ namespace Ludots.Tests.Gas.AI
             world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-            Warn.If(ms, Is.GreaterThanOrEqualTo(1.5), $"Latched success second wave exceeded 1.5ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs));
+            Assert.That(ms, Is.LessThan(LatchedWaveBudgetMs),
+                $"Latched success second wave exceeded {LatchedWaveBudgetMs:F1}ms: {ms:F3}ms");
         }
 
         [Test]
@@ -192,8 +211,8 @@ namespace Ludots.Tests.Gas.AI
 
             public ScriptedSensors(GraphActionCatalog actions)
             {
-                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy");
-                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange");
+                _see = GraphRegistryScriptResolver.RequireActionId(actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+                _range = GraphRegistryScriptResolver.RequireActionId(actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
             }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)

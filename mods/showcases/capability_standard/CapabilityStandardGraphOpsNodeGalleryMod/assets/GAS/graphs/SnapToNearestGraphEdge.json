@@ -11,8 +11,7 @@
       },
       {
         "id": "snapEdge",
-        "op": "SnapToNearestGraphEdge",
-        "validOutput": "edgeValid"
+        "op": "SnapToNearestGraphEdge"
       }
     ],
     "controlEdges": [

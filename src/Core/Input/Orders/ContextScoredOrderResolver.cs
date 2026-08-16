@@ -244,7 +244,7 @@ namespace Ludots.Core.Input.Orders
                         preconditionProgram,
                         _graphApi,
                         preconditionKind,
-                        _graphHandlers))
+                        _graphHandlers, _graphPrograms))
                 {
                     return false;
                 }
@@ -266,7 +266,7 @@ namespace Ludots.Core.Input.Orders
                     scoreProgram,
                     _graphApi,
                     scoreKind,
-                    _graphHandlers);
+                    _graphHandlers, _graphPrograms);
             }
 
             return true;

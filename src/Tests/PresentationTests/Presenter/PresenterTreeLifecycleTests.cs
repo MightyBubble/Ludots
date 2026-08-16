@@ -106,6 +106,42 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void CreateChild_WhenParentChildBufferIsFull_ThrowsBeforeDroppingChild()
+        {
+            using var fixture = PresenterTreeFixture.Create();
+            int rootId = fixture.Definitions.Register("root", new PresenterDefinition());
+            int childId = fixture.Definitions.Register("child", new PresenterDefinition());
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 900);
+
+            for (int i = 0; i < PresenterChildren.MAX_CHILDREN; i++)
+            {
+                fixture.Create(childId, fixture.Owner, scopeTag: 901 + i, parentEntity: rootEntity);
+            }
+
+            ref readonly PresenterChildren children = ref fixture.World.Get<PresenterChildren>(rootEntity);
+            Assert.That(children.Count, Is.EqualTo(PresenterChildren.MAX_CHILDREN));
+
+            Assert.That(
+                () =>
+                {
+                    Assert.That(fixture.Commands.TryAdd(new PresenterCommand
+                    {
+                        CommandKind = PresenterCommandKind.CreatePresenter,
+                        PresenterDefinitionId = childId,
+                        ParentEntity = rootEntity,
+                        ScopeTag = 950,
+                        AnchorKind = PresentationAnchorKind.Entity,
+                        Source = fixture.Owner,
+                        Target = fixture.Owner,
+                    }), Is.True);
+                    fixture.Runtime.Update(0.016f);
+                },
+                Throws.InvalidOperationException.With.Message.Contains("exceeded child capacity"));
+
+            Assert.That(fixture.World.Get<PresenterChildren>(rootEntity).Count, Is.EqualTo(PresenterChildren.MAX_CHILDREN));
+        }
+
+        [Test]
         public void DestroyPresenterScope_ReleasesOnlyThatScope()
         {
             using var fixture = PresenterTreeFixture.Create();
@@ -598,7 +634,7 @@ namespace Ludots.Tests.Presentation
 
         private void WriteFile(string modId, string relativePath, string content)
         {
-            string dir = Path.Combine(_root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? string.Empty);
+            string dir = Path.Combine(_root, modId, Path.GetDirectoryName(relativePath) ?? string.Empty);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }

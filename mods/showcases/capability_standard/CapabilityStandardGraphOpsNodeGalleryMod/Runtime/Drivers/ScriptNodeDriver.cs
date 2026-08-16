@@ -175,7 +175,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     private void RegisterConstSevenCallee(GraphOpsNodeDriverContext ctx)
     {
-        int calleeId = RequireInvokeScriptGraphId(ctx.Compiled);
+        int calleeId = ResolveCalleeGraphId(ctx.Compiled);
         string path = Path.Combine(ctx.AssetsRoot, "GAS", "graphs", ConstSevenCalleeFile);
         if (!File.Exists(path))
         {
@@ -204,7 +204,12 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         }
     }
 
-    private static int RequireInvokeScriptGraphId(GraphControlFlowCompileResult compiled)
+    /// <summary>
+    /// Resolves the callee graph ID for the gallery's InvokeScript demo.
+    /// When the authored node uses functionName (FuncLib path), allocates a local callee ID
+    /// and patches the instruction so the local registry can serve the call.
+    /// </summary>
+    private int ResolveCalleeGraphId(GraphControlFlowCompileResult compiled)
     {
         GraphInstruction[] program = compiled.Program;
         for (int i = 0; i < program.Length; i++)
@@ -216,8 +221,15 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
             if ((program[i].Flags & GraphInstructionFlags.FuncLibName) != 0)
             {
-                throw new InvalidOperationException(
-                    "InvokeScript gallery must reference a registered graph id, not a function catalog name.");
+                int calleeId = GraphIdRegistry.GetId(ConstSevenCalleeGraphKey);
+                if (calleeId <= 0)
+                {
+                    calleeId = GraphIdRegistry.Register(ConstSevenCalleeGraphKey);
+                }
+
+                program[i].Imm = calleeId;
+                program[i].Flags = (byte)(program[i].Flags & ~GraphInstructionFlags.FuncLibName);
+                return calleeId;
             }
 
             if (program[i].Imm <= 0)

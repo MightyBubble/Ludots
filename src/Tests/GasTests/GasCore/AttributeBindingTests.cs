@@ -23,14 +23,14 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                     """
                     [
                       { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"),
                     """
                     [
                       {
@@ -98,14 +98,14 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                     """
                     [
                       { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"),
                     """
                     [
                       {

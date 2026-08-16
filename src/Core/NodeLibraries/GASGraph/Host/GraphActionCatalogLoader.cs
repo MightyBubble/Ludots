@@ -101,15 +101,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             $"ActionLib '{name}' host '{hostText}' must be BehaviorTree, Hfsm, Level, or Script.");
                     }
 
-                    if (_programs.TryGetRegistration(graphId, out GraphProgramRegistration registration) &&
-                        registration.ContainsYield &&
-                        !GraphActionHostYieldPolicy.AllowsYield(host))
+                    if (!GraphActionHostYieldPolicy.AllowsYield(host) &&
+                        !GraphYieldPurityValidator.TryValidateNoReachableYield(
+                            _programs,
+                            graphId,
+                            $"ActionLib '{name}' graph '{graphKey}'",
+                            ResolveFuncLibTarget,
+                            out string diagnostic))
                     {
                         throw new InvalidOperationException(
-                            $"ActionLib '{name}' host '{host}' cannot bind a program that reaches Yield.");
+                            $"ActionLib '{name}' host '{host}' cannot bind a program that reaches Yield. Path: {diagnostic}");
                     }
 
-                    _catalog.Register(name, graphId, GraphKind.Script);
+                    _catalog.Register(name, graphId, GraphKind.Script, host);
                 }
                 catch (Exception ex)
                 {
@@ -122,6 +126,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new AggregateException(
                     $"[GraphActionCatalogLoader] {errors.Count} action_lib error(s) in '{relativePath}'.",
                     errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+            }
+
+            bool ResolveFuncLibTarget(string functionName, out GraphYieldPurityTarget target)
+            {
+                if (_functions.TryGet(functionName, out GraphFunctionEntry entry))
+                {
+                    target = new GraphYieldPurityTarget(
+                        entry.GraphId,
+                        $"FuncLib '{entry.Name}'");
+                    return true;
+                }
+
+                target = default;
+                return false;
             }
         }
 

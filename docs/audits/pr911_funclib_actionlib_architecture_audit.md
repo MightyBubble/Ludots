@@ -3,7 +3,8 @@
 **审计对象：** PR #911（`cursor/funclib-actionlib-impl-45dc`）
 **审计 tip：** `20bf1e031`（`docs(architecture): mark FuncLib/ActionLib contract as landed`）
 **基线：** PR #895 head `99bdad19c`（本 PR 的 base）
-**审计需求 SSOT：** [`pr911_funclib_actionlib_audit_handoff.md`](pr911_funclib_actionlib_audit_handoff.md)（随 PR #912 入库）
+**现在怎样：** [图能力唯一入口](../../gitbook/architecture/graph-capability-status.md)（本页是 #911 当时结论，不是当前进度）
+**审计需求（当时）：** [`pr911_funclib_actionlib_audit_handoff.md`](pr911_funclib_actionlib_audit_handoff.md)（随 PR #912 入库）
 **合同对照：** `gitbook/architecture/graph-funclib-actionlib-contract.md`、`gitbook/architecture/graph-layering-flow-and-behavior.md`
 **前序审计：** [`pr895_graph_infra_and_lsw_architecture_audit.md`](pr895_graph_infra_and_lsw_architecture_audit.md)（#906）
 

@@ -3,7 +3,7 @@
 
 Reads:
   CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/{Op}.json
-  assets/Configs/GAS/graph_node_op_coverage.registry.json
+  assets/GAS/graph_node_op_coverage.registry.json
 
 Writes (do not hand-edit):
   gitbook/reference/graph-node-op-wiki/README.md
@@ -21,7 +21,7 @@ from pathlib import Path
 
 PREFIX = "capability_standard_graph_op_"
 GALLERY_REL = "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod"
-COVERAGE_REL = "assets/Configs/GAS/graph_node_op_coverage.registry.json"
+COVERAGE_REL = "assets/GAS/graph_node_op_coverage.registry.json"
 WIKI_REL = "gitbook/reference/graph-node-op-wiki"
 EVIDENCE_REL = "artifacts/evidence"
 

@@ -1,0 +1,8 @@
+flowchart TD
+    A["MapLoaded: stress battlefield boot -> toolbar mounted"] --> B["Spawn: both teams converge to 48 units with W/F/L/P roles"]
+    B --> C["Selection View: P1 live selection shows player-picked trio"]
+    C --> D["Selection View: P1 formation / AI targets / command snapshot all resolve from selection containers"]
+    D --> E["Combat: warriors melee while fireball and laser projectiles peak above zero"]
+    E --> F["Support: priests heal damaged allies -> health rises on tracked entities"]
+    F --> G["Toolbar: A+ and B+ -> both teams scale to 56 units"]
+    B --> X["if counts do not converge -> fail stress spawn / queue regression"]

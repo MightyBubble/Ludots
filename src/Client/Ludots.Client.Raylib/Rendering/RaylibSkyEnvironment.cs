@@ -326,19 +326,19 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            string vsPath = Path.Combine(_shaderBaseDirectory, "skybox.vs");
-            string fsPath = Path.Combine(_shaderBaseDirectory, "skybox.fs");
+            string vsPath = Path.Combine(_shaderBaseDirectory, "sky_daynight.vs");
+            string fsPath = Path.Combine(_shaderBaseDirectory, "sky_daynight.fs");
             if (!File.Exists(vsPath))
             {
                 throw new FileNotFoundException(
-                    $"{nameof(RaylibSkyEnvironment)} missing skybox vertex shader at '{vsPath}'.",
+                    $"{nameof(RaylibSkyEnvironment)} missing day-night sky vertex shader at '{vsPath}'.",
                     vsPath);
             }
 
             if (!File.Exists(fsPath))
             {
                 throw new FileNotFoundException(
-                    $"{nameof(RaylibSkyEnvironment)} missing skybox fragment shader at '{fsPath}'.",
+                    $"{nameof(RaylibSkyEnvironment)} missing day-night sky fragment shader at '{fsPath}'.",
                     fsPath);
             }
 
@@ -346,7 +346,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_shader.id == 0)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibSkyEnvironment)} failed to compile skybox shader from '{vsPath}' + '{fsPath}'.");
+                    $"{nameof(RaylibSkyEnvironment)} failed to compile day-night sky shader from '{vsPath}' + '{fsPath}'.");
             }
 
             EnsureShaderLocations();

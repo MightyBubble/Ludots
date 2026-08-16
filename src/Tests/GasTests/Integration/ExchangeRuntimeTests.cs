@@ -31,6 +31,7 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
+            AttributeRegistry.Clear();
             ModRegistryAmbient.Reset();
             EffectParamKeys.Initialize();
         }
@@ -38,6 +39,7 @@ namespace Ludots.Tests.GAS
         [TearDown]
         public void TearDown()
         {
+            AttributeRegistry.Clear();
             ModRegistryAmbient.Reset();
         }
 
@@ -637,16 +639,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeRelGate", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    Path.Combine(root, "Core", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Exchange", "operations.json"),
                     """
                     [
                       {
@@ -730,16 +732,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeAttributeCost", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    Path.Combine(root, "Core", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Exchange", "operations.json"),
                     """
                     [
                       {

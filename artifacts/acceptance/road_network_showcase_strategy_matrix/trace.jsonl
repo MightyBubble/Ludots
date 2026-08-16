@@ -1,0 +1,6 @@
+{"actor":"Blue Vanguard","planner":"Grand Road","execution":"Vanguard","accepted_status":"Grand Road selected Direct corridor with 32 sampled point(s).","point_count":32,"max_abs_path_y_cm":0,"direct_bias_cm":-4000,"north_bias_cm":6000,"south_bias_cm":6000,"speed_multiplier":1,"waypoint_radius_cm":45,"final_arrival_radius_cm":75}
+{"actor":"Blue North Column","planner":"North Scout","execution":"Courier","accepted_status":"North Scout selected North corridor with 56 sampled point(s).","point_count":56,"max_abs_path_y_cm":10125,"direct_bias_cm":18000,"north_bias_cm":-6000,"south_bias_cm":26000,"speed_multiplier":1.22,"waypoint_radius_cm":30,"final_arrival_radius_cm":55}
+{"actor":"Blue South Column","planner":"South Guard","execution":"Siege Train","accepted_status":"South Guard selected South corridor with 56 sampled point(s).","point_count":56,"max_abs_path_y_cm":10125,"direct_bias_cm":18000,"north_bias_cm":26000,"south_bias_cm":-6000,"speed_multiplier":0.68,"waypoint_radius_cm":34,"final_arrival_radius_cm":80}
+{"metric":"advance_cm","actor":"Blue Vanguard","value":3416.021}
+{"metric":"advance_cm","actor":"Blue North Column","value":2790.0374}
+{"metric":"advance_cm","actor":"Blue South Column","value":2705.2883}

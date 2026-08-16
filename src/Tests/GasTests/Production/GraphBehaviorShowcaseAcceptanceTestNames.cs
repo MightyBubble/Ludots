@@ -18,7 +18,7 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class BehaviorTreeArenaShowcaseAcceptanceTests
     {
-        private const double ShowcaseThinkBudgetMs = 25.0;
+        private const double ShowcaseThinkBudgetMs = 15.0;
 
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
@@ -37,7 +37,7 @@ namespace Ludots.Tests.Gas.Production
     [Category("ci-gate")]
     public sealed class HfsmSentryArenaShowcaseAcceptanceTests
     {
-        private const double ShowcaseThinkBudgetMs = 25.0;
+        private const double ShowcaseThinkBudgetMs = 15.0;
 
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()

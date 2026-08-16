@@ -183,6 +183,19 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void CompileWithOutputs_QueryAcceptsExplicitHaltReturnInt()
+        {
+            GraphControlFlowDocument doc = CreateAggregateDocument();
+            doc.Nodes.Add(new GraphControlFlowNode { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) });
+            doc.ControlEdges.Add(new GraphControlFlowEdge("crystalSum", GraphControlFlowPorts.Next, "done"));
+
+            var (package, _, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(doc);
+
+            Assert.That(package.HasValue, Is.True, FormatDiagnostics(diagnostics));
+            Assert.That(package!.Value.Program[^1].Op, Is.EqualTo((ushort)GraphNodeOp.HaltReturnInt));
+        }
+
+        [Test]
         public void Compile_ScriptKindRejectsQueryAllMapEntities()
         {
             var doc = new GraphControlFlowDocument
@@ -210,7 +223,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryControlFlowTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), AggregateGraphJson);
 

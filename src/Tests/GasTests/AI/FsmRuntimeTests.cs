@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.AI
@@ -14,7 +15,6 @@ namespace Ludots.Tests.Gas.AI
     {
         private const double FrameBudgetMs = 5.0;
         private const double ScriptBudgetMs = 15.0;
-        private const double CiTimingEnvelopeMs = 100.0;
 
         [Test]
         public void SentryHfsm_StimulusEntersAlertingSubtree_ThenCyclesToIdle()
@@ -104,8 +104,7 @@ namespace Ludots.Tests.Gas.AI
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
             TestContext.WriteLine($"A={stats.Agents} preds={stats.PredicatesChecked} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
-            Warn.If(ms, Is.GreaterThanOrEqualTo(FrameBudgetMs), $"HFSM think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs), $"HFSM think wave exceeded CI envelope: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(FrameBudgetMs), $"HFSM think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
         }
 
         [Test]
@@ -123,6 +122,20 @@ namespace Ludots.Tests.Gas.AI
             Assert.That(world.GetLeafState(0), Is.EqualTo(4));
             world.TickAll(host);
             Assert.That(world.GetLeafState(0), Is.EqualTo(5));
+        }
+
+        [Test]
+        public void GraphProgramHfsmHost_RefreshesCachedScriptAfterRegistryReplace()
+        {
+            var programs = new GraphProgramRegistry();
+            programs.Register(10, ReturnIntProgram(0), GraphKind.Script);
+            var host = new GraphProgramHfsmHost(programs);
+
+            Assert.That(host.EvalCondition(0, 10), Is.False);
+
+            programs.ReplaceProgram(10, ReturnIntProgram(1), GraphKind.Script, GraphInstructionSourceMap.Empty);
+
+            Assert.That(host.EvalCondition(0, 10), Is.True);
         }
 
         [Test]
@@ -145,9 +158,7 @@ namespace Ludots.Tests.Gas.AI
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
             TestContext.WriteLine($"scripted A={stats.Agents} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
-            // Registry Script host on CI can exceed the frame budget; keep a warning at 15ms and a wider CI envelope.
-            Warn.If(ms, Is.GreaterThanOrEqualTo(ScriptBudgetMs), $"Scripted HFSM think wave exceeded {ScriptBudgetMs:F0}ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs), $"Scripted HFSM think wave exceeded CI envelope: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(ScriptBudgetMs), $"Scripted HFSM think wave exceeded {ScriptBudgetMs:F0}ms: {ms:F3}ms");
         }
 
         private sealed class RecordingHost : IHfsmGraphHost
@@ -167,5 +178,12 @@ namespace Ludots.Tests.Gas.AI
                 Actions.Add((agentIndex, actionGraphId));
             }
         }
+
+        private static GraphInstruction[] ReturnIntProgram(int value)
+            =>
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = value },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+            ];
     }
 }

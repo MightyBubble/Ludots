@@ -72,15 +72,15 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         int guards = 6, sentries = 6;
-        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy");
-        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange");
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.seeEnemy", GraphActionHost.BehaviorTree);
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, "bt.inAttackRange", GraphActionHost.BehaviorTree);
         _bt = new BehaviorTreeWorld(_behavior.RequireTree("bt.patrolChaseAttack"), guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
         _hfsm = new HfsmWorld(_behavior.RequireHfsm("hfsm.sentry.scripted"), sentries);
         _levelHost = new GraphProgramLevelHost(_programs);
         _level = LevelBlueprintFactory.CreateTwoPhaseTrial(
             "integration.level",
-            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance"));
+            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance", GraphActionHost.Level));
 
         _gx = new float[guards];
         _gy = new float[guards];
@@ -139,7 +139,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         {
             _accum = 0f;
             if (_level.Phase == 1 && !_enemyAlive && Metrics.ThinkWaves > 8) _level.AddCounter(10);
-            for (int i = 0; i < _bt!.Count; i++) _bt.RestartThinking(i);
+            _bt!.RestartAllThinking();
             var sw = Stopwatch.StartNew();
             _bt.TickAll(_programs, 32, this);
             _hfsm!.TickAll(_hfsmHost);
