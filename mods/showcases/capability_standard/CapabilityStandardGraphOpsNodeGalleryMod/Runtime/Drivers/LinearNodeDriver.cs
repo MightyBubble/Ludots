@@ -159,10 +159,11 @@ public sealed class LinearNodeDriver : IGraphOpsNodeDriver
                 continue;
             }
 
+            // Authored bench operands come first in program order; settle-tail plumbing
+            // (e.g. CompareGtFloat's strike feeds) appends its own constants after them.
             if (count >= dst.Length)
             {
-                throw new InvalidOperationException(
-                    $"Linear '{GraphSettled}' bench for {ctx.Vignette.Op} sees more ConstFloat feeds than expected.");
+                break;
             }
 
             dst[count++] = ins.ImmF;
