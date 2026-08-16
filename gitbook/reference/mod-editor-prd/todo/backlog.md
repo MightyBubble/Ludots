@@ -19,3 +19,4 @@
 | T13 | 低 | facts 页无 CI 门禁：数字漂移要靠人跑脚本 | scripts/generate-prd-facts.py | CI 步骤：再生成 + git diff --exit-code | 待立项 |
 | T14 | 低 | UXD 仅 cfg-01 为高保真样板，cfg-02…08 待升级 | uxd/ 目录 | 按样板逐篇补线框/控件数据源/交互流/状态 | 排期中 |
 | T15 | 低 | graph-node-op-wiki 与手册节点族篇将双轨：删除节点时 wiki 死页（已发生一次） | 本次清理两页 | 生成 wiki 时以 GraphOps 枚举为准做孤儿检测 | 待立项 |
+| T16 | 高 | 扩展属性三件套死链路：无生产者、分配的 id（10001+）进不了 64 槽 AttributeBuffer | ExtensionAttributeRegistry.cs:19,40-43；AttributeSchemaUpdateQueue.cs:16-28；AttributeBuffer.cs:72-81 | 接通（缓冲扩容或映射层）或移除；MAX_EXTENSION_ATTRS=1000 死常量一并清理（详见 todo/attribute.md A1） | 待立项 |

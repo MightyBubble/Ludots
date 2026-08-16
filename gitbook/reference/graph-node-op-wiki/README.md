@@ -116,11 +116,9 @@
 - [圈里的人排个稳定顺序](QuerySortStable.md) — 同样距离时顺序不乱跳。
 - [好感再加一截](RelationshipAddMetric.md) — 好感从 40 加到 70。
 - [把好感写成指定值](RelationshipSetMetric.md) — 好感被写成 80。
-- [把状态牌翻成面板字](LookupTagDisplayToken.md) — 选中的牌变成玩家能读的字。
 - [按读到的模板打到点名目标](ApplyEffectDynamic.md) — 模板号不是写死的，读出来再打木桩。
 - [按读到的模板打圈里所有人](FanOutApplyEffectDynamic.md) — 动态模板扇出。
 - [摸一圈看看谁在近处](QueryRadius.md) — 施法者周围一圈亮起来，圈外的人不动。
-- [读出当前状态牌](SelectTagInMask.md) — 从状态掩码里选出当前牌。
 - [身上有没有敌人标记](HasTag.md) — 侦察兵带着敌人标记，检查为「有」。
 - [这条关系受不受信任](RelationshipHasFlag.md) — 信任旗开着，字幕说信得过。
 
