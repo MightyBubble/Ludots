@@ -29,7 +29,7 @@ namespace DesertStrikeShowcaseMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var engine = context.GetEngine();
+            var engine = context.Get(CoreServiceKeys.Engine);
             if (engine == null)
             {
                 return Task.CompletedTask;
@@ -52,6 +52,7 @@ namespace DesertStrikeShowcaseMod.Triggers
 
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
+            // SystemCapability("desert-strike.showcase-systems")
             engine.RegisterSystem(new DesertStrikeWaveSystem(engine, state, config), SystemGroup.PostMovement);
             engine.RegisterSystem(new DesertStrikeAutoBattleSystem(engine, state), SystemGroup.PostMovement);
             engine.RegisterSystem(new DesertStrikeIncomeSystem(engine, state, config), SystemGroup.PostMovement);
