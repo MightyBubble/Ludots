@@ -1,6 +1,6 @@
 param(
     [string]$RepoRoot = (Resolve-Path ".").Path,
-    [string]$NavMeshConfigPath = "assets/Navigation/navmesh.json",
+    [string]$NavMeshConfigPath = "assets/Configs/Navigation/navmesh.json",
     [switch]$WhatIf
 )
 

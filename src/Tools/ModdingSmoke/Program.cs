@@ -160,7 +160,7 @@ namespace ModdingTest
             Console.WriteLine("\n=== Verifying Camera Request Pipeline ===");
             try
             {
-                var inputConfigPath = Path.Combine(assetsDir, "Input", "default_input.json");
+                var inputConfigPath = Path.Combine(assetsDir, "Configs", "Input", "default_input.json");
                 var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var backend = new DummyInputBackend();
                 var inputHandler = new PlayerInputHandler(backend, inputConfig);

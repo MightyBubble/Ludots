@@ -2497,13 +2497,13 @@ static class EditorRepo
             }
         }
 
-        AddMapsFromDir(Path.Combine(ctx.RepoRoot, "assets", "Maps"));
+        AddMapsFromDir(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Maps"));
         AddMapsFromDir(Path.Combine(ctx.RepoRoot, "assets", "Maps"));
 
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
-            AddMapsFromDir(Path.Combine(mod.RootPath, "assets", "Maps"));
+            AddMapsFromDir(Path.Combine(mod.RootPath, "assets", "Configs", "Maps"));
             AddMapsFromDir(Path.Combine(mod.RootPath, "assets", "Maps"));
         }
 
@@ -2688,7 +2688,7 @@ static class EditorRepo
             sources.Add(path);
         }
 
-        string coreCfg = Path.Combine(ctx.RepoRoot, "assets", "Maps", $"{mapId}.json");
+        string coreCfg = Path.Combine(ctx.RepoRoot, "assets", "Configs", "Maps", $"{mapId}.json");
         string coreAssets = Path.Combine(ctx.RepoRoot, "assets", "Maps", $"{mapId}.json");
         TryLoad(coreCfg);
         TryLoad(coreAssets);
@@ -2696,7 +2696,7 @@ static class EditorRepo
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
-            TryLoad(Path.Combine(mod.RootPath, "assets", "Maps", $"{mapId}.json"));
+            TryLoad(Path.Combine(mod.RootPath, "assets", "Configs", "Maps", $"{mapId}.json"));
             TryLoad(Path.Combine(mod.RootPath, "assets", "Maps", $"{mapId}.json"));
         }
 
@@ -3267,13 +3267,13 @@ static class EditorRepo
             }
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Entities", "templates.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Entities", "templates.json"));
         Load(Path.Combine(ctx.RepoRoot, "assets", "Entities", "templates.json"));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
             Load(Path.Combine(mod.RootPath, "assets", "Entities", "templates.json"));
-            Load(Path.Combine(mod.RootPath, "assets", "Entities", "templates.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Entities", "templates.json"));
         }
 
         sources = sourcesLocal;
@@ -3299,13 +3299,13 @@ static class EditorRepo
             }
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "presenters.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "presenters.json"));
         Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "presenters.json"));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
             Load(Path.Combine(mod.RootPath, "assets", "Presentation", "presenters.json"));
-            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "presenters.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "presenters.json"));
         }
 
         sources = sourcesLocal;
@@ -3356,13 +3356,13 @@ static class EditorRepo
             throw new InvalidOperationException($"Navigation config '{fileName}' has incompatible JSON root types across sources.");
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Navigation", fileName));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Navigation", fileName));
         Load(Path.Combine(ctx.RepoRoot, "assets", "Navigation", fileName));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
             Load(Path.Combine(mod.RootPath, "assets", "Navigation", fileName));
-            Load(Path.Combine(mod.RootPath, "assets", "Navigation", fileName));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Navigation", fileName));
         }
 
         sources = sourceList;
@@ -3379,7 +3379,7 @@ static class EditorRepo
         }
 
         var mod = ctx.ModsById[ctx.TargetModId];
-        return Path.Combine(mod.RootPath, "assets", "Navigation", fileName);
+        return Path.Combine(mod.RootPath, "assets", "Configs", "Navigation", fileName);
     }
 
     private static void MergeArrayById(JsonArray target, JsonArray source)

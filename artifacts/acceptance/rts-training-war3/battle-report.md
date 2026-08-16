@@ -18,7 +18,7 @@
 ## Expected Outcomes
 - Primary success condition: progress/status and queue rows stay readable throughout training.
 - Failure branch condition: queue labels collapse to `Cast Ability`, progress never starts, or resource movement mismatches the style.
-- Key metrics: start Minerals=700, end Minerals=565, avg frame ms=0.352.
+- Key metrics: start Minerals=700, end Minerals=565, avg frame ms=0.445.
 
 ## Timeline
 - [T+001] Barracks is selected by default and ready to train.

@@ -516,6 +516,15 @@ namespace Ludots.Adapter.Raylib
                                                 !waterOnVisualHeightmap &&
                                                 engine.VertexMap != null;
                         bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
+                        bool postProcessWorldFrame = !waterFboEnabled;
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
+                        }
+                        else
+                        {
+                            Rl.ClearBackground(frameClearColor);
+                        }
                         if (waterFboEnabled)
                         {
                             waterPass.EnsureRenderTargets(lastW, lastH);
@@ -574,10 +583,6 @@ namespace Ludots.Adapter.Raylib
                             EndCoreMode3D();
                             waterPass.EndPass();
                         }
-
-                        // Water render-target passes run before the post-process target because
-                        // EndTextureMode returns to the default framebuffer instead of the enclosing one.
-                        environmentRenderer.BeginWorldFrame(lastW, lastH, frameClearColor);
 
                         long mode3DStart = Stopwatch.GetTimestamp();
                         Restore3DDepthState();
@@ -780,7 +785,10 @@ namespace Ludots.Adapter.Raylib
 
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
-                        environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
+                        if (postProcessWorldFrame)
+                        {
+                            environmentRenderer.EndWorldFrame(runtimeStopwatch.Elapsed.TotalSeconds);
+                        }
 
                         if (drawSkiaUi)
                         {
