@@ -1,0 +1,94 @@
+{
+  "op": "FanOutApplyEffectDynamic",
+  "driver": "sandbox",
+  "title": "按读到的模板打圈里所有人",
+  "beat": "动态模板扇出。",
+  "detailTemplate": "按读到的模板打圈里所有人，状态已经挂上了。",
+  "assertDetailContains": [
+    "圈里"
+  ],
+  "featuredNodeId": "fanDyn",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "unit",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处甲",
+      "x": 0,
+      "y": 4,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处乙",
+      "x": -3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearC",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丙",
+      "x": 3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearD",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丁",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处甲",
+      "x": 12,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处乙",
+      "x": 0,
+      "y": 12,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

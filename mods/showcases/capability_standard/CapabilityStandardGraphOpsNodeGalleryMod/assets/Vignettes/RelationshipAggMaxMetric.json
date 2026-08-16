@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggMaxMetric",
+  "driver": "rel",
+  "title": "最高好感是多少",
+  "beat": "字幕报最高值，对应的人条最满。",
+  "detailTemplate": "最高好感是 {max}，{friend}的条最满。",
+  "assertDetailContains": [
+    "最高"
+  ],
+  "featuredNodeId": "max",
+  "graphKind": "Query",
+  "field": "rel"
+}

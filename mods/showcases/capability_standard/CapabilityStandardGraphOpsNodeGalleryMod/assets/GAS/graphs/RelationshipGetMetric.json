@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipGetMetric",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "get",
+        "op": "RelationshipGetMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "get"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "get",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "get",
+        "toPort": "target"
+      }
+    ]
+  }
+]

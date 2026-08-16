@@ -71,7 +71,6 @@ namespace Ludots.Tests.GAS
             long finalAlloc = GC.GetAllocatedBytesForCurrentThread();
             long allocatedBytes = finalAlloc - initialAlloc;
             
-            // Assert & Log
             double avgTimeMs = sw.ElapsedMilliseconds / (double)ITERATIONS;
             double opsPerSecond = (ENTITY_COUNT * ITERATIONS) / sw.Elapsed.TotalSeconds;
             
@@ -84,6 +83,9 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"  Memory Allocated: {allocatedMemory / 1024.0:F2} KB");
             Console.WriteLine($"  AllocatedBytes(CurrentThread): {allocatedBytes} bytes");
             Console.WriteLine($"  GC Collections: Gen0={GC.CollectionCount(0)}, Gen1={GC.CollectionCount(1)}, Gen2={GC.CollectionCount(2)}");
+
+            That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                $"TagOps.AddTag WorldGet allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
         }
 
         [Test]
@@ -145,6 +147,9 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"  Memory Allocated: {allocatedMemory / 1024.0:F2} KB");
             Console.WriteLine($"  AllocatedBytes(CurrentThread): {allocatedBytes} bytes");
             Console.WriteLine($"  GC Collections: Gen0={GC.CollectionCount(0)}, Gen1={GC.CollectionCount(1)}, Gen2={GC.CollectionCount(2)}");
+
+            That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                $"TagOps.AddTag WorldGet WithRules allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
         }
 
         [Test]
@@ -264,8 +269,9 @@ namespace Ludots.Tests.GAS
         {
             // Arrange
             var queue = new DeferredTriggerQueue();
-            var attributeTriggers = new AttributeChangedTrigger[ENTITY_COUNT];
-            for (int i = 0; i < ENTITY_COUNT; i++)
+            int fillCount = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
+            var attributeTriggers = new AttributeChangedTrigger[fillCount];
+            for (int i = 0; i < fillCount; i++)
             {
                 attributeTriggers[i] = new AttributeChangedTrigger
                 {
@@ -281,12 +287,12 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             
             long initialMemory = GC.GetTotalMemory(false);
+            long initialAlloc = GC.GetAllocatedBytesForCurrentThread();
             var sw = Stopwatch.StartNew();
             
-            // Act
             for (int iter = 0; iter < ITERATIONS; iter++)
             {
-                for (int i = 0; i < ENTITY_COUNT; i++)
+                for (int i = 0; i < fillCount; i++)
                 {
                     queue.EnqueueAttributeChanged(attributeTriggers[i]);
                 }
@@ -296,19 +302,23 @@ namespace Ludots.Tests.GAS
             sw.Stop();
             long finalMemory = GC.GetTotalMemory(false);
             long allocatedMemory = finalMemory - initialMemory;
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - initialAlloc;
             
-            // Assert & Log
             double avgTimeMs = sw.ElapsedMilliseconds / (double)ITERATIONS;
-            double opsPerSecond = (ENTITY_COUNT * ITERATIONS) / sw.Elapsed.TotalSeconds;
+            double opsPerSecond = (fillCount * ITERATIONS) / sw.Elapsed.TotalSeconds;
             
             Console.WriteLine($"[Benchmark] DeferredTriggerQueue.EnqueueAttributeChanged:");
-            Console.WriteLine($"  Triggers: {ENTITY_COUNT}");
+            Console.WriteLine($"  Triggers: {fillCount}");
             Console.WriteLine($"  Iterations: {ITERATIONS}");
             Console.WriteLine($"  Total Time: {sw.ElapsedMilliseconds}ms");
             Console.WriteLine($"  Avg Time per Iteration: {avgTimeMs:F2}ms");
             Console.WriteLine($"  Operations/sec: {opsPerSecond:F0}");
             Console.WriteLine($"  Memory Allocated: {allocatedMemory / 1024.0:F2} KB");
+            Console.WriteLine($"  AllocatedBytes(CurrentThread): {allocatedBytes} bytes");
             Console.WriteLine($"  GC Collections: Gen0={GC.CollectionCount(0)}, Gen1={GC.CollectionCount(1)}, Gen2={GC.CollectionCount(2)}");
+
+            That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                $"DeferredTriggerQueue.EnqueueAttributeChanged allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
         }
 
         [Test]
@@ -370,12 +380,12 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             
             long initialMemory = GC.GetTotalMemory(false);
+            long initialAlloc = GC.GetAllocatedBytesForCurrentThread();
             var sw = Stopwatch.StartNew();
             
-            // Act
             for (int iter = 0; iter < ITERATIONS * 100; iter++)
             {
-                int tagId = (iter % 16) + 1; // tagId must be > 0
+                int tagId = (iter % 16) + 1;
                 container.AddCount(tagId, 1);
                 container.GetCount(tagId);
                 if (iter % 2 == 0)
@@ -387,8 +397,8 @@ namespace Ludots.Tests.GAS
             sw.Stop();
             long finalMemory = GC.GetTotalMemory(false);
             long allocatedMemory = finalMemory - initialMemory;
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - initialAlloc;
             
-            // Assert & Log
             double avgTimeMs = sw.ElapsedMilliseconds / (double)(ITERATIONS * 100);
             double opsPerSecond = (ITERATIONS * 100 * 3) / sw.Elapsed.TotalSeconds;
             
@@ -398,7 +408,11 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"  Avg Time per Operation: {avgTimeMs:F4}ms");
             Console.WriteLine($"  Operations/sec: {opsPerSecond:F0}");
             Console.WriteLine($"  Memory Allocated: {allocatedMemory / 1024.0:F2} KB");
+            Console.WriteLine($"  AllocatedBytes(CurrentThread): {allocatedBytes} bytes");
             Console.WriteLine($"  GC Collections: Gen0={GC.CollectionCount(0)}, Gen1={GC.CollectionCount(1)}, Gen2={GC.CollectionCount(2)}");
+
+            That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                $"TagCountContainer.Add/Remove/Get allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
         }
     }
 }

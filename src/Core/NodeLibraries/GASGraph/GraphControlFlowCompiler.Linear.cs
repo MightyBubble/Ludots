@@ -1,0 +1,1012 @@
+using System;
+using System.Collections.Generic;
+using Ludots.Core.GraphRuntime;
+
+namespace Ludots.Core.NodeLibraries.GASGraph
+{
+    public static partial class GraphControlFlowCompiler
+    {
+        private static bool IsAllowedLinearControlPort(string port)
+            => port == GraphControlFlowPorts.Next;
+
+        private static void ValidateLinearNode(
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            switch (op.NodeOp)
+            {
+                case GraphNodeOp.ConstFloat:
+                case GraphNodeOp.ConstBool:
+                case GraphNodeOp.ConstInt:
+                case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadViewer:
+                case GraphNodeOp.LoadContextSource:
+                case GraphNodeOp.LoadContextTarget:
+                case GraphNodeOp.LoadContextTargetContext:
+                case GraphNodeOp.RandomFloat01:
+                case GraphNodeOp.BeginLifecycleTransaction:
+                case GraphNodeOp.AggCount:
+                case GraphNodeOp.QueryFilterLayer:
+                case GraphNodeOp.LoadTargetPosX:
+                case GraphNodeOp.LoadTargetPosY:
+                    break;
+
+                case GraphNodeOp.HaltReturnInt:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+
+                case GraphNodeOp.InvokeScript:
+                    if (string.IsNullOrWhiteSpace(node.FunctionName))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeScript node '{node.Id}' requires functionName for linear FuncLib calls.", node.Id));
+                    }
+
+                    if (node.GraphId > 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeScript node '{node.Id}' cannot use graphId in linear FuncLib authoring.", node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.QueryHexNeighbors:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryRadius:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QuerySortStable:
+                case GraphNodeOp.QueryLimit:
+                case GraphNodeOp.AggMinByDistance:
+                    break;
+
+                case GraphNodeOp.AddFloat:
+                case GraphNodeOp.MulFloat:
+                case GraphNodeOp.SubFloat:
+                case GraphNodeOp.DivFloat:
+                case GraphNodeOp.MinFloat:
+                case GraphNodeOp.MaxFloat:
+                case GraphNodeOp.CompareGtFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Min, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AbsFloat:
+                case GraphNodeOp.NegFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AddInt:
+                case GraphNodeOp.CompareLtInt:
+                case GraphNodeOp.CompareEqInt:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SelectEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.HasTag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompareEqEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadAttribute:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadSelfAttribute:
+                    RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteSelfAttribute:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ModifyAttributeAdd:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectTemplate:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    bool hasA = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.A));
+                    bool hasB = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.B));
+                    if (hasB && !hasA)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                            $"Node '{node.Id}' cannot wire float arg B without A.", node.Id));
+                    }
+
+                    if (hasA)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    if (hasB)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutApplyEffect:
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutApplyEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RemoveEffectTemplate:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffect:
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    RequireNonEmpty(node.PayloadPreset, "payloadPreset", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.PayloadPreset, "payloadPreset", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.InvokeBuiltin:
+                    RequireNonEmpty(node.BuiltinHandler, "builtinHandler", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardInt:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadBlackboardInt:
+                case GraphNodeOp.ReadBlackboardFloat:
+                case GraphNodeOp.ReadBlackboardEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.BlackboardKey, "blackboardKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadConfigFloat:
+                case GraphNodeOp.LoadConfigInt:
+                case GraphNodeOp.LoadConfigEffectId:
+                    RequireNonEmpty(node.ConfigKey, "configKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryCone:
+                case GraphNodeOp.QueryRectangle:
+                case GraphNodeOp.QueryLine:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryHexRange:
+                case GraphNodeOp.QueryHexRing:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryFilterNotEntity:
+                case GraphNodeOp.QueryFilterRelationship:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (op.NodeOp == GraphNodeOp.QueryFilterRelationship)
+                    {
+                        RequireNonEmpty(node.RelationshipMode, "relationshipMode", node, graphId, diagnostics);
+                    }
+
+                    break;
+
+                case GraphNodeOp.TargetListGet:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipEnsureLink:
+                case GraphNodeOp.RelationshipRemoveLink:
+                case GraphNodeOp.RelationshipHasLink:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetMetric:
+                case GraphNodeOp.RelationshipAddMetric:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Metric, "metric", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipGetMetric:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Metric, "metric", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipHasFlag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Flag, "flag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetFlag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Flag, "flag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampTargetToRange:
+                case GraphNodeOp.IsPointInCircle:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SnapToNearestInCollection:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SnapToNearestGraphEdge:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadInt:
+                    if (node.Slot is < 0 or > 1)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' LoadEventPayloadInt slot must be 0 (PayloadA) or 1 (PayloadB).",
+                            node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadFloat:
+                    if (node.Slot is < 0 or > 3)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' LoadEventPayloadFloat slot must be 0..3 (FloatA..FloatD).",
+                            node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.ControlDomainResolve:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ControlDomainControls:
+                case GraphNodeOp.KnowledgeHasProjection:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SendEvent:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
+                    break;
+
+                default:
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"Op '{op.NodeOp}' is not supported by linear ControlFlow compiler.", node.Id));
+                    break;
+            }
+
+            _ = controlEdges;
+        }
+
+        private static void RequireNonEmpty(
+            string? value,
+            string fieldName,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires a non-empty {fieldName}.", node.Id));
+            }
+        }
+
+        private static void RequireSpatialCapacityPolicy(
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (!IsRequireComplete(node) && !IsAllowTruncated(node))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' must declare queryCapacityPolicy as 'RequireComplete' or 'AllowTruncated'.",
+                    node.Id));
+                return;
+            }
+
+            if (IsAllowTruncated(node))
+            {
+                if (string.IsNullOrWhiteSpace(node.DroppedOutput))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"Node '{node.Id}' AllowTruncated requires a non-empty droppedOutput.",
+                        node.Id));
+                }
+
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(node.DroppedOutput))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' droppedOutput is only valid with queryCapacityPolicy 'AllowTruncated'.",
+                    node.Id));
+            }
+        }
+
+        private static void CompileLinearNode(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            byte[] outputRegisters,
+            GraphValueType[] outputTypes,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphInstruction[] program,
+            GraphInstructionSource[] sources,
+            bool[] definedInts,
+            bool[] definedBools,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            int nodeIndex = nodeIndices[node.Id];
+            int bodyIndex = layouts[nodeIndex].BodyIndex;
+            var instruction = new GraphInstruction
+            {
+                Op = (ushort)op.NodeOp,
+                Dst = outputRegisters[nodeIndex]
+            };
+
+            switch (op.NodeOp)
+            {
+                case GraphNodeOp.ConstFloat:
+                    instruction.ImmF = node.FloatValue;
+                    break;
+
+                case GraphNodeOp.ConstBool:
+                    instruction.Imm = node.BoolValue ? 1 : 0;
+                    break;
+
+                case GraphNodeOp.ConstInt:
+                    instruction.Imm = node.IntValue;
+                    break;
+
+                case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadViewer:
+                case GraphNodeOp.LoadContextSource:
+                case GraphNodeOp.LoadContextTarget:
+                case GraphNodeOp.LoadContextTargetContext:
+                case GraphNodeOp.RandomFloat01:
+                case GraphNodeOp.BeginLifecycleTransaction:
+                case GraphNodeOp.AggCount:
+                case GraphNodeOp.LoadTargetPosX:
+                case GraphNodeOp.LoadTargetPosY:
+                    break;
+
+                case GraphNodeOp.QueryHexNeighbors:
+                    instruction.Flags = 0;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QueryRadius:
+                    instruction.Flags = 0;
+                    instruction.ImmF = node.RadiusCm;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QuerySortStable:
+                    break;
+
+                case GraphNodeOp.QueryLimit:
+                    instruction.Imm = node.IntValue;
+                    break;
+
+                case GraphNodeOp.AggMinByDistance:
+                    break;
+
+                case GraphNodeOp.AddFloat:
+                case GraphNodeOp.MulFloat:
+                case GraphNodeOp.SubFloat:
+                case GraphNodeOp.DivFloat:
+                case GraphNodeOp.MinFloat:
+                case GraphNodeOp.MaxFloat:
+                case GraphNodeOp.CompareGtFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Min, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Max, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AbsFloat:
+                case GraphNodeOp.NegFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AddInt:
+                case GraphNodeOp.CompareLtInt:
+                case GraphNodeOp.CompareEqInt:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SelectEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.HasTag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompareEqEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadAttribute:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadSelfAttribute:
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteSelfAttribute:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ModifyAttributeAdd:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectTemplate:
+                {
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    byte floatCount = 0;
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.A)))
+                    {
+                        instruction.B = ResolveValueInput(
+                            node, GraphControlFlowPorts.A, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        floatCount = 1;
+                    }
+
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.B)))
+                    {
+                        instruction.C = ResolveValueInput(
+                            node, GraphControlFlowPorts.B, GraphValueType.Float,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                        floatCount = 2;
+                    }
+
+                    instruction.Flags = floatCount;
+                    break;
+                }
+
+                case GraphNodeOp.FanOutApplyEffect:
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutApplyEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RemoveEffectTemplate:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffect:
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.InvokeBuiltin:
+                    instruction.Imm = RequireSymbol(node.BuiltinHandler, "builtinHandler", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardInt:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteBlackboardEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ReadBlackboardInt:
+                case GraphNodeOp.ReadBlackboardFloat:
+                case GraphNodeOp.ReadBlackboardEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadConfigFloat:
+                case GraphNodeOp.LoadConfigInt:
+                case GraphNodeOp.LoadConfigEffectId:
+                    instruction.Imm = RequireSymbol(node.ConfigKey, "configKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryCone:
+                    instruction.Flags = 0;
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.ImmF = node.RangeCm;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QueryRectangle:
+                    instruction.Flags = 0;
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = node.RotationDeg;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QueryLine:
+                    instruction.Flags = 0;
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = node.HalfWidthCm;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QueryHexRange:
+                case GraphNodeOp.QueryHexRing:
+                    instruction.Flags = 0;
+                    instruction.Imm = node.HexRadius;
+                    ApplySpatialCapacityPolicy(node, droppedRegisters[nodeIndex], ref instruction);
+                    break;
+
+                case GraphNodeOp.QueryFilterLayer:
+                    instruction.Imm = unchecked((int)node.LayerMask);
+                    break;
+
+                case GraphNodeOp.QueryFilterNotEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QueryFilterRelationship:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = ParseLinearRelationshipFilterMode(node.RelationshipMode, node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.TargetListGet:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
+                    break;
+
+                case GraphNodeOp.RelationshipEnsureLink:
+                case GraphNodeOp.RelationshipRemoveLink:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetMetric:
+                case GraphNodeOp.RelationshipAddMetric:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Metric, "metric", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = byte.MaxValue;
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipGetMetric:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Metric, "metric", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipHasFlag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Flag, "flag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetFlag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Bool,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Flag, "flag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = byte.MaxValue;
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipHasLink:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampTargetToRange:
+                case GraphNodeOp.IsPointInCircle:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SnapToNearestInCollection:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = boolScratches[nodeIndex];
+                    break;
+
+                case GraphNodeOp.SnapToNearestGraphEdge:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadInt:
+                case GraphNodeOp.LoadEventPayloadFloat:
+                    instruction.Imm = node.Slot;
+                    break;
+
+                case GraphNodeOp.ControlDomainResolve:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ControlDomainControls:
+                case GraphNodeOp.KnowledgeHasProjection:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SendEvent:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.InvokeScript:
+                    instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = GraphInstructionFlags.FuncLibName;
+                    break;
+
+                case GraphNodeOp.HaltReturnInt:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        instruction.A = ResolveValueInput(
+                            node,
+                            GraphControlFlowPorts.Value,
+                            GraphValueType.Int,
+                            valueEdges,
+                            nodeIndices,
+                            outputTypes,
+                            outputRegisters,
+                            boolScratches,
+                            droppedRegisters,
+                            definedInts,
+                            definedBools,
+                            graphId,
+                            diagnostics);
+                    }
+
+                    break;
+
+                default:
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"Op '{op.NodeOp}' is not supported by linear ControlFlow compiler.", node.Id));
+                    return;
+            }
+
+            program[bodyIndex] = instruction;
+            SetSource(sources, bodyIndex, graphId, node, op.NodeOp.ToString(), GraphControlFlowPorts.Enter);
+
+            if (outputTypes[nodeIndex] == GraphValueType.Int)
+            {
+                definedInts[outputRegisters[nodeIndex]] = true;
+            }
+
+            if (outputTypes[nodeIndex] == GraphValueType.Bool)
+            {
+                definedBools[outputRegisters[nodeIndex]] = true;
+            }
+
+            if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
+            {
+                EmitRelativeJump(
+                    document,
+                    node,
+                    GraphControlFlowPorts.Next,
+                    bodyIndex + 1,
+                    controlEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    graphId);
+            }
+            else if (op.NodeOp != GraphNodeOp.HaltReturnInt)
+            {
+                EmitExplicitHalt(program, sources, bodyIndex + 1, graphId, node);
+            }
+        }
+
+        private static int ParseLinearRelationshipFilterMode(
+            string? mode,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(mode))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires a non-empty relationshipMode.", node.Id));
+                return 0;
+            }
+
+            return mode switch
+            {
+                "Hostile" => 1,
+                "Friendly" => 2,
+                "Neutral" => 3,
+                "NotFriendly" => 4,
+                "NotHostile" => 5,
+                _ => AddLinearUnsupportedRelationshipMode(mode, node, graphId, diagnostics),
+            };
+        }
+
+        private static int AddLinearUnsupportedRelationshipMode(
+            string mode,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                $"Node '{node.Id}' has unsupported relationshipMode '{mode}'. Supported: Hostile, Friendly, Neutral, NotFriendly, NotHostile.",
+                node.Id));
+            return 0;
+        }
+
+        private static byte RequirePayloadPresetSymbol(
+            string? symbol,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{nodeId}' requires a non-empty payloadPreset.", nodeId));
+                return byte.MaxValue;
+            }
+
+            return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
+        }
+    }
+}

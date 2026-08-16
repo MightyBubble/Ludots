@@ -11,10 +11,10 @@
   "presentation": {
     "runtimeEntitySpawnQueueCapacity": 256,
     "runtimeEntitySpawnReceiptQueueCapacity": 256,
-    "performerInstanceCapacity": 256,
+    "presenterInstanceCapacity": 256,
     "presentationEventStreamCapacity": 512,
     "presentationOwnerChangeCapacity": 512,
-    "performerCommandCapacity": 512,
+    "presenterCommandCapacity": 512,
     "primitiveDrawBufferCapacity": 512,
     "visualSnapshotBufferCapacity": 512,
     "visualProxyBufferCapacity": 512,

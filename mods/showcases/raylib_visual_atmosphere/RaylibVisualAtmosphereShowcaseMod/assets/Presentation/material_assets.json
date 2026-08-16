@@ -1,0 +1,46 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.palm_cutout",
+    "domain": "Surface",
+    "flags": ["Cutout", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.bush_cutout",
+    "domain": "Surface",
+    "flags": ["Cutout", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_alphablend",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_additive",
+    "domain": "Surface",
+    "flags": ["Additive", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.rock",
+    "domain": "Surface"
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_footprints",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_scorch",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_blood",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.decal_cracks",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "Unlit", "DoubleSided"]
+  }
+]

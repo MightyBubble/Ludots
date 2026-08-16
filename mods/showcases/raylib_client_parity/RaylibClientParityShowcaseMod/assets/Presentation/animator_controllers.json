@@ -1,0 +1,40 @@
+[
+  {
+    "id": "raylib_client_parity.locomotion",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 0, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 1, "durationSeconds": 0.8, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": "raylib_client_parity.locomotion.speed",
+        "threshold": 0.2,
+        "durationSeconds": 0.08,
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 0,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": "raylib_client_parity.locomotion.speed",
+        "threshold": 0.1,
+        "durationSeconds": 0.08,
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
+      }
+    ]
+  }
+]

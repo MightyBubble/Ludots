@@ -1,0 +1,41 @@
+[
+  {
+    "id": "ui.panel.player.resource.aggregate",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "allMap", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "oreSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Ore" },
+      { "id": "crystalSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Crystal" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "allMap" },
+      { "from": "allMap", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "oreSum" },
+      { "from": "oreSum", "fromPort": "next", "to": "crystalSum" }
+    ],
+    "valueEdges": [
+      { "from": "allMap", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "oreSum", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "crystalSum", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "oreTotal",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "oreSum",
+        "key": "ui.panel.player.ore.total"
+      },
+      {
+        "id": "crystalTotal",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "crystalSum",
+        "key": "ui.panel.player.crystal.total"
+      }
+    ]
+  }
+]

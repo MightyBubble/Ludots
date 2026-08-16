@@ -17,7 +17,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public string Id { get; set; } = string.Empty;
         public string Op { get; set; } = string.Empty;
-        public string? Next { get; set; }
         public List<string> Inputs { get; set; } = new();
 
         public float FloatValue { get; set; }

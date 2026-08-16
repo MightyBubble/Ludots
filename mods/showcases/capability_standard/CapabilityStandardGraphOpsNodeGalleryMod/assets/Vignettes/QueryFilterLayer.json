@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterLayer",
+  "driver": "spatial",
+  "title": "只打敌对层",
+  "beat": "友军层被滤掉，只留敌人。",
+  "detailTemplate": "只留敌对层，名单{count}人。",
+  "assertDetailContains": [
+    "敌对层"
+  ],
+  "featuredNodeId": "layer",
+  "graphKind": "Query",
+  "field": "spatial"
+}

@@ -256,7 +256,7 @@ namespace Ludots.Tests.GAS
 
         private void WriteConfig(string relativePath, string json)
         {
-            string fullPath = Path.Combine(_root, "Core", "Configs", relativePath);
+            string fullPath = Path.Combine(_root, "Core", relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
             File.WriteAllText(fullPath, json);
         }

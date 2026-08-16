@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggMaxEntityByMetric",
+  "driver": "rel",
+  "title": "谁是好感最高的人",
+  "beat": "那个人被点名高亮。",
+  "detailTemplate": "好感最高的人是{friend}。",
+  "assertDetailContains": [
+    "最高的人"
+  ],
+  "featuredNodeId": "maxEnt",
+  "graphKind": "Query",
+  "field": "rel"
+}

@@ -1,0 +1,38 @@
+{
+  "op": "MaxFloat",
+  "driver": "linear",
+  "title": "两刀取更大的那一刀",
+  "beat": "左边 12、右边 28，打出去的是更大的 28。",
+  "detailTemplate": "两刀里更大的那一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "更大"
+  ],
+  "featuredNodeId": "bigger",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "targetHealthSubtract"
+  }
+}

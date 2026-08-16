@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipRemoveLink",
+  "driver": "rel",
+  "title": "把最弱的那条链拆掉",
+  "beat": "好感最低的朋友断链，条掉光、人变灰。",
+  "detailTemplate": "把好感最低的{friend}拆掉了，链从 {linksBefore} 条变成 {linksAfter} 条。",
+  "assertDetailContains": [
+    "拆掉"
+  ],
+  "featuredNodeId": "break",
+  "graphKind": "Effect",
+  "field": "rel"
+}

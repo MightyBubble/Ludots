@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipHasLink",
+  "driver": "rel",
+  "title": "我们有没有连着",
+  "beat": "有链显示连着，无链显示没连。",
+  "detailTemplate": "我们{status}。",
+  "assertDetailContains": [
+    "连着"
+  ],
+  "featuredNodeId": "has",
+  "graphKind": "Effect",
+  "field": "rel"
+}

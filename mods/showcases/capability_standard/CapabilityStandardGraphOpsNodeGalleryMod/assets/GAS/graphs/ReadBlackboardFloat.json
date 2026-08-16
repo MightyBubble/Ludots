@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.ReadBlackboardFloat",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "readF",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "showcase.bb.power"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "readF"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "readF",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "name": "PresenterBlacksmithShowcaseMod",
+  "version": "1.0.0",
+  "description": "Visual showcase of the Presenter-as-Actor blacksmith scenario with a mouse-driven Ludots UI control panel and scatter benchmark hooks.",
+  "main": "bin/net8.0/PresenterBlacksmithShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "presenter", "blacksmith"]
+}

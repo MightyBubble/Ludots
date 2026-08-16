@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@types/three": "^0.182.0",
+    "@xyflow/react": "^12.11.2",
     "cdt2d": "^1.0.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",

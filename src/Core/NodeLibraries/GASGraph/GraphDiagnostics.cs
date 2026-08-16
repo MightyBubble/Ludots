@@ -15,12 +15,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string DuplicateNodeId = "GASG0003";
         public const string UnknownNodeOp = "GASG0004";
         public const string MissingNodeRef = "GASG0005";
-        public const string NextCycle = "GASG0006";
-        public const string DataDependencyCycle = "GASG0007";
         public const string UnreachableNode = "GASG0008";
         public const string BudgetExceeded = "GASG0009";
         public const string TypeMismatch = "GASG0010";
         public const string UnsupportedGraphKind = "GASG0011";
+        public const string MissingControlEdge = "GASG0012";
+        public const string UnexpectedControlEdge = "GASG0013";
+        public const string DuplicateControlEdge = "GASG0014";
+        public const string MissingValueInput = "GASG0015";
+        public const string DuplicateValueEdge = "GASG0016";
+        public const string RegisterOutOfRange = "GASG0017";
+        public const string UninitializedRegisterRead = "GASG0018";
+        public const string EmptyGraph = "GASG0019";
+        public const string MissingNodeId = "GASG0020";
+        public const string RegisterAliasConflict = "GASG0021";
     }
 }
 

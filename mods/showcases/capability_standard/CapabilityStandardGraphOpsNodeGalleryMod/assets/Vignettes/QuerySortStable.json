@@ -1,0 +1,94 @@
+{
+  "op": "QuerySortStable",
+  "driver": "sandbox",
+  "title": "圈里的人排个稳定顺序",
+  "beat": "同样距离时顺序不乱跳。",
+  "detailTemplate": "名单顺序稳住了：{order}。",
+  "assertDetailContains": [
+    "顺序"
+  ],
+  "featuredNodeId": "sort",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "unit",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处甲",
+      "x": 0,
+      "y": 4,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处乙",
+      "x": -3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearC",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丙",
+      "x": 3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearD",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丁",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处甲",
+      "x": 12,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处乙",
+      "x": 0,
+      "y": 12,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

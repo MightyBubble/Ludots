@@ -923,7 +923,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.base.{kvp.Key}");
                     buffer.SetBase(attrId, v);
                 }
             }
@@ -943,7 +943,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.current.{kvp.Key}");
                     buffer.SetCurrent(attrId, v);
                 }
             }
@@ -959,6 +959,23 @@ namespace Ludots.Core.Config
 
             entity.Add(buffer);
             entity.Add(snapshot);
+        }
+
+        private static int ResolveAttributeBufferAttributeId(string attributeName, string context)
+        {
+            int attributeId = AttributeRegistry.GetId(attributeName);
+            if (attributeId != AttributeRegistry.InvalidId)
+            {
+                return attributeId;
+            }
+
+            if (!AttributeRegistry.IsFrozen)
+            {
+                return AttributeRegistry.Register(attributeName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
         }
 
         private static void SetEntityLocalClock(Entity entity, JsonNode data)

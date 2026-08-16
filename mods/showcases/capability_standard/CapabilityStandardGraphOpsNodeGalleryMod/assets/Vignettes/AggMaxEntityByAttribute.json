@@ -1,0 +1,13 @@
+{
+  "op": "AggMaxEntityByAttribute",
+  "driver": "query",
+  "title": "谁最能打（血最厚）",
+  "beat": "最厚的人被点名。",
+  "detailTemplate": "最厚的是{label}，生命{hp}。",
+  "assertDetailContains": [
+    "最厚"
+  ],
+  "featuredNodeId": "maxEnt",
+  "graphKind": "Query",
+  "field": "query"
+}

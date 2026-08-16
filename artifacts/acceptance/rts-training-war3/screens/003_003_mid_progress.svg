@@ -1,0 +1,21 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860">
+  <rect width="1600" height="860" fill="#0b1017" />
+  <rect x="32" y="28" width="1536" height="804" rx="20" fill="#122031" stroke="#4c89c7" stroke-width="2" />
+  <text x="64" y="84" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Barracks Training Snapshot | 003_mid_progress</text>
+  <text x="64" y="126" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Focus: Barracks | Goal: queue Footman. Watch for upfront cost, Barracks progress, and the finished unit stepping out of the building.</text>
+  <rect x="64" y="170" width="690" height="140" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="88" y="210" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Quick Select</text>
+<text x="88" y="244" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[x] W3 Train (war3_train) #D4A15A</text>
+<text x="88" y="272" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[ ] Reset Cam (camera_reset) #F2C36B</text>
+  <rect x="64" y="318" width="690" height="168" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="88" y="358" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Command Slots</text>
+<text x="88" y="392" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[0] 待命 | 保留槽位，不执行任何命令。 | Base | action=SkillQ</text>
+<text x="88" y="420" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[1] 待命 | 保留槽位，不执行任何命令。 | Base | action=SkillW</text>
+<text x="88" y="448" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">[2] 训练步兵 | 90 tick 后从兵营外滚出可进驻步兵。 | Base|Blocked | action=SkillE</text>
+  <rect x="790" y="170" width="746" height="112" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="814" y="210" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Statuses</text>
+<text x="814" y="244" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">ActiveAbility 6.7% | 训练步兵 | Executing · 84 steps left</text>
+  <rect x="790" y="338" width="746" height="112" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />
+<text x="814" y="378" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">Order Queue</text>
+<text x="814" y="412" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">Active | 训练步兵 | Active - slot 2 - Barracks</text>
+</svg>

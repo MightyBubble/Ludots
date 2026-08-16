@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.MaxFloat",
+    "kind": "Effect",
+    "entry": "left",
+    "nodes": [
+      {
+        "id": "left",
+        "op": "ConstFloat",
+        "floatValue": 12
+      },
+      {
+        "id": "right",
+        "op": "ConstFloat",
+        "floatValue": 28
+      },
+      {
+        "id": "bigger",
+        "op": "MaxFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "left",
+        "fromPort": "next",
+        "to": "right"
+      },
+      {
+        "from": "right",
+        "fromPort": "next",
+        "to": "bigger"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "left",
+        "fromPort": "value",
+        "to": "bigger",
+        "toPort": "a"
+      },
+      {
+        "from": "right",
+        "fromPort": "value",
+        "to": "bigger",
+        "toPort": "b"
+      }
+    ]
+  }
+]

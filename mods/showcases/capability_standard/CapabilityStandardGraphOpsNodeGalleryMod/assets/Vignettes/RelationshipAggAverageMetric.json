@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggAverageMetric",
+  "driver": "rel",
+  "title": "好感平均多少",
+  "beat": "字幕报平均。",
+  "detailTemplate": "好感平均 {avg}。",
+  "assertDetailContains": [
+    "平均"
+  ],
+  "featuredNodeId": "avg",
+  "graphKind": "Query",
+  "field": "rel"
+}

@@ -20,6 +20,8 @@ namespace Ludots.Core.Spatial
             _cellSizeCm = cellSizeCm;
         }
 
+        public void Clear() => _world.Clear();
+
         public int QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer, out int dropped)
         {
             IntRect rect = MathUtil.WorldAabbToCellRect(in bounds, _cellSizeCm);

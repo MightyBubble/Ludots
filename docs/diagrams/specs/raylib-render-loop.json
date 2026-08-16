@@ -54,7 +54,7 @@
       "x": 1645, "y": 1065, "w": 260, "h": 80 },
     { "id": "beginmode", "title": "BeginMode2D/3D", "tint": "sand",
       "x": 1645, "y": 1180, "w": 260, "h": 80 },
-    { "id": "drawperf", "title": "DrawPerformer", "tint": "sand",
+    { "id": "drawperf", "title": "DrawPresenter", "tint": "sand",
       "x": 1645, "y": 1295, "w": 260, "h": 80 },
     { "id": "endmode", "title": "EndMode2D/3D", "tint": "sand",
       "x": 1645, "y": 1410, "w": 260, "h": 80 },
@@ -67,7 +67,7 @@
       "items": ["PollEvents"] },
     { "id": "draw", "title": "Draw", "tint": "stone", "border_w": 1.6,
       "x": 620, "y": 700, "w": 300, "h": 120,
-      "items": ["Performer.Render"] },
+      "items": ["Presenter.Render"] },
 
     { "id": "api", "title": "Raylib Core API Calls", "tint": "teal",
       "x": 700, "y": 1080, "w": 600, "h": 330,

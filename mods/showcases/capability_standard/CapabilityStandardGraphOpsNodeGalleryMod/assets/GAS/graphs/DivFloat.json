@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.DivFloat",
+    "kind": "Effect",
+    "entry": "base",
+    "nodes": [
+      {
+        "id": "base",
+        "op": "ConstFloat",
+        "floatValue": 40
+      },
+      {
+        "id": "distance",
+        "op": "ConstFloat",
+        "floatValue": 2
+      },
+      {
+        "id": "attenuation",
+        "op": "DivFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "base",
+        "fromPort": "next",
+        "to": "distance"
+      },
+      {
+        "from": "distance",
+        "fromPort": "next",
+        "to": "attenuation"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "base",
+        "fromPort": "value",
+        "to": "attenuation",
+        "toPort": "a"
+      },
+      {
+        "from": "distance",
+        "fromPort": "value",
+        "to": "attenuation",
+        "toPort": "b"
+      }
+    ]
+  }
+]

@@ -22,7 +22,7 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Collects and deep-merges all game.json fragments into a single GameConfig.
-        /// Merge order: Core:Configs/game.json -> Mods (by priority) -> Final
+        /// Merge order: Core:game.json -> Mods (by priority) -> Final
         /// </summary>
         public GameConfig MergeGameConfig()
         {
@@ -103,6 +103,14 @@ namespace Ludots.Core.Config
             return nodes;
         }
 
+        public List<JsonNode> CollectFragments(in ConfigCatalogEntry entry)
+        {
+            var fragments = CollectFragmentsWithSources(in entry);
+            var nodes = new List<JsonNode>(fragments.Count);
+            for (int i = 0; i < fragments.Count; i++) nodes.Add(fragments[i].Node);
+            return nodes;
+        }
+
         public List<ConfigFragment> CollectFragmentsWithSources(string relativePath)
         {
             var fragments = new List<ConfigFragment>();
@@ -116,15 +124,28 @@ namespace Ludots.Core.Config
             return fragments;
         }
 
+        public List<ConfigFragment> CollectFragmentsWithSources(in ConfigCatalogEntry entry)
+        {
+            var fragments = new List<ConfigFragment>();
+            LoadFromAllSources(in entry, (stream, sourceUri) =>
+            {
+                var node = JsonNode.Parse(stream)
+                    ?? throw new JsonException($"JSON root in {sourceUri} is null.");
+                fragments.Add(new ConfigFragment(node, sourceUri));
+                Log.Info(in LogChannels.Config, $"Merged fragment from: {sourceUri}");
+            });
+            return fragments;
+        }
+
         public JsonNode? MergeFromCatalog(in ConfigCatalogEntry entry)
         {
-            var fragments = CollectFragments(entry.RelativePath);
+            var fragments = CollectFragments(in entry);
             return ConfigMerger.MergeMany(fragments, in entry);
         }
 
         public JsonNode? MergeFromCatalog(in ConfigCatalogEntry entry, ConfigConflictReport report)
         {
-            var fragments = CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = CollectFragmentsWithSources(in entry);
             return ConfigMerger.MergeManyWithReport(fragments, in entry, report);
         }
 
@@ -134,7 +155,8 @@ namespace Ludots.Core.Config
         public IReadOnlyList<MergedConfigEntry> MergeArrayByIdFromCatalog(
             in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {
-            var fragments = CollectFragmentsWithSources(entry.RelativePath);
+            RequirePolicy(in entry, ConfigMergePolicy.ArrayById);
+            var fragments = CollectFragmentsWithSources(in entry);
             return ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
         }
 
@@ -144,10 +166,10 @@ namespace Ludots.Core.Config
         public JsonObject MergeDeepObjectFromCatalog(
             in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {
-            var deepEntry = new ConfigCatalogEntry(entry.RelativePath, ConfigMergePolicy.DeepObject);
+            RequirePolicy(in entry, ConfigMergePolicy.DeepObject);
             var result = report != null
-                ? MergeFromCatalog(in deepEntry, report)
-                : MergeFromCatalog(in deepEntry);
+                ? MergeFromCatalog(in entry, report)
+                : MergeFromCatalog(in entry);
             if (result == null)
             {
                 return null;
@@ -163,21 +185,37 @@ namespace Ludots.Core.Config
             ConfigMergePolicy defaultPolicy, string defaultIdField = "id")
         {
             if (catalog != null && catalog.TryGet(path, out var found))
+            {
+                RequirePolicy(in found, defaultPolicy);
+                if (defaultPolicy == ConfigMergePolicy.ArrayById &&
+                    !string.Equals(found.IdField, defaultIdField, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Config catalog entry '{path}' must declare IdField '{defaultIdField}', but declares '{found.IdField}'.");
+                }
+
                 return found;
+            }
+
             throw new InvalidOperationException(
                 $"Config catalog must explicitly declare '{path}' with policy '{defaultPolicy}'.");
         }
 
+        private static void RequirePolicy(in ConfigCatalogEntry entry, ConfigMergePolicy expected)
+        {
+            if (entry.MergePolicy != expected)
+            {
+                throw new InvalidOperationException(
+                    $"Config catalog entry '{entry.RelativePath}' declares policy '{entry.MergePolicy}', but loader requires '{expected}'.");
+            }
+        }
+
         private void LoadFromAllSources(string relativePath, Action<Stream, string> onStreamOpened)
         {
-            // Normalize path
-            if (relativePath.StartsWith("/") || relativePath.StartsWith("\\"))
-                relativePath = relativePath.Substring(1);
+            relativePath = NormalizeRelativePath(relativePath);
 
-            // 1. Core Configs (highest priority - engine defaults)
-            TryLoad(ConfigSourcePaths.CoreConfig(relativePath), onStreamOpened);
-            // Also try Core:{path} directly (for Maps/ and other non-Configs paths)
-            TryLoad($"Core:{relativePath}", onStreamOpened);
+            // 1. Core (highest priority - engine defaults)
+            TryLoad(ConfigSourcePaths.CoreAsset(relativePath), onStreamOpened);
 
             // 2. Mods (in dependency/priority order)
             if (_modLoader != null && _modLoader.LoadedModIds != null)
@@ -185,9 +223,89 @@ namespace Ludots.Core.Config
                 foreach (var modId in _modLoader.LoadedModIds)
                 {
                     TryLoad(ConfigSourcePaths.ModAssets(modId, relativePath), onStreamOpened);
-                    TryLoad(ConfigSourcePaths.ModConfigs(modId, relativePath), onStreamOpened);
                 }
             }
+        }
+
+        private void LoadFromAllSources(in ConfigCatalogEntry entry, Action<Stream, string> onStreamOpened)
+        {
+            string relativePath = NormalizeRelativePath(entry.RelativePath);
+            string[] shardDirectories = entry.ShardDirectories ?? Array.Empty<string>();
+
+            LoadFromCoreSource(relativePath, shardDirectories, onStreamOpened);
+
+            if (_modLoader != null && _modLoader.LoadedModIds != null)
+            {
+                foreach (var modId in _modLoader.LoadedModIds)
+                {
+                    LoadFromModSource(modId, relativePath, shardDirectories, onStreamOpened);
+                }
+            }
+        }
+
+        private void LoadFromCoreSource(
+            string relativePath,
+            string[] shardDirectories,
+            Action<Stream, string> onStreamOpened)
+        {
+            TryLoad(ConfigSourcePaths.CoreAsset(relativePath), onStreamOpened);
+
+            for (int i = 0; i < shardDirectories.Length; i++)
+            {
+                string dir = NormalizeRelativePath(shardDirectories[i]);
+                string dirUri = ConfigSourcePaths.CoreAsset(dir);
+                LoadShardDirectory(dirUri, onStreamOpened);
+            }
+        }
+
+        private void LoadFromModSource(
+            string modId,
+            string relativePath,
+            string[] shardDirectories,
+            Action<Stream, string> onStreamOpened)
+        {
+            TryLoad(ConfigSourcePaths.ModAssets(modId, relativePath), onStreamOpened);
+
+            for (int i = 0; i < shardDirectories.Length; i++)
+            {
+                string dir = NormalizeRelativePath(shardDirectories[i]);
+                string dirUri = ConfigSourcePaths.ModAssets(modId, dir);
+                LoadShardDirectory(dirUri, onStreamOpened);
+            }
+        }
+
+        private void LoadShardDirectory(string directoryUri, Action<Stream, string> onStreamOpened)
+        {
+            IReadOnlyList<string> files;
+            try
+            {
+                files = _vfs.EnumerateFiles(directoryUri, "*.json");
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new InvalidOperationException($"Error enumerating {directoryUri}: {ex.Message}", ex);
+            }
+
+            for (int i = 0; i < files.Count; i++)
+            {
+                TryLoad(files[i], onStreamOpened);
+            }
+        }
+
+        private static string NormalizeRelativePath(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                return string.Empty;
+            }
+
+            relativePath = relativePath.Replace('\\', '/');
+            while (relativePath.StartsWith("/", StringComparison.Ordinal))
+            {
+                relativePath = relativePath.Substring(1);
+            }
+
+            return relativePath;
         }
 
         private void TryLoad(string uri, Action<Stream, string> onStreamOpened)
@@ -214,5 +332,3 @@ namespace Ludots.Core.Config
         }
     }
 }
-
-

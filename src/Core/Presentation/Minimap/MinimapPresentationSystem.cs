@@ -91,6 +91,8 @@ namespace Ludots.Core.Presentation.Minimap
     {
         private readonly MinimapRuntime _runtime;
         private readonly MinimapFocusCollectionProvider _focusCollectionProvider;
+        private string _focusCollectionKey;
+        private int _focusCollectionKeyId;
         private bool _prevToggle;
         private bool _prevCenterOnFocusPrimary;
         private bool _prevZoomIn;
@@ -317,10 +319,21 @@ namespace Ludots.Core.Presentation.Minimap
             focusPrimary = Entity.Null;
             return _focusCollectionProvider(engine, out Entity owner, out string collectionKey) &&
                    engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections) &&
-                   collections.TryGet(owner, collectionKey, out EntityCollectionHandle handle) &&
+                   collections.TryGet(owner, ResolveFocusCollectionKeyId(collections, collectionKey), out EntityCollectionHandle handle) &&
                    collections.TryGetEntityAt(handle, 0, out focusPrimary) &&
                    focusPrimary != Entity.Null &&
                    engine.World.IsAlive(focusPrimary);
+        }
+
+        private int ResolveFocusCollectionKeyId(EntityCollectionStore collections, string collectionKey)
+        {
+            if (!string.Equals(_focusCollectionKey, collectionKey, StringComparison.Ordinal) || _focusCollectionKeyId <= 0)
+            {
+                _focusCollectionKey = collectionKey;
+                _focusCollectionKeyId = collections.KeyRegistry.GetId(collectionKey);
+            }
+
+            return _focusCollectionKeyId;
         }
     }
 

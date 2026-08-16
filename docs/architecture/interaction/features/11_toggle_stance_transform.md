@@ -159,10 +159,10 @@ Invoker QWE:
 
 ```
 Down → Toggle tag "detective_vision"
-  Performer rules:
+  Presenter rules:
     if HasTag("detective_vision"):
-      enable highlighting performers on all entities with specific tags
-      enable X-ray overlay performer
+      enable highlighting presenters on all entities with specific tags
+      enable X-ray overlay presenter
 ```
 
 ## 新增需求

@@ -1,0 +1,9 @@
+{
+  "name": "LiveSkillWorkbenchMod",
+  "version": "1.0.0",
+  "description": "Reusable Real-time Skill Workbench Web UI capability and Data Plane contract.",
+  "main": "bin/net8.0/LiveSkillWorkbenchMod.dll",
+  "priority": -50,
+  "author": "Ludots Team",
+  "tags": ["live-skill-workbench", "webui", "dataplane", "capability", "gas"]
+}

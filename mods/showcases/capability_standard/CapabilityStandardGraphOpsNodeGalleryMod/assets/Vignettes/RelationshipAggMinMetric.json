@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipAggMinMetric",
+  "driver": "rel",
+  "title": "最低好感是多少",
+  "beat": "最弱那条。",
+  "detailTemplate": "最低好感是 {min}，最弱的是{friend}。",
+  "assertDetailContains": [
+    "最低"
+  ],
+  "featuredNodeId": "min",
+  "graphKind": "Query",
+  "field": "rel"
+}

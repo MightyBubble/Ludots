@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardPerformerBehaviorExtensionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase proving a Mod can define and run its own performer behavior kind.",
+  "main": "bin/net8.0/CapabilityStandardPerformerBehaviorExtensionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "performer-behavior", "presentation"]
+}

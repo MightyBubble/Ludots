@@ -26,7 +26,7 @@ namespace Ludots.Tests.GAS
         public void TransportNetworkAssetLoader_LoadsStrictJsonThroughConfigPipeline()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-transport-network-loader-" + Guid.NewGuid().ToString("N"));
-            string configsRoot = Path.Combine(tempRoot, "Configs");
+            string configsRoot = tempRoot;
             Directory.CreateDirectory(Path.Combine(configsRoot, "TransportNetwork"));
             File.WriteAllText(Path.Combine(configsRoot, "config_catalog.json"),
                 """

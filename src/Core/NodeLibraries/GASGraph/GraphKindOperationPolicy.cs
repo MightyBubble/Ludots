@@ -41,6 +41,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string OperationNotAllowedError = "GAS.GRAPH_KIND.ERR.OperationNotAllowed";
         public const string MissingOperationMetadataError = "GAS.GRAPH_KIND.ERR.MissingOperationMetadata";
         public const string ListenerOperationNotAllowedError = "GAS.GRAPH_KIND.ERR.ListenerOperationNotAllowed";
+        public const string JumpOutOfRangeError = "GAS.GRAPH.ERR.JumpOutOfRange";
+        public const string MissingHaltError = "GAS.GRAPH.ERR.MissingHalt";
+        public const string RegisterOutOfRangeError = "GAS.GRAPH.ERR.RegisterOutOfRange";
+        public const string KindMismatchError = "GAS.GRAPH.ERR.KindMismatch";
+        public const string PcOutOfRangeError = "GAS.GRAPH.ERR.PcOutOfRange";
 
         public static void RequireAllowed(
             GraphKind kind,
@@ -99,6 +104,102 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 requireListenerCompatibility: false,
                 requirePureListenerOperations: false,
                 out violation);
+
+        public static void ValidateProgram(
+            GraphKind kind,
+            ReadOnlySpan<GraphInstruction> program,
+            GasGraphOpHandlerTable handlers,
+            int graphId = 0,
+            string entrypoint = "GraphProgramRegistry")
+        {
+            RequireAllowed(kind, program, handlers, graphId, entrypoint);
+            ValidateRegisterBounds(program, graphId, entrypoint);
+            ValidateBranchTargets(program, graphId, entrypoint);
+            ValidateHasHalt(program, graphId, entrypoint);
+        }
+
+        public static void ValidateRegisterBounds(
+            ReadOnlySpan<GraphInstruction> program,
+            int graphId = 0,
+            string entrypoint = "GraphProgramRegistry")
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                ref readonly GraphInstruction instruction = ref program[i];
+                GraphNodeOp op = (GraphNodeOp)instruction.Op;
+                if (!GraphOpDescriptorTable.TryGet(op, out GraphOpDescriptor descriptor) ||
+                    descriptor.DstRole == GraphOperandRole.DstRegister)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
+                }
+
+                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
+                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
+                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
+            }
+        }
+
+        public static void ValidateBranchTargets(
+            ReadOnlySpan<GraphInstruction> program,
+            int graphId = 0,
+            string entrypoint = "GraphProgramRegistry")
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                GraphNodeOp op = (GraphNodeOp)program[i].Op;
+                if (op is GraphNodeOp.Jump or GraphNodeOp.JumpIfFalse)
+                {
+                    int target = i + 1 + program[i].Imm;
+                    if ((uint)target >= (uint)program.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"{JumpOutOfRangeError}: entrypoint='{entrypoint}', graphId={graphId}, instructionIndex={i}, op='{op}', target={target}, length={program.Length}. 第 {i} 条指令跳到了程序外面。");
+                    }
+                }
+                else if (op == GraphNodeOp.Call)
+                {
+                    int target = program[i].Imm;
+                    if ((uint)target >= (uint)program.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"{JumpOutOfRangeError}: entrypoint='{entrypoint}', graphId={graphId}, instructionIndex={i}, op='Call', target={target}, length={program.Length}. 第 {i} 条指令跳到了程序外面。");
+                    }
+                }
+            }
+        }
+
+        public static void ValidateHasHalt(
+            ReadOnlySpan<GraphInstruction> program,
+            int graphId = 0,
+            string entrypoint = "GraphProgramRegistry")
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                if (program[i].Op == (ushort)GraphNodeOp.HaltReturnInt)
+                {
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"{MissingHaltError}: entrypoint='{entrypoint}', graphId={graphId}. 这张图没有显式终结指令 HaltReturnInt。");
+        }
+
+        private static void RequireRegisterIndex(
+            int graphId,
+            int instructionIndex,
+            string operand,
+            byte registerIndex,
+            string entrypoint)
+        {
+            if (registerIndex < GraphVmLimits.MaxFloatRegisters)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"{RegisterOutOfRangeError}: entrypoint='{entrypoint}', graphId={graphId}, instructionIndex={instructionIndex}, operand={operand}, registerIndex={registerIndex}, capacity={GraphVmLimits.MaxFloatRegisters}.");
+        }
 
         private static void RequireAllowedCore(
             GraphKind kind,
@@ -162,7 +263,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             out Violation violation)
         {
             ArgumentNullException.ThrowIfNull(handlers);
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph operation policy requires an explicit supported kind.");
             }
@@ -231,27 +332,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static bool RequiresListenerOwnerContext(GraphNodeOp operation)
-            => operation is GraphNodeOp.LoadConfigFloat or
-                            GraphNodeOp.LoadConfigInt or
-                            GraphNodeOp.LoadConfigEffectId;
+            => GraphOpDescriptorTable.RequiresListenerOwnerContext(operation);
 
         private static bool IsAllowed(
             GraphKind kind,
             GraphNodeOp op,
             in EffectOperationMetadata metadata)
-        {
-            if (kind == GraphKind.Effect)
-            {
-                return true;
-            }
-
-            if (metadata.Kind == EffectOperationKind.Pure)
-            {
-                return true;
-            }
-
-            return kind == GraphKind.Derived && op == GraphNodeOp.WriteSelfAttribute;
-        }
+            => GraphOpDescriptorTable.IsPolicyAllowed(kind, op, in metadata);
 
         private static InvalidOperationException CreateError(
             string errorCode,

@@ -1,0 +1,38 @@
+{
+  "op": "SubFloat",
+  "driver": "linear",
+  "title": "距离把伤害削掉一截",
+  "beat": "走远了，50 点里被削掉 12 点，头顶那根条按剩下的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。",
+  "detailTemplate": "走远之后被削掉一截，这一刀剩下 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "削掉"
+  ],
+  "featuredNodeId": "decay",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "targetHealthSubtract"
+  }
+}

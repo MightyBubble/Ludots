@@ -1,0 +1,13 @@
+{
+  "op": "QueryAllMapEntities",
+  "driver": "query",
+  "title": "把场上的人都找出来",
+  "beat": "全图搜到一圈人，字幕报人数。",
+  "detailTemplate": "全图搜到{count}人，都在场上。",
+  "assertDetailContains": [
+    "场上"
+  ],
+  "featuredNodeId": "all",
+  "graphKind": "Query",
+  "field": "query"
+}

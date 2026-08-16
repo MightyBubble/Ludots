@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.Browser\Ludots.WebUI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\live_skill_workbench\LiveSkillWorkbenchMod\LiveSkillWorkbenchMod.csproj" />
   </ItemGroup>
 </Project>

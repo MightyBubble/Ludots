@@ -33,7 +33,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _registry.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
             ValidateRawIds(fragments, entry.RelativePath);
             var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
             var options = StrictJsonOptions.CreateCamelCase();

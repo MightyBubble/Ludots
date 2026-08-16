@@ -1,0 +1,410 @@
+[
+  {
+    "id": "Graph.Showcase.Blacksmith.RandomDrift",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "durabilityRandom",
+        "op": "RandomFloat01"
+      },
+      {
+        "id": "durabilityCenter",
+        "op": "ConstFloat",
+        "floatValue": 0.5
+      },
+      {
+        "id": "durabilitySigned",
+        "op": "SubFloat"
+      },
+      {
+        "id": "durabilityScale",
+        "op": "ConstFloat",
+        "floatValue": 24.0
+      },
+      {
+        "id": "durabilityDelta",
+        "op": "MulFloat"
+      },
+      {
+        "id": "modifyDurability",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Durability"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "durabilityRandom"
+      },
+      {
+        "from": "durabilityRandom",
+        "fromPort": "next",
+        "to": "durabilityCenter"
+      },
+      {
+        "from": "durabilityCenter",
+        "fromPort": "next",
+        "to": "durabilitySigned"
+      },
+      {
+        "from": "durabilitySigned",
+        "fromPort": "next",
+        "to": "durabilityScale"
+      },
+      {
+        "from": "durabilityScale",
+        "fromPort": "next",
+        "to": "durabilityDelta"
+      },
+      {
+        "from": "durabilityDelta",
+        "fromPort": "next",
+        "to": "modifyDurability"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "durabilityRandom",
+        "fromPort": "value",
+        "to": "durabilitySigned",
+        "toPort": "a"
+      },
+      {
+        "from": "durabilityCenter",
+        "fromPort": "value",
+        "to": "durabilitySigned",
+        "toPort": "b"
+      },
+      {
+        "from": "durabilitySigned",
+        "fromPort": "value",
+        "to": "durabilityDelta",
+        "toPort": "a"
+      },
+      {
+        "from": "durabilityScale",
+        "fromPort": "value",
+        "to": "durabilityDelta",
+        "toPort": "b"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "modifyDurability",
+        "toPort": "target"
+      },
+      {
+        "from": "durabilityDelta",
+        "fromPort": "value",
+        "to": "modifyDurability",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Showcase.Blacksmith.SetDurabilityIntact",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "stopRandomDrift",
+        "op": "RemoveEffectTemplate",
+        "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift"
+      },
+      {
+        "id": "current",
+        "op": "LoadAttribute",
+        "attribute": "Durability"
+      },
+      {
+        "id": "desired",
+        "op": "ConstFloat",
+        "floatValue": 100.0
+      },
+      {
+        "id": "delta",
+        "op": "SubFloat"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Durability"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "stopRandomDrift"
+      },
+      {
+        "from": "stopRandomDrift",
+        "fromPort": "next",
+        "to": "current"
+      },
+      {
+        "from": "current",
+        "fromPort": "next",
+        "to": "desired"
+      },
+      {
+        "from": "desired",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "modify"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "stopRandomDrift",
+        "toPort": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "current",
+        "toPort": "source"
+      },
+      {
+        "from": "desired",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "a"
+      },
+      {
+        "from": "current",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "b"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "target"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Showcase.Blacksmith.SetDurabilityDamaged",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "stopRandomDrift",
+        "op": "RemoveEffectTemplate",
+        "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift"
+      },
+      {
+        "id": "current",
+        "op": "LoadAttribute",
+        "attribute": "Durability"
+      },
+      {
+        "id": "desired",
+        "op": "ConstFloat",
+        "floatValue": 50.0
+      },
+      {
+        "id": "delta",
+        "op": "SubFloat"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Durability"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "stopRandomDrift"
+      },
+      {
+        "from": "stopRandomDrift",
+        "fromPort": "next",
+        "to": "current"
+      },
+      {
+        "from": "current",
+        "fromPort": "next",
+        "to": "desired"
+      },
+      {
+        "from": "desired",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "modify"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "stopRandomDrift",
+        "toPort": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "current",
+        "toPort": "source"
+      },
+      {
+        "from": "desired",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "a"
+      },
+      {
+        "from": "current",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "b"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "target"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Showcase.Blacksmith.SetDurabilityRuined",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "stopRandomDrift",
+        "op": "RemoveEffectTemplate",
+        "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift"
+      },
+      {
+        "id": "current",
+        "op": "LoadAttribute",
+        "attribute": "Durability"
+      },
+      {
+        "id": "desired",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
+        "id": "delta",
+        "op": "SubFloat"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Durability"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "stopRandomDrift"
+      },
+      {
+        "from": "stopRandomDrift",
+        "fromPort": "next",
+        "to": "current"
+      },
+      {
+        "from": "current",
+        "fromPort": "next",
+        "to": "desired"
+      },
+      {
+        "from": "desired",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "modify"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "stopRandomDrift",
+        "toPort": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "current",
+        "toPort": "source"
+      },
+      {
+        "from": "desired",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "a"
+      },
+      {
+        "from": "current",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "b"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "target"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "value"
+      }
+    ]
+  }
+]

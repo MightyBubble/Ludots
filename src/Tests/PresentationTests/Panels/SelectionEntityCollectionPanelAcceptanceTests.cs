@@ -14,9 +14,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
-using Ludots.UI.Input;
 using Ludots.UI.Runtime;
-using Ludots.UI.Runtime.Events;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 
@@ -37,6 +35,18 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         "InteractionShowcaseMod",
     };
 
+    [SetUp]
+    public void SetUp()
+    {
+        AttributeRegistry.Clear();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        AttributeRegistry.Clear();
+    }
+
     [Test]
     public void InteractionShowcase_CommandSourceEntityCollectionPanel_VirtualizesAndWritesScreenshotArtifacts()
     {
@@ -45,10 +55,12 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 
+        int healthId = AttributeRegistry.Register("Acceptance.CommandSource.Health");
+        int manaId = AttributeRegistry.Register("Acceptance.CommandSource.Mana");
+
         using var engine = CreateEngine(ShowcaseMods);
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1600f, 900f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot service is missing.");
 
         LoadMap(engine, InteractionShowcaseHubMapId);
 
@@ -59,8 +71,6 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
 
         const int commandSourceCount = 72;
-        int healthId = AttributeRegistry.Register("Acceptance.CommandSource.Health");
-        int manaId = AttributeRegistry.Register("Acceptance.CommandSource.Mana");
         var selected = new Entity[commandSourceCount];
         for (int i = 0; i < commandSourceCount; i++)
         {
@@ -97,20 +107,12 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         string sceneText = ExtractUiSceneText(scene);
         Assert.That(sceneText, Does.Contain("Acceptance command source"));
         Assert.That(sceneText, Does.Contain("Spearman x24 *"));
-        Assert.That(sceneText, Does.Contain("LIVE 72"));
-        Assert.That(sceneText, Does.Contain("Acceptance.CommandSource.Health"));
+        Assert.That(sceneText, Does.Contain("72 entities ready for commands"));
+        Assert.That(sceneText, Does.Contain("72 hero(es) ready in Command source"));
+        Assert.That(sceneText, Does.Contain("Health 60/100"));
+        Assert.That(sceneText, Does.Contain("Minerals 20/80"));
 
-        float x = host.LayoutRect.X + (host.LayoutRect.Width * 0.5f);
-        float y = host.LayoutRect.Y + (host.LayoutRect.Height * 0.5f);
-        bool handledScroll = uiRoot.HandleInput(new PointerEvent
-        {
-            DeviceType = InputDeviceType.Mouse,
-            PointerId = 0,
-            Action = PointerAction.Scroll,
-            X = x,
-            Y = y,
-            DeltaY = 320f,
-        });
+        bool handledScroll = DispatchScrollToNode(uiRoot, scene, host, deltaY: 320f);
         scene.Layout(uiRoot.Width, uiRoot.Height);
 
         Assert.That(handledScroll, Is.True);
@@ -184,8 +186,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
         InstallInput(engine);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        PresentationAcceptanceUiHostInstaller.Install(engine, 1600f, 900f);
         engine.Start();
         return engine;
     }
@@ -268,6 +269,19 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     private static UiNode? FindNodeByIdPrefix(UiNode? node, string prefix)
     {
         return FindBestMatch(node, prefix, null);
+    }
+
+    private static bool DispatchScrollToNode(UIRoot uiRoot, UiScene scene, UiNode target, float deltaY)
+    {
+        float width = uiRoot.Width;
+        float height = uiRoot.Height;
+        scene.Layout(width, height);
+        Assert.That(target.MaxScrollY, Is.GreaterThan(0f), $"Expected scroll host '{target.ElementId}' to be vertically scrollable.");
+
+        bool handled = uiRoot.ScrollNode(target.Id, deltaX: 0f, deltaY);
+
+        scene.Layout(width, height);
+        return handled;
     }
 
     private static UiNode? FindBestMatch(UiNode? node, string prefix, UiNode? currentBest)

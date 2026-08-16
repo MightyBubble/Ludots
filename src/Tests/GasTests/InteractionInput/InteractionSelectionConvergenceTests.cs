@@ -542,6 +542,130 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommandSourceAcquisitionSystem_CameraCulledEntity_RemainsSelectableAndReceivesOrders()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var culled = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CommandSourceSelectableTag());
+            var offCamera = world.Create(
+                WorldPositionCm.FromCm(2600, 1600),
+                new CommandSourceSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            CreateCommandSourceRuntime(world, globals);
+
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
+
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+            AssertCommandSource(globals, local, culled);
+
+            DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(2700f, 1700f));
+            AssertCommandSource(globals, local, culled, offCamera);
+
+            var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Stop",
+                        ActorCollectionKey = EntityCollectionKeys.CommandSource,
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "stop",
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
+                        IsSkillMapping = false,
+                    },
+                },
+            });
+            mapping.SetLocalPlayer(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
+            {
+                That(collectionKey, Is.EqualTo(EntityCollectionKeys.CommandSource));
+                var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+                That(collections.TryGet(local, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+                entities.Clear();
+                Entity[] members = new Entity[2];
+                int written = collections.CopyEntities(handle, 0, members);
+                for (int i = 0; i < written; i++)
+                {
+                    entities.Add(members[i]);
+                }
+
+                rejection = OrderSubmitResult.Activated;
+                return written > 0;
+            });
+
+            var orders = new List<Order>();
+            mapping.SetOrderSubmitHandler((in Order _) =>
+            {
+                Fail("Multi-actor command-source fan-out must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            mapping.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    orders.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
+
+            input.InjectButtonPress("Stop");
+            input.Update();
+            mapping.Update(0f);
+
+            That(orders.Count, Is.EqualTo(2));
+            That(orders[0].Actor, Is.EqualTo(culled));
+            That(orders[1].Actor, Is.EqualTo(offCamera));
+            That(orders[0].OrderTypeId, Is.EqualTo(1003));
+            That(orders[1].OrderTypeId, Is.EqualTo(1003));
+        }
+
+        [Test]
+        public void CommandSourcePointerHitResolver_UsesWorldPositionCm_NotVisualTransformOrCull()
+        {
+            using var world = World.Create();
+            var local = world.Create();
+            var actor = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(80f, 0f, 80f) },
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CommandSourceSelectableTag());
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+            };
+
+            Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                world,
+                globals,
+                local,
+                new Vector2(1600f, 1200f),
+                radiusPixels: 16f);
+
+            That(hit, Is.EqualTo(actor));
+        }
+
+        [Test]
         public void CommandSourceAcquisitionSystem_AcquisitionPublishesCommandSourceCollection()
         {
             using var world = World.Create();
@@ -1175,15 +1299,15 @@ namespace Ludots.Tests.GAS
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create(
                 new Team { Id = 1 },
-                new VisualTransform { Position = Vector3.Zero });
+                WorldPositionCm.FromCm(0, 0));
             _ = world.Create(
                 new Team { Id = 2 },
-                new VisualTransform { Position = new Vector3(5f, 0f, 0f) },
+                WorldPositionCm.FromCm(500, 0),
                 new CommandSourceSelectableTag(),
                 CommandSourceSelectableState.Disabled);
             var enabledEnemy = world.Create(
                 new Team { Id = 2 },
-                new VisualTransform { Position = new Vector3(10f, 0f, 0f) },
+                WorldPositionCm.FromCm(1000, 0),
                 new CommandSourceSelectableTag());
 
             var globals = new Dictionary<string, object>

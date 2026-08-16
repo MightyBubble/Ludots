@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTagAny",
+  "driver": "query",
+  "title": "身上带着敌人标记的人",
+  "beat": "有敌人标记的亮。",
+  "detailTemplate": "身上带着敌人标记的有{count}人。",
+  "assertDetailContains": [
+    "带着"
+  ],
+  "featuredNodeId": "tagAny",
+  "graphKind": "Query",
+  "field": "query"
+}

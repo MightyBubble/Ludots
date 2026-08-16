@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTeam",
+  "driver": "query",
+  "title": "只留下敌对阵营",
+  "beat": "友军被滤掉，敌人亮。",
+  "detailTemplate": "友军被滤掉后，敌对阵营还剩{count}人。",
+  "assertDetailContains": [
+    "敌对阵营"
+  ],
+  "featuredNodeId": "team",
+  "graphKind": "Query",
+  "field": "query"
+}

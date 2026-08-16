@@ -43,7 +43,8 @@ namespace Ludots.Core.Gameplay.GAS
             try
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
-                tagOps?.MarkDirtyEntity(world, target);
+                tagOps.MarkDirtyEntity(world, target);
+                MarkAttributeAggregateDirty(world, target);
             }
             catch
             {
@@ -53,6 +54,16 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             MarkPresentationChanged(world, target, attributeId);
+        }
+
+        public static void ReplaceCurrentFromCap(World world, Entity target, int attributeId, TagOps tagOps)
+        {
+            if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
+            {
+                return;
+            }
+
+            SetCurrent(world, target, attributeId, world.Get<AttributeBuffer>(target).GetCap(attributeId), tagOps);
         }
 
         public static void SetBase(World world, Entity target, int attributeId, float value, TagOps tagOps)
@@ -80,7 +91,8 @@ namespace Ludots.Core.Gameplay.GAS
             try
             {
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
-                tagOps?.MarkDirtyEntity(world, target);
+                tagOps.MarkDirtyEntity(world, target);
+                MarkAttributeAggregateDirty(world, target);
             }
             catch
             {
@@ -106,10 +118,7 @@ namespace Ludots.Core.Gameplay.GAS
             for (int i = 0; i < modifiers.Count; i++)
             {
                 int attributeId = modifiers.Get(i).AttributeId;
-                if (attributeId < 0 || attributeId >= AttributeBuffer.MAX_ATTRS)
-                {
-                    continue;
-                }
+                AttributeBuffer.ValidateAttributeId(attributeId);
 
                 ulong bit = 1UL << attributeId;
                 if ((touchedMask & bit) != 0UL)
@@ -159,7 +168,8 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 try
                 {
-                    tagOps?.MarkDirtyEntity(world, target);
+                    tagOps.MarkDirtyEntity(world, target);
+                    MarkAttributeAggregateDirty(world, target);
                 }
                 catch
                 {
@@ -193,6 +203,16 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 throw new InvalidOperationException(TagOps.MissingTagOpsError);
             }
+        }
+
+        private static void MarkAttributeAggregateDirty(World world, Entity target)
+        {
+            if (!world.Has<ActiveEffectContainer>(target) || world.Has<AttributeAggregateDirty>(target))
+            {
+                return;
+            }
+
+            world.Add(target, new AttributeAggregateDirty());
         }
 
         private static void MarkPresentationChanged(World world, Entity target, int attributeId)

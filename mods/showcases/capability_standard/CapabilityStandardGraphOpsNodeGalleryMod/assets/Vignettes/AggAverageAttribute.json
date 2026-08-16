@@ -1,0 +1,13 @@
+{
+  "op": "AggAverageAttribute",
+  "driver": "query",
+  "title": "平均生命多少",
+  "beat": "字幕报平均。",
+  "detailTemplate": "平均生命是{avg}。",
+  "assertDetailContains": [
+    "平均"
+  ],
+  "featuredNodeId": "avg",
+  "graphKind": "Query",
+  "field": "query"
+}

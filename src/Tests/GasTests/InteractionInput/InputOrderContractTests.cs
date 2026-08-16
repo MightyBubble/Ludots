@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         public void DefaultCommandIntentProfile_RoutesGroundAndInspectableEntityHitsToMove()
         {
             string repoRoot = FindRepoRoot();
-            string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
+            string profilePath = Path.Combine(repoRoot, "assets", "Input", "command_intent_profiles.json");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
                     File.ReadAllText(profilePath),
@@ -365,7 +365,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     new FunctionRegistry(),
                     new TriggerManager(),
                     new Ludots.Core.Engine.SystemFactoryRegistry(),
-                    new TriggerDecoratorRegistry());
+                    new TriggerDecoratorRegistry(),
+                    new ModExtensionHub());
                 var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
 

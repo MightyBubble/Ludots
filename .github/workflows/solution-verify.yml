@@ -15,6 +15,9 @@ on:
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
+      - 'scripts/generate-graph-op-node-galleries.py'
+      - 'scripts/graph_op_coverage_index.py'
+      - 'showcase.registry.json'
       - 'src/**'
   push:
     branches:
@@ -32,6 +35,9 @@ on:
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
+      - 'scripts/generate-graph-op-node-galleries.py'
+      - 'scripts/graph_op_coverage_index.py'
+      - 'showcase.registry.json'
       - 'src/**'
   workflow_dispatch:
 
@@ -43,6 +49,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check graph-op gallery generator has no drift
+        shell: pwsh
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+        run: |
+          python scripts/generate-graph-op-node-galleries.py --strict
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Graph-op gallery generator drifted. Run scripts/generate-graph-op-node-galleries.py --strict and commit the result."
+            exit 1
+          }
+          $porcelain = git status --porcelain
+          if ($porcelain) {
+            Write-Host "Graph-op gallery generator produced untracked or unstaged files:"
+            Write-Host $porcelain
+            exit 1
+          }
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -75,6 +102,7 @@ jobs:
         run: |
           $guardFilter = @(
             'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~S14LayeringRatchetTests',
             'FullyQualifiedName~GasRuntimeStateContractTests',
             'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
           ) -join '|'

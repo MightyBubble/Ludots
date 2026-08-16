@@ -1,0 +1,59 @@
+{
+  "Id": "lsw_hot_apply_arena",
+  "Tags": [
+    "showcase",
+    "live-skill-workbench",
+    "hot-apply"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1550,
+    "TargetYCm": 900,
+    "DistanceCm": 1400,
+    "Pitch": 52,
+    "Yaw": 180,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_ezreal",
+      "InstanceId": "lsw-ezreal",
+      "Overrides": {
+        "Name": { "Value": "Ezreal" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 900 } },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 200,
+            "Shield": 0,
+            "MoveSpeed": 355,
+            "Armor": 4
+          }
+        }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_garen",
+      "InstanceId": "lsw-dummy-garen",
+      "Overrides": {
+        "Name": { "Value": "Training Dummy" },
+        "PlayerOwner": { "PlayerId": 2 },
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 1900, "Y": 900 } },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 200,
+            "Shield": 0,
+            "MoveSpeed": 0,
+            "Armor": 0
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "lsw-ezreal" },
+    { "TeamId": 2, "RepresentativeInstanceId": "lsw-dummy-garen" }
+  ]
+}

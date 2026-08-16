@@ -112,7 +112,7 @@ function ShowcaseCard({ entry }: { entry: ShowcaseEntry }) {
         </button>
       ) : (
         <div className="mt-auto rounded-lg border border-bg-border/50 bg-bg px-2 py-1.5 text-[10px] text-gray-600">
-          no launch selector (asset-only fixture)
+          {entry.status === "retired" ? "已退役，不能启动" : "no launch selector (asset-only fixture)"}
         </div>
       )}
     </div>

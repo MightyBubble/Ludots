@@ -43,7 +43,7 @@ AbilityExecSpec:
 
 **视觉表现**:
 ```
-Performer: GroundOverlay(Circle, radius=200cm, color=purple, opacity=0.5)
+Presenter: GroundOverlay(Circle, radius=200cm, color=purple, opacity=0.5)
   lifetime: 300 ticks
   position: anchor
 ```
@@ -57,7 +57,7 @@ Performer: GroundOverlay(Circle, radius=200cm, color=purple, opacity=0.5)
 | QueryRadius Graph op | ✅ 已有 |
 | FanOutApplyEffect | ✅ 已有 |
 | Duration expiration | ✅ 已有 |
-| GroundOverlay Performer | ✅ 已有 |
+| GroundOverlay Presenter | ✅ 已有 |
 
 ## 新增需求
 

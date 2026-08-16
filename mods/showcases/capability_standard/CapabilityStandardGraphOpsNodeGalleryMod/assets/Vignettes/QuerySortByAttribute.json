@@ -1,0 +1,13 @@
+{
+  "op": "QuerySortByAttribute",
+  "driver": "query",
+  "title": "按生命排个序",
+  "beat": "血最多的排前面。",
+  "detailTemplate": "按生命从高到低排，最前面是{label}，生命{hp}。",
+  "assertDetailContains": [
+    "按生命"
+  ],
+  "featuredNodeId": "sortHp",
+  "graphKind": "Query",
+  "field": "query"
+}

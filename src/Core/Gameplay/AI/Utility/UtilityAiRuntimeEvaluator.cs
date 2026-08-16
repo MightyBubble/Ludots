@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
@@ -656,7 +657,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             if (ability.HasCooldown)
             {
-                if (ability.Cooldown.CooldownValueAttributeId > 0 &&
+                if (AttributeRegistry.IsValidId(ability.Cooldown.CooldownValueAttributeId) &&
                     _world.Has<AttributeBuffer>(actor) &&
                     _world.Get<AttributeBuffer>(actor).GetCurrent(ability.Cooldown.CooldownValueAttributeId) > 0f)
                 {
@@ -843,9 +844,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
         private float ExecuteScoreGraph(Entity actor, Entity target, int graphId)
         {
-            if (graphId <= 0 || _graphs == null || _graphApi == null)
+            if (graphId <= 0)
             {
                 return 0f;
+            }
+
+            if (_graphs == null || _graphApi == null)
+            {
+                throw new InvalidOperationException($"AI score graph id {graphId} cannot run because graph services are not configured.");
             }
 
             if (!_graphs.TryGetProgram(graphId, out var program))
@@ -855,7 +861,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind, programs: _graphs);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

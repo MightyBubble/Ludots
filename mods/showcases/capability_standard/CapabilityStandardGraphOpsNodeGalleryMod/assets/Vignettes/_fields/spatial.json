@@ -1,0 +1,149 @@
+{
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0.0,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "ally",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "友军",
+      "x": 0.0,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "north",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北面的人",
+      "x": 0.0,
+      "y": 4.5,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "hexN",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "北格的人",
+      "x": 3.46,
+      "y": 6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "hexE",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "东格的人",
+      "x": 6.93,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "hexSW",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西南格的人",
+      "x": 3.46,
+      "y": -6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "hexNW",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西北格的人",
+      "x": -3.46,
+      "y": 6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "hexOuter",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "外环的人",
+      "x": 13.86,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "near",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "近处的人",
+      "x": 0.6,
+      "y": 0.2,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "side",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "身侧的人",
+      "x": -0.5,
+      "y": 0.3,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "diag",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "斜线上的人",
+      "x": 1.8,
+      "y": 1.8,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "farDiag",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "更远斜线的人",
+      "x": 2.5,
+      "y": 2.5,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "west",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西边的人",
+      "x": -9.0,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    }
+  ],
+  "collections": [],
+  "links": []
+}

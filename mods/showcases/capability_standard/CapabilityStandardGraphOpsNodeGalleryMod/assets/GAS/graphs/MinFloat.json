@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.MinFloat",
+    "kind": "Effect",
+    "entry": "left",
+    "nodes": [
+      {
+        "id": "left",
+        "op": "ConstFloat",
+        "floatValue": 30
+      },
+      {
+        "id": "right",
+        "op": "ConstFloat",
+        "floatValue": 18
+      },
+      {
+        "id": "smaller",
+        "op": "MinFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "left",
+        "fromPort": "next",
+        "to": "right"
+      },
+      {
+        "from": "right",
+        "fromPort": "next",
+        "to": "smaller"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "left",
+        "fromPort": "value",
+        "to": "smaller",
+        "toPort": "a"
+      },
+      {
+        "from": "right",
+        "fromPort": "value",
+        "to": "smaller",
+        "toPort": "b"
+      }
+    ]
+  }
+]

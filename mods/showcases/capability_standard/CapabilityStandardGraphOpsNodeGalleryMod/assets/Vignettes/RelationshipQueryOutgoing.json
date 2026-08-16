@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipQueryOutgoing",
+  "driver": "rel",
+  "title": "我主动交的朋友",
+  "beat": "从自己出发的链，亮出那些朋友。",
+  "detailTemplate": "我交的朋友有 {friendCount} 人。",
+  "assertDetailContains": [
+    "我交的"
+  ],
+  "featuredNodeId": "out",
+  "graphKind": "Query",
+  "field": "rel"
+}

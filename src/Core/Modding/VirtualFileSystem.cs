@@ -72,6 +72,53 @@ namespace Ludots.Core.Modding
             return TryResolveUnderRoot(rootPath, relativePath, out fullPath);
         }
 
+        public IReadOnlyList<string> EnumerateFiles(string uri, string searchPattern = "*.json")
+        {
+            if (string.IsNullOrWhiteSpace(searchPattern))
+            {
+                throw new ArgumentException("Search pattern must not be empty.", nameof(searchPattern));
+            }
+
+            var parts = uri.Split(new[] { ':' }, 2);
+            if (parts.Length != 2)
+            {
+                throw new ArgumentException($"Invalid URI format: {uri}. Expected ModId:Path");
+            }
+
+            var modId = parts[0];
+            var relativePath = parts[1];
+
+            if (!_mountPoints.TryGetValue(modId, out var rootPath))
+            {
+                throw new FileNotFoundException($"Mod '{modId}' is not mounted.");
+            }
+
+            if (!TryResolveUnderRoot(rootPath, relativePath, out var fullPath))
+            {
+                throw new UnauthorizedAccessException($"Path escapes mount root: {uri}");
+            }
+
+            if (!Directory.Exists(fullPath))
+            {
+                return Array.Empty<string>();
+            }
+
+            var files = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(fullPath, searchPattern, SearchOption.TopDirectoryOnly))
+            {
+                var full = Path.GetFullPath(file);
+                if (!TryMakeRelativeUri(modId, rootPath, full, out string fileUri))
+                {
+                    throw new UnauthorizedAccessException($"Enumerated file escapes mount root: {full}");
+                }
+
+                files.Add(fileUri);
+            }
+
+            files.Sort(StringComparer.Ordinal);
+            return files;
+        }
+
         private static bool TryResolveUnderRoot(string rootPath, string relativePath, out string fullPath)
         {
             fullPath = string.Empty;
@@ -94,6 +141,27 @@ namespace Ludots.Core.Modding
             }
 
             fullPath = candidate;
+            return true;
+        }
+
+        private static bool TryMakeRelativeUri(string modId, string rootPath, string fullPath, out string uri)
+        {
+            uri = string.Empty;
+            var rootFull = Path.GetFullPath(rootPath);
+            var rootWithSep = rootFull.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? rootFull
+                : rootFull + Path.DirectorySeparatorChar;
+            var fileFull = Path.GetFullPath(fullPath);
+
+            if (!fileFull.StartsWith(rootWithSep, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string relative = fileFull.Substring(rootWithSep.Length)
+                .Replace(Path.DirectorySeparatorChar, '/')
+                .Replace(Path.AltDirectorySeparatorChar, '/');
+            uri = $"{modId}:{relative}";
             return true;
         }
     }

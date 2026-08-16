@@ -1,0 +1,13 @@
+{
+  "op": "AggSumAttribute",
+  "driver": "query",
+  "title": "把生命加总",
+  "beat": "字幕报生命总和。",
+  "detailTemplate": "把生命加总，总和是{sum}。",
+  "assertDetailContains": [
+    "总和"
+  ],
+  "featuredNodeId": "sum",
+  "graphKind": "Query",
+  "field": "query"
+}

@@ -1,0 +1,53 @@
+{
+  "Id": "ui_player_aggregate_graph_mvp",
+  "Tags": ["showcase", "ui", "panel", "graph", "aggregate"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 1400,
+    "TargetYCm": 900,
+    "DistanceCm": 4200,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": [
+    {
+      "Template": "ui_player_aggregate_faction_owner",
+      "InstanceId": "ui-player-aggregate-faction-owner",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1040, "Y": 900 } }
+      }
+    },
+    {
+      "Template": "ui_player_aggregate_producer",
+      "InstanceId": "ui-player-aggregate-ore-depot",
+      "Overrides": {
+        "Name": { "Value": "Ore Depot Alpha" },
+        "WorldPositionCm": { "Value": { "X": 1320, "Y": 760 } },
+        "AttributeBuffer": {
+          "base": {
+            "Showcase.Resource.Ore": 120,
+            "Showcase.Resource.Crystal": 30
+          }
+        }
+      }
+    },
+    {
+      "Template": "ui_player_aggregate_producer",
+      "InstanceId": "ui-player-aggregate-crystal-hub",
+      "Overrides": {
+        "Name": { "Value": "Crystal Hub Beta" },
+        "WorldPositionCm": { "Value": { "X": 1680, "Y": 1040 } },
+        "AttributeBuffer": {
+          "base": {
+            "Showcase.Resource.Ore": 60,
+            "Showcase.Resource.Crystal": 90
+          }
+        }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "ui-player-aggregate-faction-owner" }
+  ]
+}

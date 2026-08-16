@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.AbsFloat",
+    "kind": "Effect",
+    "entry": "modifier",
+    "nodes": [
+      {
+        "id": "modifier",
+        "op": "ConstFloat",
+        "floatValue": -8
+      },
+      {
+        "id": "absMod",
+        "op": "AbsFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "modifier",
+        "fromPort": "next",
+        "to": "absMod"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "modifier",
+        "fromPort": "value",
+        "to": "absMod",
+        "toPort": "value"
+      }
+    ]
+  }
+]

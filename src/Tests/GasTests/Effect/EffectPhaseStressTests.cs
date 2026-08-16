@@ -21,10 +21,11 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class EffectPhaseStressTests
     {
+        private static readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable ZeroAllocHandlers = new();
         /// <summary>
         /// Stress test: execute Phase graphs for N effects × all 8 phases.
         /// Each phase runs a trivial 3-instruction graph (ConstFloat + AddFloat + WriteBlackboard).
-        /// Measures throughput in microseconds-per-phase-execution and total GC allocations.
+        /// Guards average phase cost under 50μs and keeps the measured window within the 64-byte alloc budget.
         /// </summary>
         [Test]
         public void PhaseExecutor_HighVolume_ReportsThroughputAndGc()
@@ -36,7 +37,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -47,11 +48,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
                 int validationGraphId = 2;
                 programs.Register(validationGraphId, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Validation);
 
                 // Proposal uses validation; all other phases use the effect graph.
@@ -152,8 +155,10 @@ namespace Ludots.Tests.GAS
                     That(bb.TryGet(1, out _), Is.True, $"Entity {e} should have BB key=1");
                 }
 
-                // Performance guard: <10μs per phase execution on any modern hardware
-                That(perExecUs, Is.LessThan(50.0), "Phase execution should be < 50μs average");
+                That(perExecUs, Is.LessThan(50.0),
+                    $"Phase execution averaged {perExecUs:F3}μs; budget is 50μs.");
+                That(allocDelta, Is.LessThanOrEqualTo(64),
+                    $"Phase executor high-volume run allocated {allocDelta} bytes; zero-alloc budget is 64.");
                 That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0), "Total time should be < 30s");
 
                 Pass("Phase executor stress test complete");
@@ -192,6 +197,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ClampFloat, Dst = 7, A = 4, B = 5, C = 6 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 8, A = 7 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AbsFloat, Dst = 9, A = 8 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 var f = new float[GraphVmLimits.MaxFloatRegisters];
@@ -199,6 +205,7 @@ namespace Ludots.Tests.GAS
                 var b = new byte[GraphVmLimits.MaxBoolRegisters];
                 var e = new Entity[GraphVmLimits.MaxEntityRegisters];
                 var targets = new Entity[GraphVmLimits.MaxTargets];
+                Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
 
                 e[0] = entity;
                 e[1] = entity;
@@ -213,8 +220,10 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
+                        CallStack = callStack,
+                        CallStackCount = 0,
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                 }
 
                 GC.Collect();
@@ -234,8 +243,10 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
+                        CallStack = callStack,
+                        CallStackCount = 0,
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                 }
 
                 sw.Stop();
@@ -279,6 +290,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ReadBlackboardFloat, Dst = 1, A = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 1, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 int entityCount = 1000;
@@ -294,10 +306,10 @@ namespace Ludots.Tests.GAS
                 var b = new byte[GraphVmLimits.MaxBoolRegisters];
                 var e = new Entity[GraphVmLimits.MaxEntityRegisters];
                 var targets = new Entity[GraphVmLimits.MaxTargets];
+                var callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
                 e[0] = caster;
 
-                // Warmup
                 for (int w = 0; w < 5; w++)
                 {
                     foreach (var ent in entities)
@@ -310,8 +322,10 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
+                            CallStack = callStack,
+                            CallStackCount = 0,
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                     }
                 }
 
@@ -336,8 +350,10 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
+                            CallStack = callStack,
+                            CallStackCount = 0,
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, ZeroAllocHandlers);
                     }
                 }
 
@@ -357,7 +373,10 @@ namespace Ludots.Tests.GAS
                 That(bb.TryGet(1, out float v), Is.True);
                 That(v, Is.EqualTo(42.5f).Within(1e-6f));
 
-                That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0));
+                That(alloc1 - alloc0, Is.LessThanOrEqualTo(64),
+                    $"Blackboard mass write/read allocated {alloc1 - alloc0} bytes; ZeroGc budget is 64.");
+                That(sw.Elapsed.TotalSeconds, Is.LessThan(30.0),
+                    $"Blackboard mass write/read took {sw.Elapsed.TotalSeconds:F2}s; budget is 30s.");
 
                 Pass("BB stress test complete");
             }

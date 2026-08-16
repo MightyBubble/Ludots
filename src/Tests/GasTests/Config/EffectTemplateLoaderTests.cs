@@ -28,8 +28,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -88,8 +88,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -122,8 +122,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -155,8 +155,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -198,8 +198,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -255,8 +255,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -301,8 +301,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -346,8 +346,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -397,8 +397,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     $$"""
                     [
                       {
@@ -442,8 +442,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -483,8 +483,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -527,8 +527,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -569,8 +569,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -604,8 +604,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -638,8 +638,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -689,8 +689,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -739,8 +739,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -779,8 +779,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -820,8 +820,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -868,8 +868,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -909,8 +909,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -948,8 +948,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -987,8 +987,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1028,8 +1028,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1068,8 +1068,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1109,13 +1109,65 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_CustomPresetType_StoresExtensionPresetId()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Custom_Status",
+                        "tags": ["Effect.Custom.Status"],
+                        "presetType": "ExampleMod.CustomStatus",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var presetTypes = new PresetTypeRegistry();
+                int customPresetId = presetTypes.RegisterKey("ExampleMod.CustomStatus");
+                var customPreset = new PresetTypeDefinition
+                {
+                    TypeId = customPresetId,
+                    TypeKey = "ExampleMod.CustomStatus",
+                    ActivePhases = PhaseFlags.InstantCore,
+                    AllowedLifetimes = LifetimeFlags.InstantOnly,
+                };
+                presetTypes.Register(in customPreset);
+
+                var registry = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, registry, presetTypes: presetTypes);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Custom_Status");
+                That(tplId, Is.GreaterThan(0));
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.PresetType, Is.EqualTo(EffectPresetType.None));
+                That(tpl.PresetTypeId, Is.EqualTo(customPresetId));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_GraphProgramTargetQuery_RequiresGraphProgramId()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1159,8 +1211,8 @@ namespace Ludots.Tests.GAS
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
 
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1212,8 +1264,8 @@ namespace Ludots.Tests.GAS
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
 
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1262,8 +1314,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {

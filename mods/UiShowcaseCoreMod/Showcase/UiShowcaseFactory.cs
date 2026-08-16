@@ -107,7 +107,6 @@ public static class UiShowcaseFactory
     {
         return new WebParityShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
     }
-
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return UiSkinShowcaseSceneFactory.CreateScene(textMeasurer, imageSizeProvider);

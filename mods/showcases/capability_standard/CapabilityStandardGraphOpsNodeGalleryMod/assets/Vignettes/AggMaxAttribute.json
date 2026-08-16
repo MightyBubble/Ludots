@@ -1,0 +1,13 @@
+{
+  "op": "AggMaxAttribute",
+  "driver": "query",
+  "title": "最高生命是多少",
+  "beat": "最高值+对应人高亮。",
+  "detailTemplate": "最高生命是{max}，对应{label}。",
+  "assertDetailContains": [
+    "最高生命"
+  ],
+  "featuredNodeId": "max",
+  "graphKind": "Query",
+  "field": "query"
+}

@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTagNone",
+  "driver": "query",
+  "title": "没有阵亡标记的人",
+  "beat": "死掉的被滤掉。",
+  "detailTemplate": "没阵亡标记的还剩{count}人。",
+  "assertDetailContains": [
+    "没阵亡"
+  ],
+  "featuredNodeId": "tagNone",
+  "graphKind": "Query",
+  "field": "query"
+}

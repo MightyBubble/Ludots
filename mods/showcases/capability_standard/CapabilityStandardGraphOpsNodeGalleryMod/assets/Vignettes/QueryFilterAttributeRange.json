@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterAttributeRange",
+  "driver": "query",
+  "title": "只留下残血的人",
+  "beat": "生命低于阈值的人亮。",
+  "detailTemplate": "生命不超过{threshold}的残血有{count}人。",
+  "assertDetailContains": [
+    "残血"
+  ],
+  "featuredNodeId": "hpRange",
+  "graphKind": "Query",
+  "field": "query"
+}

@@ -1,0 +1,59 @@
+[
+  {
+    "id": "showcase.graph_op.LoadConfigEffectId",
+    "kind": "Effect",
+    "entry": "cfgFx",
+    "nodes": [
+      {
+        "id": "cfgFx",
+        "op": "LoadConfigEffectId",
+        "configKey": "showcase.config.chainEffect"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "wound",
+        "op": "ConstFloat",
+        "floatValue": -18
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "cfgFx",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "wound"
+      },
+      {
+        "from": "wound",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "wound",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
+  }
+]

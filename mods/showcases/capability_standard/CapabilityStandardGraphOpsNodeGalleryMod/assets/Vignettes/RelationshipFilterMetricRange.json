@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipFilterMetricRange",
+  "driver": "rel",
+  "title": "好感落在区间里的人",
+  "beat": "只留好感 30~80 的。",
+  "detailTemplate": "好感落在 30 到 80 区间里的有 {friendCount} 人。",
+  "assertDetailContains": [
+    "区间"
+  ],
+  "featuredNodeId": "range",
+  "graphKind": "Query",
+  "field": "rel"
+}

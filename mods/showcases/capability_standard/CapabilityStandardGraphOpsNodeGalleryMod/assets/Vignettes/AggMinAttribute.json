@@ -1,0 +1,13 @@
+{
+  "op": "AggMinAttribute",
+  "driver": "query",
+  "title": "最低生命是多少",
+  "beat": "最低值。",
+  "detailTemplate": "最低生命是{min}，对应{label}。",
+  "assertDetailContains": [
+    "最低生命"
+  ],
+  "featuredNodeId": "min",
+  "graphKind": "Query",
+  "field": "query"
+}

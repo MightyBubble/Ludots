@@ -1,0 +1,13 @@
+{
+  "op": "AggMinEntityByAttribute",
+  "driver": "query",
+  "title": "谁最残",
+  "beat": "最残的人被点名。",
+  "detailTemplate": "最残的是{label}，生命{hp}。",
+  "assertDetailContains": [
+    "最残"
+  ],
+  "featuredNodeId": "minEnt",
+  "graphKind": "Query",
+  "field": "query"
+}

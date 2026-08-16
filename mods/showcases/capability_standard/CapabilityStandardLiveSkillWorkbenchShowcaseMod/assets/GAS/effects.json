@@ -1,0 +1,35 @@
+[
+  {
+    "id": "Effect.LSW.IceballHit",
+    "tags": [
+      "Effect.LSW.Ice"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "stack": {
+      "limit": 1,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    },
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -45
+      }
+    ],
+    "grantedTags": [
+      {
+        "tag": "State.LSW.Chilled",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  }
+]

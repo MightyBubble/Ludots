@@ -1,0 +1,13 @@
+{
+  "op": "QueryLine",
+  "driver": "spatial",
+  "title": "这条线上有谁",
+  "beat": "一道直线穿过去点到的人。",
+  "detailTemplate": "一道直线点到{count}人。",
+  "assertDetailContains": [
+    "直线"
+  ],
+  "featuredNodeId": "line",
+  "graphKind": "Query",
+  "field": "spatial"
+}

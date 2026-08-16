@@ -221,7 +221,7 @@ namespace GasTests
             {
                 Path.Combine(repoRoot, "mods"),
                 Path.Combine(repoRoot, "assets"),
-                Path.Combine(repoRoot, "src", "Platforms", "Web", "wwwroot", "Configs", "Maps")
+                Path.Combine(repoRoot, "src", "Platforms", "Web", "wwwroot", "Maps")
             })
             {
                 if (!Directory.Exists(root))

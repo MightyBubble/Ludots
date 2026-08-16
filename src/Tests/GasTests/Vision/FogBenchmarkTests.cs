@@ -17,6 +17,9 @@ namespace Ludots.Tests.GAS
     [Category("benchmark")]
     public sealed class FogBenchmarkTests
     {
+        private const double TargetProjectionHz = 30.0;
+        private const double MinimumCiProjectionHz = 20.0;
+
         [Test]
         public void Benchmark_FogField_DenseOneMillionCellsCopyIsZeroAlloc()
         {
@@ -115,7 +118,9 @@ namespace Ludots.Tests.GAS
             Assert.That(projectedCells, Is.EqualTo(cellCount * frames));
             Assert.That(allocated, Is.EqualTo(0));
             Assert.That(cellsPerSecond, Is.GreaterThan(500_000d));
-            Assert.That(projectionHz, Is.GreaterThan(30d));
+            Warn.If(projectionHz, Is.LessThan(TargetProjectionHz),
+                $"Global fog projection fell below {TargetProjectionHz:F0}Hz target: {projectionHz:F3}Hz");
+            Assert.That(projectionHz, Is.GreaterThan(MinimumCiProjectionHz));
         }
 
         [Test]

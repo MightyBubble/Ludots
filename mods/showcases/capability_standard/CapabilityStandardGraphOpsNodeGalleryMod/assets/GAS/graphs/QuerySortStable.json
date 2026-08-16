@@ -1,0 +1,34 @@
+[
+  {
+    "id": "showcase.graph_op.QuerySortStable",
+    "kind": "Query",
+    "entry": "radius",
+    "nodes": [
+      {
+        "id": "radius",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 800
+      },
+      {
+        "id": "sort",
+        "op": "QuerySortStable"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "radius",
+        "fromPort": "next",
+        "to": "sort"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "radius",
+        "fromPort": "list",
+        "to": "sort",
+        "toPort": "list"
+      }
+    ]
+  }
+]

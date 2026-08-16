@@ -43,6 +43,17 @@ namespace Ludots.Core.Spatial
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
         }
 
+        public void ClearPartition()
+        {
+            if (_backend is not SpatialPartitionBackendBase partition)
+            {
+                throw new InvalidOperationException(
+                    $"SpatialQueryService backend '{_backend.GetType().FullName}' cannot clear its partition.");
+            }
+
+            partition.Clear();
+        }
+
         /// <summary>
         /// Set the position provider used for fine shape filtering.
         /// Must be set before calling QueryCone/QueryRectangle/QueryLine.

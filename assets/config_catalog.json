@@ -1,0 +1,442 @@
+[
+  {
+    "Path": "AI/atoms.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/projection.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/utility.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/goap_actions.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/goap_goals.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/htn_domain.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/behavior_trees.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "AI/hfsm.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "AI/target_filters.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/inputs.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/normalizations.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/curves.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/tasks.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/decisions.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/decision_makers.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/stances.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "AI/actuators.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "GAS/effects.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ShardDirectories": [
+      "GAS/effects"
+    ]
+  },
+  {
+    "Path": "GAS/abilities.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ShardDirectories": [
+      "GAS/abilities"
+    ],
+    "AllowEmpty": true
+  },
+  {
+    "Path": "GAS/tag_rules.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "GAS/attribute_bindings.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/graphs.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ShardDirectories": [
+      "GAS/graphs"
+    ]
+  },
+  {
+    "Path": "GAS/func_lib.json",
+    "Policy": "ArrayById",
+    "IdField": "name"
+  },
+  {
+    "Path": "GAS/action_lib.json",
+    "Policy": "ArrayById",
+    "IdField": "name"
+  },
+  {
+    "Path": "GAS/preset_types.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ShardDirectories": [
+      "GAS/preset_types"
+    ]
+  },
+  {
+    "Path": "GAS/target_dispatch_presets.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "GAS/ability_form_sets.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "GAS/context_groups.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "GAS/attribute_constraints.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "GAS/clock.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "GAS/order_types.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Vision/fog_layers.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Progression/scopes.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Progression/progressions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Progression/requirements.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Engine/clock.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Physics2D/clock.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Physics2D/solver.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Physics2D/kinematic.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Navigation/agent_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Navigation/pathing.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Navigation/navmesh.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Entities/templates.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/presenters.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "ShardDirectories": [
+      "Presentation/presenters"
+    ],
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/particle_vfx.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/mesh_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/material_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/host_assets.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/sky_environments.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/water_environments.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/terrain_albedo_environments.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Presentation/instanced_batches.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/animator_controllers.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/animation_clips.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/animation_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/text_tokens.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/text_locales.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Presentation/lod_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Items/shapes.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Items/layouts.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Items/definitions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Exchange/operations.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Relationships/catalog.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/default_input.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/action_attribute_bindings.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Input/input_order_mappings.json",
+    "Policy": "DeepObject",
+    "AllowEmpty": true
+  },
+  {
+    "Path": "Input/filter_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/command_intent_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/cast_dispatch_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/interaction_context_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/cast_commit_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/cast_commit_locks.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Input/control_schemes.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "UI/ability_aggregation_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "UI/command_deck_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "UI/production_overview_profiles.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "Camera/virtual_cameras.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Narrative/variables.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Quests/quests.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Narrative/dialogues.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "Narrative/cinematics.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
+    "Path": "EntityInfo/insight_profiles.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  }
+]

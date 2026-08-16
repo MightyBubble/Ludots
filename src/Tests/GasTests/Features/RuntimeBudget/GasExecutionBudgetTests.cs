@@ -84,6 +84,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresEffectRequestQueueCapacityAtOrAboveEngineFloor()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME - 1;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("effectRequestQueueCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveOrderAdmissionRejectionCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -179,7 +189,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         public void DefaultGameConfig_GasRuntimeCapacity_ValidatesAdmissionResultHeadroom()
         {
             string repoRoot = FindRepoRoot();
-            string configPath = Path.Combine(repoRoot, "assets", "Configs", "game.json");
+            string configPath = Path.Combine(repoRoot, "assets", "game.json");
             string json = File.ReadAllText(configPath);
             GameConfig config = JsonSerializer.Deserialize<GameConfig>(
                 json,
@@ -1047,6 +1057,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecSnapshotCapacity = 64,
                 EffectLifetimeSnapshotCapacity = 64,
                 EffectFanOutCommandCapacity = 64,
+                EffectRequestQueueCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 OrderQueueCapacity = 64,
                 ResponseChainOrderQueueCapacity = 64,
                 OrderAdmissionResultCapacity = 128,
@@ -1069,7 +1080,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             while (directory != null)
             {
                 string gitPath = Path.Combine(directory.FullName, ".git");
-                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "Configs", "game.json");
+                string defaultConfigPath = Path.Combine(directory.FullName, "assets", "game.json");
                 if ((File.Exists(gitPath) || Directory.Exists(gitPath)) &&
                     File.Exists(defaultConfigPath) &&
                     Directory.Exists(Path.Combine(directory.FullName, "mods")))
