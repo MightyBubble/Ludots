@@ -12,9 +12,9 @@
 ## Results
 | Profile | Profile id | Slot count | Revision | Labels |
 |---------|------------|------------|----------|--------|
-| Family | aggregation.by_family | 8 | 3546403227 | Context, Dash, Mobility, Projectile, Defense, Toggle, Area, Advanced |
-| Template | aggregation.by_template | 24 | 2584606449 | Fireball, Blink Step, Arc Shield, NovaPulse, ArcDash, GuardToggle, ActionContext, RuneBurst, Fireball, Leap, Guard, Shockwave, ChargeDash, IronWall, ActionContext, GroundSlam, Stone Throw, Blink Step, Guard, Overclock, ThrustJump, ShieldNet, ActionContext, OrbitalStrike |
-| Ability | aggregation.by_ability_id | 21 | 1955839986 | ActionContext, ArcDash, GuardToggle, NovaPulse, RuneBurst, ActionContext, OrbitalStrike, Overclock, ShieldNet, ThrustJump, ActionContext, ChargeDash, GroundSlam, IronWall, Shockwave, Arc Shield, Blink Step, Fireball, Guard, Leap, Stone Throw |
+| Family | aggregation.by_family | 8 | 1511098490 | Context, Dash, Mobility, Projectile, Defense, Toggle, Area, Advanced |
+| Template | aggregation.by_template | 24 | 3456689720 | Fireball, Blink Step, Arc Shield, NovaPulse, ArcDash, GuardToggle, ActionContext, RuneBurst, Fireball, Leap, Guard, Shockwave, ChargeDash, IronWall, ActionContext, GroundSlam, Stone Throw, Blink Step, Guard, Overclock, ThrustJump, ShieldNet, ActionContext, OrbitalStrike |
+| Ability | aggregation.by_ability_id | 21 | 833516171 | ActionContext, ArcDash, GuardToggle, NovaPulse, RuneBurst, ActionContext, OrbitalStrike, Overclock, ShieldNet, ThrustJump, ActionContext, ChargeDash, GroundSlam, IronWall, Shockwave, Arc Shield, Blink Step, Fireball, Guard, Leap, Stone Throw |
 
 ## Slot Detail
 ### Family
