@@ -26,57 +26,6 @@
         "WorldPositionCm": { "Value": { "X": 12000, "Y": 0 } },
         "Name": { "Value": "Command Center P2" }
       }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p1_l0",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -9000, "Y": 3500 } },
-        "Name": { "Value": "Spawn P1 L0" }
-      }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p1_l1",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
-        "Name": { "Value": "Spawn P1 L1" }
-      }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p1_l2",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -9000, "Y": -3500 } },
-        "Name": { "Value": "Spawn P1 L2" }
-      }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p2_l0",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9000, "Y": 3500 } },
-        "Name": { "Value": "Spawn P2 L0" },
-        "Team": { "Id": 2 }
-      }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p2_l1",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
-        "Name": { "Value": "Spawn P2 L1" },
-        "Team": { "Id": 2 }
-      }
-    },
-    {
-      "Template": "ds_spawn_marker",
-      "InstanceId": "desert_strike_spawn_p2_l2",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 9000, "Y": -3500 } },
-        "Name": { "Value": "Spawn P2 L2" },
-        "Team": { "Id": 2 }
-      }
     }
   ],
   "Teams": [

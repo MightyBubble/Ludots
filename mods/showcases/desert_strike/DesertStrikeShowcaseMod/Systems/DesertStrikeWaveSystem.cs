@@ -72,7 +72,7 @@ namespace DesertStrikeShowcaseMod.Systems
         private void SpawnSide(bool player, int team, int playerId)
         {
             var queue = player ? _state.PlayerQueue : _state.AiQueue;
-            var markers = player ? _state.PlayerSpawnMarkers : _state.AiSpawnMarkers;
+            var spawns = player ? _config.Lanes.PlayerSpawns : _config.Lanes.AiSpawns;
 
             for (int i = 0; i < queue.Count; i++)
             {
@@ -83,20 +83,20 @@ namespace DesertStrikeShowcaseMod.Systems
                         $"DS.WAVE.ERR.UnknownUnit: unitId={purchase.UnitId}.");
                 }
 
-                if (!markers.TryGetValue(purchase.LaneIndex, out Arch.Core.Entity marker) || !World.IsAlive(marker))
+                if ((uint)purchase.LaneIndex >= (uint)spawns.Count)
                 {
                     throw new InvalidOperationException(
-                        $"DS.WAVE.ERR.MissingLaneMarker: lane={purchase.LaneIndex}.");
+                        $"DS.WAVE.ERR.MissingLaneSpawn: lane={purchase.LaneIndex}.");
                 }
 
-                var markerCm = World.Get<Ludots.Core.Components.WorldPositionCm>(marker).Value.ToWorldCmInt2();
+                DesertStrikeConfig.SpawnPointConfig spawn = spawns[purchase.LaneIndex];
                 (int offsetX, int offsetY) = ScatterOffset(i);
                 var request = new RuntimeEntitySpawnRequest
                 {
                     Kind = RuntimeEntitySpawnKind.Template,
                     TemplateId = unit.Template,
                     HasWorldPosition = 1,
-                    WorldPositionCm = Fix64Vec2.FromInt(markerCm.X + offsetX, markerCm.Y + offsetY),
+                    WorldPositionCm = Fix64Vec2.FromInt(spawn.X + offsetX, spawn.Y + offsetY),
                     TeamIdOverride = team,
                     PlayerOwnerIdOverride = playerId,
                     EmitReceipt = 1,

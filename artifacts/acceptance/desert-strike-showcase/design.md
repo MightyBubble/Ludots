@@ -55,9 +55,10 @@
 ## 5. 地图布局（世界坐标 cm，Y 轴为上）
 
 - 基地：P1 (-12000, 0)，P2 (+12000, 0)；基地 HP 6000，无 MoveSpeed。
-- 出兵线 marker（每方 3 路）：P1 (-9000, +3500 / 0 / -3500)，P2 (+9000, +3500 / 0 / -3500)。
+- 出兵点：配置驱动（`desert_strike_config.json → lanes`），每方 3 路：P1 (-9000, +3500 / 0 / -3500)，P2 (+9000, +3500 / 0 / -3500)，波次出生 = 出兵点 + 确定性散开（不在地图中放 marker 实体，避免多余的 actor 光圈）。
 - 双方互斥敌对（ParticipantRelationships Teams 1↔2 Hostile）。
 - 波次单位出生后自动向敌方基地推进（`DesertStrikeAutoBattleSystem` 目标 = 敌方基地实时位置）。
+- 地图加载后本地玩家指令源自动选中 P1 基地（复用 EntityCollection 指令源 API），指令面板即商店。
 
 ## 6. 平衡初值（`desert_strike_config.json` + 模板属性）
 

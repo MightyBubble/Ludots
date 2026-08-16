@@ -3,6 +3,18 @@
   "incomeIntervalTicks": 600,
   "incomePerInterval": 120,
   "startingMinerals": 600,
+  "lanes": {
+    "playerSpawns": [
+      { "x": -9000, "y": 3500 },
+      { "x": -9000, "y": 0 },
+      { "x": -9000, "y": -3500 }
+    ],
+    "aiSpawns": [
+      { "x": 9000, "y": 3500 },
+      { "x": 9000, "y": 0 },
+      { "x": 9000, "y": -3500 }
+    ]
+  },
   "starterWave": {
     "player": [
       { "unit": "marine", "lane": 0 },

@@ -18,6 +18,7 @@ namespace DesertStrikeShowcaseMod.Systems
         private readonly IClock _clock;
         private readonly ScreenOverlayBuffer? _overlay;
         private readonly int _mineralsAttributeId;
+        private readonly int _healthAttributeId;
 
         public DesertStrikeHudSystem(GameEngine engine, DesertStrikeState state, DesertStrikeConfig config)
             : base(engine.World)
@@ -27,6 +28,7 @@ namespace DesertStrikeShowcaseMod.Systems
             _clock = engine.GetService(CoreServiceKeys.Clock);
             engine.TryGetService(CoreServiceKeys.ScreenOverlayBuffer, out _overlay);
             _mineralsAttributeId = EnsureAttributeId("Minerals");
+            _healthAttributeId = EnsureAttributeId("Health");
         }
 
         public override void Update(in float dt)
@@ -38,38 +40,30 @@ namespace DesertStrikeShowcaseMod.Systems
 
             int step = _clock.Now(ClockDomainId.FixedFrame);
             int waveSeconds = Math.Max(0, (_state.NextWaveStep - step) / 60);
-            _overlay.AddRect(
-                x: 8,
-                y: 8,
-                width: 460,
-                height: 110,
-                fill: new Vector4(0f, 0f, 0f, 0.45f),
-                border: new Vector4(1f, 1f, 1f, 0.16f));
-            _overlay.AddText(16, 16, $"Minerals: {ReadMinerals(_state.PlayerBase):0}", 20, new Vector4(0.6f, 1f, 0.7f, 1f));
-            _overlay.AddText(16, 42, $"Next wave: {waveSeconds}s | Wave {_state.WaveNumber} | Queue {_state.PlayerQueue.Count}", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
-            _overlay.AddText(16, 66, $"AI Minerals: {ReadMinerals(_state.AiBase):0} | AI Queue {_state.AiQueue.Count}", 16, new Vector4(1f, 0.78f, 0.6f, 1f));
-            _overlay.AddText(16, 90, $"Units {_state.UnitsSpawned} spawned / {_state.UnitsDestroyed} destroyed", 16, new Vector4(0.7f, 0.7f, 0.7f, 1f));
+
+            _overlay.AddRect(8, 8, 480, 132, new Vector4(0f, 0f, 0f, 0.55f), new Vector4(1f, 1f, 1f, 0.18f), stableId: 100, dirtySerial: 0);
+            _overlay.AddText(16, 14, "沙漠风暴 · Desert Strike (Tug of War)", 22, new Vector4(1f, 0.9f, 0.5f, 1f), stableId: 101, dirtySerial: 0);
+            _overlay.AddText(16, 42, $"水晶: {ReadMinerals(_state.PlayerBase):0}    下一波: {waveSeconds}s    波次: {_state.WaveNumber}", 18, new Vector4(0.6f, 1f, 0.7f, 1f), stableId: 102, dirtySerial: 0);
+            _overlay.AddText(16, 66, $"本波待发: {_state.PlayerQueue.Count} 单位    AI 水晶: {ReadMinerals(_state.AiBase):0}    AI 待发: {_state.AiQueue.Count}", 18, new Vector4(0.78f, 0.92f, 1f, 1f), stableId: 103, dirtySerial: 0);
+            _overlay.AddText(16, 90, $"我方基地 HP: {ReadHealth(_state.PlayerBase):0}    敌方基地 HP: {ReadHealth(_state.AiBase):0}", 18, new Vector4(1f, 0.6f, 0.6f, 1f), stableId: 104, dirtySerial: 0);
+            _overlay.AddText(16, 112, "玩法：选中我方基地（绿圈）→ 点击下方按钮购买单位 → 每 30 秒自动出兵，摧毁敌方基地获胜", 16, new Vector4(0.85f, 0.85f, 0.85f, 1f), stableId: 105, dirtySerial: 0);
 
             if (_state.GameOver)
             {
                 bool localVictory = _state.WinnerPlayerId == 1;
-                _overlay.AddRect(
-                    x: 340,
-                    y: 280,
-                    width: 600,
-                    height: 120,
-                    fill: new Vector4(0f, 0f, 0f, 0.7f),
-                    border: new Vector4(localVictory ? 0.3f : 1f, localVictory ? 1f : 0.3f, 0.3f, 1f));
+                _overlay.AddRect(340, 280, 600, 120, new Vector4(0f, 0f, 0f, 0.72f), new Vector4(localVictory ? 0.3f : 1f, localVictory ? 1f : 0.3f, 0.3f, 1f), stableId: 200, dirtySerial: 0);
                 _overlay.AddText(
                     360,
                     316,
-                    localVictory ? "VICTORY — Enemy base destroyed" : "DEFEAT — Your base was destroyed",
-                    32,
-                    new Vector4(1f, 1f, 1f, 1f));
+                    localVictory ? "胜利！敌方基地已被摧毁" : "失败！我方基地已被摧毁",
+                    34,
+                    new Vector4(1f, 1f, 1f, 1f),
+                    stableId: 201,
+                    dirtySerial: 0);
             }
         }
 
-        private float ReadMinerals(Arch.Core.Entity baseEntity)
+        private float ReadMinerals(Entity baseEntity)
         {
             if (!World.IsAlive(baseEntity) || !World.Has<AttributeBuffer>(baseEntity))
             {
@@ -77,6 +71,16 @@ namespace DesertStrikeShowcaseMod.Systems
             }
 
             return World.Get<AttributeBuffer>(baseEntity).GetCurrent(_mineralsAttributeId);
+        }
+
+        private float ReadHealth(Entity baseEntity)
+        {
+            if (!World.IsAlive(baseEntity) || !World.Has<AttributeBuffer>(baseEntity))
+            {
+                return 0f;
+            }
+
+            return World.Get<AttributeBuffer>(baseEntity).GetCurrent(_healthAttributeId);
         }
 
         private static int EnsureAttributeId(string attributeName)

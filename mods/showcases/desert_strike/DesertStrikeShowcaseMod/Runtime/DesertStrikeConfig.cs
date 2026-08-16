@@ -13,9 +13,22 @@ namespace DesertStrikeShowcaseMod.Runtime
         [JsonPropertyName("incomeIntervalTicks")] public int IncomeIntervalTicks { get; set; } = 600;
         [JsonPropertyName("incomePerInterval")] public int IncomePerInterval { get; set; } = 120;
         [JsonPropertyName("startingMinerals")] public int StartingMinerals { get; set; } = 600;
+        [JsonPropertyName("lanes")] public LanesConfig Lanes { get; set; } = new();
         [JsonPropertyName("starterWave")] public StarterWaveConfig StarterWave { get; set; } = new();
         [JsonPropertyName("units")] public Dictionary<string, UnitConfig> Units { get; set; } = new();
         [JsonPropertyName("ai")] public AiConfig Ai { get; set; } = new();
+
+        public sealed class LanesConfig
+        {
+            [JsonPropertyName("playerSpawns")] public List<SpawnPointConfig> PlayerSpawns { get; set; } = new();
+            [JsonPropertyName("aiSpawns")] public List<SpawnPointConfig> AiSpawns { get; set; } = new();
+        }
+
+        public sealed class SpawnPointConfig
+        {
+            [JsonPropertyName("x")] public int X { get; set; }
+            [JsonPropertyName("y")] public int Y { get; set; }
+        }
 
         public sealed class StarterWaveConfig
         {

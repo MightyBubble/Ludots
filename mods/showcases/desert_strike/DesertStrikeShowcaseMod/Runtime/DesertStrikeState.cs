@@ -17,9 +17,6 @@ namespace DesertStrikeShowcaseMod.Runtime
         public int PlayerNextLane;
         public int AiNextLane;
 
-        public readonly Dictionary<int, Entity> PlayerSpawnMarkers = new();
-        public readonly Dictionary<int, Entity> AiSpawnMarkers = new();
-
         public int WaveNumber;
         public int NextWaveStep;
         public int NextIncomeStep;

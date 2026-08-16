@@ -73,7 +73,7 @@ namespace DesertStrikeShowcaseMod.Systems
 
                 DesertStrikeConfig.UnitConfig unit = _config.Units[unitId];
                 AttributeMutationOps.SetCurrent(World, _state.AiBase, _mineralsAttributeId, minerals - unit.Cost, _tagOps);
-                int laneCount = Math.Max(1, _state.AiSpawnMarkers.Count);
+                int laneCount = Math.Max(1, _config.Lanes.AiSpawns.Count);
                 int lane = _state.AiNextLane;
                 _state.AiNextLane = (lane + 1) % laneCount;
                 _state.AiQueue.Add(new DesertStrikePurchase(unitId, lane));

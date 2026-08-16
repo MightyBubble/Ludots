@@ -64,8 +64,10 @@ namespace DesertStrikeShowcaseMod.Triggers
             state.PlayerTeam = RequireTeam(world, state.PlayerBase);
             state.AiTeam = RequireTeam(world, state.AiBase);
 
-            BindSpawnMarkers(world, state, "Spawn P1 L", state.PlayerSpawnMarkers);
-            BindSpawnMarkers(world, state, "Spawn P2 L", state.AiSpawnMarkers);
+            if (!TrySelectCommandSource(engine, state.PlayerBase))
+            {
+                _ctx.Log("[DesertStrikeShowcaseMod] Player base command source not selected; the base may be clickable directly.");
+            }
 
             var tagOps = engine.GetService(CoreServiceKeys.TagOps);
             int mineralsId = EnsureAttributeId("Minerals");
@@ -94,13 +96,32 @@ namespace DesertStrikeShowcaseMod.Triggers
             }
         }
 
-        private static void BindSpawnMarkers(World world, DesertStrikeState state, string prefix, Dictionary<int, Entity> markers)
+        private static bool TrySelectCommandSource(GameEngine engine, Entity target)
         {
-            for (int lane = 0; lane < 3; lane++)
+            if (!engine.World.IsAlive(target) ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not Ludots.Core.EntityCollections.EntityCollectionStore collections)
             {
-                Entity marker = RequireNamedEntity(world, $"{prefix}{lane}");
-                markers[lane] = marker;
+                return false;
             }
+
+            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (!engine.World.IsAlive(owner))
+            {
+                return false;
+            }
+
+            Span<Entity> next = stackalloc Entity[1];
+            next[0] = target;
+            var descriptor = Ludots.Core.EntityCollections.EntityCollectionDescriptor.Create(
+                Ludots.Core.EntityCollections.EntityCollectionKeys.CommandSource,
+                Ludots.Core.EntityCollections.EntityCollectionSourceKind.UiAcquisition,
+                Ludots.Core.EntityCollections.EntityCollectionRoleKind.CommandSource,
+                owner,
+                target,
+                "Desert Strike command source",
+                "1 actor");
+            collections.Replace(owner, descriptor, next, owner);
+            return true;
         }
 
         private static Entity RequireNamedEntity(World world, string name)
