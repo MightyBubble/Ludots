@@ -1,18 +1,49 @@
-{
-  "id": "showcase.graph_op.WriteBlackboardFloat",
-  "kind": "Effect",
-  "entry": "src",
-  "nodes": [
-    { "id": "src", "op": "LoadContextSource" },
-    { "id": "power", "op": "ConstFloat", "floatValue": 35 },
-    { "id": "writeF", "op": "WriteBlackboardFloat", "blackboardKey": "showcase.bb.power" }
-  ],
-  "controlEdges": [
-    { "from": "src", "fromPort": "next", "to": "power" },
-    { "from": "power", "fromPort": "next", "to": "writeF" }
-  ],
-  "valueEdges": [
-    { "from": "src", "fromPort": "value", "to": "writeF", "toPort": "source" },
-    { "from": "power", "fromPort": "value", "to": "writeF", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.WriteBlackboardFloat",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "power",
+        "op": "ConstFloat",
+        "floatValue": 35
+      },
+      {
+        "id": "writeF",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "showcase.bb.power"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "power"
+      },
+      {
+        "from": "power",
+        "fromPort": "next",
+        "to": "writeF"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "writeF",
+        "toPort": "source"
+      },
+      {
+        "from": "power",
+        "fromPort": "value",
+        "to": "writeF",
+        "toPort": "value"
+      }
+    ]
+  }
+]

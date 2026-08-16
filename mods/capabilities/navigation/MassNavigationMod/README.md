@@ -25,7 +25,7 @@ Foundation-owned files stay under `mods/capabilities/navigation/MassNavigationMo
 | File | Responsibility |
 | --- | --- |
 | `mods/capabilities/navigation/MassNavigationMod/assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, and view residency. |
-| `mods/capabilities/navigation/MassNavigationMod/assets/Configs/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
+| `mods/capabilities/navigation/MassNavigationMod/assets/Camera/virtual_cameras.json` | Foundation visual-heightmap-aware camera profile for the large-world map. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
 | `mods/capabilities/navigation/MassNavigationMod/assets/Presentation/presenters.json` | Foundation example presenter authoring. |

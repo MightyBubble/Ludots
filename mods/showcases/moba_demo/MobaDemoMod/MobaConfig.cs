@@ -8,7 +8,7 @@ namespace MobaDemoMod
 {
     /// <summary>
     /// Centralized configuration for MobaDemoMod.
-    /// Loaded from assets/Configs/moba_config.json.
+    /// Loaded from assets/moba_config.json.
     /// Keeps tunable values in data instead of runtime code.
     /// </summary>
     public sealed class MobaConfig
@@ -82,7 +82,7 @@ namespace MobaDemoMod
         /// </summary>
         public static MobaConfig Load(IModContext ctx)
         {
-            const string uri = "assets/Configs/moba_config.json";
+            const string uri = "assets/moba_config.json";
             string fullUri = $"{ctx.ModId}:{uri}";
             using var stream = ctx.VFS.GetStream(fullUri);
             return JsonSerializer.Deserialize<MobaConfig>(stream, JsonOptions)

@@ -1,15 +1,34 @@
-{
-  "id": "showcase.graph_op.WriteSelfAttribute",
-  "kind": "Effect",
-  "entry": "heal",
-  "nodes": [
-    { "id": "heal", "op": "ConstFloat", "floatValue": 90 },
-    { "id": "healSelf", "op": "WriteSelfAttribute", "attribute": "Health" }
-  ],
-  "controlEdges": [
-    { "from": "heal", "fromPort": "next", "to": "healSelf" }
-  ],
-  "valueEdges": [
-    { "from": "heal", "fromPort": "value", "to": "healSelf", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.WriteSelfAttribute",
+    "kind": "Effect",
+    "entry": "heal",
+    "nodes": [
+      {
+        "id": "heal",
+        "op": "ConstFloat",
+        "floatValue": 90
+      },
+      {
+        "id": "healSelf",
+        "op": "WriteSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "heal",
+        "fromPort": "next",
+        "to": "healSelf"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "heal",
+        "fromPort": "value",
+        "to": "healSelf",
+        "toPort": "value"
+      }
+    ]
+  }
+]

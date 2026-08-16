@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         public void DefaultCommandIntentProfile_RoutesGroundAndInspectableEntityHitsToMove()
         {
             string repoRoot = FindRepoRoot();
-            string profilePath = Path.Combine(repoRoot, "assets", "Configs", "Input", "command_intent_profiles.json");
+            string profilePath = Path.Combine(repoRoot, "assets", "Input", "command_intent_profiles.json");
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             CommandIntentProfilesConfig config = JsonSerializer.Deserialize<CommandIntentProfilesConfig>(
                     File.ReadAllText(profilePath),

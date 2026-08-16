@@ -74,7 +74,7 @@ namespace Ludots.Tests.Architecture
         public void CoreDefaultConfigAssets_CarryNoScenarioVocabulary()
         {
             string repoRoot = FindRepoRoot();
-            string configsRoot = Path.Combine(repoRoot, "assets", "Configs");
+            string configsRoot = Path.Combine(repoRoot, "assets");
             string[] roots =
             {
                 Path.Combine(configsRoot, "Relationships"),
@@ -94,7 +94,7 @@ namespace Ludots.Tests.Architecture
                     if (node is JsonObject rootObject &&
                         string.Equals(
                             ToRepoRelativePath(repoRoot, file),
-                            "assets/Configs/Relationships/catalog.json",
+                            "assets/Relationships/catalog.json",
                             StringComparison.Ordinal))
                     {
                         // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)

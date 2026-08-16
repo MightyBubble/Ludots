@@ -1,18 +1,49 @@
-{
-  "id": "showcase.graph_op.IsPointInCircle",
-  "kind": "Validation",
-  "entry": "caster",
-  "nodes": [
-    { "id": "caster", "op": "LoadCaster" },
-    { "id": "range", "op": "ConstFloat", "floatValue": 500 },
-    { "id": "inCircle", "op": "IsPointInCircle", "validOutput": "inCircle" }
-  ],
-  "controlEdges": [
-    { "from": "caster", "fromPort": "next", "to": "range" },
-    { "from": "range", "fromPort": "next", "to": "inCircle" }
-  ],
-  "valueEdges": [
-    { "from": "caster", "fromPort": "value", "to": "inCircle", "toPort": "a" },
-    { "from": "range", "fromPort": "value", "to": "inCircle", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.IsPointInCircle",
+    "kind": "Validation",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "range",
+        "op": "ConstFloat",
+        "floatValue": 500
+      },
+      {
+        "id": "inCircle",
+        "op": "IsPointInCircle",
+        "validOutput": "inCircle"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "range"
+      },
+      {
+        "from": "range",
+        "fromPort": "next",
+        "to": "inCircle"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "inCircle",
+        "toPort": "a"
+      },
+      {
+        "from": "range",
+        "fromPort": "value",
+        "to": "inCircle",
+        "toPort": "b"
+      }
+    ]
+  }
+]

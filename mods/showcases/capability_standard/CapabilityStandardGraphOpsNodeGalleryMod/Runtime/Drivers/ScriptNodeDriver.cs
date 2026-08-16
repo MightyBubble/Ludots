@@ -185,7 +185,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         }
 
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-        JsonObject obj = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        JsonObject obj = GraphOpsNodeGraphCompiler.ParseSingleGraphShard(path);
         GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(
             obj,
             ConstSevenCalleeGraphKey,

@@ -1,46 +1,48 @@
-{
-  "id": "showcase.graph_op.RelationshipHasLink",
-  "kind": "Effect",
-  "entry": "source",
-  "nodes": [
-    {
-      "id": "source",
-      "op": "LoadCaster"
-    },
-    {
-      "id": "target",
-      "op": "LoadExplicitTarget"
-    },
-    {
-      "id": "has",
-      "op": "RelationshipHasLink",
-      "relationshipType": "SocialBond"
-    }
-  ],
-  "controlEdges": [
-    {
-      "from": "source",
-      "fromPort": "next",
-      "to": "target"
-    },
-    {
-      "from": "target",
-      "fromPort": "next",
-      "to": "has"
-    }
-  ],
-  "valueEdges": [
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "has",
-      "toPort": "source"
-    },
-    {
-      "from": "target",
-      "fromPort": "value",
-      "to": "has",
-      "toPort": "target"
-    }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.RelationshipHasLink",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "has",
+        "op": "RelationshipHasLink",
+        "relationshipType": "SocialBond"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "has"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "has",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "has",
+        "toPort": "target"
+      }
+    ]
+  }
+]

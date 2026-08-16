@@ -1,18 +1,49 @@
-{
-  "id": "showcase.graph_op.MulFloat",
-  "kind": "Effect",
-  "entry": "base",
-  "nodes": [
-    { "id": "base", "op": "ConstFloat", "floatValue": 20 },
-    { "id": "multiplier", "op": "ConstFloat", "floatValue": 1.5 },
-    { "id": "scaled", "op": "MulFloat" }
-  ],
-  "controlEdges": [
-    { "from": "base", "fromPort": "next", "to": "multiplier" },
-    { "from": "multiplier", "fromPort": "next", "to": "scaled" }
-  ],
-  "valueEdges": [
-    { "from": "base", "fromPort": "value", "to": "scaled", "toPort": "a" },
-    { "from": "multiplier", "fromPort": "value", "to": "scaled", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.MulFloat",
+    "kind": "Effect",
+    "entry": "base",
+    "nodes": [
+      {
+        "id": "base",
+        "op": "ConstFloat",
+        "floatValue": 20
+      },
+      {
+        "id": "multiplier",
+        "op": "ConstFloat",
+        "floatValue": 1.5
+      },
+      {
+        "id": "scaled",
+        "op": "MulFloat"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "base",
+        "fromPort": "next",
+        "to": "multiplier"
+      },
+      {
+        "from": "multiplier",
+        "fromPort": "next",
+        "to": "scaled"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "base",
+        "fromPort": "value",
+        "to": "scaled",
+        "toPort": "a"
+      },
+      {
+        "from": "multiplier",
+        "fromPort": "value",
+        "to": "scaled",
+        "toPort": "b"
+      }
+    ]
+  }
+]

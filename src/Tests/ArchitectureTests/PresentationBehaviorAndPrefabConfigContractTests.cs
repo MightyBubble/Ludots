@@ -27,9 +27,9 @@ namespace Ludots.Tests.Architecture
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(core, "Presentation"));
             WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+            File.WriteAllText(Path.Combine(core, "Presentation", "mesh_assets.json"), """
 [
   { "id": "legacy.composite", "type": "Prefab", "parts": [ { "kind": "Mesh", "meshAssetId": "cube" } ] }
 ]
@@ -170,9 +170,9 @@ namespace Ludots.Tests.Architecture
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeKeyRules", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            Directory.CreateDirectory(Path.Combine(core, "GAS"));
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+            File.WriteAllText(Path.Combine(core, "GAS", "order_types.json"), """
 {
   "orderBlackboardKeys": {
     "Attack.MovePosition": true,
@@ -268,9 +268,9 @@ namespace Ludots.Tests.Architecture
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeKeyCaseStrict", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            Directory.CreateDirectory(Path.Combine(core, "GAS"));
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+            File.WriteAllText(Path.Combine(core, "GAS", "order_types.json"), """
 {
   "orderBlackboardKeys": {},
   "orderTypes": {
@@ -496,9 +496,9 @@ namespace Ludots.Tests.Architecture
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeAllocatedIds", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            Directory.CreateDirectory(Path.Combine(core, "GAS"));
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+            File.WriteAllText(Path.Combine(core, "GAS", "order_types.json"), """
 {
   "orderBlackboardKeys": {},
   "orderTypes": {
@@ -568,9 +568,9 @@ namespace Ludots.Tests.Architecture
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeDeterministicIds", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            Directory.CreateDirectory(Path.Combine(core, "GAS"));
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-            string path = Path.Combine(core, "Configs", "GAS", "order_types.json");
+            string path = Path.Combine(core, "GAS", "order_types.json");
             File.WriteAllText(path, """
 {
   "orderBlackboardKeys": {},
@@ -838,9 +838,9 @@ namespace Ludots.Tests.Architecture
             {
                 string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeCustomBlackboardKey", Guid.NewGuid().ToString("N"));
                 string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(core, "GAS"));
                 WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-                File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+                File.WriteAllText(Path.Combine(core, "GAS", "order_types.json"), """
 {
   "orderBlackboardKeys": {
     "Test.Order.CustomInt": true
@@ -1002,10 +1002,10 @@ namespace Ludots.Tests.Architecture
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationRuntimeConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             string mod = Path.Combine(root, "ModPresentation");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(core);
             Directory.CreateDirectory(Path.Combine(mod, "assets"));
 
-            File.WriteAllText(Path.Combine(core, "Configs", "game.json"), """
+            File.WriteAllText(Path.Combine(core, "game.json"), """
 {
   "presentation": {
     "presenterInstanceCapacity": 2048,
@@ -1208,7 +1208,7 @@ namespace Ludots.Tests.Architecture
                 throw new ArgumentException("Catalog entries must be path/policy/idField triples.", nameof(triples));
             }
 
-            Directory.CreateDirectory(Path.Combine(coreRoot, "Configs"));
+            Directory.CreateDirectory(coreRoot);
             using var writer = new StringWriter();
             writer.WriteLine("[");
             for (int i = 0; i < triples.Length; i += 3)
@@ -1229,16 +1229,16 @@ namespace Ludots.Tests.Architecture
 
             writer.WriteLine();
             writer.WriteLine("]");
-            File.WriteAllText(Path.Combine(coreRoot, "Configs", "config_catalog.json"), writer.ToString());
+            File.WriteAllText(Path.Combine(coreRoot, "config_catalog.json"), writer.ToString());
         }
 
         private static InvalidOperationException LoadInvalidOrderTypesJson(string json)
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeStrictness", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            Directory.CreateDirectory(Path.Combine(core, "GAS"));
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
-            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), json);
+            File.WriteAllText(Path.Combine(core, "GAS", "order_types.json"), json);
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);

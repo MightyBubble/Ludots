@@ -1,27 +1,94 @@
-{
-  "id": "showcase.graph_op.SelectEntity",
-  "kind": "Effect",
-  "entry": "yes",
-  "nodes": [
-    { "id": "yes", "op": "ConstInt", "intValue": 1 },
-    { "id": "yes2", "op": "ConstInt", "intValue": 1 },
-    { "id": "cond", "op": "CompareEqInt" },
-    { "id": "caster", "op": "LoadCaster" },
-    { "id": "target", "op": "LoadExplicitTarget" },
-    { "id": "pick", "op": "SelectEntity" }
-  ],
-  "controlEdges": [
-    { "from": "yes", "fromPort": "next", "to": "yes2" },
-    { "from": "yes2", "fromPort": "next", "to": "cond" },
-    { "from": "cond", "fromPort": "next", "to": "caster" },
-    { "from": "caster", "fromPort": "next", "to": "target" },
-    { "from": "target", "fromPort": "next", "to": "pick" }
-  ],
-  "valueEdges": [
-    { "from": "yes", "fromPort": "value", "to": "cond", "toPort": "a" },
-    { "from": "yes2", "fromPort": "value", "to": "cond", "toPort": "b" },
-    { "from": "cond", "fromPort": "value", "to": "pick", "toPort": "condition" },
-    { "from": "target", "fromPort": "value", "to": "pick", "toPort": "a" },
-    { "from": "caster", "fromPort": "value", "to": "pick", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.SelectEntity",
+    "kind": "Effect",
+    "entry": "yes",
+    "nodes": [
+      {
+        "id": "yes",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "yes2",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "cond",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "pick",
+        "op": "SelectEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "yes",
+        "fromPort": "next",
+        "to": "yes2"
+      },
+      {
+        "from": "yes2",
+        "fromPort": "next",
+        "to": "cond"
+      },
+      {
+        "from": "cond",
+        "fromPort": "next",
+        "to": "caster"
+      },
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "pick"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "yes",
+        "fromPort": "value",
+        "to": "cond",
+        "toPort": "a"
+      },
+      {
+        "from": "yes2",
+        "fromPort": "value",
+        "to": "cond",
+        "toPort": "b"
+      },
+      {
+        "from": "cond",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "condition"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "a"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "b"
+      }
+    ]
+  }
+]

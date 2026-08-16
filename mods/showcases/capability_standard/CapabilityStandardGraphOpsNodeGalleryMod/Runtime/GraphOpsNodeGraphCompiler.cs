@@ -34,7 +34,7 @@ public static class GraphOpsNodeGraphCompiler
         }
 
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-        JsonObject obj = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        JsonObject obj = ParseSingleGraphShard(path);
         string graphId = GraphOpsNodeIds.GraphId(opName);
         GraphControlFlowCompileResult compiled = GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphId, options);
         if (!compiled.Succeeded)
@@ -62,6 +62,22 @@ public static class GraphOpsNodeGraphCompiler
         GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
         _ = RequireFeaturedDest(compiled, vignette);
         return compiled;
+    }
+
+    /// <summary>
+    /// GAS/graphs shard files are ArrayById fragments: each file is a one-element array
+    /// so the ConfigPipeline shard merge accepts it. Direct loaders unwrap the single graph.
+    /// </summary>
+    public static JsonObject ParseSingleGraphShard(string path)
+    {
+        JsonNode root = JsonNode.Parse(File.ReadAllText(path)) ?? throw new InvalidOperationException($"Graph shard is null JSON: {path}");
+        if (root is not JsonArray array || array.Count != 1 || array[0] is not JsonObject graph)
+        {
+            throw new InvalidOperationException(
+                $"Graph shard {path} must be a JSON array with exactly one graph object (ArrayById shard contract).");
+        }
+
+        return graph;
     }
 
     public static byte RequireFeaturedDest(GraphControlFlowCompileResult compiled, GraphOpsNodeVignette vignette)

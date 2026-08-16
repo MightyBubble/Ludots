@@ -1,31 +1,33 @@
-{
-  "id": "showcase.graph_op.RelationshipQueryIncoming",
-  "kind": "Query",
-  "entry": "source",
-  "nodes": [
-    {
-      "id": "source",
-      "op": "LoadCaster"
-    },
-    {
-      "id": "in",
-      "op": "RelationshipQueryIncoming",
-      "relationshipType": "SocialBond"
-    }
-  ],
-  "controlEdges": [
-    {
-      "from": "source",
-      "fromPort": "next",
-      "to": "in"
-    }
-  ],
-  "valueEdges": [
-    {
-      "from": "source",
-      "fromPort": "value",
-      "to": "in",
-      "toPort": "source"
-    }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.RelationshipQueryIncoming",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "in",
+        "op": "RelationshipQueryIncoming",
+        "relationshipType": "SocialBond"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "in"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "in",
+        "toPort": "source"
+      }
+    ]
+  }
+]

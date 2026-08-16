@@ -295,14 +295,14 @@ namespace Ludots.Tests.Presentation
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorSemanticParam", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(core, "Presentation"));
+            File.WriteAllText(Path.Combine(core, "config_catalog.json"), """
 [
   { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
 ]
 """);
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+            File.WriteAllText(Path.Combine(core, "Presentation", "animator_controllers.json"), """
 [
   {
     "id": "semantic.controller",
@@ -358,14 +358,14 @@ namespace Ludots.Tests.Presentation
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorStrictCondition", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(core, "Presentation"));
+            File.WriteAllText(Path.Combine(core, "config_catalog.json"), """
 [
   { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
 ]
 """);
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+            File.WriteAllText(Path.Combine(core, "Presentation", "animator_controllers.json"), """
 [
   {
     "id": "strict.controller",
@@ -411,14 +411,14 @@ namespace Ludots.Tests.Presentation
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorNumericParam", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(core, "Presentation"));
+            File.WriteAllText(Path.Combine(core, "config_catalog.json"), """
 [
   { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
 ]
 """);
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+            File.WriteAllText(Path.Combine(core, "Presentation", "animator_controllers.json"), """
 [
   {
     "id": "numeric.controller",
@@ -536,14 +536,14 @@ namespace Ludots.Tests.Presentation
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimationBuiltinClips", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
-            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(core, "Presentation"));
+            File.WriteAllText(Path.Combine(core, "config_catalog.json"), """
 [
   { "Path": "Presentation/animation_profiles.json", "Policy": "ArrayById", "IdField": "id" }
 ]
 """);
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animation_profiles.json"), """
+            File.WriteAllText(Path.Combine(core, "Presentation", "animation_profiles.json"), """
 [
   {
     "id": "legacy.profile",

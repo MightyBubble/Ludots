@@ -188,7 +188,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DefaultLocksConfigFile_DeserializesAndValidates()
         {
-            string configPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "Input", "cast_commit_locks.json");
+            string configPath = Path.Combine(FindRepoRoot(), "assets", "Input", "cast_commit_locks.json");
             Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
 
             var config = JsonSerializer.Deserialize<CastCommitLocksConfig>(

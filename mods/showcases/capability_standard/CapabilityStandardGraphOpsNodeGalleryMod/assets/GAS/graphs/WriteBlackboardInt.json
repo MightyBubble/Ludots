@@ -1,18 +1,49 @@
-{
-  "id": "showcase.graph_op.WriteBlackboardInt",
-  "kind": "Effect",
-  "entry": "src",
-  "nodes": [
-    { "id": "src", "op": "LoadContextSource" },
-    { "id": "stacks", "op": "ConstInt", "intValue": 4 },
-    { "id": "writeI", "op": "WriteBlackboardInt", "blackboardKey": "showcase.bb.stacks" }
-  ],
-  "controlEdges": [
-    { "from": "src", "fromPort": "next", "to": "stacks" },
-    { "from": "stacks", "fromPort": "next", "to": "writeI" }
-  ],
-  "valueEdges": [
-    { "from": "src", "fromPort": "value", "to": "writeI", "toPort": "source" },
-    { "from": "stacks", "fromPort": "value", "to": "writeI", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.WriteBlackboardInt",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      {
+        "id": "src",
+        "op": "LoadContextSource"
+      },
+      {
+        "id": "stacks",
+        "op": "ConstInt",
+        "intValue": 4
+      },
+      {
+        "id": "writeI",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "showcase.bb.stacks"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "src",
+        "fromPort": "next",
+        "to": "stacks"
+      },
+      {
+        "from": "stacks",
+        "fromPort": "next",
+        "to": "writeI"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "src",
+        "fromPort": "value",
+        "to": "writeI",
+        "toPort": "source"
+      },
+      {
+        "from": "stacks",
+        "fromPort": "value",
+        "to": "writeI",
+        "toPort": "value"
+      }
+    ]
+  }
+]

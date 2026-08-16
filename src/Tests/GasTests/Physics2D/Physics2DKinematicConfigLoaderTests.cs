@@ -43,9 +43,9 @@ namespace GasTests.Physics2D
             try
             {
                 // Catalog declares the entry, but no source provides the file: strict fail, no default injection.
-                Directory.CreateDirectory(Path.Combine(root, "Configs"));
+                Directory.CreateDirectory(root);
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     "[{ \"Path\": \"Physics2D/kinematic.json\", \"Policy\": \"DeepObject\" }]");
 
                 var loader = CreateLoader(root, out ConfigCatalog catalog);
@@ -66,8 +66,8 @@ namespace GasTests.Physics2D
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs"));
-                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"), "[]");
+                Directory.CreateDirectory(root);
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"), "[]");
 
                 var loader = CreateLoader(root, out ConfigCatalog catalog);
 
@@ -188,11 +188,11 @@ namespace GasTests.Physics2D
 
         private static void WriteKinematicConfig(string root, string kinematicJson)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Physics2D"));
+            Directory.CreateDirectory(Path.Combine(root, "Physics2D"));
             File.WriteAllText(
-                Path.Combine(root, "Configs", "config_catalog.json"),
+                Path.Combine(root, "config_catalog.json"),
                 "[{ \"Path\": \"Physics2D/kinematic.json\", \"Policy\": \"DeepObject\" }]");
-            File.WriteAllText(Path.Combine(root, "Configs", "Physics2D", "kinematic.json"), kinematicJson);
+            File.WriteAllText(Path.Combine(root, "Physics2D", "kinematic.json"), kinematicJson);
         }
 
         private static string CreateTempRoot()

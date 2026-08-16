@@ -1,18 +1,47 @@
-{
-  "id": "showcase.graph_op.CompareEqEntity",
-  "kind": "Effect",
-  "entry": "caster",
-  "nodes": [
-    { "id": "caster", "op": "LoadCaster" },
-    { "id": "explicit", "op": "LoadExplicitTarget" },
-    { "id": "notSelf", "op": "CompareEqEntity" }
-  ],
-  "controlEdges": [
-    { "from": "caster", "fromPort": "next", "to": "explicit" },
-    { "from": "explicit", "fromPort": "next", "to": "notSelf" }
-  ],
-  "valueEdges": [
-    { "from": "caster", "fromPort": "value", "to": "notSelf", "toPort": "a" },
-    { "from": "explicit", "fromPort": "value", "to": "notSelf", "toPort": "b" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.CompareEqEntity",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "notSelf",
+        "op": "CompareEqEntity"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "notSelf"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "a"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "b"
+      }
+    ]
+  }
+]

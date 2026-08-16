@@ -1,45 +1,188 @@
-{
-  "id": "showcase.graph_op.Jump",
-  "kind": "Script",
-  "entry": "full",
-  "nodes": [
-    { "id": "full", "op": "ConstInt", "intValue": 3, "pinRegister": 0 },
-    { "id": "limitValue", "op": "ConstInt", "intValue": 3, "pinRegister": 1 },
-    { "id": "one", "op": "ConstInt", "intValue": 1, "pinRegister": 2 },
-    { "id": "readWater", "op": "MoveInt" },
-    { "id": "readLimit", "op": "MoveInt" },
-    { "id": "stillNeedSip", "op": "CompareLtInt" },
-    { "id": "needSip", "op": "JumpIfFalse" },
-    { "id": "skip", "op": "Jump" },
-    { "id": "wouldReadWater", "op": "MoveInt" },
-    { "id": "wouldReadOne", "op": "MoveInt" },
-    { "id": "wouldAdd", "op": "AddInt", "pinRegister": 0 },
-    { "id": "done", "op": "HaltReturnInt" }
-  ],
-  "controlEdges": [
-    { "from": "full", "fromPort": "next", "to": "limitValue" },
-    { "from": "limitValue", "fromPort": "next", "to": "one" },
-    { "from": "one", "fromPort": "next", "to": "readWater" },
-    { "from": "readWater", "fromPort": "next", "to": "readLimit" },
-    { "from": "readLimit", "fromPort": "next", "to": "stillNeedSip" },
-    { "from": "stillNeedSip", "fromPort": "next", "to": "needSip" },
-    { "from": "needSip", "fromPort": "true", "to": "wouldReadWater" },
-    { "from": "needSip", "fromPort": "false", "to": "skip" },
-    { "from": "skip", "fromPort": "target", "to": "done" },
-    { "from": "wouldReadWater", "fromPort": "next", "to": "wouldReadOne" },
-    { "from": "wouldReadOne", "fromPort": "next", "to": "wouldAdd" },
-    { "from": "wouldAdd", "fromPort": "next", "to": "done" }
-  ],
-  "valueEdges": [
-    { "from": "full", "fromPort": "value", "to": "readWater", "toPort": "value" },
-    { "from": "limitValue", "fromPort": "value", "to": "readLimit", "toPort": "value" },
-    { "from": "readWater", "fromPort": "value", "to": "stillNeedSip", "toPort": "a" },
-    { "from": "readLimit", "fromPort": "value", "to": "stillNeedSip", "toPort": "b" },
-    { "from": "stillNeedSip", "fromPort": "value", "to": "needSip", "toPort": "condition" },
-    { "from": "full", "fromPort": "value", "to": "wouldReadWater", "toPort": "value" },
-    { "from": "one", "fromPort": "value", "to": "wouldReadOne", "toPort": "value" },
-    { "from": "wouldReadWater", "fromPort": "value", "to": "wouldAdd", "toPort": "a" },
-    { "from": "wouldReadOne", "fromPort": "value", "to": "wouldAdd", "toPort": "b" },
-    { "from": "full", "fromPort": "value", "to": "done", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.Jump",
+    "kind": "Script",
+    "entry": "full",
+    "nodes": [
+      {
+        "id": "full",
+        "op": "ConstInt",
+        "intValue": 3,
+        "pinRegister": 0
+      },
+      {
+        "id": "limitValue",
+        "op": "ConstInt",
+        "intValue": 3,
+        "pinRegister": 1
+      },
+      {
+        "id": "one",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 2
+      },
+      {
+        "id": "readWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "readLimit",
+        "op": "MoveInt"
+      },
+      {
+        "id": "stillNeedSip",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "needSip",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "skip",
+        "op": "Jump"
+      },
+      {
+        "id": "wouldReadWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "wouldReadOne",
+        "op": "MoveInt"
+      },
+      {
+        "id": "wouldAdd",
+        "op": "AddInt",
+        "pinRegister": 0
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "full",
+        "fromPort": "next",
+        "to": "limitValue"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "next",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "next",
+        "to": "readLimit"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "next",
+        "to": "stillNeedSip"
+      },
+      {
+        "from": "stillNeedSip",
+        "fromPort": "next",
+        "to": "needSip"
+      },
+      {
+        "from": "needSip",
+        "fromPort": "true",
+        "to": "wouldReadWater"
+      },
+      {
+        "from": "needSip",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "skip",
+        "fromPort": "target",
+        "to": "done"
+      },
+      {
+        "from": "wouldReadWater",
+        "fromPort": "next",
+        "to": "wouldReadOne"
+      },
+      {
+        "from": "wouldReadOne",
+        "fromPort": "next",
+        "to": "wouldAdd"
+      },
+      {
+        "from": "wouldAdd",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "full",
+        "fromPort": "value",
+        "to": "readWater",
+        "toPort": "value"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "value",
+        "to": "readLimit",
+        "toPort": "value"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "value",
+        "to": "stillNeedSip",
+        "toPort": "a"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "value",
+        "to": "stillNeedSip",
+        "toPort": "b"
+      },
+      {
+        "from": "stillNeedSip",
+        "fromPort": "value",
+        "to": "needSip",
+        "toPort": "condition"
+      },
+      {
+        "from": "full",
+        "fromPort": "value",
+        "to": "wouldReadWater",
+        "toPort": "value"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "wouldReadOne",
+        "toPort": "value"
+      },
+      {
+        "from": "wouldReadWater",
+        "fromPort": "value",
+        "to": "wouldAdd",
+        "toPort": "a"
+      },
+      {
+        "from": "wouldReadOne",
+        "fromPort": "value",
+        "to": "wouldAdd",
+        "toPort": "b"
+      },
+      {
+        "from": "full",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
+  }
+]

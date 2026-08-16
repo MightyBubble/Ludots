@@ -912,7 +912,7 @@ namespace Ludots.Tests.Architecture.Governance
 
                 string gameJsonPath = Path.Combine(modDir, "assets", "game.json");
                 string templatesPath = Path.Combine(modDir, "assets", "Entities", "templates.json");
-                string configPath = Path.Combine(modDir, "assets", "Configs", "config_catalog.json");
+                string configPath = Path.Combine(modDir, "assets", "config_catalog.json");
                 string projectFile = Path.Combine(modDir, $"{spec.ModName}.csproj");
                 Assert.That(File.Exists(projectFile), Is.True, $"Missing {projectFile}");
                 Assert.That(File.Exists(gameJsonPath), Is.True, $"Missing {gameJsonPath}");
@@ -1563,7 +1563,7 @@ namespace Ludots.Tests.Architecture.Governance
             string containerPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "ItemComponents.cs");
             string inventoryPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "InventoryRuntimeService.cs");
             string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
-            string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Configs", "Relationships", "catalog.json");
+            string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Relationships", "catalog.json");
             string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "ownership_cascade", "OwnershipCascadeShowcaseMod", "mod.json");
 
             Assert.That(File.Exists(containerPath), Is.True, $"Missing {containerPath}");

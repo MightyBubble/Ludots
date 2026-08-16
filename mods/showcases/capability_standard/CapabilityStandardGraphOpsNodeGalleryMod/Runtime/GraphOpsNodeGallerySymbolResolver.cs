@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -82,53 +83,13 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
 
     internal static void BindSandboxDisplayTable(TagDisplayTableRegistry tagDisplay, string assetsRoot)
     {
-        string path = Path.Combine(assetsRoot, "GAS", "sandbox", "catalog.json");
+        string path = Path.Combine(assetsRoot, "GAS", "tag_display_tables.json");
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException("Gallery requires assets/GAS/sandbox/catalog.json.", path);
+            throw new FileNotFoundException("Gallery requires assets/GAS/tag_display_tables.json.", path);
         }
 
-        JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-        GraphOpsNodeGallerySandboxCatalog? catalog = JsonSerializer.Deserialize<GraphOpsNodeGallerySandboxCatalog>(
-            File.ReadAllText(path),
-            options);
-        if (catalog == null || string.IsNullOrWhiteSpace(catalog.DisplayTable))
-        {
-            throw new InvalidOperationException($"Sandbox catalog '{path}' deserialized to null.");
-        }
-
-        if (tagDisplay.TryGetTableId(catalog.DisplayTable, out _))
-        {
-            return;
-        }
-
-        if (tagDisplay.IsFrozen)
-        {
-            throw new InvalidOperationException(
-                $"Tag display registry is frozen without table '{catalog.DisplayTable}'.");
-        }
-
-        if (string.IsNullOrWhiteSpace(catalog.BurningTag) ||
-            string.IsNullOrWhiteSpace(catalog.MarkedTag) ||
-            catalog.BurningTokenId <= 0 ||
-            catalog.MarkedTokenId <= 0)
-        {
-            throw new InvalidOperationException($"Sandbox catalog '{path}' is missing display table fields.");
-        }
-
-        int burning = TagRegistry.Register(catalog.BurningTag);
-        int marked = TagRegistry.Register(catalog.MarkedTag);
-        var mask = new GameplayTagContainer();
-        mask.AddTag(burning);
-        mask.AddTag(marked);
-        tagDisplay.RegisterTable(
-            catalog.DisplayTable,
-            in mask,
-            new (int, int)[]
-            {
-                (burning, catalog.BurningTokenId),
-                (marked, catalog.MarkedTokenId)
-            });
+        TagDisplayTableConfigLoader.LoadFromJson(tagDisplay, File.ReadAllText(path));
     }
 
     public int ResolveTag(string name)

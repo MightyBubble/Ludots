@@ -70,13 +70,13 @@ public sealed class EffectCompositionSsotTests
 
         string repoRoot = FindRepoRoot();
         JsonArray presets = JsonNode.Parse(
-            File.ReadAllText(Path.Combine(repoRoot, "assets", "Configs", "GAS", "preset_types.json")))!.AsArray();
+            File.ReadAllText(Path.Combine(repoRoot, "assets", "GAS", "preset_types.json")))!.AsArray();
         Assert.That(
             presets.Select(node => node!["id"]!.GetValue<string>()),
             Does.Not.Contain("RevealArea"));
 
         JsonArray graphs = JsonNode.Parse(
-            File.ReadAllText(Path.Combine(repoRoot, "assets", "Configs", "GAS", "graphs.json")))!.AsArray();
+            File.ReadAllText(Path.Combine(repoRoot, "assets", "GAS", "graphs.json")))!.AsArray();
         string[] graphIds = graphs.Select(node => node!["id"]!.GetValue<string>()).ToArray();
         Assert.That(graphIds, Does.Not.Contain("Graph.Vision.RevealArea"));
         Assert.That(graphIds, Does.Not.Contain("Graph.Vision.DecayRevealArea"));
@@ -107,7 +107,7 @@ public sealed class EffectCompositionSsotTests
         string? directory = AppDomain.CurrentDomain.BaseDirectory;
         while (directory != null)
         {
-            if (File.Exists(Path.Combine(directory, "assets", "Configs", "GAS", "preset_types.json")))
+            if (File.Exists(Path.Combine(directory, "assets", "GAS", "preset_types.json")))
             {
                 return directory;
             }

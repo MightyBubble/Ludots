@@ -1,15 +1,33 @@
-{
-  "id": "showcase.graph_op.QueryFromCollection",
-  "kind": "Query",
-  "entry": "caster",
-  "nodes": [
-    { "id": "caster", "op": "LoadCaster" },
-    { "id": "fromCol", "op": "QueryFromCollection", "collectionKey": "squad.members" }
-  ],
-  "controlEdges": [
-    { "from": "caster", "fromPort": "next", "to": "fromCol" }
-  ],
-  "valueEdges": [
-    { "from": "caster", "fromPort": "value", "to": "fromCol", "toPort": "source" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.QueryFromCollection",
+    "kind": "Query",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "fromCol",
+        "op": "QueryFromCollection",
+        "collectionKey": "squad.members"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "fromCol"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "fromCol",
+        "toPort": "source"
+      }
+    ]
+  }
+]

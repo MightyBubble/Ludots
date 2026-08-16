@@ -38,10 +38,10 @@ namespace Ludots.Tests.Presentation
             _repoRoot = FindRepoRoot();
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_AtmosphereFieldUat", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_tempRoot, "Core");
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs"));
+            Directory.CreateDirectory(_coreRoot);
             File.WriteAllText(
-                Path.Combine(_coreRoot, "Configs", "config_catalog.json"),
-                File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "config_catalog.json")));
+                Path.Combine(_coreRoot, "config_catalog.json"),
+                File.ReadAllText(Path.Combine(_repoRoot, "assets", "config_catalog.json")));
             TagRegistry.Clear();
             PresenterScopeTagRegistry.Clear();
             AttributeRegistry.Clear();

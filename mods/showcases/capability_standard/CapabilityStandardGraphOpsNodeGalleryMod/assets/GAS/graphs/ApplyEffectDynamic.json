@@ -1,21 +1,63 @@
-{
-  "id": "showcase.graph_op.ApplyEffectDynamic",
-  "kind": "Effect",
-  "entry": "caster",
-  "nodes": [
-    { "id": "caster", "op": "LoadCaster" },
-    { "id": "target", "op": "LoadExplicitTarget" },
-    { "id": "buffId", "op": "ReadBlackboardInt", "blackboardKey": "graphops.sandbox.buffTemplate" },
-    { "id": "applyDyn", "op": "ApplyEffectDynamic" }
-  ],
-  "controlEdges": [
-    { "from": "caster", "fromPort": "next", "to": "target" },
-    { "from": "target", "fromPort": "next", "to": "buffId" },
-    { "from": "buffId", "fromPort": "next", "to": "applyDyn" }
-  ],
-  "valueEdges": [
-    { "from": "caster", "fromPort": "value", "to": "buffId", "toPort": "source" },
-    { "from": "target", "fromPort": "value", "to": "applyDyn", "toPort": "target" },
-    { "from": "buffId", "fromPort": "value", "to": "applyDyn", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.ApplyEffectDynamic",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "buffId",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "graphops.sandbox.buffTemplate"
+      },
+      {
+        "id": "applyDyn",
+        "op": "ApplyEffectDynamic"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "target"
+      },
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "buffId"
+      },
+      {
+        "from": "buffId",
+        "fromPort": "next",
+        "to": "applyDyn"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "buffId",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "applyDyn",
+        "toPort": "target"
+      },
+      {
+        "from": "buffId",
+        "fromPort": "value",
+        "to": "applyDyn",
+        "toPort": "value"
+      }
+    ]
+  }
+]

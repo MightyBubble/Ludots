@@ -1,15 +1,33 @@
-{
-  "id": "showcase.graph_op.AggAverageAttribute",
-  "kind": "Query",
-  "entry": "all",
-  "nodes": [
-    { "id": "all", "op": "QueryAllMapEntities" },
-    { "id": "avg", "op": "AggAverageAttribute", "attribute": "Health" }
-  ],
-  "controlEdges": [
-    { "from": "all", "fromPort": "next", "to": "avg" }
-  ],
-  "valueEdges": [
-    { "from": "all", "fromPort": "list", "to": "avg", "toPort": "list" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.AggAverageAttribute",
+    "kind": "Query",
+    "entry": "all",
+    "nodes": [
+      {
+        "id": "all",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "avg",
+        "op": "AggAverageAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "all",
+        "fromPort": "next",
+        "to": "avg"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "all",
+        "fromPort": "list",
+        "to": "avg",
+        "toPort": "list"
+      }
+    ]
+  }
+]

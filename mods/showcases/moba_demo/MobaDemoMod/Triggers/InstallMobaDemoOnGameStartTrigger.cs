@@ -46,7 +46,7 @@ namespace MobaDemoMod.Triggers
 
             var mobaConfig = MobaConfig.Load(_ctx);
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
-            _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
+            _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/moba_config.json");
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
                 ordersObj is OrderQueue orders)

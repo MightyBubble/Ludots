@@ -279,7 +279,6 @@ namespace Ludots.Tests.GAS.Production
                 "capability_standard",
                 "CapabilityStandardPhysics2DShowcaseMod",
                 "assets",
-                "Configs",
                 "config_catalog.json");
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
             AssertCatalogEntry(document.RootElement, ShowcaseConfigPath, "Replace", null);

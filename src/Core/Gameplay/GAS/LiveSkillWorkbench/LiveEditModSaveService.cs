@@ -115,29 +115,29 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 {
                     case LiveDebugPatchOperationKind.GraphBodyReplace:
                         files.Add(new LiveEditSaveFilePlan(
-                            ResolveGraphsRelativePath(modRootPath),
+                            GraphsRelativePath,
                             $"Upsert graph '{op.DefinitionId}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveGraphsRelativePath(modRootPath)))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, GraphsRelativePath))));
                         break;
                     case LiveDebugPatchOperationKind.SkillEffectNumeric:
                     case LiveDebugPatchOperationKind.EffectTemplateRef:
                     case LiveDebugPatchOperationKind.EffectGrantedTag:
                         files.Add(new LiveEditSaveFilePlan(
-                            ResolveEffectsRelativePath(modRootPath),
+                            EffectsRelativePath,
                             $"Upsert effect field '{op.DefinitionId}.{op.FieldPath ?? op.Kind.ToString()}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveEffectsRelativePath(modRootPath)))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, EffectsRelativePath))));
                         break;
                     case LiveDebugPatchOperationKind.AttrConstraintNumeric:
                         files.Add(new LiveEditSaveFilePlan(
-                            ResolveAttributesRelativePath(modRootPath),
+                            AttributesRelativePath,
                             $"Upsert attribute constraint '{op.DefinitionId}.{op.FieldPath}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveAttributesRelativePath(modRootPath)))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, AttributesRelativePath))));
                         break;
                     case LiveDebugPatchOperationKind.TagRuleBodyReplace:
                         files.Add(new LiveEditSaveFilePlan(
-                            ResolveTagRulesRelativePath(modRootPath),
+                            TagRulesRelativePath,
                             $"Upsert tag rule '{op.DefinitionId}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveTagRulesRelativePath(modRootPath)))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, TagRulesRelativePath))));
                         break;
                     default:
                         diags.Add(new LiveEditDiagnostic(
@@ -200,14 +200,14 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 {
                     if (op.Kind == LiveDebugPatchOperationKind.GraphBodyReplace)
                     {
-                        string rel = ResolveGraphsRelativePath(preview.ModRootPath);
+                        string rel = GraphsRelativePath;
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertGraphDocument(path, op.DefinitionId!, op.DocumentJson!);
                         if (!written.Contains(rel)) written.Add(rel);
                     }
                     else if (op.Kind == LiveDebugPatchOperationKind.TagRuleBodyReplace)
                     {
-                        string rel = ResolveTagRulesRelativePath(preview.ModRootPath);
+                        string rel = TagRulesRelativePath;
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertTagRule(path, op.DefinitionId!, op.DocumentJson!);
                         if (!written.Contains(rel)) written.Add(rel);
@@ -216,14 +216,14 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                              || op.Kind == LiveDebugPatchOperationKind.EffectTemplateRef
                              || op.Kind == LiveDebugPatchOperationKind.EffectGrantedTag)
                     {
-                        string rel = ResolveEffectsRelativePath(preview.ModRootPath);
+                        string rel = EffectsRelativePath;
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertEffectPatch(path, in op);
                         if (!written.Contains(rel)) written.Add(rel);
                     }
                     else if (op.Kind == LiveDebugPatchOperationKind.AttrConstraintNumeric)
                     {
-                        string rel = ResolveAttributesRelativePath(preview.ModRootPath);
+                        string rel = AttributesRelativePath;
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertAttributeConstraint(path, in op);
                         if (!written.Contains(rel)) written.Add(rel);
@@ -251,41 +251,10 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             return new LiveEditSaveResult(true, written, Array.Empty<LiveEditDiagnostic>());
         }
 
-        private static string ResolveEffectsRelativePath(string modRootPath)
-        {
-            const string configs = "assets/Configs/GAS/effects.json";
-            const string shortPath = "assets/GAS/effects.json";
-            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
-            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
-            return configs;
-        }
-
-        private static string ResolveGraphsRelativePath(string modRootPath)
-        {
-            const string configs = "assets/Configs/GAS/graphs.json";
-            const string shortPath = "assets/GAS/graphs.json";
-            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
-            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
-            return configs;
-        }
-
-        private static string ResolveTagRulesRelativePath(string modRootPath)
-        {
-            const string configs = "assets/Configs/GAS/tag_rules.json";
-            const string shortPath = "assets/GAS/tag_rules.json";
-            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
-            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
-            return configs;
-        }
-
-        private static string ResolveAttributesRelativePath(string modRootPath)
-        {
-            const string configs = "assets/Configs/GAS/attributes.json";
-            const string shortPath = "assets/GAS/attributes.json";
-            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
-            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
-            return configs;
-        }
+        private const string EffectsRelativePath = "assets/GAS/effects.json";
+        private const string GraphsRelativePath = "assets/GAS/graphs.json";
+        private const string TagRulesRelativePath = "assets/GAS/tag_rules.json";
+        private const string AttributesRelativePath = "assets/GAS/attributes.json";
 
         private void UpsertGraphDocument(string path, string graphId, string documentJson)
         {

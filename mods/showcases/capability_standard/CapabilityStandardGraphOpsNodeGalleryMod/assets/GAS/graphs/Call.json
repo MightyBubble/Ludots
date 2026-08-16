@@ -1,21 +1,61 @@
-{
-  "id": "showcase.graph_op.Call",
-  "kind": "Script",
-  "entry": "ready",
-  "nodes": [
-    { "id": "ready", "op": "ConstInt", "intValue": 1, "pinRegister": 0 },
-    { "id": "call", "op": "Call" },
-    { "id": "home", "op": "HaltReturnInt" },
-    { "id": "errand", "op": "Yield" },
-    { "id": "ret", "op": "Return" }
-  ],
-  "controlEdges": [
-    { "from": "ready", "fromPort": "next", "to": "call" },
-    { "from": "call", "fromPort": "call", "to": "errand" },
-    { "from": "call", "fromPort": "next", "to": "home" },
-    { "from": "errand", "fromPort": "next", "to": "ret" }
-  ],
-  "valueEdges": [
-    { "from": "ready", "fromPort": "value", "to": "home", "toPort": "value" }
-  ]
-}
+[
+  {
+    "id": "showcase.graph_op.Call",
+    "kind": "Script",
+    "entry": "ready",
+    "nodes": [
+      {
+        "id": "ready",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 0
+      },
+      {
+        "id": "call",
+        "op": "Call"
+      },
+      {
+        "id": "home",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "errand",
+        "op": "Yield"
+      },
+      {
+        "id": "ret",
+        "op": "Return"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "ready",
+        "fromPort": "next",
+        "to": "call"
+      },
+      {
+        "from": "call",
+        "fromPort": "call",
+        "to": "errand"
+      },
+      {
+        "from": "call",
+        "fromPort": "next",
+        "to": "home"
+      },
+      {
+        "from": "errand",
+        "fromPort": "next",
+        "to": "ret"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "ready",
+        "fromPort": "value",
+        "to": "home",
+        "toPort": "value"
+      }
+    ]
+  }
+]

@@ -26,17 +26,17 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+                Directory.CreateDirectory(root);
+                Directory.CreateDirectory(Path.Combine(root, "Presentation"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     """
                     [
                       { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Presentation", "presenters.json"),
+                    Path.Combine(root, "Presentation", "presenters.json"),
                     """
                     [
                       {

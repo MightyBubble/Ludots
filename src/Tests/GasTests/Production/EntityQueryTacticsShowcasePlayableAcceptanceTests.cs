@@ -2391,7 +2391,7 @@ namespace Ludots.Tests.GAS.Production
                 "EntityQueryTacticsShowcaseConfig.json",
                 Path.Combine("Frontend", "entity_query_tactics_frontend.json"),
                 Path.Combine("Presentation", "presenters.json"),
-                Path.Combine("Configs", "Camera", "virtual_cameras.json"),
+                Path.Combine("Camera", "virtual_cameras.json"),
                 Path.Combine("GAS", "graphs.json"),
                 Path.Combine("GAS", "attribute_constraints.json"),
                 Path.Combine("GAS", "tag_rules.json"),
