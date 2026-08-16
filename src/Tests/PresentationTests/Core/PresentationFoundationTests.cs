@@ -1883,10 +1883,7 @@ namespace Ludots.Tests.Presentation
                 [CoreServiceKeys.VertexMap.Name] = vertexMap,
             };
 
-            using var system = new TerrainHeightSyncSystem(world, globals)
-            {
-                HeightScale = 1f,
-            };
+            using var system = new TerrainHeightSyncSystem(world, globals);
             system.Update(0.016f);
 
             VisualTransform visual = world.Get<VisualTransform>(entity);

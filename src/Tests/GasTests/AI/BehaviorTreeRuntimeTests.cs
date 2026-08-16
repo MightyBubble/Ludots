@@ -13,7 +13,7 @@ namespace Ludots.Tests.Gas.AI
     public sealed class BehaviorTreeRuntimeTests
     {
         private const double FrameBudgetMs = 15.0;
-        private const double CiTimingEnvelopeMs = 100.0;
+        private const double LatchedWaveBudgetMs = 1.5;
 
         private GraphProgramRegistry? _programs;
         private GraphActionCatalog? _actions;
@@ -96,10 +96,8 @@ namespace Ludots.Tests.Gas.AI
             BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-            Warn.If(ms, Is.GreaterThanOrEqualTo(FrameBudgetMs),
+            Assert.That(ms, Is.LessThan(FrameBudgetMs),
                 $"AlwaysSuccess-16 think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs),
-                $"AlwaysSuccess-16 think wave exceeded CI envelope: {ms:F3}ms");
             Assert.That(stats.Agents, Is.EqualTo(agents));
         }
 
@@ -115,8 +113,8 @@ namespace Ludots.Tests.Gas.AI
             world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-            Warn.If(ms, Is.GreaterThanOrEqualTo(1.5), $"Latched success second wave exceeded 1.5ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs));
+            Assert.That(ms, Is.LessThan(LatchedWaveBudgetMs),
+                $"Latched success second wave exceeded {LatchedWaveBudgetMs:F1}ms: {ms:F3}ms");
         }
 
         [Test]

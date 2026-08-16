@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Numerics;
+using System.Text;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
@@ -2666,6 +2667,56 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_WhenPresenterDirectChildrenExceedCapacity_Throws()
+        {
+            WriteCatalog();
+            WritePresenters(BuildPresenterWithChildCount(PresenterChildren.MAX_CHILDREN + 1));
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain($"declares {PresenterChildren.MAX_CHILDREN + 1} direct children"));
+            Assert.That(ex.Message, Does.Contain($"capacity={PresenterChildren.MAX_CHILDREN}"));
+        }
+
+        [Test]
+        public void Load_WhenAssetBindingSoundIsAuthoredInConfig_Throws()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "sound_old_schema",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Sound",
+                          "assetId": "ambient_loop",
+                          "renderPath": "None",
+                          "mobility": "Static"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AssetBinding.assetKind 'Sound' has been removed"));
+            Assert.That(ex.Message, Does.Contain("behavior kind 'Sound'"));
+        }
+
+        [Test]
         public void Load_RejectsFailedDefinitionAndParentsThatReferenceThem()
         {
             WriteCatalog();
@@ -2794,6 +2845,35 @@ namespace Ludots.Tests.Presentation
             string dir = Path.Combine(_root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? string.Empty);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
+        }
+
+        private static string BuildPresenterWithChildCount(int childCount)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("[");
+            for (int i = 0; i < childCount; i++)
+            {
+                builder.Append("  { \"id\": \"child_").Append(i).AppendLine("\" },");
+            }
+
+            builder.AppendLine("  {");
+            builder.AppendLine("    \"id\": \"root\",");
+            builder.AppendLine("    \"children\": [");
+            for (int i = 0; i < childCount; i++)
+            {
+                builder.Append("      { \"definitionId\": \"child_").Append(i).Append("\" }");
+                if (i + 1 < childCount)
+                {
+                    builder.Append(',');
+                }
+
+                builder.AppendLine();
+            }
+
+            builder.AppendLine("    ]");
+            builder.AppendLine("  }");
+            builder.AppendLine("]");
+            return builder.ToString();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Events;
@@ -184,6 +185,7 @@ namespace Ludots.Core.Presentation.Instancing
     public sealed class InstancedBatchOperationBuffer
     {
         private InstancedBatchOperation[] _buffer;
+        private readonly Dictionary<OperationCoalescingKey, int> _coalescedIndices;
         private int _count;
 
         public InstancedBatchOperationBuffer(int capacity = 4096)
@@ -194,6 +196,7 @@ namespace Ludots.Core.Presentation.Instancing
             }
 
             _buffer = new InstancedBatchOperation[capacity];
+            _coalescedIndices = new Dictionary<OperationCoalescingKey, int>(capacity);
         }
 
         public int Count => _count;
@@ -203,13 +206,16 @@ namespace Ludots.Core.Presentation.Instancing
         {
             if (operation.Coalescing == InstancedBatchCoalescingMode.LastWriteWins)
             {
-                for (int i = _count - 1; i >= 0; i--)
+                OperationCoalescingKey key = OperationCoalescingKey.From(in operation);
+                if (_coalescedIndices.TryGetValue(key, out int index))
                 {
-                    if (CanCoalesce(in _buffer[i], in operation))
+                    if ((uint)index < (uint)_count)
                     {
-                        _buffer[i] = operation;
+                        _buffer[index] = operation;
                         return;
                     }
+
+                    _coalescedIndices.Remove(key);
                 }
             }
 
@@ -219,7 +225,13 @@ namespace Ludots.Core.Presentation.Instancing
                     $"InstancedBatchOperationBuffer overflowed while adding kind={operation.Kind}, batchAssetId={operation.BatchAssetId}.");
             }
 
-            _buffer[_count++] = operation;
+            int writeIndex = _count;
+            _buffer[writeIndex] = operation;
+            _count = writeIndex + 1;
+            if (operation.Coalescing == InstancedBatchCoalescingMode.LastWriteWins)
+            {
+                _coalescedIndices[OperationCoalescingKey.From(in operation)] = writeIndex;
+            }
         }
 
         public ReadOnlySpan<InstancedBatchOperation> GetSpan() => _buffer.AsSpan(0, _count);
@@ -227,28 +239,81 @@ namespace Ludots.Core.Presentation.Instancing
         public void Clear()
         {
             _count = 0;
+            _coalescedIndices.Clear();
         }
 
-        private static bool CanCoalesce(in InstancedBatchOperation existing, in InstancedBatchOperation incoming)
+        private readonly struct OperationCoalescingKey : IEquatable<OperationCoalescingKey>
         {
-            return existing.Kind == incoming.Kind &&
-                   existing.BatchAssetId == incoming.BatchAssetId &&
-                   existing.PresenterStableId == incoming.PresenterStableId &&
-                   existing.Presenter == incoming.Presenter &&
-                   existing.Address.Equals(incoming.Address) &&
-                   existing.CustomDataSlot == incoming.CustomDataSlot &&
-                   PayloadIdentityMatches(in existing, in incoming);
-        }
+            private readonly InstancedBatchOperationKind _kind;
+            private readonly int _batchAssetId;
+            private readonly int _presenterStableId;
+            private readonly Entity _presenter;
+            private readonly InstancedBatchAddress _address;
+            private readonly int _customDataSlot;
+            private readonly int _payloadIdentity;
 
-        private static bool PayloadIdentityMatches(in InstancedBatchOperation existing, in InstancedBatchOperation incoming)
-        {
-            return incoming.Kind switch
+            private OperationCoalescingKey(
+                InstancedBatchOperationKind kind,
+                int batchAssetId,
+                int presenterStableId,
+                Entity presenter,
+                InstancedBatchAddress address,
+                int customDataSlot,
+                int payloadIdentity)
             {
-                InstancedBatchOperationKind.AttachEffect or
-                InstancedBatchOperationKind.UpdateEffect or
-                InstancedBatchOperationKind.RemoveEffect => existing.PayloadId == incoming.PayloadId,
-                _ => true,
-            };
+                _kind = kind;
+                _batchAssetId = batchAssetId;
+                _presenterStableId = presenterStableId;
+                _presenter = presenter;
+                _address = address;
+                _customDataSlot = customDataSlot;
+                _payloadIdentity = payloadIdentity;
+            }
+
+            public static OperationCoalescingKey From(in InstancedBatchOperation operation)
+            {
+                int payloadIdentity = operation.Kind switch
+                {
+                    InstancedBatchOperationKind.AttachEffect or
+                    InstancedBatchOperationKind.UpdateEffect or
+                    InstancedBatchOperationKind.RemoveEffect => operation.PayloadId,
+                    _ => 0,
+                };
+
+                return new OperationCoalescingKey(
+                    operation.Kind,
+                    operation.BatchAssetId,
+                    operation.PresenterStableId,
+                    operation.Presenter,
+                    operation.Address,
+                    operation.CustomDataSlot,
+                    payloadIdentity);
+            }
+
+            public bool Equals(OperationCoalescingKey other)
+            {
+                return _kind == other._kind &&
+                       _batchAssetId == other._batchAssetId &&
+                       _presenterStableId == other._presenterStableId &&
+                       _presenter == other._presenter &&
+                       _address.Equals(other._address) &&
+                       _customDataSlot == other._customDataSlot &&
+                       _payloadIdentity == other._payloadIdentity;
+            }
+
+            public override bool Equals(object? obj) => obj is OperationCoalescingKey other && Equals(other);
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(
+                    _kind,
+                    _batchAssetId,
+                    _presenterStableId,
+                    _presenter,
+                    _address,
+                    _customDataSlot,
+                    _payloadIdentity);
+            }
         }
     }
 }

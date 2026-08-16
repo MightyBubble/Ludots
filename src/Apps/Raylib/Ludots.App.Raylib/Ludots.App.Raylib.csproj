@@ -94,6 +94,14 @@
       <Link>skybox.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\sky_daynight.vs">
+      <Link>sky_daynight.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\sky_daynight.fs">
+      <Link>sky_daynight.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\..\Platforms\Desktop\postprocess.fs">
       <Link>postprocess.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

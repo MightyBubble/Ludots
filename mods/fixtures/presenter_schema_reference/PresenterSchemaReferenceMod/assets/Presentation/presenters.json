@@ -355,14 +355,12 @@
     "id": "ref_sound_standalone",
     "behaviors": [
       {
-        "slot": "body",
-        "kind": "AssetBinding",
+        "slot": "sound",
+        "kind": "Sound",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Sound",
-          "assetId": "ref_sound_ambient",
-          "renderPath": "None",
-          "mobility": "Static"
+        "sound": {
+          "soundAssetId": "ref_sound_ambient",
+          "loop": true
         }
       }
     ]

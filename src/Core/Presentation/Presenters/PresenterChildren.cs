@@ -6,7 +6,7 @@ namespace Ludots.Core.Presentation.Presenters
 {
     public unsafe struct PresenterChildren
     {
-        public const int MAX_CHILDREN = 16;
+        public const int MAX_CHILDREN = 32;
         public int Count;
         public fixed int ChildIds[MAX_CHILDREN];
         public fixed int ChildWorldIds[MAX_CHILDREN];

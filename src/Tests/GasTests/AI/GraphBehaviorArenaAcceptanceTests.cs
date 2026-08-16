@@ -21,6 +21,7 @@ namespace Ludots.Tests.Gas.AI
         {
             const int agents = 10_000;
             const int waves = 25; // 5s / 0.2s
+            const double combinedWaveBudgetMs = 5.0;
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
             _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out _,
@@ -87,7 +88,7 @@ namespace Ludots.Tests.Gas.AI
             {
                 sumMs += samples[w];
                 if (samples[w] > maxMs) maxMs = samples[w];
-                if (samples[w] >= 5.0) over++;
+                if (samples[w] >= combinedWaveBudgetMs) over++;
             }
 
             double avgMs = sumMs / waves;
@@ -95,10 +96,10 @@ namespace Ludots.Tests.Gas.AI
             double p95 = samples[(int)(waves * 0.95)];
             TestContext.WriteLine(
                 $"waves={waves} A={agents} N_topo={bt.NodeCount} avg={avgMs:F3} p95={p95:F3} max={maxMs:F3} over5ms={over} phase={level.Phase}");
-            Warn.If(over, Is.GreaterThan(0), $"Combined think wave exceeded 5ms in {over} of {waves} samples");
+            Assert.That(over, Is.EqualTo(0), $"Combined think wave exceeded {combinedWaveBudgetMs:F0}ms in {over} of {waves} samples");
             Assert.That(avgMs, Is.LessThan(15.0), $"Combined think avg exceeded 15ms: {avgMs:F3}");
             Assert.That(p95, Is.LessThan(15.0), $"Combined think p95 exceeded 15ms: {p95:F3}");
-            Assert.That(maxMs, Is.LessThan(25.0), $"Combined think max exceeded 25ms: {maxMs:F3}");
+            Assert.That(maxMs, Is.LessThan(combinedWaveBudgetMs), $"Combined think max exceeded {combinedWaveBudgetMs:F0}ms: {maxMs:F3}");
             Assert.That(level.Phase, Is.EqualTo(2));
         }
     }

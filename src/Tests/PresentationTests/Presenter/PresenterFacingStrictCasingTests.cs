@@ -47,6 +47,17 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresenterParamKeyRegistry_GetName_ReturnsAllWellKnownNamesForSharedNumericIds()
+        {
+            string idZeroNames = PresenterParamKeyRegistry.GetName(WellKnownPresenterParamKeys.MarkerScale);
+
+            Assert.That(idZeroNames, Does.Contain("marker3d.scale"));
+            Assert.That(idZeroNames, Does.Contain("worldBar.fillRatio"));
+            Assert.That(idZeroNames, Does.Contain("worldText.value0"));
+            Assert.That(idZeroNames, Does.Contain("groundOverlay.radius"));
+        }
+
+        [Test]
         public void PresenterScopeTagRegistry_ResolvesOnlyExactCasing()
         {
             int workingId = PresenterScopeTagRegistry.Register("working");

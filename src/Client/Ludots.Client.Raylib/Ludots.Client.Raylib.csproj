@@ -66,6 +66,14 @@
       <Link>skybox.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Platforms\Desktop\sky_daynight.vs">
+      <Link>sky_daynight.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\sky_daynight.fs">
+      <Link>sky_daynight.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Resources\ambient_day_ramp.json">
       <Link>ambient_day_ramp.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

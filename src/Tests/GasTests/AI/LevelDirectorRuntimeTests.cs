@@ -13,7 +13,6 @@ namespace Ludots.Tests.Gas.AI
     public sealed class LevelDirectorRuntimeTests
     {
         private const double FrameBudgetMs = 5.0;
-        private const double CiTimingEnvelopeMs = 100.0;
 
         [Test]
         public void TwoPhaseTrial_AdvancesOnWavesAndCounter()
@@ -50,8 +49,7 @@ namespace Ludots.Tests.Gas.AI
             LevelThinkStats stats = director.TickThinkWave();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-            Warn.If(ms, Is.GreaterThanOrEqualTo(FrameBudgetMs), $"Level think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
-            Assert.That(ms, Is.LessThan(CiTimingEnvelopeMs));
+            Assert.That(ms, Is.LessThan(FrameBudgetMs), $"Level think wave exceeded {FrameBudgetMs:F0}ms: {ms:F3}ms");
             Assert.That(stats.TriggersChecked, Is.EqualTo(128));
             Assert.That(peakUnits, Is.EqualTo(10_000));
         }
