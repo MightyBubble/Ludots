@@ -500,6 +500,7 @@ namespace Ludots.Core.Presentation.Config
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
 
             RejectRemovedFields(node, key);
+            RejectChildInstanceAuthoringFields(node, key);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
             PresenterDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
@@ -573,6 +574,27 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException(
                         $"Presenter '{key}' still uses removed field '{field}'. Migrate Presenter authoring to lifecycle, anchor, visibility, and behaviors[].");
                 }
+            }
+        }
+
+        private static void RejectChildInstanceAuthoringFields(JsonNode node, string key)
+        {
+            if (node["children_mode"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' uses snake_case field 'children_mode'. Author 'childrenMode' on children[] entries.");
+            }
+
+            if (node["runtime_behaviors"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors' on children[] entries.");
+            }
+
+            if (node["childrenMode"] != null || node["instanceChildren"] != null || node["instanceBehaviors"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{key}' declares child instance fields at definition level. Author childrenMode/instanceChildren/instanceBehaviors on children[] entries.");
             }
         }
 
@@ -1613,6 +1635,30 @@ namespace Ludots.Core.Presentation.Config
                 {
                     throw new InvalidOperationException(
                         $"children[{i}] uses snake_case transform fields. Author 'overrides.transform.localPosition/localRotation/localScale'.");
+                }
+
+                if (obj["children_mode"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] uses snake_case field 'children_mode'. Author 'childrenMode'.");
+                }
+
+                if (obj["runtime_behaviors"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] uses snake_case field 'runtime_behaviors'. Author 'instanceBehaviors'.");
+                }
+
+                if (obj["childrenMode"] != null || obj["instanceChildren"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] declares 'childrenMode'/'instanceChildren', but child instance subtree override is not implemented yet.");
+                }
+
+                if (obj["instanceBehaviors"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"children[{i}] declares 'instanceBehaviors', but child instance behaviors are not implemented yet.");
                 }
 
                 children[i] = new ChildPresenterRef

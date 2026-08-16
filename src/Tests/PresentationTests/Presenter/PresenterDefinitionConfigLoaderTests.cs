@@ -2848,6 +2848,193 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
+        [Test]
+        public void Load_RejectsSnakeCaseChildrenModeOnChildEntry()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "children_mode": "instance" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'children_mode'"));
+            Assert.That(ex.Message, Does.Contain("'childrenMode'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseRuntimeBehaviorsOnChildEntry()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      { "definitionId": "child_a", "runtime_behaviors": [] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(ex.Message, Does.Contain("'instanceBehaviors'"));
+        }
+
+        [Test]
+        public void Load_RejectsSnakeCaseChildInstanceFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_mode",
+                    "children_mode": "instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException modeEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(modeEx.Message, Does.Contain("'children_mode'"));
+            Assert.That(modeEx.Message, Does.Contain("children[] entries"));
+
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root_runtime",
+                    "runtime_behaviors": [],
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+            var (_, _, pipeline2, catalog2) = BuildPipeline();
+
+            InvalidOperationException runtimeEx = Assert.Throws<InvalidOperationException>(() =>
+                new PresenterDefinitionConfigLoader(pipeline2, registry).Load(catalog2))!;
+            Assert.That(runtimeEx.Message, Does.Contain("'runtime_behaviors'"));
+            Assert.That(runtimeEx.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_RejectsChildInstanceCanonicalFieldsAtDefinitionLevel()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "childrenMode": "instance",
+                    "children": [ { "definitionId": "child_a" } ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("definition level"));
+            Assert.That(ex.Message, Does.Contain("children[] entries"));
+        }
+
+        [Test]
+        public void Load_RejectsChildInstanceSubtreeOverrideUntilImplemented()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_b" },
+                  { "id": "child_a", "children": [ { "definitionId": "child_b" } ] },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "childrenMode": "instance",
+                        "instanceChildren": [ { "definitionId": "child_b" } ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("child instance subtree override"));
+        }
+
+        [Test]
+        public void Load_RejectsChildInstanceBehaviorsUntilImplemented()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_a" },
+                  {
+                    "id": "root",
+                    "children": [
+                      {
+                        "definitionId": "child_a",
+                        "instanceBehaviors": [
+                          { "slot": "fx", "kind": "Sound", "sound": { "soundAssetId": 1 } }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("child instance behaviors"));
+        }
+
         private static void NoOpExtensionCommand(in PresenterCommandExecutionContext context)
         {
         }
