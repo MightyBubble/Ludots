@@ -104,8 +104,9 @@ def record_one(
         env["DISPLAY"] = ":99"
         env["LIBGL_ALWAYS_SOFTWARE"] = "1"
         env["GALLIUM_DRIVER"] = "llvmpipe"
-    env["LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY"] = "1"
-    env["LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY"] = "1"
+    if os.name == "posix":
+        env["LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY"] = "1"
+        env["LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY"] = "1"
     env["LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE"] = "immediate"
     env["LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW"] = "1"
     env["LUDOTS_AUTO_EXIT_FRAME"] = str(AUTO_EXIT_FRAME)
