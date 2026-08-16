@@ -14,14 +14,8 @@
         "op": "LoadExplicitTarget"
       },
       {
-        "id": "wound",
-        "op": "ConstFloat",
-        "floatValue": -18
-      },
-      {
-        "id": "hit",
-        "op": "ModifyAttributeAdd",
-        "attribute": "Health"
+        "id": "applyDyn",
+        "op": "ApplyEffectDynamic"
       }
     ],
     "controlEdges": [
@@ -33,26 +27,21 @@
       {
         "from": "explicit",
         "fromPort": "next",
-        "to": "wound"
-      },
-      {
-        "from": "wound",
-        "fromPort": "next",
-        "to": "hit"
+        "to": "applyDyn"
       }
     ],
     "valueEdges": [
       {
-        "from": "explicit",
+        "from": "cfgFx",
         "fromPort": "value",
-        "to": "hit",
-        "toPort": "target"
+        "to": "applyDyn",
+        "toPort": "value"
       },
       {
-        "from": "wound",
+        "from": "explicit",
         "fromPort": "value",
-        "to": "hit",
-        "toPort": "value"
+        "to": "applyDyn",
+        "toPort": "target"
       }
     ]
   }

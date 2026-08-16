@@ -1,6 +1,6 @@
-# 把层数写到记事板
+# 把层数记上板
 
-记下 4 层。
+四枚层印叠进层数格。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 层数写上 {result}。
+> 层数格记下 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把层数写到记事板
+Feature: 把层数记上板
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_WriteBlackboardInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_WriteBlackboardInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「记下 4 层。」这类人话
+    Then 字幕讲的是「四枚层印叠进层数格。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

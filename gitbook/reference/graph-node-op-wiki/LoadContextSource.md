@@ -1,6 +1,6 @@
-# 从情境取出出手的人
+# 从情境信封认出出手人
 
-情境来源是施法者。
+拆开这一击的信封，出手人那格画的正是金块自己。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadContextSource/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadContextSource/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadContextSource/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从情境取出出手的人，就是施法者。
+> 信封出手人那格，贴上了{named}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从情境取出出手的人
+Feature: 从情境信封认出出手人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadContextSource
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadContextSource/play.mp4
     When 短剧演完
-    Then 字幕讲的是「情境来源是施法者。」这类人话
+    Then 字幕讲的是「拆开这一击的信封，出手人那格画的正是金块自己。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

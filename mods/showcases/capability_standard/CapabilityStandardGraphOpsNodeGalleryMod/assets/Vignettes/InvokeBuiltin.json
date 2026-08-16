@@ -1,11 +1,11 @@
 {
   "op": "InvokeBuiltin",
-  "driver": "blackboard",
-  "title": "跑一个内置步骤",
-  "beat": "事务里先生成新身体，再清掉新身体上的残留效果。",
-  "detailTemplate": "内置步骤清掉了新身体上的印记。",
+  "driver": "attr",
+  "title": "账本里的步骤逐条办",
+  "beat": "造出新身体，再把新身体的效果挂架扫净。",
+  "detailTemplate": "新身体已上场，效果挂架已清空。",
   "assertDetailContains": [
-    "内置"
+    "新身体"
   ],
   "featuredNodeId": "invoke",
   "graphKind": "Effect",
@@ -30,16 +30,6 @@
       "y": 0,
       "health": 100,
       "healthMax": 100
-    },
-    {
-      "id": "mark",
-      "role": "mark",
-      "template": "GraphOps.Ally",
-      "name": "印记",
-      "x": 1,
-      "y": 1.6,
-      "health": 40,
-      "healthMax": 40
     }
   ]
 }

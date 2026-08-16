@@ -1,6 +1,6 @@
-# 从记事板读出威力
+# 照记事板上的威力出拳
 
-板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。
+板上写 35，木桩就真掉 35。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从记事板读出威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
+> 板上威力 {result}；木桩血量 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从记事板读出威力
+Feature: 照记事板上的威力出拳
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ReadBlackboardFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「板上写 35，木桩就真掉 35。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

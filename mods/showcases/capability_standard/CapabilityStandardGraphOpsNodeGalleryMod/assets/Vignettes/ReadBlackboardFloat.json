@@ -1,11 +1,11 @@
 {
   "op": "ReadBlackboardFloat",
   "driver": "blackboard",
-  "title": "从记事板读出威力",
-  "beat": "板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。",
-  "detailTemplate": "从记事板读出威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "照记事板上的威力出拳",
+  "beat": "板上写 35，木桩就真掉 35。",
+  "detailTemplate": "板上威力 {result}；木桩血量 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "威力"
+    "板上威力"
   ],
   "featuredNodeId": "readF",
   "graphKind": "Effect",

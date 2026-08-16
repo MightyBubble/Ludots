@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_ReadBlackboardFloat",
-  "windowTitle": "Ludots - 从记事板读出威力",
+  "windowTitle": "Ludots - 照记事板上的威力出拳",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

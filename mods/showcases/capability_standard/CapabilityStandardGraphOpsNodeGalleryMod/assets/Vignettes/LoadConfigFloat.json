@@ -1,11 +1,11 @@
 {
   "op": "LoadConfigFloat",
   "driver": "blackboard",
-  "title": "从技能配置读出威力",
-  "beat": "配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。",
-  "detailTemplate": "配置威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "翻开技能册照威力办事",
+  "beat": "册上写 40，木桩就真挨 40。",
+  "detailTemplate": "册上威力 {result}；木桩血量 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "配置威力"
+    "册上威力"
   ],
   "featuredNodeId": "cfgF",
   "graphKind": "Effect",

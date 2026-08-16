@@ -1,11 +1,11 @@
 {
   "op": "WriteBlackboardEntity",
   "driver": "blackboard",
-  "title": "把点名的人写到记事板",
-  "beat": "木桩被记到板上。",
-  "detailTemplate": "把{named}记到板上。",
+  "title": "把要盯的人记上板",
+  "beat": "从木桩身上揭张画像，贴进点名格。",
+  "detailTemplate": "点名格贴上了{named}。",
   "assertDetailContains": [
-    "记到板上"
+    "点名格"
   ],
   "featuredNodeId": "writeE",
   "graphKind": "Effect",

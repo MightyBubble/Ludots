@@ -1,9 +1,9 @@
 {
   "op": "ReadBlackboardInt",
   "driver": "blackboard",
-  "title": "从记事板读出层数",
-  "beat": "板上层数 4。",
-  "detailTemplate": "从记事板读出层数 {result}。",
+  "title": "照记事板上的层数挂印",
+  "beat": "板上 4 层，木桩头顶落满 4 层印。",
+  "detailTemplate": "板上层数 {result}，落在木桩头顶。",
   "assertDetailContains": [
     "层数"
   ],

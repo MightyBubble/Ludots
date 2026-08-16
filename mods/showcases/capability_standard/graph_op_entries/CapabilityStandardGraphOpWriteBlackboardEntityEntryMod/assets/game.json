@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_WriteBlackboardEntity",
-  "windowTitle": "Ludots - 把点名的人写到记事板",
+  "windowTitle": "Ludots - 把要盯的人记上板",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

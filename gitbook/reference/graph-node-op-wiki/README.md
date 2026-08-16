@@ -62,6 +62,7 @@
 ## 属性与效果
 
 - [从这一击的情境里取出目标](LoadContextTarget.md) — 情境里的目标就是木桩，读出来再扣血。
+- [先开生命台账再动土](BeginLifecycleTransaction.md) — 账本一开，造身记上一笔；账一关，新身体已站在场上。
 - [先看对方还有多少血](LoadAttribute.md) — 出手前先读木桩当前生命，字幕报出读到的数。
 - [写死的整数](ConstInt.md) — 这一刀的层数写死是 3，不读装备。
 - [层数有没有叠满](CompareEqInt.md) — 当前 3 层对比满层 3，叠满就爆。
@@ -74,6 +75,7 @@
 - [给自己回一口](WriteSelfAttribute.md) — 施法者血从 60 写回 90，金块血条涨上去。
 - [血量够不够打全力](CompareLtInt.md) — 木桩血低于 80 就打全力，否则轻击。
 - [认出自己](LoadCaster.md) — 图从施法者自己读起，确认出手的人是台上这个金块。
+- [账本里的步骤逐条办](InvokeBuiltin.md) — 造出新身体，再把新身体的效果挂架扫净。
 - [连击数加一](AddInt.md) — 连击从 2 加到 3，字幕报连击。
 - [锁定点名目标](LoadExplicitTarget.md) — 点到谁就打谁，血条在被点名的红块上掉。
 
@@ -137,16 +139,14 @@
 
 ## 黑板与配置
 
-- [从情境取出出手的人](LoadContextSource.md) — 情境来源是施法者。
-- [从情境取出额外那个人](LoadContextTargetContext.md) — 情境里还有一个关联目标。
-- [从技能配置读出威力](LoadConfigFloat.md) — 配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。
-- [从技能配置读出阶位](LoadConfigInt.md) — 配置阶位 2。
-- [从记事板读出威力](ReadBlackboardFloat.md) — 板上写着 35 点威力，读出来画在示意条上，不是结算出来的伤。
-- [从记事板读出层数](ReadBlackboardInt.md) — 板上层数 4。
-- [从记事板读出点名的人](ReadBlackboardEntity.md) — 板上记着木桩，读出来锁定他。
-- [从配置读出要放的效果](LoadConfigEffectId.md) — 配置指着某效果再打出去。
-- [开一笔生命周期事务](BeginLifecycleTransaction.md) — 先开账再做事，字幕说事务已开。
-- [把层数写到记事板](WriteBlackboardInt.md) — 记下 4 层。
-- [把点名的人写到记事板](WriteBlackboardEntity.md) — 木桩被记到板上。
+- [从情境信封找出额外那个人](LoadContextTargetContext.md) — 信封第三格写着这一击还要照顾谁。
+- [从情境信封认出出手人](LoadContextSource.md) — 拆开这一击的信封，出手人那格画的正是金块自己。
+- [册上贴哪张效果票，就照票开打](LoadConfigEffectId.md) — 撕下打击票，木桩真挨票面那一下。
+- [把层数记上板](WriteBlackboardInt.md) — 四枚层印叠进层数格。
+- [把要盯的人记上板](WriteBlackboardEntity.md) — 从木桩身上揭张画像，贴进点名格。
 - [把这一拳的威力记上板](WriteBlackboardFloat.md) — 35 落进威力格，格子亮了。
-- [跑一个内置步骤](InvokeBuiltin.md) — 事务里先生成新身体，再清掉新身体上的残留效果。
+- [照记事板上的威力出拳](ReadBlackboardFloat.md) — 板上写 35，木桩就真掉 35。
+- [照记事板上的层数挂印](ReadBlackboardInt.md) — 板上 4 层，木桩头顶落满 4 层印。
+- [照记事板点名叫阵](ReadBlackboardEntity.md) — 板上那格贴着木桩的画像，读出来就套住他。
+- [翻开技能册照威力办事](LoadConfigFloat.md) — 册上写 40，木桩就真挨 40。
+- [翻开技能册认品阶](LoadConfigInt.md) — 册上品阶两颗星，头顶徽章照着点亮。
