@@ -6141,6 +6141,31 @@
       ]
     },
     {
+      "id": "ui_nineslice_panel",
+      "path": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
+      "projectPath": "UiNineSlicePanelShowcaseMod.csproj",
+      "title": "墨痕怎么裁、怎么铺",
+      "summary": "水墨风拟物框：九/三宫格、二方/四方连续，外加 SVG 朱印与墨迹呼吸动效。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "ui_nineslice_panel_showcase",
+      "preset": "ui_nineslice_panel_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod/README.md",
+      "acceptanceTest": "UiNineSlicePanelTests",
+      "artifactDir": "artifacts/acceptance/ui-nineslice-panel",
+      "screenshot": "artifacts/acceptance/ui-nineslice-panel/nineslice-compact.png",
+      "status": "active",
+      "tags": [
+        "ui",
+        "markup",
+        "nine-slice",
+        "svg",
+        "animation",
+        "skeuomorphic"
+      ]
+    },
+    {
       "id": "ui_skin_classic",
       "path": "mods/UiSkinClassicMod",
       "projectPath": "UiSkinClassicMod.csproj",

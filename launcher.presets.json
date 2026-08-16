@@ -173,6 +173,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "ui_nineslice_panel_raylib",
+      "name": "UI Nine-Slice Panel Raylib",
+      "selectors": [
+        "$ui_nineslice_panel_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "browser_ui_cef_raylib",
       "name": "Browser UI CEF Raylib",
       "selectors": [
