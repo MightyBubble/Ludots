@@ -1,9 +1,9 @@
 {
   "op": "QueryAllMapEntities",
   "driver": "query",
-  "title": "把场上的人都找出来",
-  "beat": "全图搜到一圈人，字幕报人数。",
-  "detailTemplate": "全图搜到{count}人，都在场上。",
+  "title": "把场上的人全点名",
+  "beat": "扫描弧从指挥席扫过全场，点到谁谁亮。",
+  "detailTemplate": "扫完一遍，场上{count}人个个有圈，计数牌停在{count}。",
   "assertDetailContains": [
     "场上"
   ],

@@ -1,11 +1,11 @@
 {
   "op": "QueryFilterTeam",
   "driver": "query",
-  "title": "只留下敌对阵营",
-  "beat": "友军被滤掉，敌人亮。",
-  "detailTemplate": "友军被滤掉后，敌对阵营还剩{count}人。",
+  "title": "圈出对面十个",
+  "beat": "红的一排留圈，蓝的退成灰影。",
+  "detailTemplate": "红方{count}个个个有圈，蓝方两个全退成灰影。",
   "assertDetailContains": [
-    "敌对阵营"
+    "红方"
   ],
   "featuredNodeId": "team",
   "graphKind": "Query",
