@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOD 编辑器 PRD — Ludots</title>
+<meta name="description" content="Ludots MOD 编辑器 PRD：GAS × Graph 配置手册。一个原子功能点一篇，配置的形状与得到的结果。目录数据由构建脚本从总篇 README 解析生成。">
+<link rel="stylesheet" href="site-assets/site.css">
+<style>
+  /* ===== 阅读区布局（与门户文档区同构） ===== */
+  .docs-layout {
+    display: grid; grid-template-columns: 320px 1fr; gap: 26px; align-items: start;
+  }
+  .docs-tree {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 14px;
+    max-height: 74vh; overflow-y: auto; position: sticky; top: 84px;
+  }
+  .docs-tree .tree-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    padding: 0 10px 10px; letter-spacing: 1px;
+  }
+  .docs-tree a, .docs-tree .entry {
+    display: block; padding: 5px 10px; border-radius: var(--radius-sm);
+    color: var(--fg); font-size: 13.5px; line-height: 1.55;
+  }
+  .docs-tree a:hover { background: var(--accent-light); color: var(--accent); text-decoration: none; }
+  .docs-tree a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .docs-tree .grp > .entry { font-weight: 600; }
+  .docs-tree .children { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 6px; }
+  .docs-tree .todo { color: var(--faint); }
+  .docs-tree .todo .st {
+    display: inline-block; margin-left: 6px; font-size: 11px; padding: 0 7px;
+    border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border);
+  }
+  .layerbar { display: flex; gap: 6px; }
+  .doc-layerbar { margin: 0 0 14px; }
+  .layerbtn {
+    flex: 1 1 0; font-size: 12px; padding: 5px 0; cursor: pointer;
+    border: 1px solid var(--border); background: var(--bg-soft);
+    border-radius: var(--radius-sm); color: var(--muted); font-family: inherit;
+  }
+  .layerbtn:hover { color: var(--accent); }
+  .layerbtn.on {
+    background: var(--accent-light); color: var(--accent);
+    border-color: var(--accent); font-weight: 600;
+  }
+  .docs-tree .p2flag { font-size: 11px; color: var(--faint); margin-left: 6px; }
+  .docs-tree .id {
+    font-family: var(--mono); font-size: 11.5px; color: var(--accent);
+    background: var(--accent-light); border-radius: 4px; padding: 0 5px; margin-right: 6px;
+  }
+  .docs-view {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 36px 44px; min-height: 400px;
+    max-width: 100%; overflow-x: hidden;
+  }
+  .docs-view .doc-path { font-size: 12.5px; color: var(--faint); margin-bottom: 18px; font-family: var(--mono); }
+  /* markdown 渲染排版 */
+  .md-body h1 { font-size: 26px; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 18px; }
+  .md-body h2 { font-size: 21px; margin-top: 34px; border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+  .md-body h3 { font-size: 17px; margin-top: 26px; }
+  .md-body h4 { font-size: 15.5px; margin-top: 22px; }
+  .md-body p { margin: 12px 0; }
+  .md-body ul, .md-body ol { margin: 12px 0; padding-left: 24px; }
+  .md-body li { margin: 4px 0; }
+  .md-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; display: block; overflow-x: auto; }
+  .md-body th, .md-body td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
+  .md-body th { background: var(--bg-soft); font-weight: 600; }
+  .md-body blockquote {
+    border-left: 3px solid var(--accent); margin: 16px 0;
+    padding: 8px 16px; background: var(--bg-soft); color: var(--muted);
+  }
+  .md-body pre { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; overflow-x: auto; font-size: 13px; }
+  .md-body code { font-family: var(--mono); font-size: 0.92em; background: var(--bg-soft); border-radius: 4px; padding: 1px 5px; }
+  .md-body pre code { background: none; padding: 0; }
+  .md-body img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 14px 0; }
+  .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  .docs-loading { color: var(--faint); padding: 40px 0; text-align: center; }
+
+  @media (max-width: 960px) {
+    .docs-layout { grid-template-columns: 1fr; }
+    .docs-tree { position: static; max-height: 320px; }
+    .docs-view { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body data-page="prd">
+<header id="topbar"></header>
+
+<main class="page">
+  <div class="docs-layout" style="margin-top: 22px;">
+    <aside class="docs-tree" id="prd-tree">
+      <div class="tree-title">目录加载中…</div>
+    </aside>
+    <article class="docs-view">
+      <div class="layerbar doc-layerbar" id="doc-layer"></div>
+      <div class="doc-path" id="doc-path"></div>
+      <div class="md-body" id="doc-body">
+        <div class="docs-loading">文档加载中…</div>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots MOD 编辑器 PRD · 写作源 gitbook/reference/mod-editor-prd/</span>
+    <span>与主文档区同一路由协议（#docs/）· 发布于 GitHub Pages</span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="site-assets/site.js"></script>
+<script src="site-assets/prd-nav.js"></script>
+<script>
+(function () {
+  "use strict";
+  var esc = LudotsSite.esc;
+
+  var PRD_BASE = "reference/mod-editor-prd/";
+  var PRD_DIR = PRD_BASE + "prd/";
+  var SPEC_RT_DIR = PRD_BASE + "spec-runtime/";
+  var SPEC_ED_DIR = PRD_BASE + "spec-editor/";
+  var AB_DIR = PRD_BASE + "reference/";
+  var CONFIG_DIR = PRD_BASE + "config/";
+  var UXD_DIR = PRD_BASE + "uxd/";
+  var DEFAULT_DOC = PRD_BASE + "README.md";
+  var currentDoc = null;
+
+  if (window.marked && marked.setOptions) {
+    marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
+  }
+
+  /* ============ 目录树（数据源：site-assets/prd-nav.js，由构建脚本生成） ============ */
+  var LAYERS = [
+    { key: "prd", label: "PRD", dir: PRD_DIR, hint: "第一性需求 · 冻结" },
+    { key: "config", label: "Config", dir: CONFIG_DIR, hint: "配置说明 · 跟着写" },
+    { key: "uxd", label: "UXD", dir: UXD_DIR, hint: "编辑器需求 · 逐篇" },
+    { key: "specrt", label: "Spec·引擎", dir: SPEC_RT_DIR, hint: "runtime spec · 引擎实现任务书" },
+    { key: "speced", label: "Spec·编辑", dir: SPEC_ED_DIR, hint: "editor spec · 编辑器实现任务书" },
+    { key: "reference", label: "Reference", dir: AB_DIR, hint: "现状参考 · 如实记录" }
+  ];
+  var activeLayer = "prd";
+
+  function layerByKey(key) {
+    for (var i = 0; i < LAYERS.length; i++) if (LAYERS[i].key === key) return LAYERS[i];
+    return LAYERS[0];
+  }
+
+  function shortId(file) {
+    var m = /^([a-z]+(?:-op)?-\d+)-/.exec(file);
+    return m ? m[1] : "";
+  }
+
+  function buildTree() {
+    var host = document.getElementById("prd-tree");
+    if (!window.PRD_NAV || !window.PRD_NAV.volumes) {
+      host.innerHTML = '<div class="tree-title">目录不可用</div>' +
+        '<div class="docs-loading">请先运行 python scripts/build-site.py 重建站点。</div>';
+      return;
+    }
+    var nav = window.PRD_NAV;
+    var layer = layerByKey(activeLayer);
+    var html = '<div class="tree-title">' + esc(layer.label) + " 层目录（已写 " + nav.written + " / " + nav.total + "）</div>";
+    html += '<div class="grp"><div class="entry"><span class="id">README</span>总篇 · 结构与路线</div>' +
+      '<div class="children">' + setEntry("README.md", "总篇：定位·模板·阅读路线") + "</div></div>";
+    for (var i = 0; i < nav.volumes.length; i++) {
+      var v = nav.volumes[i];
+      var done = 0;
+      for (var j = 0; j < v.children.length; j++) if (v.children[j].written) done++;
+      html += '<div class="grp"><div class="entry">' + esc(v.title) +
+        ' <span style="color:var(--faint);font-weight:400;font-size:12px;">' + done + "/" + v.children.length + "</span></div>";
+      html += '<div class="children">';
+      for (var k = 0; k < v.children.length; k++) {
+        var c = v.children[k];
+        html += childLink(layer.dir, c.file, c.title, c.written ? "written" : "todo", c.priority);
+      }
+      html += "</div></div>";
+    }
+    html += '<div style="margin-top:14px;padding:0 10px;"><a href="index.html#docs/' + DEFAULT_DOC +
+      '" style="font-size:12.5px;color:var(--faint);">↩ 在完整文档树中查看本手册</a></div>';
+    host.innerHTML = html;
+    markActive();
+  }
+
+  function markActive() {
+    document.querySelectorAll("#prd-tree a[data-doc]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-doc") === currentDoc);
+    });
+  }
+
+  function setEntry(file, title) {
+    var path = PRD_BASE + file;
+    return '<a data-doc="' + esc(path) + '" href="#docs/' + esc(path) + '">' + esc(title) + "</a>";
+  }
+
+  function childLink(dir, file, title, state, priority) {
+    var id = shortId(file);
+    var idHtml = id ? '<span class="id">' + esc(id) + "</span>" : "";
+    var p2 = priority === "P2" ? '<span class="p2flag">P2</span>' : "";
+    if (state === "todo") {
+      return '<div class="entry todo">' + idHtml + esc(title) + p2 +
+        '<span class="st">未写</span></div>';
+    }
+    var path = dir + file;
+    return '<a data-doc="' + esc(path) + '" href="#docs/' + esc(path) + '">' +
+      idHtml + esc(title) + p2 + "</a>";
+  }
+
+  /* ============ 文档加载与链接重写（与门户文档区同协议） ============ */
+  function resolvePath(docPath, href) {
+    var base = docPath.split("/").slice(0, -1);
+    var rel = href.split("/");
+    rel.forEach(function (seg) {
+      if (seg === "" || seg === ".") return;
+      if (seg === "..") { base.pop(); } else { base.push(seg); }
+    });
+    return base.join("/");
+  }
+
+  function rewriteLinks(container, docPath) {
+    container.querySelectorAll("a[href]").forEach(function (a) {
+      var href = a.getAttribute("href");
+      if (!href || /^(https?:|mailto:|#)/i.test(href)) return;
+      var hash = "";
+      var hi = href.indexOf("#");
+      if (hi >= 0) { hash = href.slice(hi); href = href.slice(0, hi); }
+      var resolved = resolvePath(docPath, decodeURIComponent(href));
+      if (/\.md$/i.test(href)) {
+        a.setAttribute("href", "#docs/" + resolved + hash);
+      } else if (/\.html?$/i.test(href)) {
+        a.setAttribute("href", "gitbook/" + resolved + hash);
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener");
+      } else {
+        a.setAttribute("href", "gitbook/" + resolved + hash);
+      }
+    });
+    container.querySelectorAll("img[src]").forEach(function (img) {
+      var src = img.getAttribute("src");
+      if (!src || /^(https?:|data:|\/)/i.test(src)) return;
+      img.setAttribute("src", "gitbook/" + resolvePath(docPath, src));
+    });
+  }
+
+  /* ============ 文档顶部的层切换条：读哪篇就在哪篇的三层之间跳 ============ */
+  function docLayerOf(path) {
+    for (var i = 0; i < LAYERS.length; i++) if (path.indexOf(LAYERS[i].dir) === 0) return LAYERS[i];
+    return null;
+  }
+
+  function renderDocLayerBar() {
+    var host = document.getElementById("doc-layer");
+    if (!host) return;
+    var cur = docLayerOf(currentDoc || "");
+    var html = "";
+    for (var i = 0; i < LAYERS.length; i++) {
+      var lb = LAYERS[i];
+      html += '<button type="button" class="layerbtn' + (cur && cur.key === lb.key ? " on" : "") +
+        '" data-layer="' + lb.key + '" title="' + esc(lb.hint) + '">' + lb.label + "</button>";
+    }
+    host.innerHTML = html;
+  }
+
+  function loadDoc(path) {
+    currentDoc = path;
+    renderDocLayerBar();
+    var body = document.getElementById("doc-body");
+    var pathEl = document.getElementById("doc-path");
+    body.innerHTML = '<div class="docs-loading">加载中…</div>';
+    pathEl.textContent = "gitbook/" + path;
+
+    LudotsSite.fetchText("gitbook/" + path).then(function (md) {
+      body.innerHTML = marked.parse(md);
+      rewriteLinks(body, path);
+      LudotsSite.bindCopyButtons(body);
+      syncLayerFromDoc(path);
+      markActive();
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }).catch(function () {
+      body.innerHTML = '<div class="docs-loading">无法加载 <code>gitbook/' + esc(path) +
+        '</code><br>该篇可能尚未撰写，或需要先运行 <code>python scripts/build-site.py</code> 重建站点。</div>';
+    });
+  }
+
+  /* 页内链接可能跳到另一层的文档：目录切换跟随当前文档所在层 */
+  function syncLayerFromDoc(path) {
+    for (var i = 0; i < LAYERS.length; i++) {
+      if (path.indexOf(LAYERS[i].dir) === 0) {
+        if (activeLayer !== LAYERS[i].key) {
+          activeLayer = LAYERS[i].key;
+          buildTree();
+        }
+        return;
+      }
+    }
+  }
+
+  function route() {
+    var h = window.location.hash || "";
+    if (h.indexOf("#docs/") === 0) {
+      var p = decodeURIComponent(h.slice("#docs/".length));
+      var hi = p.indexOf("#");
+      if (hi >= 0) p = p.slice(0, hi);
+      if (p && p !== currentDoc) loadDoc(p);
+    } else if (!h || h === "#") {
+      if (!currentDoc) loadDoc(DEFAULT_DOC, false);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    buildTree();
+    renderDocLayerBar();
+    route();
+
+    document.getElementById("doc-layer").addEventListener("click", function (e) {
+      var btn = e.target.closest(".layerbtn");
+      if (!btn) return;
+      var target = layerByKey(btn.getAttribute("data-layer"));
+      var cur = docLayerOf(currentDoc || "");
+      if (cur) {
+        loadDoc(target.dir + currentDoc.slice(cur.dir.length));
+      } else {
+        activeLayer = target.key;
+        buildTree();
+      }
+    });
+  });
+
+  window.addEventListener("hashchange", route);
+})();
+</script>
+</body>
+</html>

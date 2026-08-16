@@ -34,9 +34,9 @@
 
 配置 SSOT:
 
-- GAS: `assets/Configs/GAS/**`
-- Performer: `assets/Configs/Presentation/performers/**`
-- Catalog: 全局 `assets/Configs/config_catalog.json`
+- GAS: `assets/GAS/**`
+- Performer: `assets/Presentation/performers/**`
+- Catalog: 全局 `assets/config_catalog.json`
 
 是否新增 JSON schema: NO。新增文件都落在既有 schema 和既有 catalog entry 下。
 

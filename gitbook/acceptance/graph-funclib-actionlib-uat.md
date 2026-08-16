@@ -14,7 +14,7 @@
 
 覆盖 Epic #915 P3：至少一个 `bt.*` ActionLib 叶子真 Yield；Query Kind FuncLib `InvokeScript.functionName`；行为树跨拍 resume。
 
-名称对齐：ActionLib 巡逻条目以资产名 `bt.patrol` 为准（`assets/Configs/GAS/action_lib.json` → `Graph.BT.Leaf.Patrol`，图内含 `Yield`）。合同 §6 写作 `bt.patrolStep`，本页按资产名映射，不另立一条场景。
+名称对齐：ActionLib 巡逻条目以资产名 `bt.patrol` 为准（`assets/GAS/action_lib.json` → `Graph.BT.Leaf.Patrol`，图内含 `Yield`）。合同 §6 写作 `bt.patrolStep`，本页按资产名映射，不另立一条场景。
 
 合同 §6「技能阶段不能调用 ActionLib」原文节点是 `InvokeAction`。全仓 `GraphNodeOp` 无此作者节点；作者侧实际调用口是 `InvokeScript`。
 

@@ -93,6 +93,6 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 - `src/Core/Gameplay/Lifecycle/EntityLifecycleAtomicOps.cs` — Layer 0 atomic ops
 - `src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs` — Layer 1 transaction rollback
 - `src/Core/Gameplay/Lifecycle/EntityLifecycleBuiltinHandlers.cs` — GAS BuiltinHandler 注册（Layer 0）
-- `assets/Configs/GAS/graphs.json` — `Graph.Lifecycle.DeployConsumeSource`（Layer 2 组合）
-- `assets/Configs/GAS/preset_types.json` — `DeployConsumeSource` → graph（Layer 3）
+- `assets/GAS/graphs.json` — `Graph.Lifecycle.DeployConsumeSource`（Layer 2 组合）
+- `assets/GAS/preset_types.json` — `DeployConsumeSource` → graph（Layer 3）
 - `presetType: DeployConsumeSource` + `configParams._ep.targetEntityTemplate` in `effects.json`
