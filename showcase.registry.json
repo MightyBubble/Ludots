@@ -4273,6 +4273,27 @@
       ]
     },
     {
+      "id": "desert_strike",
+      "path": "mods/showcases/desert_strike/DesertStrikeShowcaseMod",
+      "projectPath": "DesertStrikeShowcaseMod.csproj",
+      "title": "沙漠风暴 Tug of War",
+      "summary": "星际争霸 Desert Strike 风格 tug of war（game.desert-strike.json 入口）：三路波次自动出兵、自动交战推进、水晶经济购买与摧毁主基地胜负。",
+      "tier": "T2",
+      "category": "genre",
+      "binding": null,
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "DesertStrikeShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "rts",
+        "tug-of-war"
+      ]
+    },
+    {
       "id": "dep_consumer",
       "path": "mods/fixtures/dep_consumer/DepConsumerMod",
       "projectPath": "DepConsumerMod.csproj",

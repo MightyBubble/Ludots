@@ -1,0 +1,164 @@
+[
+  {
+    "id": "ds_base_player",
+    "components": {
+      "Name": { "Value": "Command Center" },
+      "Team": { "Id": 1 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 6000, "Minerals": 600 },
+        "current": { "Health": 6000, "Minerals": 600 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Buy.Marine",
+          "Ability.Ds.Buy.Firebat",
+          "Ability.Ds.Buy.Goliath",
+          "Ability.Ds.Buy.Tank"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeBase": {}
+    }
+  },
+  {
+    "id": "ds_base_ai",
+    "components": {
+      "Name": { "Value": "Command Center" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 6000, "Minerals": 600 },
+        "current": { "Health": 6000, "Minerals": 600 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Buy.Marine",
+          "Ability.Ds.Buy.Firebat",
+          "Ability.Ds.Buy.Goliath",
+          "Ability.Ds.Buy.Tank"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeBase": {}
+    }
+  },
+  {
+    "id": "ds_spawn_marker",
+    "components": {
+      "Name": { "Value": "Spawn Marker" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+    }
+  },
+  {
+    "id": "ds_marine",
+    "components": {
+      "Name": { "Value": "Marine" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 180, "MoveSpeed": 620, "AttackRange": 300 },
+        "current": { "Health": 180 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Attack.Marine"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeUnit": {}
+    }
+  },
+  {
+    "id": "ds_firebat",
+    "components": {
+      "Name": { "Value": "Firebat" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 260, "MoveSpeed": 560, "AttackRange": 220 },
+        "current": { "Health": 260 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Attack.Firebat"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeUnit": {}
+    }
+  },
+  {
+    "id": "ds_goliath",
+    "components": {
+      "Name": { "Value": "Goliath" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 420, "MoveSpeed": 500, "AttackRange": 560 },
+        "current": { "Health": 420 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Attack.Goliath"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeUnit": {}
+    }
+  },
+  {
+    "id": "ds_tank",
+    "components": {
+      "Name": { "Value": "Siege Tank" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": {
+        "base": { "Health": 520, "MoveSpeed": 340, "AttackRange": 920 },
+        "current": { "Health": 520 }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Ds.Attack.Tank"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "DesertStrikeUnit": {}
+    }
+  }
+]

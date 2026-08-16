@@ -1,0 +1,59 @@
+{
+  "waveIntervalTicks": 1800,
+  "incomeIntervalTicks": 600,
+  "incomePerInterval": 120,
+  "startingMinerals": 600,
+  "starterWave": {
+    "player": [
+      { "unit": "marine", "lane": 0 },
+      { "unit": "marine", "lane": 0 },
+      { "unit": "marine", "lane": 1 },
+      { "unit": "marine", "lane": 1 },
+      { "unit": "marine", "lane": 2 },
+      { "unit": "marine", "lane": 2 }
+    ],
+    "ai": [
+      { "unit": "marine", "lane": 0 },
+      { "unit": "marine", "lane": 0 },
+      { "unit": "marine", "lane": 1 },
+      { "unit": "marine", "lane": 1 },
+      { "unit": "marine", "lane": 2 },
+      { "unit": "marine", "lane": 2 }
+    ]
+  },
+  "units": {
+    "marine": {
+      "template": "ds_marine",
+      "cost": 75,
+      "purchaseTag": "Command.Ds.Buy.Marine",
+      "displayName": "Marine"
+    },
+    "firebat": {
+      "template": "ds_firebat",
+      "cost": 150,
+      "purchaseTag": "Command.Ds.Buy.Firebat",
+      "displayName": "Firebat"
+    },
+    "goliath": {
+      "template": "ds_goliath",
+      "cost": 300,
+      "purchaseTag": "Command.Ds.Buy.Goliath",
+      "displayName": "Goliath"
+    },
+    "tank": {
+      "template": "ds_tank",
+      "cost": 450,
+      "purchaseTag": "Command.Ds.Buy.Tank",
+      "displayName": "Siege Tank"
+    }
+  },
+  "ai": {
+    "thinkIntervalTicks": 120,
+    "weights": {
+      "marine": 4,
+      "firebat": 2,
+      "goliath": 2,
+      "tank": 1
+    }
+  }
+}

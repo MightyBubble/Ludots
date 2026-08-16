@@ -90,6 +90,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\RtsWar3TrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_cnc\RtsCncTrainingShowcaseMod\RtsCncTrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\RtsSc2TrainingShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\desert_strike\DesertStrikeShowcaseMod\DesertStrikeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\StaticObstaclePhysicsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\CapabilityStandardParticipantViewsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />

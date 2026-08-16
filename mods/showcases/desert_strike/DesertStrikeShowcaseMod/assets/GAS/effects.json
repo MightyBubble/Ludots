@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Effect.Ds.Damage.Marine",
+    "tags": ["Effect.Ds.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -10 }
+    ]
+  },
+  {
+    "id": "Effect.Ds.Damage.Firebat",
+    "tags": ["Effect.Ds.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18 }
+    ]
+  },
+  {
+    "id": "Effect.Ds.Damage.Goliath",
+    "tags": ["Effect.Ds.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -26 }
+    ]
+  },
+  {
+    "id": "Effect.Ds.Damage.Tank",
+    "tags": ["Effect.Ds.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -48 }
+    ]
+  }
+]
