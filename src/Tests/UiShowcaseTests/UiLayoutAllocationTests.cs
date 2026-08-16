@@ -157,11 +157,21 @@ public sealed class UiLayoutAllocationTests
 
 	private sealed class ConstantTextMeasurer : IUiTextMeasurer
 	{
+		private readonly Dictionary<string, UiTextLayoutResult> _layoutCache = new();
+
 		public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
 		{
-			float width = (text?.Length ?? 0) * style.FontSize * 0.5f;
+			string key = text ?? string.Empty;
+			if (_layoutCache.TryGetValue(key, out UiTextLayoutResult cached))
+			{
+				return cached;
+			}
+
+			float width = key.Length * style.FontSize * 0.5f;
 			float lineHeight = style.FontSize * 1.4f;
-			return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, lineHeight, lineHeight, style.FontSize, Math.Max(0f, lineHeight - style.FontSize));
+			var result = new UiTextLayoutResult(new[] { key }, width, lineHeight, lineHeight, style.FontSize, Math.Max(0f, lineHeight - style.FontSize));
+			_layoutCache[key] = result;
+			return result;
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
