@@ -1371,6 +1371,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_DecreasesLinks",
+        "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_OverlayKeepsGhostsOfSeveredChains",
         "GraphOpsNodeGalleryRelAcceptanceTests.RemoveLink_SecondThinkStillBreaksALink",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1430,6 +1431,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.GetMetric_CaptionContainsNumber",
+        "GraphOpsNodeGalleryRelAcceptanceTests.GetMetric_OverlayDrawsReadingCardWithTrueLoyalty",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1490,6 +1492,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.QueryOutgoing_FriendCountGreaterThanZero",
+        "GraphOpsNodeGalleryRelAcceptanceTests.QueryOutgoing_OverlayKeepsGrayFieldAndLightsOutgoingArrows",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1525,6 +1528,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.QueryMutual_OverlayKeepsGrayFieldAndLightsDoubleArrowsOnly",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1542,6 +1546,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.QueryBetweenPair_OverlayDrawsDoubleArrowAndChainLinkWithCountOne",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1559,6 +1564,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.FilterMetricRange_OverlayDrawsGateAndHeadClipboards",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1576,6 +1582,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.FilterFlag_OverlayDrawsTrustFlagsOnGreenChains",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1594,6 +1601,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
+        "GraphOpsNodeGalleryRelAcceptanceTests.SortByMetric_OverlayDrawsRankBadgesAboveHeads",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1610,6 +1618,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggSumMetric_OverlayDrawsBenchWithGraphSum",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1627,6 +1636,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxMetric_NamesStrongestFriendAndBenchLiftsItsCard",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1644,6 +1654,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggAverageMetric_OverlayDrawsBenchWithTruncatedAverage",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1904,6 +1915,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggMinMetric_NamesWeakestFriendAndBenchLiftsItsCard",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1922,6 +1934,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxEntityByMetric_NamesHighestPerson",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggMaxEntityByMetric_OverlayLightsOnlyTheStrongestPerson",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1939,6 +1952,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.AggMinEntityByMetric_OverlayLightsOnlyTheWeakestPerson",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1960,6 +1974,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRelAcceptanceTests.HasLink_OverlayDrawsChainLinkOnlyWhileTheLinkIsLive",
         "GraphOpsNodeGalleryRelAcceptanceTests.RelFamilyOp_RendersPlayerCaption",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"

@@ -2843,7 +2843,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggAverageMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggAverageMetricEntryMod.csproj",
       "title": "好感平均多少",
-      "summary": "字幕报平均。",
+      "summary": "四份好感倒进算式台，除以四人。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2870,7 +2870,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod.csproj",
       "title": "谁是好感最高的人",
-      "summary": "那个人被点名高亮。",
+      "summary": "数值牌最高的人被照亮。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2897,7 +2897,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMaxMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggMaxMetricEntryMod.csproj",
       "title": "最高好感是多少",
-      "summary": "字幕报最高值，对应的人条最满。",
+      "summary": "四块数值牌里最高的浮出来。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2924,7 +2924,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMinEntityByMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggMinEntityByMetricEntryMod.csproj",
       "title": "谁是好感最低的人",
-      "summary": "最弱的人被点名。",
+      "summary": "数值牌最矮的人被照亮。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2951,7 +2951,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMinMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggMinMetricEntryMod.csproj",
       "title": "最低好感是多少",
-      "summary": "最弱那条。",
+      "summary": "四块数值牌里最矮的浮出来。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2978,7 +2978,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod.csproj",
       "title": "把好感加总",
-      "summary": "字幕报好感总和。",
+      "summary": "四份好感在算式台上连加。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3031,8 +3031,8 @@
       "id": "capability_standard_graph_op_RelationshipFilterFlag",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipFilterFlagEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipFilterFlagEntryMod.csproj",
-      "title": "只看受信任的",
-      "summary": "信任旗开着的人亮。",
+      "title": "只看挂了信任旗的",
+      "summary": "链上插着信任旗的才留下。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3059,7 +3059,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipFilterMetricRangeEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipFilterMetricRangeEntryMod.csproj",
       "title": "好感落在区间里的人",
-      "summary": "只留好感 30~80 的。",
+      "summary": "好感量尺卡在 30 到 80 之间才留。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3086,7 +3086,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipGetMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipGetMetricEntryMod.csproj",
       "title": "读出这个人的好感",
-      "summary": "点名好友，字幕和好感条显示读到的数。",
+      "summary": "从链上抽出读数牌，写着 85。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3140,7 +3140,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipHasLinkEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipHasLinkEntryMod.csproj",
       "title": "我们有没有连着",
-      "summary": "有链显示连着，无链显示没连。",
+      "summary": "和好友的链环扣紧，就是连着。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3167,7 +3167,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryBetweenPairEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipQueryBetweenPairEntryMod.csproj",
       "title": "这两人之间有没有链",
-      "summary": "自己和某好友之间查到链。",
+      "summary": "这一对之间拉出一条双头链。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3221,7 +3221,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryMutualEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipQueryMutualEntryMod.csproj",
       "title": "互相都认的朋友",
-      "summary": "双向都有链的人亮。",
+      "summary": "两头都有箭头的链才亮。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3248,7 +3248,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryOutgoingEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipQueryOutgoingEntryMod.csproj",
       "title": "我主动交的朋友",
-      "summary": "从自己出发的链，亮出那些朋友。",
+      "summary": "箭头从自己射出去的链才算。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3275,7 +3275,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipRemoveLinkEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipRemoveLinkEntryMod.csproj",
       "title": "把最弱的那条链拆掉",
-      "summary": "好感最低的朋友断链，条掉光、人变灰。",
+      "summary": "好感最低那条链断开，线少一条。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3356,7 +3356,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSortByMetricEntryMod",
       "projectPath": "CapabilityStandardGraphOpRelationshipSortByMetricEntryMod.csproj",
       "title": "按好感排个序",
-      "summary": "最高好感排前面，字幕点名第一。",
+      "summary": "按好感高低挂出名次牌。",
       "tier": "T2",
       "category": "capability",
       "tags": [

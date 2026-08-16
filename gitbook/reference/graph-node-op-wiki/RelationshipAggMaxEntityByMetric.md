@@ -1,6 +1,6 @@
 # 谁是好感最高的人
 
-那个人被点名高亮。
+数值牌最高的人被照亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 谁是好感最高的人
     Given 玩家打开 capability_standard_graph_op_RelationshipAggMaxEntityByMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxEntityByMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「那个人被点名高亮。」这类人话
+    Then 字幕讲的是「数值牌最高的人被照亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

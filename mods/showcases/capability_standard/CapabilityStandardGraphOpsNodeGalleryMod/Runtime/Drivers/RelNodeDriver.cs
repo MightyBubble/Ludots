@@ -1,3 +1,4 @@
+using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.Relationships;
@@ -8,10 +9,23 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 public sealed class RelNodeDriver : IGraphOpsNodeDriver
 {
+    // Head-top anchors clear the HUD name + bar band so badges/markers read on their own.
+    private const float HeadTopYOffset = 1.2f;
+    private const float HeadMarkerYOffset = 1.7f;
+    private const float HeadClipboardYOffset = 1.9f;
+    private const float BenchX = 7.0f;
+    private const float BenchPanelY = 0.9f;
+    private const float BenchResultLiftY = 3.5f;
+    private const float BenchResultDropY = -2.3f;
+
     private bool _seeded;
     private int _socialBondTypeId;
     private int _loyaltyMetricId;
     private int _estrangedFlagId;
+    private int _trustedFlagId;
+    private int _aggResult;
+    private Entity _extremeEntity = Entity.Null;
+    private readonly List<Entity> _severed = new();
     private Entity[] _friends = Array.Empty<Entity>();
     private byte[] _linked = Array.Empty<byte>();
     private bool[] _lit = Array.Empty<bool>();
@@ -27,9 +41,13 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
         _socialBondTypeId = ctx.RelationshipTypes.Register("SocialBond");
         _loyaltyMetricId = ctx.RelationshipMetrics.Register("Loyalty", -100, 100, 0);
         _estrangedFlagId = ctx.RelationshipFlags.Register("Estranged");
+        _trustedFlagId = ctx.RelationshipFlags.Register("Trusted");
         CollectFriends(ctx);
         _linked = new byte[_friends.Length];
         _lit = new bool[_friends.Length];
+        _aggResult = 0;
+        _extremeEntity = Entity.Null;
+        _severed.Clear();
         ReseedLinks(ctx);
         RefreshLinkedFlags(ctx);
         ctx.Target = _friends[0];
@@ -60,8 +78,25 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
         RefreshLinkedFlags(ctx);
         int linksAfter = CountLinkedFriends(ctx);
+        if (op == GraphNodeOp.RelationshipRemoveLink &&
+            !ctx.Relationships!.HasLink(ctx.Caster, ctx.Target, _socialBondTypeId) &&
+            !_severed.Contains(ctx.Target))
+        {
+            _severed.Add(ctx.Target);
+        }
+
         FillCaption(ctx, op, result, linksBefore, linksAfter);
         ApplyBars(ctx, op, result);
+        if (IsAggValueOp(op))
+        {
+            _aggResult = result.IntValue;
+        }
+
+        if (IsAggEntOp(op))
+        {
+            _extremeEntity = result.EntityValue;
+        }
+
         GraphOpsNodeActorBinding.SyncHud(ctx);
     }
 
@@ -82,6 +117,45 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
                     return;
                 case GraphNodeOp.RelationshipSetFlag:
                     DrawSetFlagOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipQueryMutual:
+                    DrawMutualOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipFilterFlag:
+                    DrawFilterFlagOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipQueryOutgoing:
+                    DrawOutgoingOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipFilterMetricRange:
+                    DrawMetricRangeOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipAggSumMetric:
+                case GraphNodeOp.RelationshipAggAverageMetric:
+                case GraphNodeOp.RelationshipAggMinMetric:
+                case GraphNodeOp.RelationshipAggMaxMetric:
+                    DrawAggBenchOverlay(ctx, debugDraw, caster, op);
+                    return;
+                case GraphNodeOp.RelationshipSortByMetric:
+                    DrawSortOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipGetMetric:
+                    DrawGetMetricOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipHasLink:
+                    DrawHasLinkOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipRemoveLink:
+                    DrawRemoveLinkOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipAggMinEntityByMetric:
+                    DrawMinEntOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipAggMaxEntityByMetric:
+                    DrawMaxEntOverlay(ctx, debugDraw, caster);
+                    return;
+                case GraphNodeOp.RelationshipQueryBetweenPair:
+                    DrawBetweenPairOverlay(ctx, debugDraw, caster);
                     return;
             }
         }
@@ -174,6 +248,665 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
             (ay + by) * 0.5f,
             GraphShowcaseStagePresenter.BadgeKind.Flag,
             GraphShowcaseStagePresenter.EnemyColor);
+    }
+
+    private void DrawChainField(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        GraphOpsNodeLink[] links = ctx.Vignette.Links;
+        for (int i = 0; i < links.Length; i++)
+        {
+            int from = GraphOpsNodeActorBinding.IndexOfId(ctx.Vignette, links[i].From);
+            int to = GraphOpsNodeActorBinding.IndexOfId(ctx.Vignette, links[i].To);
+            GraphShowcaseStagePresenter.DrawDashedDirectedLine(
+                debugDraw,
+                actors[from].X,
+                actors[from].Y,
+                actors[to].X,
+                actors[to].Y,
+                0.08f,
+                GraphShowcaseStagePresenter.GhostColor);
+        }
+    }
+
+    private void DrawMutualOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0 || !IsMutual(ctx, _friends[i]))
+            {
+                continue;
+            }
+
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[fi].X,
+                actors[fi].Y,
+                0.14f,
+                GraphShowcaseStagePresenter.SentryAlert,
+                arrowStart: true,
+                arrowEnd: true);
+        }
+    }
+
+    private bool IsMutual(GraphOpsNodeDriverContext ctx, Entity friend)
+    {
+        return ctx.Relationships!.HasLink(ctx.Caster, friend, _socialBondTypeId)
+            && ctx.Relationships.HasLink(friend, ctx.Caster, _socialBondTypeId);
+    }
+
+    private void DrawFilterFlagOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0 ||
+                !ctx.Relationships!.HasFlag(ctx.Caster, _friends[i], _socialBondTypeId, _trustedFlagId))
+            {
+                continue;
+            }
+
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            float ax = actors[caster].X;
+            float ay = actors[caster].Y;
+            float bx = actors[fi].X;
+            float by = actors[fi].Y;
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                ax,
+                ay,
+                bx,
+                by,
+                0.12f,
+                GraphShowcaseStagePresenter.GuardColor);
+            GraphShowcaseStagePresenter.DrawBadge(
+                debugDraw,
+                (ax + bx) * 0.5f,
+                (ay + by) * 0.5f,
+                GraphShowcaseStagePresenter.BadgeKind.Flag,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+    }
+
+    private void DrawOutgoingOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0)
+            {
+                continue;
+            }
+
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[fi].X,
+                actors[fi].Y,
+                0.14f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+    }
+
+    private void DrawMetricRangeOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int m = 0; m < ctx.HitTargetCount; m++)
+        {
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.HitTargets[m]);
+            if (fi < 0 || fi == caster)
+            {
+                continue;
+            }
+
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[fi].X,
+                actors[fi].Y,
+                0.12f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+
+        const float left = -4.8f;
+        const float right = 4.8f;
+        const float y80 = 2.5f;
+        const float y30 = 1.9f;
+        RawLine(debugDraw, left, 1.3f, left, 2.9f, 0.12f, GraphShowcaseStagePresenter.GateColor);
+        RawLine(debugDraw, right, 1.3f, right, 2.9f, 0.12f, GraphShowcaseStagePresenter.GateColor);
+        RawLine(debugDraw, left, y80, right, y80, 0.09f, GraphShowcaseStagePresenter.SentryAlert);
+        RawLine(debugDraw, left, y30, right, y30, 0.09f, GraphShowcaseStagePresenter.SentryAlert);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, right + 0.9f, y80, 80, 0.4f, GraphShowcaseStagePresenter.SentryAlert);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, right + 0.9f, y30, 30, 0.4f, GraphShowcaseStagePresenter.SentryAlert);
+
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0)
+            {
+                continue;
+            }
+
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            int loyalty = FriendLoyalty(ctx, _friends[i]);
+            float hx = actors[fi].X;
+            float hy = actors[fi].Y + HeadClipboardYOffset;
+            GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, hx, hy, 0.8f, 0.5f, 1, GraphShowcaseStagePresenter.GateColor);
+            GraphShowcaseStagePresenter.DrawNumber(debugDraw, hx + 0.25f, hy, loyalty, 0.42f, GraphShowcaseStagePresenter.SentryAlert);
+        }
+    }
+
+    private void DrawSortOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        int ranked = ctx.HitTargetCount;
+        for (int i = 0; i < ranked; i++)
+        {
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.HitTargets[i]);
+            if (fi < 0)
+            {
+                continue;
+            }
+
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[fi].X,
+                actors[fi].Y,
+                0.16f - i * 0.03f,
+                GraphShowcaseStagePresenter.SentryAlert);
+            DrawRankBadge(debugDraw, actors[fi].X, actors[fi].Y + HeadTopYOffset, i + 1);
+        }
+    }
+
+    private static void DrawRankBadge(DebugDrawCommandBuffer debugDraw, float x, float y, int rank)
+    {
+        debugDraw.Boxes.Add(new DebugDrawBox2D
+        {
+            Center = new Vector2(x, y),
+            HalfWidth = 0.34f,
+            HalfHeight = 0.44f,
+            Thickness = 0.06f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, x + 0.22f, y, rank, 0.45f, GraphShowcaseStagePresenter.OutlineDark);
+    }
+
+    private void DrawGetMetricOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        if (ctx.Target == Entity.Null)
+        {
+            return;
+        }
+
+        int fi = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.Target);
+        if (fi < 0)
+        {
+            return;
+        }
+
+        int loyalty = FriendLoyalty(ctx, ctx.Target);
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        float ax = actors[caster].X;
+        float ay = actors[caster].Y;
+        float bx = actors[fi].X;
+        float by = actors[fi].Y;
+        float mx = (ax + bx) * 0.5f;
+        float my = (ay + by) * 0.5f + 0.6f;
+        GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, mx, my, 0.9f, 0.6f, 1, GraphShowcaseStagePresenter.GateColor);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, mx + 0.28f, my, loyalty, 0.5f, GraphShowcaseStagePresenter.SentryAlert);
+        GraphShowcaseStagePresenter.DrawDirectedLine(debugDraw, mx, my, ax, ay, 0.09f, GraphShowcaseStagePresenter.SentryAlert);
+
+        float cx = ax - 2.2f;
+        float cy = ay - 1.6f;
+        GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, cx, cy, 1.1f, 0.7f, 1, GraphShowcaseStagePresenter.GateColor);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, cx + 0.35f, cy, loyalty, 0.55f, GraphShowcaseStagePresenter.SentryAlert);
+    }
+
+    private void DrawHasLinkOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        if (ctx.Target == Entity.Null ||
+            !ctx.Relationships!.HasLink(ctx.Caster, ctx.Target, _socialBondTypeId))
+        {
+            return;
+        }
+
+        int fi = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.Target);
+        if (fi < 0)
+        {
+            return;
+        }
+
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        float ax = actors[caster].X;
+        float ay = actors[caster].Y;
+        float bx = actors[fi].X;
+        float by = actors[fi].Y;
+        GraphShowcaseStagePresenter.DrawDirectedLine(
+            debugDraw,
+            ax,
+            ay,
+            bx,
+            by,
+            0.14f,
+            GraphShowcaseStagePresenter.GuardColor);
+        float mx = (ax + bx) * 0.5f;
+        float my = (ay + by) * 0.5f;
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            mx,
+            my,
+            GraphShowcaseStagePresenter.BadgeKind.Ring,
+            GraphShowcaseStagePresenter.GuardColor,
+            scale: 1.1f);
+        float dx = bx - ax;
+        float dy = by - ay;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len > 1e-4f)
+        {
+            GraphShowcaseStagePresenter.DrawBadge(
+                debugDraw,
+                mx + dx / len * 0.22f,
+                my + dy / len * 0.22f,
+                GraphShowcaseStagePresenter.BadgeKind.Ring,
+                GraphShowcaseStagePresenter.GuardColor,
+                scale: 0.9f);
+        }
+    }
+
+    private void DrawRemoveLinkOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0)
+            {
+                continue;
+            }
+
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[fi].X,
+                actors[fi].Y,
+                0.08f,
+                GraphShowcaseStagePresenter.GhostColor);
+        }
+
+        for (int s = 0; s < _severed.Count; s++)
+        {
+            int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _severed[s]);
+            if (fi < 0)
+            {
+                continue;
+            }
+
+            float ax = actors[caster].X;
+            float ay = actors[caster].Y;
+            float bx = actors[fi].X;
+            float by = actors[fi].Y;
+            float dx = bx - ax;
+            float dy = by - ay;
+            GraphShowcaseStagePresenter.DrawGhostSegment(debugDraw, ax, ay, ax + dx * 0.42f, ay + dy * 0.42f, GraphShowcaseStagePresenter.GhostColor);
+            GraphShowcaseStagePresenter.DrawGhostSegment(debugDraw, ax + dx * 0.58f, ay + dy * 0.58f, bx, by, GraphShowcaseStagePresenter.GhostColor);
+        }
+    }
+
+    private void DrawAggBenchOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, GraphNodeOp op)
+    {
+        if (_aggResult <= 0)
+        {
+            return;
+        }
+
+        bool extreme = IsMinMaxValue(op);
+        int winnerIndex = extreme ? IndexOfFriend(FriendWithLoyalty(ctx, _aggResult)) : -1;
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0)
+            {
+                continue;
+            }
+
+            int gi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            if (extreme && i != winnerIndex)
+            {
+                GraphShowcaseStagePresenter.DrawDashedDirectedLine(
+                    debugDraw,
+                    actors[caster].X,
+                    actors[caster].Y,
+                    actors[gi].X,
+                    actors[gi].Y,
+                    0.08f,
+                    GraphShowcaseStagePresenter.GhostColor);
+                continue;
+            }
+
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[gi].X,
+                actors[gi].Y,
+                0.12f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+
+        if (extreme && winnerIndex >= 0)
+        {
+            int gi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[winnerIndex]);
+            DrawExtremeMarker(
+                debugDraw,
+                actors[gi].X,
+                actors[gi].Y + HeadMarkerYOffset,
+                op == GraphNodeOp.RelationshipAggMinMetric,
+                FriendLoyalty(ctx, _friends[winnerIndex]));
+        }
+
+        float resultY = extreme ? BenchResultLiftY : BenchResultDropY;
+        if (!extreme)
+        {
+            for (int i = 0; i < _friends.Length; i++)
+            {
+                int gi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+                float midX = (actors[caster].X + actors[gi].X) * 0.5f;
+                float midY = (actors[caster].Y + actors[gi].Y) * 0.5f;
+                GraphShowcaseStagePresenter.DrawGhostSegment(debugDraw, midX, midY, SlotX(i), BenchPanelY, GraphShowcaseStagePresenter.GhostColor);
+            }
+
+            GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, BenchX, BenchPanelY, 2.6f, 1.9f, 4, GraphShowcaseStagePresenter.GateColor);
+            for (int i = 0; i < _friends.Length; i++)
+            {
+                GraphShowcaseStagePresenter.DrawNumber(
+                    debugDraw,
+                    SlotX(i) + 0.25f,
+                    BenchPanelY,
+                    FriendLoyalty(ctx, _friends[i]),
+                    0.44f,
+                    GraphShowcaseStagePresenter.SentryAlert);
+            }
+
+            if (op == GraphNodeOp.RelationshipAggSumMetric)
+            {
+                DrawPlusGlyph(debugDraw, BenchX, -0.5f);
+            }
+            else
+            {
+                DrawDivideGlyph(debugDraw, BenchX, -0.5f);
+            }
+        }
+        else
+        {
+            GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, BenchX, BenchPanelY, 2.6f, 1.9f, 4, GraphShowcaseStagePresenter.GateColor);
+            for (int i = 0; i < _friends.Length; i++)
+            {
+                if (i == winnerIndex)
+                {
+                    continue;
+                }
+
+                GraphShowcaseStagePresenter.DrawNumber(
+                    debugDraw,
+                    SlotX(i) + 0.25f,
+                    BenchPanelY,
+                    FriendLoyalty(ctx, _friends[i]),
+                    0.44f,
+                    GraphShowcaseStagePresenter.GhostColor);
+            }
+        }
+
+        GraphShowcaseStagePresenter.DrawPanelBox(debugDraw, BenchX, resultY, 1.6f, 0.9f, 1, GraphShowcaseStagePresenter.GateColor);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, BenchX + 0.5f, resultY, _aggResult, 0.6f, GraphShowcaseStagePresenter.SentryAlert);
+        if (extreme && winnerIndex >= 0)
+        {
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                SlotX(winnerIndex),
+                BenchPanelY,
+                BenchX,
+                resultY - 0.55f,
+                0.1f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+        else
+        {
+            GraphShowcaseStagePresenter.DrawDirectedLine(
+                debugDraw,
+                BenchX,
+                -0.5f,
+                BenchX,
+                resultY + 0.55f,
+                0.1f,
+                GraphShowcaseStagePresenter.SentryAlert);
+        }
+    }
+
+    private void DrawMinEntOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawExtremeEntityOverlay(ctx, debugDraw, caster, isMin: true);
+    }
+
+    private void DrawMaxEntOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawExtremeEntityOverlay(ctx, debugDraw, caster, isMin: false);
+    }
+
+    private void DrawExtremeEntityOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster, bool isMin)
+    {
+        if (_extremeEntity == Entity.Null)
+        {
+            return;
+        }
+
+        int fi = GraphOpsNodeActorBinding.IndexOf(ctx, _extremeEntity);
+        if (fi < 0)
+        {
+            return;
+        }
+
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_linked[i] == 0)
+            {
+                continue;
+            }
+
+            int gi = GraphOpsNodeActorBinding.IndexOf(ctx, _friends[i]);
+            if (gi == fi)
+            {
+                continue;
+            }
+
+            GraphShowcaseStagePresenter.DrawDashedDirectedLine(
+                debugDraw,
+                actors[caster].X,
+                actors[caster].Y,
+                actors[gi].X,
+                actors[gi].Y,
+                0.08f,
+                GraphShowcaseStagePresenter.GhostColor);
+        }
+
+        GraphShowcaseStagePresenter.DrawDirectedLine(
+            debugDraw,
+            actors[caster].X,
+            actors[caster].Y,
+            actors[fi].X,
+            actors[fi].Y,
+            0.14f,
+            GraphShowcaseStagePresenter.SentryAlert);
+        DrawExtremeMarker(
+            debugDraw,
+            actors[fi].X,
+            actors[fi].Y + HeadMarkerYOffset,
+            isMin,
+            FriendLoyalty(ctx, _extremeEntity));
+    }
+
+    private void DrawBetweenPairOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        DrawChainField(ctx, debugDraw);
+        if (ctx.HitTargetCount <= 0)
+        {
+            return;
+        }
+
+        int fi = GraphOpsNodeActorBinding.IndexOf(ctx, ctx.HitTargets[0]);
+        if (fi < 0 || fi == caster)
+        {
+            return;
+        }
+
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        float ax = actors[caster].X;
+        float ay = actors[caster].Y;
+        float bx = actors[fi].X;
+        float by = actors[fi].Y;
+        DrawUpTriangle(debugDraw, bx, by + HeadMarkerYOffset);
+        GraphShowcaseStagePresenter.DrawDirectedLine(
+            debugDraw,
+            ax,
+            ay,
+            bx,
+            by,
+            0.16f,
+            GraphShowcaseStagePresenter.SentryAlert,
+            arrowStart: true,
+            arrowEnd: true);
+        float mx = (ax + bx) * 0.5f;
+        float my = (ay + by) * 0.5f;
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            mx,
+            my,
+            GraphShowcaseStagePresenter.BadgeKind.Ring,
+            GraphShowcaseStagePresenter.SentryAlert,
+            scale: 1.2f);
+        float fx = mx + 0.7f;
+        float fy = my - 1.0f;
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            fx,
+            fy,
+            GraphShowcaseStagePresenter.BadgeKind.Cross,
+            GraphShowcaseStagePresenter.SentryAlert);
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, fx + 0.4f, fy, ctx.HitTargetCount, 0.4f, GraphShowcaseStagePresenter.SentryAlert);
+    }
+
+    private int FriendLoyalty(GraphOpsNodeDriverContext ctx, Entity friend)
+    {
+        return ctx.Relationships!.GetMetric(ctx.Caster, friend, _socialBondTypeId, _loyaltyMetricId);
+    }
+
+    private static float SlotX(int index)
+    {
+        return BenchX + (index - 1.5f) * 0.62f;
+    }
+
+    private int IndexOfFriend(Entity friend)
+    {
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_friends[i] == friend)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static void DrawPlusGlyph(DebugDrawCommandBuffer debugDraw, float x, float y)
+    {
+        RawLine(debugDraw, x - 0.3f, y, x + 0.3f, y, 0.08f, GraphShowcaseStagePresenter.GateColor);
+        RawLine(debugDraw, x, y - 0.3f, x, y + 0.3f, 0.08f, GraphShowcaseStagePresenter.GateColor);
+    }
+
+    private static void DrawDivideGlyph(DebugDrawCommandBuffer debugDraw, float x, float y)
+    {
+        RawLine(debugDraw, x - 0.35f, y, x + 0.35f, y, 0.08f, GraphShowcaseStagePresenter.GateColor);
+        debugDraw.Circles.Add(new DebugDrawCircle2D
+        {
+            Center = new Vector2(x, y + 0.28f),
+            Radius = 0.07f,
+            Thickness = 0.06f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, x + 0.62f, y, 4, 0.4f, GraphShowcaseStagePresenter.GateColor);
+    }
+
+    private static void DrawExtremeMarker(DebugDrawCommandBuffer debugDraw, float x, float y, bool isMin, int value)
+    {
+        if (isMin)
+        {
+            DrawDownTriangle(debugDraw, x, y);
+        }
+        else
+        {
+            DrawUpTriangle(debugDraw, x, y);
+        }
+
+        GraphShowcaseStagePresenter.DrawNumber(debugDraw, x + 0.5f, y, value, 0.45f, GraphShowcaseStagePresenter.GateColor);
+    }
+
+    private static void DrawUpTriangle(DebugDrawCommandBuffer debugDraw, float x, float y)
+    {
+        RawLine(debugDraw, x, y + 0.35f, x - 0.3f, y - 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+        RawLine(debugDraw, x, y + 0.35f, x + 0.3f, y - 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+        RawLine(debugDraw, x - 0.3f, y - 0.25f, x + 0.3f, y - 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+    }
+
+    private static void DrawDownTriangle(DebugDrawCommandBuffer debugDraw, float x, float y)
+    {
+        RawLine(debugDraw, x, y - 0.35f, x - 0.3f, y + 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+        RawLine(debugDraw, x, y - 0.35f, x + 0.3f, y + 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+        RawLine(debugDraw, x - 0.3f, y + 0.25f, x + 0.3f, y + 0.25f, 0.08f, GraphShowcaseStagePresenter.SentryAlert);
+    }
+
+    private static void RawLine(DebugDrawCommandBuffer debugDraw, float ax, float ay, float bx, float by, float thickness, DebugDrawColor color)
+    {
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(ax, ay),
+            B = new Vector2(bx, by),
+            Thickness = thickness,
+            Color = color
+        });
+    }
+
+    private static bool IsAggValueOp(GraphNodeOp op)
+    {
+        return op is GraphNodeOp.RelationshipAggSumMetric
+            or GraphNodeOp.RelationshipAggAverageMetric
+            or GraphNodeOp.RelationshipAggMinMetric
+            or GraphNodeOp.RelationshipAggMaxMetric;
+    }
+
+    private static bool IsAggEntOp(GraphNodeOp op)
+    {
+        return op is GraphNodeOp.RelationshipAggMinEntityByMetric
+            or GraphNodeOp.RelationshipAggMaxEntityByMetric;
+    }
+
+    private static bool IsMinMaxValue(GraphNodeOp op)
+    {
+        return op is GraphNodeOp.RelationshipAggMinMetric or GraphNodeOp.RelationshipAggMaxMetric;
     }
 
     private void CollectFriends(GraphOpsNodeDriverContext ctx)
@@ -347,7 +1080,6 @@ public sealed class RelNodeDriver : IGraphOpsNodeDriver
                     throw new InvalidOperationException("RelationshipHasLink was false after seeding a live chain.");
                 }
 
-                values["status"] = "连着";
                 values["friend"] = EntityLabel(ctx, ctx.Target);
                 break;
             default:

@@ -114,6 +114,193 @@ public sealed class GraphOpsNodeGalleryRelAcceptanceTests
         Assert.That(red, Is.GreaterThanOrEqualTo(3), "flag badge glyph needs its pole plus two cloth edges");
     }
 
+    [Test]
+    public void QueryMutual_OverlayKeepsGrayFieldAndLightsDoubleArrowsOnly()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipQueryMutual");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int gray = CountLines(debugDraw, DebugDrawColor.Gray);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(gray, Is.GreaterThan(0), "mutual overlay must keep the whole gray dashed chain field");
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(5), "each double-arrow mutual chain draws a body plus four wings");
+        Assert.That(runtime.Context.CaptionValues["friendCount"], Is.EqualTo("2"));
+    }
+
+    [Test]
+    public void FilterFlag_OverlayDrawsTrustFlagsOnGreenChains()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipFilterFlag");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int green = CountLines(debugDraw, DebugDrawColor.Green);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(green, Is.GreaterThanOrEqualTo(6), "two trusted chains: body plus wings each");
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(3), "flag badge glyph needs its pole plus two cloth edges");
+        Assert.That(runtime.Context.CaptionValues["friendCount"], Is.EqualTo("2"));
+    }
+
+    [Test]
+    public void QueryOutgoing_OverlayKeepsGrayFieldAndLightsOutgoingArrows()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipQueryOutgoing");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int gray = CountLines(debugDraw, DebugDrawColor.Gray);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(gray, Is.GreaterThan(0), "outgoing overlay must keep the gray chain field");
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(12), "four outgoing chains: body plus wings each");
+    }
+
+    [Test]
+    public void FilterMetricRange_OverlayDrawsGateAndHeadClipboards()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipFilterMetricRange");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int white = CountLines(debugDraw, DebugDrawColor.White);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(white, Is.GreaterThan(0), "gate posts and clipboard frames must be white");
+        Assert.That(yellow, Is.GreaterThan(0), "threshold ticks and loyalty numbers must be yellow");
+        Assert.That(runtime.Context.CaptionValues["friendCount"], Is.EqualTo("3"));
+    }
+
+    [Test]
+    public void SortByMetric_OverlayDrawsRankBadgesAboveHeads()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipSortByMetric");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Boxes.Count, Is.GreaterThanOrEqualTo(4), "each friend wears a white rank badge frame");
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友1"));
+        Assert.That(runtime.Context.CaptionValues["loyalty"], Is.EqualTo("85"));
+    }
+
+    [Test]
+    public void HasLink_OverlayDrawsChainLinkOnlyWhileTheLinkIsLive()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipHasLink");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int green = CountLines(debugDraw, DebugDrawColor.Green);
+        Assert.That(green, Is.GreaterThan(0), "live seed link must draw the green chain-link line");
+        Assert.That(debugDraw.Circles.Count, Is.GreaterThanOrEqualTo(2), "chain-link glyph is two interlocked rings");
+        Assert.That(runtime.Metrics.Detail, Does.Contain("链着"));
+    }
+
+    [Test]
+    public void GetMetric_OverlayDrawsReadingCardWithTrueLoyalty()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipGetMetric");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(runtime.Context.CaptionValues["loyalty"], Is.EqualTo("85"));
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友1"));
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void RemoveLink_OverlayKeepsGhostsOfSeveredChains()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipRemoveLink");
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int gray = CountLines(debugDraw, DebugDrawColor.Gray);
+        Assert.That(gray, Is.GreaterThan(0), "severed chain must leave dashed gray ghost segments");
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友4"));
+    }
+
+    [Test]
+    public void AggSumMetric_OverlayDrawsBenchWithGraphSum()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggSumMetric");
+        Assert.That(runtime.Context.CaptionValues["sum"], Is.EqualTo("230"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void AggAverageMetric_OverlayDrawsBenchWithTruncatedAverage()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggAverageMetric");
+        Assert.That(runtime.Context.CaptionValues["avg"], Is.EqualTo("57"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void AggMinMetric_NamesWeakestFriendAndBenchLiftsItsCard()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggMinMetric");
+        Assert.That(runtime.Context.CaptionValues["min"], Is.EqualTo("35"));
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友4"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void AggMaxMetric_NamesStrongestFriendAndBenchLiftsItsCard()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggMaxMetric");
+        Assert.That(runtime.Context.CaptionValues["max"], Is.EqualTo("85"));
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友1"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void AggMinEntityByMetric_OverlayLightsOnlyTheWeakestPerson()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggMinEntityByMetric");
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友4"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(3), "winner chain: body plus wings");
+    }
+
+    [Test]
+    public void AggMaxEntityByMetric_OverlayLightsOnlyTheStrongestPerson()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipAggMaxEntityByMetric");
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友1"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(3), "winner chain: body plus wings");
+    }
+
+    [Test]
+    public void QueryBetweenPair_OverlayDrawsDoubleArrowAndChainLinkWithCountOne()
+    {
+        using GraphOpsNodeGalleryRuntime runtime = Play("RelationshipQueryBetweenPair");
+        Assert.That(runtime.Context.CaptionValues["friendCount"], Is.EqualTo("1"));
+        Assert.That(runtime.Context.CaptionValues["friend"], Is.EqualTo("好友1"));
+        var debugDraw = new DebugDrawCommandBuffer();
+        runtime.DrawOverlay(debugDraw);
+        int yellow = CountLines(debugDraw, DebugDrawColor.Yellow);
+        Assert.That(yellow, Is.GreaterThanOrEqualTo(5), "double-arrow pair line: body plus four wings");
+        Assert.That(debugDraw.Circles.Count, Is.GreaterThanOrEqualTo(2), "chain-link ring at the pair midpoint");
+    }
+
+    private static int CountLines(DebugDrawCommandBuffer debugDraw, DebugDrawColor color)
+    {
+        int count = 0;
+        foreach (DebugDrawLine2D line in debugDraw.Lines)
+        {
+            if (line.Color.Equals(color))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static void CountLineColors(
         DebugDrawCommandBuffer debugDraw,
         DebugDrawColor first,

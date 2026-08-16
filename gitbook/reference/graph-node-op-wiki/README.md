@@ -24,23 +24,23 @@
 
 ## 关系与好感
 
-- [互相都认的朋友](RelationshipQueryMutual.md) — 双向都有链的人亮。
-- [只看受信任的](RelationshipFilterFlag.md) — 信任旗开着的人亮。
-- [好感平均多少](RelationshipAggAverageMetric.md) — 字幕报平均。
-- [好感落在区间里的人](RelationshipFilterMetricRange.md) — 只留好感 30~80 的。
-- [我主动交的朋友](RelationshipQueryOutgoing.md) — 从自己出发的链，亮出那些朋友。
-- [我们有没有连着](RelationshipHasLink.md) — 有链显示连着，无链显示没连。
+- [互相都认的朋友](RelationshipQueryMutual.md) — 两头都有箭头的链才亮。
+- [只看挂了信任旗的](RelationshipFilterFlag.md) — 链上插着信任旗的才留下。
+- [好感平均多少](RelationshipAggAverageMetric.md) — 四份好感倒进算式台，除以四人。
+- [好感落在区间里的人](RelationshipFilterMetricRange.md) — 好感量尺卡在 30 到 80 之间才留。
+- [我主动交的朋友](RelationshipQueryOutgoing.md) — 箭头从自己射出去的链才算。
+- [我们有没有连着](RelationshipHasLink.md) — 和好友的链环扣紧，就是连着。
 - [打上失和标记](RelationshipSetFlag.md) — 最弱那条链上插起失和旗。
-- [把好感加总](RelationshipAggSumMetric.md) — 字幕报好感总和。
-- [把最弱的那条链拆掉](RelationshipRemoveLink.md) — 好感最低的朋友断链，条掉光、人变灰。
-- [按好感排个序](RelationshipSortByMetric.md) — 最高好感排前面，字幕点名第一。
-- [最低好感是多少](RelationshipAggMinMetric.md) — 最弱那条。
-- [最高好感是多少](RelationshipAggMaxMetric.md) — 字幕报最高值，对应的人条最满。
-- [读出这个人的好感](RelationshipGetMetric.md) — 点名好友，字幕和好感条显示读到的数。
+- [把好感加总](RelationshipAggSumMetric.md) — 四份好感在算式台上连加。
+- [把最弱的那条链拆掉](RelationshipRemoveLink.md) — 好感最低那条链断开，线少一条。
+- [按好感排个序](RelationshipSortByMetric.md) — 按好感高低挂出名次牌。
+- [最低好感是多少](RelationshipAggMinMetric.md) — 四块数值牌里最矮的浮出来。
+- [最高好感是多少](RelationshipAggMaxMetric.md) — 四块数值牌里最高的浮出来。
+- [读出这个人的好感](RelationshipGetMetric.md) — 从链上抽出读数牌，写着 85。
 - [谁把我当朋友](RelationshipQueryIncoming.md) — 箭头指着自己的链亮。
-- [谁是好感最低的人](RelationshipAggMinEntityByMetric.md) — 最弱的人被点名。
-- [谁是好感最高的人](RelationshipAggMaxEntityByMetric.md) — 那个人被点名高亮。
-- [这两人之间有没有链](RelationshipQueryBetweenPair.md) — 自己和某好友之间查到链。
+- [谁是好感最低的人](RelationshipAggMinEntityByMetric.md) — 数值牌最矮的人被照亮。
+- [谁是好感最高的人](RelationshipAggMaxEntityByMetric.md) — 数值牌最高的人被照亮。
+- [这两人之间有没有链](RelationshipQueryBetweenPair.md) — 这一对之间拉出一条双头链。
 
 ## 名单筛选与汇总
 

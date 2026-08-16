@@ -1,6 +1,6 @@
 # 把好感加总
 
-字幕报好感总和。
+四份好感在算式台上连加。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把好感加总，总和是 {sum}。
+> 好感总和 {sum}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 把好感加总
     Given 玩家打开 capability_standard_graph_op_RelationshipAggSumMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipAggSumMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「字幕报好感总和。」这类人话
+    Then 字幕讲的是「四份好感在算式台上连加。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 
