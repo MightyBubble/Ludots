@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.RaylibAdapter;
 

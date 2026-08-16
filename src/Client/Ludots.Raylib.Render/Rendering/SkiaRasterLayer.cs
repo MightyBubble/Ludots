@@ -1,7 +1,7 @@
 using System;
 using SkiaSharp;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed class SkiaRasterLayer : IDisposable
     {

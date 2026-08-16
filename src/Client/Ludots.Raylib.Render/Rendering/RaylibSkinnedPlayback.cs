@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Ludots.Core.Presentation.Components;
 using Raylib_cs;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Client-side clip playback surface for GpuSkinnedInstance.

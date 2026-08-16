@@ -1,7 +1,7 @@
 using System;
 using Raylib_cs;
 
-namespace Ludots.Client.Raylib.Input
+namespace Ludots.Raylib.Render
 {
     public static class RaylibInputPathParser
     {

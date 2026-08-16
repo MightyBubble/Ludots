@@ -1,7 +1,7 @@
 using System.Numerics;
 using Raylib_cs;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Re-draws GPU meshes that overlap a world-space AABB so a projected Decal can paint them.

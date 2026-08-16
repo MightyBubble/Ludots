@@ -4,7 +4,7 @@ using System.Numerics;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed unsafe class RaylibSkyboxRenderer : IDisposable
     {

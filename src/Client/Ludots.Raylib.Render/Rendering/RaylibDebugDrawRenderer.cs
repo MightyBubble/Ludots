@@ -4,7 +4,7 @@ using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed class RaylibDebugDrawRenderer
     {

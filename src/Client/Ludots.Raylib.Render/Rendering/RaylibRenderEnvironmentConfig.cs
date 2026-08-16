@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using Raylib_cs;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed record RaylibRenderEnvironmentConfig(
         RaylibLightingConfig Lighting,
