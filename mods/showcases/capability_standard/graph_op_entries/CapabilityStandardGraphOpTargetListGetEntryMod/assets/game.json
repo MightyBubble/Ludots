@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_TargetListGet",
-  "windowTitle": "Ludots - 点名单上的第一个",
+  "windowTitle": "Ludots - 按名单取第一个",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

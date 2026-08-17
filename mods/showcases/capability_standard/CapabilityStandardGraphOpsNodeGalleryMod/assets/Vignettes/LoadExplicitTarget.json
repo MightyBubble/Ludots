@@ -1,12 +1,11 @@
 {
   "op": "LoadExplicitTarget",
   "driver": "attr",
-  "title": "锁定点名目标",
-  "beat": "点到谁就打谁，血条在被点名的红块上掉。",
-  "detailTemplate": "点名到木桩，准备出手。",
+  "title": "点名谁就打谁",
+  "beat": "红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。",
+  "detailTemplate": "点名木桩，木桩从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "点名到木桩",
-    "准备出手"
+    "点名"
   ],
   "featuredNodeId": "loadTarget",
   "graphKind": "Effect",

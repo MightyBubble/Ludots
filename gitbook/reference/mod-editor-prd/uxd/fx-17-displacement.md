@@ -1,6 +1,6 @@
-# fx-21 UXD · 位移的编辑器需求
+# fx-17 UXD · 位移的编辑器需求
 
-> fx-20 的编辑器需求（高保真规格）。第一性需求见 [fx-20 PRD](../prd/fx-17-displacement.md)；配置写法见 [fx-20 配置说明](../config/fx-17-displacement.md)；编辑器实现见 [editor spec](../spec-editor/fx-17-displacement.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-17 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -48,4 +48,4 @@ Displacement 效果编辑页的位移表单：方向模式、距离时长、导�
 - "这个位移有多快"无需手算：派生速度一跳可见。
 - 方向模式切换后的可见字段集与合法集一致。
 
-**相关文档**：[fx-20 PRD](../prd/fx-17-displacement.md) · [editor spec](../spec-editor/fx-17-displacement.md)
+**相关文档**：[fx-17 PRD](../prd/fx-17-displacement.md) · [editor spec](../spec-editor/fx-17-displacement.md)

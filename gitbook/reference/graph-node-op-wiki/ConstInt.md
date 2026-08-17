@@ -1,6 +1,6 @@
-# 写死的整数
+# 写死的整数：一刀三层
 
-这一刀的层数写死是 3，不读装备。
+铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ConstInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_ConstInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ConstInt/play.mp4`。
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 写死的整数
+Feature: 写死的整数：一刀三层
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ConstInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ConstInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「这一刀的层数写死是 3，不读装备。」这类人话
+    Then 字幕讲的是「铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

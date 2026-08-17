@@ -1,6 +1,6 @@
-# ai-08 runtime spec · 目标过滤器
+# ai-06 runtime spec · 目标过滤器
 
-> 引擎实现任务书。第一性需求见 [ai-07 PRD](../prd/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
+> 引擎实现任务书。第一性需求见 [ai-06 PRD](../prd/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
 
 ## 1. 概述
 
@@ -27,4 +27,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-07 PRD](../prd/ai-06-target-filters.md) · [reference](../reference/ai-06-target-filters.md)
+**相关文档**：[ai-06 PRD](../prd/ai-06-target-filters.md) · [reference](../reference/ai-06-target-filters.md)

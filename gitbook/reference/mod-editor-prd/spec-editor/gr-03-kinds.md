@@ -1,6 +1,6 @@
-# gr-05 editor spec · 六种 Kind
+# gr-03 editor spec · 六种 Kind
 
-> 编辑器实现任务书。编辑器需求见 [gr-04 UXD](../uxd/gr-03-kinds.md)；引擎侧见 [runtime spec](../spec-runtime/gr-03-kinds.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-03 UXD](../uxd/gr-03-kinds.md)；引擎侧见 [runtime spec](../spec-runtime/gr-03-kinds.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ kind 决策向导与白名单过滤：编辑器侧节点可见性判定与引擎
 - 消费：kind 策略表投影、返回槽/保留槽常量、图名注册表。
 - 验收：六 kind 各建一图，越权路径三路全拦；挂点拖拽的 kind 校验与引擎挂接一致。
 
-**相关文档**：[gr-04 UXD](../uxd/gr-03-kinds.md) · [gr-04 runtime spec](../spec-runtime/gr-03-kinds.md)
+**相关文档**：[gr-03 UXD](../uxd/gr-03-kinds.md) · [gr-03 runtime spec](../spec-runtime/gr-03-kinds.md)

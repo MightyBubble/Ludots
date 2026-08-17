@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryLimit",
-  "windowTitle": "Ludots - 只点最近的几个",
+  "windowTitle": "Ludots - 名单取前三个",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

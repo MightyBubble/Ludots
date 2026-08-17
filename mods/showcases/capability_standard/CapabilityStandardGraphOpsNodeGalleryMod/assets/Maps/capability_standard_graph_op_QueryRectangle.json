@@ -95,8 +95,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 346,
-            "Y": 600
+            "X": 260,
+            "Y": 500
           }
         },
         "AttributeBuffer": {
@@ -164,8 +164,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": -346,
-            "Y": 600
+            "X": -260,
+            "Y": 500
           }
         },
         "AttributeBuffer": {
@@ -210,8 +210,8 @@
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 60,
-            "Y": 20
+            "X": 240,
+            "Y": 196
           }
         },
         "AttributeBuffer": {
@@ -304,6 +304,75 @@
           "Value": {
             "X": -900,
             "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "mercenary",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "雇佣兵"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -120,
+            "Y": 460
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "traitor",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "内奸"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 120,
+            "Y": 460
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "edgeOut",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "贴边的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 410,
+            "Y": 590
           }
         },
         "AttributeBuffer": {

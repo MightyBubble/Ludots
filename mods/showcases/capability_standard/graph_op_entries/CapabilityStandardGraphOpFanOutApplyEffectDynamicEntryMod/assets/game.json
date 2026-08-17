@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_FanOutApplyEffectDynamic",
-  "windowTitle": "Ludots - 按读到的模板打圈里所有人",
+  "windowTitle": "Ludots - 翻出一张牌，圈里每人照牌挨一下",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
-# fx-17 配置说明 · 效果授予 Tag
+# fx-13 配置说明 · 效果授予 Tag
 
-> 配置写法与行为。第一性需求见 [fx-16 PRD](../prd/fx-13-granted-tags.md)；编辑器需求见 [UXD](../uxd/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
+> 配置写法与行为。第一性需求见 [fx-13 PRD](../prd/fx-13-granted-tags.md)；编辑器需求见 [UXD](../uxd/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
 
 ## 1. 示例配置
 
@@ -40,7 +40,7 @@
 
 ## 3. 文件结构
 
-`grantedTags` 是 `assets/GAS/effects.json` 效果条目的可选块（条目骨架@@fx2@@），与 modifiers 并存：数值改属性走修改器、状态标记走授予 tag。
+`grantedTags` 是 `assets/GAS/effects.json` 效果条目的可选块（条目骨架fx-03），与 modifiers 并存：数值改属性走修改器、状态标记走授予 tag。
 
 ## 4. 运行时加载效果
 
@@ -61,4 +61,4 @@ loader 逐条注册 tag 名、锁定公式并把 amount/base 钳到计数上限�
 - 减速/沉默状态：`mods/showcases/moba_demo/MobaDemoMod/assets/GAS/effects.json`（Debuff.Slow、Debuff.Silence）
 - 科研状态：`mods/showcases/fourx_demo/FourXDemoMod/assets/GAS/effects.json`（TechResearch）
 
-**相关文档**：[fx-16 PRD](../prd/fx-13-granted-tags.md) · [tag-01 配置说明](tag-01-basics.md)
+**相关文档**：[fx-13 PRD](../prd/fx-13-granted-tags.md) · [tag-01 配置说明](tag-01-basics.md)

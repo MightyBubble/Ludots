@@ -1,6 +1,6 @@
-# ai-06 reference · 决策
+# ai-04 reference · 决策
 
-> 现状参考。第一性需求见 [ai-05 PRD](../prd/ai-04-decisions.md)；配置说明见 [ai-05 配置说明](../config/ai-04-decisions.md)。
+> 现状参考。第一性需求见 [ai-04 PRD](../prd/ai-04-decisions.md)；配置说明见 [ai-04 配置说明](../config/ai-04-decisions.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 冷却/共享冷却状态写入 | src/Core/Gameplay/AI/Systems/UtilityAiSystems.cs:193-205 |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decisions.json |
 
-**相关文档**：[ai-05 PRD](../prd/ai-04-decisions.md) · [ai-06 reference](ai-05-dm-profiles.md)
+**相关文档**：[ai-04 PRD](../prd/ai-04-decisions.md) · [ai-05 reference](ai-05-dm-profiles.md)

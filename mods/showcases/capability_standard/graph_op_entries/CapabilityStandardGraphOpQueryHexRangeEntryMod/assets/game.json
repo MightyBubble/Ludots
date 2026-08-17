@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryHexRange",
-  "windowTitle": "Ludots - 这几格六角范围内",
+  "windowTitle": "Ludots - 两格以内的六角范围",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

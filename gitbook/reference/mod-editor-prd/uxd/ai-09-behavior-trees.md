@@ -1,6 +1,6 @@
-# ai-11 UXD · 行为树的编辑器需求
+# ai-09 UXD · 行为树的编辑器需求
 
-> ai-10 的编辑器需求（高保真规格）。第一性需求见 [ai-10 PRD](../prd/ai-09-behavior-trees.md)；配置写法见 [ai-10 配置说明](../config/ai-09-behavior-trees.md)；编辑器实现见 [editor spec](../spec-editor/ai-09-behavior-trees.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-09 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -55,4 +55,4 @@
 - 结构错误（多父/不可达/重复 id）在画布层即被拦截。
 - Tick 单步调试可见每节点状态与脚本步消耗。
 
-**相关文档**：[ai-10 PRD](../prd/ai-09-behavior-trees.md) · [editor spec](../spec-editor/ai-09-behavior-trees.md)
+**相关文档**：[ai-09 PRD](../prd/ai-09-behavior-trees.md) · [editor spec](../spec-editor/ai-09-behavior-trees.md)

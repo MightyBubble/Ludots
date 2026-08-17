@@ -35,7 +35,7 @@
 
 ## 3. 文件结构
 
-outputs 是 graphs.json 文档顶层字段（gr-03），仅 Query 图允许。
+outputs 是 graphs.json 文档顶层字段（gr-02），仅 Query 图允许。
 
 ## 4. 运行时加载效果
 
@@ -53,7 +53,7 @@ outputs 是 graphs.json 文档顶层字段（gr-03），仅 Query 图允许。
 
 ## 6. 实例
 
-- 主线资产现状无实例（Query kind 零存量）；编辑器样本@@gr2@@ 第 6 节其余 kind
-- 消费方：实体集合描述符与摘要键值（gr-09 次要挂点）
+- 主线资产现状无实例（Query kind 零存量）；编辑器样本gr-03 第 6 节其余 kind
+- 消费方：实体集合描述符与摘要键值（gr-08 次要挂点）
 
-**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-03 配置说明](gr-02-document.md) · [gr-09 配置说明](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-02 配置说明](gr-02-document.md) · [gr-08 配置说明](gr-08-mount-points.md)

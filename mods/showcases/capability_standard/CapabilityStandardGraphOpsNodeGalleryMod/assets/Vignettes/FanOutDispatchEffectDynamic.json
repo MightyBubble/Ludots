@@ -1,11 +1,11 @@
 {
   "op": "FanOutDispatchEffectDynamic",
   "driver": "event",
-  "title": "模板号读出来再派发",
-  "beat": "先从事件里读出模板号，再按这个号把效果扇出给圈里的人。",
-  "detailTemplate": "模板号读出来再派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "先接飞来的卡，再照卡发招",
+  "beat": "芯片插进空槽，圈里三人各挂上一枚铃。",
+  "detailTemplate": "按卡给圈里 {count} 人挂上铃。",
   "assertDetailContains": [
-    "读出来再派"
+    "挂上铃"
   ],
   "featuredNodeId": "fanDyn",
   "graphKind": "Effect",

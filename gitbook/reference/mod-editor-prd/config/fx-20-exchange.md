@@ -1,6 +1,6 @@
-# fx-23 配置说明 · 兑换
+# fx-20 配置说明 · 兑换
 
-> 配置写法与行为。第一性需求见 [fx-23 PRD](../prd/fx-20-exchange.md)；编辑器需求见 [UXD](../uxd/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
+> 配置写法与行为。第一性需求见 [fx-20 PRD](../prd/fx-20-exchange.md)；编辑器需求见 [UXD](../uxd/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
 
 ## 1. 示例配置
 
@@ -60,4 +60,4 @@ loader 要求 Exchange 必带正数 `_ep.exchangeOperationId` 并经兑换操作
 - 兑换操作本体：`mods/showcases/gold_market/GoldMarketShowcaseMod/assets/Exchange/operations.json`（buy_relic 等）
 - 带关系门槛的操作：`mods/showcases/diplomacy_trade_gate/DiplomacyTradeGateShowcaseMod/assets/Exchange/operations.json`
 
-**相关文档**：[fx-23 PRD](../prd/fx-20-exchange.md) · [fx-17 配置说明](fx-14-config-params.md)
+**相关文档**：[fx-20 PRD](../prd/fx-20-exchange.md) · [fx-14 配置说明](fx-14-config-params.md)

@@ -1,6 +1,6 @@
-# ai-08 reference · 目标过滤器
+# ai-06 reference · 目标过滤器
 
-> 现状参考。第一性需求见 [ai-07 PRD](../prd/ai-06-target-filters.md)；配置说明见 [ai-07 配置说明](../config/ai-06-target-filters.md)。
+> 现状参考。第一性需求见 [ai-06 PRD](../prd/ai-06-target-filters.md)；配置说明见 [ai-06 配置说明](../config/ai-06-target-filters.md)。
 
 ## 1. 现状快照
 
@@ -21,4 +21,4 @@
 | 拒绝码 | UtilityAiRuntimeEvaluator.cs（UtilityAiFilterRejectReason） |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/target_filters.json |
 
-**相关文档**：[ai-07 PRD](../prd/ai-06-target-filters.md) · [ai-08 reference](ai-07-tasks.md)
+**相关文档**：[ai-06 PRD](../prd/ai-06-target-filters.md) · [ai-07 reference](ai-07-tasks.md)

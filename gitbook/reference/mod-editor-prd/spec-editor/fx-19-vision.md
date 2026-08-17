@@ -1,6 +1,6 @@
-# fx-23 editor spec · 视野揭示
+# fx-19 editor spec · 视野揭示
 
-> 编辑器实现任务书。编辑器需求见 [fx-22 UXD](../uxd/fx-19-vision.md)；引擎侧见 [runtime spec](../spec-runtime/fx-19-vision.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-19 UXD](../uxd/fx-19-vision.md)；引擎侧见 [runtime spec](../spec-runtime/fx-19-vision.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：作用域注册表、迷雾层注册表、计划编译认证结果、保存管线。
 - 验收：勾选第上限+1 层被禁用；scope 悬空阻保存；警示条在启用区块即出现。
 
-**相关文档**：[fx-22 UXD](../uxd/fx-19-vision.md) · [fx-22 runtime spec](../spec-runtime/fx-19-vision.md)
+**相关文档**：[fx-19 UXD](../uxd/fx-19-vision.md) · [fx-19 runtime spec](../spec-runtime/fx-19-vision.md)

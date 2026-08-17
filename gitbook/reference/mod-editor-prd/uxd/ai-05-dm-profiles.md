@@ -1,6 +1,6 @@
-# ai-07 UXD · 决策者与档案的编辑器需求
+# ai-05 UXD · 决策者与档案的编辑器需求
 
-> ai-06 的编辑器需求（高保真规格）。第一性需求见 [ai-06 PRD](../prd/ai-05-dm-profiles.md)；配置写法见 [ai-06 配置说明](../config/ai-05-dm-profiles.md)；编辑器实现见 [editor spec](../spec-editor/ai-05-dm-profiles.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-05 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -13,7 +13,7 @@
 ├─ 左：档案树 ─────────┬─ 右：详情 ────────────────────────────────────┤
 │ ▸ Profile.Mage       │ Profile.UtilityAutocast.Mage                  │
 │   └ DM.Mage          │ 节奏  interval [1]  MaxCandidates [32]        │
-│     ├ Attack   ⚡65  │ stance [（空·ai-09）▾]                         │
+│     ├ Attack   ⚡65  │ stance [（空·ai-08）▾]                         │
 │     ├ HealBurst ⚡78 │ 决策者 DM.Mage：mode [UtilityScore ▾]          │
 │     └ Curse    ⚡55  │              margin [0]                       │
 │ ＋新建档案           │ 决策竞技场（实时分，来自 trace）               │
@@ -49,7 +49,7 @@
 | 引用断链 | 决策/决策者名不存在 | 树节点红点 |
 | 区间不连续 | 排序后解析区间断开 | 红条指断点（I3） |
 | 无 profile 预警 | 十表非空而 profiles 空 | 顶部红条 |
-| stance 未接线 | DefaultStance 已选 | 灰字提示"编译保留、暂无系统消费（ai-09/I6）" |
+| stance 未接线 | DefaultStance 已选 | 灰字提示"编译保留、暂无系统消费（ai-08/I6）" |
 | 静态会话 | 无运行实例 | 竞技场显示占位说明 |
 
 ## 6. 易用性验收口径
@@ -58,4 +58,4 @@
 - interval/maxCandidates 的性能含义有人话提示。
 - FixedPriority 与 margin 的适用差异在表单内即可读懂。
 
-**相关文档**：[ai-06 PRD](../prd/ai-05-dm-profiles.md) · [editor spec](../spec-editor/ai-05-dm-profiles.md)
+**相关文档**：[ai-05 PRD](../prd/ai-05-dm-profiles.md) · [editor spec](../spec-editor/ai-05-dm-profiles.md)

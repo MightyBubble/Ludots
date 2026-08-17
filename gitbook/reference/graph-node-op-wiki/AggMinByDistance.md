@@ -1,6 +1,6 @@
-# 谁离我最近
+# 扇形里谁离我最近
 
-最近的那个人闪出来。
+每人拉一条线，最短的那条留下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggMinByDistance/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4`。
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 谁离我最近
+Feature: 扇形里谁离我最近
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggMinByDistance
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最近的那个人闪出来。」这类人话
+    Then 字幕讲的是「每人拉一条线，最短的那条留下。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

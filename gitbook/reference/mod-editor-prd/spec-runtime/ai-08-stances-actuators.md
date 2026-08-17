@@ -1,6 +1,6 @@
-# ai-10 runtime spec · 战斗姿态与执行器门
+# ai-08 runtime spec · 战斗姿态与执行器门
 
-> 引擎实现任务书。第一性需求见 [ai-09 PRD](../prd/ai-08-stances-actuators.md)；现状见 [reference](../reference/ai-08-stances-actuators.md)。
+> 引擎实现任务书。第一性需求见 [ai-08 PRD](../prd/ai-08-stances-actuators.md)；现状见 [reference](../reference/ai-08-stances-actuators.md)。
 
 ## 1. 概述
 
@@ -19,10 +19,10 @@
 
 ## 4. 迁移与治理
 
-现状即基线；I6/I7 处置入 todo/ai.md。姿态消费系统落地时须同步 ai-06 DefaultStance 语义与 ai-07 过滤器联动。
+现状即基线；I6/I7 处置入 todo/ai.md。姿态消费系统落地时须同步 ai-05 DefaultStance 语义与 ai-06 过滤器联动。
 
 ## 变更记录
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-09 PRD](../prd/ai-08-stances-actuators.md) · [reference](../reference/ai-08-stances-actuators.md)
+**相关文档**：[ai-08 PRD](../prd/ai-08-stances-actuators.md) · [reference](../reference/ai-08-stances-actuators.md)

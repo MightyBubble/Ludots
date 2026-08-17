@@ -1,6 +1,6 @@
-# fx-20 UXD · 造单位的编辑器需求
+# fx-16 UXD · 造单位的编辑器需求
 
-> fx-19 的编辑器需求（高保真规格）。第一性需求见 [fx-19 PRD](../prd/fx-16-unit-creation.md)；配置写法见 [fx-19 配置说明](../config/fx-16-unit-creation.md)；编辑器实现见 [editor spec](../spec-editor/fx-16-unit-creation.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-16 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -52,4 +52,4 @@ CreateUnit 效果编辑页的造单位表单：来源、数量、摆放与朝向
 - 图案切换后可见字段集与该图案合法集完全一致（无禁用灰置歧义）。
 - "归属开关关闭=字段不存在"的持久化语义在表单提示中一跳可见。
 
-**相关文档**：[fx-19 PRD](../prd/fx-16-unit-creation.md) · [editor spec](../spec-editor/fx-16-unit-creation.md)
+**相关文档**：[fx-16 PRD](../prd/fx-16-unit-creation.md) · [editor spec](../spec-editor/fx-16-unit-creation.md)

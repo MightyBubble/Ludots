@@ -1,6 +1,6 @@
-# 从观众自己看
+# 取出镜头背后的人
 
-镜头和观众实体被读出，字幕说从自己这侧看。
+眼睛徽章落在观众头上，观众飞进镜位槽。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadViewer/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadViewer/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadViewer/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从{result}看。
+> 镜位取出的是观众（{result}）。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从观众自己看
+Feature: 取出镜头背后的人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadViewer
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadViewer/play.mp4
     When 短剧演完
-    Then 字幕讲的是「镜头和观众实体被读出，字幕说从自己这侧看。」这类人话
+    Then 字幕讲的是「眼睛徽章落在观众头上，观众飞进镜位槽。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

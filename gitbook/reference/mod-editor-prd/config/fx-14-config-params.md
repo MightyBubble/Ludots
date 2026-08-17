@@ -1,6 +1,6 @@
-# fx-18 配置说明 · 参数化
+# fx-14 配置说明 · 参数化
 
-> 配置写法与行为。第一性需求见 [fx-17 PRD](../prd/fx-14-config-params.md)；编辑器需求见 [UXD](../uxd/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
+> 配置写法与行为。第一性需求见 [fx-14 PRD](../prd/fx-14-config-params.md)；编辑器需求见 [UXD](../uxd/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
 
 ## 1. 示例配置
 
@@ -41,7 +41,7 @@
 
 ## 3. 文件结构
 
-`configParams` 是 `assets/GAS/effects.json` 效果条目的可选块（条目骨架@@fx2@@）。
+`configParams` 是 `assets/GAS/effects.json` 效果条目的可选块（条目骨架fx-03）。
 
 ## 4. 运行时加载效果
 
@@ -62,4 +62,4 @@
 - 自定义键与效果引用：`mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/effects.json`
 - `_ep.force*` 力参数：`mods/showcases/moba_demo/MobaDemoMod/assets/GAS/effects.json`
 
-**相关文档**：[fx-17 PRD](../prd/fx-14-config-params.md) · [attr-01 配置说明](attr-01-definition.md)
+**相关文档**：[fx-14 PRD](../prd/fx-14-config-params.md) · [attr-01 配置说明](attr-01-definition.md)

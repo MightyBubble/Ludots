@@ -26,7 +26,7 @@ Script 图的结构化外衣：作者写糖（Branch/While/Wait），画布显�
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
 | 糖面板 | 糖常量表（五个） | 拖入即插糖节点，保存时展开 |
-| 函数名选择器 | FuncLib 注册表（gr-09） | InvokeScript 的 imm |
+| 函数名选择器 | FuncLib 注册表（gr-06） | InvokeScript 的 imm |
 | Halt 自动补 | 图扫描 | 保存前若无显式终结自动插入并提示 |
 | 钉槽引导 | 寄存器文件 | 循环变量建议 `pinRegister` |
 | 深度投影 | vm 限额 | InvokeScript 链显示当前嵌套深度 |

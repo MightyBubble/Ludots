@@ -1,6 +1,6 @@
-# 打出一记并广播出去
+# 打出去，对方听得见
 
-木桩挨打，同时这件事被广播给听事件的人。
+木桩挨打掉血，头顶的铃同时被这一下敲亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SendEvent/poster.png" src="artifacts/evidence/capability_standard_graph_op_SendEvent/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SendEvent/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 打出一记并广播出去，木桩血条从 {healthBefore} 掉到 {healthAfter}。
+> 木桩血条从 {healthBefore} 掉到 {healthAfter}，铃亮了。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 打出一记并广播出去
+Feature: 打出去，对方听得见
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_SendEvent
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_SendEvent/play.mp4
     When 短剧演完
-    Then 字幕讲的是「木桩挨打，同时这件事被广播给听事件的人。」这类人话
+    Then 字幕讲的是「木桩挨打掉血，头顶的铃同时被这一下敲亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadTargetPosX",
-  "windowTitle": "Ludots - 读出击落点的左右",
+  "windowTitle": "Ludots - 读出落点在东西标尺上的读数",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

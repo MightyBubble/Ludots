@@ -1,6 +1,6 @@
-# fx-19 editor spec · 弹道
+# fx-15 editor spec · 弹道
 
-> 编辑器实现任务书。编辑器需求见 [fx-18 UXD](../uxd/fx-15-projectile.md)；引擎侧见 [runtime spec](../spec-runtime/fx-15-projectile.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-15 UXD](../uxd/fx-15-projectile.md)；引擎侧见 [runtime spec](../spec-runtime/fx-15-projectile.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ LaunchProjectile 效果表单的弹道子表单：四组参数、引用选择、
 - 消费：效果模板注册表、关系过滤枚举、保存管线、热通道分级。
 - 验收：缺 hitEffect 保存被拒；impactPolicy 切 ContinueOnHit 后 maxHitCount 自动启用且限界。
 
-**相关文档**：[fx-18 UXD](../uxd/fx-15-projectile.md) · [fx-18 runtime spec](../spec-runtime/fx-15-projectile.md)
+**相关文档**：[fx-15 UXD](../uxd/fx-15-projectile.md) · [fx-15 runtime spec](../spec-runtime/fx-15-projectile.md)

@@ -1,6 +1,6 @@
-# fx-19 配置说明 · 弹道
+# fx-15 配置说明 · 弹道
 
-> 配置写法与行为。第一性需求见 [fx-18 PRD](../prd/fx-15-projectile.md)；编辑器需求见 [UXD](../uxd/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
+> 配置写法与行为。第一性需求见 [fx-15 PRD](../prd/fx-15-projectile.md)；编辑器需求见 [UXD](../uxd/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
 
 ## 1. 示例配置
 
@@ -35,11 +35,11 @@
 | `collisionExcludeSource` | 只可 `true` 或省略（写 `false` 启动报错）：排除发射者自身 |
 | `maxHitCount` | 1..命中历史容量（事实页/常量 32）：贯穿策略的最大命中数 |
 
-块只允许挂在 `presetType: LaunchProjectile`；该 preset 必须 Instant（preset 合同@@fx3@@）。
+块只允许挂在 `presetType: LaunchProjectile`；该 preset 必须 Instant（preset 合同fx-04）。
 
 ## 3. 文件结构
 
-`assets/GAS/effects.json` 效果条目的 `projectile` 块；命中/落点子效果是同表普通条目，被本块按 id 引用（引用许可序@@fx2@@）。
+`assets/GAS/effects.json` 效果条目的 `projectile` 块；命中/落点子效果是同表普通条目，被本块按 id 引用（引用许可序fx-03）。
 
 ## 4. 运行时加载效果
 
@@ -61,4 +61,4 @@ loader 校验上述合同并把子效果名解析为模板 id；运行期发射�
 - 直射/多段弹：`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（MysticShot 等）
 - 火箭：`mods/showcases/arpg_demo/ArpgDemoMod/assets/GAS/effects.json`（FireArrow）
 
-**相关文档**：[fx-18 PRD](../prd/fx-15-projectile.md) · @@fx11@@ config（子效果派发）
+**相关文档**：[fx-15 PRD](../prd/fx-15-projectile.md) · fx-11 config（子效果派发）

@@ -42,12 +42,12 @@
       "Template": "GraphOps.Ally",
       "Overrides": {
         "Name": {
-          "Value": "施法者"
+          "Value": "陌生人"
         },
         "WorldPositionCm": {
           "Value": {
-            "X": 0,
-            "Y": 0
+            "X": 150,
+            "Y": 300
           }
         },
         "AttributeBuffer": {

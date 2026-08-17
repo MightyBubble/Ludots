@@ -35,7 +35,7 @@ FourX 关联 showcase 真实三件（`mods/showcases/fourx_association/FourXAsso
 ]
 ```
 
-GAS 侧的完成效果（教学骨架，合成；合同见 fx-23）：
+GAS 侧的完成效果（教学骨架，合成；合同见 fx-21）：
 
 ```json
 [ { "id": "Effect.FourX.TechStep", "presetType": "CompleteProgression",
@@ -77,4 +77,4 @@ GAS 侧的完成效果（教学骨架，合成；合同见 fx-23）：
 
 - `mods/showcases/fourx_association/FourXAssociationShowcaseMod/assets/Progression/scopes.json`、`progressions.json`、`requirements.json`
 
-**相关文档**：[misc-01 PRD](../prd/misc-01-progression.md) · [fx-23 配置说明](fx-21-progression.md)
+**相关文档**：[misc-01 PRD](../prd/misc-01-progression.md) · [fx-21 配置说明](fx-21-progression.md)

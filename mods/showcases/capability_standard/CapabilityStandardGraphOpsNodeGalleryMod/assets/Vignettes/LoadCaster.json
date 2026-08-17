@@ -1,11 +1,11 @@
 {
   "op": "LoadCaster",
   "driver": "attr",
-  "title": "认出自己",
-  "beat": "图从施法者自己读起，确认出手的人是台上这个金块。",
-  "detailTemplate": "出手的是自己。",
+  "title": "先认出是谁出手",
+  "beat": "白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。",
+  "detailTemplate": "出手的确认是自己。",
   "assertDetailContains": [
-    "出手的是自己"
+    "出手"
   ],
   "featuredNodeId": "loadSelf",
   "graphKind": "Effect",

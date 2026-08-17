@@ -57,7 +57,7 @@ kind 缩写同 gr-op-01（L=E+S+V+D、Q、SC）。Float 读属性用 LoadAttribu
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；格式见 gr-04。
+图文档放 `assets/GAS/graphs.json` 或分片目录；格式见 gr-02。
 
 ## 4. 运行时加载效果
 

@@ -63,13 +63,13 @@ kind 缩写同 gr-op-01。
 
 互斥与陷阱：
 
-- WriteSelfAttribute 是**唯一非 Effect 也非纯读**的可写事务 op（Effect 与 Derived 两类可用）：Derived 图回写自身、Effect 图直写自身走同一颗节点。它直写 SetCurrent，不建修改器——想被聚合管线管理就走效果修改器（fx-05），不要用这颗节点替代。
+- WriteSelfAttribute 是**唯一非 Effect 也非纯读**的可写事务 op（Effect 与 Derived 两类可用）：Derived 图回写自身、Effect 图直写自身走同一颗节点。它直写 SetCurrent，不建修改器——想被聚合管线管理就走效果修改器（fx-03），不要用这颗节点替代。
 - LoadConfig 三件在监听宿主的图里禁用：监听图没有 owner 模板上下文可归属，编译拒绝。
 - 属性名与配置键都是符号：属性上限与约束语义见 attr-01 与事实页；配置键经 ConfigKeyRegistry。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`attribute`/`configKey` 字段写符号名，见 gr-04。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`attribute`/`configKey` 字段写符号名，见 gr-02。
 
 ## 4. 运行时加载效果
 

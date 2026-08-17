@@ -1,6 +1,6 @@
-# fx-19 UXD · 弹道的编辑器需求
+# fx-15 UXD · 弹道的编辑器需求
 
-> fx-18 的编辑器需求（高保真规格）。第一性需求见 [fx-18 PRD](../prd/fx-15-projectile.md)；配置写法见 [fx-18 配置说明](../config/fx-15-projectile.md)；编辑器实现见 [editor spec](../spec-editor/fx-15-projectile.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-15 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -28,7 +28,7 @@ LaunchProjectile 效果编辑页的弹道表单：飞行、命中策略、碰撞
 | 飞行数值框 | 整数 | 负数即时红条 |
 | travelMode / impactPolicy 单选 | Direction/TrackTarget；DestroyOnFirstHit/ContinueOnHit | 不提供 Legacy；impactPolicy 联动 maxHitCount 可用性 |
 | maxHitCount | 1..命中历史容量（事实页） | 滑条限界 |
-| relationFilter 选择 | 关系过滤枚举 | 与 fx-14 过滤同源 |
+| relationFilter 选择 | 关系过滤枚举 | 与 fx-10 过滤同源 |
 | 子效果选择器 | 效果模板注册表 | hitEffect 必选；另两个可空 |
 | 排除源开关 | 布尔 | 只写 true，关闭即删字段（false 禁存） |
 
@@ -52,4 +52,4 @@ LaunchProjectile 效果编辑页的弹道表单：飞行、命中策略、碰撞
 - 四组参数在单屏无滚动可见。
 - "贯穿需要哪些字段"（策略→maxHitCount 联动）无需查文档即可正确完成。
 
-**相关文档**：[fx-18 PRD](../prd/fx-15-projectile.md) · [editor spec](../spec-editor/fx-15-projectile.md)
+**相关文档**：[fx-15 PRD](../prd/fx-15-projectile.md) · [editor spec](../spec-editor/fx-15-projectile.md)

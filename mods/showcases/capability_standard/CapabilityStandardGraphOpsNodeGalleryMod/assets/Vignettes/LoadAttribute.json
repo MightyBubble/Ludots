@@ -1,11 +1,11 @@
 {
   "op": "LoadAttribute",
   "driver": "attr",
-  "title": "先看对方还有多少血",
-  "beat": "出手前先读木桩当前生命，字幕报出读到的数。",
-  "detailTemplate": "木桩还有 {hp} 点血。",
+  "title": "出手前先看一眼对方的血",
+  "beat": "黄虚线搭到木桩，读出当前生命，头顶浮出 80。",
+  "detailTemplate": "读出木桩当前生命 {hp}。",
   "assertDetailContains": [
-    "还有"
+    "读出"
   ],
   "featuredNodeId": "loadHp",
   "graphKind": "Effect",

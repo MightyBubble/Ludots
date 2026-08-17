@@ -1,6 +1,6 @@
 # gr-09 UXD · Query 图输出的编辑器需求
 
-> gr-09 的编辑器需求（高保真规格）。第一性需求见 [gr-09 PRD](../prd/gr-09-outputs.md)；配置写法见 [gr-09 配置说明](../config/gr-09-outputs.md)；编辑器实现见 [editor spec](../spec-editor/gr-09-outputs.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> gr-09 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -48,4 +48,4 @@
 - 非法组合在界面上不可构造。
 - 每个输出从声明到落点预览 ≤ 2 跳。
 
-**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [editor spec](../spec-editor/gr-09-outputs.md) · [gr-09 UXD](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [editor spec](../spec-editor/gr-09-outputs.md) · [gr-08 UXD](gr-08-mount-points.md)

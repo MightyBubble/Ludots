@@ -1,6 +1,6 @@
-# 点名单上的第一个
+# 按名单取第一个
 
-名单第一人被点名，血条或高亮在他身上。
+名单按序编号，红线只连 1 号。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_TargetListGet/poster.png" src="artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 点名第一个，是{name}。
+> 名单第 1 个，是{name}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 点名单上的第一个
+Feature: 按名单取第一个
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_TargetListGet
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_TargetListGet/play.mp4
     When 短剧演完
-    Then 字幕讲的是「名单第一人被点名，血条或高亮在他身上。」这类人话
+    Then 字幕讲的是「名单按序编号，红线只连 1 号。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,6 +1,6 @@
-# 直接扣血
+# 直接在血条上做加法
 
-不绕圈子，木桩血条按加算结果往下掉。
+一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/poster.png" src="artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 直接扣血，木桩从 {healthBefore} 掉到 {healthAfter}。
+> 加算 {delta}，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 直接扣血
+Feature: 直接在血条上做加法
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ModifyAttributeAdd
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ModifyAttributeAdd/play.mp4
     When 短剧演完
-    Then 字幕讲的是「不绕圈子，木桩血条按加算结果往下掉。」这类人话
+    Then 字幕讲的是「一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

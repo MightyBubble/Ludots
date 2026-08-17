@@ -1,9 +1,9 @@
 {
   "op": "QuerySortStable",
   "driver": "sandbox",
-  "title": "圈里的人排个稳定顺序",
-  "beat": "同样距离时顺序不乱跳。",
-  "detailTemplate": "名单顺序稳住了：{order}。",
+  "title": "点名名单按编号排好，次次一样",
+  "beat": "每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。",
+  "detailTemplate": "点名顺序稳定：{order}。",
   "assertDetailContains": [
     "顺序"
   ],

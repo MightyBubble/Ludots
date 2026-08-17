@@ -1,6 +1,6 @@
-# ai-11 editor spec · 层次状态机
+# ai-10 editor spec · 层次状态机
 
-> 编辑器实现任务书。编辑器需求见 [ai-11 UXD](../uxd/ai-10-hfsm.md)；引擎侧见 [runtime spec](../spec-runtime/ai-10-hfsm.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-10 UXD](../uxd/ai-10-hfsm.md)；引擎侧见 [runtime spec](../spec-runtime/ai-10-hfsm.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@ HFSM 面板实现：层级画布、转移排序与平局标注、Stimulus/生命
 - 消费：hfsm 合并视图、schema（结构提示）、GraphActionCatalog、HfsmWorld 运行态接口。
 - 验收：结构非法禁存；平局胜者编辑期标注；单步可观察 StimulusLatched 触发与清零。
 
-**相关文档**：[ai-11 UXD](../uxd/ai-10-hfsm.md) · [ai-11 runtime spec](../spec-runtime/ai-10-hfsm.md)
+**相关文档**：[ai-10 UXD](../uxd/ai-10-hfsm.md) · [ai-10 runtime spec](../spec-runtime/ai-10-hfsm.md)
