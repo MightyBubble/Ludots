@@ -43,7 +43,7 @@
 - [x] 实例增删改：复用现有 skinned batch / snapshot 生命周期；换 clip = 换桶  
 - [x] 禁止静默降级为静态 ISM  
 
-复用：`GpuSkinnedInstance` 车道、`tools/gpu_skinned_instance_probe` 已验证路径、离线 `tools/animation_retarget`。
+复用：`GpuSkinnedInstance` 车道、画廊 `gpu_skinning` 场景（原 `tools/gpu_skinned_instance_probe` 已退役）、离线 `tools/animation_retarget`。
 
 ### W2 — Host 材质绑定（P0）
 
