@@ -340,11 +340,13 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         }
 
         ApplyPlayerTeam(engine.World, _owner, config.PlayerTeamId, config.FactionOwnerName);
+        TagOps seedTagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("UiPlayerAggregateGraphMvp requires TagOps.");
         for (int i = 0; i < _producerEntities.Length; i++)
         {
             UiPlayerAggregateBuildingSeed seed = config.Buildings[i];
             ApplyPlayerTeam(engine.World, _producerEntities[i], config.PlayerTeamId, seed.Name);
-            ApplyBuildingSeed(engine.World, _producerEntities[i], seed, _oreAttributeId, _crystalAttributeId);
+            ApplyBuildingSeed(engine.World, _producerEntities[i], seed, _oreAttributeId, _crystalAttributeId, seedTagOps);
         }
 
         _scenarioReady = true;
@@ -538,16 +540,11 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         Entity entity,
         UiPlayerAggregateBuildingSeed seed,
         int oreAttributeId,
-        int crystalAttributeId)
+        int crystalAttributeId,
+        TagOps tagOps)
     {
-        if (!world.Has<AttributeBuffer>(entity))
-        {
-            throw new InvalidOperationException($"Producer building '{seed.Name}' has no AttributeBuffer.");
-        }
-
-        ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
-        attributes.SetBase(oreAttributeId, seed.Ore);
-        attributes.SetBase(crystalAttributeId, seed.Crystal);
+        AttributeMutationOps.SetBase(world, entity, oreAttributeId, seed.Ore, tagOps);
+        AttributeMutationOps.SetBase(world, entity, crystalAttributeId, seed.Crystal, tagOps);
     }
 
     private uint NextSeed()
