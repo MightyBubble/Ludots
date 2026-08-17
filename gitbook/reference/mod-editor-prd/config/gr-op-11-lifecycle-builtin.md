@@ -60,7 +60,7 @@ kind 缩写同 gr-op-01。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`builtinHandler` 写 handler 名，见 gr-02。生命周期内建语义正本见 fx-23。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`builtinHandler` 写 handler 名，见 gr-04。生命周期内建语义正本见 fx-23。
 
 ## 4. 运行时加载效果
 

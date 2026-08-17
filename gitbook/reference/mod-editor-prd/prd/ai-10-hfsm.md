@@ -1,6 +1,6 @@
-# ai-09 · 层次状态机
+# ai-11 · 层次状态机
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-10-hfsm.md)；编辑器需求见 [UXD](../uxd/ai-10-hfsm.md)；引擎实现见 [runtime spec](../spec-runtime/ai-10-hfsm.md)；编辑器实现见 [editor spec](../spec-editor/ai-10-hfsm.md)；现状见 [reference](../reference/ai-10-hfsm.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-10-hfsm.md)；编辑器需求见 [UXD](../uxd/ai-10-hfsm.md)；引擎实现见 [runtime spec](../spec-runtime/ai-10-hfsm.md)；editor spec 见 [editor spec](../spec-editor/ai-10-hfsm.md)；现状见 [reference](../reference/ai-10-hfsm.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@ HFSM 是分层的状态化行为：Compound 态嵌 Leaf 态，转移带谓词与
 
 Compound 缺 defaultChild、Leaf 带 children、多父/不可达、predicate 非法（大小写敏感）、condition/onEnter 等图名未注册、生命周期图超预算未 halt——启动或运行失败并带状态机 id 与字段。
 
-**相关文档**：[配置说明](../config/ai-10-hfsm.md) · [ai-08](ai-09-behavior-trees.md) · [ai-00](ai-01-utility-overview.md)
+**相关文档**：[配置说明](../config/ai-10-hfsm.md) · [ai-10](ai-09-behavior-trees.md) · [ai-02](ai-01-utility-overview.md)

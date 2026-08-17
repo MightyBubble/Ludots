@@ -1,6 +1,6 @@
-# fx-12 UXD · 效果授予 Tag 的编辑器需求
+# fx-17 UXD · 效果授予 Tag 的编辑器需求
 
-> fx-12 的编辑器需求（高保真规格）。第一性需求见 [fx-12 PRD](../prd/fx-13-granted-tags.md)；配置写法见 [fx-12 配置说明](../config/fx-13-granted-tags.md)；编辑器实现见 [editor spec](../spec-editor/fx-13-granted-tags.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-16 的编辑器需求（高保真规格）。第一性需求见 [fx-16 PRD](../prd/fx-13-granted-tags.md)；配置写法见 [fx-16 配置说明](../config/fx-13-granted-tags.md)；编辑器实现见 [editor spec](../spec-editor/fx-13-granted-tags.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -50,4 +50,4 @@
 - 公式语义（三行对照）在表单内一跳可见。
 - 任一授予的"定义 + 层数贡献预览"≤ 2 跳可达。
 
-**相关文档**：[fx-12 PRD](../prd/fx-13-granted-tags.md) · [editor spec](../spec-editor/fx-13-granted-tags.md)
+**相关文档**：[fx-16 PRD](../prd/fx-13-granted-tags.md) · [editor spec](../spec-editor/fx-13-granted-tags.md)

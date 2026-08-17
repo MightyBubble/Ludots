@@ -1,6 +1,6 @@
-# fx-18 · 视野揭示
+# fx-23 · 视野揭示
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-19-vision.md)；编辑器需求见 [UXD](../uxd/fx-19-vision.md)；引擎实现见 [runtime spec](../spec-runtime/fx-19-vision.md)；编辑器实现见 [editor spec](../spec-editor/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-19-vision.md)；编辑器需求见 [UXD](../uxd/fx-19-vision.md)；引擎实现见 [runtime spec](../spec-runtime/fx-19-vision.md)；editor spec 见 [editor spec](../spec-editor/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
 
 ## 1. 定位
 

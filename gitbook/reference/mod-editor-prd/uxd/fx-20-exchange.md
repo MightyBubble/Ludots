@@ -1,6 +1,6 @@
-# fx-19 UXD · 兑换的编辑器需求
+# fx-23 UXD · 兑换的编辑器需求
 
-> fx-19 的编辑器需求（高保真规格）。第一性需求见 [fx-19 PRD](../prd/fx-20-exchange.md)；配置写法见 [fx-19 配置说明](../config/fx-20-exchange.md)；编辑器实现见 [editor spec](../spec-editor/fx-20-exchange.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-23 的编辑器需求（高保真规格）。第一性需求见 [fx-23 PRD](../prd/fx-20-exchange.md)；配置写法见 [fx-23 配置说明](../config/fx-20-exchange.md)；编辑器实现见 [editor spec](../spec-editor/fx-20-exchange.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -45,4 +45,4 @@ Exchange 效果编辑页的兑换区块：选操作、配作用域，并透视�
 - 选中操作后的"进什么、出什么"一跳可见，无需打开操作表。
 - "失败不炸效果"的语义在区块提示中一跳可见。
 
-**相关文档**：[fx-19 PRD](../prd/fx-20-exchange.md) · [editor spec](../spec-editor/fx-20-exchange.md)
+**相关文档**：[fx-23 PRD](../prd/fx-20-exchange.md) · [editor spec](../spec-editor/fx-20-exchange.md)

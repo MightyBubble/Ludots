@@ -1,6 +1,6 @@
 # ab-03 · CallerParams 参数池
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-03-caller-params.md)；编辑器需求见 [UXD](../uxd/ab-03-caller-params.md)；引擎实现见 [runtime spec](../spec-runtime/ab-03-caller-params.md)；编辑器实现见 [editor spec](../spec-editor/ab-03-caller-params.md)；现状见 [reference](../reference/ab-03-caller-params.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-03-caller-params.md)；编辑器需求见 [UXD](../uxd/ab-03-caller-params.md)；引擎实现见 [runtime spec](../spec-runtime/ab-03-caller-params.md)；editor spec 见 [editor spec](../spec-editor/ab-03-caller-params.md)；现状见 [reference](../reference/ab-03-caller-params.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ CallerParams 是技能向效果传参的通道：同一条时间轴让多个效�
 
 单组参数超上限、池组数超上限——启动失败并指明条目路径；运行期空间参数追加失败——技能失败。
 
-**相关文档**：[配置说明](../config/ab-03-caller-params.md) · [ab-02](ab-02-exec-timeline.md) · [fx-14](fx-14-config-params.md)
+**相关文档**：[配置说明](../config/ab-03-caller-params.md) · [ab-02](ab-02-exec-timeline.md) · [fx-18](fx-14-config-params.md)

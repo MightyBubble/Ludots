@@ -1,6 +1,6 @@
 # infra-01 · 引擎与物理配置
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-01-engine-physics.md)；编辑器需求见 [UXD](../uxd/infra-01-engine-physics.md)；引擎实现见 [runtime spec](../spec-runtime/infra-01-engine-physics.md)；编辑器实现见 [editor spec](../spec-editor/infra-01-engine-physics.md)；现状见 [reference](../reference/infra-01-engine-physics.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-01-engine-physics.md)；编辑器需求见 [UXD](../uxd/infra-01-engine-physics.md)；引擎实现见 [runtime spec](../spec-runtime/infra-01-engine-physics.md)；editor spec 见 [editor spec](../spec-editor/infra-01-engine-physics.md)；现状见 [reference](../reference/infra-01-engine-physics.md)。
 
 ## 1. 定位
 

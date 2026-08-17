@@ -1,6 +1,6 @@
-# fx-01 reference · 效果模板骨架
+# fx-05 reference · 效果模板骨架
 
-> 现状参考。第一性需求见 [fx-01 PRD](../prd/fx-02-template.md)；配置说明见 [fx-01 配置说明](../config/fx-02-template.md)。
+> 现状参考。第一性需求见 [fx-04 PRD](../prd/fx-02-template.md)；配置说明见 [fx-04 配置说明](../config/fx-02-template.md)。
 
 ## 1. 现状快照
 
@@ -29,4 +29,4 @@
 | 弹道引用热替换 | EffectTemplateRegistry.cs:552-603 |
 | 恢复模板 / 槽 0 tag 热替换 | EffectTemplateRegistry.cs:609-618, 622-672 |
 
-**相关文档**：[fx-01 PRD](../prd/fx-02-template.md) · [fx-00 reference](fx-01-pipeline.md)
+**相关文档**：[fx-04 PRD](../prd/fx-02-template.md) · [fx-03 reference](fx-01-pipeline.md)

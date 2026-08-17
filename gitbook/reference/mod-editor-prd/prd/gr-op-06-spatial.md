@@ -1,6 +1,6 @@
 # gr-op-06 · 节点：空间查询
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-06-spatial.md)；编辑器需求见 [UXD](../uxd/gr-op-06-spatial.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-06-spatial.md)；编辑器实现见 [editor spec](../spec-editor/gr-op-06-spatial.md)；现状见 [reference](../reference/gr-op-06-spatial.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-06-spatial.md)；编辑器需求见 [UXD](../uxd/gr-op-06-spatial.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-06-spatial.md)；editor spec 见 [editor spec](../spec-editor/gr-op-06-spatial.md)；现状见 [reference](../reference/gr-op-06-spatial.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@
 
 RequireComplete 装不下命中集——执行失败并报容量；形状参数缺引脚、kind 越界——编译失败。AllowTruncated 的丢弃通过 dropped 计数暴露，不算错误。
 
-**相关文档**：[配置说明](../config/gr-op-06-spatial.md) · [gr-op-09](gr-op-09-aggregate.md) · [fx-09](fx-09-target-query.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)
+**相关文档**：[配置说明](../config/gr-op-06-spatial.md) · [gr-op-09](gr-op-09-aggregate.md) · [fx-12](fx-09-target-query.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)

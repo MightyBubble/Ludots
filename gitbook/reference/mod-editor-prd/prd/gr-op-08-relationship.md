@@ -1,6 +1,6 @@
 # gr-op-08 · 节点：关系系统
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-08-relationship.md)；编辑器需求见 [UXD](../uxd/gr-op-08-relationship.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-08-relationship.md)；编辑器实现见 [editor spec](../spec-editor/gr-op-08-relationship.md)；现状见 [reference](../reference/gr-op-08-relationship.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-08-relationship.md)；编辑器需求见 [UXD](../uxd/gr-op-08-relationship.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-08-relationship.md)；editor spec 见 [editor spec](../spec-editor/gr-op-08-relationship.md)；现状见 [reference](../reference/gr-op-08-relationship.md)。
 
 ## 1. 定位
 

@@ -74,7 +74,7 @@ kind 全族为 Q（Query 专属）。TargetList 同 gr-op-06。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`teamId`/`template`/`attribute`/`tag`/`collectionKey` 与排序旗标写在节点字段，见 gr-02。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`teamId`/`template`/`attribute`/`tag`/`collectionKey` 与排序旗标写在节点字段，见 gr-04。
 
 ## 4. 运行时加载效果
 

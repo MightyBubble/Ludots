@@ -1,6 +1,6 @@
-# gr-01 reference · 图文档格式
+# gr-04 reference · 图文档格式
 
-> 现状参考。第一性需求见 [gr-01 PRD](../prd/gr-02-document.md)；配置说明见 [gr-01 配置说明](../config/gr-02-document.md)。
+> 现状参考。第一性需求见 [gr-03 PRD](../prd/gr-02-document.md)；配置说明见 [gr-03 配置说明](../config/gr-02-document.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | id 补全与大小写 | GraphProgramAuthoringFrontDoor.cs:51-59 |
 | 真实文档实例 | assets/GAS/graphs.json |
 
-**相关文档**：[gr-01 PRD](../prd/gr-02-document.md) · [gr-00 reference](gr-01-model.md) · [gr-03 reference](gr-04-compilation.md)
+**相关文档**：[gr-03 PRD](../prd/gr-02-document.md) · [gr-02 reference](gr-01-model.md) · [gr-05 reference](gr-04-compilation.md)

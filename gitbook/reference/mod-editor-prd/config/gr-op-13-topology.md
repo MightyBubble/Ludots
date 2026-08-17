@@ -44,7 +44,7 @@ kind 缩写同 gr-op-01；三件均 L（线性四类）。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；本族无符号字段，见 gr-02。
+图文档放 `assets/GAS/graphs.json` 或分片目录；本族无符号字段，见 gr-04。
 
 ## 4. 运行时加载效果
 
@@ -63,4 +63,4 @@ kind 缩写同 gr-op-01；三件均 L（线性四类）。
 - `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ControlDomainResolve.json`
 - 同目录 `ControlDomainControls.json`、`KnowledgeHasProjection.json`
 
-**相关文档**：[gr-op-13 PRD](../prd/gr-op-13-topology.md) · [gr-op-01 配置说明](gr-op-01-context.md) · [fx-19 配置说明](fx-19-vision.md)
+**相关文档**：[gr-op-13 PRD](../prd/gr-op-13-topology.md) · [gr-op-01 配置说明](gr-op-01-context.md) · [fx-23 配置说明](fx-19-vision.md)

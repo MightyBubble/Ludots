@@ -1,6 +1,6 @@
 # ab-01 · 技能定义骨架
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-01-definition.md)；编辑器需求见 [UXD](../uxd/ab-01-definition.md)；引擎实现见 [runtime spec](../spec-runtime/ab-01-definition.md)；编辑器实现见 [editor spec](../spec-editor/ab-01-definition.md)；现状见 [reference](../reference/ab-01-definition.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-01-definition.md)；编辑器需求见 [UXD](../uxd/ab-01-definition.md)；引擎实现见 [runtime spec](../spec-runtime/ab-01-definition.md)；editor spec 见 [editor spec](../spec-editor/ab-01-definition.md)；现状见 [reference](../reference/ab-01-definition.md)。
 
 ## 1. 定位
 

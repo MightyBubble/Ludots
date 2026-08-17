@@ -1,6 +1,6 @@
-# fx-19 runtime spec · 兑换
+# fx-23 runtime spec · 兑换
 
-> 引擎实现任务书。第一性需求见 [fx-19 PRD](../prd/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
+> 引擎实现任务书。第一性需求见 [fx-23 PRD](../prd/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
 
 ## 1. 概述
 兑换执行合同：上下文组装、一次原子结算、失败记录不抛。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-19 PRD](../prd/fx-20-exchange.md) · [reference](../reference/fx-20-exchange.md)
+**相关文档**：[fx-23 PRD](../prd/fx-20-exchange.md) · [reference](../reference/fx-20-exchange.md)

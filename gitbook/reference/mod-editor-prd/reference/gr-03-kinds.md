@@ -1,6 +1,6 @@
-# gr-02 reference · 六种 Kind
+# gr-05 reference · 六种 Kind
 
-> 现状参考。第一性需求见 [gr-02 PRD](../prd/gr-03-kinds.md)；配置说明见 [gr-02 配置说明](../config/gr-03-kinds.md)。
+> 现状参考。第一性需求见 [gr-04 PRD](../prd/gr-03-kinds.md)；配置说明见 [gr-04 配置说明](../config/gr-03-kinds.md)。
 
 ## 1. 现状快照
 
@@ -24,6 +24,6 @@
 | 监听相容 | GraphKindOperationPolicy.cs:319-335 |
 | E0-E2 与槽保护 | GraphRegisterFile.cs:61-63,65-76,222-231 |
 | E2 三种来源 | src/Core/NodeLibraries/GASGraph/GraphFrame.cs:8-14 |
-| 实例（Score/Validation/Derived） | mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod 等（gr-02 config 第 6 节） |
+| 实例（Score/Validation/Derived） | mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod 等（gr-04 config 第 6 节） |
 
-**相关文档**：[gr-02 PRD](../prd/gr-03-kinds.md) · [gr-00 reference](gr-01-model.md) · [gr-07 reference](gr-08-mount-points.md)
+**相关文档**：[gr-04 PRD](../prd/gr-03-kinds.md) · [gr-02 reference](gr-01-model.md) · [gr-09 reference](gr-08-mount-points.md)

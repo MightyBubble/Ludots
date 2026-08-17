@@ -1,6 +1,6 @@
 # ord-06 · 输入映射
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-06-input-mappings.md)；编辑器需求见 [UXD](../uxd/ord-06-input-mappings.md)；引擎实现见 [runtime spec](../spec-runtime/ord-06-input-mappings.md)；编辑器实现见 [editor spec](../spec-editor/ord-06-input-mappings.md)；现状见 [reference](../reference/ord-06-input-mappings.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-06-input-mappings.md)；编辑器需求见 [UXD](../uxd/ord-06-input-mappings.md)；引擎实现见 [runtime spec](../spec-runtime/ord-06-input-mappings.md)；editor spec 见 [editor spec](../spec-editor/ord-06-input-mappings.md)；现状见 [reference](../reference/ord-06-input-mappings.md)。
 
 ## 1. 定位
 

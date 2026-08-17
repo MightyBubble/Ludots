@@ -1,6 +1,6 @@
 # input-02 · 施法派发档案
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-02-cast-dispatch.md)；编辑器需求见 [UXD](../uxd/input-02-cast-dispatch.md)；引擎实现见 [runtime spec](../spec-runtime/input-02-cast-dispatch.md)；编辑器实现见 [editor spec](../spec-editor/input-02-cast-dispatch.md)；现状见 [reference](../reference/input-02-cast-dispatch.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-02-cast-dispatch.md)；编辑器需求见 [UXD](../uxd/input-02-cast-dispatch.md)；引擎实现见 [runtime spec](../spec-runtime/input-02-cast-dispatch.md)；editor spec 见 [editor spec](../spec-editor/input-02-cast-dispatch.md)；现状见 [reference](../reference/input-02-cast-dispatch.md)。
 
 ## 1. 定位
 

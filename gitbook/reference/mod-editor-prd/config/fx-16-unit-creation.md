@@ -1,6 +1,6 @@
-# fx-15 配置说明 · 造单位
+# fx-20 配置说明 · 造单位
 
-> 配置写法与行为。第一性需求见 [fx-15 PRD](../prd/fx-16-unit-creation.md)；编辑器需求见 [UXD](../uxd/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
+> 配置写法与行为。第一性需求见 [fx-19 PRD](../prd/fx-16-unit-creation.md)；编辑器需求见 [UXD](../uxd/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
 
 ## 1. 示例配置
 
@@ -61,4 +61,4 @@ loader 校验组合与互斥字段，unitType 首现注册、子效果名解析�
 - 放建筑与出兵：`mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/GAS/effects.json`（PlacePowerPlant、TrainRhino 全族）
 - 环形召唤：`mods/showcases/moba_demo/MobaDemoMod/assets/GAS/effects.json`（Summon.Skeleton）
 
-**相关文档**：[fx-15 PRD](../prd/fx-16-unit-creation.md) · [ent-01 配置说明](ent-01-templates.md)
+**相关文档**：[fx-19 PRD](../prd/fx-16-unit-creation.md) · [ent-01 配置说明](ent-01-templates.md)

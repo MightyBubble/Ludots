@@ -1,6 +1,6 @@
-# fx-04 reference · 八相位执行
+# fx-08 reference · 八相位执行
 
-> 现状参考。第一性需求见 [fx-04 PRD](../prd/fx-05-phases.md)；配置说明见 [fx-04 配置说明](../config/fx-05-phases.md)。
+> 现状参考。第一性需求见 [fx-07 PRD](../prd/fx-05-phases.md)；配置说明见 [fx-07 配置说明](../config/fx-05-phases.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | config 作用域包裹 | EffectPhaseExecutor.cs:205-252 |
 | main/skipMain 互斥校验 | src/Core/Gameplay/GAS/Config/EffectTemplateLoader.cs:1224-1228 |
 
-**相关文档**：[fx-04 PRD](../prd/fx-05-phases.md) · [fx-05 reference](fx-06-proposal-window.md)
+**相关文档**：[fx-07 PRD](../prd/fx-05-phases.md) · [fx-08 reference](fx-06-proposal-window.md)

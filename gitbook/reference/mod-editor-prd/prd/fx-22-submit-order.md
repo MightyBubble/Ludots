@@ -1,6 +1,6 @@
-# fx-21 · 出生下单
+# fx-23 · 出生下单
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-22-submit-order.md)；编辑器需求见 [UXD](../uxd/fx-22-submit-order.md)；引擎实现见 [runtime spec](../spec-runtime/fx-22-submit-order.md)；编辑器实现见 [editor spec](../spec-editor/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-22-submit-order.md)；编辑器需求见 [UXD](../uxd/fx-22-submit-order.md)；引擎实现见 [runtime spec](../spec-runtime/fx-22-submit-order.md)；editor spec 见 [editor spec](../spec-editor/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ SubmitOrderFromBlackboard 效果替单位向正式订单队列提交一条命令
 
 槽位为 None、黑板键或订单类型未注册、submitMode 未知——启动失败并指明字段；运行期槽位实体失效、执行者无订单缓冲、提交被拒——抛错带细节。
 
-**相关文档**：[配置说明](../config/fx-22-submit-order.md) · 见 ord-04（黑板）、fx-15（造单位）
+**相关文档**：[配置说明](../config/fx-22-submit-order.md) · 见 ord-04（黑板）、fx-19（造单位）

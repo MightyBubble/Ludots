@@ -1,6 +1,6 @@
 # input-01 · 命令意图档案
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-01-command-intent.md)；编辑器需求见 [UXD](../uxd/input-01-command-intent.md)；引擎实现见 [runtime spec](../spec-runtime/input-01-command-intent.md)；编辑器实现见 [editor spec](../spec-editor/input-01-command-intent.md)；现状见 [reference](../reference/input-01-command-intent.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-01-command-intent.md)；编辑器需求见 [UXD](../uxd/input-01-command-intent.md)；引擎实现见 [runtime spec](../spec-runtime/input-01-command-intent.md)；editor spec 见 [editor spec](../spec-editor/input-01-command-intent.md)；现状见 [reference](../reference/input-01-command-intent.md)。
 
 ## 1. 定位
 

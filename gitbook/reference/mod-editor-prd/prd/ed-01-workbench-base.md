@@ -1,6 +1,6 @@
 # ed-01 · 实时技能工作台编辑基座
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ed-01-workbench-base.md)；编辑器需求见 [UXD](../uxd/ed-01-workbench-base.md)；引擎实现见 [runtime spec](../spec-runtime/ed-01-workbench-base.md)；编辑器实现见 [editor spec](../spec-editor/ed-01-workbench-base.md)；现状见 [reference](../reference/ed-01-workbench-base.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ed-01-workbench-base.md)；编辑器需求见 [UXD](../uxd/ed-01-workbench-base.md)；引擎实现见 [runtime spec](../spec-runtime/ed-01-workbench-base.md)；editor spec 见 [editor spec](../spec-editor/ed-01-workbench-base.md)；现状见 [reference](../reference/ed-01-workbench-base.md)。
 
 ## 1. 定位
 

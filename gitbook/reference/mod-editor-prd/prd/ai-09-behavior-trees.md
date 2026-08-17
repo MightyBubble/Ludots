@@ -1,6 +1,6 @@
-# ai-08 · 行为树
+# ai-11 · 行为树
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-09-behavior-trees.md)；编辑器需求见 [UXD](../uxd/ai-09-behavior-trees.md)；引擎实现见 [runtime spec](../spec-runtime/ai-09-behavior-trees.md)；编辑器实现见 [editor spec](../spec-editor/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-09-behavior-trees.md)；编辑器需求见 [UXD](../uxd/ai-09-behavior-trees.md)；引擎实现见 [runtime spec](../spec-runtime/ai-09-behavior-trees.md)；editor spec 见 [editor spec](../spec-editor/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@
 
 root 缺失、nodes 空、id 重复、kind/leaf 非法（含大小写）、多父/不可达、action 挂非 ScriptSlice 叶、action 名不在 ActionLib——启动失败并带树 id 与节点 id。
 
-**相关文档**：[配置说明](../config/ai-09-behavior-trees.md) · [ai-09](ai-10-hfsm.md) · [ai-00](ai-01-utility-overview.md)
+**相关文档**：[配置说明](../config/ai-09-behavior-trees.md) · [ai-11](ai-10-hfsm.md) · [ai-02](ai-01-utility-overview.md)

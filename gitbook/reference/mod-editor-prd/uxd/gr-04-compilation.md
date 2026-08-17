@@ -1,6 +1,6 @@
-# gr-03 UXD · 编译与校验的编辑器需求
+# gr-06 UXD · 编译与校验的编辑器需求
 
-> gr-03 的编辑器需求（高保真规格）。第一性需求见 [gr-03 PRD](../prd/gr-04-compilation.md)；配置写法见 [gr-03 配置说明](../config/gr-04-compilation.md)；编辑器实现见 [editor spec](../spec-editor/gr-04-compilation.md)。
+> gr-05 的编辑器需求（高保真规格）。第一性需求见 [gr-05 PRD](../prd/gr-04-compilation.md)；配置写法见 [gr-05 配置说明](../config/gr-04-compilation.md)；编辑器实现见 [editor spec](../spec-editor/gr-04-compilation.md)。
 
 ## 1. 界面定位
 
@@ -46,4 +46,4 @@
 - 任一诊断从出现到定位 ≤ 1 跳。
 - 编辑器诊断集合与引擎装载诊断完全一致（同源验收）。
 
-**相关文档**：[gr-03 PRD](../prd/gr-04-compilation.md) · [editor spec](../spec-editor/gr-04-compilation.md) · [gr-00 UXD](gr-01-model.md)
+**相关文档**：[gr-05 PRD](../prd/gr-04-compilation.md) · [editor spec](../spec-editor/gr-04-compilation.md) · [gr-02 UXD](gr-01-model.md)

@@ -1,6 +1,6 @@
 # input-04 · 施法提交档案
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-04-cast-commit.md)；编辑器需求见 [UXD](../uxd/input-04-cast-commit.md)；引擎实现见 [runtime spec](../spec-runtime/input-04-cast-commit.md)；编辑器实现见 [editor spec](../spec-editor/input-04-cast-commit.md)；现状见 [reference](../reference/input-04-cast-commit.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-04-cast-commit.md)；编辑器需求见 [UXD](../uxd/input-04-cast-commit.md)；引擎实现见 [runtime spec](../spec-runtime/input-04-cast-commit.md)；editor spec 见 [editor spec](../spec-editor/input-04-cast-commit.md)；现状见 [reference](../reference/input-04-cast-commit.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
-# ai-02 · 归一化与响应曲线
+# ai-05 · 归一化与响应曲线
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-03-norm-curves.md)；编辑器需求见 [UXD](../uxd/ai-03-norm-curves.md)；引擎实现见 [runtime spec](../spec-runtime/ai-03-norm-curves.md)；编辑器实现见 [editor spec](../spec-editor/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-03-norm-curves.md)；编辑器需求见 [UXD](../uxd/ai-03-norm-curves.md)；引擎实现见 [runtime spec](../spec-runtime/ai-03-norm-curves.md)；editor spec 见 [editor spec](../spec-editor/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@
 
 未知 Kind、非 Identity 的 Max≤Min、Exponent≤0——启动失败并带条目路径。
 
-**相关文档**：[配置说明](../config/ai-03-norm-curves.md) · [ai-01](ai-02-inputs.md) · [ai-03](ai-04-decisions.md)
+**相关文档**：[配置说明](../config/ai-03-norm-curves.md) · [ai-03](ai-02-inputs.md) · [ai-05](ai-04-decisions.md)

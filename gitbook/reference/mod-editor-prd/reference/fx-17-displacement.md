@@ -1,6 +1,6 @@
-# fx-16 reference · 位移
+# fx-21 reference · 位移
 
-> 现状参考。第一性需求见 [fx-16 PRD](../prd/fx-17-displacement.md)；配置说明见 [fx-16 配置说明](../config/fx-17-displacement.md)。
+> 现状参考。第一性需求见 [fx-20 PRD](../prd/fx-17-displacement.md)；配置说明见 [fx-20 配置说明](../config/fx-17-displacement.md)。
 
 ## 1. 现状快照
 
@@ -18,4 +18,4 @@
 | External(Displacement) 注册 | BuiltinHandlers.cs:71 |
 | 位移状态组件 | src/Core/Gameplay/GAS/Components/DisplacementState.cs |
 
-**相关文档**：[fx-16 PRD](../prd/fx-17-displacement.md) · [fx-16 配置说明](../config/fx-17-displacement.md)
+**相关文档**：[fx-20 PRD](../prd/fx-17-displacement.md) · [fx-20 配置说明](../config/fx-17-displacement.md)

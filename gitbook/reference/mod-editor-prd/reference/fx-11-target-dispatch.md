@@ -1,6 +1,6 @@
-# fx-10 reference · 目标派发
+# fx-15 reference · 目标派发
 
-> 现状参考。第一性需求见 [fx-10 PRD](../prd/fx-11-target-dispatch.md)；配置说明见 [fx-10 配置说明](../config/fx-11-target-dispatch.md)。
+> 现状参考。第一性需求见 [fx-14 PRD](../prd/fx-11-target-dispatch.md)；配置说明见 [fx-14 配置说明](../config/fx-11-target-dispatch.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | 查询中心解析 | TargetResolverFanOutHelper.cs:132-155 |
 | 事务内随提交发布 | src/Core/Gameplay/GAS/EffectPhaseSideEffectTransaction.cs:960-963 |
 
-**相关文档**：[fx-10 PRD](../prd/fx-11-target-dispatch.md) · [fx-11 reference](fx-12-stack.md)
+**相关文档**：[fx-14 PRD](../prd/fx-11-target-dispatch.md) · [fx-15 reference](fx-12-stack.md)

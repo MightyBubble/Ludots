@@ -1,6 +1,6 @@
-# ai-05 editor spec · 目标过滤器
+# ai-08 editor spec · 目标过滤器
 
-> 编辑器实现任务书。编辑器需求见 [ai-05 UXD](../uxd/ai-06-target-filters.md)；引擎侧见 [runtime spec](../spec-runtime/ai-06-target-filters.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-07 UXD](../uxd/ai-06-target-filters.md)；引擎侧见 [runtime spec](../spec-runtime/ai-06-target-filters.md)。
 
 ## 1. 概述
 
@@ -23,4 +23,4 @@
 - 消费：target_filters 合并视图、tag/技能注册表、Team/位置组件查询、拒绝码枚举。
 - 验收：九种 op 均可建-排-试-存；试验台淘汰原因与运行 trace 一致；非法参数被表单拦截。
 
-**相关文档**：[ai-05 UXD](../uxd/ai-06-target-filters.md) · [ai-05 runtime spec](../spec-runtime/ai-06-target-filters.md)
+**相关文档**：[ai-07 UXD](../uxd/ai-06-target-filters.md) · [ai-07 runtime spec](../spec-runtime/ai-06-target-filters.md)

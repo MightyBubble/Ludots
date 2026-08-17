@@ -1,6 +1,6 @@
-# ai-10 editor spec · GOAP 与 HTN 规划
+# ai-11 editor spec · GOAP 与 HTN 规划
 
-> 编辑器实现任务书。编辑器需求见 [ai-10 UXD](../uxd/ai-11-goap-htn.md)；引擎侧见 [runtime spec](../spec-runtime/ai-11-goap-htn.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-11 UXD](../uxd/ai-11-goap-htn.md)；引擎侧见 [runtime spec](../spec-runtime/ai-11-goap-htn.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 - 消费：六表合并视图、AtomRegistry、OrderTypeRegistry（黑板键域）、规划器 dry 接口。
 - 验收：未声明 atom 全表拦截；预演与运行计划一致；htn_domain 四数组可编辑且引用越界被拦。
 
-**相关文档**：[ai-10 UXD](../uxd/ai-11-goap-htn.md) · [ai-10 runtime spec](../spec-runtime/ai-11-goap-htn.md)
+**相关文档**：[ai-11 UXD](../uxd/ai-11-goap-htn.md) · [ai-11 runtime spec](../spec-runtime/ai-11-goap-htn.md)

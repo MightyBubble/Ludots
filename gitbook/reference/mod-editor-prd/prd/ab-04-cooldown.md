@@ -1,6 +1,6 @@
 # ab-04 · 冷却三件套
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-04-cooldown.md)；编辑器需求见 [UXD](../uxd/ab-04-cooldown.md)；引擎实现见 [runtime spec](../spec-runtime/ab-04-cooldown.md)；编辑器实现见 [editor spec](../spec-editor/ab-04-cooldown.md)；现状见 [reference](../reference/ab-04-cooldown.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-04-cooldown.md)；编辑器需求见 [UXD](../uxd/ab-04-cooldown.md)；引擎实现见 [runtime spec](../spec-runtime/ab-04-cooldown.md)；editor spec 见 [editor spec](../spec-editor/ab-04-cooldown.md)；现状见 [reference](../reference/ab-04-cooldown.md)。
 
 ## 1. 定位
 

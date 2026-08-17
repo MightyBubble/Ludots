@@ -1,6 +1,6 @@
-# fx-19 · 兑换
+# fx-23 · 兑换
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-20-exchange.md)；编辑器需求见 [UXD](../uxd/fx-20-exchange.md)；引擎实现见 [runtime spec](../spec-runtime/fx-20-exchange.md)；编辑器实现见 [editor spec](../spec-editor/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-20-exchange.md)；编辑器需求见 [UXD](../uxd/fx-20-exchange.md)；引擎实现见 [runtime spec](../spec-runtime/fx-20-exchange.md)；editor spec 见 [editor spec](../spec-editor/fx-20-exchange.md)；现状见 [reference](../reference/fx-20-exchange.md)。
 
 ## 1. 定位
 

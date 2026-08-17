@@ -1,6 +1,6 @@
-# fx-07 runtime spec · 相位监听器
+# fx-11 runtime spec · 相位监听器
 
-> 引擎实现任务书。第一性需求见 [fx-07 PRD](../prd/fx-08-phase-listeners.md)；现状见 [reference](../reference/fx-08-phase-listeners.md)。
+> 引擎实现任务书。第一性需求见 [fx-10 PRD](../prd/fx-08-phase-listeners.md)；现状见 [reference](../reference/fx-08-phase-listeners.md)。
 
 ## 1. 概述
 
@@ -14,7 +14,7 @@
 
 ## 3. 精确语义与不变量
 
-- 监听器所有权唯一（一个监听器只属一个宿主效果实体）；收集与执行分离，序不变（fx-04）。
+- 监听器所有权唯一（一个监听器只属一个宿主效果实体）；收集与执行分离，序不变（fx-07）。
 
 ## 4. 迁移与治理
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-07 PRD](../prd/fx-08-phase-listeners.md) · [reference](../reference/fx-08-phase-listeners.md)
+**相关文档**：[fx-10 PRD](../prd/fx-08-phase-listeners.md) · [reference](../reference/fx-08-phase-listeners.md)

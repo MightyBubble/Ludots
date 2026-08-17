@@ -1,6 +1,6 @@
-# fx-14 · 弹道
+# fx-19 · 弹道
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-15-projectile.md)；编辑器需求见 [UXD](../uxd/fx-15-projectile.md)；引擎实现见 [runtime spec](../spec-runtime/fx-15-projectile.md)；编辑器实现见 [editor spec](../spec-editor/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-15-projectile.md)；编辑器需求见 [UXD](../uxd/fx-15-projectile.md)；引擎实现见 [runtime spec](../spec-runtime/fx-15-projectile.md)；editor spec 见 [editor spec](../spec-editor/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ LaunchProjectile 效果发射一条弹道实体：按直射或追踪飞行，命
 
 块与 preset 不匹配、缺必填字段、Legacy 取值、maxHitCount 越界——启动失败并指明字段；运行期方向不可解析、队列容量满——执行失败并抛错。
 
-**相关文档**：[配置说明](../config/fx-15-projectile.md) · 见 fx-11（命中与落点子效果的派发）
+**相关文档**：[配置说明](../config/fx-15-projectile.md) · @@fx11@@（命中与落点子效果的派发）

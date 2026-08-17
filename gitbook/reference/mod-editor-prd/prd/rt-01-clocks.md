@@ -1,6 +1,6 @@
 # rt-01 · 时钟系统
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-01-clocks.md)；编辑器需求见 [UXD](../uxd/rt-01-clocks.md)；引擎实现见 [runtime spec](../spec-runtime/rt-01-clocks.md)；编辑器实现见 [editor spec](../spec-editor/rt-01-clocks.md)；现状见 [reference](../reference/rt-01-clocks.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-01-clocks.md)；编辑器需求见 [UXD](../uxd/rt-01-clocks.md)；引擎实现见 [runtime spec](../spec-runtime/rt-01-clocks.md)；editor spec 见 [editor spec](../spec-editor/rt-01-clocks.md)；现状见 [reference](../reference/rt-01-clocks.md)。
 
 ## 1. 定位
 

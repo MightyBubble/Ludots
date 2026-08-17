@@ -1,6 +1,6 @@
 # misc-02 · 物品与兑换
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/misc-02-items-exchange.md)；编辑器需求见 [UXD](../uxd/misc-02-items-exchange.md)；引擎实现见 [runtime spec](../spec-runtime/misc-02-items-exchange.md)；编辑器实现见 [editor spec](../spec-editor/misc-02-items-exchange.md)；现状见 [reference](../reference/misc-02-items-exchange.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/misc-02-items-exchange.md)；编辑器需求见 [UXD](../uxd/misc-02-items-exchange.md)；引擎实现见 [runtime spec](../spec-runtime/misc-02-items-exchange.md)；editor spec 见 [editor spec](../spec-editor/misc-02-items-exchange.md)；现状见 [reference](../reference/misc-02-items-exchange.md)。
 
 ## 1. 定位
 

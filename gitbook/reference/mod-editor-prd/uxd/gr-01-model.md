@@ -1,6 +1,6 @@
-# gr-00 UXD · 图编程模型的编辑器需求
+# gr-03 UXD · 图编程模型的编辑器需求
 
-> gr-00 的编辑器需求（高保真规格）。第一性需求见 [gr-00 PRD](../prd/gr-01-model.md)；配置写法见 [gr-00 配置说明](../config/gr-01-model.md)；编辑器实现见 [editor spec](../spec-editor/gr-01-model.md)；上限数值以 [事实与取值表](../facts.md) 与 gr-00 reference 为准。
+> gr-02 的编辑器需求（高保真规格）。第一性需求见 [gr-02 PRD](../prd/gr-01-model.md)；配置写法见 [gr-02 配置说明](../config/gr-01-model.md)；编辑器实现见 [editor spec](../spec-editor/gr-01-model.md)；上限数值以 [事实与取值表](../facts.md) 与 gr-02 reference 为准。
 
 ## 1. 界面定位
 
@@ -23,15 +23,15 @@
 
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
-| 节点面板 | 节点目录表 + kind 白名单（gr-02） | 按 kind 过滤；不可用节点灰显并注明原因 |
-| 画布 | 图文档（gr-01 格式） | 连线即校验端口与值类型 |
-| 节点检查器 | 节点字段表（gr-01） | 符号字段带引用补全（tag/attribute/图名） |
-| 诊断条 | 编译器诊断码（gr-03） | 点击定位节点/边 |
-| 预算仪表 | 编译产物统计 vs 上限（事实页 / gr-00 reference） | 接近上限变色 |
+| 节点面板 | 节点目录表 + kind 白名单（gr-04） | 按 kind 过滤；不可用节点灰显并注明原因 |
+| 画布 | 图文档（gr-03 格式） | 连线即校验端口与值类型 |
+| 节点检查器 | 节点字段表（gr-03） | 符号字段带引用补全（tag/attribute/图名） |
+| 诊断条 | 编译器诊断码（gr-05） | 点击定位节点/边 |
+| 预算仪表 | 编译产物统计 vs 上限（事实页 / gr-02 reference） | 接近上限变色 |
 
 ## 4. 关键交互流：从零建一张图
 
-1. 新建图 → 选 kind（gr-02 六卡片）→ 命名 id。
+1. 新建图 → 选 kind（gr-04 六卡片）→ 命名 id。
 2. 节点面板拖 ConstInt、HaltReturnInt 入画布，连线（next、value）。
 3. 保存 → 编辑器预编译零诊断 → 写入 graphs.json 分片 → 预算仪表更新。
 
@@ -50,4 +50,4 @@
 - 任一诊断 ≤ 2 跳定位到对应节点或边。
 - 编辑器预编译通过的文档，引擎装载必零诊断（同源验收）。
 
-**相关文档**：[gr-00 PRD](../prd/gr-01-model.md) · [editor spec](../spec-editor/gr-01-model.md) · [gr-01 UXD](gr-02-document.md)
+**相关文档**：[gr-02 PRD](../prd/gr-01-model.md) · [editor spec](../spec-editor/gr-01-model.md) · [gr-03 UXD](gr-02-document.md)

@@ -53,11 +53,11 @@ kind 缩写同 gr-op-01。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`functionName` 写 FuncLib 名，见 gr-02 与 gr-06。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`functionName` 写 FuncLib 名，见 gr-04 与 gr-09。
 
 ## 4. 运行时加载效果
 
-糖在编译期展开；跳转/调用编译为程序计数器指令；执行期受步数与调用深度预算（vm 限额）约束，Run-to-Halt 语义见 gr-05。
+糖在编译期展开；跳转/调用编译为程序计数器指令；执行期受步数与调用深度预算（vm 限额）约束，Run-to-Halt 语义见 gr-08。
 
 ## 5. 异常处理
 
@@ -73,4 +73,4 @@ kind 缩写同 gr-op-01。
 - `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/JumpIfFalse.json`
 - 同目录 `Jump.json`、`Call.json`、`Return.json`、`Yield.json`、`HaltReturnInt.json`、`InvokeScript.json`、`MoveInt.json`、`_constSevenCallee.json`
 
-**相关文档**：[gr-op-14 PRD](../prd/gr-op-14-control-flow.md) · [gr-05 配置说明](gr-05-execution.md) · [gr-06 配置说明](gr-06-funclib.md)
+**相关文档**：[gr-op-14 PRD](../prd/gr-op-14-control-flow.md) · [gr-08 配置说明](gr-05-execution.md) · [gr-09 配置说明](gr-06-funclib.md)

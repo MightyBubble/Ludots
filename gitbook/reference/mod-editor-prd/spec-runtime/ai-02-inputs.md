@@ -1,6 +1,6 @@
-# ai-01 runtime spec · 效用输入
+# ai-04 runtime spec · 效用输入
 
-> 引擎实现任务书。第一性需求见 [ai-01 PRD](../prd/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
+> 引擎实现任务书。第一性需求见 [ai-03 PRD](../prd/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
 
 ## 1. 概述
 
@@ -27,4 +27,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-01 PRD](../prd/ai-02-inputs.md) · [reference](../reference/ai-02-inputs.md)
+**相关文档**：[ai-03 PRD](../prd/ai-02-inputs.md) · [reference](../reference/ai-02-inputs.md)

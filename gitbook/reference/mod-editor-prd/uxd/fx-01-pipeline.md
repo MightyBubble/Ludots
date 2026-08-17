@@ -1,6 +1,6 @@
-# fx-00 UXD · 效果执行管线总览的编辑器需求
+# fx-04 UXD · 效果执行管线总览的编辑器需求
 
-> 效果执行管线总览的编辑器需求（高保真规格）。第一性需求见 [fx-00 PRD](../prd/fx-01-pipeline.md)；配置写法见 [fx-00 配置说明](../config/fx-01-pipeline.md)；编辑器实现见 [editor spec](../spec-editor/fx-01-pipeline.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 效果执行管线总览的编辑器需求（高保真规格）。第一性需求见 [fx-03 PRD](../prd/fx-01-pipeline.md)；配置写法见 [fx-03 配置说明](../config/fx-01-pipeline.md)；编辑器实现见 [editor spec](../spec-editor/fx-01-pipeline.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -48,4 +48,4 @@
 - 任一暂停帧 ≤2 跳答出"阶段、剩余预算、未消化请求数"。
 - 回滚必须可见原因，不允许请求静默消失。
 
-**相关文档**：[fx-00 PRD](../prd/fx-01-pipeline.md) · [editor spec](../spec-editor/fx-01-pipeline.md)
+**相关文档**：[fx-03 PRD](../prd/fx-01-pipeline.md) · [editor spec](../spec-editor/fx-01-pipeline.md)

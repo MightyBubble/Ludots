@@ -1,6 +1,6 @@
-# ai-05 · 目标过滤器
+# ai-08 · 目标过滤器
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-06-target-filters.md)；编辑器需求见 [UXD](../uxd/ai-06-target-filters.md)；引擎实现见 [runtime spec](../spec-runtime/ai-06-target-filters.md)；编辑器实现见 [editor spec](../spec-editor/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-06-target-filters.md)；编辑器需求见 [UXD](../uxd/ai-06-target-filters.md)；引擎实现见 [runtime spec](../spec-runtime/ai-06-target-filters.md)；editor spec 见 [editor spec](../spec-editor/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@ target filter 是决策的取景框：以 op 序列描述"什么算合法目标"
 
 Ops 缺失、未知 Kind、RadiusCm/Mask/MaxCm/TtlSteps 非正、AbilityEligible 未配技能——启动失败并带 路径:id.Ops[n]。
 
-**相关文档**：[配置说明](../config/ai-06-target-filters.md) · [ai-03](ai-04-decisions.md) · [ai-07](ai-08-stances-actuators.md)
+**相关文档**：[配置说明](../config/ai-06-target-filters.md) · [ai-05](ai-04-decisions.md) · [ai-09](ai-08-stances-actuators.md)

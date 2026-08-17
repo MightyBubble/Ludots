@@ -1,6 +1,6 @@
-# fx-16 配置说明 · 位移
+# fx-21 配置说明 · 位移
 
-> 配置写法与行为。第一性需求见 [fx-16 PRD](../prd/fx-17-displacement.md)；编辑器需求见 [UXD](../uxd/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
+> 配置写法与行为。第一性需求见 [fx-20 PRD](../prd/fx-17-displacement.md)；编辑器需求见 [UXD](../uxd/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
 
 ## 1. 示例配置
 
@@ -57,4 +57,4 @@ loader 校验方向模式与正数合同；运行期组装位移状态：同目�
 - 击退：`mods/showcases/moba_demo/MobaDemoMod/assets/GAS/effects.json`（Displacement.R）
 - 冲击波击退：`mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod/assets/GAS/effects.json`（Shockwave.Knockback）
 
-**相关文档**：[fx-16 PRD](../prd/fx-17-displacement.md) · 见 fx-06 config（独占计划）
+**相关文档**：[fx-20 PRD](../prd/fx-17-displacement.md) · @@fx6@@ config（独占计划）

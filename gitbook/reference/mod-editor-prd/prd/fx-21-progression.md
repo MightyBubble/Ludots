@@ -1,6 +1,6 @@
-# fx-20 · 进度完成
+# fx-23 · 进度完成
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-21-progression.md)；编辑器需求见 [UXD](../uxd/fx-21-progression.md)；引擎实现见 [runtime spec](../spec-runtime/fx-21-progression.md)；编辑器实现见 [editor spec](../spec-editor/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-21-progression.md)；编辑器需求见 [UXD](../uxd/fx-21-progression.md)；引擎实现见 [runtime spec](../spec-runtime/fx-21-progression.md)；editor spec 见 [editor spec](../spec-editor/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
 
 ## 1. 定位
 

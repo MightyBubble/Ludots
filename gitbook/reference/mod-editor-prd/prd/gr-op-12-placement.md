@@ -1,6 +1,6 @@
 # gr-op-12 · 节点：放置校验
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-12-placement.md)；编辑器需求见 [UXD](../uxd/gr-op-12-placement.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-12-placement.md)；编辑器实现见 [editor spec](../spec-editor/gr-op-12-placement.md)；现状见 [reference](../reference/gr-op-12-placement.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-12-placement.md)；编辑器需求见 [UXD](../uxd/gr-op-12-placement.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-12-placement.md)；editor spec 见 [editor spec](../spec-editor/gr-op-12-placement.md)；现状见 [reference](../reference/gr-op-12-placement.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
-# ai-01 UXD · 效用输入的编辑器需求
+# ai-04 UXD · 效用输入的编辑器需求
 
-> ai-01 的编辑器需求（高保真规格）。第一性需求见 [ai-01 PRD](../prd/ai-02-inputs.md)；配置写法见 [ai-01 配置说明](../config/ai-02-inputs.md)；编辑器实现见 [editor spec](../spec-editor/ai-02-inputs.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-03 的编辑器需求（高保真规格）。第一性需求见 [ai-03 PRD](../prd/ai-02-inputs.md)；配置写法见 [ai-03 配置说明](../config/ai-02-inputs.md)；编辑器实现见 [editor spec](../spec-editor/ai-02-inputs.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -34,7 +34,7 @@
 
 1. 输入面板 → 新建输入，Kind 选 GraphScore。
 2. GraphKey 选择器挑 `Graph.UtilityAutocast.TargetHealth`；黑名单预检通过显示绿标。
-3. 保存；在决策面板（ai-03）的考量表单里引用该输入 id。
+3. 保存；在决策面板（ai-05）的考量表单里引用该输入 id。
 
 ## 5. 状态设计
 
@@ -51,4 +51,4 @@
 - 任一输入"定义+全部使用处"≤ 2 跳可达。
 - 图/tag/技能引用只从下拉选，不手打名字。
 
-**相关文档**：[ai-01 PRD](../prd/ai-02-inputs.md) · [editor spec](../spec-editor/ai-02-inputs.md)
+**相关文档**：[ai-03 PRD](../prd/ai-02-inputs.md) · [editor spec](../spec-editor/ai-02-inputs.md)

@@ -1,6 +1,6 @@
-# fx-18 UXD · 视野揭示的编辑器需求
+# fx-23 UXD · 视野揭示的编辑器需求
 
-> fx-18 的编辑器需求（高保真规格）。第一性需求见 [fx-18 PRD](../prd/fx-19-vision.md)；配置写法见 [fx-18 配置说明](../config/fx-19-vision.md)；编辑器实现见 [editor spec](../spec-editor/fx-19-vision.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-22 的编辑器需求（高保真规格）。第一性需求见 [fx-22 PRD](../prd/fx-19-vision.md)；配置写法见 [fx-22 配置说明](../config/fx-19-vision.md)；编辑器实现见 [editor spec](../spec-editor/fx-19-vision.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -46,4 +46,4 @@
 - "层上限是多少、scope 从哪来"在区块内一跳可见。
 - 保存可写但启动被拒的现状在保存前就有明示，不等到启动报错。
 
-**相关文档**：[fx-18 PRD](../prd/fx-19-vision.md) · [editor spec](../spec-editor/fx-19-vision.md)
+**相关文档**：[fx-22 PRD](../prd/fx-19-vision.md) · [editor spec](../spec-editor/fx-19-vision.md)

@@ -1,6 +1,6 @@
-# fx-16 · 位移
+# fx-21 · 位移
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-17-displacement.md)；编辑器需求见 [UXD](../uxd/fx-17-displacement.md)；引擎实现见 [runtime spec](../spec-runtime/fx-17-displacement.md)；编辑器实现见 [editor spec](../spec-editor/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-17-displacement.md)；编辑器需求见 [UXD](../uxd/fx-17-displacement.md)；引擎实现见 [runtime spec](../spec-runtime/fx-17-displacement.md)；editor spec 见 [editor spec](../spec-editor/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ Displacement 效果把目标沿计算方向推移一段距离：距离与时长�
 
 非 Displacement preset 带块、非 Instant、非 Fixed 配固定方向、距离或时长非正——启动失败并指明字段。
 
-**相关文档**：[配置说明](../config/fx-17-displacement.md) · 见 fx-06（外部原子独占律）
+**相关文档**：[配置说明](../config/fx-17-displacement.md) · @@fx6@@（外部原子独占律）

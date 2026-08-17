@@ -1,6 +1,6 @@
-# gr-03 reference · 编译与校验
+# gr-06 reference · 编译与校验
 
-> 现状参考。第一性需求见 [gr-03 PRD](../prd/gr-04-compilation.md)；配置说明见 [gr-03 配置说明](../config/gr-04-compilation.md)。
+> 现状参考。第一性需求见 [gr-05 PRD](../prd/gr-04-compilation.md)；配置说明见 [gr-05 配置说明](../config/gr-04-compilation.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | PatchFuncLib | GraphProgramSymbolPatcher.cs:195-218 |
 | 装载顺序与冻结 | src/Core/NodeLibraries/GASGraph/Host/GraphProgramConfigLoader.cs:47-145 |
 
-**相关文档**：[gr-03 PRD](../prd/gr-04-compilation.md) · [gr-01 reference](gr-02-document.md) · [gr-05 reference](gr-06-funclib.md)
+**相关文档**：[gr-05 PRD](../prd/gr-04-compilation.md) · [gr-03 reference](gr-02-document.md) · [gr-08 reference](gr-06-funclib.md)

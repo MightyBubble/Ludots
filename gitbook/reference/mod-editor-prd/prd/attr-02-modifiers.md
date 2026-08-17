@@ -1,6 +1,6 @@
 # attr-02 · 修改器
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-02-modifiers.md)；编辑器需求见 [UXD](../uxd/attr-02-modifiers.md)；引擎实现见 [runtime spec](../spec-runtime/attr-02-modifiers.md)；编辑器实现见 [editor spec](../spec-editor/attr-02-modifiers.md)；现状见 [reference](../reference/attr-02-modifiers.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-02-modifiers.md)；编辑器需求见 [UXD](../uxd/attr-02-modifiers.md)；引擎实现见 [runtime spec](../spec-runtime/attr-02-modifiers.md)；editor spec 见 [editor spec](../spec-editor/attr-02-modifiers.md)；现状见 [reference](../reference/attr-02-modifiers.md)。
 
 ## 1. 定位
 

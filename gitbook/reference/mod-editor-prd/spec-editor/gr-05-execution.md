@@ -1,6 +1,6 @@
-# gr-04 editor spec · 执行模型
+# gr-08 editor spec · 执行模型
 
-> 编辑器实现任务书。编辑器需求见 [gr-04 UXD](../uxd/gr-05-execution.md)；引擎侧见 [runtime spec](../spec-runtime/gr-05-execution.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-06 UXD](../uxd/gr-05-execution.md)；引擎侧见 [runtime spec](../spec-runtime/gr-05-execution.md)。
 
 ## 1. 概述
 
@@ -10,7 +10,7 @@
 
 - 调试会话调用引擎切片入口逐片驱动，游标/步数/调用栈直接取执行快照，不复制状态。
 - 入口选择器映射两种引擎入口；错误呈现透传引擎原文。
-- 宿主政策表投影用于"可挂宿主"提示（gr-06 同源）。
+- 宿主政策表投影用于"可挂宿主"提示（gr-09 同源）。
 
 ## 3. 精确语义与不变量
 
@@ -22,4 +22,4 @@
 - 消费：切片执行入口、游标快照接口、宿主政策表、上限常量投影。
 - 验收：挂起循环逐帧续跑可视化正确；预算耗尽呈现与引擎异常一致。
 
-**相关文档**：[gr-04 UXD](../uxd/gr-05-execution.md) · [gr-04 runtime spec](../spec-runtime/gr-05-execution.md)
+**相关文档**：[gr-06 UXD](../uxd/gr-05-execution.md) · [gr-06 runtime spec](../spec-runtime/gr-05-execution.md)

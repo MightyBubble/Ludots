@@ -61,7 +61,7 @@ kind 缩写同 gr-op-01。TargetList 指查询管线的目标列表值线。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；形状参数（`radiusCm`/`rangeCm`/`hexRadius`/`layerMask`/`intValue`）与 `queryCapacityPolicy` 写在节点字段，见 gr-02。
+图文档放 `assets/GAS/graphs.json` 或分片目录；形状参数（`radiusCm`/`rangeCm`/`hexRadius`/`layerMask`/`intValue`）与 `queryCapacityPolicy` 写在节点字段，见 gr-04。
 
 ## 4. 运行时加载效果
 
@@ -80,4 +80,4 @@ kind 缩写同 gr-op-01。TargetList 指查询管线的目标列表值线。
 - `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/QueryRadius.json`
 - 同目录 `QueryCone.json`、`QueryRectangle.json`、`QueryLine.json`、`QueryHexRange.json`、`QueryHexRing.json`、`QueryHexNeighbors.json`、`QuerySortStable.json`、`QueryLimit.json`、`QueryFilterNotEntity.json`、`QueryFilterLayer.json`、`QueryFilterRelationship.json`
 
-**相关文档**：[gr-op-06 PRD](../prd/gr-op-06-spatial.md) · [gr-op-09 配置说明](gr-op-09-aggregate.md) · [fx-09 配置说明](fx-09-target-query.md)
+**相关文档**：[gr-op-06 PRD](../prd/gr-op-06-spatial.md) · [gr-op-09 配置说明](gr-op-09-aggregate.md) · [fx-12 配置说明](fx-09-target-query.md)

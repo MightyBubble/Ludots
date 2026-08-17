@@ -1,6 +1,6 @@
-# fx-22 runtime spec · 生命周期原子操作
+# fx-23 runtime spec · 生命周期原子操作
 
-> 引擎实现任务书。第一性需求见 [fx-22 PRD](../prd/fx-23-lifecycle-atomic.md)；现状见 [reference](../reference/fx-23-lifecycle-atomic.md)。
+> 引擎实现任务书。第一性需求见 [fx-23 PRD](../prd/fx-23-lifecycle-atomic.md)；现状见 [reference](../reference/fx-23-lifecycle-atomic.md)。
 
 ## 1. 概述
 部署消费合同：事务态组装、六步原子链、失败回滚边界。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-22 PRD](../prd/fx-23-lifecycle-atomic.md) · [reference](../reference/fx-23-lifecycle-atomic.md)
+**相关文档**：[fx-23 PRD](../prd/fx-23-lifecycle-atomic.md) · [reference](../reference/fx-23-lifecycle-atomic.md)

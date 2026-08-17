@@ -1,6 +1,6 @@
 # pres-03 · 动画配置
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-03-animation.md)；编辑器需求见 [UXD](../uxd/pres-03-animation.md)；引擎实现见 [runtime spec](../spec-runtime/pres-03-animation.md)；编辑器实现见 [editor spec](../spec-editor/pres-03-animation.md)；现状见 [reference](../reference/pres-03-animation.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-03-animation.md)；编辑器需求见 [UXD](../uxd/pres-03-animation.md)；引擎实现见 [runtime spec](../spec-runtime/pres-03-animation.md)；editor spec 见 [editor spec](../spec-editor/pres-03-animation.md)；现状见 [reference](../reference/pres-03-animation.md)。
 
 ## 1. 定位
 

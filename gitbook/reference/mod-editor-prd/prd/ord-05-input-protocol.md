@@ -1,6 +1,6 @@
 # ord-05 · 输入协议
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-05-input-protocol.md)；编辑器需求见 [UXD](../uxd/ord-05-input-protocol.md)；引擎实现见 [runtime spec](../spec-runtime/ord-05-input-protocol.md)；编辑器实现见 [editor spec](../spec-editor/ord-05-input-protocol.md)；现状见 [reference](../reference/ord-05-input-protocol.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-05-input-protocol.md)；编辑器需求见 [UXD](../uxd/ord-05-input-protocol.md)；引擎实现见 [runtime spec](../spec-runtime/ord-05-input-protocol.md)；editor spec 见 [editor spec](../spec-editor/ord-05-input-protocol.md)；现状见 [reference](../reference/ord-05-input-protocol.md)。
 
 ## 1. 定位
 

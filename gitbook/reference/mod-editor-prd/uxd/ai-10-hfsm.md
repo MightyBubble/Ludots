@@ -1,6 +1,6 @@
-# ai-09 UXD · 层次状态机的编辑器需求
+# ai-11 UXD · 层次状态机的编辑器需求
 
-> ai-09 的编辑器需求（高保真规格）。第一性需求见 [ai-09 PRD](../prd/ai-10-hfsm.md)；配置写法见 [ai-09 配置说明](../config/ai-10-hfsm.md)；编辑器实现见 [editor spec](../spec-editor/ai-10-hfsm.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-11 的编辑器需求（高保真规格）。第一性需求见 [ai-11 PRD](../prd/ai-10-hfsm.md)；配置写法见 [ai-11 配置说明](../config/ai-10-hfsm.md)；编辑器实现见 [editor spec](../spec-editor/ai-10-hfsm.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -56,4 +56,4 @@ HFSM 面板是相位图的工位：嵌套态画成层级框，转移画成箭头
 - 平局胜者在编辑期即被标注（不让 I8 变运行期惊喜）。
 - LCA 收展（onExit 上爬/onEnter 下钻）在单步调试中可视化。
 
-**相关文档**：[ai-09 PRD](../prd/ai-10-hfsm.md) · [editor spec](../spec-editor/ai-10-hfsm.md)
+**相关文档**：[ai-11 PRD](../prd/ai-10-hfsm.md) · [editor spec](../spec-editor/ai-10-hfsm.md)

@@ -1,6 +1,6 @@
-# gr-04 · 执行模型
+# gr-08 · 执行模型
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-05-execution.md)；编辑器需求见 [UXD](../uxd/gr-05-execution.md)；引擎实现见 [runtime spec](../spec-runtime/gr-05-execution.md)；编辑器实现见 [editor spec](../spec-editor/gr-05-execution.md)；现状见 [reference](../reference/gr-05-execution.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-05-execution.md)；编辑器需求见 [UXD](../uxd/gr-05-execution.md)；引擎实现见 [runtime spec](../spec-runtime/gr-05-execution.md)；editor spec 见 [editor spec](../spec-editor/gr-05-execution.md)；现状见 [reference](../reference/gr-05-execution.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@
 
 预算耗尽、深度超限、在不允许挂起的入口遇到挂起——执行失败并指明图；掉队指令指针一律按越界处理。
 
-**相关文档**：[配置说明](../config/gr-05-execution.md) · [gr-00](gr-01-model.md) · [gr-06](gr-07-actionlib.md) · [gr-07](gr-08-mount-points.md)
+**相关文档**：[配置说明](../config/gr-05-execution.md) · [gr-02](gr-01-model.md) · [gr-09](gr-07-actionlib.md) · [gr-09](gr-08-mount-points.md)

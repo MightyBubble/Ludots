@@ -1,6 +1,6 @@
-# fx-13 · 参数化
+# fx-18 · 参数化
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-14-config-params.md)；编辑器需求见 [UXD](../uxd/fx-14-config-params.md)；引擎实现见 [runtime spec](../spec-runtime/fx-14-config-params.md)；编辑器实现见 [editor spec](../spec-editor/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-14-config-params.md)；编辑器需求见 [UXD](../uxd/fx-14-config-params.md)；引擎实现见 [runtime spec](../spec-runtime/fx-14-config-params.md)；editor spec 见 [editor spec](../spec-editor/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ configParams 是效果模板的具名参数槽：模板写默认值，施放链�
 
 未知类型、未知引用名、保留键类型不符、模板侧超容量——启动失败并指明键与位置。
 
-**相关文档**：[配置说明](../config/fx-14-config-params.md) · 见 fx-02、ab-03（CallerParams 参数池）
+**相关文档**：[配置说明](../config/fx-14-config-params.md) · @@fx2@@、ab-03（CallerParams 参数池）

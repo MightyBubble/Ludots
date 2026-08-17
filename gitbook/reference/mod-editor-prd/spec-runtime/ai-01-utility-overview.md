@@ -1,6 +1,6 @@
-# ai-00 runtime spec · AI 行为层总论
+# ai-03 runtime spec · AI 行为层总论
 
-> 引擎实现任务书。第一性需求见 [ai-00 PRD](../prd/ai-01-utility-overview.md)；现状见 [reference](../reference/ai-01-utility-overview.md)。
+> 引擎实现任务书。第一性需求见 [ai-02 PRD](../prd/ai-01-utility-overview.md)；现状见 [reference](../reference/ai-01-utility-overview.md)。
 
 ## 1. 概述
 
@@ -27,4 +27,4 @@ AI 配置编译合同：18 表固定加载序、单一 AiCompiledRuntime 产物�
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-00 PRD](../prd/ai-01-utility-overview.md) · [reference](../reference/ai-01-utility-overview.md)
+**相关文档**：[ai-02 PRD](../prd/ai-01-utility-overview.md) · [reference](../reference/ai-01-utility-overview.md)

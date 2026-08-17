@@ -1,6 +1,6 @@
-# gr-06 配置说明 · 动作库 ActionLib
+# gr-09 配置说明 · 动作库 ActionLib
 
-> 配置写法与行为。第一性需求见 [gr-06 PRD](../prd/gr-07-actionlib.md)；编辑器需求见 [UXD](../uxd/gr-07-actionlib.md)；现状见 [reference](../reference/gr-07-actionlib.md)。
+> 配置写法与行为。第一性需求见 [gr-09 PRD](../prd/gr-07-actionlib.md)；编辑器需求见 [UXD](../uxd/gr-07-actionlib.md)；现状见 [reference](../reference/gr-07-actionlib.md)。
 
 ## 1. 示例配置
 
@@ -23,11 +23,11 @@
 | `graph` / `kind` | 指向已注册图；kind 必须 `Script` |
 | `host` | 四值之一：`BehaviorTree`（可挂起）/ `Hfsm`（不可）/ `Level`（不可）/ `Script`（可挂起） |
 
-宿主与挂起（gr-04）：host 填 Hfsm 或 Level 时，图内任何可达 Yield 都在装载期拒绝；要挂起就挂 BT 或 Script。
+宿主与挂起（gr-06）：host 填 Hfsm 或 Level 时，图内任何可达 Yield 都在装载期拒绝；要挂起就挂 BT 或 Script。
 
 ## 3. 文件结构
 
-`assets/GAS/action_lib.json`（目录登记条目，同 name 合并）；引用许可序在 graphs、func_lib 之后（gr-00 第 4 节）。
+`assets/GAS/action_lib.json`（目录登记条目，同 name 合并）；引用许可序在 graphs、func_lib 之后（gr-02 第 4 节）。
 
 ## 4. 运行时加载效果
 
@@ -46,6 +46,6 @@
 ## 6. 实例
 
 - 引擎默认：`assets/GAS/action_lib.json`（11 条：5 BT / 4 Hfsm / 1 Level / 1 Script，计数见事实页目录节）
-- 挂起动作样本：`script.drinkUntilFull`（gr-04 第 1 节）
+- 挂起动作样本：`script.drinkUntilFull`（gr-06 第 1 节）
 
-**相关文档**：[gr-06 PRD](../prd/gr-07-actionlib.md) · [gr-04 配置说明](gr-05-execution.md) · [gr-07 配置说明](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-07-actionlib.md) · [gr-06 配置说明](gr-05-execution.md) · [gr-09 配置说明](gr-08-mount-points.md)

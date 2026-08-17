@@ -1,6 +1,6 @@
-# fx-20 UXD · 进度完成的编辑器需求
+# fx-23 UXD · 进度完成的编辑器需求
 
-> fx-20 的编辑器需求（高保真规格）。第一性需求见 [fx-20 PRD](../prd/fx-21-progression.md)；配置写法见 [fx-20 配置说明](../config/fx-21-progression.md)；编辑器实现见 [editor spec](../spec-editor/fx-21-progression.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-23 的编辑器需求（高保真规格）。第一性需求见 [fx-23 PRD](../prd/fx-21-progression.md)；配置写法见 [fx-23 配置说明](../config/fx-21-progression.md)；编辑器实现见 [editor spec](../spec-editor/fx-21-progression.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -47,4 +47,4 @@ CompleteProgression 效果编辑页的进度完成表单：选进度、定作用
 - "这个进度有几级"在选中后一跳可见。
 - 三种作用域的宿主是谁（施法者/受术者/显式宿主）在表单内联说明一跳可见。
 
-**相关文档**：[fx-20 PRD](../prd/fx-21-progression.md) · [editor spec](../spec-editor/fx-21-progression.md)
+**相关文档**：[fx-23 PRD](../prd/fx-21-progression.md) · [editor spec](../spec-editor/fx-21-progression.md)

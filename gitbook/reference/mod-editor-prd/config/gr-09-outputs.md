@@ -1,6 +1,6 @@
-# gr-08 配置说明 · Query 图输出
+# gr-09 配置说明 · Query 图输出
 
-> 配置写法与行为。第一性需求见 [gr-08 PRD](../prd/gr-09-outputs.md)；编辑器需求见 [UXD](../uxd/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
+> 配置写法与行为。第一性需求见 [gr-09 PRD](../prd/gr-09-outputs.md)；编辑器需求见 [UXD](../uxd/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
 
 ## 1. 示例配置
 
@@ -35,7 +35,7 @@
 
 ## 3. 文件结构
 
-outputs 是 graphs.json 文档顶层字段（gr-01），仅 Query 图允许。
+outputs 是 graphs.json 文档顶层字段（gr-03），仅 Query 图允许。
 
 ## 4. 运行时加载效果
 
@@ -53,7 +53,7 @@ outputs 是 graphs.json 文档顶层字段（gr-01），仅 Query 图允许。
 
 ## 6. 实例
 
-- 主线资产现状无实例（Query kind 零存量）；编辑器样本见 gr-02 第 6 节其余 kind
-- 消费方：实体集合描述符与摘要键值（gr-07 次要挂点）
+- 主线资产现状无实例（Query kind 零存量）；编辑器样本@@gr2@@ 第 6 节其余 kind
+- 消费方：实体集合描述符与摘要键值（gr-09 次要挂点）
 
-**相关文档**：[gr-08 PRD](../prd/gr-09-outputs.md) · [gr-01 配置说明](gr-02-document.md) · [gr-07 配置说明](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-03 配置说明](gr-02-document.md) · [gr-09 配置说明](gr-08-mount-points.md)

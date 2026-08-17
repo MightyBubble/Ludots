@@ -1,6 +1,6 @@
-# ai-02 UXD · 归一化与响应曲线的编辑器需求
+# ai-05 UXD · 归一化与响应曲线的编辑器需求
 
-> ai-02 的编辑器需求（高保真规格）。第一性需求见 [ai-02 PRD](../prd/ai-03-norm-curves.md)；配置写法见 [ai-02 配置说明](../config/ai-03-norm-curves.md)；编辑器实现见 [editor spec](../spec-editor/ai-03-norm-curves.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-04 的编辑器需求（高保真规格）。第一性需求见 [ai-04 PRD](../prd/ai-03-norm-curves.md)；配置写法见 [ai-04 配置说明](../config/ai-03-norm-curves.md)；编辑器实现见 [editor spec](../spec-editor/ai-03-norm-curves.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -52,4 +52,4 @@
 - 保存前所有非法组合被表单层拦截。
 - 预览公式与运行时 Normalize/Curve 逐点一致（同源实现）。
 
-**相关文档**：[ai-02 PRD](../prd/ai-03-norm-curves.md) · [editor spec](../spec-editor/ai-03-norm-curves.md)
+**相关文档**：[ai-04 PRD](../prd/ai-03-norm-curves.md) · [editor spec](../spec-editor/ai-03-norm-curves.md)

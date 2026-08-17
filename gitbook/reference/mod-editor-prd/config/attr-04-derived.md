@@ -16,7 +16,7 @@
 }
 ```
 
-对应图须在 `assets/GAS/graphs.json`（或分片）声明且 kind 为 Derived（教学骨架，节点从略，写法见 gr-02）：
+对应图须在 `assets/GAS/graphs.json`（或分片）声明且 kind 为 Derived（教学骨架，节点从略，写法见 gr-04）：
 
 ```json
 { "id": "Derived.Example.MoveSpeedFromStacks", "kind": "Derived", "nodes": [ ] }
@@ -31,7 +31,7 @@
 
 ## 3. 文件结构
 
-绑定写在实体模板（`Entities/templates.json`，见 ent-01）；图写在 GAS 图表（见 gr-02）。图先于绑定加载（引用许可序）。
+绑定写在实体模板（`Entities/templates.json`，见 ent-01）；图写在 GAS 图表（见 gr-04）。图先于绑定加载（引用许可序）。
 
 ## 4. 运行时加载效果
 

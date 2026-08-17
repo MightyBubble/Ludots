@@ -1,6 +1,6 @@
-# ai-06 配置说明 · 任务
+# ai-09 配置说明 · 任务
 
-> 配置写法与行为。第一性需求见 [ai-06 PRD](../prd/ai-07-tasks.md)；编辑器需求见 [UXD](../uxd/ai-07-tasks.md)；现状见 [reference](../reference/ai-07-tasks.md)。
+> 配置写法与行为。第一性需求见 [ai-08 PRD](../prd/ai-07-tasks.md)；编辑器需求见 [UXD](../uxd/ai-07-tasks.md)；现状见 [reference](../reference/ai-07-tasks.md)。
 
 ## 1. 示例配置
 
@@ -45,7 +45,7 @@
 
 ## 3. 文件结构
 
-目录条目 `AI/tasks.json`（根数据为空，由 mod 贡献）（ArrayById）。任务条目被 decisions 的 Tasks 数组按 id 引用且须连续区间（ai-03/I3）。无 schema（I10）。
+目录条目 `AI/tasks.json`（根数据为空，由 mod 贡献）（ArrayById）。任务条目被 decisions 的 Tasks 数组按 id 引用且须连续区间（ai-05/I3）。无 schema（I10）。
 
 ## 4. 运行时加载效果
 
@@ -65,4 +65,4 @@
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/tasks.json`（真实，3 条 SubmitOrder：Attack/HealBurst/Curse，槽位 0/1/2）
 
-**相关文档**：[ai-06 PRD](../prd/ai-07-tasks.md) · [ai-03 配置说明](ai-04-decisions.md) · [ai-04 配置说明](ai-05-dm-profiles.md)
+**相关文档**：[ai-08 PRD](../prd/ai-07-tasks.md) · [ai-05 配置说明](ai-04-decisions.md) · [ai-06 配置说明](ai-05-dm-profiles.md)

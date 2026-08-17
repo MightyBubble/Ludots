@@ -1,6 +1,6 @@
-# fx-22 reference · 生命周期原子操作
+# fx-23 reference · 生命周期原子操作
 
-> 现状参考。第一性需求见 [fx-22 PRD](../prd/fx-23-lifecycle-atomic.md)；配置说明见 [fx-22 配置说明](../config/fx-23-lifecycle-atomic.md)。
+> 现状参考。第一性需求见 [fx-23 PRD](../prd/fx-23-lifecycle-atomic.md)；配置说明见 [fx-23 配置说明](../config/fx-23-lifecycle-atomic.md)。
 
 ## 1. 现状快照
 
@@ -23,4 +23,4 @@
 | 默认图本体 | assets/GAS/graphs.json（Graph.Lifecycle.DeployConsumeSource） |
 | 直连验证测试 | src/Tests/GasTests/Integration/LifecycleArchitectureTests.cs:44-320 |
 
-**相关文档**：[fx-22 PRD](../prd/fx-23-lifecycle-atomic.md) · [fx-22 配置说明](../config/fx-23-lifecycle-atomic.md)
+**相关文档**：[fx-23 PRD](../prd/fx-23-lifecycle-atomic.md) · [fx-23 配置说明](../config/fx-23-lifecycle-atomic.md)

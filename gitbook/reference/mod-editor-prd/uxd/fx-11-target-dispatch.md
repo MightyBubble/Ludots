@@ -1,6 +1,6 @@
-# fx-10 UXD · 目标派发的编辑器需求
+# fx-15 UXD · 目标派发的编辑器需求
 
-> 目标派发的编辑器需求（高保真规格）。第一性需求见 [fx-10 PRD](../prd/fx-11-target-dispatch.md)；配置写法见 [fx-10 配置说明](../config/fx-11-target-dispatch.md)；编辑器实现见 [editor spec](../spec-editor/fx-11-target-dispatch.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 目标派发的编辑器需求（高保真规格）。第一性需求见 [fx-14 PRD](../prd/fx-11-target-dispatch.md)；配置写法见 [fx-14 配置说明](../config/fx-11-target-dispatch.md)；编辑器实现见 [editor spec](../spec-editor/fx-11-target-dispatch.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -17,7 +17,7 @@
 │ │ 目标上下文 ──▶ [原目标   ▾]                                     │ │
 │ └──────────────────────────────────────────────────────────────────┘ │
 │ 载荷效果 [Effect.Champion.Garen.JudgmentHit ▾]（注册表校验）        │
-├─ 底部：扇出预估 = 过滤后候选数（联动 fx-09 预览）────────────────────┤
+├─ 底部：扇出预估 = 过滤后候选数（联动 fx-12 预览）────────────────────┤
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -51,4 +51,4 @@
 - 三槽语义不看文档可懂（每槽有四值悬停释义）。
 - 默认映射与等价预设的关系一屏可见。
 
-**相关文档**：[fx-10 PRD](../prd/fx-11-target-dispatch.md) · [editor spec](../spec-editor/fx-11-target-dispatch.md)
+**相关文档**：[fx-14 PRD](../prd/fx-11-target-dispatch.md) · [editor spec](../spec-editor/fx-11-target-dispatch.md)

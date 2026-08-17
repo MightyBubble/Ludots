@@ -1,6 +1,6 @@
 # ab-10 · 上下文组
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-10-context-groups.md)；编辑器需求见 [UXD](../uxd/ab-10-context-groups.md)；引擎实现见 [runtime spec](../spec-runtime/ab-10-context-groups.md)；编辑器实现见 [editor spec](../spec-editor/ab-10-context-groups.md)；现状见 [reference](../reference/ab-10-context-groups.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-10-context-groups.md)；编辑器需求见 [UXD](../uxd/ab-10-context-groups.md)；引擎实现见 [runtime spec](../spec-runtime/ab-10-context-groups.md)；editor spec 见 [editor spec](../spec-editor/ab-10-context-groups.md)；现状见 [reference](../reference/ab-10-context-groups.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
 # rt-03 · 诊断与错误码
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-03-diagnostics.md)；编辑器需求见 [UXD](../uxd/rt-03-diagnostics.md)；引擎实现见 [runtime spec](../spec-runtime/rt-03-diagnostics.md)；编辑器实现见 [editor spec](../spec-editor/rt-03-diagnostics.md)；现状见 [reference](../reference/rt-03-diagnostics.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-03-diagnostics.md)；编辑器需求见 [UXD](../uxd/rt-03-diagnostics.md)；引擎实现见 [runtime spec](../spec-runtime/rt-03-diagnostics.md)；editor spec 见 [editor spec](../spec-editor/rt-03-diagnostics.md)；现状见 [reference](../reference/rt-03-diagnostics.md)。
 
 ## 1. 定位
 

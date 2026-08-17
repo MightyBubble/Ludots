@@ -1,6 +1,6 @@
-# fx-03 runtime spec · 生命周期与时长
+# fx-07 runtime spec · 生命周期与时长
 
-> 引擎实现任务书。第一性需求见 [fx-03 PRD](../prd/fx-04-lifetime.md)；现状见 [reference](../reference/fx-04-lifetime.md)。
+> 引擎实现任务书。第一性需求见 [fx-06 PRD](../prd/fx-04-lifetime.md)；现状见 [reference](../reference/fx-04-lifetime.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-03 PRD](../prd/fx-04-lifetime.md) · [reference](../reference/fx-04-lifetime.md)
+**相关文档**：[fx-06 PRD](../prd/fx-04-lifetime.md) · [reference](../reference/fx-04-lifetime.md)

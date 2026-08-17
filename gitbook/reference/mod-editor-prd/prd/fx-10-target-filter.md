@@ -1,6 +1,6 @@
-# fx-09 · 目标过滤
+# fx-14 · 目标过滤
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-10-target-filter.md)；编辑器需求见 [UXD](../uxd/fx-10-target-filter.md)；引擎实现见 [runtime spec](../spec-runtime/fx-10-target-filter.md)；编辑器实现见 [editor spec](../spec-editor/fx-10-target-filter.md)；现状见 [reference](../reference/fx-10-target-filter.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-10-target-filter.md)；编辑器需求见 [UXD](../uxd/fx-10-target-filter.md)；引擎实现见 [runtime spec](../spec-runtime/fx-10-target-filter.md)；editor spec 见 [editor spec](../spec-editor/fx-10-target-filter.md)；现状见 [reference](../reference/fx-10-target-filter.md)。
 
 ## 1. 定位
 
@@ -16,10 +16,10 @@
 
 ## 3. 运行行为
 
-过滤在派发前的链路上执行；环内径过滤只对环形查询生效。根预算是最后一道闸（fx-06）。
+过滤在派发前的链路上执行；环内径过滤只对环形查询生效。根预算是最后一道闸（fx-09）。
 
 ## 4. 异常承诺
 
 敌我关系非六值、必填字段缺失、层未注册——启动失败并指明模板。
 
-**相关文档**：[配置说明](../config/fx-10-target-filter.md) · [fx-08](fx-09-target-query.md) · [fx-10](fx-11-target-dispatch.md) · [tag-01](tag-01-basics.md)
+**相关文档**：[配置说明](../config/fx-10-target-filter.md) · [fx-11](fx-09-target-query.md) · [fx-14](fx-11-target-dispatch.md) · [tag-01](tag-01-basics.md)

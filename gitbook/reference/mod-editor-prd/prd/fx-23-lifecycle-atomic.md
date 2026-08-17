@@ -1,6 +1,6 @@
-# fx-22 · 生命周期原子操作
+# fx-23 · 生命周期原子操作
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-23-lifecycle-atomic.md)；编辑器需求见 [UXD](../uxd/fx-23-lifecycle-atomic.md)；引擎实现见 [runtime spec](../spec-runtime/fx-23-lifecycle-atomic.md)；编辑器实现见 [editor spec](../spec-editor/fx-23-lifecycle-atomic.md)；现状见 [reference](../reference/fx-23-lifecycle-atomic.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-23-lifecycle-atomic.md)；编辑器需求见 [UXD](../uxd/fx-23-lifecycle-atomic.md)；引擎实现见 [runtime spec](../spec-runtime/fx-23-lifecycle-atomic.md)；editor spec 见 [editor spec](../spec-editor/fx-23-lifecycle-atomic.md)；现状见 [reference](../reference/fx-23-lifecycle-atomic.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ DeployConsumeSource 效果执行一次原子变形：源单位在场地上物化
 
 缺任一必配参数、取值来源非法、无属性键——启动失败并指明键名；源已死或挂起销毁、目标点不可解析、嵌套事务、模板键不可解析——执行期抛生命周期错误。
 
-**相关文档**：[配置说明](../config/fx-23-lifecycle-atomic.md) · [ent-01](ent-01-templates.md) · 见 fx-15（不消费源的造单位）
+**相关文档**：[配置说明](../config/fx-23-lifecycle-atomic.md) · [ent-01](ent-01-templates.md) · @@fx15@@（不消费源的造单位）

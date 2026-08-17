@@ -1,6 +1,6 @@
-# ai-10 · GOAP 与 HTN 规划
+# ai-11 · GOAP 与 HTN 规划
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-11-goap-htn.md)；编辑器需求见 [UXD](../uxd/ai-11-goap-htn.md)；引擎实现见 [runtime spec](../spec-runtime/ai-11-goap-htn.md)；编辑器实现见 [editor spec](../spec-editor/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-11-goap-htn.md)；编辑器需求见 [UXD](../uxd/ai-11-goap-htn.md)；引擎实现见 [runtime spec](../spec-runtime/ai-11-goap-htn.md)；editor spec 见 [editor spec](../spec-editor/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@
 
 引用未声明 atom、projection 键未声明且非内建、IntKey/EntityKey 与 op 不匹配、IntValue/EntityKey 互斥破坏、goap_action 缺 Order、htn_domain 引用越界——启动失败并带表:id.字段。
 
-**相关文档**：[配置说明](../config/ai-11-goap-htn.md) · [ai-00](ai-01-utility-overview.md) · [cfg-04](cfg-04-config-tables.md)
+**相关文档**：[配置说明](../config/ai-11-goap-htn.md) · [ai-02](ai-01-utility-overview.md) · [cfg-04](cfg-04-config-tables.md)

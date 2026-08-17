@@ -1,6 +1,6 @@
 # attr-03 · 聚合管线
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-03-aggregation.md)；编辑器需求见 [UXD](../uxd/attr-03-aggregation.md)；引擎实现见 [runtime spec](../spec-runtime/attr-03-aggregation.md)；编辑器实现见 [editor spec](../spec-editor/attr-03-aggregation.md)；现状见 [reference](../reference/attr-03-aggregation.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-03-aggregation.md)；编辑器需求见 [UXD](../uxd/attr-03-aggregation.md)；引擎实现见 [runtime spec](../spec-runtime/attr-03-aggregation.md)；editor spec 见 [editor spec](../spec-editor/attr-03-aggregation.md)；现状见 [reference](../reference/attr-03-aggregation.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
 # ord-03 · 订单流水
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-03-pipeline.md)；编辑器需求见 [UXD](../uxd/ord-03-pipeline.md)；引擎实现见 [runtime spec](../spec-runtime/ord-03-pipeline.md)；编辑器实现见 [editor spec](../spec-editor/ord-03-pipeline.md)；现状见 [reference](../reference/ord-03-pipeline.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ord-03-pipeline.md)；编辑器需求见 [UXD](../uxd/ord-03-pipeline.md)；引擎实现见 [runtime spec](../spec-runtime/ord-03-pipeline.md)；editor spec 见 [editor spec](../spec-editor/ord-03-pipeline.md)；现状见 [reference](../reference/ord-03-pipeline.md)。
 
 ## 1. 定位
 

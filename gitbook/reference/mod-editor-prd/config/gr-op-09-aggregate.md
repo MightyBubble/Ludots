@@ -34,7 +34,7 @@ kind 缩写同 gr-op-01。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；本族无符号字段，见 gr-02。
+图文档放 `assets/GAS/graphs.json` 或分片目录；本族无符号字段，见 gr-04。
 
 ## 4. 运行时加载效果
 

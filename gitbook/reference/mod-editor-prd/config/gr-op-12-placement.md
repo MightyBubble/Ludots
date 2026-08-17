@@ -52,7 +52,7 @@ kind 缩写同 gr-op-01；本族四件均 L（线性四类）。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`collectionKey`/`validOutput` 写节点字段，见 gr-02。集合键经 ConfigKeyRegistry 同池（gr-op-05）。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`collectionKey`/`validOutput` 写节点字段，见 gr-04。集合键经 ConfigKeyRegistry 同池（gr-op-05）。
 
 ## 4. 运行时加载效果
 

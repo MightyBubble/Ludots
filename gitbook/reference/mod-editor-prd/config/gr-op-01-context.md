@@ -70,7 +70,7 @@ kind 缩写：E=Effect、S=Score、V=Validation、D=Derived、Q=Query、SC=Scrip
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录 `assets/GAS/graphs/<名>.json`；节点字段（`op`、字面量、`pinRegister`）写在 nodes 数组里。文档格式见 gr-02。
+图文档放 `assets/GAS/graphs.json` 或分片目录 `assets/GAS/graphs/<名>.json`；节点字段（`op`、字面量、`pinRegister`）写在 nodes 数组里。文档格式见 gr-04。
 
 ## 4. 运行时加载效果
 

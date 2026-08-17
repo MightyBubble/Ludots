@@ -1,6 +1,6 @@
-# fx-16 editor spec · 位移
+# fx-21 editor spec · 位移
 
-> 编辑器实现任务书。编辑器需求见 [fx-16 UXD](../uxd/fx-17-displacement.md)；引擎侧见 [runtime spec](../spec-runtime/fx-17-displacement.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-20 UXD](../uxd/fx-17-displacement.md)；引擎侧见 [runtime spec](../spec-runtime/fx-17-displacement.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ Displacement 效果表单的位移子表单：模式联动、派生速度、替�
 - 消费：效果模板保存管线、热通道分级。
 - 验收：ToTarget 切 Fixed 后角度必填红条；距离改 0 保存被拒。
 
-**相关文档**：[fx-16 UXD](../uxd/fx-17-displacement.md) · [fx-16 runtime spec](../spec-runtime/fx-17-displacement.md)
+**相关文档**：[fx-20 UXD](../uxd/fx-17-displacement.md) · [fx-20 runtime spec](../spec-runtime/fx-17-displacement.md)

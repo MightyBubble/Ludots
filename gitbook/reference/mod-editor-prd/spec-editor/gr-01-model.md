@@ -1,6 +1,6 @@
-# gr-00 editor spec · 图编程模型
+# gr-03 editor spec · 图编程模型
 
-> 编辑器实现任务书。编辑器需求见 [gr-00 UXD](../uxd/gr-01-model.md)；引擎侧见 [runtime spec](../spec-runtime/gr-01-model.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-02 UXD](../uxd/gr-01-model.md)；引擎侧见 [runtime spec](../spec-runtime/gr-01-model.md)。
 
 ## 1. 概述
 
@@ -10,7 +10,7 @@
 
 - **同源预检**：编辑器内嵌引擎编译器做保存前预检，诊断码、节点目录、端口白名单全部取自引擎同源表，编辑器不自建副本。
 - **预算仪表**：统计编译产物（指令数、寄存器占用、目标数）对照引擎上限常量，来源为引擎投影接口而非手抄数值。
-- **文档写回**：按 gr-01 格式落 graphs.json 分片，一文件一条，id 尾段命名。
+- **文档写回**：按 gr-03 格式落 graphs.json 分片，一文件一条，id 尾段命名。
 
 ## 3. 精确语义与不变量
 
@@ -22,4 +22,4 @@
 - 消费：编译器诊断接口、节点目录投影、上限常量投影、FrontDoor。
 - 验收：同一文档双端编译诊断一致；预算仪表与装载实测一致。
 
-**相关文档**：[gr-00 UXD](../uxd/gr-01-model.md) · [gr-00 runtime spec](../spec-runtime/gr-01-model.md)
+**相关文档**：[gr-02 UXD](../uxd/gr-01-model.md) · [gr-02 runtime spec](../spec-runtime/gr-01-model.md)

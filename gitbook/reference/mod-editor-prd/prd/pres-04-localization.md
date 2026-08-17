@@ -1,6 +1,6 @@
 # pres-04 · 本地化
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-04-localization.md)；编辑器需求见 [UXD](../uxd/pres-04-localization.md)；引擎实现见 [runtime spec](../spec-runtime/pres-04-localization.md)；编辑器实现见 [editor spec](../spec-editor/pres-04-localization.md)；现状见 [reference](../reference/pres-04-localization.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-04-localization.md)；编辑器需求见 [UXD](../uxd/pres-04-localization.md)；引擎实现见 [runtime spec](../spec-runtime/pres-04-localization.md)；editor spec 见 [editor spec](../spec-editor/pres-04-localization.md)；现状见 [reference](../reference/pres-04-localization.md)。
 
 ## 1. 定位
 

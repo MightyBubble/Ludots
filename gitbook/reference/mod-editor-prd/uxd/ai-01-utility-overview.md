@@ -1,6 +1,6 @@
-# ai-00 UXD · AI 行为层总论的编辑器需求
+# ai-03 UXD · AI 行为层总论的编辑器需求
 
-> ai-00 的编辑器需求（高保真规格）。第一性需求见 [ai-00 PRD](../prd/ai-01-utility-overview.md)；配置写法见 [ai-00 配置说明](../config/ai-01-utility-overview.md)；编辑器实现见 [editor spec](../spec-editor/ai-01-utility-overview.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-02 的编辑器需求（高保真规格）。第一性需求见 [ai-02 PRD](../prd/ai-01-utility-overview.md)；配置写法见 [ai-02 配置说明](../config/ai-01-utility-overview.md)；编辑器实现见 [editor spec](../spec-editor/ai-01-utility-overview.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -12,12 +12,12 @@ AI 总览是行为层的地图与体检台：一张图看清 18 张表谁有货�
 ┌─ AI 总览面板 ─────────────────────────────────────────────────────────┐
 ├─ 左：表清单（按组）────────┬─ 右：编译产物视图 ──────────────────────┤
 │ 效用感知                   │ AiCompiledRuntime                       │
-│  inputs        2 条 ▸ai-01 │  Atoms 4 · Projection 1 · Goals 1       │
-│  normalizations 3 ▸ai-02   │  UtilityRuntime ✔(1 profile)            │
+│  inputs        2 条 ▸ai-03 │  Atoms 4 · Projection 1 · Goals 1       │
+│  normalizations 3 ▸ai-04   │  UtilityRuntime ✔(1 profile)            │
 │ 效用决断                   │  Behavior: BT 1 · HFSM 2                │
-│  decisions     3 ▸ai-03    │ 接缝体检                                │
-│  profiles      1 ▸ai-04    │  GraphScore→只读 ✔                      │
-│ 世界状态 ▸ai-10 图行为 ▸…  │  SubmitOrder→OrderQueue ✔               │
+│  decisions     3 ▸ai-05    │ 接缝体检                                │
+│  profiles      1 ▸ai-06    │  GraphScore→只读 ✔                      │
+│ 世界状态 ▸ai-11 图行为 ▸…  │  SubmitOrder→OrderQueue ✔               │
 │ ＋新建条目（跳对应表）      │  AbilityKey→技能注册表 ✔                │
 ├─ 底部：[来源 utility_autocast · 主仓 4 文件 · mod 11 文件] ───────────┤
 └────────────────────────────────────────────────────────────────────────┘
@@ -35,7 +35,7 @@ AI 总览是行为层的地图与体检台：一张图看清 18 张表谁有货�
 ## 4. 关键交互流：摸清一个 mod 的 AI 配了什么
 
 1. 打开 AI 总览，读表清单条目数，定位主要组。
-2. 点 `decisions 3` 跳决策面板（ai-03），看决策者归属。
+2. 点 `decisions 3` 跳决策面板（ai-05），看决策者归属。
 3. 查接缝体检：GraphScore 引用的图是否只读、AbilityKey 是否已注册。
 4. 点来源条展开 VFS 视图，确认各表来自哪个 mod。
 
@@ -53,4 +53,4 @@ AI 总览是行为层的地图与体检台：一张图看清 18 张表谁有货�
 - 编译期错误（表:id.字段）在保存时预演呈现，不等启动。
 - 主仓与 mod 的表来源一眼可分。
 
-**相关文档**：[ai-00 PRD](../prd/ai-01-utility-overview.md) · [editor spec](../spec-editor/ai-01-utility-overview.md)
+**相关文档**：[ai-02 PRD](../prd/ai-01-utility-overview.md) · [editor spec](../spec-editor/ai-01-utility-overview.md)

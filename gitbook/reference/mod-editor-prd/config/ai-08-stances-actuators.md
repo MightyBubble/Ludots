@@ -1,6 +1,6 @@
-# ai-07 配置说明 · 战斗姿态与执行器门
+# ai-10 配置说明 · 战斗姿态与执行器门
 
-> 配置写法与行为。第一性需求见 [ai-07 PRD](../prd/ai-08-stances-actuators.md)；编辑器需求见 [UXD](../uxd/ai-08-stances-actuators.md)；现状见 [reference](../reference/ai-08-stances-actuators.md)。
+> 配置写法与行为。第一性需求见 [ai-09 PRD](../prd/ai-08-stances-actuators.md)；编辑器需求见 [UXD](../uxd/ai-08-stances-actuators.md)；现状见 [reference](../reference/ai-08-stances-actuators.md)。
 
 ## 1. 示例配置
 
@@ -70,4 +70,4 @@ actuators：
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/stances.json`、`actuators.json`（真实：均为空 []）
 
-**相关文档**：[ai-07 PRD](../prd/ai-08-stances-actuators.md) · [ai-04 配置说明](ai-05-dm-profiles.md) · [ent-01 配置说明](ent-01-templates.md)
+**相关文档**：[ai-09 PRD](../prd/ai-08-stances-actuators.md) · [ai-06 配置说明](ai-05-dm-profiles.md) · [ent-01 配置说明](ent-01-templates.md)

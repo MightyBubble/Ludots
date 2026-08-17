@@ -50,4 +50,4 @@ durationTicks、periodTicks、modifiers.0.value 三处即热字段——经工�
 - 热字段实现：效果模板注册表（见 reference 锚点）
 - 演示场景：强化兵种 mod 的数值热调（改伤害/时长→下次施放生效）
 
-**相关文档**：[ed-02 PRD](../prd/ed-02-hot-apply.md) · [ed-01 配置说明](ed-01-workbench-base.md) · [fx-02](fx-02-template.md)
+**相关文档**：[ed-02 PRD](../prd/ed-02-hot-apply.md) · [ed-01 配置说明](ed-01-workbench-base.md) · [fx-05](fx-02-template.md)

@@ -1,6 +1,6 @@
-# fx-21 runtime spec · 出生下单
+# fx-23 runtime spec · 出生下单
 
-> 引擎实现任务书。第一性需求见 [fx-21 PRD](../prd/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
+> 引擎实现任务书。第一性需求见 [fx-23 PRD](../prd/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
 
 ## 1. 概述
 黑板读出与订单提交合同：五键快照、按目标种类组单、正式入口准入。
@@ -13,7 +13,7 @@
 ## 3. 精确语义与不变量
 - 一次效果执行至多一条订单；与玩家命令走同一准入与终态链路。
 - 黑板无目标不是错误：跳过且不产生副作用。
-- 提交被拒是错误：抛错中断效果链（与 fx-19 兑换的"失败不抛"对照，两域语义各自决定）。
+- 提交被拒是错误：抛错中断效果链（与 fx-23 兑换的"失败不抛"对照，两域语义各自决定）。
 
 ## 4. 迁移与治理
 现状即基线。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-21 PRD](../prd/fx-22-submit-order.md) · [reference](../reference/fx-22-submit-order.md)
+**相关文档**：[fx-23 PRD](../prd/fx-22-submit-order.md) · [reference](../reference/fx-22-submit-order.md)

@@ -1,6 +1,6 @@
-# fx-07 reference · 相位监听器
+# fx-11 reference · 相位监听器
 
-> 现状参考。第一性需求见 [fx-07 PRD](../prd/fx-08-phase-listeners.md)；配置说明见 [fx-07 配置说明](../config/fx-08-phase-listeners.md)。
+> 现状参考。第一性需求见 [fx-10 PRD](../prd/fx-08-phase-listeners.md)；配置说明见 [fx-10 配置说明](../config/fx-08-phase-listeners.md)。
 
 ## 1. 现状快照
 
@@ -26,4 +26,4 @@
 | 运行期跨帧寿命抛错 | src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs:1616-1620 |
 | 收集抛错（注释不一致处） | EffectProposalProcessingSystem.cs:511-515 |
 
-**相关文档**：[fx-07 PRD](../prd/fx-08-phase-listeners.md) · [fx-08 reference](fx-09-target-query.md)
+**相关文档**：[fx-10 PRD](../prd/fx-08-phase-listeners.md) · [fx-11 reference](fx-09-target-query.md)

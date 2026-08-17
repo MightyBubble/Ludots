@@ -58,4 +58,4 @@
 - 姿态光环：`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/abilities.json`（Garen.Courage）
 - 形态开关：同文件 Jayce.Transform.Hammer / Transform.Cannon（配 ability_form_sets）
 
-**相关文档**：[ab-08 PRD](../prd/ab-08-toggle.md) · [ab-02 配置说明](ab-02-exec-timeline.md) · [fx-13 配置说明](fx-13-granted-tags.md)
+**相关文档**：[ab-08 PRD](../prd/ab-08-toggle.md) · [ab-02 配置说明](ab-02-exec-timeline.md) · [fx-17 配置说明](fx-13-granted-tags.md)

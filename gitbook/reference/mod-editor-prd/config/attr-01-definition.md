@@ -51,6 +51,6 @@
 ## 6. 实例
 
 - 引擎默认：`assets/GAS/attribute_constraints.json`
-- mod 使用：演示底座效果表的 Credits/Ore 修改器
+- mod 使用：效果表的 Credits 修改器；Ore/Power 见实体模板
 
 **相关文档**：[attr-01 PRD](../prd/attr-01-definition.md) · [attr-02 配置说明](attr-02-modifiers.md)

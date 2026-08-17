@@ -1,6 +1,6 @@
-# fx-06 runtime spec · 响应链
+# fx-10 runtime spec · 响应链
 
-> 引擎实现任务书。第一性需求见 [fx-06 PRD](../prd/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
+> 引擎实现任务书。第一性需求见 [fx-09 PRD](../prd/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-06 PRD](../prd/fx-07-response-chain.md) · [reference](../reference/fx-07-response-chain.md)
+**相关文档**：[fx-09 PRD](../prd/fx-07-response-chain.md) · [reference](../reference/fx-07-response-chain.md)

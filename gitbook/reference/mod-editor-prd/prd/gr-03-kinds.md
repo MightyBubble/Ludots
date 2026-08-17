@@ -1,6 +1,6 @@
-# gr-02 · 六种 Kind
+# gr-05 · 六种 Kind
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-03-kinds.md)；编辑器需求见 [UXD](../uxd/gr-03-kinds.md)；引擎实现见 [runtime spec](../spec-runtime/gr-03-kinds.md)；编辑器实现见 [editor spec](../spec-editor/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-03-kinds.md)；编辑器需求见 [UXD](../uxd/gr-03-kinds.md)；引擎实现见 [runtime spec](../spec-runtime/gr-03-kinds.md)；editor spec 见 [editor spec](../spec-editor/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
 
 ## 1. 定位
 
@@ -15,10 +15,10 @@ kind 回答一张图"是什么、怎么收尾、能写哪些节点"：Effect、Q
 
 ## 3. 运行行为
 
-kind 在文档头声明、装载期定死：注册后不可改；挂接点只接受声明的 kind（gr-07）。
+kind 在文档头声明、装载期定死：注册后不可改；挂接点只接受声明的 kind（gr-09）。
 
 ## 4. 异常承诺
 
 越权节点、图未按约定收尾、kind 与挂接点不符——装载或挂接失败，指明图与节点。
 
-**相关文档**：[配置说明](../config/gr-03-kinds.md) · [gr-00](gr-01-model.md) · [gr-07](gr-08-mount-points.md)
+**相关文档**：[配置说明](../config/gr-03-kinds.md) · [gr-02](gr-01-model.md) · [gr-09](gr-08-mount-points.md)

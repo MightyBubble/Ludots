@@ -1,6 +1,6 @@
 # attr-04 · 派生属性图
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-04-derived.md)；编辑器需求见 [UXD](../uxd/attr-04-derived.md)；引擎实现见 [runtime spec](../spec-runtime/attr-04-derived.md)；编辑器实现见 [editor spec](../spec-editor/attr-04-derived.md)；现状见 [reference](../reference/attr-04-derived.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-04-derived.md)；编辑器需求见 [UXD](../uxd/attr-04-derived.md)；引擎实现见 [runtime spec](../spec-runtime/attr-04-derived.md)；editor spec 见 [editor spec](../spec-editor/attr-04-derived.md)；现状见 [reference](../reference/attr-04-derived.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
-# fx-07 UXD · 相位监听器的编辑器需求
+# fx-11 UXD · 相位监听器的编辑器需求
 
-> 相位监听器的编辑器需求（高保真规格）。第一性需求见 [fx-07 PRD](../prd/fx-08-phase-listeners.md)；配置写法见 [fx-07 配置说明](../config/fx-08-phase-listeners.md)；编辑器实现见 [editor spec](../spec-editor/fx-08-phase-listeners.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 相位监听器的编辑器需求（高保真规格）。第一性需求见 [fx-10 PRD](../prd/fx-08-phase-listeners.md)；配置写法见 [fx-10 配置说明](../config/fx-08-phase-listeners.md)；编辑器实现见 [editor spec](../spec-editor/fx-08-phase-listeners.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -49,4 +49,4 @@
 - 新建监听器全程无自由文本 id 手打（选择器化）。
 - 容量与纯相位限制在编辑期可见，不靠运行报错发现。
 
-**相关文档**：[fx-07 PRD](../prd/fx-08-phase-listeners.md) · [editor spec](../spec-editor/fx-08-phase-listeners.md)
+**相关文档**：[fx-10 PRD](../prd/fx-08-phase-listeners.md) · [editor spec](../spec-editor/fx-08-phase-listeners.md)
