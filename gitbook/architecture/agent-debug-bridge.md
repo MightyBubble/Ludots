@@ -26,7 +26,7 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 |------|------|
 | `LUDOTS_AGENT_BRIDGE=0` | 强制关闭（即使 Mod 已加载） |
 | `LUDOTS_AGENT_BRIDGE_PORT=<port>` | 覆盖端口（默认 47921，占用时自动 +1 重试最多 16 次） |
-| 发现文件 | `artifacts/agent-bridge/session.json`（`{ port, pid, tools }`），进程退出时删除 |
+| 发现文件 | `artifacts/agent-bridge/` 目录下的 `session.json`（`{ port, pid, tools }`），进程退出时删除 |
 
 安全边界：仅绑定 `127.0.0.1`，无鉴权——与 `dotnet-dump` 同信任模型，属调试接口。
 

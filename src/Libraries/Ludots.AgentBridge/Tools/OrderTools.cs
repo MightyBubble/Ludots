@@ -208,7 +208,7 @@ namespace Ludots.AgentBridge.Tools
             {
                 OrderId = 0,
                 OrderTypeId = orderTypeId,
-                PlayerId = context.Engine.GameSession.LocalPlayerId,
+                PlayerId = AgentToolContext.SolePlayerId(context.Engine),
                 Actor = actor,
                 CommandSource = actor,
                 SubmitMode = AgentToolContext.OptionalBool(args, "queued", false)

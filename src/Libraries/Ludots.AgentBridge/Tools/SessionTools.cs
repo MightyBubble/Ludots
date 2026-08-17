@@ -21,7 +21,7 @@ namespace Ludots.AgentBridge.Tools
         {
             var engine = context.Engine;
             var session = engine.GameSession;
-            var camera = session.Camera.State;
+            var camera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
 
             var mods = new JsonArray();
             foreach (string id in engine.ModLoader.LoadedModIds)
@@ -32,7 +32,10 @@ namespace Ludots.AgentBridge.Tools
             var result = new JsonObject
             {
                 ["tick"] = session.CurrentTick,
-                ["localPlayerId"] = session.LocalPlayerId,
+                ["localPlayerId"] = Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out var soleRep)
+                    && Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId > 0
+                    ? Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId
+                    : 1,
                 ["pacemaker"] = engine.Pacemaker?.GetType().Name ?? "null",
                 ["mods"] = mods,
                 ["camera"] = new JsonObject

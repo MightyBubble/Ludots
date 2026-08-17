@@ -17,6 +17,13 @@ namespace Ludots.AgentBridge
 
         public GameEngine Engine { get; }
 
+        public static int SolePlayerId(GameEngine engine)
+        {
+            return Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out _)
+                ? Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(engine).Require("seat.0").PossessedPlayerId
+                : 1;
+        }
+
         /// <summary>
         /// Resolves a runtime entity id to a live Arch entity by scanning.
         /// Throws entity.not_found when no alive entity matches.
