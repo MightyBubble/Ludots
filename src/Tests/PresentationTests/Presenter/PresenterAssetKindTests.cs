@@ -1749,7 +1749,6 @@ namespace Ludots.Tests.Presentation
 
             return new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
             };
         }

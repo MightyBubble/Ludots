@@ -288,7 +288,7 @@ namespace Ludots.Core.Input.Orders
         private OrderIdentityAssigner? _orderIdentityAssigner;
         
         // Context
-        private Entity _localPlayer;
+        private Entity _solePossessedRep;
         private int _playerId;
         private ActivationActorValidator? _activationActorValidator;
         private Entity _explicitActivationActor;
@@ -556,11 +556,11 @@ namespace Ludots.Core.Input.Orders
             CommandActionId = bindings.CommandActionId;
         }
         
-        public void SetLocalPlayer(Entity entity, int playerId)
+        public void SetSolePossessedActor(Entity entity, int playerId)
         {
             if (entity == Entity.Null)
             {
-                throw new ArgumentException("InputOrderMappingSystem requires a non-null local player entity.", nameof(entity));
+                throw new ArgumentException("InputOrderMappingSystem requires a non-null sole possessed actor entity.", nameof(entity));
             }
 
             if (playerId <= 0)
@@ -568,7 +568,7 @@ namespace Ludots.Core.Input.Orders
                 throw new ArgumentOutOfRangeException(nameof(playerId), "InputOrderMappingSystem requires a positive player id.");
             }
 
-            _localPlayer = entity;
+            _solePossessedRep = entity;
             _playerId = playerId;
         }
         
@@ -1107,7 +1107,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderWithOrderTypeKey(InputOrderMapping mapping, Entity actor, string orderTypeKey, out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer()) return false;
+            if (!HasExplicitSolePossessedActor()) return false;
             int orderTypeId = RequireOrderTypeId(mapping.ActionId, orderTypeKey);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -1241,7 +1241,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer()) return false;
+            if (!HasExplicitSolePossessedActor()) return false;
 
             int orderTypeId = RequireOrderTypeId(mapping);
 
@@ -1273,7 +1273,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, Entity actor, out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer() || actor == default)
+            if (!HasExplicitSolePossessedActor() || actor == default)
             {
                 return false;
             }
@@ -1377,7 +1377,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer()) return false;
+            if (!HasExplicitSolePossessedActor()) return false;
             
             int orderTypeId = RequireOrderTypeId(mapping);
             
@@ -1418,7 +1418,7 @@ namespace Ludots.Core.Input.Orders
             out Order order)
         {
             order = default;
-            if (!HasExplicitLocalPlayer() || actor == default)
+            if (!HasExplicitSolePossessedActor() || actor == default)
             {
                 return false;
             }
@@ -1669,7 +1669,7 @@ namespace Ludots.Core.Input.Orders
                     $"Active command intent '{intentName}' is not installed in the command intent registry.");
             }
 
-            if (!HasExplicitLocalPlayer())
+            if (!HasExplicitSolePossessedActor())
             {
                 return RejectCommandIntent(mapping, OrderSubmitResult.RejectedInvalidActor);
             }
@@ -1932,9 +1932,9 @@ namespace Ludots.Core.Input.Orders
                 return Entity.Null;
             }
 
-            if (_localPlayer != Entity.Null)
+            if (_solePossessedRep != Entity.Null)
             {
-                return _localPlayer;
+                return _solePossessedRep;
             }
 
             return Entity.Null;
@@ -2000,7 +2000,7 @@ namespace Ludots.Core.Input.Orders
                 ? _explicitActivationActor
                 : _isAiming && _aimingContext.Actor != Entity.Null
                     ? _aimingContext.Actor
-                    : _localPlayer;
+                    : _solePossessedRep;
             RecordRejectedActivation(actor, result);
             return result;
         }
@@ -2184,7 +2184,7 @@ namespace Ludots.Core.Input.Orders
                 return _collectionActorsScratch[0];
             }
 
-            return _localPlayer;
+            return _solePossessedRep;
         }
 
         private int CurrentActivationPlayerId => _hasExplicitActivationContext
@@ -2193,7 +2193,7 @@ namespace Ludots.Core.Input.Orders
                 ? _aimingContext.PlayerId
                 : _playerId;
 
-        private bool HasExplicitLocalPlayer()
+        private bool HasExplicitSolePossessedActor()
         {
             if (_hasExplicitActivationContext &&
                 _explicitActivationActor != Entity.Null &&
@@ -2209,7 +2209,7 @@ namespace Ludots.Core.Input.Orders
                 return true;
             }
 
-            return _playerId > 0 && _localPlayer != Entity.Null;
+            return _playerId > 0 && _solePossessedRep != Entity.Null;
         }
 
         private bool TryCaptureCollectionEntities(

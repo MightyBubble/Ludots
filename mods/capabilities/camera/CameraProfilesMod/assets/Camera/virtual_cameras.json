@@ -43,7 +43,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 120,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "allowUserInput": true
   },
   {

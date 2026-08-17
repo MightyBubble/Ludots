@@ -321,7 +321,7 @@ public sealed class ProductionOverviewPanelTests
 
 		Harness harness = Harness.Create(world, source);
 		var definition = CreateBaseDefinition();
-		definition.SourceKind = ProductionOverviewSourceKindIds.LocalPlayerRep;
+		definition.SourceKind = ProductionOverviewSourceKindIds.SolePossessedRep;
 		definition.SourceRef = EntityCollectionKeys.CommandSource;
 		harness.InstallProfile(definition);
 

@@ -49,7 +49,7 @@ internal sealed class UxPrototypeLocalOrderSourceSystem : ISystem<float>
             return;
         }
 
-        if (!_helper.TrySetLocalPlayer(_mapping, actor))
+        if (!_helper.TryBindSoleSeatActor(_mapping, actor))
         {
             return;
         }

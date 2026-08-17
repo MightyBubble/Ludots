@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -64,7 +65,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
 
         LoadMap(engine, InteractionShowcaseHubMapId);
 
-        Entity local = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) && localObj is Entity entity
+        Entity local = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity entity)
             ? entity
             : throw new InvalidOperationException("Local player entity is missing.");
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)

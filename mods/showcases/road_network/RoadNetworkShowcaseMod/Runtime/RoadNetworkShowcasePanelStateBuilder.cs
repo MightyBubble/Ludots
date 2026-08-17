@@ -12,6 +12,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
@@ -149,7 +150,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;
@@ -349,8 +350,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveLocalOwner()
         {
-            return _engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) &&
-                   ownerObj is Entity owner &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity owner) &&
                    _world.IsAlive(owner)
                 ? owner
                 : Entity.Null;

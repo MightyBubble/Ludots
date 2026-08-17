@@ -577,7 +577,7 @@ Deferred 模式下：
 Presenter 的可见性由三层控制�?
 
 1. **Entity CullState 继承** �?owner entity 被摄像机裁剪时，�?presenter 树跳�?emit（不发射 proxy）。子 presenter 继承父的 cull 状态�?
-2. **VisibilityCondition** �?声明式条件（�?`OwnerCullVisible`、`SourceIsLocalPlayer`），每帧评估�?
+2. **VisibilityCondition** �?声明式条件（�?`OwnerCullVisible`、`SourceIsSolePossessedRep`），每帧评估�?
 3. **VisibilityParamKey** �?命令式控制（如雾战系统写�?0=hidden/1=visible）�?
 
 选择高亮和队伍着色通过 Material behavior 实现�?

@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -274,7 +275,7 @@ public sealed class MinimapShowcaseAcceptanceTests
         Assert.That(NormalizeSignedRadians(screenMarkers.GetOrientationRad(0)), Is.EqualTo(0f).Within(0.001f));
         Assert.That(screenMarkers.GetOrientationLengthPx(0), Is.EqualTo(22f));
 
-        engine.GameSession.Camera.State.Yaw = 90f;
+        engine.AuthorityCamera().State.Yaw = 90f;
         runtime.SetRotateWithCamera(true);
         runtime.Refresh(engine, markers, screenMarkers);
 
@@ -316,7 +317,7 @@ public sealed class MinimapShowcaseAcceptanceTests
 
         Vector2 rightScreen = new(runtime.FieldX + (runtime.FieldSize * 0.95f), runtime.FieldY + (runtime.FieldSize * 0.5f));
         Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 northUpWorld), Is.True);
-        engine.GameSession.Camera.State.Yaw = 90f;
+        engine.AuthorityCamera().State.Yaw = 90f;
         runtime.SetRotateWithCamera(true);
         runtime.Refresh(engine, markers, screenMarkers);
         Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 rotatedWorld), Is.True);

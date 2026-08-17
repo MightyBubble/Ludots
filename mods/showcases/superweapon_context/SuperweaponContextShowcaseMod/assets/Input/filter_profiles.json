@@ -3,7 +3,7 @@
     {
       "id": "filter.superweapon.valid_targets",
       "associationQuery": {
-        "anchor": "localPlayerRep",
+        "anchor": "solePossessedRep",
         "expand": "controls"
       },
       "exclude": {

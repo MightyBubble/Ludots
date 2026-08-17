@@ -123,7 +123,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 120,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "defaultBlendDuration": 0.2,
     "blendCurve": "SmoothStep",
     "allowUserInput": true
@@ -151,7 +151,7 @@
     "rotateRequiresHold": false,
     "enableZoom": false,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "defaultBlendDuration": 0.15,
     "blendCurve": "SmoothStep",
     "allowUserInput": true

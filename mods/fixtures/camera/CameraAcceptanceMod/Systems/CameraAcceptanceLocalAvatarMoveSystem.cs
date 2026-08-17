@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CameraAcceptanceMod.Systems
@@ -38,8 +39,7 @@ namespace CameraAcceptanceMod.Systems
                 !CameraAcceptanceIds.IsAcceptanceMap(_engine.CurrentMapSession?.MapId.Value) ||
                 !_engine.GlobalContext.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object? inputObj) ||
                 inputObj is not IInputActionReader input ||
-                !_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-                localObj is not Entity local ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var local) ||
                 !_engine.World.IsAlive(local) ||
                 !_engine.World.Has<WorldPositionCm>(local))
             {
@@ -53,7 +53,7 @@ namespace CameraAcceptanceMod.Systems
             }
 
             moveIntent = WorldPlane2D.NormalizeOrDefault(moveIntent, Vector2.Zero);
-            Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(_engine.GameSession.Camera.State.Yaw, moveIntent);
+            Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State.Yaw, moveIntent);
             if (move.LengthSquared() <= 0.000001f)
             {
                 return;

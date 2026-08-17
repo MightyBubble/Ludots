@@ -1,3 +1,9 @@
 {
-  "startupMapId": "rts_war3_training"
+  "startupMapId": "rts_war3_training",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CameraAcceptanceMod.Systems
@@ -52,8 +53,7 @@ namespace CameraAcceptanceMod.Systems
 
         private void ApplySweepAvatarTarget(Vector2 targetCm)
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-                localObj is not Entity localPlayer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var localPlayer) ||
                 !_engine.World.IsAlive(localPlayer) ||
                 !_engine.World.Has<WorldPositionCm>(localPlayer))
             {

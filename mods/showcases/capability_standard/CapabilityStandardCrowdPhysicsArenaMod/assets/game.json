@@ -1,7 +1,9 @@
 {
   "startupMapId": "crowd_physics_arena",
-  "startupLocalPlayerId": 1,
-  "startupInputContexts": [ "Default_Gameplay", "CrowdPhysicsArena.Controls" ],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "CrowdPhysicsArena.Controls"
+  ],
   "windowTitle": "Ludots Engine - Capability Standard Crowd Physics Arena",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
@@ -13,8 +15,12 @@
     "orderTerminalResultCapacity": 16384
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
   },
   "presentation": {
     "presenterInstanceCapacity": 16384,
@@ -52,5 +58,11 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

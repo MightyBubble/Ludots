@@ -1,4 +1,5 @@
 {
+  "startupMapId": "control_plane_projection",
   "windowTitle": "Ludots - Control Plane Projection Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,
@@ -8,8 +9,10 @@
     "required": true,
     "provider": "cef"
   },
-  "startupMapId": "control_plane_projection",
-  "startupInputContexts": ["Default_Gameplay", "ControlPlaneProjection.Controls"],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "ControlPlaneProjection.Controls"
+  ],
   "commandSource": {
     "targetFilter": {
       "relationFilter": "All"
@@ -18,5 +21,11 @@
       "collectionKey": "controlplane.collection.ui.box",
       "title": "Control plane box acquisition"
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

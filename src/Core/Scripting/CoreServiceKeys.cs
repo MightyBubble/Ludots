@@ -387,9 +387,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");
 
-        // --- Local Command Source (presentation-layer) ---
-        public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
-        public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
+        // --- Client local seats & logical vision (Epic #896) ---
+        public static readonly ServiceKey<Ludots.Core.Client.ClientLocalSeatRegistry> ClientLocalSeatRegistry = new("ClientLocalSeatRegistry");
+        public static readonly ServiceKey<Ludots.Core.Client.LogicViewRegistry> LogicViewRegistry = new("LogicViewRegistry");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
 
         // --- Config & AI ---

@@ -9,6 +9,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 
@@ -76,7 +77,7 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
     private bool TryResolveLocalCommandSourceOwner(out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
         if (local == Entity.Null || !_engine.World.IsAlive(local))
         {
             return false;

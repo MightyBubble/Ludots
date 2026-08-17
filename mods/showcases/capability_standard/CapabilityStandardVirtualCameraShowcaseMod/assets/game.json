@@ -1,7 +1,9 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
-  "startupLocalPlayerId": 1,
-  "startupInputContexts": ["Default_Gameplay", "CapabilityStandard.VirtualCamera.Controls"],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "CapabilityStandard.VirtualCamera.Controls"
+  ],
   "windowTitle": "Ludots Engine - Capability Standard Virtual Camera",
   "targetFps": 0,
   "worldWidthInMacroTiles": 2,
@@ -24,5 +26,11 @@
     "minimapMarkerCapacity": 64,
     "runtimeEntitySpawnQueueCapacity": 64,
     "runtimeEntitySpawnReceiptQueueCapacity": 64
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

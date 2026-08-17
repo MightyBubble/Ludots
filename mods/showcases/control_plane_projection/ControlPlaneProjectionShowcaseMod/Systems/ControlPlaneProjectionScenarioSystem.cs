@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
@@ -18,8 +19,8 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
     /// Bootstraps the showcase world once the map session is live (CTRL-2 slice: Owns/MemberOf/Ally
-    /// edges via RelationshipRuntime.EnsureLink), binds P1Rep as the local command-source owner,
-    /// and services the ToggleProxy input action.
+    /// edges via RelationshipRuntime.EnsureLink), binds scenario seats once as this dual-rep harness
+    /// SSOT (not map-launch repair), and services the ToggleProxy input action.
     /// </summary>
     internal sealed class ControlPlaneProjectionScenarioSystem : ISystem<float>
     {
@@ -123,7 +124,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             _state.RefereePhase1ProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.RefereePhase1ProjectionCollectionKey);
 
             BuildRelationshipEdges(relationships);
-            BindLocalPlayer();
+            BindScenarioSeats();
 
             _state.BindRuntime(_world, tagOps);
         }
@@ -252,10 +253,9 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             relationships.EnsureLink(_state.P1Rep, _state.P2Rep, _state.AllyTypeId);
         }
 
-        private void BindLocalPlayer()
+        private void BindScenarioSeats()
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, _state.P1Rep);
-            _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+            ClientLocalSeatBindings.BindSoleSeat(_engine, _state.P1Rep, 1);
         }
 
         private static void ResolveUnits(MapSession session, string[] instanceIds, Entity[] destination)

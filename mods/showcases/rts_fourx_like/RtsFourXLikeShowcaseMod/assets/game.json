@@ -4,5 +4,11 @@
   "windowWidth": 1440,
   "windowHeight": 900,
   "windowResizable": true,
-  "targetFps": 60
+  "targetFps": 60,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

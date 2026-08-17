@@ -29,6 +29,8 @@
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
     <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
+    <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
+    <Compile Include="..\TestCommon\AuthorityCameraAccess.cs" Link="AuthorityCameraAccess.cs" />
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />

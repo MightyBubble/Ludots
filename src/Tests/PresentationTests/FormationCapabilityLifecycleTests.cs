@@ -13,6 +13,7 @@ using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -39,7 +40,7 @@ public sealed class FormationCapabilityLifecycleTests
         LoadMap(engine);
         TickUntil(engine, () => CountFormationAnchors(engine.World) > 0 && CountFormationMembers(engine.World) > 0, 180);
 
-        Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         ControlDomainQuery controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery)
             ?? throw new InvalidOperationException("Formation lifecycle test requires ControlDomainQuery.");
         int anchors = 0;
@@ -121,7 +122,7 @@ public sealed class FormationCapabilityLifecycleTests
     {
         engine.LoadMap(MapLoadRequest.FromMapId(
             "formation_capability_showcase",
-            MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)));
+            engine.MergedConfig.CreateStartupLaunchContext()));
     }
 
     private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames)

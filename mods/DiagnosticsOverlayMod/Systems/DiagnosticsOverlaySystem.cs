@@ -17,6 +17,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Core.Client;
 
 namespace DiagnosticsOverlayMod.Systems
 {
@@ -304,7 +305,7 @@ namespace DiagnosticsOverlayMod.Systems
                 wpCount += chunk.Count;
             }
 
-            var camera = _engine.GameSession.Camera.State;
+            var camera = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State;
             string vertexMapStatus = _engine.VertexMap == null
                 ? "NULL"
                 : $"{_engine.VertexMap.WidthInChunks}x{_engine.VertexMap.HeightInChunks}";

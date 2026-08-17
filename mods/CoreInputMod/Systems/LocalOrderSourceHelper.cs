@@ -25,6 +25,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -139,7 +140,7 @@ namespace CoreInputMod.Systems
             });
             mapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? _context.GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -301,28 +302,28 @@ namespace CoreInputMod.Systems
                 TryGetCommandSourceOwner);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
-            return _context.TryGetLocalPlayerId(out playerId);
+            return _context.TryGetSolePossessedPlayerId(out playerId);
         }
 
-        public bool TrySetLocalPlayer(InputOrderMappingSystem mapping, Entity actor)
+        public bool TryBindSoleSeatActor(InputOrderMappingSystem mapping, Entity actor)
         {
             if (mapping == null ||
                 actor == Entity.Null ||
                 !_world.IsAlive(actor) ||
-                !TryGetLocalPlayerId(out int playerId))
+                !TryGetSolePossessedPlayerId(out int playerId))
             {
                 return false;
             }
 
-            mapping.SetLocalPlayer(actor, playerId);
+            mapping.SetSolePossessedActor(actor, playerId);
             return true;
         }
 
         public Entity GetControlledActor()
         {
-            return TryGetLocalPlayerId(out int playerId)
+            return TryGetSolePossessedPlayerId(out int playerId)
                 ? _context.GetControlledActor(playerId)
                 : default;
         }
@@ -355,8 +356,7 @@ namespace CoreInputMod.Systems
                 return true;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                 local != Entity.Null &&
                 _world.IsAlive(local))
             {

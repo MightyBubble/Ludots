@@ -19,6 +19,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
@@ -69,7 +70,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null), "interaction showcase must publish the local player command owner.");
             Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
             Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
@@ -209,7 +210,7 @@ namespace Ludots.Tests.GAS.Production
                 engine.LoadMap(InteractionShowcaseIds.HubMapId);
                 Tick(engine, 8);
 
-                Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
                 Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
                 Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
                 Entity commander = FindEntityByName(engine.World, InteractionShowcaseIds.CommanderName);
@@ -268,7 +269,7 @@ namespace Ludots.Tests.GAS.Production
             engine.LoadMap(InteractionShowcaseIds.HubMapId);
             Tick(engine, 8);
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.Has<WorldPositionCm>(localPlayer), Is.True);
 
@@ -795,7 +796,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 owner = frame.ContextEntity;
             }
-            else if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer))
+            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer))
             {
                 owner = localPlayer;
             }

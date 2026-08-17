@@ -14,6 +14,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using UxPrototypeMod.UI;
 
@@ -26,9 +27,6 @@ internal sealed class UxPrototypeScenarioState
 
     private static readonly QueryDescription PrototypeEntityQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm, MapEntity>();
-
-    private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription()
-        .WithAll<Name, PlayerOwner, MapEntity, CommandSourceSelectableTag>();
 
     private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription()
         .WithAll<CommandSourceSelectableTag, MapEntity>();
@@ -87,7 +85,7 @@ internal sealed class UxPrototypeScenarioState
         }
 
         ResetForMap(mapId);
-        Entity localPlayer = EnsurePrototypeLocalPlayer(engine, mapId);
+        Entity localPlayer = RequirePrototypeSolePossessedRep(engine, mapId);
         PublishSelectableKnowledge(engine, mapId, localPlayer);
         SeedRallyPoints(engine, mapId);
         AddEvent("War council convened around the eastern pass.");
@@ -151,7 +149,7 @@ internal sealed class UxPrototypeScenarioState
         }
 
         EnsureInitialized(engine, mapId!);
-        Entity localPlayer = EnsurePrototypeLocalPlayer(engine, mapId!);
+        Entity localPlayer = RequirePrototypeSolePossessedRep(engine, mapId!);
         PublishSelectableKnowledge(engine, mapId!, localPlayer);
         float speedMultiplier = _paused ? 0f : _speedIndex switch
         {
@@ -174,99 +172,20 @@ internal sealed class UxPrototypeScenarioState
         AdvanceSkillCooldowns(scaledDt);
     }
 
-    private static Entity EnsurePrototypeLocalPlayer(GameEngine engine, string activeMapId)
+    private static Entity RequirePrototypeSolePossessedRep(GameEngine engine, string activeMapId)
     {
-        if (TryResolveExistingLocalPlayer(engine, activeMapId, out Entity existing))
+        Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        if (!engine.World.IsAlive(possessed) ||
+            !engine.World.TryGet(possessed, out PlayerOwner owner) ||
+            !engine.World.TryGet(possessed, out MapEntity mapEntity) ||
+            owner.PlayerId != ShowcaseLocalPlayerId ||
+            !string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
         {
-            return existing;
+            throw new InvalidOperationException(
+                "UxPrototypeMod requires sole ClientLocalSeat possession of map playerId 1 from launchContext.localSeats / startupLocalSeats.");
         }
 
-        Entity firstCandidate = Entity.Null;
-        Entity preferredCandidate = Entity.Null;
-        int firstPlayerId = 0;
-        int preferredPlayerId = 0;
-
-        engine.World.Query(in LocalPlayerCandidateQuery, (Entity entity, ref Name name, ref PlayerOwner owner, ref MapEntity mapEntity, ref CommandSourceSelectableTag _) =>
-        {
-            if (!IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
-            {
-                return;
-            }
-
-            if (firstCandidate == Entity.Null)
-            {
-                firstCandidate = entity;
-                firstPlayerId = owner.PlayerId;
-            }
-
-            if (string.Equals(name.Value, "Blue City", StringComparison.OrdinalIgnoreCase))
-            {
-                preferredCandidate = entity;
-                preferredPlayerId = owner.PlayerId;
-            }
-        });
-
-        Entity resolved = preferredCandidate != Entity.Null ? preferredCandidate : firstCandidate;
-        int resolvedPlayerId = preferredCandidate != Entity.Null ? preferredPlayerId : firstPlayerId;
-        if (resolved == Entity.Null)
-        {
-            throw new InvalidOperationException("UxPrototypeMod requires a map-owned local player representative before command-source selection can run.");
-        }
-
-        PublishPrototypeLocalPlayer(engine, resolved, resolvedPlayerId);
-        return resolved;
-    }
-
-    private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
-    {
-        localPlayer = Entity.Null;
-        if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
-            !engine.World.IsAlive(existing) ||
-            !engine.World.TryGet(existing, out PlayerOwner owner) ||
-            !engine.World.TryGet(existing, out MapEntity mapEntity) ||
-            !IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
-        {
-            return false;
-        }
-
-        localPlayer = existing;
-        PublishPrototypeLocalPlayer(engine, existing, owner.PlayerId);
-        return true;
-    }
-
-    private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
-    {
-        return owner.PlayerId == ShowcaseLocalPlayerId &&
-               string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void PublishPrototypeLocalPlayer(GameEngine engine, Entity localPlayer, int playerId)
-    {
-        if (playerId <= 0)
-        {
-            throw new InvalidOperationException("UxPrototypeMod local player representative must have a positive PlayerOwner.PlayerId.");
-        }
-
-        if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
-            lookup == null ||
-            (lookup.TryGet(playerId, out Entity existing) && existing != localPlayer))
-        {
-            lookup = new PlayerEntityLookup();
-            engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
-        }
-
-        if (!lookup.TryGet(playerId, out _))
-        {
-            lookup.Register(playerId, localPlayer);
-        }
-
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-        engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-        if (engine.CurrentMapSession != null)
-        {
-            engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
-            engine.CurrentMapSession.LocalPlayerId = playerId;
-        }
+        return possessed;
     }
 
     private static void PublishSelectableKnowledge(GameEngine engine, string activeMapId, Entity viewer)
@@ -822,7 +741,7 @@ internal sealed class UxPrototypeScenarioState
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;
