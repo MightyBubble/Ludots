@@ -1,6 +1,6 @@
-# 两刀取更大的那一刀
+# 两刀里挑大的一刀
 
-左边 12、右边 28，打出去的是更大的 28。
+两块刀伤 12 和 28 摆上台面，挑中的是更长的那块，打出去按它的长度掉血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_MaxFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_MaxFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_MaxFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 两刀里更大的那一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 更长的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 两刀取更大的那一刀
+Feature: 两刀里挑大的一刀
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_MaxFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_MaxFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「左边 12、右边 28，打出去的是更大的 28。」这类人话
+    Then 字幕讲的是「两块刀伤 12 和 28 摆上台面，挑中的是更长的那块，打出去按它的长度掉血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

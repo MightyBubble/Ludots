@@ -55,6 +55,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
         SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
         SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+
+        int ResolveTableRow(int tableId, int key)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        int TableReadInt(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        float TableReadFloat(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -358,6 +373,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveGraphLookupTable(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup table '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
+        int ResolveGraphLookupField(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup field '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
         int ResolveRelationshipType(string name);
         int ResolveRelationshipMetric(string name);
         int ResolveRelationshipFlag(string name);

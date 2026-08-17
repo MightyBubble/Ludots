@@ -1,6 +1,6 @@
 # 打上失和标记
 
-断链或失和后插上失和旗。
+最弱那条链上插起失和旗。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 给{friend}打上失和标记。
+> 给{friend}的链插上失和旗。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 打上失和标记
     Given 玩家打开 capability_standard_graph_op_RelationshipSetFlag
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipSetFlag/play.mp4
     When 短剧演完
-    Then 字幕讲的是「断链或失和后插上失和旗。」这类人话
+    Then 字幕讲的是「最弱那条链上插起失和旗。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

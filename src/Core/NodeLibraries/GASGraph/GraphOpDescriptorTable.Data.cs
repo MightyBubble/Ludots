@@ -134,6 +134,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.LoadConfigFloat, LinearAll, GraphValueType.Float, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
             Add(rows, GraphNodeOp.LoadConfigInt, LinearAll, GraphValueType.Int, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
             Add(rows, GraphNodeOp.LoadConfigEffectId, LinearAll, GraphValueType.Int, imm: GraphOperandRole.SymbolImm, listenerOwner: true);
+            Add(rows, GraphNodeOp.ResolveTableRow, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.TableReadInt, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.TableReadFloat, LinearQueryScript, GraphValueType.Float, portA, queryOut: GraphValueType.Float, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadContextSource, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTarget, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTargetContext, LinearAll, GraphValueType.Entity);

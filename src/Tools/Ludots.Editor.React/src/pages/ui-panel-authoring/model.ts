@@ -19,7 +19,8 @@ export type CanvasNode = {
   id: string;
   title: string;
   detail: string;
-  kind: 'source' | 'op' | 'const' | 'panel';
+  /** intent = unpaid capability marker; never treated as a compilable op */
+  kind: 'source' | 'op' | 'const' | 'panel' | 'intent';
   x: number;
   y: number;
   /** output port ids on this node (default: ["out"]) */
@@ -80,7 +81,7 @@ export const SURFACE_META: Record<
   webui: {
     label: 'Web UI',
     native: 'WPK descriptor fields[]',
-    note: 'sourceKind + attributeId / graphOutputKey',
+    note: 'sourceKind 互斥：attributeId 或 graphOutputKey',
   },
 };
 
@@ -92,8 +93,8 @@ export const TEMPLATES: PanelTemplate[] = [
     surfaceKind: 'reactive',
     variables: [
       { id: 'hp', label: '血量', valueKind: 'Float' },
-      { id: 'lastKill', label: '上一次击杀', valueKind: 'Text' },
-      { id: 'curState', label: '当前状态', valueKind: 'Text' },
+      { id: 'lastKill', label: '上一次击杀', valueKind: 'Int' },
+      { id: 'curState', label: '当前状态', valueKind: 'Int' },
     ],
     nodes: [
       {
@@ -147,32 +148,42 @@ export const TEMPLATES: PanelTemplate[] = [
       {
         id: 'bbKill',
         title: 'ReadBlackboard',
-        detail: 'BB key · combat.last_kill',
+        detail: 'BB key · combat.last_kill → Int token id（Text BB 另单）',
         kind: 'op',
         x: 620,
         y: 140,
         ins: ['entity'],
-        outs: ['text'],
+        outs: ['token'],
       },
       {
-        id: 'tagState',
-        title: 'ReadGameplayTag',
-        detail: 'tag · State.*（当前态）',
-        kind: 'op',
+        id: 'stateTag',
+        title: '（意图）当前状态 tag id',
+        detail: '玩法纯读未交付 · 灰态占位，非可编译 op',
+        kind: 'intent',
         x: 620,
         y: 260,
         ins: ['entity'],
-        outs: ['tag'],
+        outs: ['key'],
       },
       {
-        id: 'tagLookup',
-        title: 'LookupTagDisplayText',
-        detail: 'tag → 文案表',
+        id: 'resolveRow',
+        title: 'ResolveTableRow',
+        detail: 'lookupTable · mod.example.state_display',
         kind: 'op',
         x: 800,
-        y: 260,
-        ins: ['tag'],
-        outs: ['text'],
+        y: 220,
+        ins: ['key'],
+        outs: ['row'],
+      },
+      {
+        id: 'readToken',
+        title: 'TableReadInt',
+        detail: 'lookupField · displayToken → Int',
+        kind: 'op',
+        x: 800,
+        y: 300,
+        ins: ['row'],
+        outs: ['token'],
       },
       {
         id: 'panel',
@@ -190,7 +201,7 @@ export const TEMPLATES: PanelTemplate[] = [
       { id: 'e3', from: 'idx', fromPort: 'value', to: 'at', toPort: 'index', valueKind: 'Int' },
       { id: 'e4', from: 'at', fromPort: 'entity', to: 'hpAttr', toPort: 'entity' },
       { id: 'e5', from: 'at', fromPort: 'entity', to: 'bbKill', toPort: 'entity' },
-      { id: 'e6', from: 'at', fromPort: 'entity', to: 'tagState', toPort: 'entity' },
+      { id: 'e6', from: 'at', fromPort: 'entity', to: 'stateTag', toPort: 'entity' },
       {
         id: 'e7',
         from: 'hpAttr',
@@ -202,25 +213,34 @@ export const TEMPLATES: PanelTemplate[] = [
       {
         id: 'e8',
         from: 'bbKill',
-        fromPort: 'text',
+        fromPort: 'token',
         to: 'panel',
         toPort: 'lastKill',
-        valueKind: 'Text',
+        valueKind: 'Int',
       },
       {
         id: 'e9',
-        from: 'tagState',
-        fromPort: 'tag',
-        to: 'tagLookup',
-        toPort: 'tag',
+        from: 'stateTag',
+        fromPort: 'key',
+        to: 'resolveRow',
+        toPort: 'key',
+        valueKind: 'Int',
       },
       {
         id: 'e10',
-        from: 'tagLookup',
-        fromPort: 'text',
+        from: 'resolveRow',
+        fromPort: 'row',
+        to: 'readToken',
+        toPort: 'row',
+        valueKind: 'Int',
+      },
+      {
+        id: 'e11',
+        from: 'readToken',
+        fromPort: 'token',
         to: 'panel',
         toPort: 'curState',
-        valueKind: 'Text',
+        valueKind: 'Int',
       },
     ],
     bindings: {
@@ -228,7 +248,6 @@ export const TEMPLATES: PanelTemplate[] = [
         sourceKind: 'graphOutput',
         graphOutputKey: 'panel.entity_info.hp',
         fromNodeId: 'hpAttr',
-        attributeId: 'attribute.health.current',
       },
       lastKill: {
         sourceKind: 'graphOutput',
@@ -238,7 +257,7 @@ export const TEMPLATES: PanelTemplate[] = [
       curState: {
         sourceKind: 'graphOutput',
         graphOutputKey: 'panel.entity_info.curState',
-        fromNodeId: 'tagLookup',
+        fromNodeId: 'readToken',
       },
     },
     copyTemplate: '血量: {hp}\n上一次击杀的对象: {lastKill}\n当前状态: {curState}',

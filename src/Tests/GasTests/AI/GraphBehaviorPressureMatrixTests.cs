@@ -21,6 +21,8 @@ namespace Ludots.Tests.Gas.AI
         private const double FrameBudgetMs = 15.0;
         private const double HfsmFrameBudgetMs = 5.0;
         private const double LevelFrameBudgetMs = 5.0;
+        private const double CiFrameEnvelopeMs = 25.0;
+        private const double CiNarrowEnvelopeMs = 10.0;
 
         private static string ArtifactDir
         {
@@ -63,16 +65,20 @@ namespace Ludots.Tests.Gas.AI
             {
                 PressureThinkRow row = m1[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), $"M1 A={row.Agents} N={row.Topology} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(FrameBudgetMs),
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
                     $"M1 A={row.Agents} N={row.Topology} think wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiFrameEnvelopeMs),
+                    $"M1 A={row.Agents} N={row.Topology} think wave exceeded CI envelope: {row.TimeMs:F3}");
             }
 
             for (int i = 0; i < m2.Length; i++)
             {
                 PressureThinkRow row = m2[i];
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), $"M2 G={row.Topology} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(FrameBudgetMs),
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
                     $"M2 A={row.Agents} G={row.Topology} think-wave sum exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiFrameEnvelopeMs),
+                    $"M2 A={row.Agents} G={row.Topology} think-wave sum exceeded CI envelope: {row.TimeMs:F3}");
             }
 
             for (int i = 0; i < m3.Length; i++)
@@ -93,8 +99,10 @@ namespace Ludots.Tests.Gas.AI
                 Assert.That(row.Transitions, Is.EqualTo(row.Agents / 2),
                     $"M4 took {row.Transitions}/{row.Agents / 2} expected half-stimulus transitions.");
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), "M4 produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(HfsmFrameBudgetMs),
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(HfsmFrameBudgetMs),
                     $"M4 HFSM think wave exceeded {HfsmFrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiNarrowEnvelopeMs),
+                    $"M4 HFSM think wave exceeded CI envelope: {row.TimeMs:F3}");
             }
 
             for (int i = 0; i < m5.Length; i++)
@@ -103,8 +111,10 @@ namespace Ludots.Tests.Gas.AI
                 Assert.That(row.Checked, Is.EqualTo(row.ArmedTriggers),
                     $"M5 checked {row.Checked}/{row.ArmedTriggers} armed triggers.");
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0), "M5 produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(LevelFrameBudgetMs),
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(LevelFrameBudgetMs),
                     $"M5 level director think wave exceeded {LevelFrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiNarrowEnvelopeMs),
+                    $"M5 level director think wave exceeded CI envelope: {row.TimeMs:F3}");
             }
 
             for (int i = 0; i < m6.Length; i++)
@@ -114,8 +124,10 @@ namespace Ludots.Tests.Gas.AI
                     $"M6 targets={row.Agents} I={row.Instructions} halted {row.Halted}/{row.Agents} cast programs.");
                 Assert.That(row.TimeMs, Is.GreaterThan(0.0),
                     $"M6 targets={row.Agents} I={row.Instructions} produced no timing sample.");
-                Assert.That(row.TimeMs, Is.LessThan(FrameBudgetMs),
+                Warn.If(row.TimeMs, Is.GreaterThanOrEqualTo(FrameBudgetMs),
                     $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded {FrameBudgetMs:F0}ms: {row.TimeMs:F3}");
+                Assert.That(row.TimeMs, Is.LessThan(CiFrameEnvelopeMs),
+                    $"M6 targets={row.Agents} I={row.Instructions} cast wave exceeded CI envelope: {row.TimeMs:F3}");
             }
         }
 

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryFilterTemplate",
-  "windowTitle": "Ludots - 只留下侦察兵",
+  "windowTitle": "Ludots - 只挑侦察兵",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

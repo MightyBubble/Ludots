@@ -272,7 +272,7 @@
     },
     {
       "InstanceId": "unit10",
-      "Template": "Unit.Soldier",
+      "Template": "GraphOps.Ally",
       "Overrides": {
         "Name": {
           "Value": "友军11"

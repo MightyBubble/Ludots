@@ -54,6 +54,6 @@
 ## 6. 实例
 
 - 底座模板表：`mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/Entities/templates.json`
-- 出生效果消费方：效果卷 fx-16（造单位）
+- 出生效果消费方：效果卷 fx-20（造单位）
 
 **相关文档**：[ent-01 PRD](../prd/ent-01-templates.md) · [map-01 配置说明](map-01-definition.md) · [cfg-04 配置说明](../config/cfg-04-config-tables.md)

@@ -28,6 +28,8 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
     private const float SnapRadiusCm = 200f;
     private const float PayloadFloatValue = 2.5f;
     private const int PayloadIntValue = 99;
+    private const float SnapGhostRadius = 0.4f;
+    private const float SnapDotRadius = 0.15f;
 
     private bool _seeded;
     private Entity _viewer;
@@ -36,6 +38,9 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
     private float _overlayRangeMeters;
     private int _aimX;
     private int _aimY;
+    private int _preSnapX;
+    private int _preSnapY;
+    private bool _snapAimed;
 
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
@@ -62,6 +67,8 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         SeedOwnershipAndKnowledge(ctx);
         ctx.TargetPosCm = SeedTargetPos(ctx);
         ctx.HasTargetPosCm = true;
+        _preSnapX = ctx.TargetPosCm.X;
+        _preSnapY = ctx.TargetPosCm.Y;
         ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
         PrefillFanOut(ctx);
         _overlayRangeMeters = OverlayRangeMeters(ctx.Vignette.Op);
@@ -78,7 +85,6 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException($"Event driver for {ctx.Vignette.Op} was not seeded.");
         }
 
-        ctx.EffectRequests.Clear();
         ctx.EventPayload = BuildPayload(ctx.Vignette.Op);
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
@@ -87,6 +93,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         ctx.EventBus.Update();
         _aimX = ctx.TargetPosCm.X;
         _aimY = ctx.TargetPosCm.Y;
+        _snapAimed = true;
         ApplyBeat(ctx, result, healthBefore);
         ctx.Metrics.Detail = GraphOpsNodeActorBinding.FormatDetail(ctx.Vignette.DetailTemplate, ctx.CaptionValues);
         GraphOpsNodeVignetteLoader.RejectBannedCaption(ctx.Metrics.Detail, ctx.Vignette.Op, "detail");
@@ -133,6 +140,7 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                     new System.Numerics.Vector2(2f, 0f)
                 ],
                 GraphShowcaseStagePresenter.PathColor);
+            DrawSnapResidue(debugDraw);
         }
 
         int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
@@ -145,6 +153,40 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 ctx.Vignette.Actors[target].X,
                 ctx.Vignette.Actors[target].Y);
         }
+    }
+
+    private void DrawSnapResidue(DebugDrawCommandBuffer debugDraw)
+    {
+        float fromX = _preSnapX / 100f;
+        float fromY = _preSnapY / 100f;
+        GraphShowcaseStagePresenter.DrawGhostCircle(
+            debugDraw,
+            fromX,
+            fromY,
+            SnapGhostRadius,
+            GraphShowcaseStagePresenter.GhostColor);
+        if (!_snapAimed)
+        {
+            return;
+        }
+
+        float toX = _aimX / 100f;
+        float toY = _aimY / 100f;
+        GraphShowcaseStagePresenter.DrawDirectedLine(
+            debugDraw,
+            fromX,
+            fromY,
+            toX,
+            toY,
+            0.1f,
+            GraphShowcaseStagePresenter.CasterColor);
+        GraphShowcaseStagePresenter.DrawThickOutlineCircle(
+            debugDraw,
+            toX,
+            toY,
+            SnapDotRadius,
+            GraphShowcaseStagePresenter.OutlineDark,
+            GraphShowcaseStagePresenter.GateColor);
     }
 
     private void BindViewer(GraphOpsNodeDriverContext ctx)
@@ -271,6 +313,8 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
                 RequireSnapSucceeded(ctx, featuredBool, "路边");
                 MoveMarker(ctx, _aimX / 100f, _aimY / 100f);
                 ctx.CaptionValues["result"] = "路边";
+                ctx.CaptionValues["x"] = _aimX.ToString();
+                ctx.CaptionValues["y"] = _aimY.ToString();
                 _overlayArmed = true;
                 break;
             case "LoadViewer":

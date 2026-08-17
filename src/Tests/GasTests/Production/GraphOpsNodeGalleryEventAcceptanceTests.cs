@@ -32,6 +32,14 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
         }
     }
 
+    [TestCase("FanOutDispatchEffect")]
+    [TestCase("FanOutDispatchEffectDynamic")]
+    public void FanOutDispatch_SettlesQueuedEffectRequests(string op)
+    {
+        using var runtime = BindAndTick(op);
+        Assert.That(runtime.Context.EffectRequests!.Count, Is.EqualTo(0), op);
+    }
+
     [Test]
     public void SnapToNearestInCollection_SucceedsWithPlayerCaption()
     {
@@ -87,7 +95,7 @@ public sealed class GraphOpsNodeGalleryEventAcceptanceTests
     {
         using var runtime = BindAndTick("SnapToNearestGraphEdge");
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("吸到路上最近的边"));
+        Assert.That(runtime.Title, Is.EqualTo("离路太远就拽回路边"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("路边"));
     }
 

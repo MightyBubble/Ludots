@@ -7,6 +7,7 @@
 - [运行时总览](runtime-overview.md)
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [UI 面板作者形态（四种表面）](ui-panel-authoring-form.md)
+- [UIP-0：Template / Instance / Router 合同](ui-panel-template-instance-router.md) — ADR 正本挂 [#880](https://github.com/MightyBubble/Ludots/issues/880)；本页为仓库锚点
 - [Mod 架构](mod-architecture.md)
 - [Mod Extensible Runtime](mod-extensible-runtime.md)
 - [Mod Extensible Runtime Showcases](mod-extensible-runtime-showcases/README.md)
@@ -15,8 +16,8 @@
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
 - [图能力唯一入口](graph-capability-status.md) — **进度、还开着的活、不该合的 PR，只认这里**
 - [图复用库合同：FuncLib / ActionLib](graph-funclib-actionlib-contract.md) — **纯函数库 vs 可挂起动作库；Effect 时间轴与阶段表达力补丁**
-- [Tag → 展示 Token 查表（面板 curState）](tag-display-lookup.md)
-- [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md)
+- [（已废止）TagDisplay 专线查表](tag-display-lookup.md)
+- [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md) — **查表 SSOT**
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
 - [实时技能工作台（LSW）架构契约](live-skill-workbench.md) — **热调试技能数值 / 属性 / 效果链 / AI 草稿与热应用分级的 SSOT**
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)

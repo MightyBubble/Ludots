@@ -281,7 +281,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.Yield or
                 GraphNodeOp.HaltReturnInt or
                 GraphNodeOp.InvokeScript or
-                GraphNodeOp.MoveInt
+                GraphNodeOp.MoveInt or
+                GraphNodeOp.ResolveTableRow or
+                GraphNodeOp.TableReadInt or
+                GraphNodeOp.TableReadFloat
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -772,6 +775,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HaltReturnInt, HandleHaltReturnInt, "HaltReturnInt graph opcode.");
             Register(GraphNodeOp.InvokeScript, HandleInvokeScript, "InvokeScript graph opcode.");
             Register(GraphNodeOp.MoveInt, HandleMoveInt, "MoveInt graph opcode.");
+            Register(GraphNodeOp.ResolveTableRow, HandleResolveTableRow, "ResolveTableRow graph opcode.");
+            Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
+            Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
         }
 
         // ── Value Ops ──
@@ -933,6 +939,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleMoveInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.I[ins.Dst] = s.I[ins.A];
+        }
+
+        // ── Generic lookup tables (#881) ──
+
+        private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key)
+            s.I[ins.Dst] = s.Api.ResolveTableRow(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleTableReadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle)
+            s.I[ins.Dst] = s.Api.TableReadInt(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle)
+            s.F[ins.Dst] = s.Api.TableReadFloat(ins.Imm, s.I[ins.A]);
         }
 
         // ── Attribute ──

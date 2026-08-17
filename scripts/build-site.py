@@ -50,6 +50,7 @@ DOCS_DIR = REPO_ROOT / "docs"
 GITBOOK_DIR = REPO_ROOT / "gitbook"
 SUMMARY_MD = GITBOOK_DIR / "SUMMARY.md"
 PRD_README = GITBOOK_DIR / "reference" / "mod-editor-prd" / "README.md"
+PRD_TODO_DIR = GITBOOK_DIR / "reference" / "mod-editor-prd" / "todo"
 ACCEPTANCE_DIR = REPO_ROOT / "artifacts" / "acceptance"
 GRAPH_OP_EVIDENCE_GLOB = "capability_standard_graph_op_*"
 EVIDENCE_DIR = REPO_ROOT / "artifacts" / "evidence"
@@ -381,12 +382,26 @@ def build(out_dir: Path) -> int:
         "tree": nav_tree,
     }
 
+    todo_docs = []
+    if PRD_TODO_DIR.is_dir():
+        tf = [f for f in PRD_TODO_DIR.glob("*.md") if f.name != "README.md"]
+        readme = PRD_TODO_DIR / "README.md"
+        if readme.exists(): tf.append(readme)
+        for f in sorted(tf):
+            first = ""
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if line.startswith("# "):
+                    first = line[2:].strip()
+                    break
+            todo_docs.append({"file": "todo/" + f.name, "title": first or f.stem})
+
     print("-- 解析 mod-editor-prd/README.md 分篇目录 -> prd-nav.js")
     prd_catalog = parse_prd_catalog(PRD_README)
     prd_nav = {
         "generatedAt": now,
         "source": "gitbook/reference/mod-editor-prd/README.md",
         **prd_catalog,
+        "todo": todo_docs,
     }
 
     print("-- 读取 showcase.registry.json → gallery-data.js")

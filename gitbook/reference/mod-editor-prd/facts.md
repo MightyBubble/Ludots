@@ -1,7 +1,7 @@
 # 事实与取值表（生成物）
 
 > 由 `scripts/generate-prd-facts.py` 从代码与资产抽取；**勿手改**，再生成本页。
-> 生成时间：2026-08-17T00:59:56+08:00
+> 生成时间：2026-08-17T01:50:00+08:00
 
 ## 配置目录（assets/config_catalog.json）
 
@@ -65,5 +65,5 @@
 
 - Tag 总数上限：`src/Core/Gameplay/GAS/TagRuleRegistry.cs` = **256**
 - 属性总数上限：`src/Core/Gameplay/GAS/Registry/AttributeRegistry.cs` = **64**
-- 图程序上限：`src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs` = **0**
+- 图程序上限：`src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs` = **4095**
 

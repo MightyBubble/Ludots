@@ -1,11 +1,11 @@
 {
   "op": "DivFloat",
   "driver": "linear",
-  "title": "按距离摊薄",
-  "beat": "同样 40 点伤害，距离翻倍就摊成一半。",
-  "detailTemplate": "按距离摊薄后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "一刀摊给两根木桩",
+  "beat": "40 的伤害段从中间切开，两根木桩各接一半。",
+  "detailTemplate": "摊开之后每一根木桩挨 {result}；两根血条都从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "摊"
+    "摊开"
   ],
   "featuredNodeId": "attenuation",
   "graphKind": "Effect",
@@ -24,8 +24,18 @@
       "id": "target",
       "role": "target",
       "template": "GraphOps.Target",
-      "name": "木桩",
+      "name": "左木桩",
       "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "context",
+      "role": "context",
+      "template": "GraphOps.Target",
+      "name": "右木桩",
+      "x": 6.5,
       "y": 0,
       "health": 100,
       "healthMax": 100
@@ -33,6 +43,6 @@
   ],
   "linear": {
     "resultKind": "float",
-    "applyTo": "targetHealthSubtract"
+    "applyTo": "graphSettled"
   }
 }

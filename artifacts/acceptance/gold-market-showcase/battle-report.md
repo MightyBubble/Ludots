@@ -6,5 +6,5 @@
 - rollback status: OutputBlocked
 - rollback gold after failure: 7
 - rollback relics after failure: 1
-- ui refresh allocated bytes (reported, not asserted): 5182256
+- ui refresh allocated bytes (reported, not asserted): 6330160
 - sampled frames: 20

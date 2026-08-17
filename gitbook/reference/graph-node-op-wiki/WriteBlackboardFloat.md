@@ -1,6 +1,6 @@
-# 把威力写到记事板
+# 把这一拳的威力记上板
 
-算完 35 写上去，下一眼能读到。
+35 落进威力格，格子亮了。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 记下威力 {result}。
+> 威力格记下 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把威力写到记事板
+Feature: 把这一拳的威力记上板
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_WriteBlackboardFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_WriteBlackboardFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「算完 35 写上去，下一眼能读到。」这类人话
+    Then 字幕讲的是「35 落进威力格，格子亮了。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

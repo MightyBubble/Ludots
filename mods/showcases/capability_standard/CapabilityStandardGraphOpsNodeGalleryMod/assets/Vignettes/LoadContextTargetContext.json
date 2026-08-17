@@ -1,11 +1,12 @@
 {
   "op": "LoadContextTargetContext",
   "driver": "blackboard",
-  "title": "从情境取出额外那个人",
-  "beat": "情境里还有一个关联目标。",
-  "detailTemplate": "从情境取出额外那个人，关联到{named}。",
+  "title": "从情境信封找出额外那个人",
+  "beat": "信封第三格写着这一击还要照顾谁。",
+  "detailTemplate": "信封额外那格指向{named}。",
   "assertDetailContains": [
-    "关联"
+    "信封",
+    "额外那格"
   ],
   "featuredNodeId": "tgtCtx",
   "graphKind": "Effect",

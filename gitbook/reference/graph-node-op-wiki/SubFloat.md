@@ -1,6 +1,6 @@
-# 距离把伤害削掉一截
+# 格挡先咬掉一截
 
-走远了，50 点里被削掉 12 点，头顶那根条按剩下的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。
+50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SubFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 走远之后被削掉一截，这一刀剩下 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
+> 咬掉一截后剩下 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 距离把伤害削掉一截
+Feature: 格挡先咬掉一截
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_SubFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_SubFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「走远了，50 点里被削掉 12 点，头顶那根条按剩下的数往下掉，是把算式结果画上去的示意，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

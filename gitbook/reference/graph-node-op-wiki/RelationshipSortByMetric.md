@@ -1,6 +1,6 @@
 # 按好感排个序
 
-最高好感排前面，字幕点名第一。
+按好感高低挂出名次牌。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按好感排序，排第一的是{friend}，好感 {loyalty}。
+> 排第一是{friend}，好感 {loyalty}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 按好感排个序
     Given 玩家打开 capability_standard_graph_op_RelationshipSortByMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipSortByMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最高好感排前面，字幕点名第一。」这类人话
+    Then 字幕讲的是「按好感高低挂出名次牌。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

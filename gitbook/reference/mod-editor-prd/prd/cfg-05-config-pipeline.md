@@ -1,6 +1,6 @@
 # cfg-05 · 配置管线与跨 mod 合并
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-05-config-pipeline.md)；编辑器需求见 [UXD](../uxd/cfg-05-config-pipeline.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-05-config-pipeline.md)；编辑器实现见 [editor spec](../spec-editor/cfg-05-config-pipeline.md)；现状见 [reference](../reference/cfg-05-config-pipeline.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-05-config-pipeline.md)；编辑器需求见 [UXD](../uxd/cfg-05-config-pipeline.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-05-config-pipeline.md)；editor spec 见 [editor spec](../spec-editor/cfg-05-config-pipeline.md)；现状见 [reference](../reference/cfg-05-config-pipeline.md)。
 
 ## 1. 定位
 

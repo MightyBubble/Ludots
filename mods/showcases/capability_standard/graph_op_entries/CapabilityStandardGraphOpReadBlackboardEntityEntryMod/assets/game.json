@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_ReadBlackboardEntity",
-  "windowTitle": "Ludots - 从记事板读出点名的人",
+  "windowTitle": "Ludots - 照记事板点名叫阵",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

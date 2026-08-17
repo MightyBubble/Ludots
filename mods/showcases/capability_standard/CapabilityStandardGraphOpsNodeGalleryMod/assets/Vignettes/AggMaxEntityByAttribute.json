@@ -1,11 +1,11 @@
 {
   "op": "AggMaxEntityByAttribute",
   "driver": "query",
-  "title": "谁最能打（血最厚）",
-  "beat": "最厚的人被点名。",
-  "detailTemplate": "最厚的是{label}，生命{hp}。",
+  "title": "点名最能扛的",
+  "beat": "全场退成灰影，满血条那个被点名徽钉住。",
+  "detailTemplate": "被点名的是{label}，血{hp}，血条顶格还顶着点名徽。",
   "assertDetailContains": [
-    "最厚"
+    "点名徽"
   ],
   "featuredNodeId": "maxEnt",
   "graphKind": "Query",

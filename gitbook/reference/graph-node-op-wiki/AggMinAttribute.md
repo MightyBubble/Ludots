@@ -1,6 +1,6 @@
-# 最低生命是多少
+# 全场最低血量
 
-最低值。
+台面翻出最低一格，亮出的数短得像那条空血条。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggMinAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggMinAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggMinAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 最低生命是{min}，对应{label}。
+> 全场最低生命{min}，没有一条血条比它更短。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 最低生命是多少
+Feature: 全场最低血量
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggMinAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMinAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最低值。」这类人话
+    Then 字幕讲的是「台面翻出最低一格，亮出的数短得像那条空血条。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

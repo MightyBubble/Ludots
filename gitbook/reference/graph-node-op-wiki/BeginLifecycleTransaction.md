@@ -1,6 +1,6 @@
-# 开一笔生命周期事务
+# 先开生命台账再动土
 
-先开账再做事，字幕说事务已开。
+账本一开，造身记上一笔；账一关，新身体已站在场上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/poster.png" src="artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/play.mp4`。
@@ -10,7 +10,7 @@
 
 这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
 
-- 家族：黑板与配置
+- 家族：属性与效果
 - 启动绑定：`capability_standard_graph_op_BeginLifecycleTransaction`
 - 作者记号：`BeginLifecycleTransaction`（给写图的人对照，不出现在玩家字幕里）
 
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 生命周期事务已开，可以接着做事。
+> 台账记了一笔造身，新身体已就位。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 开一笔生命周期事务
+Feature: 先开生命台账再动土
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_BeginLifecycleTransaction
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_BeginLifecycleTransaction/play.mp4
     When 短剧演完
-    Then 字幕讲的是「先开账再做事，字幕说事务已开。」这类人话
+    Then 字幕讲的是「账本一开，造身记上一笔；账一关，新身体已站在场上。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

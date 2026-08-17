@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_InvokeBuiltin",
-  "windowTitle": "Ludots - 跑一个内置步骤",
+  "windowTitle": "Ludots - 账本里的步骤逐条办",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

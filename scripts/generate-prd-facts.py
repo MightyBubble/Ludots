@@ -52,7 +52,7 @@ def main():
         ("Tag 总数上限", "src/Core/Gameplay/GAS/TagRuleRegistry.cs", r"MaxCoreTags = (\d+)"),
         ("属性总数上限", "src/Core/Gameplay/GAS/Registry/AttributeRegistry.cs", r"MaxAttributes = (\d+)"),
         ("效果模板上限", "src/Core/Gameplay/GAS/EffectTemplateRegistry.cs", r"MAX_[A-Z_]* = (\d+)"),
-        ("图程序上限", "src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs", r"= (\d+)"),
+        ("图程序上限", "src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs", r"MaxGraphs = (\d+)"),
     ]
     lines += ["## 关键注册表容量（源码常量）", ""]
     for label, rel, pat in probes:

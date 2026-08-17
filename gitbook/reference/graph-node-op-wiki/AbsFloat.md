@@ -1,6 +1,6 @@
-# 负面修正取绝对值
+# 对折零轴取长度
 
-修正是 -8，取绝对值变成 8 再叠上去。
+负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AbsFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_AbsFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AbsFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 负面修正取绝对值后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 对折后的长度是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 负面修正取绝对值
+Feature: 对折零轴取长度
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AbsFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AbsFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「修正是 -8，取绝对值变成 8 再叠上去。」这类人话
+    Then 字幕讲的是「负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,11 +1,15 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -37,6 +41,8 @@ public readonly struct UiPlayerAggregateProducerMarker
 public sealed class UiPlayerAggregateGraphMvpRuntime
 {
     private readonly UiPlayerAggregateGraphMvpPanelController _panelController;
+    private readonly string _bootstrapOreAttribute;
+    private readonly string _bootstrapCrystalAttribute;
     private UiPlayerAggregateGraphMvpConfig? _config;
     private Entity _owner = Entity.Null;
     private Entity _shutDownBuilding = Entity.Null;
@@ -53,14 +59,31 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     private uint _randomSeed = 1u;
     private IGraphRuntimeApi? _graphApi;
 
-    public UiPlayerAggregateGraphMvpRuntime()
+    public UiPlayerAggregateGraphMvpRuntime(string bootstrapOreAttribute, string bootstrapCrystalAttribute)
     {
+        if (string.IsNullOrWhiteSpace(bootstrapOreAttribute) || string.IsNullOrWhiteSpace(bootstrapCrystalAttribute))
+        {
+            throw new ArgumentException("Bootstrap resource attribute names are required for graph symbol patch ordering.");
+        }
+
+        _bootstrapOreAttribute = bootstrapOreAttribute.Trim();
+        _bootstrapCrystalAttribute = bootstrapCrystalAttribute.Trim();
         _panelController = new UiPlayerAggregateGraphMvpPanelController(this);
     }
 
     public UiPlayerAggregateGraphMvpSnapshot Snapshot => BuildSnapshot();
 
     public ReadOnlySpan<UiPlayerAggregateProducerMarker> ProducerMarkers => _producerMarkers;
+
+    public UiPlayerAggregateMarkerStyle RequireMarkerStyle()
+    {
+        if (_config == null)
+        {
+            throw new InvalidOperationException("Player aggregate graph MVP marker style requires loaded showcase config.");
+        }
+
+        return _config.Presentation.Markers;
+    }
 
     public UiPlayerAggregateGraphMvpConfig RequireConfig(GameEngine engine) => EnsureConfig(engine);
 
@@ -173,25 +196,28 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     internal UiPlayerAggregateGraphMvpPanelState BuildPanelState()
     {
         UiPlayerAggregateGraphMvpSnapshot snapshot = BuildSnapshot();
+        UiPlayerAggregateGraphMvpConfig config = _config
+            ?? throw new InvalidOperationException("Player aggregate graph MVP panel requires loaded showcase config.");
         return new UiPlayerAggregateGraphMvpPanelState(
             Title: snapshot.Title,
             Copy: snapshot.Copy,
             Controls: snapshot.Controls,
             Status: snapshot.Status,
             GraphId: snapshot.GraphId,
-            OreSummaryKey: snapshot.OreSummaryKey,
-            CrystalSummaryKey: snapshot.CrystalSummaryKey,
+            OreBinding: config.OreBinding,
+            CrystalBinding: config.CrystalBinding,
             OreTotal: snapshot.OreTotal,
             CrystalTotal: snapshot.CrystalTotal,
             BuildingShutDown: snapshot.BuildingShutDown,
-            ShutDownBuildingName: snapshot.ShutDownBuildingName);
+            ShutDownBuildingName: snapshot.ShutDownBuildingName,
+            PanelStyle: config.Presentation.Panel);
     }
 
     private UiPlayerAggregateGraphMvpSnapshot BuildSnapshot()
     {
         UiPlayerAggregateGraphMvpConfig? config = _config;
         return new UiPlayerAggregateGraphMvpSnapshot(
-            Title: config?.Presentation.Title ?? "Player Resource Overview",
+            Title: config?.Presentation.Title ?? string.Empty,
             Copy: config?.Presentation.Copy ?? string.Empty,
             Controls: config?.Presentation.Controls ?? string.Empty,
             Status: _status,
@@ -225,20 +251,22 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         GraphOutputValueStore values = engine.GetService(CoreServiceKeys.GraphOutputValueStore)
             ?? throw new InvalidOperationException("GraphOutputValueStore is missing.");
         var reader = new PanelProjectionReader(engine.World, values);
+        UiPlayerAggregatePanelBinding oreBinding = _config.OreBinding;
+        UiPlayerAggregatePanelBinding crystalBinding = _config.CrystalBinding;
         _oreTotal = reader.ResolveFloat(
             _owner,
             new PanelVariableBinding(
-                "oreTotal",
+                oreBinding.VariableId,
                 PanelBindingSourceKind.AggregateProjection,
                 attributeId: null,
-                graphOutputKey: _config.SummaryKeys.OreTotal));
+                graphOutputKey: oreBinding.GraphOutputKey));
         _crystalTotal = reader.ResolveFloat(
             _owner,
             new PanelVariableBinding(
-                "crystalTotal",
+                crystalBinding.VariableId,
                 PanelBindingSourceKind.AggregateProjection,
                 attributeId: null,
-                graphOutputKey: _config.SummaryKeys.CrystalTotal));
+                graphOutputKey: crystalBinding.GraphOutputKey));
         if (!_buildingShutDown)
         {
             _status = "Tally graph projections are live on the resource strip.";
@@ -262,7 +290,21 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
                 ?? throw new InvalidOperationException("Player aggregate graph MVP requires ConfigCatalog."),
             engine.ConfigConflictReport
                 ?? throw new InvalidOperationException("Player aggregate graph MVP requires ConfigConflictReport."));
+        RequireBootstrapAttributesMatchPipeline(_config);
         return _config;
+    }
+
+    private void RequireBootstrapAttributesMatchPipeline(UiPlayerAggregateGraphMvpConfig config)
+    {
+        if (!string.Equals(config.Attributes.Ore, _bootstrapOreAttribute, StringComparison.Ordinal) ||
+            !string.Equals(config.Attributes.Crystal, _bootstrapCrystalAttribute, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Player aggregate graph MVP attributes from ConfigPipeline must match OnLoad bootstrap registration " +
+                $"(bootstrap ore='{_bootstrapOreAttribute}' crystal='{_bootstrapCrystalAttribute}', " +
+                $"pipeline ore='{config.Attributes.Ore}' crystal='{config.Attributes.Crystal}'). " +
+                "AttributeRegistry is frozen before graph patch; diverging Replace merges are fail-closed.");
+        }
     }
 
     private void EnsureScenario(GameEngine engine, UiPlayerAggregateGraphMvpConfig config)
@@ -286,6 +328,9 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
                 $"Resource attributes '{config.Attributes.Ore}' / '{config.Attributes.Crystal}' are not registered.");
         }
 
+        InjectPlayerTeamIdIntoAggregateGraph(engine, _graphId, config.PlayerTeamId);
+        RequireGraphOutputKeysMatchPanelBindings(engine, _graphId, config);
+
         _owner = FindEntityByName(engine.World, config.FactionOwnerName);
         _shutDownBuilding = FindEntityByName(engine.World, config.ShutDownBuildingName);
         _producerEntities = new Entity[config.Buildings.Length];
@@ -293,6 +338,16 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         for (int i = 0; i < config.Buildings.Length; i++)
         {
             _producerEntities[i] = FindEntityByName(engine.World, config.Buildings[i].Name);
+        }
+
+        ApplyPlayerTeam(engine.World, _owner, config.PlayerTeamId, config.FactionOwnerName);
+        TagOps seedTagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("UiPlayerAggregateGraphMvp requires TagOps.");
+        for (int i = 0; i < _producerEntities.Length; i++)
+        {
+            UiPlayerAggregateBuildingSeed seed = config.Buildings[i];
+            ApplyPlayerTeam(engine.World, _producerEntities[i], config.PlayerTeamId, seed.Name);
+            ApplyBuildingSeed(engine.World, _producerEntities[i], seed, _oreAttributeId, _crystalAttributeId, seedTagOps);
         }
 
         _scenarioReady = true;
@@ -320,14 +375,16 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
 
             ref WorldPositionCm pos = ref world.Get<WorldPositionCm>(entity);
             System.Numerics.Vector3 meters = WorldUnitsFix64.WorldCmToVisualMeters(in pos.Value);
-            bool offline = false;
-            if (world.Has<AttributeBuffer>(entity))
+            if (!world.Has<AttributeBuffer>(entity))
             {
-                ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
-                float stock = attrs.GetCurrent(_oreAttributeId) + attrs.GetCurrent(_crystalAttributeId);
-                offline = stock <= 0.01f;
+                throw new InvalidOperationException(
+                    $"Producer building '{_config.Buildings[i].Name}' is missing AttributeBuffer for marker stock.");
             }
 
+            ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
+            float stock = attrs.GetCurrent(_oreAttributeId) + attrs.GetCurrent(_crystalAttributeId);
+            float offlineEpsilon = _config.Presentation.Markers.OfflineStockEpsilon;
+            bool offline = stock <= offlineEpsilon;
             _producerMarkers[i] = new UiPlayerAggregateProducerMarker(meters.X, meters.Z, offline);
         }
     }
@@ -376,6 +433,119 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     {
         return engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
             ?? throw new InvalidOperationException("Engine-owned production GasGraphRuntimeApi is missing.");
+    }
+
+    private static void InjectPlayerTeamIdIntoAggregateGraph(GameEngine engine, int graphId, int playerTeamId)
+    {
+        GraphProgramRegistry registry = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+            ?? throw new InvalidOperationException("GraphProgramRegistry is missing.");
+        if (!registry.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.IsEmpty)
+        {
+            throw new InvalidOperationException($"Aggregate graph id {graphId} has no compiled program.");
+        }
+
+        Span<GraphInstruction> instructions = MemoryMarshal.CreateSpan(
+            ref MemoryMarshal.GetReference(program),
+            program.Length);
+        int patched = 0;
+        for (int i = 0; i < instructions.Length; i++)
+        {
+            if ((GraphNodeOp)instructions[i].Op != GraphNodeOp.QueryFilterTeam)
+            {
+                continue;
+            }
+
+            if (instructions[i].Flags != 0)
+            {
+                throw new InvalidOperationException(
+                    "Player aggregate graph MVP requires QueryFilterTeam to use the Imm teamId field so showcase config can inject playerTeamId.");
+            }
+
+            instructions[i].Imm = playerTeamId;
+            patched++;
+        }
+
+        if (patched != 1)
+        {
+            throw new InvalidOperationException(
+                $"Player aggregate graph MVP expected exactly one QueryFilterTeam Imm injection site, found {patched}.");
+        }
+
+        if (!registry.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> verify) ||
+            !TryReadInjectedTeamId(verify, out int injected) ||
+            injected != playerTeamId)
+        {
+            throw new InvalidOperationException(
+                $"Failed to inject playerTeamId {playerTeamId} into aggregate QueryFilterTeam Imm.");
+        }
+    }
+
+    private static bool TryReadInjectedTeamId(ReadOnlySpan<GraphInstruction> program, out int teamId)
+    {
+        teamId = 0;
+        int found = 0;
+        for (int i = 0; i < program.Length; i++)
+        {
+            if ((GraphNodeOp)program[i].Op != GraphNodeOp.QueryFilterTeam || program[i].Flags != 0)
+            {
+                continue;
+            }
+
+            teamId = program[i].Imm;
+            found++;
+        }
+
+        return found == 1;
+    }
+
+    private static void RequireGraphOutputKeysMatchPanelBindings(
+        GameEngine engine,
+        int graphId,
+        UiPlayerAggregateGraphMvpConfig config)
+    {
+        GraphOutputSchemaRegistry schemas = engine.GetService(CoreServiceKeys.GraphOutputSchemaRegistry)
+            ?? throw new InvalidOperationException("GraphOutputSchemaRegistry is missing.");
+        GraphOutputSchema schema = schemas.Get(graphId);
+        RequireSchemaContainsKey(schema, config.OreBinding.GraphOutputKey);
+        RequireSchemaContainsKey(schema, config.CrystalBinding.GraphOutputKey);
+    }
+
+    private static void RequireSchemaContainsKey(GraphOutputSchema schema, string key)
+    {
+        ReadOnlySpan<GraphOutputBinding> bindings = schema.Bindings;
+        for (int i = 0; i < bindings.Length; i++)
+        {
+            if (string.Equals(bindings[i].Key, key, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Aggregate graph output schema is missing panel binding key '{key}'.");
+    }
+
+    private static void ApplyPlayerTeam(World world, Entity entity, int playerTeamId, string entityName)
+    {
+        if (!world.Has<Team>(entity))
+        {
+            throw new InvalidOperationException($"Showcase entity '{entityName}' requires a Team component.");
+        }
+
+        ref Team team = ref world.Get<Team>(entity);
+        team.Id = playerTeamId;
+    }
+
+    private static void ApplyBuildingSeed(
+        World world,
+        Entity entity,
+        UiPlayerAggregateBuildingSeed seed,
+        int oreAttributeId,
+        int crystalAttributeId,
+        TagOps tagOps)
+    {
+        AttributeMutationOps.SetBase(world, entity, oreAttributeId, seed.Ore, tagOps);
+        AttributeMutationOps.SetBase(world, entity, crystalAttributeId, seed.Crystal, tagOps);
     }
 
     private uint NextSeed()

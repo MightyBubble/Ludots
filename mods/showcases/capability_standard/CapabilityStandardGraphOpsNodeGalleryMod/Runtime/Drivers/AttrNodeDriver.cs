@@ -1,18 +1,31 @@
+using System.Numerics;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Mathematics;
+
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 public sealed class AttrNodeDriver : IGraphOpsNodeDriver
 {
     public const string MarkEffectId = "Effect.GraphOpsAttr.Mark";
+    public const string NewBodyTemplate = "GraphOps.Ally";
+    public const string NewBodyName = "新身体";
+
+    private const float MarkHaloRadius = 0.9f;
+    private const float MarkBadgeLift = 2.4f;
+    private static readonly DebugDrawColor MarkViolet = new(198, 0, 255);
+    private static readonly DebugDrawColor LedgerSeal = DebugDrawColor.Cyan;
+    private static readonly DebugDrawColor LedgerStamp = DebugDrawColor.Red;
 
     private int _markTemplateId;
     private Entity _seededMark = Entity.Null;
+    private Entity _boundBody = Entity.Null;
 
     public int PendingEffectRequests => ctxRequests?.Count ?? 0;
     private EffectRequestQueue? ctxRequests;
@@ -51,12 +64,16 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         }
 
         GraphOpsNodeActorBinding.RestoreVignetteHealth(ctx);
-        ctx.EffectRequests.Clear();
         int casterIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float targetBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         float casterBefore = casterIndex >= 0 ? ctx.ActorHealth[casterIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
+        if (IsLifecycleOp(ctx.Vignette.Op))
+        {
+            BindMaterializedBody(ctx);
+        }
+
         GraphOpsNodeActorBinding.SyncActorHealthFromWorld(ctx);
 
         float targetAfter = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
@@ -71,7 +88,18 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
     {
         int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
         int target = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
-        if (caster < 0 || target < 0)
+        if (caster < 0)
+        {
+            return;
+        }
+
+        if (IsLifecycleOp(ctx.Vignette.Op))
+        {
+            DrawLifecycleLedger(ctx, debugDraw, caster);
+            return;
+        }
+
+        if (target < 0)
         {
             return;
         }
@@ -82,6 +110,263 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             ctx.Vignette.Actors[caster].Y,
             ctx.Vignette.Actors[target].X,
             ctx.Vignette.Actors[target].Y);
+        DrawLiveMark(ctx, debugDraw, target);
+    }
+
+    private static bool IsLifecycleOp(string op)
+    {
+        return string.Equals(op, "BeginLifecycleTransaction", StringComparison.Ordinal)
+            || string.Equals(op, "InvokeBuiltin", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The materialized body is bound once as a formal stage actor so the recorder sees a named
+    /// body (not a phantom). Headless galleries skip stage binding and only assert the body lives.
+    /// </summary>
+    private void BindMaterializedBody(GraphOpsNodeDriverContext ctx)
+    {
+        Entity body = ctx.LastMaterializedTarget;
+        if (body == Entity.Null || !ctx.SimWorld.IsAlive(body))
+        {
+            throw new InvalidOperationException($"{ctx.Vignette.Op} must leave a live new body in the world.");
+        }
+
+        if (_boundBody != Entity.Null)
+        {
+            return;
+        }
+
+        if (ctx.Stage != null)
+        {
+            if (!ctx.SimWorld.Has<WorldPositionCm>(body))
+            {
+                throw new InvalidOperationException($"{ctx.Vignette.Op} new body is missing WorldPositionCm.");
+            }
+
+            WorldCmInt2 pos = ctx.SimWorld.Get<WorldPositionCm>(body).ToWorldCmInt2();
+            float health = ctx.SimWorld.Has<AttributeBuffer>(body)
+                ? GraphOpsNodeActorBinding.ReadHealth(ctx.SimWorld, body)
+                : 0f;
+            float healthMax = Math.Max(health, 1f);
+            ctx.Stage.BindMapEntity(
+                body,
+                NewBodyTemplate,
+                NewBodyName,
+                pos.X / 100f,
+                pos.Y / 100f,
+                health,
+                healthMax,
+                bindAsViewer: false);
+        }
+
+        _boundBody = body;
+    }
+
+    /// <summary>Life-ledger at the caster's feet: open pages, then the cyan Begin seal and red 讫 stamp.</summary>
+    private void DrawLifecycleLedger(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int caster)
+    {
+        GraphOpsNodeActor actor = ctx.Vignette.Actors[caster];
+        float lx = actor.X + 1.2f;
+        float ly = actor.Y - 0.85f;
+        float hw = 1.1f;
+        float hh = 0.55f;
+
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(lx - hw, ly + hh),
+            B = new Vector2(lx + hw, ly + hh),
+            Thickness = 0.07f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(lx - hw, ly - hh),
+            B = new Vector2(lx + hw, ly - hh),
+            Thickness = 0.07f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(lx - hw, ly + hh),
+            B = new Vector2(lx - hw, ly - hh),
+            Thickness = 0.07f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(lx + hw, ly + hh),
+            B = new Vector2(lx + hw, ly - hh),
+            Thickness = 0.07f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(lx, ly + hh),
+            B = new Vector2(lx, ly - hh),
+            Thickness = 0.06f,
+            Color = GraphShowcaseStagePresenter.GateColor
+        });
+
+        DrawLedgerRow(debugDraw, lx - hw * 0.45f, ly + 0.3f, highlighted: ctx.Wave == 1);
+        DrawLedgerRow(debugDraw, lx + hw * 0.45f, ly + 0.3f, highlighted: ctx.Wave >= 2);
+        if (ctx.Wave >= 2)
+        {
+            debugDraw.Circles.Add(new DebugDrawCircle2D
+            {
+                Center = new Vector2(lx, ly - 0.15f),
+                Radius = 0.34f,
+                Thickness = 0.1f,
+                Color = LedgerStamp
+            });
+        }
+        else
+        {
+            debugDraw.Circles.Add(new DebugDrawCircle2D
+            {
+                Center = new Vector2(lx, ly - 0.15f),
+                Radius = 0.28f,
+                Thickness = 0.08f,
+                Color = LedgerSeal
+            });
+        }
+
+        DrawMaterializedBody(ctx, debugDraw);
+        if (string.Equals(ctx.Vignette.Op, "InvokeBuiltin", StringComparison.Ordinal))
+        {
+            DrawClearedRack(ctx, debugDraw);
+        }
+    }
+
+    private static void DrawLedgerRow(DebugDrawCommandBuffer debugDraw, float x, float y, bool highlighted)
+    {
+        DebugDrawColor color = highlighted
+            ? GraphShowcaseStagePresenter.CasterColor
+            : GraphShowcaseStagePresenter.GhostColor;
+        debugDraw.Boxes.Add(new DebugDrawBox2D
+        {
+            Center = new Vector2(x, y),
+            HalfWidth = 0.4f,
+            HalfHeight = 0.1f,
+            Thickness = highlighted ? 0.06f : 0.03f,
+            Color = color
+        });
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(x - 0.3f, y + 0.06f),
+            B = new Vector2(x + 0.3f, y + 0.06f),
+            Thickness = 0.04f,
+            Color = color
+        });
+    }
+
+    /// <summary>The new body appears ghost→solid next to the target; the ledger seals mark the transaction.</summary>
+    private void DrawMaterializedBody(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
+    {
+        Entity body = _boundBody;
+        if (body == Entity.Null ||
+            !ctx.SimWorld.IsAlive(body) ||
+            !ctx.SimWorld.Has<WorldPositionCm>(body))
+        {
+            return;
+        }
+
+        WorldCmInt2 pos = ctx.SimWorld.Get<WorldPositionCm>(body).ToWorldCmInt2();
+        float x = pos.X / 100f;
+        float y = pos.Y / 100f;
+        if (ctx.Wave >= 2)
+        {
+            GraphShowcaseStagePresenter.DrawThickOutlineCircle(
+                debugDraw, x, y, 0.55f, GraphShowcaseStagePresenter.OutlineDark, GraphShowcaseStagePresenter.GuardColor);
+        }
+        else
+        {
+            GraphShowcaseStagePresenter.DrawGhostCircle(debugDraw, x, y, 0.55f, GraphShowcaseStagePresenter.GuardColor);
+        }
+    }
+
+    /// <summary>After ClearActiveEffects the body's effect rack reads as a row of empty slots swept with a slash.</summary>
+    private void DrawClearedRack(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
+    {
+        Entity body = _boundBody;
+        if (body == Entity.Null ||
+            !ctx.SimWorld.IsAlive(body) ||
+            !ctx.SimWorld.Has<WorldPositionCm>(body))
+        {
+            return;
+        }
+
+        WorldCmInt2 pos = ctx.SimWorld.Get<WorldPositionCm>(body).ToWorldCmInt2();
+        float x = pos.X / 100f;
+        float y = pos.Y / 100f + 1.5f;
+        for (int i = 0; i < 3; i++)
+        {
+            float slotX = x + (i - 1) * 0.34f;
+            debugDraw.Boxes.Add(new DebugDrawBox2D
+            {
+                Center = new Vector2(slotX, y),
+                HalfWidth = 0.12f,
+                HalfHeight = 0.16f,
+                Thickness = 0.05f,
+                Color = GraphShowcaseStagePresenter.GateColor
+            });
+        }
+
+        debugDraw.Lines.Add(new DebugDrawLine2D
+        {
+            A = new Vector2(x - 0.55f, y + 0.24f),
+            B = new Vector2(x + 0.55f, y - 0.24f),
+            Thickness = 0.08f,
+            Color = GraphShowcaseStagePresenter.EnemyColor
+        });
+    }
+
+    private void DrawLiveMark(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw, int targetIndex)
+    {
+        if (!TargetHasLiveMark(ctx))
+        {
+            return;
+        }
+
+        GraphOpsNodeActor target = ctx.Vignette.Actors[targetIndex];
+        GraphShowcaseStagePresenter.DrawThickOutlineCircle(
+            debugDraw,
+            target.X,
+            target.Y,
+            MarkHaloRadius,
+            GraphShowcaseStagePresenter.OutlineDark,
+            MarkViolet);
+        GraphShowcaseStagePresenter.DrawBadge(
+            debugDraw,
+            target.X,
+            target.Y + MarkBadgeLift,
+            GraphShowcaseStagePresenter.BadgeKind.Diamond,
+            MarkViolet);
+    }
+
+    private bool TargetHasLiveMark(GraphOpsNodeDriverContext ctx)
+    {
+        if (ctx.Target == Entity.Null ||
+            !ctx.SimWorld.IsAlive(ctx.Target) ||
+            !ctx.SimWorld.Has<ActiveEffectContainer>(ctx.Target))
+        {
+            return false;
+        }
+
+        ActiveEffectContainer container = ctx.SimWorld.Get<ActiveEffectContainer>(ctx.Target);
+        for (int i = 0; i < container.Count; i++)
+        {
+            Entity effect = container.GetEntity(i);
+            if (ctx.SimWorld.IsAlive(effect) &&
+                ctx.SimWorld.Has<GameplayEffect>(effect) &&
+                !ctx.SimWorld.Get<GameplayEffect>(effect).CancelRequested &&
+                ctx.SimWorld.Has<EffectTemplateRef>(effect) &&
+                ctx.SimWorld.Get<EffectTemplateRef>(effect).TemplateId == _markTemplateId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void EnsureMarkOnTarget(GraphOpsNodeDriverContext ctx)
@@ -236,6 +521,21 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
                 !ctx.SimWorld.Get<GameplayEffect>(_seededMark).CancelRequested)
             {
                 throw new InvalidOperationException("RemoveEffectTemplate gallery did not 卸 the seeded mark.");
+            }
+        }
+
+        if (IsLifecycleOp(op))
+        {
+            if (ctx.LastMaterializedTarget == Entity.Null ||
+                !ctx.SimWorld.IsAlive(ctx.LastMaterializedTarget))
+            {
+                throw new InvalidOperationException($"{op} gallery must leave the new body alive in the world.");
+            }
+
+            if (string.Equals(op, "InvokeBuiltin", StringComparison.Ordinal) &&
+                GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "mark") >= 0)
+            {
+                throw new InvalidOperationException("InvokeBuiltin gallery must not keep the mark stand-in actor.");
             }
         }
     }

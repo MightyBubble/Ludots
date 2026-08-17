@@ -8,7 +8,7 @@
 - 引擎本地回退路径仅在显式传入 mod 路径且无启动计划时启用（调试、无头直启）：本地拓扑排序，就绪候选按 priority 降序、发现序升序。
 - 每个 mod 对每个 relativePath 从唯一根 `assets/{path}` 收集片段（单一根约定）；分片表先主文件后同根分片目录。
 - 路径构造与收集集中于 ConfigSourcePaths 与 ConfigPipeline（单根 + 分片目录枚举）。
-- 引擎默认片段来自仓库 `assets/Configs/`；catalog 文件自身也按 Path 同 id 跨源合并。
+- 引擎默认片段来自仓库 仓库 `assets/` 根（引擎默认）；catalog 文件自身也按 Path 同 id 跨源合并。
 - 冲突报告记录片段列表、id 级赢家与删除记录；无字段级溯源。
 - 文件缺失静默跳过；JSON 解析错误、条目缺 id、路径未登记、依赖问题均启动失败。
 - 配置重载机制存在但不可达：重载入口支持按组重建（AI、Narrative、Quests，忽略大小写，空组=全部），唯一入口是触发器 `Config.Reload`，全仓（src/mods/tools/web）无任何发射方；重进地图走地图资产管线，不触发配置重载。
@@ -19,7 +19,7 @@
 
 | 机制 | 位置 |
 |---|---|
-| 片段收集顺序：Core:Configs → Core: → 每个 mod 的 `assets/` 再 `assets/Configs/` | src/Core/Config/ConfigPipeline.cs:171-191；URI 构造 src/Core/Config/ConfigSourcePaths.cs:5-9 |
+| 片段收集顺序：Core:Configs → Core: → 每个 mod 的 `assets/` 再 仓库 `assets/` 根（引擎默认） | src/Core/Config/ConfigPipeline.cs:171-191；URI 构造 src/Core/Config/ConfigSourcePaths.cs:5-9 |
 | 五种合并策略枚举：Replace / DeepObject / ArrayReplace / ArrayAppend / ArrayById | src/Core/Config/ConfigMergePolicy.cs:3-10 |
 | 策略分发表与各策略实现 | src/Core/Config/ConfigMerger.cs:10-96 |
 | 同 id 深合并核心：字段级 MergeObject、`__delete` 与 `Disabled` 删除、结果首现序 | src/Core/Config/ConfigMerger.cs:112-236 |

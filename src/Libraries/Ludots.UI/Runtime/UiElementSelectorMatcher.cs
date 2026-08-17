@@ -12,6 +12,21 @@ public static class UiElementSelectorMatcher
 	{
 		ArgumentNullException.ThrowIfNull(element, "element");
 		ArgumentNullException.ThrowIfNull(selector, "selector");
+		if (selector.PseudoElement != UiPseudoElement.None)
+		{
+			return false;
+		}
+		return Matches(element, selector.Parts.Count - 1, selector.Parts);
+	}
+
+	public static bool MatchesOriginatingElement(UiElement element, UiSelector selector)
+	{
+		ArgumentNullException.ThrowIfNull(element, "element");
+		ArgumentNullException.ThrowIfNull(selector, "selector");
+		if (selector.PseudoElement == UiPseudoElement.Unsupported)
+		{
+			return false;
+		}
 		return Matches(element, selector.Parts.Count - 1, selector.Parts);
 	}
 

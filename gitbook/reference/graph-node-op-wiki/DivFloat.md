@@ -1,6 +1,6 @@
-# 按距离摊薄
+# 一刀摊给两根木桩
 
-同样 40 点伤害，距离翻倍就摊成一半。
+40 的伤害段从中间切开，两根木桩各接一半。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_DivFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_DivFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_DivFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按距离摊薄后这一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。
+> 摊开之后每一根木桩挨 {result}；两根血条都从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 按距离摊薄
+Feature: 一刀摊给两根木桩
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_DivFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_DivFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「同样 40 点伤害，距离翻倍就摊成一半。」这类人话
+    Then 字幕讲的是「40 的伤害段从中间切开，两根木桩各接一半。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

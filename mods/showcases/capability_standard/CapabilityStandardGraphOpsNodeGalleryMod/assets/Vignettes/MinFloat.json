@@ -1,11 +1,11 @@
 {
   "op": "MinFloat",
   "driver": "linear",
-  "title": "两刀取更小的那一刀",
-  "beat": "左边 30、右边 18，打出去的是更小的 18。",
-  "detailTemplate": "两刀里更小的那一刀是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "两刀里挑小的一刀",
+  "beat": "两块刀伤 30 和 18 摆上台面，挑中的是更短的那块，打出去按它的长度掉血。",
+  "detailTemplate": "更短的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "更小"
+    "更短"
   ],
   "featuredNodeId": "smaller",
   "graphKind": "Effect",
@@ -33,6 +33,6 @@
   ],
   "linear": {
     "resultKind": "float",
-    "applyTo": "targetHealthSubtract"
+    "applyTo": "graphSettled"
   }
 }

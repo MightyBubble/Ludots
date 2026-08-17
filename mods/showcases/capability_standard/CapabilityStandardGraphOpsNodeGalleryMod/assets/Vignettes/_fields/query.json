@@ -152,7 +152,7 @@
     {
       "id": "unit10",
       "role": "ally",
-      "template": "Unit.Soldier",
+      "template": "GraphOps.Ally",
       "name": "友军11",
       "x": 3.3,
       "y": 4.0,

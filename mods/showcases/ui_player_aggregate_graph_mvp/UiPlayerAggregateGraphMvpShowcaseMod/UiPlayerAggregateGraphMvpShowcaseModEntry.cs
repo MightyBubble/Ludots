@@ -13,10 +13,15 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        AttributeRegistry.Register("Showcase.Resource.Ore");
-        AttributeRegistry.Register("Showcase.Resource.Crystal");
+        UiPlayerAggregateGraphMvpConfig bootstrapConfig = LoadBootstrapConfig(context);
+        AttributeRegistry.Register(bootstrapConfig.Attributes.Ore);
+        AttributeRegistry.Register(bootstrapConfig.Attributes.Crystal);
 
-        var runtime = new UiPlayerAggregateGraphMvpRuntime();
+        // AttributeRegistry must be populated before graph symbol patch; ConfigPipeline is not
+        // available on IModContext. Runtime fail-closes if pipeline attributes diverge from bootstrap.
+        var runtime = new UiPlayerAggregateGraphMvpRuntime(
+            bootstrapConfig.Attributes.Ore,
+            bootstrapConfig.Attributes.Crystal);
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
@@ -50,5 +55,12 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseModEntry : IMod
 
     public void OnUnload()
     {
+    }
+
+    private static UiPlayerAggregateGraphMvpConfig LoadBootstrapConfig(IModContext context)
+    {
+        using var stream = context.GetResource(
+            $"{context.ModId}:assets/{UiPlayerAggregateGraphMvpConfigLoader.RelativePath}");
+        return UiPlayerAggregateGraphMvpConfig.Load(stream);
     }
 }
