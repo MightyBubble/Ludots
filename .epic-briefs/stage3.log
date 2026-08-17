@@ -23,3 +23,15 @@ FAILED capability_standard_graph_op_MoveInt: [WinError 32] 另一个程序正在
 Failed: capability_standard_graph_op_Call, capability_standard_graph_op_Return, capability_standard_graph_op_MoveInt
 
 [13:52:43] F8 ABORT: recording failed
+[13:56:57] === F8 start (7 ops) ===
+[14:00:28] pi fam8 exit=0 report_saved (1888 chars)
+[14:00:55] F8 tests green: 有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+[14:04:05] record 7 ops -> OK
+ability_standard_graph_op_JumpIfFalse
+  wrote C:\001_AI\LudotsProd\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_JumpIfFalse\play.mp4 (107038 bytes), poster.png
+[6/7] Recording capability_standard_graph_op_HaltReturnInt
+  wrote C:\001_AI\LudotsProd\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_HaltReturnInt\play.mp4 (104091 bytes), poster.png
+[7/7] Recording capability_standard_graph_op_Jump
+  wrote C:\001_AI\LudotsProd\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_Jump\play.mp4 (104899 bytes), poster.png
+Recorded 7/7; failed 0
+
