@@ -15,6 +15,10 @@
         "radiusCm": 800
       },
       {
+        "id": "notSelf",
+        "op": "QueryFilterNotEntity"
+      },
+      {
         "id": "buffId",
         "op": "ReadBlackboardInt",
         "blackboardKey": "graphops.sandbox.buffTemplate"
@@ -33,6 +37,11 @@
       {
         "from": "radius",
         "fromPort": "next",
+        "to": "notSelf"
+      },
+      {
+        "from": "notSelf",
+        "fromPort": "next",
         "to": "buffId"
       },
       {
@@ -46,6 +55,12 @@
         "from": "caster",
         "fromPort": "value",
         "to": "buffId",
+        "toPort": "source"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "notSelf",
         "toPort": "source"
       },
       {

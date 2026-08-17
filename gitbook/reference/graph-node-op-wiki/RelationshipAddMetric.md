@@ -1,6 +1,6 @@
 # 好感再加一截
 
-好感从 40 加到 70。
+记事板上好感条原本四成，新亮的一截补到七成。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 好感再加一截，写成{loyalty}。
+> 好感从 40 加 30，记事板停在{loyalty}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 好感再加一截
     Given 玩家打开 capability_standard_graph_op_RelationshipAddMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipAddMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「好感从 40 加到 70。」这类人话
+    Then 字幕讲的是「记事板上好感条原本四成，新亮的一截补到七成。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

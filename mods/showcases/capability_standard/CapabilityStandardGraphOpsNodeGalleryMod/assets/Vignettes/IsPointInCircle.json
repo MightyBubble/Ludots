@@ -1,11 +1,12 @@
 {
   "op": "IsPointInCircle",
   "driver": "event",
-  "title": "这一点在不在圈里",
-  "beat": "落点在圈内显示在圈里，圈外显示在圈外。",
-  "detailTemplate": "落点{result}。",
+  "title": "圈里圈外，当场见分晓",
+  "beat": "圈里的点亮绿勾，圈外的点吃红叉。",
+  "detailTemplate": "圈内点{resultIn}，圈外点{resultOut}。",
   "assertDetailContains": [
-    "在圈里"
+    "圈内",
+    "圈外"
   ],
   "featuredNodeId": "inCircle",
   "graphKind": "Validation",

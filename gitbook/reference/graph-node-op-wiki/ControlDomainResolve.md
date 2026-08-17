@@ -1,6 +1,6 @@
-# 找出谁说了算
+# 一路问到说了算的人
 
-单位归属到控制域代表，字幕说了算的是队长。
+从小兵往上问，问到插旗的队长为止。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/poster.png" src="artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 说了算的是队长。
+> 小兵说了算的人是{result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 找出谁说了算
+Feature: 一路问到说了算的人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ControlDomainResolve
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ControlDomainResolve/play.mp4
     When 短剧演完
-    Then 字幕讲的是「单位归属到控制域代表，字幕说了算的是队长。」这类人话
+    Then 字幕讲的是「从小兵往上问，问到插旗的队长为止。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

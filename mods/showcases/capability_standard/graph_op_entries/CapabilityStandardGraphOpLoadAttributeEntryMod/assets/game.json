@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadAttribute",
-  "windowTitle": "Ludots - 先看对方还有多少血",
+  "windowTitle": "Ludots - 出手前先看一眼对方的血",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

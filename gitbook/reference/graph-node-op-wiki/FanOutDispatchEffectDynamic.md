@@ -1,6 +1,6 @@
-# 模板号读出来再派发
+# 先接飞来的卡，再照卡发招
 
-先从事件里读出模板号，再按这个号把效果扇出给圈里的人。
+芯片插进空槽，圈里三人各挂上一枚铃。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/poster.png" src="artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 模板号读出来再派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。
+> 按卡给圈里 {count} 人挂上铃。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 模板号读出来再派发
+Feature: 先接飞来的卡，再照卡发招
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_FanOutDispatchEffectDynamic
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffectDynamic/play.mp4
     When 短剧演完
-    Then 字幕讲的是「先从事件里读出模板号，再按这个号把效果扇出给圈里的人。」这类人话
+    Then 字幕讲的是「芯片插进空槽，圈里三人各挂上一枚铃。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

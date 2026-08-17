@@ -2,22 +2,8 @@
   {
     "id": "showcase.graph_op.SelectEntity",
     "kind": "Effect",
-    "entry": "yes",
+    "entry": "caster",
     "nodes": [
-      {
-        "id": "yes",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "yes2",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "cond",
-        "op": "CompareEqInt"
-      },
       {
         "id": "caster",
         "op": "LoadCaster"
@@ -27,26 +13,25 @@
         "op": "LoadExplicitTarget"
       },
       {
+        "id": "cond",
+        "op": "CompareEqEntity"
+      },
+      {
         "id": "pick",
         "op": "SelectEntity"
+      },
+      {
+        "id": "strike",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.GraphOps.Strike"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
       }
     ],
     "controlEdges": [
-      {
-        "from": "yes",
-        "fromPort": "next",
-        "to": "yes2"
-      },
-      {
-        "from": "yes2",
-        "fromPort": "next",
-        "to": "cond"
-      },
-      {
-        "from": "cond",
-        "fromPort": "next",
-        "to": "caster"
-      },
       {
         "from": "caster",
         "fromPort": "next",
@@ -55,18 +40,33 @@
       {
         "from": "target",
         "fromPort": "next",
+        "to": "cond"
+      },
+      {
+        "from": "cond",
+        "fromPort": "next",
         "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "strike"
+      },
+      {
+        "from": "strike",
+        "fromPort": "next",
+        "to": "done"
       }
     ],
     "valueEdges": [
       {
-        "from": "yes",
+        "from": "caster",
         "fromPort": "value",
         "to": "cond",
         "toPort": "a"
       },
       {
-        "from": "yes2",
+        "from": "target",
         "fromPort": "value",
         "to": "cond",
         "toPort": "b"
@@ -78,16 +78,22 @@
         "toPort": "condition"
       },
       {
-        "from": "target",
+        "from": "caster",
         "fromPort": "value",
         "to": "pick",
         "toPort": "a"
       },
       {
-        "from": "caster",
+        "from": "target",
         "fromPort": "value",
         "to": "pick",
         "toPort": "b"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "strike",
+        "toPort": "target"
       }
     ]
   }

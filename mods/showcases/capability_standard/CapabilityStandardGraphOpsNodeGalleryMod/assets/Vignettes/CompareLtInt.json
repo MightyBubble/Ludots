@@ -1,9 +1,9 @@
 {
   "op": "CompareLtInt",
   "driver": "attr",
-  "title": "血量够不够打全力",
-  "beat": "木桩血低于 80 就打全力，否则轻击。",
-  "detailTemplate": "木桩血量偏低，这一刀打{style}。",
+  "title": "血量过线没：过线轻击，没过线全力",
+  "beat": "木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。",
+  "detailTemplate": "木桩 {healthBefore} 低于 80，打{style}，掉到 {healthAfter}。",
   "assertDetailContains": [
     "全力"
   ],

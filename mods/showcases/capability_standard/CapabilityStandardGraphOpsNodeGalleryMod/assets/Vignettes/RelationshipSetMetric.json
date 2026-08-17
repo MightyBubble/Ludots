@@ -1,9 +1,9 @@
 {
   "op": "RelationshipSetMetric",
   "driver": "sandbox",
-  "title": "把好感写成指定值",
-  "beat": "好感被写成 80。",
-  "detailTemplate": "好感被写成{loyalty}。",
+  "title": "好感直接写成指定值",
+  "beat": "灰色的旧条被一条更长的绿条整个换掉。",
+  "detailTemplate": "好感不看原来多少，直接写成{loyalty}。",
   "assertDetailContains": [
     "写成"
   ],

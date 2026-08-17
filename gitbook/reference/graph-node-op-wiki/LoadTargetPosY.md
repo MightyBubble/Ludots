@@ -1,6 +1,6 @@
-# 读出击落点的前后
+# 读出落点在南北标尺上的读数
 
-落点前后坐标被读出，字幕报纵深位置。
+虚线打到标尺上，亮出 200。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 落点前后是 {result}。
+> 落点南北读数 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 读出击落点的前后
+Feature: 读出落点在南北标尺上的读数
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadTargetPosY
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadTargetPosY/play.mp4
     When 短剧演完
-    Then 字幕讲的是「落点前后坐标被读出，字幕报纵深位置。」这类人话
+    Then 字幕讲的是「虚线打到标尺上，亮出 200。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

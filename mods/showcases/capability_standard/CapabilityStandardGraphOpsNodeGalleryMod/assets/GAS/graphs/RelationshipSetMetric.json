@@ -13,6 +13,11 @@
         "op": "LoadExplicitTarget"
       },
       {
+        "id": "baseLoyalty",
+        "op": "ConstInt",
+        "intValue": 40
+      },
+      {
         "id": "value",
         "op": "ConstInt",
         "intValue": 80
@@ -21,6 +26,12 @@
         "id": "ensure",
         "op": "RelationshipEnsureLink",
         "relationshipType": "SocialBond"
+      },
+      {
+        "id": "seedBase",
+        "op": "RelationshipSetMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
       },
       {
         "id": "setMetric",
@@ -38,6 +49,11 @@
       {
         "from": "target",
         "fromPort": "next",
+        "to": "baseLoyalty"
+      },
+      {
+        "from": "baseLoyalty",
+        "fromPort": "next",
         "to": "value"
       },
       {
@@ -47,6 +63,11 @@
       },
       {
         "from": "ensure",
+        "fromPort": "next",
+        "to": "seedBase"
+      },
+      {
+        "from": "seedBase",
         "fromPort": "next",
         "to": "setMetric"
       }
@@ -63,6 +84,24 @@
         "fromPort": "value",
         "to": "ensure",
         "toPort": "target"
+      },
+      {
+        "from": "caster",
+        "fromPort": "value",
+        "to": "seedBase",
+        "toPort": "source"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "seedBase",
+        "toPort": "target"
+      },
+      {
+        "from": "baseLoyalty",
+        "fromPort": "value",
+        "to": "seedBase",
+        "toPort": "value"
       },
       {
         "from": "caster",

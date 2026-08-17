@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_SendEvent",
-  "windowTitle": "Ludots - 打出一记并广播出去",
+  "windowTitle": "Ludots - 打出去，对方听得见",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

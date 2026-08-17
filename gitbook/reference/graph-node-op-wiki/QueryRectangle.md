@@ -1,6 +1,6 @@
-# 矩形里有谁
+# 身前这块矩形里有谁
 
-身前一块矩形框人。
+身前的框描出来，框里的人亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryRectangle/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryRectangle/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryRectangle/play.mp4`。
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 矩形里有谁
+Feature: 身前这块矩形里有谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryRectangle
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryRectangle/play.mp4
     When 短剧演完
-    Then 字幕讲的是「身前一块矩形框人。」这类人话
+    Then 字幕讲的是「身前的框描出来，框里的人亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

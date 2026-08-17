@@ -1,11 +1,11 @@
 {
   "op": "SelectEntity",
   "driver": "attr",
-  "title": "有条件就换目标",
-  "beat": "条件成立时改打木桩，不成立打自己。",
-  "detailTemplate": "这一刀打向木桩。",
+  "title": "岔路口选人打",
+  "beat": "残影幕条件不成立→挑了自己挨打；正幕条件成立→挑了木桩，扣 18。",
+  "detailTemplate": "这一刀挑中木桩，木桩从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "打向"
+    "挑中"
   ],
   "featuredNodeId": "pick",
   "graphKind": "Effect",

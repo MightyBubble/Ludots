@@ -1,6 +1,6 @@
-# 这个人能不能指挥那个
+# 同一个兵，不是谁都指挥得动
 
-队长能指挥队员显示管得着。
+队长指挥队员是实线；反过来队员指挥队长，线断在半路。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ControlDomainControls/poster.png" src="artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 队长对队员管得着。
+> 队长对队员{result}；队员对队长{resultFoe}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 这个人能不能指挥那个
+Feature: 同一个兵，不是谁都指挥得动
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ControlDomainControls
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4
     When 短剧演完
-    Then 字幕讲的是「队长能指挥队员显示管得着。」这类人话
+    Then 字幕讲的是「队长指挥队员是实线；反过来队员指挥队长，线断在半路。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

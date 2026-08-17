@@ -1,11 +1,11 @@
 {
   "op": "LoadViewer",
   "driver": "event",
-  "title": "从观众自己看",
-  "beat": "镜头和观众实体被读出，字幕说从自己这侧看。",
-  "detailTemplate": "从{result}看。",
+  "title": "取出镜头背后的人",
+  "beat": "眼睛徽章落在观众头上，观众飞进镜位槽。",
+  "detailTemplate": "镜位取出的是观众（{result}）。",
   "assertDetailContains": [
-    "自己这侧"
+    "观众"
   ],
   "featuredNodeId": "viewer",
   "graphKind": "Validation",

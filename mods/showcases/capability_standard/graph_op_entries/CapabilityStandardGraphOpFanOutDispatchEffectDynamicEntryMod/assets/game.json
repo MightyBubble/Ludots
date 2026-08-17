@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_FanOutDispatchEffectDynamic",
-  "windowTitle": "Ludots - 模板号读出来再派发",
+  "windowTitle": "Ludots - 先接飞来的卡，再照卡发招",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

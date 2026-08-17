@@ -42,7 +42,7 @@
       "Template": "GraphOps.Ally",
       "Overrides": {
         "Name": {
-          "Value": "队员"
+          "Value": "小兵"
         },
         "WorldPositionCm": {
           "Value": {

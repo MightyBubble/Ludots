@@ -11,18 +11,43 @@
         "radiusCm": 800
       },
       {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "notSelf",
+        "op": "QueryFilterNotEntity"
+      },
+      {
         "id": "fanOut",
         "op": "FanOutApplyEffect",
-        "effectTemplate": "Effect.GraphOpsSandbox.Mark"
+        "effectTemplate": "Effect.GraphOps.Strike"
       }
     ],
     "controlEdges": [
       {
         "from": "radius",
         "fromPort": "next",
+        "to": "self"
+      },
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "notSelf"
+      },
+      {
+        "from": "notSelf",
+        "fromPort": "next",
         "to": "fanOut"
       }
     ],
-    "valueEdges": []
+    "valueEdges": [
+      {
+        "from": "self",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "source"
+      }
+    ]
   }
 ]

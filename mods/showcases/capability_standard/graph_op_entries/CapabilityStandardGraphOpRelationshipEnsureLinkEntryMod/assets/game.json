@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_RelationshipEnsureLink",
-  "windowTitle": "Ludots - 先把关系链接上",
+  "windowTitle": "Ludots - 把两人连成一条关系链",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

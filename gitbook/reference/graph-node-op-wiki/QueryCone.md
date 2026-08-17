@@ -1,6 +1,6 @@
-# 扇形里有谁
+# 朝这个方向的扇形里有谁
 
-面前扇形扫过，扇里的人亮、扇外的人暗。
+描边扇形罩住的人亮，贴着边站歪一点的不亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryCone/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryCone/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryCone/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 面前扇形扫过，圈到{count}人。
+> 扇形扫过，弧内{count}人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 扇形里有谁
+Feature: 朝这个方向的扇形里有谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryCone
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryCone/play.mp4
     When 短剧演完
-    Then 字幕讲的是「面前扇形扫过，扇里的人亮、扇外的人暗。」这类人话
+    Then 字幕讲的是「描边扇形罩住的人亮，贴着边站歪一点的不亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

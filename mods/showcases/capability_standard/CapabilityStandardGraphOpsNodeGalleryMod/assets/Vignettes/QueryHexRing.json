@@ -1,12 +1,12 @@
 {
   "op": "QueryHexRing",
   "driver": "spatial",
-  "title": "只取这一圈六角环",
-  "beat": "只有环上的人亮，里圈和环外都不亮。",
-  "detailTemplate": "只取这一圈，环上{count}人亮了，里外都不算。",
+  "title": "只取半径 2 的六角环",
+  "beat": "描边那一圈上的人亮，里圈和更外圈都不亮。",
+  "detailTemplate": "环上{count}人亮，里圈和环外都不算。",
   "assertDetailContains": [
-    "这一圈",
-    "里外"
+    "环上",
+    "里圈和环外"
   ],
   "featuredNodeId": "hexRing",
   "graphKind": "Query",

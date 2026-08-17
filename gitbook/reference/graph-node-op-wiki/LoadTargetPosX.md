@@ -1,6 +1,6 @@
-# 读出击落点的左右
+# 读出落点在东西标尺上的读数
 
-落点左右坐标被读出，字幕报水平位置。
+虚线打到标尺上，亮出 360。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 落点左右是 {result}。
+> 落点东西读数 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 读出击落点的左右
+Feature: 读出落点在东西标尺上的读数
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadTargetPosX
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadTargetPosX/play.mp4
     When 短剧演完
-    Then 字幕讲的是「落点左右坐标被读出，字幕报水平位置。」这类人话
+    Then 字幕讲的是「虚线打到标尺上，亮出 360。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

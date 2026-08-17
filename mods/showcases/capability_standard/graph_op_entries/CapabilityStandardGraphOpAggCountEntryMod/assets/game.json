@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_AggCount",
-  "windowTitle": "Ludots - 圈里一共几个人",
+  "windowTitle": "Ludots - 扇形里数出几个人",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

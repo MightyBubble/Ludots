@@ -1,11 +1,11 @@
 {
   "op": "RelationshipHasFlag",
   "driver": "sandbox",
-  "title": "这条关系受不受信任",
-  "beat": "信任旗开着，字幕说信得过。",
-  "detailTemplate": "信任旗开着，{result}。",
+  "title": "这条关系上插没插信任旗",
+  "beat": "青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。",
+  "detailTemplate": "信任旗插着，检查结果：{result}。",
   "assertDetailContains": [
-    "信"
+    "信任旗"
   ],
   "featuredNodeId": "hasFlag",
   "graphKind": "Effect",

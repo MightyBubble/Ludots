@@ -1,9 +1,9 @@
 {
   "op": "RemoveEffectTemplate",
   "driver": "attr",
-  "title": "把状态卸掉",
-  "beat": "先挂上再卸掉，字幕说卸效果。",
-  "detailTemplate": "把木桩身上的标记卸掉了。",
+  "title": "把身上的状态摘掉",
+  "beat": "木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。",
+  "detailTemplate": "木桩身上的标记被卸掉了，血量保持 {healthAfter}。",
   "assertDetailContains": [
     "卸"
   ],

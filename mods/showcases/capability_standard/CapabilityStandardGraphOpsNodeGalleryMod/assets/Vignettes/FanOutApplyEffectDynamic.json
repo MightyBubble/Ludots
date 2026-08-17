@@ -1,11 +1,11 @@
 {
   "op": "FanOutApplyEffectDynamic",
   "driver": "sandbox",
-  "title": "按读到的模板打圈里所有人",
-  "beat": "动态模板扇出。",
-  "detailTemplate": "按读到的模板打圈里所有人，状态已经挂上了。",
+  "title": "翻出一张牌，圈里每人照牌挨一下",
+  "beat": "先翻牌再动手：圈内五个人同时掉一截血，圈外没事。",
+  "detailTemplate": "翻到的牌是打击，圈内{applied}人每人挨一下。",
   "assertDetailContains": [
-    "圈里"
+    "每人"
   ],
   "featuredNodeId": "fanDyn",
   "graphKind": "Effect",

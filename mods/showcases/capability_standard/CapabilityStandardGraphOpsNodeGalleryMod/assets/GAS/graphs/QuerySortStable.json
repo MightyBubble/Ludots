@@ -1,7 +1,7 @@
 [
   {
     "id": "showcase.graph_op.QuerySortStable",
-    "kind": "Query",
+    "kind": "Effect",
     "entry": "radius",
     "nodes": [
       {
@@ -9,6 +9,14 @@
         "op": "QueryRadius",
         "queryCapacityPolicy": "RequireComplete",
         "radiusCm": 800
+      },
+      {
+        "id": "self",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "notSelf",
+        "op": "QueryFilterNotEntity"
       },
       {
         "id": "sort",
@@ -19,15 +27,25 @@
       {
         "from": "radius",
         "fromPort": "next",
+        "to": "self"
+      },
+      {
+        "from": "self",
+        "fromPort": "next",
+        "to": "notSelf"
+      },
+      {
+        "from": "notSelf",
+        "fromPort": "next",
         "to": "sort"
       }
     ],
     "valueEdges": [
       {
-        "from": "radius",
-        "fromPort": "list",
-        "to": "sort",
-        "toPort": "list"
+        "from": "self",
+        "fromPort": "value",
+        "to": "notSelf",
+        "toPort": "source"
       }
     ]
   }

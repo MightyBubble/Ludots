@@ -1,11 +1,12 @@
 {
   "op": "QueryFilterNotEntity",
   "driver": "spatial",
-  "title": "圈人时排除自己",
-  "beat": "自己在圈里但不进名单。",
-  "detailTemplate": "排除自己，{self}，其余{count}人在名单里。",
+  "title": "圈人时把你自己抠出去",
+  "beat": "滤前自己也在名单里，一步后自己暗掉。",
+  "detailTemplate": "排除自己，{self}，名单剩{count}人。",
   "assertDetailContains": [
-    "排除自己"
+    "排除自己",
+    "名单剩"
   ],
   "featuredNodeId": "notSelf",
   "graphKind": "Query",

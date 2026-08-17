@@ -1,6 +1,6 @@
-# 把状态卸掉
+# 把身上的状态摘掉
 
-先挂上再卸掉，字幕说卸效果。
+木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把木桩身上的标记卸掉了。
+> 木桩身上的标记被卸掉了，血量保持 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把状态卸掉
+Feature: 把身上的状态摘掉
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RemoveEffectTemplate
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RemoveEffectTemplate/play.mp4
     When 短剧演完
-    Then 字幕讲的是「先挂上再卸掉，字幕说卸效果。」这类人话
+    Then 字幕讲的是「木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

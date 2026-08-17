@@ -14,16 +14,6 @@
         "op": "LoadExplicitTarget"
       },
       {
-        "id": "wound",
-        "op": "ConstFloat",
-        "floatValue": -18
-      },
-      {
-        "id": "hit",
-        "op": "ModifyAttributeAdd",
-        "attribute": "Health"
-      },
-      {
         "id": "fanDyn",
         "op": "FanOutDispatchEffectDynamic",
         "payloadPreset": "TargetToResolved"
@@ -38,16 +28,6 @@
       {
         "from": "explicit",
         "fromPort": "next",
-        "to": "wound"
-      },
-      {
-        "from": "wound",
-        "fromPort": "next",
-        "to": "hit"
-      },
-      {
-        "from": "hit",
-        "fromPort": "next",
         "to": "fanDyn"
       }
     ],
@@ -56,18 +36,6 @@
         "from": "payloadTemplate",
         "fromPort": "value",
         "to": "fanDyn",
-        "toPort": "value"
-      },
-      {
-        "from": "explicit",
-        "fromPort": "value",
-        "to": "hit",
-        "toPort": "target"
-      },
-      {
-        "from": "wound",
-        "fromPort": "value",
-        "to": "hit",
         "toPort": "value"
       }
     ]

@@ -1,9 +1,9 @@
 {
   "op": "SnapToNearestInCollection",
   "driver": "event",
-  "title": "吸到花名册里最近的人",
-  "beat": "落点吸到最近单位身上。",
-  "detailTemplate": "落点已经吸到花名册里最近的人。",
+  "title": "贴到花名册里最近的人",
+  "beat": "X 标记离开原地，压到花名册里够得着的最近那人身上。",
+  "detailTemplate": "落点吸到{result}身上。",
   "assertDetailContains": [
     "吸到"
   ],
@@ -35,6 +35,7 @@
     {
       "key": "showcase.graph_op.snap",
       "members": [
+        "caster",
         "target"
       ]
     }

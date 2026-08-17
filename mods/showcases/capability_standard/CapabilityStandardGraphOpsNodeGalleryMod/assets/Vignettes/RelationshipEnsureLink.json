@@ -1,11 +1,11 @@
 {
   "op": "RelationshipEnsureLink",
   "driver": "sandbox",
-  "title": "先把关系链接上",
-  "beat": "施法者和盟友之间出现友谊/好感链。",
-  "detailTemplate": "接上了关系。",
+  "title": "把两人连成一条关系链",
+  "beat": "灰色虚线先比划一下，然后咔哒扣成青色实线。",
+  "detailTemplate": "施法者和盟友之间扣上了关系链，环扣亮起。",
   "assertDetailContains": [
-    "接上"
+    "关系链"
   ],
   "featuredNodeId": "ensure",
   "graphKind": "Effect",
