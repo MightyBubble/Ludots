@@ -1,6 +1,8 @@
 {
   "startupMapId": "entry",
-  "startupInputContexts": ["Default_Gameplay"],
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
   "presentation": {
     "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 65536,
@@ -63,11 +65,15 @@
     }
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "All" },
+    "targetFilter": {
+      "relationFilter": "All"
+    },
     "acquisition": {
       "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
     },
-    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
+    "movePathPreviewOrderTypeKeys": [
+      "moveTo"
+    ]
   }
 }

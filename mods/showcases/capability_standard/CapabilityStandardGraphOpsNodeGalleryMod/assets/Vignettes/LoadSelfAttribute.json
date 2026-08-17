@@ -2,10 +2,10 @@
   "op": "LoadSelfAttribute",
   "driver": "attr",
   "title": "看自己还剩多少血",
-  "beat": "不靠情境，施法者读自己生命，字幕报出。",
-  "detailTemplate": "自己还剩 {hp} 点血。",
+  "beat": "自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。",
+  "detailTemplate": "读自己的生命，还剩 {hp} 点。",
   "assertDetailContains": [
-    "自己"
+    "还剩"
   ],
   "featuredNodeId": "selfHp",
   "graphKind": "Effect",
@@ -17,7 +17,7 @@
       "name": "施法者",
       "x": -2,
       "y": 0,
-      "health": 100,
+      "health": 62,
       "healthMax": 100
     },
     {

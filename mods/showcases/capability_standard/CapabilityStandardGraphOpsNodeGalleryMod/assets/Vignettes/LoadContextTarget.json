@@ -1,11 +1,11 @@
 {
   "op": "LoadContextTarget",
   "driver": "attr",
-  "title": "从这一击的情境里取出目标",
-  "beat": "情境里的目标就是木桩，读出来再扣血。",
-  "detailTemplate": "从这一击的情境里取出目标，木桩挨了这一刀。",
+  "title": "这一击的单据上写着打谁",
+  "beat": "从这一击自带单据里取出目标，取到木桩，扣 12 血。",
+  "detailTemplate": "单据取出的目标是木桩，木桩从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "情境"
+    "单据"
   ],
   "featuredNodeId": "ctxTarget",
   "graphKind": "Effect",

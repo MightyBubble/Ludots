@@ -69,7 +69,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         }
 
         AssertBannedPlayerCopy(runtime.Metrics.Detail);
-        Assert.That(runtime.Title, Is.EqualTo("续一杯歇一口气"));
+        Assert.That(runtime.Title, Is.EqualTo("续一杯，歇一口气"));
         Assert.That(runtime.Context.ActorHealth[0], Is.EqualTo(opening).Within(0.01f));
         Assert.That(int.Parse(runtime.Context.CaptionValues["water"]), Is.GreaterThan(0));
         Assert.That(runtime.Metrics.Detail, Does.Contain("茶水"));
@@ -128,6 +128,30 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase));
+        }
+    }
+
+    [Test]
+    public void ScriptOps_DrawOverlayDoesNotThrow()
+    {
+        string[] ops =
+        [
+            "Jump", "JumpIfFalse", "Call", "Return", "Yield",
+            "HaltReturnInt", "InvokeScript", "MoveInt"
+        ];
+        foreach (string op in ops)
+        {
+            using var runtime = new GraphOpsNodeGalleryRuntime();
+            runtime.BindOp(op);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 6; i++)
+            {
+                runtime.Tick(0.35f);
+            }
+
+            var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+            runtime.DrawOverlay(debugDraw);
+            Assert.That(debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count, Is.GreaterThan(0), op);
         }
     }
 

@@ -35,6 +35,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using NUnit.Framework;
 using SkiaSharp;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -467,7 +468,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
             engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
 

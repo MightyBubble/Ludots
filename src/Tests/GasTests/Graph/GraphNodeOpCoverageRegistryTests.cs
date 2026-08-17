@@ -203,7 +203,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(
                     attribution.Executes(
                         "GraphOpsNodeGalleryAcceptanceTests",
-                        "ConstFloat_SetsTargetHealthToAuthoredConstant",
+                        "ConstFloat_SettlesAuthoredConstantThroughGraphTail",
                         "ConstFloat"),
                     Is.True);
                 Assert.That(

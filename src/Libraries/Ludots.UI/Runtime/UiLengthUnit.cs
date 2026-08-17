@@ -4,5 +4,10 @@ public enum UiLengthUnit : byte
 {
 	Auto,
 	Pixel,
-	Percent
+	Percent,
+	Vw,
+	Vh,
+	Vmin,
+	Vmax,
+	Calc
 }

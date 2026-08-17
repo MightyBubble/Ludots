@@ -4,9 +4,9 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -150,7 +150,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             InitializeIdentifiers();
             PrepareEntities(context);
             SeedRelationshipRuntime(context);
-            BindCommandSourceOwner(context.Owner);
+            RequireCommandSourceOwner(context.Owner);
             PublishSelectableKnowledge(context.Owner);
             _state.SetScenarioContext(context);
             _engine.GlobalContext[EntityQueryTacticsShowcaseIds.ScenarioKey] = context;
@@ -642,12 +642,13 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             return flagId;
         }
 
-        private void BindCommandSourceOwner(Entity owner)
+        private void RequireCommandSourceOwner(Entity owner)
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+            if (!_world.IsAlive(possessed) || possessed != owner)
             {
-                _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
+                throw new InvalidOperationException(
+                    "Entity query tactics showcase requires sole ClientLocalSeat possession of the player commander from launchContext.localSeats / startupLocalSeats.");
             }
         }
 

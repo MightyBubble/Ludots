@@ -1,9 +1,9 @@
 {
   "op": "QueryFilterTemplate",
   "driver": "query",
-  "title": "只留下侦察兵",
-  "beat": "士兵暗、侦察兵亮。",
-  "detailTemplate": "侦察兵亮了{count}个，士兵都暗下去了。",
+  "title": "只挑侦察兵",
+  "beat": "全场先亮一圈，再只剩两个矮个子亮着。",
+  "detailTemplate": "矮个侦察兵留圈{count}个，高个士兵全退成灰影。",
   "assertDetailContains": [
     "侦察兵"
   ],

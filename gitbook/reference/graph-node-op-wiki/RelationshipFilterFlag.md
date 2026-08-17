@@ -1,6 +1,6 @@
-# 只看受信任的
+# 只看挂了信任旗的
 
-信任旗开着的人亮。
+链上插着信任旗的才留下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 受信任的朋友有 {friendCount} 人。
+> 挂着信任旗的有 {friendCount} 人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 只看受信任的
+Feature: 只看挂了信任旗的
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RelationshipFilterFlag
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipFilterFlag/play.mp4
     When 短剧演完
-    Then 字幕讲的是「信任旗开着的人亮。」这类人话
+    Then 字幕讲的是「链上插着信任旗的才留下。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

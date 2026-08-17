@@ -1,6 +1,6 @@
 # cfg-01 · mod 数据
 
-> 第一性需求 · 已冻结。配置写法见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；编辑器需求见 [cfg-01 UXD](../uxd/cfg-01-mod-manifest.md)；理想实现见 [cfg-01 spec](../spec-runtime/cfg-01-mod-manifest.md)；现状见 [cfg-01 reference](../reference/cfg-01-mod-manifest.md)。
+> 第一性需求 · 已冻结。配置写法见 [cfg-01 配置说明](../config/cfg-01-mod-manifest.md)；编辑器需求见 [cfg-01 UXD](../uxd/cfg-01-mod-manifest.md)；runtime spec 见 [cfg-01 spec](../spec-runtime/cfg-01-mod-manifest.md)；现状见 [cfg-01 reference](../reference/cfg-01-mod-manifest.md)。
 
 ## 1. 定位
 

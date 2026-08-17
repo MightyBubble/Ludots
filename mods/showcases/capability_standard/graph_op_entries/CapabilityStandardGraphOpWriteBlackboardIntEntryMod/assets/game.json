@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_WriteBlackboardInt",
-  "windowTitle": "Ludots - 把层数写到记事板",
+  "windowTitle": "Ludots - 把层数记上板",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

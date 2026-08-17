@@ -25,6 +25,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -326,7 +327,7 @@ namespace Physics2DPlaygroundMod.Systems
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;

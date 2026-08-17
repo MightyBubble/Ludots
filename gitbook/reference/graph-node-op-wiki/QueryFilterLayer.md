@@ -1,6 +1,6 @@
-# 只打敌对层
+# 只留敌方层的人
 
-友军层被滤掉，只留敌人。
+扇内先亮一片，敌方层的留下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 只留敌对层，名单{count}人。
+> 敌对层滤过，名单剩{count}人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 只打敌对层
+Feature: 只留敌方层的人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryFilterLayer
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryFilterLayer/play.mp4
     When 短剧演完
-    Then 字幕讲的是「友军层被滤掉，只留敌人。」这类人话
+    Then 字幕讲的是「扇内先亮一片，敌方层的留下。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

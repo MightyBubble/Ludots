@@ -1,3 +1,6 @@
+using Arch;
+using Arch.Core;
+using Ludots.Core.Client;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -18,6 +21,7 @@ using Ludots.UI.Surface;
 using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using PresenterBlacksmithShowcaseMod.Runtime;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.Presentation
 {
@@ -60,6 +64,7 @@ namespace Ludots.Tests.Presentation
             engine.LoadMap(mapId);
             Tick(engine, frames);
         }
+
 
         internal static void Tick(GameEngine engine, int frames)
         {
@@ -155,8 +160,8 @@ namespace Ludots.Tests.Presentation
             var cameraAdapter = new HeadlessCameraAdapter();
             var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timings);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
@@ -164,7 +169,7 @@ namespace Ludots.Tests.Presentation
 
             var culling = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                engine.AuthorityCamera(),
                 engine.SpatialQueries,
                 view,
                 loadedChunks: null,
@@ -203,7 +208,7 @@ namespace Ludots.Tests.Presentation
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
         }
 
         private sealed class NullInputBackend : IInputBackend

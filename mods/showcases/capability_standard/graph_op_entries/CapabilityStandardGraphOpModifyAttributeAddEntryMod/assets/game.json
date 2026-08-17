@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_ModifyAttributeAdd",
-  "windowTitle": "Ludots - 直接扣血",
+  "windowTitle": "Ludots - 直接在血条上做加法",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryLine",
-  "windowTitle": "Ludots - 这条线上有谁",
+  "windowTitle": "Ludots - 这条窄线穿过谁",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

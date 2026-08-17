@@ -13,19 +13,22 @@ public sealed class UiSelector
 
 	public IReadOnlyList<UiSelectorPart> Parts { get; }
 
+	public UiPseudoElement PseudoElement { get; }
+
 	public int Specificity { get; }
 
-	public UiSelector(IReadOnlyList<UiSelectorPart> parts)
+	public UiSelector(IReadOnlyList<UiSelectorPart> parts, UiPseudoElement pseudoElement = UiPseudoElement.None)
 	{
 		if (parts == null || parts.Count == 0)
 		{
 			throw new ArgumentException("Selector must contain at least one part.", "parts");
 		}
 		Parts = parts;
-		Specificity = CalculateSpecificity(parts);
+		PseudoElement = pseudoElement;
+		Specificity = CalculateSpecificity(parts, pseudoElement);
 	}
 
-	private static int CalculateSpecificity(IReadOnlyList<UiSelectorPart> parts)
+	private static int CalculateSpecificity(IReadOnlyList<UiSelectorPart> parts, UiPseudoElement pseudoElement)
 	{
 		int num = 0;
 		int num2 = 0;
@@ -53,6 +56,10 @@ public sealed class UiSelector
 				num3++;
 			}
 		}
+		if (pseudoElement == UiPseudoElement.Before || pseudoElement == UiPseudoElement.After)
+		{
+			num3++;
+		}
 		return num * 10000 + num2 * 100 + num3;
 	}
 
@@ -68,7 +75,18 @@ public sealed class UiSelector
 			}
 			stringBuilder.Append(FormatPart(uiSelectorPart));
 		}
+		stringBuilder.Append(FormatPseudoElement(PseudoElement));
 		return stringBuilder.ToString();
+	}
+
+	private static string FormatPseudoElement(UiPseudoElement pseudoElement)
+	{
+		return pseudoElement switch
+		{
+			UiPseudoElement.Before => "::before",
+			UiPseudoElement.After => "::after",
+			_ => string.Empty,
+		};
 	}
 
 	private static string FormatPart(UiSelectorPart part)

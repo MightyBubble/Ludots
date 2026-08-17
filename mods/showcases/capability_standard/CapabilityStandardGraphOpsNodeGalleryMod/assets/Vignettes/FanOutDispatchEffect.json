@@ -1,9 +1,9 @@
 {
   "op": "FanOutDispatchEffect",
   "driver": "event",
-  "title": "按预设把效果派给圈里的人",
-  "beat": "圈中单位同时挨打、挂上派发出来的状态。",
-  "detailTemplate": "按预设把效果派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "按预设发同一招给全圈",
+  "beat": "卡一亮，圈内三人一起掉 18 血。",
+  "detailTemplate": "派给圈里 {count} 人，各掉 {damage} 血。",
   "assertDetailContains": [
     "派给"
   ],

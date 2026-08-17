@@ -1,6 +1,6 @@
 # cfg-08 · mod 代码扩展面
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-08-mod-extensions.md)；编辑器需求见 [UXD](../uxd/cfg-08-mod-extensions.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-08-mod-extensions.md)；编辑器实现见 [editor spec](../spec-editor/cfg-08-mod-extensions.md)；现状见 [reference](../reference/cfg-08-mod-extensions.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-08-mod-extensions.md)；编辑器需求见 [UXD](../uxd/cfg-08-mod-extensions.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-08-mod-extensions.md)；editor spec 见 [editor spec](../spec-editor/cfg-08-mod-extensions.md)；现状见 [reference](../reference/cfg-08-mod-extensions.md)。
 
 ## 1. 定位
 

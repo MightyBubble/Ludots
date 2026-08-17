@@ -1,9 +1,9 @@
 {
   "op": "FanOutApplyEffect",
   "driver": "sandbox",
-  "title": "圈里每人挂一层",
-  "beat": "圈中单位都被挂上状态，血条或字幕说挂上了。",
-  "detailTemplate": "圈里每人挂上一层，血条显示挂上了。",
+  "title": "圈里每人挨一记",
+  "beat": "黄圈内五个人同时掉一截血，圈外两个没事。",
+  "detailTemplate": "圈内{applied}人每人挨了一记，血条都掉了一截；圈外两人完好。",
   "assertDetailContains": [
     "每人"
   ],

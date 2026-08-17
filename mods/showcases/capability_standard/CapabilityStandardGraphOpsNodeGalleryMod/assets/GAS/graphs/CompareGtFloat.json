@@ -7,42 +7,227 @@
       {
         "id": "damage",
         "op": "ConstFloat",
-        "floatValue": 30
+        "floatValue": 50
       },
       {
-        "id": "threshold",
-        "op": "ConstFloat",
-        "floatValue": 15
+        "id": "explicitThin",
+        "op": "LoadExplicitTarget"
       },
       {
-        "id": "isCritical",
+        "id": "healthThin",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "cmpThin",
         "op": "CompareGtFloat"
+      },
+      {
+        "id": "jifThin",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "flipThin",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hitThin",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "explicitThick",
+        "op": "LoadContextTargetContext"
+      },
+      {
+        "id": "healthThick",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "cmpThick",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "jifThick",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "flipThick",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hitThick",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
       }
     ],
     "controlEdges": [
       {
         "from": "damage",
         "fromPort": "next",
-        "to": "threshold"
+        "to": "explicitThin"
       },
       {
-        "from": "threshold",
+        "from": "explicitThin",
         "fromPort": "next",
-        "to": "isCritical"
+        "to": "healthThin"
+      },
+      {
+        "from": "healthThin",
+        "fromPort": "next",
+        "to": "cmpThin"
+      },
+      {
+        "from": "cmpThin",
+        "fromPort": "next",
+        "to": "jifThin"
+      },
+      {
+        "from": "jifThin",
+        "fromPort": "true",
+        "to": "flipThin"
+      },
+      {
+        "from": "jifThin",
+        "fromPort": "false",
+        "to": "explicitThick"
+      },
+      {
+        "from": "flipThin",
+        "fromPort": "next",
+        "to": "hitThin"
+      },
+      {
+        "from": "hitThin",
+        "fromPort": "next",
+        "to": "explicitThick"
+      },
+      {
+        "from": "explicitThick",
+        "fromPort": "next",
+        "to": "healthThick"
+      },
+      {
+        "from": "healthThick",
+        "fromPort": "next",
+        "to": "cmpThick"
+      },
+      {
+        "from": "cmpThick",
+        "fromPort": "next",
+        "to": "jifThick"
+      },
+      {
+        "from": "jifThick",
+        "fromPort": "true",
+        "to": "flipThick"
+      },
+      {
+        "from": "jifThick",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "flipThick",
+        "fromPort": "next",
+        "to": "hitThick"
+      },
+      {
+        "from": "hitThick",
+        "fromPort": "next",
+        "to": "done"
       }
     ],
     "valueEdges": [
       {
         "from": "damage",
         "fromPort": "value",
-        "to": "isCritical",
+        "to": "cmpThin",
         "toPort": "a"
       },
       {
-        "from": "threshold",
+        "from": "explicitThin",
         "fromPort": "value",
-        "to": "isCritical",
+        "to": "healthThin",
+        "toPort": "source"
+      },
+      {
+        "from": "healthThin",
+        "fromPort": "value",
+        "to": "cmpThin",
         "toPort": "b"
+      },
+      {
+        "from": "cmpThin",
+        "fromPort": "value",
+        "to": "jifThin",
+        "toPort": "condition"
+      },
+      {
+        "from": "damage",
+        "fromPort": "value",
+        "to": "flipThin",
+        "toPort": "value"
+      },
+      {
+        "from": "flipThin",
+        "fromPort": "value",
+        "to": "hitThin",
+        "toPort": "value"
+      },
+      {
+        "from": "explicitThin",
+        "fromPort": "value",
+        "to": "hitThin",
+        "toPort": "target"
+      },
+      {
+        "from": "explicitThick",
+        "fromPort": "value",
+        "to": "healthThick",
+        "toPort": "source"
+      },
+      {
+        "from": "healthThick",
+        "fromPort": "value",
+        "to": "cmpThick",
+        "toPort": "b"
+      },
+      {
+        "from": "damage",
+        "fromPort": "value",
+        "to": "cmpThick",
+        "toPort": "a"
+      },
+      {
+        "from": "cmpThick",
+        "fromPort": "value",
+        "to": "jifThick",
+        "toPort": "condition"
+      },
+      {
+        "from": "damage",
+        "fromPort": "value",
+        "to": "flipThick",
+        "toPort": "value"
+      },
+      {
+        "from": "flipThick",
+        "fromPort": "value",
+        "to": "hitThick",
+        "toPort": "value"
+      },
+      {
+        "from": "explicitThick",
+        "fromPort": "value",
+        "to": "hitThick",
+        "toPort": "target"
       }
     ]
   }

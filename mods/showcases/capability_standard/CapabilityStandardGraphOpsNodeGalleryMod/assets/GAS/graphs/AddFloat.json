@@ -17,6 +17,19 @@
       {
         "id": "sum",
         "op": "AddFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "flip",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
       }
     ],
     "controlEdges": [
@@ -29,6 +42,21 @@
         "from": "bonus",
         "fromPort": "next",
         "to": "sum"
+      },
+      {
+        "from": "sum",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "flip"
+      },
+      {
+        "from": "flip",
+        "fromPort": "next",
+        "to": "hit"
       }
     ],
     "valueEdges": [
@@ -43,6 +71,24 @@
         "fromPort": "value",
         "to": "sum",
         "toPort": "b"
+      },
+      {
+        "from": "sum",
+        "fromPort": "value",
+        "to": "flip",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "flip",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
       }
     ]
   }

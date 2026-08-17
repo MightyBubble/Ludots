@@ -12,6 +12,19 @@
       {
         "id": "negMod",
         "op": "NegFloat"
+      },
+      {
+        "id": "negAgain",
+        "op": "NegFloat"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
       }
     ],
     "controlEdges": [
@@ -19,6 +32,21 @@
         "from": "modifier",
         "fromPort": "next",
         "to": "negMod"
+      },
+      {
+        "from": "negMod",
+        "fromPort": "next",
+        "to": "negAgain"
+      },
+      {
+        "from": "negAgain",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
       }
     ],
     "valueEdges": [
@@ -27,6 +55,24 @@
         "fromPort": "value",
         "to": "negMod",
         "toPort": "value"
+      },
+      {
+        "from": "negMod",
+        "fromPort": "value",
+        "to": "negAgain",
+        "toPort": "value"
+      },
+      {
+        "from": "negAgain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
       }
     ]
   }

@@ -1,6 +1,6 @@
 # cfg-07 · 合并规则案例集
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-07-merge-rules.md)；编辑器需求见 [UXD](../uxd/cfg-07-merge-rules.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-07-merge-rules.md)；编辑器实现见 [editor spec](../spec-editor/cfg-07-merge-rules.md)；现状见 [reference](../reference/cfg-07-merge-rules.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-07-merge-rules.md)；编辑器需求见 [UXD](../uxd/cfg-07-merge-rules.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-07-merge-rules.md)；editor spec 见 [editor spec](../spec-editor/cfg-07-merge-rules.md)；现状见 [reference](../reference/cfg-07-merge-rules.md)。
 
 ## 1. 定位
 

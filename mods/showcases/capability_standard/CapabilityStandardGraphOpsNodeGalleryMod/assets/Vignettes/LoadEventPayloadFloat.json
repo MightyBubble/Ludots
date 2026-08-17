@@ -1,9 +1,9 @@
 {
   "op": "LoadEventPayloadFloat",
   "driver": "event",
-  "title": "读出事件里的小数",
-  "beat": "事件带来的小数载荷显示在字幕。",
-  "detailTemplate": "事件里的小数是 {result}。",
+  "title": "从飞来的那一发里读出小数",
+  "beat": "信号落地后，2.5 从事件里飞进信件板。",
+  "detailTemplate": "这一发带来的小数是 {result}。",
   "assertDetailContains": [
     "小数"
   ],

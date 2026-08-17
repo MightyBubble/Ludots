@@ -1,6 +1,6 @@
-# 给木桩挂上状态
+# 给木桩挂上看得见的状态
 
-木桩被挂上一层可见状态，字幕说挂上了标记。
+红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/poster.png" src="artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 木桩被挂上了一层标记。
+> 木桩被挂上标记，状态可见，血量 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 给木桩挂上状态
+Feature: 给木桩挂上看得见的状态
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ApplyEffectTemplate
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ApplyEffectTemplate/play.mp4
     When 短剧演完
-    Then 字幕讲的是「木桩被挂上一层可见状态，字幕说挂上了标记。」这类人话
+    Then 字幕讲的是「红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

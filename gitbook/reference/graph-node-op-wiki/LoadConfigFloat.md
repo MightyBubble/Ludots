@@ -1,6 +1,6 @@
-# 从技能配置读出威力
+# 翻开技能册照威力办事
 
-配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。
+册上写 40，木桩就真挨 40。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 配置威力 {result}；示意条从 {healthBefore} 掉到 {healthAfter}。
+> 册上威力 {result}；木桩血量 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从技能配置读出威力
+Feature: 翻开技能册照威力办事
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadConfigFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadConfigFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「配置写着 40，不是写死在图常数里。头顶示意条按这个数往下掉，不是结算出来的伤。」这类人话
+    Then 字幕讲的是「册上写 40，木桩就真挨 40。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

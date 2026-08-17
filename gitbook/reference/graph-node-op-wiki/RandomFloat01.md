@@ -1,6 +1,6 @@
-# 这一刀带随机抖动
+# 骰子决定这一刀
 
-每次抖动不一样，血条每次掉的数不完全相同。
+每一拍重掷一次骰子，掷出多长这一刀就多长，一列掷点史里没有两根一样长。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RandomFloat01/poster.png" src="artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 这一刀随机抖动是 {result}。
+> 这一拍掷出 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 这一刀带随机抖动
+Feature: 骰子决定这一刀
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RandomFloat01
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RandomFloat01/play.mp4
     When 短剧演完
-    Then 字幕讲的是「每次抖动不一样，血条每次掉的数不完全相同。」这类人话
+    Then 字幕讲的是「每一拍重掷一次骰子，掷出多长这一刀就多长，一列掷点史里没有两根一样长。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

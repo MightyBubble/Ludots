@@ -35,6 +35,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -42,6 +43,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -389,7 +391,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
             Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
             ReplaceCommandSource(engine, localPlayer, ezreal, garenAlpha);
@@ -403,29 +405,29 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(buttons[3].Active, Is.False);
             Assert.That(buttons[4].Active, Is.True);
 
-            engine.GameSession.Camera.Update(DeltaTime);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm.HasValue, Is.True);
+            engine.AuthorityCamera().Update(DeltaTime);
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm.HasValue, Is.True);
 
             toolbar.Activate(FollowSelectionGroupToolbarButtonId);
             Tick(engine, 2);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[5].Active, Is.True);
-            engine.GameSession.Camera.Update(DeltaTime);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm.HasValue, Is.True);
+            engine.AuthorityCamera().Update(DeltaTime);
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm.HasValue, Is.True);
 
             Vector2 ezrealPos = engine.World.Get<WorldPositionCm>(ezreal).Value.ToVector2();
             Vector2 garenPos = engine.World.Get<WorldPositionCm>(garenAlpha).Value.ToVector2();
             Vector2 expectedGroup = (ezrealPos + (garenPos * 3f)) / 4f;
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm!.Value.X, Is.EqualTo(expectedGroup.X).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm!.Value.Y, Is.EqualTo(expectedGroup.Y).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm!.Value.X, Is.EqualTo(expectedGroup.X).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm!.Value.Y, Is.EqualTo(expectedGroup.Y).Within(0.01f));
 
             toolbar.Activate(FreeCameraToolbarButtonId);
             Tick(engine, 2);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.True);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            engine.AuthorityCamera().ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = SandboxTacticalCameraId,
                 TargetCm = new Vector2(2600f, 1480f),
@@ -439,12 +441,12 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(ResetCameraToolbarButtonId);
             Tick(engine, 4);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(SandboxTacticalCameraId));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(1850f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(980f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(3900f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.Pitch, Is.EqualTo(54f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.FovYDeg, Is.EqualTo(42f).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(SandboxTacticalCameraId));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(1850f).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(980f).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(3900f).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().State.Pitch, Is.EqualTo(54f).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().State.FovYDeg, Is.EqualTo(42f).Within(0.01f));
         }
 
         [Test]
@@ -620,7 +622,7 @@ namespace Ludots.Tests.GAS.Production
                 return counts.TeamA >= 48 && counts.TeamB >= 48;
             }, maxFrames: 360);
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity[] teamASelection =
             {
                 FindEntityByName(engine.World, "StressFireMageA"),
@@ -1032,8 +1034,8 @@ namespace Ludots.Tests.GAS.Production
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
@@ -1041,7 +1043,7 @@ namespace Ludots.Tests.GAS.Production
 
             var culling = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                engine.AuthorityCamera(),
                 engine.SpatialQueries,
                 view,
                 loadedChunks: null,
@@ -1109,7 +1111,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames)
@@ -1702,7 +1704,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
         }
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
@@ -1721,7 +1723,7 @@ namespace Ludots.Tests.GAS.Production
                            ownerObj is Entity activeOwner &&
                            engine.World.IsAlive(activeOwner)
                 ? activeOwner
-                : engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                : ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             string key = engine.GlobalContext.TryGetValue(ActiveCollectionKey, out object? keyObj) &&
                          keyObj is string activeKey &&
                          !string.IsNullOrWhiteSpace(activeKey)

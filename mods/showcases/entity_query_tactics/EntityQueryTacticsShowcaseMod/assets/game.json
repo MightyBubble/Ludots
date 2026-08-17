@@ -1,10 +1,13 @@
 {
+  "startupMapId": "entity_query_tactics_showcase",
   "windowTitle": "Ludots - Entity Query Tactics Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,
   "targetFps": 0,
-  "startupMapId": "entity_query_tactics_showcase",
-  "startupInputContexts": ["Default_Gameplay", "EntityQueryTactics.Controls"],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "EntityQueryTactics.Controls"
+  ],
   "commandSource": {
     "targetFilter": {
       "relationFilter": "Friendly"

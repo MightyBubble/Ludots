@@ -1,11 +1,11 @@
 {
   "op": "Return",
   "driver": "script",
-  "title": "办完事交回",
-  "beat": "子程序结束，人回到主线。",
-  "detailTemplate": "办完事交回主线。人在{place}。",
+  "title": "办完差事，交回原点",
+  "beat": "差事办完这一步，人从驿站那格退回原点，虚影收回真人。",
+  "detailTemplate": "差事办完了，人退回{place}。",
   "assertDetailContains": [
-    "交回"
+    "退回"
   ],
   "featuredNodeId": "ret",
   "graphKind": "Script",

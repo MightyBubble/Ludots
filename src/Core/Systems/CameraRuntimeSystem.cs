@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
 
@@ -9,23 +10,21 @@ namespace Ludots.Core.Systems
 {
     /// <summary>
     /// Fixed-step authoritative camera system.
-    /// Applies pending camera requests, freezes the latest sampled input, and advances camera logic.
+    /// Drives every registered LogicView camera (participant + client-present). No session camera fallback.
     /// </summary>
     public sealed class CameraRuntimeSystem : ISystem<float>
     {
         private readonly World _world;
-        private readonly CameraManager _cameraManager;
         private readonly Dictionary<string, object> _globals;
         private readonly VirtualCameraRegistry _virtualCameraRegistry;
+        private readonly List<CameraManager> _cameraScratch = new(4);
 
         public CameraRuntimeSystem(
             World world,
-            CameraManager cameraManager,
             Dictionary<string, object> globals,
             VirtualCameraRegistry virtualCameraRegistry)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
-            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _virtualCameraRegistry = virtualCameraRegistry ?? throw new ArgumentNullException(nameof(virtualCameraRegistry));
         }
@@ -36,16 +35,61 @@ namespace Ludots.Core.Systems
 
         public void Update(in float dt)
         {
-            ApplyVirtualCameraRequest();
-            ApplyCameraPoseRequest();
-            _cameraManager.Update(dt);
+            CollectCameras();
+            bool hasPoseRequest = _globals.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name);
+            bool hasVirtualCameraRequest = _globals.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name);
+            if (_cameraScratch.Count == 0)
+            {
+                if (hasPoseRequest || hasVirtualCameraRequest)
+                {
+                    throw new InvalidOperationException(
+                        "CameraPoseRequest / VirtualCameraRequest requires at least one LogicView " +
+                        "(participant view or logicview.client.present). GameSession.Camera is removed.");
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < _cameraScratch.Count; i++)
+            {
+                ApplyVirtualCameraRequest(_cameraScratch[i]);
+                ApplyCameraPoseRequest(_cameraScratch[i]);
+                _cameraScratch[i].Update(dt);
+            }
+
+            _globals.Remove(CoreServiceKeys.CameraPoseRequest.Name);
+            _globals.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
         }
 
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
 
-        private void ApplyCameraPoseRequest()
+        private void CollectCameras()
+        {
+            _cameraScratch.Clear();
+            if (!_globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) ||
+                viewsObj is not LogicViewRegistry views)
+            {
+                return;
+            }
+
+            if (views.Count > 0)
+            {
+                views.CopyCameras(_cameraScratch);
+                return;
+            }
+
+            if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
+                seatsObj is ClientLocalSeatRegistry seats &&
+                seats.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "ClientLocalSeatRegistry has seats but LogicViewRegistry is empty — PresentBinding/LogicView publish is required.");
+            }
+        }
+
+        private void ApplyCameraPoseRequest(CameraManager cameraManager)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.CameraPoseRequest.Name, out var requestObj) ||
                 requestObj is not CameraPoseRequest request)
@@ -53,11 +97,10 @@ namespace Ludots.Core.Systems
                 return;
             }
 
-            _cameraManager.ApplyPose(request);
-            _globals.Remove(CoreServiceKeys.CameraPoseRequest.Name);
+            cameraManager.ApplyPose(request);
         }
 
-        private void ApplyVirtualCameraRequest()
+        private void ApplyVirtualCameraRequest(CameraManager cameraManager)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out var requestObj) ||
                 requestObj is not VirtualCameraRequest request)
@@ -69,14 +112,13 @@ namespace Ludots.Core.Systems
             {
                 if (string.IsNullOrWhiteSpace(request.Id))
                 {
-                    _cameraManager.ClearVirtualCamera();
+                    cameraManager.ClearVirtualCamera();
                 }
                 else
                 {
-                    _cameraManager.DeactivateVirtualCamera(request.Id, request.BlendDurationSeconds);
+                    cameraManager.DeactivateVirtualCamera(request.Id, request.BlendDurationSeconds);
                 }
 
-                _globals.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
                 return;
             }
 
@@ -87,7 +129,7 @@ namespace Ludots.Core.Systems
 
             if (request.ReplaceActiveStack)
             {
-                _cameraManager.ResetVirtualCameras();
+                cameraManager.ResetVirtualCameras();
             }
 
             var definition = _virtualCameraRegistry.Get(request.Id);
@@ -102,15 +144,13 @@ namespace Ludots.Core.Systems
                 request.FollowCollectionOwnerOverride,
                 followCollectionKey);
 
-            _cameraManager.ActivateVirtualCamera(
+            cameraManager.ActivateVirtualCamera(
                 request.Id,
                 request.BlendDurationSeconds,
                 request.PriorityOverride,
                 followTarget,
                 request.SnapToFollowTargetWhenAvailable,
                 request.ResetRuntimeState);
-
-            _globals.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
         }
     }
 }

@@ -11,6 +11,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -641,8 +642,9 @@ namespace InteractionShowcaseMod.UI
         private static bool TryResolveCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+                local == Entity.Null ||
+                !engine.World.IsAlive(local))
             {
                 return false;
             }
@@ -828,7 +830,7 @@ namespace InteractionShowcaseMod.UI
                 return $"Command group: {contextView.Count} hero(es).";
             }
 
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
                 localPlayer != Entity.Null &&
                 engine.World.IsAlive(localPlayer) &&
                 collections.TryGet(localPlayer, frame.ActiveCollectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle localHandle) &&
@@ -957,7 +959,7 @@ namespace InteractionShowcaseMod.UI
             {
                 owner = frame.ContextEntity;
             }
-            else if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+            else if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
                      localPlayer != Entity.Null &&
                      engine.World.IsAlive(localPlayer))
             {

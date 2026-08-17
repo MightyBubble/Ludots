@@ -2,8 +2,8 @@
   "op": "RelationshipGetMetric",
   "driver": "rel",
   "title": "读出这个人的好感",
-  "beat": "点名好友，字幕和好感条显示读到的数。",
-  "detailTemplate": "点名{friend}，读到好感 {loyalty}。",
+  "beat": "从链上抽出读数牌，写着 85。",
+  "detailTemplate": "读到{friend}的好感 {loyalty}。",
   "assertDetailContains": [
     "好感"
   ],

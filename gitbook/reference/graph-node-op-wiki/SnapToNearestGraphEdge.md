@@ -1,6 +1,6 @@
-# 吸到路上最近的边
+# 离路太远就拽回路边
 
-落点吸到路网边上。
+X 从半空掉到路上，原位留下残影。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/poster.png" src="artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 落点已经吸到路边。
+> 落点已经钉在路边 ({x},{y})。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 吸到路上最近的边
+Feature: 离路太远就拽回路边
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_SnapToNearestGraphEdge
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_SnapToNearestGraphEdge/play.mp4
     When 短剧演完
-    Then 字幕讲的是「落点吸到路网边上。」这类人话
+    Then 字幕讲的是「X 从半空掉到路上，原位留下残影。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -20,7 +20,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 500,
     "followMode": "HoldToLock",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "allowUserInput": true
   },
   {
@@ -141,7 +141,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 100,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "allowUserInput": true
   },
   {
@@ -163,7 +163,7 @@
     "rotateRequiresHold": false,
     "enableZoom": false,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "allowUserInput": true
   }
 ]

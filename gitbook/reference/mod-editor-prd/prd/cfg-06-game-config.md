@@ -1,6 +1,6 @@
 # cfg-06 · 游戏配置
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-06-game-config.md)；编辑器需求见 [UXD](../uxd/cfg-06-game-config.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-06-game-config.md)；编辑器实现见 [editor spec](../spec-editor/cfg-06-game-config.md)；现状见 [reference](../reference/cfg-06-game-config.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-06-game-config.md)；编辑器需求见 [UXD](../uxd/cfg-06-game-config.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-06-game-config.md)；editor spec 见 [editor spec](../spec-editor/cfg-06-game-config.md)；现状见 [reference](../reference/cfg-06-game-config.md)。
 
 ## 1. 定位
 

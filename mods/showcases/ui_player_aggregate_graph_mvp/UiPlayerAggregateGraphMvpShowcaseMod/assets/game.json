@@ -1,8 +1,11 @@
 {
+  "startupMapId": "ui_player_aggregate_graph_mvp",
   "windowTitle": "Ludots - Player Aggregate Graph MVP",
   "windowWidth": 1440,
   "windowHeight": 810,
   "targetFps": 0,
-  "startupMapId": "ui_player_aggregate_graph_mvp",
-  "startupInputContexts": ["Default_Gameplay", "UiPlayerAggregateGraphMvp.Controls"]
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "UiPlayerAggregateGraphMvp.Controls"
+  ]
 }

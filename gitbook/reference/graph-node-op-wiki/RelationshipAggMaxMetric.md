@@ -1,6 +1,6 @@
 # 最高好感是多少
 
-字幕报最高值，对应的人条最满。
+四块数值牌里最高的浮出来。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 最高好感是 {max}，{friend}的条最满。
+> 最高好感 {max}，是{friend}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 最高好感是多少
     Given 玩家打开 capability_standard_graph_op_RelationshipAggMaxMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipAggMaxMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「字幕报最高值，对应的人条最满。」这类人话
+    Then 字幕讲的是「四块数值牌里最高的浮出来。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

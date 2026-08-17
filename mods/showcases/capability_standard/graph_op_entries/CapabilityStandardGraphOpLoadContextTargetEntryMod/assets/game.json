@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadContextTarget",
-  "windowTitle": "Ludots - 从这一击的情境里取出目标",
+  "windowTitle": "Ludots - 这一击的单据上写着打谁",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

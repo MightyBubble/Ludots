@@ -1,6 +1,6 @@
-# 谁最残
+# 点名最残的那个
 
-最残的人被点名。
+全场退成灰影，空血条那个被点名徽钉住。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 最残的是{label}，生命{hp}。
+> 被点名的是{label}，血{hp}，点名线从指挥席拉到他头顶。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 谁最残
+Feature: 点名最残的那个
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggMinEntityByAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMinEntityByAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最残的人被点名。」这类人话
+    Then 字幕讲的是「全场退成灰影，空血条那个被点名徽钉住。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

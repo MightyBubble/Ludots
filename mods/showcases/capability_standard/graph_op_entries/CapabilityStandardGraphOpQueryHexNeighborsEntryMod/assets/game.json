@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryHexNeighbors",
-  "windowTitle": "Ludots - 贴着的六格邻居",
+  "windowTitle": "Ludots - 贴身六格邻居",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

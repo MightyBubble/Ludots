@@ -28,5 +28,8 @@
     { "TeamId": 2, "RepresentativeInstanceId": "minimap-federation-prime" },
     { "TeamId": 3, "RepresentativeInstanceId": "minimap-horde-nest" },
     { "TeamId": 4, "RepresentativeInstanceId": "minimap-nomad-enclave" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "minimap-imperial-capital" }
   ]
 }

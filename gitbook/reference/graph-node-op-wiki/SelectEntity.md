@@ -1,6 +1,6 @@
-# 有条件就换目标
+# 岔路口选人打
 
-条件成立时改打木桩，不成立打自己。
+残影幕条件不成立→挑了自己挨打；正幕条件成立→挑了木桩，扣 18。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SelectEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_SelectEntity/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SelectEntity/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 这一刀打向木桩。
+> 这一刀挑中木桩，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 有条件就换目标
+Feature: 岔路口选人打
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_SelectEntity
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_SelectEntity/play.mp4
     When 短剧演完
-    Then 字幕讲的是「条件成立时改打木桩，不成立打自己。」这类人话
+    Then 字幕讲的是「残影幕条件不成立→挑了自己挨打；正幕条件成立→挑了木桩，扣 18。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

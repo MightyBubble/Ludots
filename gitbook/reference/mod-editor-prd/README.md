@@ -43,9 +43,11 @@ gitbook/reference/mod-editor-prd/
 | 强化兵种 | 数值热调：表单编辑、下次施放生效的热应用 |
 | 皇室战争玩法 | 玩法创新组合：技能/效果/图编辑器把卡牌、圣水、塔拼出来 |
 
-示例纪律：cfg-01 起各命题的示例统一取自本场景的真实文件（现阶段锚定仓库 `mods/showcases/rts_red_alert_like/`，治理拆分后切换到 `mods/handbook/` 族），禁止零散杜撰；已有实现与文档合同冲突时，**治理实现**，不顺着错误实现写文档。
+示例纪律：cfg-01 起各命题的示例统一取自本场景的真实文件（现阶段锚定仓库 `mods/showcases/rts_red_alert_like/`，治理拆分后切换到 mods/handbook/（规划中目录，尚未创建） 族），禁止零散杜撰；已有实现与文档合同冲突时，**治理实现**，不顺着错误实现写文档。
 
 ## 3. 概念模型
+
+> 初读可跳过本节，待熟悉各域后回看全景。
 
 ```
 输入映射 ─→ Order（命令意图：admission → 实体队列 → 终态）
@@ -63,7 +65,7 @@ gitbook/reference/mod-editor-prd/
         属性绑定 Sink（物理/相机）              延迟触发 → 事件 → Reaction/EventGate（下一帧）
 ```
 
-Graph 不是第六个框，而是**贯穿 Effect、Ability、AI 的可编程面**：效果相位图、能力前置图、派生属性图、订单校验图、AI 打分图、BT/HFSM 叶子——八个挂接点见 `gr-08`；新图节点与效果处理器可由 mod 代码在加载窗口注册（扩展面，见 cfg-01）。
+Graph 不是第六个框，而是**贯穿 Effect、Ability、AI 的可编程面**：效果相位图、能力前置图、派生属性图、订单校验图、AI 打分图、BT/HFSM 叶子——八个挂接点见 `gr-09`；新图节点与效果处理器可由 mod 代码在加载窗口注册（扩展面，见 cfg-01）。
 
 配置资产与加载顺序——谁必须先注册，谁才能引用：
 
@@ -153,19 +155,21 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 |---|---|
 | 搞懂 mod 的组成与启动 | 按卷 1 顺序通读：cfg-01 → cfg-02 → cfg-03 → cfg-04 → cfg-05 → cfg-06 → cfg-07 → cfg-08 |
 | 有一张能进游戏的地图 | cfg-06（启动地图）→ map-01 → map-02 → ent-01（卷 2） |
-| 一个伤害或治疗技能 | cfg-05 → fx-02/03/04 → ab-01/02/04 → fx-09/10/11 |
-| Buff、Debuff 或状态流 | tag-01/02 → fx-12/13 → fx-05 → attr-02/03 |
-| 自定义伤害公式或复杂逻辑 | gr-01/02/03 → gr-op-02/04/10 → fx-05/06 |
-| 弹道、召唤或位移技能 | fx-15/16/17 → ab-02 → fx-14 |
+| 一个伤害或治疗技能 | cfg-05 → fx-01/02/03 → ab-01/02/04 → fx-09/10/11 |
+| Buff、Debuff 或状态流 | tag-01/02 → fx-13/12 → fx-04 → attr-02/03 |
+| 自定义伤害公式或复杂逻辑 | gr-01/02/03 → gr-op-02/04/10 → fx-06 |
+| 弹道、召唤或位移技能 | fx-15/16/17 → ab-02 → fx-15 |
 | AI 自动施法 | ai-01 到 ai-08（第二期）+ ab-04/06 |
-| 单位生产、建造或经济 | fx-16/21/22 → ab-09 → attr-01 |
+| 单位生产、建造或经济 | fx-16/20/21 → ab-09 → attr-01 |
 | 理解运行时为什么这样跑 | rt-01 到 rt-05 |
 | 配引擎与平台基建（物理/导航/视野/界面） | infra-01 到 infra-04（卷 13） |
 | 编辑器该做成什么样 | 全目录 prd 层 + ed-01 到 ed-03 |
 
 ## 6. 分篇目录
 
-共 119 个命题，分 14 卷，每个命题一套 prd / spec / reference 三件（下表文件名为三层共用编号名）。优先级 P1 为第一期，P2 为第二期。
+> 建议先读第 5 节阅读路线，按场景选读，无需按卷序通读。
+
+共 119 个命题，分 14 卷，每个命题一套 prd / config / uxd / spec-runtime / spec-editor / reference 六件（下表文件名为六层共用编号名）。优先级 P1 为第一期，P2 为第二期。
 
 ### 卷 1 · 配置基础
 
@@ -184,7 +188,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `map-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线、跨 mod 地图合并 | P1 | **已写** |
+| `ab-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线、跨 mod 地图合并 | P1 | **已写** |
 | `map-02-triggers.md` | 地图触发器 | 地图内触发器与棋盘、剧情与胜负判定 | P1 | **已写** |
 | `ent-01-templates.md` | 实体模板 | Entities/templates.json、组件与初始值、出生效果 | P1 | **已写** |
 
@@ -193,172 +197,174 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
 | `tag-01-basics.md` | Tag 表示与状态 | 位图、层数、定时、快照、有效缓存、惰性注册 | P1 | **已写** |
-| `tag-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | **已写** |
+| `ord-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | **已写** |
 | `tag-03-changed-events.md` | Tag 变化与事件 | 延迟触发器、变化事件、一帧延迟语义 | P1 | **已写** |
 
 ### 卷 4 · Attribute
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `attr-01-definition.md` | 属性定义与约束 | attribute_constraints.json、Base/Cap/Current、clampToBase、64 上限 | P1 | 未写 |
-| `attr-02-modifiers.md` | 修改器 | Add/Multiply/Override、聚合与即时的区别、写入权威 | P1 | 未写 |
-| `attr-03-aggregation.md` | 聚合管线 | Buff 重聚合、持久 Current、Cap 取聚合值 | P1 | 未写 |
-| `attr-04-derived.md` | 派生属性图 | Derived 图、实体绑定、原子提交 | P1 | 未写 |
-| `attr-05-bindings.md` | 属性绑定与 Sink | attribute_bindings.json、物理力与相机通道、脉冲式清零 | P1 | 未写 |
-| `attr-06-events.md` | 属性事件 | 属性变化发布事件、变化位、表现层读取 | P1 | 未写 |
+| `ab-01-definition.md` | 属性定义与约束 | attribute_constraints.json、Base/Cap/Current、clampToBase、64 上限 | P1 | **已写** |
+| `attr-02-modifiers.md` | 修改器 | Add/Multiply/Override、聚合与即时的区别、写入权威 | P1 | **已写** |
+| `attr-03-aggregation.md` | 聚合管线 | Buff 重聚合、持久 Current、Cap 取聚合值 | P1 | **已写** |
+| `attr-04-derived.md` | 派生属性图 | Derived 图、实体绑定、原子提交 | P1 | **已写** |
+| `attr-05-bindings.md` | 属性绑定与 Sink | attribute_bindings.json、物理力与相机通道、脉冲式清零 | P1 | **已写** |
+| `attr-06-events.md` | 属性事件 | 属性变化发布事件、变化位、表现层读取 | P1 | **已写** |
 
 ### 卷 5 · Effect
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `fx-01-pipeline.md` | 效果执行管线总览 | 从提案到移除的端到端时序、三个事务边界 | P1 | 未写 |
-| `fx-02-template.md` | 效果模板骨架 | effects.json 顶层、presetType 与 lifetime 合法组合 | P1 | 未写 |
-| `fx-03-preset-types.md` | Preset 类型系统 | preset_types.json、17 种 preset 全表、默认相位处理器 | P1 | 未写 |
-| `fx-04-lifetime.md` | 生命周期与时长 | Instant/After/Infinite、duration 块、周期、过期条件 | P1 | 未写 |
-| `fx-05-phases.md` | 八相位执行 | 相位顺序、Pre/Main/Post 三槽、skipMain、纯相位限制 | P1 | 未写 |
-| `fx-06-proposal-window.md` | 提案窗口与 Instant 内联 | OnPropose 验证图、OnCalculate、外部原子独占律 | P1 | 未写 |
-| `fx-07-response-chain.md` | 响应链 | Hook/Modify/Chain/PromptInput、窗口深度、fan-out 预算 | P1 | 未写 |
-| `fx-08-phase-listeners.md` | 相位监听器 | phaseListeners、Source 与 Target 视角、通配、随宿主清理 | P1 | 未写 |
-| `fx-09-target-query.md` | 目标查询 | 五种空间形状、origin、GraphProgram 动态查询 | P1 | 未写 |
-| `fx-10-target-filter.md` | 目标过滤 | 敌我关系、排除源、数量上限、层掩码 | P1 | 未写 |
-| `fx-11-target-dispatch.md` | 目标派发 | preset 与 contextMapping、payloadEffect、FanOut 链 | P1 | 未写 |
-| `fx-12-stack.md` | 堆叠 | 三种策略、两种溢出处理、无 stack 时的独立实体 | P1 | 未写 |
-| `fx-13-granted-tags.md` | 效果授予 Tag | Fixed/Linear/LinearPlusBase 公式、层数回收 | P1 | 未写 |
-| `fx-14-config-params.md` | 参数化 | configParams 七类型、`_ep.` 保留键全表、CallerParams 覆盖 | P1 | 未写 |
-| `fx-15-projectile.md` | 弹道 | projectile 全字段、直射与追踪、命中与落点子效果 | P1 | 未写 |
-| `fx-16-unit-creation.md` | 造单位 | placement 与 facing、onSpawnEffect、父与玩家归属 | P1 | 未写 |
-| `fx-17-displacement.md` | 位移 | 四种朝向模式、导航接管、叠加即替换 | P1 | 未写 |
-| `fx-18-relation.md` | 关系操作 | SetParent、RemoveParent、EnsureLink | P1 | 未写 |
-| `fx-19-vision.md` | 视野揭示 | revealArea、scope/layers、记忆时长、探测强度 | P1 | 未写 |
-| `fx-20-exchange.md` | 兑换 | exchange 块、exchangeOperationId 参数 | P1 | 未写 |
-| `fx-21-progression.md` | 进度完成 | id 与 scope、level 与 delta 互斥 | P1 | 未写 |
-| `fx-22-submit-order.md` | 出生下单 | submitOrderFromBlackboard、五个黑板键、提交模式 | P1 | 未写 |
-| `fx-23-lifecycle-atomic.md` | 生命周期原子操作 | DeployConsumeSource 链、六个生命周期内建操作 | P1 | 未写 |
+| `fx-01-pipeline.md` | 效果执行管线总览 | 从提案到移除的端到端时序、三个事务边界 | P1 | **已写** |
+| `fx-02-template.md` | 效果模板骨架 | effects.json 顶层、presetType 与 lifetime 合法组合 | P1 | **已写** |
+| `fx-03-preset-types.md` | Preset 类型系统 | preset_types.json、16 种 preset 全表、默认相位处理器 | P1 | **已写** |
+| `fx-04-lifetime.md` | 生命周期与时长 | Instant/After/Infinite、duration 块、周期、过期条件 | P1 | **已写** |
+| `fx-05-phases.md` | 八相位执行 | 相位顺序、Pre/Main/Post 三槽、skipMain、纯相位限制 | P1 | **已写** |
+| `fx-06-proposal-window.md` | 提案窗口与 Instant 内联 | OnPropose 验证图、OnCalculate、外部原子独占律 | P1 | **已写** |
+| `fx-07-response-chain.md` | 响应链 | Hook/Modify/Chain/PromptInput、窗口深度、fan-out 预算 | P1 | **已写** |
+| `fx-08-phase-listeners.md` | 相位监听器 | phaseListeners、Source 与 Target 视角、通配、随宿主清理 | P1 | **已写** |
+| `fx-09-target-query.md` | 目标查询 | 五种空间形状、origin、GraphProgram 动态查询 | P1 | **已写** |
+| `fx-10-target-filter.md` | 目标过滤 | 敌我关系、排除源、数量上限、层掩码 | P1 | **已写** |
+| `fx-11-target-dispatch.md` | 目标派发 | preset 与 contextMapping、payloadEffect、FanOut 链 | P1 | **已写** |
+| `fx-12-stack.md` | 堆叠 | 三种策略、两种溢出处理、无 stack 时的独立实体 | P1 | **已写** |
+| `fx-13-granted-tags.md` | 效果授予 Tag | Fixed/Linear/LinearPlusBase 公式、层数回收 | P1 | **已写** |
+| `fx-14-config-params.md` | 参数化 | configParams 七类型、`_ep.` 保留键全表、CallerParams 覆盖 | P1 | **已写** |
+| `fx-15-projectile.md` | 弹道 | projectile 全字段、直射与追踪、命中与落点子效果 | P1 | **已写** |
+| `fx-16-unit-creation.md` | 造单位 | placement 与 facing、onSpawnEffect、父与玩家归属 | P1 | **已写** |
+| `fx-17-displacement.md` | 位移 | 四种朝向模式、导航接管、叠加即替换 | P1 | **已写** |
+| `fx-18-relation.md` | 关系操作 | SetParent、RemoveParent、EnsureLink | P1 | **已写** |
+| `fx-19-vision.md` | 视野揭示 | revealArea、scope/layers、记忆时长、探测强度 | P1 | **已写** |
+| `fx-20-exchange.md` | 兑换 | exchange 块、exchangeOperationId 参数 | P1 | **已写** |
+| `fx-21-progression.md` | 进度完成 | id 与 scope、level 与 delta 互斥 | P1 | **已写** |
+| `fx-22-submit-order.md` | 出生下单 | submitOrderFromBlackboard、五个黑板键、提交模式 | P1 | **已写** |
+| `fx-23-lifecycle-atomic.md` | 生命周期原子操作 | DeployConsumeSource 链、六个生命周期内建操作 | P1 | **已写** |
 
 ### 卷 6 · Ability
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `ab-01-definition.md` | 技能定义骨架 | abilities.json 顶层、presentation 与本地化、input 声明、禁止字段 | P1 | 未写 |
-| `ab-02-exec-timeline.md` | 执行时间轴 | 11 种 item 全表、独立时钟、推进与打断、终态 | P1 | 未写 |
-| `ab-03-caller-params.md` | CallerParams 参数池 | 最多四组、与 configParams 的合并规则 | P1 | 未写 |
-| `ab-04-cooldown.md` | 冷却三件套 | cooldown 数据契约、TagClip 与 blockTags 闭环、AI 就绪判定 | P1 | 未写 |
-| `ab-05-activation-gates.md` | 激活门 | 校验顺序、blockTags、前置校验图、进度需求、toggle 先关 | P1 | 未写 |
-| `ab-06-slots.md` | 槽位系统 | 8 槽、四层解析、按来源回收 | P1 | 未写 |
-| `ab-07-form-sets.md` | 形态路由 | ability_form_sets.json、route 匹配、优先级 | P1 | 未写 |
-| `ab-08-toggle.md` | Toggle 技能 | toggleSpec、activeEffects、deactivateExec | P1 | 未写 |
-| `ab-09-targeting.md` | Targeting 与组合命令 | castRangeCm、超射程自动走近、投影排队 | P1 | 未写 |
-| `ab-10-context-groups.md` | 上下文组 | context_groups.json、candidate 评分、两张图 | P1 | 未写 |
+| `ab-01-definition.md` | 技能定义骨架 | abilities.json 顶层、presentation 与本地化、input 声明、禁止字段 | P1 | **已写** |
+| `ab-02-exec-timeline.md` | 执行时间轴 | 11 种 item 全表、独立时钟、推进与打断、终态 | P1 | **已写** |
+| `ab-03-caller-params.md` | CallerParams 参数池 | 最多四组、与 configParams 的合并规则 | P1 | **已写** |
+| `ab-04-cooldown.md` | 冷却三件套 | cooldown 数据契约、TagClip 与 blockTags 闭环、AI 就绪判定 | P1 | **已写** |
+| `ab-05-activation-gates.md` | 激活门 | 校验顺序、blockTags、前置校验图、进度需求、toggle 先关 | P1 | **已写** |
+| `ab-06-slots.md` | 槽位系统 | 8 槽、四层解析、按来源回收 | P1 | **已写** |
+| `ab-07-form-sets.md` | 形态路由 | ability_form_sets.json、route 匹配、优先级 | P1 | **已写** |
+| `ab-08-toggle.md` | Toggle 技能 | toggleSpec、activeEffects、deactivateExec | P1 | **已写** |
+| `ab-09-targeting.md` | Targeting 与组合命令 | castRangeCm、超射程自动走近、投影排队 | P1 | **已写** |
+| `ab-10-context-groups.md` | 上下文组 | context_groups.json、candidate 评分、两张图 | P1 | **已写** |
 
 ### 卷 7 · Order 与输入
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `ord-01-types.md` | 订单类型 | order_types.json 三段结构、全字段表、语义 key 分配 | P1 | 未写 |
-| `ord-02-rules.md` | 订单规则与打断 | orderRules、阻止与打断、同类型与满队策略 | P1 | 未写 |
-| `ord-03-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | 未写 |
-| `ord-04-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | 未写 |
-| `ord-05-input-protocol.md` | 输入协议 | InputRequest 与 Response、三种 Gate 的等待与改写目标 | P1 | 未写 |
-| `ord-06-input-mappings.md` | 输入映射 | input_order_mappings.json、argsTemplate、路由候选、用户覆写 | P1 | 未写 |
-| `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | 未写 |
-| `input-02-cast-dispatch.md` | 施法派发档案 | cast_dispatch_profiles.json、目标收集与派发策略 | P2 | 未写 |
-| `input-03-interaction-context.md` | 交互上下文档案 | interaction_context_profiles.json、交互模式与上下文 | P2 | 未写 |
-| `input-04-cast-commit.md` | 施法提交档案 | cast_commit_profiles 与 locks、提交确认与锁 | P2 | 未写 |
-| `input-05-filters-and-schemes.md` | 过滤与输入方案 | default_input、filter_profiles、control_schemes、动作属性绑定 | P2 | 未写 |
+| `ord-01-types.md` | 订单类型 | order_types.json 三段结构、全字段表、语义 key 分配 | P1 | **已写** |
+| `ord-02-rules.md` | 订单规则与打断 | orderRules、阻止与打断、同类型与满队策略 | P1 | **已写** |
+| `fx-01-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | **已写** |
+| `gr-op-05-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | **已写** |
+| `ord-05-input-protocol.md` | 输入协议 | InputRequest 与 Response、三种 Gate 的等待与改写目标 | P1 | **已写** |
+| `ord-06-input-mappings.md` | 输入映射 | input_order_mappings.json、argsTemplate、路由候选、用户覆写 | P1 | **已写** |
+| `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | **已写** |
+| `input-02-cast-dispatch.md` | 施法派发档案 | cast_dispatch_profiles.json、目标收集与派发策略 | P2 | **已写** |
+| `input-03-interaction-context.md` | 交互上下文档案 | interaction_context_profiles.json、交互模式与上下文 | P2 | **已写** |
+| `input-04-cast-commit.md` | 施法提交档案 | cast_commit_profiles 与 locks、提交确认与锁 | P2 | **已写** |
+| `input-05-filters-and-schemes.md` | 过滤与输入方案 | default_input、filter_profiles、control_schemes、动作属性绑定 | P2 | **已写** |
 
 ### 卷 8 · Graph
 
+（gr 基础 9 篇 + 节点家族 14 篇 + 关系目录 1 篇，共 24 篇）
+
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `gr-01-model.md` | 图编程模型 | L0/L1/L2 分层、编译流水线、寄存器机、限额总表 | P1 | 未写 |
-| `gr-02-document.md` | 图文档格式 | 顶层字段、节点字段全表、端口、边表强制、next 禁用 | P1 | 未写 |
-| `gr-03-kinds.md` | 六种 Kind | 返回约定、创作白名单与执行闸、预设寄存器 | P1 | 未写 |
-| `gr-04-compilation.md` | 编译与校验 | 编译期检查全清单、符号解析、注册终态与热替换边界 | P1 | 未写 |
-| `gr-05-execution.md` | 执行模型 | Run-to-Halt 与切片、Yield 宿主政策、步数预算、零分配 | P1 | 未写 |
-| `gr-06-funclib.md` | FuncLib | func_lib.json、纯度闭包校验、跨图调用 | P1 | 未写 |
-| `gr-07-actionlib.md` | ActionLib | action_lib.json、四种 host、yield 政策 | P1 | 未写 |
-| `gr-08-mount-points.md` | 挂接点总表 | 八个挂点与各自要求的 kind | P1 | 未写 |
-| `gr-09-outputs.md` | Query 图输出 | outputs 声明、实体集合与摘要标量、槽位清理 | P1 | 未写 |
-| `gr-op-01-context.md` | 节点：常量与上下文 | Const 三件、LoadCaster/Target/Viewer、Context 三件、EventPayload、TargetPos | P1 | 未写 |
-| `gr-op-02-math.md` | 节点：数学与比较 | 四则、clamp、abs、random、比较、SelectEntity | P1 | 未写 |
-| `gr-op-03-tags.md` | 节点：标签 | HasTag；查表一律走通用用户表（ADR #876）；"纯读选 tag"节点按 ADR 活口可重立（输入绑通用 tag 集/用户表，禁绑专表） | P1 | 未写 |
-| `gr-op-04-attributes.md` | 节点：属性与配置 | LoadAttribute、LoadSelfAttribute、WriteSelfAttribute、LoadConfig 三件 | P1 | 未写 |
-| `gr-op-05-blackboard.md` | 节点：黑板 | Read 与 Write × Float/Int/Entity | P1 | 未写 |
-| `gr-op-06-spatial.md` | 节点：空间查询 | Circle/Cone/Rectangle/Line/Hex、Sort/Limit/Filter | P1 | 未写 |
-| `gr-op-07-entityset.md` | 节点：实体集查询 | 全图、复制集合、五种过滤、按属性排序与聚合 | P1 | 未写 |
-| `gr-op-08-relationship.md` | 节点：关系系统 | 读、写、查询管线三组 | P1 | 未写 |
-| `gr-op-09-aggregate.md` | 节点：聚合与迭代 | AggCount、AggMinByDistance、TargetListGet | P1 | 未写 |
-| `gr-op-10-effect-actions.md` | 节点：效果与事件动作 | ApplyEffect 四件、RemoveEffect、FanOutDispatch 两件、ModifyAttributeAdd、SendEvent | P1 | 未写 |
-| `gr-op-11-lifecycle-builtin.md` | 节点：生命周期与内建 | BeginLifecycleTransaction、InvokeBuiltin 加 20 个内建全表 | P1 | 未写 |
-| `gr-op-12-placement.md` | 节点：放置校验 | ClampTargetToRange、IsPointInCircle、两种吸附 | P1 | 未写 |
-| `gr-op-13-topology.md` | 节点：拓扑谓词 | 控制域解析与可控性、知识投影 | P1 | 未写 |
-| `gr-op-14-control-flow.md` | 节点：Script 控制流 | Jump、Call、Return、Yield、HaltReturnInt、InvokeScript、MoveInt、作者糖 | P1 | 未写 |
-| `rel-01-catalog.md` | 关系目录 | Relationships/catalog.json、类型/度量/旗标/姿态（图节点关系族依赖） | P2 | 未写 |
+| `gr-01-model.md` | 图编程模型 | L0/L1/L2 分层、编译流水线、寄存器机、限额总表 | P1 | **已写** |
+| `gr-02-document.md` | 图文档格式 | 顶层字段、节点字段全表、端口、边表强制、next 禁用 | P1 | **已写** |
+| `gr-03-kinds.md` | 六种 Kind | 返回约定、创作白名单与执行闸、预设寄存器 | P1 | **已写** |
+| `gr-04-compilation.md` | 编译与校验 | 编译期检查全清单、符号解析、注册终态与热替换边界 | P1 | **已写** |
+| `gr-05-execution.md` | 执行模型 | Run-to-Halt 与切片、Yield 宿主政策、步数预算、零分配 | P1 | **已写** |
+| `gr-06-funclib.md` | FuncLib | func_lib.json、纯度闭包校验、跨图调用 | P1 | **已写** |
+| `gr-07-actionlib.md` | ActionLib | action_lib.json、四种 host、yield 政策 | P1 | **已写** |
+| `gr-08-mount-points.md` | 挂接点总表 | 八个挂点与各自要求的 kind | P1 | **已写** |
+| `gr-09-outputs.md` | Query 图输出 | outputs 声明、实体集合与摘要标量、槽位清理 | P1 | **已写** |
+| `gr-op-01-context.md` | 节点：常量与上下文 | Const 三件、LoadCaster/Target/Viewer、Context 三件、EventPayload、TargetPos | P1 | **已写** |
+| `gr-op-02-math.md` | 节点：数学与比较 | 四则、clamp、abs、random、比较、SelectEntity | P1 | **已写** |
+| `gr-op-03-tags.md` | 节点：标签 | HasTag；查表一律走通用用户表（ADR #876）；"纯读选 tag"节点按 ADR 活口可重立（输入绑通用 tag 集/用户表，禁绑专表） | P1 | **已写** |
+| `gr-op-04-attributes.md` | 节点：属性与配置 | LoadAttribute、LoadSelfAttribute、WriteSelfAttribute、LoadConfig 三件 | P1 | **已写** |
+| `gr-op-05-blackboard.md` | 节点：黑板 | Read 与 Write × Float/Int/Entity | P1 | **已写** |
+| `gr-op-06-spatial.md` | 节点：空间查询 | Circle/Cone/Rectangle/Line/Hex、Sort/Limit/Filter | P1 | **已写** |
+| `gr-op-07-entityset.md` | 节点：实体集查询 | 全图、复制集合、五种过滤、按属性排序与聚合 | P1 | **已写** |
+| `gr-op-08-relationship.md` | 节点：关系系统 | 读、写、查询管线三组 | P1 | **已写** |
+| `gr-op-09-aggregate.md` | 节点：聚合与迭代 | AggCount、AggMinByDistance、TargetListGet | P1 | **已写** |
+| `gr-op-10-effect-actions.md` | 节点：效果与事件动作 | ApplyEffect 四件、RemoveEffect、FanOutDispatch 两件、ModifyAttributeAdd、SendEvent | P1 | **已写** |
+| `gr-op-11-lifecycle-builtin.md` | 节点：生命周期与内建 | BeginLifecycleTransaction、InvokeBuiltin 加 20 个内建全表 | P1 | **已写** |
+| `gr-op-12-placement.md` | 节点：放置校验 | ClampTargetToRange、IsPointInCircle、两种吸附 | P1 | **已写** |
+| `gr-op-13-topology.md` | 节点：拓扑谓词 | 控制域解析与可控性、知识投影 | P1 | **已写** |
+| `gr-op-14-control-flow.md` | 节点：Script 控制流 | Jump、Call、Return、Yield、HaltReturnInt、InvokeScript、MoveInt、作者糖 | P1 | **已写** |
+| `rel-01-catalog.md` | 关系目录 | Relationships/catalog.json、类型/度量/旗标/姿态（图节点关系族依赖） | P2 | **已写** |
 
 ### 卷 9 · AI 行为层
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `ai-01-utility-overview.md` | Utility AI 总论 | 十表关系、与 GAS 和 Graph 的三个接缝 | P2 | 未写 |
-| `ai-02-inputs.md` | 打分输入 | 8 种输入、GraphScore 接 Score 图 | P2 | 未写 |
-| `ai-03-norm-curves.md` | 归一化与曲线 | Identity/Range/RangeInverse × Linear/Power/Inverse | P2 | 未写 |
-| `ai-04-decisions.md` | 决策 | 四种聚合、节流、autocast | P2 | 未写 |
-| `ai-05-dm-profiles.md` | 决策者与档案 | UtilityScore 与 FixedPriority、决策间隔 | P2 | 未写 |
-| `ai-06-target-filters.md` | 目标过滤 | 9 种操作 | P2 | 未写 |
-| `ai-07-tasks.md` | 任务 | SubmitOrder 落到 Order 系统 | P2 | 未写 |
-| `ai-08-stances-actuators.md` | 姿态与执行器 | stance 与 actuator | P2 | 未写 |
-| `ai-09-behavior-trees.md` | 行为树 | behavior_trees.json、ScriptSlice、跨波次挂起 | P2 | 未写 |
-| `ai-10-hfsm.md` | 层次状态机 | hfsm.json、三个生命周期钩子、转移谓词 | P2 | 未写 |
-| `ai-11-goap-htn.md` | GOAP 与 HTN | 旧栈五文件、256 位世界状态 | P2 | 未写 |
+| `ai-01-utility-overview.md` | Utility AI 总论 | 十表关系、与 GAS 和 Graph 的三个接缝 | P2 | **已写** |
+| `ai-02-inputs.md` | 打分输入 | 8 种输入、GraphScore 接 Score 图 | P2 | **已写** |
+| `ai-03-norm-curves.md` | 归一化与曲线 | Identity/Range/RangeInverse × Linear/Power/Inverse | P2 | **已写** |
+| `ai-04-decisions.md` | 决策 | 四种聚合、节流、autocast | P2 | **已写** |
+| `ai-05-dm-profiles.md` | 决策者与档案 | UtilityScore 与 FixedPriority、决策间隔 | P2 | **已写** |
+| `ai-06-target-filters.md` | 目标过滤 | 9 种操作 | P2 | **已写** |
+| `ai-07-tasks.md` | 任务 | SubmitOrder 落到 Order 系统 | P2 | **已写** |
+| `ai-08-stances-actuators.md` | 姿态与执行器 | stance 与 actuator | P2 | **已写** |
+| `ai-09-behavior-trees.md` | 行为树 | behavior_trees.json、ScriptSlice、跨波次挂起 | P2 | **已写** |
+| `ai-10-hfsm.md` | 层次状态机 | hfsm.json、三个生命周期钩子、转移谓词 | P2 | **已写** |
+| `ai-11-goap-htn.md` | GOAP 与 HTN | 旧栈五文件、256 位世界状态 | P2 | **已写** |
 
 ### 卷 10 · 运行时横切
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `rt-01-clocks.md` | 时钟系统 | 三种时钟域、Step 策略、实体级变速、tick 换算 | P1 | 未写 |
-| `rt-02-budgets.md` | 预算与容量 | 帧预算、单根 fan-out 上限、容量总表、报错语义 | P1 | 未写 |
-| `rt-03-diagnostics.md` | 诊断与错误码 | 9 域 21 指标、错误码字典 | P1 | 未写 |
-| `rt-04-presentation.md` | 表现事件 | 施法与效果九种事件、属性增量、溢出报错 | P1 | 未写 |
-| `rt-05-events.md` | 事件总线与帧延迟 | 双缓冲、一帧延迟语义、Reaction 消费 | P1 | 未写 |
+| `rt-01-clocks.md` | 时钟系统 | 三种时钟域、Step 策略、实体级变速、tick 换算 | P1 | **已写** |
+| `rt-02-budgets.md` | 预算与容量 | 帧预算、单根 fan-out 上限、容量总表、报错语义 | P1 | **已写** |
+| `rt-03-diagnostics.md` | 诊断与错误码 | 9 域 20 指标、错误码字典 | P1 | **已写** |
+| `rt-04-presentation.md` | 表现事件 | 施法与效果九种事件、属性增量、溢出报错 | P1 | **已写** |
+| `attr-06-events.md` | 事件总线与帧延迟 | 双缓冲、一帧延迟语义、Reaction 消费 | P1 | **已写** |
 
 ### 卷 11 · 编辑器能力与需求
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `ed-01-workbench-base.md` | 实时技能工作台编辑基座 | 会话、三段式流水线、四级应用分级、安全帧回滚 | P1 | 未写 |
-| `ed-02-hot-apply.md` | 热应用白名单与边界 | 热字段清单、重载与重启边界、身份扩张禁热 | P1 | 未写 |
-| `ed-03-gap-roadmap.md` | 编辑器缺口与路线图 | 文档投影源、撤销重做、图编辑器、冷编辑流 | P1 | 未写 |
+| `ed-01-workbench-base.md` | 实时技能工作台编辑基座 | 会话、三段式流水线、四级应用分级、安全帧回滚 | P1 | **已写** |
+| `ed-02-hot-apply.md` | 热应用白名单与边界 | 热字段清单、重载与重启边界、身份扩张禁热 | P1 | **已写** |
+| `ed-03-gap-roadmap.md` | 编辑器缺口与路线图 | 文档投影源、撤销重做、图编辑器、冷编辑流 | P1 | **已写** |
 
 ### 卷 12 · 表现资产
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `pres-01-performers.md` | 表现器档案 | performers、presentation_behaviors、prefabs | P2 | 未写 |
-| `pres-02-asset-registry.md` | 表现资产清单 | mesh/material/host 资产、instanced_batches | P2 | 未写 |
-| `pres-03-animation.md` | 动画配置 | animator_controllers、animation_clips、animation_profiles | P2 | 未写 |
-| `pres-04-localization.md` | 本地化 | text_tokens、text_locales | P2 | 未写 |
+| `pres-01-performers.md` | 表现器档案 | presenters（含内联 behaviors）、分片 | P2 | **已写** |
+| `pres-02-asset-registry.md` | 表现资产清单 | mesh/material/host 资产、instanced_batches（现零数据）、lod/vfx | P2 | **已写** |
+| `pres-03-animation.md` | 动画配置 | animator_controllers、animation_clips、animation_profiles | P2 | **已写** |
+| `pres-04-localization.md` | 本地化 | text_tokens、text_locales | P2 | **已写** |
 
 ### 卷 13 · 引擎与平台基建
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `infra-01-engine-physics.md` | 引擎与物理配置 | Engine/clock、Physics2D 的时钟/求解器/运动学 | P2 | 未写 |
-| `infra-02-navigation.md` | 导航配置 | agent_profiles、pathing、navmesh 烘焙参数 | P2 | 未写 |
-| `infra-03-vision-camera.md` | 视野与相机 | fog_layers、virtual_cameras | P2 | 未写 |
-| `infra-04-ui-profiles.md` | 界面档案 | 命令甲板、生产总览、技能聚合三张 UI 档案 | P2 | 未写 |
+| `infra-01-engine-physics.md` | 引擎与物理配置 | Engine/clock、Physics2D 的时钟/求解器/运动学 | P2 | **已写** |
+| `infra-02-navigation.md` | 导航配置 | agent_profiles、pathing、navmesh 烘焙参数 | P2 | **已写** |
+| `infra-03-vision-camera.md` | 视野与相机 | fog_layers、virtual_cameras | P2 | **已写** |
+| `infra-04-ui-profiles.md` | 界面档案 | 命令甲板、生产总览、技能聚合三张 UI 档案 | P2 | **已写** |
 
 ### 卷 14 · 其余域
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `misc-01-progression.md` | 进度域 | scopes、progressions、requirements 三张表 | P3 | 未写 |
-| `misc-02-items-exchange.md` | 物品与兑换 | shapes、layouts、definitions、operations | P3 | 未写 |
-| `misc-03-narrative.md` | 叙事与任务 | variables、quests、dialogues、cinematics | P3 | 未写 |
-| `misc-04-entity-info.md` | 实体信息档案 | insight_profiles | P3 | 未写 |
+| `fx-21-progression.md` | 进度域 | scopes、progressions、requirements 三张表 | P3 | **已写** |
+| `misc-02-items-exchange.md` | 物品与兑换 | shapes、layouts、definitions、operations | P3 | **已写** |
+| `misc-03-narrative.md` | 叙事与任务 | variables、quests、dialogues、cinematics | P3 | **已写** |
+| `misc-04-entity-info.md` | 实体信息档案 | insight_profiles | P3 | **已写** |
 
 ## 7. 写作顺序与纪律
 
-- 顺序：卷 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 10 → 8。效果卷先写 fx-01 总览再写分块。每个命题三件同一次治理节点交付。
+- 顺序：卷 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 10 → 8。效果卷先写 fx-01 总览再写分块。每个命题六件同一次治理节点交付。
 - 纪律一，防幻觉：reference 的每张锚点表逐项对照代码；prd 的每个 JSON 骨架必须能在仓库找到同构实例或通过 loader 校验逻辑推演；未接线的实现显式标注状态。
 - 纪律二，分层：PRD 冻结产品预期，Spec 是可跟踪的实现任务书，Reference 只记现状；规则见第 4 节。
 - 纪律三，职责边界：本手册只改文档；引擎与编辑器代码变更由独立任务执行，spec 篇即其任务书，落地后回写 reference。
@@ -367,7 +373,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 ## 8. 开放决策
 
-1. 节点文档粒度：当前方案是 14 个家族命题，篇内逐节点表格。若需要逐节点一个命题（约 120 对），扩展点在卷 7，不影响其他卷。
+1. 节点文档粒度：当前方案是 14 个家族命题，篇内逐节点表格。若需要逐节点一个命题（约 120 对），扩展点在卷 8，不影响其他卷。
 2. AI 卷目前排第二期。若编辑器第一期就要做 AI 面板，可以提前。
 3. 挂载位置：当前在参考资料章下，门户已为手册开了一级 tab。若希望 SUMMARY 也逐篇列出，只需调整导航。
 4. id 命名空间治理：配置 id 为全局扁平命名空间，撞名行为当前不一致（技能注册 last-wins、效果注册抛错）；治理方向待产品评审，评审前 cfg-05 只作事实陈述。

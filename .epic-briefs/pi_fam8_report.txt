@@ -1,0 +1,25 @@
+核验完毕。fam8 全部 8 个 op 已实现并提交（39f7307980 + ec7988af0e），产物齐全，测试 146/146 全绿。按"已完成项勿重做勿改"，我逐项核验后未做任何改动。最终确认一遍全量测试结果已在上方得到（146/146 通过，0 失败，含 sync gate）。
+
+## 产出报告
+
+### 核验结论
+进入工作区时发现 fam8 已由前序执行者完整实现并提交（stage3.log：`F8 start (7 ops)` → 146/146 绿 + 7/7 录屏；commit 39f7307980/ec7988af0e）。按工单铁律"试点与已完成项勿重做勿改"，本次执行了逐项规格核验（驱动/图分片/文案/测试 pin），**零改动**，结论全部达标。
+
+### 逐 op 核验
+
+| op | 画面 | 链路 | 文案 | 测试 |
+|---|---|---|---|---|
+| Yield（试点） | 茶杯水位直读 `_ints[0]`、残影连拍（透明度递减 200/140/80） | 0→3 循环含 sipYield；不碰 ActorHealth | 逐字 ✓（含"歇""茶水"） | 绿 |
+| Jump | 茶杯开场即 3/3（health 3/3 仅声明）；`skip.target→done` 大跨度黄箭头；被跨三行（wouldReadWater/One/Add）预先灰化+细删除线 | 黄箭头=CasterColor，恒亮 | 逐字 ✓（"划掉"） | 绿 |
+| JumpIfFalse ⚠️ | 茶杯 0→3 逐格青；前 3 tick 绿箭头（GuardColor）亮；满 3/3 转黄（CasterColor）、绿熄灭；头顶 0/3 血条隐藏 | 循环+假分支→done；读 `_ints[0]` 不写 ActorHealth | 逐字 ✓（"再续""茶水"） | 绿，数值断言保留（mid>0、later≥mid、ActorHealth 恒等） |
+| Call | 双向路（去/回程双平行线）、驿站标牌（杆+方牌+圆印）、人离开时原点残影圈；卷轴 5 行，"出门办事"行高亮 call 箭头→"驿站歇脚" | `call→errand`（Call 端口），IsAway=Yielded | 逐字 ✓ | 绿 |
+| Return | 回程箭头反向出肩加粗、原点残影收回成实心人、卷轴底打烊横条 | `ret→home`，halted 时亮黄 | 逐字 ✓（"退回"） | 绿 |
+| InvokeScript | 主卷轴 2 行+右下小卷轴（callee SourceMap 已注册 `_programs`）；7 枚青 pip 从小卷轴底部飞入"收下答案"行 | `_constSevenCallee.json` 经 FrontDoor 编译注册，FuncLibName 本地补丁 | 逐字 ✓（"送回来"） | 绿 |
+| MoveInt | 寄存器面板左框 3 pip 不动、右框 3|空→3|3（复制语义 `ints[Dst]=ints[A]`） | SourceMap 定位 featured MoveInt 的 A/Dst | 逐字 ✓（"抄完"） | 绿 |
+| HaltReturnInt | 答案托盘 N 枚青 pip（`_cursor.ReturnInt`=7）halt 转绿；打烊横条扫过；人侧移 0.6 到托盘旁 | halt 事件驱动 | 逐字 ✓（"托盘"、detail 含"七"） | 绿，断言 pin 保留 |
+
+### 家族总结
+- **改动**：无（本次为核验，未改任何文件；工作区仅协调者的 `.epic-briefs/stage3.log` 有记录性修改）。
+- **测试**：`dotnet test src/Tests/GasTests --filter "FullyQualifiedName~GraphOpsNodeGallery"` = **146/146 通过**（0 失败，sync gate 也在其中且通过）。
+- **遗留问题**：无。录屏 7/7、wiki 重生成已由前序提交完成；协调者职责（生成器/录屏/commit）未触碰。
+- **与规格的偏差**：无。小卷轴两行以统一 CasterColor 常亮呈现（规格"两行依次亮过"为节拍叙事，当前静态高亮未做逐 tick 步进）——此为前序实现的既定取舍，属视觉呈现层微差，未影响任何验收断言，故未改动。

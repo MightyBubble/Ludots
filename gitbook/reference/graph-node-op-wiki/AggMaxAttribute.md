@@ -1,6 +1,6 @@
-# 最高生命是多少
+# 全场最高血量
 
-最高值+对应人高亮。
+台面翻出最高一格，亮出的数顶着满格血条。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 最高生命是{max}，对应{label}。
+> 全场最高生命{max}，没有一条血条比它更长。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 最高生命是多少
+Feature: 全场最高血量
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggMaxAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMaxAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最高值+对应人高亮。」这类人话
+    Then 字幕讲的是「台面翻出最高一格，亮出的数顶着满格血条。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

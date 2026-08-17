@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace RtsRedAlertLikeShowcaseMod.Systems;
@@ -35,8 +36,7 @@ internal sealed class RtsRedAlertKnowledgeProjectionSystem : ISystem<float>
     public void Update(in float dt)
     {
         if (!IsRedAlertMapActive() ||
-            !_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-            viewerObj is not Entity viewer ||
+            !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var viewer) ||
             !_engine.World.IsAlive(viewer))
         {
             return;

@@ -1,6 +1,6 @@
-# 把数字挪到下一个格子
+# 把 3 抄一份到结果槽
 
-3 被挪到结果槽，字幕报 3。
+左边格子里的 3 原样不动，右边结果格里多出一份 3。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_MoveInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_MoveInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_MoveInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把数抄到结果上：把 3 挪过去，格子里是 {result}。
+> 抄完了：来源还是 3，结果格里也是 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把数字挪到下一个格子
+Feature: 把 3 抄一份到结果槽
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_MoveInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_MoveInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「3 被挪到结果槽，字幕报 3。」这类人话
+    Then 字幕讲的是「左边格子里的 3 原样不动，右边结果格里多出一份 3。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

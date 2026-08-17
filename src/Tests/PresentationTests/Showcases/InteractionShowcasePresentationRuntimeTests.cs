@@ -17,6 +17,7 @@ using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using System.Numerics;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.Presentation
 {
@@ -94,7 +95,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(visibleSkinned, Is.EqualTo(4));
             Assert.That(visibleStatic, Is.EqualTo(4));
 
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = engine.AuthorityCamera().State.TargetCm;
             Assert.That(target.X, Is.EqualTo(1630f).Within(0.1f), "Default camera should frame the showcase encounter instead of the world origin.");
             Assert.That(target.Y, Is.EqualTo(955f).Within(0.1f), "Default camera should frame the showcase encounter instead of the world origin.");
         }

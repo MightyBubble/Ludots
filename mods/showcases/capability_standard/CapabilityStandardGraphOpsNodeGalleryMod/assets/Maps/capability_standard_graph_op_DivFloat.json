@@ -42,11 +42,31 @@
       "Template": "GraphOps.Target",
       "Overrides": {
         "Name": {
-          "Value": "木桩"
+          "Value": "左木桩"
         },
         "WorldPositionCm": {
           "Value": {
             "X": 400,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "context",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "右木桩"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 650,
             "Y": 0
           }
         },

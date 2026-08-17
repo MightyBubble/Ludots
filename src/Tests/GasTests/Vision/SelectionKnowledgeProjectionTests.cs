@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using CoreInputMod.Systems;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
@@ -104,12 +105,14 @@ public sealed class SelectionKnowledgeProjectionTests
         Entity identityOnly = world.Create();
         Entity lastKnown = world.Create();
         Entity live = world.Create();
-        var globals = new Dictionary<string, object> { [CoreServiceKeys.LocalPlayerEntity.Name] = viewer };
         var store = new KnowledgeProjectionStore();
         store.Upsert(viewer, identityOnly, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.None, viewer));
         store.Upsert(viewer, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer));
         store.Upsert(viewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
-        globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
+        };
 
         Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.None), Is.True);
         Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.LastKnown), Is.False);
@@ -127,9 +130,8 @@ public sealed class SelectionKnowledgeProjectionTests
         Entity live = world.Create(new CommandSourceSelectableTag());
         var globals = new Dictionary<string, object>
         {
-            [CoreServiceKeys.LocalPlayerEntity.Name] = localViewer,
-            [CoreServiceKeys.LocalPlayerEntity.Name] = diagnosticsViewer,
         };
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, diagnosticsViewer, 1);
         var store = new KnowledgeProjectionStore();
         store.Upsert(localViewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, localViewer));
         globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
@@ -160,8 +162,8 @@ public sealed class SelectionKnowledgeProjectionTests
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = input,
-            [CoreServiceKeys.LocalPlayerEntity.Name] = local,
         };
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
         var store = new KnowledgeProjectionStore();
         store.Upsert(local, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, local));
         store.Upsert(local, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
@@ -198,12 +200,12 @@ public sealed class SelectionKnowledgeProjectionTests
             [CoreServiceKeys.AuthoritativeInput.Name] = input,
             [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
             [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
-            [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Select" },
             [CoreServiceKeys.CommandSourceAcquisitionConfig.Name] = commandSourceConfig,
             [CoreServiceKeys.EntityCollectionStore.Name] = new EntityCollectionStore(collectionKeys),
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
         };
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
         return globals;
     }
 

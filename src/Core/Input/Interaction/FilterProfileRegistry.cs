@@ -32,7 +32,7 @@ namespace Ludots.Core.Input.Interaction
             _profileIds = profileIdRegistry ?? throw new ArgumentNullException(nameof(profileIdRegistry));
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
-            _anchorKinds.Add(FilterAnchorKinds.LocalPlayerRep);
+            _anchorKinds.Add(FilterAnchorKinds.SolePossessedRep);
         }
 
         /// <summary>Profile id space shared with <see cref="InteractionContextStack.FilterProfileIdRegistry"/>.</summary>

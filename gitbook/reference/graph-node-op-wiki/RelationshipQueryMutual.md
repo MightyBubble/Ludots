@@ -1,6 +1,6 @@
 # 互相都认的朋友
 
-双向都有链的人亮。
+两头都有箭头的链才亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 互相都认的朋友有 {friendCount} 人。
+> 互相都认的有 {friendCount} 人：{friend}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 互相都认的朋友
     Given 玩家打开 capability_standard_graph_op_RelationshipQueryMutual
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipQueryMutual/play.mp4
     When 短剧演完
-    Then 字幕讲的是「双向都有链的人亮。」这类人话
+    Then 字幕讲的是「两头都有箭头的链才亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

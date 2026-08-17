@@ -142,14 +142,15 @@ namespace Ludots.Core.Systems
         private static readonly PresentationLocalBounds _defaultBounds =
             PresentationLocalBounds.Create(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f));
 
-        private readonly CameraManager _cameraManager;
+        private CameraManager _cameraManager;
         private readonly ISpatialQueryService _spatial;
-        private readonly IViewController _view;
+        private IViewController _view;
         private readonly ILoadedChunks? _loadedChunks;
         private readonly IWorldChunkKeyResolver? _loadedChunkKeyResolver;
         private readonly CameraCullingFocusOverride? _focusOverride;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PresenterEntityRuntime? _presenters;
+        private bool _presentBindingArmed;
         private List<Entity> _changedOwners = new List<Entity>(32768);
         private Entity[] _spatialQueryBuffer = new Entity[65536];
         private readonly HashSet<Entity> _spatialCandidates = new(65536);
@@ -203,7 +204,7 @@ namespace Ludots.Core.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
-            _cameraManager = cameraManager;
+            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
             _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _loadedChunks = loadedChunks;
@@ -211,6 +212,8 @@ namespace Ludots.Core.Systems
             _focusOverride = focusOverride;
             _presenters = presenters;
             _timingDiagnostics = timingDiagnostics;
+            // Unit/harness constructors supply an explicit present surface; hosts Disarm until PresentBinding sync.
+            _presentBindingArmed = true;
             cullingConfig = cullingConfig ?? throw new ArgumentNullException(nameof(cullingConfig));
             cullingConfig.Validate();
             HighLODDistCm = cullingConfig.HighLodDistanceCm;
@@ -218,8 +221,30 @@ namespace Ludots.Core.Systems
             LowLODDistCm = cullingConfig.LowLodDistanceCm;
         }
 
+        /// <summary>
+        /// Render culling is PresentBinding-owned. Without an armed binding, Update is a no-op
+        /// (LogicView alone must not drive CullState).
+        /// </summary>
+        public void DisarmPresentBindingCulling()
+        {
+            _presentBindingArmed = false;
+        }
+
+        public void RebindPresentBinding(CameraManager cameraManager, IViewController presentSurface)
+        {
+            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
+            _view = presentSurface ?? throw new ArgumentNullException(nameof(presentSurface));
+            _presentBindingArmed = true;
+            _hasStaticCullCameraState = false;
+        }
+
         public override void Update(in float dt)
         {
+            if (!_presentBindingArmed)
+            {
+                return;
+            }
+
             long start = Stopwatch.GetTimestamp();
             CameraStateSnapshot cameraState = _cameraManager.GetInterpolatedState(ReadPresentationAlpha());
             if (_focusOverride != null)

@@ -1,8 +1,8 @@
 {
   "op": "ConstInt",
   "driver": "attr",
-  "title": "写死的整数",
-  "beat": "这一刀的层数写死是 3，不读装备。",
+  "title": "写死的整数：一刀三层",
+  "beat": "铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。",
   "detailTemplate": "这一刀的层数写死是 {layers}。",
   "assertDetailContains": [
     "层数",

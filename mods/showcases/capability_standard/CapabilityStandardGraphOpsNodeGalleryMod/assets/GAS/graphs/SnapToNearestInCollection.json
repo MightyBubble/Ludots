@@ -11,7 +11,7 @@
       {
         "id": "radius",
         "op": "ConstFloat",
-        "floatValue": 200
+        "floatValue": 400
       },
       {
         "id": "snapCol",

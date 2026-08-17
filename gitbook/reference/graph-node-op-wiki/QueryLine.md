@@ -1,6 +1,6 @@
-# 这条线上有谁
+# 这条窄线穿过谁
 
-一道直线穿过去点到的人。
+带内的人亮，贴着带边差几厘米的也不亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryLine/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryLine/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryLine/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 一道直线点到{count}人。
+> 半宽 25cm 的线上{count}人，贴边的没进。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 这条线上有谁
+Feature: 这条窄线穿过谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryLine
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryLine/play.mp4
     When 短剧演完
-    Then 字幕讲的是「一道直线穿过去点到的人。」这类人话
+    Then 字幕讲的是「带内的人亮，贴着带边差几厘米的也不亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

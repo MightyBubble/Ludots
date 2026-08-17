@@ -1,34 +1,13 @@
 {
   "op": "LoadTargetPosX",
   "driver": "event",
-  "title": "读出击落点的左右",
-  "beat": "落点左右坐标被读出，字幕报水平位置。",
-  "detailTemplate": "落点左右是 {result}。",
+  "title": "读出落点在东西标尺上的读数",
+  "beat": "虚线打到标尺上，亮出 360。",
+  "detailTemplate": "落点东西读数 {result}。",
   "assertDetailContains": [
-    "左右"
+    "东西"
   ],
   "featuredNodeId": "posX",
   "graphKind": "Validation",
-  "actors": [
-    {
-      "id": "caster",
-      "role": "caster",
-      "template": "GraphOps.Caster",
-      "name": "施法者",
-      "x": -2,
-      "y": 0,
-      "health": 100,
-      "healthMax": 100
-    },
-    {
-      "id": "target",
-      "role": "target",
-      "template": "GraphOps.Target",
-      "name": "落点",
-      "x": 3.6,
-      "y": 2,
-      "health": 100,
-      "healthMax": 100
-    }
-  ]
+  "field": "pos"
 }

@@ -1,6 +1,6 @@
-# 先把关系链接上
+# 把两人连成一条关系链
 
-施法者和盟友之间出现友谊/好感链。
+灰色虚线先比划一下，然后咔哒扣成青色实线。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 接上了关系。
+> 施法者和盟友之间扣上了关系链，环扣亮起。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 先把关系链接上
+Feature: 把两人连成一条关系链
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RelationshipEnsureLink
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipEnsureLink/play.mp4
     When 短剧演完
-    Then 字幕讲的是「施法者和盟友之间出现友谊/好感链。」这类人话
+    Then 字幕讲的是「灰色虚线先比划一下，然后咔哒扣成青色实线。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

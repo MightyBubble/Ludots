@@ -7,18 +7,18 @@
       {
         "id": "rectW",
         "op": "ConstInt",
-        "intValue": 120
+        "intValue": 200
       },
       {
         "id": "rectH",
         "op": "ConstInt",
-        "intValue": 60
+        "intValue": 120
       },
       {
         "id": "rect",
         "op": "QueryRectangle",
         "queryCapacityPolicy": "RequireComplete",
-        "rotationDeg": 15
+        "rotationDeg": 0
       },
       {
         "id": "self",

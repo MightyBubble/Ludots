@@ -1,11 +1,12 @@
 {
   "op": "ControlDomainControls",
   "driver": "event",
-  "title": "这个人能不能指挥那个",
-  "beat": "队长能指挥队员显示管得着。",
-  "detailTemplate": "队长对队员管得着。",
+  "title": "同一个兵，不是谁都指挥得动",
+  "beat": "队长指挥队员是实线；反过来队员指挥队长，线断在半路。",
+  "detailTemplate": "队长对队员{result}；队员对队长{resultFoe}。",
   "assertDetailContains": [
-    "管得着"
+    "管得着",
+    "管不动"
   ],
   "featuredNodeId": "controls",
   "graphKind": "Validation",

@@ -7,9 +7,20 @@
       {
         "id": "beginTx",
         "op": "BeginLifecycleTransaction"
+      },
+      {
+        "id": "materialize",
+        "op": "InvokeBuiltin",
+        "builtinHandler": "MaterializeTemplate"
       }
     ],
-    "controlEdges": [],
+    "controlEdges": [
+      {
+        "from": "beginTx",
+        "fromPort": "next",
+        "to": "materialize"
+      }
+    ],
     "valueEdges": []
   }
 ]

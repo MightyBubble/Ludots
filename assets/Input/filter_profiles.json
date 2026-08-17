@@ -2,7 +2,7 @@
   "profiles": [
     {
       "id": "filter.controllable.default",
-      "associationQuery": { "anchor": "localPlayerRep", "expand": "controls" },
+      "associationQuery": { "anchor": "solePossessedRep", "expand": "controls" },
       "exclude": { "anyTags": [] },
       "include": { "anyTags": [] }
     }

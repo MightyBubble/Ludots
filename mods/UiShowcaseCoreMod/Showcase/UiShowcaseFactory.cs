@@ -1,4 +1,6 @@
-﻿using Ludots.UI.Compose;
+﻿using System;
+using Ludots.UI.Compose;
+using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
@@ -23,12 +25,12 @@ public static class UiShowcaseFactory
     {
         return Ui.Column(
                 Ui.Text("Ludots Unified UI Showcase").Class("skin-header").FontSize(34).Bold(),
-                Ui.Text("FeatureHub 负责顶层入口；Hub 只做薄导航，三种官方写法和换肤演示分别独立成 Mod。")
+                Ui.Text("三种官方写法同属 UiShowcaseCoreMod：Compose≈Flutter Fluent、Reactive≈React 状态驱动、Markup=HTML/CSS+CodeBehind；另有换肤 / 水墨匣 / 星港同稿独立 Showcase。")
                     .Class("page-copy"),
                 Ui.Row(
-                    UiShowcaseScaffolding.BuildHubCard("hub-compose", "Compose Fluent", "默认生产主路径", "HUD、菜单、背包、性能敏感界面"),
-                    UiShowcaseScaffolding.BuildHubCard("hub-reactive", "Reactive Fluent", "状态驱动主路径", "工具面板、复杂列表、编辑器"),
-                    UiShowcaseScaffolding.BuildHubCard("hub-markup", "Markup + CodeBehind", "原型导入主路径", "内容页、帮助页、剧情页"))
+                    UiShowcaseScaffolding.BuildHubCard("hub-compose", "Compose Fluent", "Flutter 式生产主路径", "HUD、菜单、背包、性能敏感界面"),
+                    UiShowcaseScaffolding.BuildHubCard("hub-reactive", "Reactive Fluent", "React 式状态驱动", "工具面板、复杂列表、编辑器"),
+                    UiShowcaseScaffolding.BuildHubCard("hub-markup", "Markup + CodeBehind", "HTML/CSS 原型导入", "内容页、帮助页、剧情页"))
                     .Class("page-grid-row")
                     .Gap(12)
                     .FlexGrow(1),
@@ -37,14 +39,14 @@ public static class UiShowcaseFactory
                     Ui.Card(
                         Ui.Text("Official entry hints").Class("page-card-title"),
                         Ui.Text("FeatureHub: U=Hub, I=Compose, O=Reactive, P=Markup, [=Skin Swap").Class("page-copy"),
-                        Ui.Text("Theme / Density / Controls / Forms / Collections / Overlays / Styles 全部在独立 Showcase 中可见。").Class("page-copy"),
+                        Ui.Text("Appearance 里 Phase 1–6：选择器、视觉、文本、图像、关键帧、Grid auto/sticky/伪元素图标。").Class("page-copy"),
                         Ui.Text("Web host 优先接收 SceneDiff，HTML 仅作为兼容桥。").Class("muted"))
                         .Class("skin-card")
                         .FlexGrow(1),
                     Ui.Card(
                         Ui.Text("CSS Profile positioning").Class("page-card-title"),
-                        Ui.Text("应用级 Native CSS Profile：selector / cascade / inheritance / variables / theme token。").Class("page-copy"),
-                        Ui.Text("不承诺浏览器级 CSSOM / JS / Grid / Animation / 浏览器怪癖兼容。").Class("muted"))
+                        Ui.Text("Native CSS：selector / cascade / flex / grid(auto·minmax) / calc / viewport / sticky / transform 动效。").Class("page-copy"),
+                        Ui.Text("浏览器同稿对照见「同一张暂停菜单」；切铺动效见「墨痕怎么裁、怎么铺」。不做 JS / 全量 CSSOM。").Class("muted"))
                         .Class("skin-card")
                         .FlexGrow(1))
                     .Class("page-grid-row")
@@ -69,6 +71,19 @@ public static class UiShowcaseFactory
     public static UiScene CreateMarkupScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return new MarkupShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
+    }
+
+    public static UiScene CreateNineSlicePanelScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        return new NineSlicePanelShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
+    }
+
+    public static UiSurfaceContribution CreateNineSlicePanelContribution(
+        IUiTextMeasurer textMeasurer,
+        IUiImageSizeProvider imageSizeProvider,
+        Action requestRebuild)
+    {
+        return new NineSlicePanelShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
     }
 
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)

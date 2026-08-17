@@ -11,9 +11,11 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS;
 
@@ -75,7 +77,7 @@ public sealed class MinimapKnowledgeProjectionTests
         runtime.Visible = true;
         runtime.UseRtsFullMapPreset();
 
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, playerViewer);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, playerViewer);
         runtime.Refresh(engine, markers, screenMarkers);
         MinimapDebugSnapshot playerSnapshot = runtime.CaptureDebugSnapshot();
         Assert.That(playerSnapshot.VisibleMarkerCount, Is.EqualTo(3));
@@ -84,7 +86,7 @@ public sealed class MinimapKnowledgeProjectionTests
         Assert.That(CountState(playerSnapshot, MinimapKnowledgeState.Disclosed), Is.EqualTo(1));
         Assert.That(playerSnapshot.VisibleMarkers.Any(marker => MathF.Abs(marker.WorldXcm - 4000f) <= 0.001f), Is.False);
 
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, teamViewer);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, teamViewer);
         runtime.Refresh(engine, markers, screenMarkers);
         MinimapDebugSnapshot teamSnapshot = runtime.CaptureDebugSnapshot();
         Assert.That(teamSnapshot.VisibleMarkerCount, Is.EqualTo(2));
@@ -110,7 +112,7 @@ public sealed class MinimapKnowledgeProjectionTests
             expiringTarget,
             CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer, expiryTick: 2));
         InstallKnowledgeServices(engine, store, null);
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
 
         markers.BeginFrame();
         var color = new Vector4(0.2f, 0.8f, 1f, 1f);
@@ -142,7 +144,7 @@ public sealed class MinimapKnowledgeProjectionTests
         var store = new KnowledgeProjectionStore(initialCapacity: 4);
         store.Upsert(viewer, target, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
         InstallKnowledgeServices(engine, store, null);
-        engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
+        ClientLocalSeatAccess.RequireRegistry(engine).Clear();
         engine.SetService(
             CoreServiceKeys.MinimapKnowledgeViewerProvider,
             (MinimapKnowledgeViewerProvider)((GameEngine _, out Entity resolvedViewer) =>
@@ -186,7 +188,7 @@ public sealed class MinimapKnowledgeProjectionTests
         }
 
         InstallKnowledgeServices(engine, store, null);
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
         runtime.Visible = true;
         runtime.UseRtsFullMapPreset();
         for (int i = 0; i < 32; i++)

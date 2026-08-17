@@ -2,7 +2,7 @@
   "op": "RelationshipAggMinEntityByMetric",
   "driver": "rel",
   "title": "谁是好感最低的人",
-  "beat": "最弱的人被点名。",
+  "beat": "数值牌最矮的人被照亮。",
   "detailTemplate": "好感最低的人是{friend}。",
   "assertDetailContains": [
     "最低的人"

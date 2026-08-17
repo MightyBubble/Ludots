@@ -329,6 +329,11 @@
       var btn = e.target.closest(".layerbtn");
       if (!btn) return;
       var target = layerByKey(btn.getAttribute("data-layer"));
+      if (target.key === "todo") {
+        activeLayer = "todo";
+        buildTree();
+        return;
+      }
       var cur = docLayerOf(currentDoc || "");
       if (cur) {
         loadDoc(target.dir + currentDoc.slice(cur.dir.length));

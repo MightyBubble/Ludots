@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_MoveInt",
-  "windowTitle": "Ludots - 把数字挪到下一个格子",
+  "windowTitle": "Ludots - 把 3 抄一份到结果槽",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

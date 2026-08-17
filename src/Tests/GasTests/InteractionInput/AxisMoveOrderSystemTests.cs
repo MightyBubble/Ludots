@@ -12,6 +12,7 @@ using Ludots.Core.Input.Systems;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS
 {
@@ -220,12 +221,12 @@ namespace Ludots.Tests.GAS
             var system = harness.CreateSystem();
             harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
 
-            harness.Globals.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            harness.Globals.Remove(CoreServiceKeys.ClientLocalSeatRegistry.Name);
             system.Update(0f);
             Assert.That(harness.Orders.Count, Is.EqualTo(0), "no resolved local player entity: nothing to move.");
 
             Entity positionless = harness.World.Create();
-            harness.Globals[CoreServiceKeys.LocalPlayerEntity.Name] = positionless;
+            ClientLocalSeatTestBindings.BindSoleSeat(harness.Globals, positionless);
             system.Update(0f);
             Assert.That(harness.Orders.Count, Is.EqualTo(0), "a rep without WorldPositionCm has no movable anchor.");
         }
@@ -339,6 +340,11 @@ namespace Ludots.Tests.GAS
 
                 var input = new FrozenInputActionReader();
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, avatar, 1);
                 return new Harness
                 {
                     World = world,
@@ -348,12 +354,7 @@ namespace Ludots.Tests.GAS
                     Schemes = schemes,
                     Avatar = avatar,
                     _schemeIds = schemeIds,
-                    Globals = new Dictionary<string, object>
-                    {
-                        [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                        [CoreServiceKeys.LocalPlayerId.Name] = 1,
-                        [CoreServiceKeys.LocalPlayerEntity.Name] = avatar,
-                    },
+                    Globals = globals,
                 };
             }
 

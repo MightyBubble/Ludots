@@ -1,6 +1,6 @@
-# 先看对方还有多少血
+# 出手前先看一眼对方的血
 
-出手前先读木桩当前生命，字幕报出读到的数。
+黄虚线搭到木桩，读出当前生命，头顶浮出 80。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 木桩还有 {hp} 点血。
+> 读出木桩当前生命 {hp}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 先看对方还有多少血
+Feature: 出手前先看一眼对方的血
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「出手前先读木桩当前生命，字幕报出读到的数。」这类人话
+    Then 字幕讲的是「黄虚线搭到木桩，读出当前生命，头顶浮出 80。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

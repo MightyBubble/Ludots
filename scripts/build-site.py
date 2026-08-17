@@ -167,6 +167,21 @@ def parse_prd_catalog(readme_path: Path) -> dict:
 
     if nav["total"] == 0:
         warn("PRD 分篇目录解析结果为 0 篇 -> 检查 README 目录表格式")
+
+    handbook_dir = readme_path.parent
+    layer_dirs = [handbook_dir / layer for layer in ("prd", "config", "uxd", "spec-runtime", "spec-editor", "reference")]
+    missing = [
+        f"{layer.name}/{child['file']}"
+        for layer in layer_dirs
+        for vol in nav["volumes"]
+        for child in vol["children"]
+        if not (layer / child["file"]).is_file()
+    ]
+    if missing:
+        raise SystemExit(
+            "PRD 分篇目录与磁盘文件不一致（站点导航会 404），先修 README 或补文件：%s"
+            % "、".join(missing[:12])
+        )
     return nav
 
 

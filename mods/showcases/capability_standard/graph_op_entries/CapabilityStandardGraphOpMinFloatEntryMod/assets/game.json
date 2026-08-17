@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_MinFloat",
-  "windowTitle": "Ludots - 两刀取更小的那一刀",
+  "windowTitle": "Ludots - 两刀里挑小的一刀",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
-# 只打敌对关系
+# 只留敌对关系的人
 
-不是敌人关系的不进名单。
+扇内先亮一片，敌对关系的留下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 只留敌对关系，名单{count}人。
+> 敌对关系滤过，名单剩{count}人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 只打敌对关系
+Feature: 只留敌对关系的人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryFilterRelationship
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryFilterRelationship/play.mp4
     When 短剧演完
-    Then 字幕讲的是「不是敌人关系的不进名单。」这类人话
+    Then 字幕讲的是「扇内先亮一片，敌对关系的留下。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

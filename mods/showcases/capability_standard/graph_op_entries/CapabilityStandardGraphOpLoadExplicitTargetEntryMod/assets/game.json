@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadExplicitTarget",
-  "windowTitle": "Ludots - 锁定点名目标",
+  "windowTitle": "Ludots - 点名谁就打谁",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

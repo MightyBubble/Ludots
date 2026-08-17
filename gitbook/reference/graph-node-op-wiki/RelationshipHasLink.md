@@ -1,6 +1,6 @@
 # 我们有没有连着
 
-有链显示连着，无链显示没连。
+和好友的链环扣紧，就是连着。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 我们{status}。
+> 和{friend}链着。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 我们有没有连着
     Given 玩家打开 capability_standard_graph_op_RelationshipHasLink
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipHasLink/play.mp4
     When 短剧演完
-    Then 字幕讲的是「有链显示连着，无链显示没连。」这类人话
+    Then 字幕讲的是「和好友的链环扣紧，就是连着。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,6 +1,6 @@
 # 把最弱的那条链拆掉
 
-好感最低的朋友断链，条掉光、人变灰。
+好感最低那条链断开，线少一条。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把好感最低的{friend}拆掉了，链从 {linksBefore} 条变成 {linksAfter} 条。
+> 拆掉{friend}的链，剩 {linksAfter} 条。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 把最弱的那条链拆掉
     Given 玩家打开 capability_standard_graph_op_RelationshipRemoveLink
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipRemoveLink/play.mp4
     When 短剧演完
-    Then 字幕讲的是「好感最低的朋友断链，条掉光、人变灰。」这类人话
+    Then 字幕讲的是「好感最低那条链断开，线少一条。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

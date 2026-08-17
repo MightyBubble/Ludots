@@ -1,11 +1,11 @@
 {
   "op": "QueryLimit",
   "driver": "sandbox",
-  "title": "只点最近的几个",
-  "beat": "圈里很多人，只留下前 3 个。",
-  "detailTemplate": "圈里很多人，只留下三个。",
+  "title": "名单取前三个",
+  "beat": "圈里五个人各有一个编号，亮着的是编号最靠前的三个。",
+  "detailTemplate": "按编号点名，留下前三个。",
   "assertDetailContains": [
-    "三个"
+    "前三个"
   ],
   "featuredNodeId": "limit",
   "graphKind": "Query",

@@ -1,11 +1,11 @@
 {
   "op": "RandomFloat01",
   "driver": "linear",
-  "title": "这一刀带随机抖动",
-  "beat": "每次抖动不一样，血条每次掉的数不完全相同。",
-  "detailTemplate": "这一刀随机抖动是 {result}。",
+  "title": "骰子决定这一刀",
+  "beat": "每一拍重掷一次骰子，掷出多长这一刀就多长，一列掷点史里没有两根一样长。",
+  "detailTemplate": "这一拍掷出 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "随机"
+    "掷出"
   ],
   "featuredNodeId": "variance",
   "graphKind": "Effect",
@@ -33,6 +33,6 @@
   ],
   "linear": {
     "resultKind": "float",
-    "applyTo": "none"
+    "applyTo": "graphSettled"
   }
 }

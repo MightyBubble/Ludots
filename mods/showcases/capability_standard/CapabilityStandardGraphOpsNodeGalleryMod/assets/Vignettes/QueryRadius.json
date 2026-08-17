@@ -1,11 +1,11 @@
 {
   "op": "QueryRadius",
   "driver": "sandbox",
-  "title": "摸一圈看看谁在近处",
-  "beat": "施法者周围一圈亮起来，圈外的人不动。",
-  "detailTemplate": "施法者周围一圈亮起来，摸到{count}个近处的人，圈外的人不动。",
+  "title": "站圈心喊一嗓子，看看圈里有谁",
+  "beat": "黄圈内五个兵亮起来，施法者自己不算，圈外两人没反应。",
+  "detailTemplate": "圈内亮起{count}个兵，不含施法者；圈外两人不亮。",
   "assertDetailContains": [
-    "近处"
+    "个兵"
   ],
   "featuredNodeId": "radius",
   "graphKind": "Query",

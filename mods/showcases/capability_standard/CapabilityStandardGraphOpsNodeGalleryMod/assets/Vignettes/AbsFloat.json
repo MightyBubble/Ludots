@@ -1,11 +1,11 @@
 {
   "op": "AbsFloat",
   "driver": "linear",
-  "title": "负面修正取绝对值",
-  "beat": "修正是 -8，取绝对值变成 8 再叠上去。",
-  "detailTemplate": "负面修正取绝对值后是 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "对折零轴取长度",
+  "beat": "负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。",
+  "detailTemplate": "对折后的长度是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "绝对值"
+    "对折"
   ],
   "featuredNodeId": "absMod",
   "graphKind": "Effect",
@@ -33,6 +33,6 @@
   ],
   "linear": {
     "resultKind": "float",
-    "applyTo": "targetHealthSubtract"
+    "applyTo": "graphSettled"
   }
 }

@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS
                         new()
                         {
                             Id = DefaultProfileId,
-                            AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "controls" },
+                            AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "controls" },
                             Exclude = new FilterProfileTagRule { AnyTags = new List<string> { "state.dead", "presentation.hidden" } },
                             Include = new FilterProfileTagRule { AnyTags = new List<string>() },
                         },

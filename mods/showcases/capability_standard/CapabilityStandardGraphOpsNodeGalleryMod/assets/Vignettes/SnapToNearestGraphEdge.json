@@ -1,9 +1,9 @@
 {
   "op": "SnapToNearestGraphEdge",
   "driver": "event",
-  "title": "吸到路上最近的边",
-  "beat": "落点吸到路网边上。",
-  "detailTemplate": "落点已经吸到路边。",
+  "title": "离路太远就拽回路边",
+  "beat": "X 从半空掉到路上，原位留下残影。",
+  "detailTemplate": "落点已经钉在路边 ({x},{y})。",
   "assertDetailContains": [
     "路边"
   ],
