@@ -1,6 +1,6 @@
 # 算出一个整数就收工
 
-管线算出 7 就停，字幕报 7。
+数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_HaltReturnInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 定数是七，管线算出 {result} 就收工。
+> 算完了，托盘里是 {result} 枚，卷轴打烊，人站在答案旁。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 算出一个整数就收工
     Given 玩家打开 capability_standard_graph_op_HaltReturnInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_HaltReturnInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「管线算出 7 就停，字幕报 7。」这类人话
+    Then 字幕讲的是「数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

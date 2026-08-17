@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillSandbox_PlayableFlow_WritesAcceptanceArtifacts
 - map: champion_skill_sandbox
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-08-16T18:33:05.3483544Z
+- execution_timestamp_utc: 2026-08-17T05:39:43.0967577Z
 
 ## Timeline
 [T+001] champion_skill_sandbox loaded | default mode Quick Cast | default focus Ezreal Alpha
@@ -50,5 +50,5 @@
 - cancelled_casts: 1
 - manifestation_spawns: 3
 - manifestation_selections: 2
-- median_tick_ms: 1.324
-- max_tick_ms: 28.766
+- median_tick_ms: 0.794
+- max_tick_ms: 26.747

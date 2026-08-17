@@ -1,11 +1,11 @@
 {
   "op": "InvokeScript",
   "driver": "script",
-  "title": "把定数管线跑一遍",
-  "beat": "叫另一张图来算出 7。",
-  "detailTemplate": "把定数跑完了，得到七。结果是 {result}。",
+  "title": "叫另一张图来帮忙算",
+  "beat": "主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。",
+  "detailTemplate": "叫了另一张图帮忙，送回来的数是 {result}。",
   "assertDetailContains": [
-    "七"
+    "送回来"
   ],
   "featuredNodeId": "invoke",
   "graphKind": "Script",

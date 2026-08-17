@@ -4,7 +4,7 @@
 - build: GasTests / ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts
 - map: champion_skill_stress
 - clock: FixedFrame @ 60 Hz
-- execution_timestamp_utc: 2026-08-16T18:33:08.0297074Z
+- execution_timestamp_utc: 2026-08-17T05:39:44.3816969Z
 - screenshots: `screens/*.svg`, `screens/timeline.svg`
 
 ## Timeline
@@ -38,5 +38,5 @@
 - peak_primitives: 198
 - peak_world_text: 396
 - heal_observed: True
-- median_tick_ms: 6.702
-- max_tick_ms: 36.703
+- median_tick_ms: 3.299
+- max_tick_ms: 20.372

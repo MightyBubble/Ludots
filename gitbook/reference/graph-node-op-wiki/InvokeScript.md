@@ -1,6 +1,6 @@
-# 把定数管线跑一遍
+# 叫另一张图来帮忙算
 
-叫另一张图来算出 7。
+主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_InvokeScript/poster.png" src="artifacts/evidence/capability_standard_graph_op_InvokeScript/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_InvokeScript/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 把定数跑完了，得到七。结果是 {result}。
+> 叫了另一张图帮忙，送回来的数是 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把定数管线跑一遍
+Feature: 叫另一张图来帮忙算
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_InvokeScript
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_InvokeScript/play.mp4
     When 短剧演完
-    Then 字幕讲的是「叫另一张图来算出 7。」这类人话
+    Then 字幕讲的是「主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

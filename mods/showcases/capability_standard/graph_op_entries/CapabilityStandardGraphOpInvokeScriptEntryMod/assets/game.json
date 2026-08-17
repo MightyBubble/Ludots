@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_InvokeScript",
-  "windowTitle": "Ludots - 把定数管线跑一遍",
+  "windowTitle": "Ludots - 叫另一张图来帮忙算",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

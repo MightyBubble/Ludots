@@ -1,0 +1,27 @@
+All done. Here's the final report.
+
+## 产出报告
+
+### 逐 op 报告
+
+| op | 改了什么（画面/链路/文案） | 测试结果 |
+|---|---|---|
+| **Call** | 驿站台：双向箭头路（上下双平行线各带末端箭头，亮向跟执行侧走）、标牌（竖杆+方牌+圆印）、原点/驿站残影圈（人不在时显影）；P5 卷轴 5 行，call 端口箭头拐到 errand 行（去程），Return 箭头跳回 home 行（回程，反向出肩）；文案三件套逐字更新，新增 `homeState` caption | ✅ |
+| **Return** | 复用 Call 图；featured 行"交差回家"白外圈高亮；回程箭头加粗闪亮；卷轴下方落打烊横条扫过；文案更新 | ✅ |
+| **InvokeScript** | 双卷轴：主卷轴 2 行 + 右下偏移小卷轴（callee SourceMap 按 Pc 去重）；跨图长分支箭头 invoke→小卷轴顶行；7 枚青 pip 从小卷轴底部经虚线搬运到"收下答案"行旁 | ✅ |
+| **MoveInt** | 人面前寄存器面板：左右两大空框，左框 `_ints[A]` 3 枚青 pip 不动、右框 `_ints[Dst]` 3 枚 pip（3\|空→3\|3 复制语义，Dst 寄存器 SourceMap 定位） | ✅ |
+| **JumpIfFalse** | 共用茶杯（水位仍读 `_ints[0]`，不碰 ActorHealth）；卷轴"没满?"行挂两枚分支箭头：水未满绿箭头（续杯路径）亮、水满灰箭头转亮黄（收工路径）；文案更新（删掉旧"血条示意"免责） | ✅ |
+| **HaltReturnInt** | 答案托盘：白扁框内 N 枚青 pip（N=`_cursor.ReturnInt`=7）随后转绿；打烊横条扫过；人侧移半步到托盘旁站定；文案更新 | ✅ |
+| **Jump** | 茶杯开场即 3 格全满（vignette 3/3 保留，显示交给茶杯）；卷轴"跳过续杯"行拉大跨度黄箭头 skip→done；被跨过的三行（wouldReadWater/One/Add）静态灰化+细删除线；文案更新 | ✅ |
+| **Yield** | 试点茶杯不动（勿重做）；新增卷轴渲染 + 残影连拍（三个透明度递减灰圈，Yielded 时沿举杯→放杯弧线显影，满 3/3 消失）；文案已由试点完成 | ✅ |
+
+### 关键修复（P5 通用卷轴渲染器）
+- 行模型 = SourceMap 按 Pc 去重 NodeId；行状态：未走=细灰框、走过=暗灰框、当前（`SourceMap.TryGetSource(_cursor.Pc)`）=黄粗框、featured=白外圈、被跳过行=灰化+细删除线。
+- 箭头静态推导自编译程序：Jump target port=大跨度黄箭头；JumpIfFalse true/false=两枚分支箭头（taken 亮黄/绿加粗，not-taken 暗灰细）；Call=去程；Return=回程（左道反向出肩）；InvokeScript=跨图调用。
+- Halt 后全板灰化 + 底部"打烊"灰粗横条扫过（wave 驱动）。
+
+### 家族总结
+- **新增测试**：`ScriptOps_DrawOverlayDoesNotThrow`（8 op 全跑 DrawOverlay 不抛异常，保证绘制路径健康）；Script 验收共 6 测试全绿。
+- **测试结果**：`dotnet test --filter GraphOpsNodeGallery` = 144/146 绿，2 个失败均为 sync gate（wiki/registry 为生成产物，协调者会跑生成器，按工单忽略）。
+- **遗留问题**：无。所有文案三件套逐字按规格写入，assertDetailContains 与新 detail 一致；未改动 VM、未写回 ActorHealth、未触碰其他家族文件。
+- **与规格偏差**：无；Call 的 `homeState` caption 按 detail「原点{homeState}」补上（空着/有人随 IsAway 切换）。

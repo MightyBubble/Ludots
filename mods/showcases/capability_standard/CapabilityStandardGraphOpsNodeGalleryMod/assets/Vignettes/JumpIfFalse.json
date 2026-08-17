@@ -2,8 +2,8 @@
   "op": "JumpIfFalse",
   "driver": "script",
   "title": "没满就再续一杯",
-  "beat": "茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。",
-  "detailTemplate": "没满就再续一杯。茶水 {water}/{limit}。",
+  "beat": "茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。",
+  "detailTemplate": "没满就再续一杯。茶水 {water}/{limit}，满了就走收工那条道。",
   "assertDetailContains": [
     "再续"
   ],

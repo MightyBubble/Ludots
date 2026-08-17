@@ -898,8 +898,8 @@
       "id": "capability_standard_graph_op_Call",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCallEntryMod",
       "projectPath": "CapabilityStandardGraphOpCallEntryMod.csproj",
-      "title": "出门办事再回来",
-      "summary": "走到驿站办完事再回到原点，像叫了一声子程序。",
+      "title": "出门办事，办完回家",
+      "summary": "人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -1358,7 +1358,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHaltReturnIntEntryMod",
       "projectPath": "CapabilityStandardGraphOpHaltReturnIntEntryMod.csproj",
       "title": "算出一个整数就收工",
-      "summary": "管线算出 7 就停，字幕报 7。",
+      "summary": "数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -1438,8 +1438,8 @@
       "id": "capability_standard_graph_op_InvokeScript",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpInvokeScriptEntryMod",
       "projectPath": "CapabilityStandardGraphOpInvokeScriptEntryMod.csproj",
-      "title": "把定数管线跑一遍",
-      "summary": "叫另一张图来算出 7。",
+      "title": "叫另一张图来帮忙算",
+      "summary": "主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -1492,8 +1492,8 @@
       "id": "capability_standard_graph_op_Jump",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpEntryMod",
       "projectPath": "CapabilityStandardGraphOpJumpEntryMod.csproj",
-      "title": "跳过这一口",
-      "summary": "茶杯已经满了，直接跳到收束，不再续杯。",
+      "title": "满了就跳过续杯",
+      "summary": "杯是满的：续杯那几行被划掉，指针直接飞到收工行。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -1520,7 +1520,7 @@
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpJumpIfFalseEntryMod",
       "projectPath": "CapabilityStandardGraphOpJumpIfFalseEntryMod.csproj",
       "title": "没满就再续一杯",
-      "summary": "茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。",
+      "summary": "茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2059,8 +2059,8 @@
       "id": "capability_standard_graph_op_MoveInt",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpMoveIntEntryMod",
       "projectPath": "CapabilityStandardGraphOpMoveIntEntryMod.csproj",
-      "title": "把数字挪到下一个格子",
-      "summary": "3 被挪到结果槽，字幕报 3。",
+      "title": "把 3 抄一份到结果槽",
+      "summary": "左边格子里的 3 原样不动，右边结果格里多出一份 3。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3382,8 +3382,8 @@
       "id": "capability_standard_graph_op_Return",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReturnEntryMod",
       "projectPath": "CapabilityStandardGraphOpReturnEntryMod.csproj",
-      "title": "办完事交回",
-      "summary": "子程序结束，人回到主线。",
+      "title": "办完差事，交回原点",
+      "summary": "差事办完这一步，人从驿站那格退回原点，虚影收回真人。",
       "tier": "T2",
       "category": "capability",
       "tags": [

@@ -171,18 +171,25 @@ def run_pi(family: int, note: str) -> bool:
         "文案三件套按规格逐字；测试 pin 同步；最终 dotnet test --filter GraphOpsNodeGallery 全绿"
         "（sync gate 两个失败可忽略，协调者会跑生成器）。开始。"
     )
-    result = run([PI, "--model", "deepseek-v4-flash", "--no-session", "--print",
-                  "--append-system-prompt", SYSTEM, prompt], timeout_s=5400)
-    tail = (result.stdout or "") + (result.stderr or "")
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    (REPO / f".epic-briefs/pi_fam{family}_report.txt").write_text(tail, encoding="utf-8")
-    ok = result.returncode == 0 and "逐 op" in tail or "完成" in tail
-    log(f"pi fam{family} exit={result.returncode} report_saved ({len(tail)} chars)")
-    return result.returncode == 0
+    for attempt in range(3):
+        result = run([PI, "--model", "deepseek-v4-flash", "--no-session", "--print",
+                      "--append-system-prompt", SYSTEM, prompt], timeout_s=5400)
+        tail = (result.stdout or "") + (result.stderr or "")
+        if result.returncode == 0 and len(tail) > 200:
+            LOG.parent.mkdir(parents=True, exist_ok=True)
+            (REPO / f".epic-briefs/pi_fam{family}_report.txt").write_text(tail, encoding="utf-8")
+            log(f"pi fam{family} exit=0 report_saved ({len(tail)} chars)")
+            return True
+        log(f"pi fam{family} attempt {attempt + 1} failed (exit={result.returncode}, {len(tail)} chars): {tail[:120]}")
+        time.sleep(90)
+    return False
 
 
 def main() -> int:
+    start_from = int(sys.argv[sys.argv.index("--start") + 1]) if "--start" in sys.argv else 1
     for family, ops_csv, note in FAMILIES:
+        if family < start_from:
+            continue
         ops = [op for op in ops_csv.split(",") if op]
         log(f"=== F{family} start ({len(ops)} ops) ===")
         if not run_pi(family, note):
