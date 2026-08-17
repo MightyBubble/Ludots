@@ -46,3 +46,7 @@ Raylib 只消费 flush 后的 VFX 项与粒子 runtime snapshot。它不拥有�
 ## 演进方向
 
 继续扩展 Presentation-owned Quarks 合同（curve、burst、shape module、material binding、GPU buffer plan）。Raylib adapter 只增加执行能力；Core 仍然负责配置合同、校验和平台无关的 runtime 项。禁止回到 `vfx.emitter` 内嵌合同或在 mesh 资产上双写 spawnMode。
+
+## 引擎能力画廊
+
+各渲染能力的标准化独立展示（零 Core 依赖、一能力一场景）见 [Raylib 引擎能力标准化 Showcase](engine-capability-showcases.md)；本文保持产品化合同与演进方向的真源。
