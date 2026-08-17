@@ -1,0 +1,8 @@
+{
+  "scene": "frame_lighting",
+  "frames": 30,
+  "avgFrameMs": 1.27,
+  "p95FrameMs": 0.688,
+  "maxFrameMs": 25.368,
+  "wallMs": 579.2
+}

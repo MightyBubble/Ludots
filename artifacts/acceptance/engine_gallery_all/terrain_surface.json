@@ -1,0 +1,8 @@
+{
+  "scene": "terrain_surface",
+  "frames": 30,
+  "avgFrameMs": 4.502,
+  "p95FrameMs": 4.31,
+  "maxFrameMs": 61.614,
+  "wallMs": 665.2
+}

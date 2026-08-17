@@ -593,6 +593,7 @@ namespace Ludots.Raylib.Render
 
             if (_material.maps != null)
             {
+                _material.shader = default;
                 Rl.UnloadMaterial(_material);
                 _material = default;
             }

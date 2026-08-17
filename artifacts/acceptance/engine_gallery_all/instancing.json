@@ -1,0 +1,8 @@
+{
+  "scene": "instancing",
+  "frames": 30,
+  "avgFrameMs": 10.317,
+  "p95FrameMs": 12.685,
+  "maxFrameMs": 60.782,
+  "wallMs": 702.1
+}
