@@ -36,7 +36,7 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 - `GET /tools` → 自描述工具目录（name / description / inputSchema）
 - `POST /rpc` → JSON-RPC 2.0：`{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
 
-## 内置工具（13）
+## 内置工具（17）
 
 | 域 | 工具 | 能力 |
 |----|------|------|
@@ -46,7 +46,17 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 | UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
 | GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |
 | 订单 | `ludots.orders.inspect` · `ludots.orders.issue` | 准入/终态缓冲明细；经正式 intake 路径下发订单，全生命周期可观测 |
-| 输入 | `ludots.input.state` · `ludots.input.inject` | 输入上下文与 UI 捕获状态；合成 press / release / set（走 `PlayerInputHandler.Inject*`，与真实输入同路径） |
+| 输入 | `ludots.input.state` · `ludots.input.inject` · `ludots.input.raw` | 输入状态与 UI 捕获；**语义层**注入（press/release/set，走 `PlayerInputHandler.Inject*`）；**窗口层**注入（pointerMove/click/scroll/press/type，经 `SyntheticInputDevice` 与物理输入同管线） |
+| 帧捕获 | `ludots.screenshot` · `ludots.recording.start/stop` | 经 `IHostFrameCapture` 端口抓帧 PNG；录屏为 PNG 序列 + manifest.json，agent 可抽帧阅读 |
+
+### 输入两层模型
+
+- **语义动作层**（`input.inject`）：直接写 `PlayerInputHandler` 的注入表，绕过硬件与 UI——用来驱动游戏行为（放技能、下命令）。
+- **窗口原始层**（`input.raw`）：事件从宿主输入轮询点进入，UI 命中测试、指针捕获、键位绑定全部生效——用来验证"用户真的点这个按钮会怎样"。
+
+### 六边形端口
+
+截图与窗口层输入是宿主能力端口，不绑定具体引擎：`IHostFrameCapture`（`Ludots.Platform.Abstractions`）与 `SyntheticInputDevice`（`Ludots.Core.Input.Runtime`）由宿主适配器实现/接线（Raylib 已接：`RaylibFrameCaptureService` + `RaylibInputBackend`/`RaylibHostLoop` 咨询虚拟设备）。未来 Unity / Unreal / Godot 宿主实现同两端口即可，桥工具零改动；未实现时工具显式报 `service.unavailable`。
 
 错误协议：`-32601` 未知工具，`-32602` 参数错，`-32000` 域错误（`data.code` 如 `entity.not_found`、`ui.node_not_found`、`bridge.timeout`）。错误信息自带下一步指引（如发现工具、合法键来源）。
 

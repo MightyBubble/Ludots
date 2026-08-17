@@ -15,5 +15,14 @@ namespace Ludots.AgentBridge
         JsonObject? InputSchema { get; }
 
         JsonNode? Execute(JsonObject? args, AgentToolContext context);
+
+        /// <summary>
+        /// Async-capable entry point (e.g. frame capture, which is fulfilled at
+        /// end of frame). The default runs <see cref="Execute"/> synchronously on
+        /// the game thread. Overrides must never block the game thread; the
+        /// returned task may complete on any thread.
+        /// </summary>
+        Task<JsonNode?> ExecuteAsync(JsonObject? args, AgentToolContext context, CancellationToken cancellationToken)
+            => Task.FromResult(Execute(args, context));
     }
 }

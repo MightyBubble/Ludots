@@ -36,6 +36,12 @@ namespace Ludots.AgentBridge
         public long PumpCount { get; private set; }
         public DateTime LastPumpUtc { get; private set; } = DateTime.MinValue;
 
+        /// <summary>Artifacts root for tool-produced files (shots/recordings). Set by the host mod.</summary>
+        public string ArtifactsRoot { get; set; } = Path.Combine("artifacts", "agent-bridge");
+
+        /// <summary>Frame-synchronous drivers (e.g. recording) tick here, right after the pump.</summary>
+        public event Action? FrameTick;
+
         /// <summary>
         /// Called by transports on their own threads. The task completes when
         /// the game thread has executed the tool (or the timeout elapses).
@@ -83,8 +89,22 @@ namespace Ludots.AgentBridge
                         throw new AgentToolException("method.not_found", $"Unknown tool '{request.Method}'.");
                     }
 
-                    JsonNode? result = tool.Execute(request.Params, _context);
-                    request.Completion.TrySetResult(result);
+                    Task<JsonNode?> call = tool.ExecuteAsync(request.Params, _context, CancellationToken.None);
+                    if (call.IsCompleted)
+                    {
+                        SettleCompletion(request.Completion, call);
+                    }
+                    else
+                    {
+                        // Frame-bound tools (screenshot) complete after the pump
+                        // returns; continuation settles the HTTP caller off-thread.
+                        call.ContinueWith(
+                            (t, state) => SettleCompletion((TaskCompletionSource<JsonNode?>)state!, t),
+                            request.Completion,
+                            CancellationToken.None,
+                            TaskContinuationOptions.RunContinuationsAsynchronously,
+                            TaskScheduler.Default);
+                    }
                 }
                 catch (AgentToolException ex)
                 {
@@ -98,7 +118,34 @@ namespace Ludots.AgentBridge
                 }
             }
 
+            FrameTick?.Invoke();
             return executed;
+        }
+
+        private static void SettleCompletion(TaskCompletionSource<JsonNode?> completion, Task<JsonNode?> call)
+        {
+            if (call.IsFaulted)
+            {
+                Exception ex = call.Exception?.GetBaseException() ?? new Exception("unknown tool failure");
+                if (ex is AgentToolException bridgeEx)
+                {
+                    completion.TrySetException(bridgeEx);
+                }
+                else
+                {
+                    completion.TrySetException(new AgentToolException(
+                        AgentBridgeErrorCodes.ToolFailed,
+                        $"tool failed: {ex.GetType().Name}: {ex.Message}"));
+                }
+            }
+            else if (call.IsCanceled)
+            {
+                completion.TrySetCanceled();
+            }
+            else
+            {
+                completion.TrySetResult(call.Result);
+            }
         }
     }
 }

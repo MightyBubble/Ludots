@@ -4,31 +4,53 @@ using Raylib_cs;
 
 namespace Ludots.Client.Raylib.Input
 {
+    /// <summary>
+    /// Hardware input backend for Raylib. When a <see cref="SyntheticInputDevice"/>
+    /// is attached, virtual window-level state is overlaid onto the physical
+    /// state so injected input flows through the same binding pipeline.
+    /// </summary>
     public class RaylibInputBackend : IInputBackend
     {
+        private readonly SyntheticInputDevice? _synthetic;
         private bool _imeEnabled = false;
         private string _charBuffer = "";
+
+        public RaylibInputBackend(SyntheticInputDevice? synthetic = null)
+        {
+            _synthetic = synthetic;
+        }
 
         public float GetAxis(string devicePath)
         {
             if (devicePath.StartsWith("<Mouse>/ScrollY"))
             {
-                return Raylib_cs.Raylib.GetMouseWheelMove();
+                return Raylib_cs.Raylib.GetMouseWheelMove() + (_synthetic?.WheelDeltaThisFrame ?? 0f);
             }
             return 0f;
         }
 
         public bool GetButton(string devicePath)
         {
+            var mouseBtn = RaylibInputPathParser.ParseMouseButton(devicePath);
+            if (mouseBtn.HasValue && _synthetic != null &&
+                _synthetic.IsButtonDown(ToSyntheticButton(mouseBtn.Value)))
+            {
+                return true;
+            }
+
             if (_imeEnabled) return false; // Block keyboard inputs when IME is active
 
             var key = RaylibInputPathParser.ParseKeyboardKey(devicePath);
             if (key.HasValue)
             {
+                if (_synthetic != null && _synthetic.IsKeyDown(ToSyntheticKeyName(key.Value)))
+                {
+                    return true;
+                }
+
                 return Raylib_cs.Raylib.IsKeyDown(key.Value);
             }
 
-            var mouseBtn = RaylibInputPathParser.ParseMouseButton(devicePath);
             if (mouseBtn.HasValue)
             {
                 return Raylib_cs.Raylib.IsMouseButtonDown(mouseBtn.Value);
@@ -39,6 +61,11 @@ namespace Ludots.Client.Raylib.Input
 
         public Vector2 GetMousePosition()
         {
+            if (_synthetic != null && _synthetic.HasPointerOverride)
+            {
+                return _synthetic.PointerPosition;
+            }
+
             if (!Raylib_cs.Raylib.IsWindowFocused())
             {
                 // Report an invalid pointer position while the game window is unfocused
@@ -51,7 +78,7 @@ namespace Ludots.Client.Raylib.Input
 
         public float GetMouseWheel()
         {
-            return Raylib_cs.Raylib.GetMouseWheelMove();
+            return Raylib_cs.Raylib.GetMouseWheelMove() + (_synthetic?.WheelDeltaThisFrame ?? 0f);
         }
 
         public void EnableIME(bool enable)
@@ -81,7 +108,33 @@ namespace Ludots.Client.Raylib.Input
                 }
                 key = Raylib_cs.Raylib.GetCharPressed();
             }
+
+            if (_synthetic != null && _synthetic.CharsThisFrame.Count > 0)
+            {
+                chars += new string(System.Linq.Enumerable.ToArray(_synthetic.CharsThisFrame));
+            }
+
             return chars;
+        }
+
+        public static SyntheticPointerButton ToSyntheticButton(MouseButton button) => button switch
+        {
+            MouseButton.MOUSE_LEFT_BUTTON => SyntheticPointerButton.Left,
+            MouseButton.MOUSE_RIGHT_BUTTON => SyntheticPointerButton.Right,
+            _ => SyntheticPointerButton.Middle,
+        };
+
+        internal static string ToSyntheticKeyName(KeyboardKey key)
+        {
+            // "KEY_PAGE_UP" -> "PAGEUP" (device names are case/underscore-insensitive)
+            string raw = key.ToString();
+            const string prefix = "KEY_";
+            if (raw.StartsWith(prefix, System.StringComparison.Ordinal))
+            {
+                raw = raw.Substring(prefix.Length);
+            }
+
+            return SyntheticInputDevice.NormalizeKey(raw);
         }
     }
 }

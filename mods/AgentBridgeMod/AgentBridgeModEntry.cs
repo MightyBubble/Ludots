@@ -27,13 +27,16 @@ namespace AgentBridgeMod
 
             var tools = new AgentToolRegistry();
             var time = new AgentTimeController();
+            var recording = new RecordingController();
 
             context.SystemFactoryRegistry.RegisterPresentation("AgentBridge", scriptCtx =>
             {
                 var engine = scriptCtx.GetEngine();
                 if (engine == null) return null!;
 
-                var runtime = new AgentBridgeRuntime(engine, tools);
+                string discoveryDir = AgentBridgeConfig.ResolveDiscoveryDirectory(AppContext.BaseDirectory);
+                var runtime = new AgentBridgeRuntime(engine, tools) { ArtifactsRoot = discoveryDir };
+                runtime.FrameTick += recording.Tick;
 
                 tools.Register(new SessionInfoTool(runtime));
                 tools.Register(new TimeGetTool(time));
@@ -48,10 +51,13 @@ namespace AgentBridgeMod
                 tools.Register(new OrdersIssueTool());
                 tools.Register(new InputStateTool());
                 tools.Register(new InputInjectTool());
+                tools.Register(new InputRawTool());
+                tools.Register(new ScreenshotTool(runtime));
+                tools.Register(new RecordingStartTool(recording, runtime));
+                tools.Register(new RecordingStopTool(recording));
 
                 engine.SetService(ToolRegistryKey, tools);
 
-                string discoveryDir = AgentBridgeConfig.ResolveDiscoveryDirectory(AppContext.BaseDirectory);
                 var server = new AgentBridgeHttpServer(runtime, config, discoveryDir);
                 server.Start();
                 _server = server;

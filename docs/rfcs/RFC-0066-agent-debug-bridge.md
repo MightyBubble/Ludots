@@ -97,11 +97,26 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 | `ludots.gas.diagnostics` | `GasDiagnosticEventBuffer` 转储（系统/指标/容量/计数） |
 | `ludots.orders.inspect` | 指定实体 OrderBuffer 明细 + 全局 OrderAdmission/Terminal 结果缓冲 |
 | `ludots.orders.issue` | 经 `OrderSubmitter.Submit` 下发订单（走正式准入规则，返回 `OrderSubmitResult`） |
-| `ludots.input.state` | 输入上下文栈、动作清单、指针快照、UI 捕获状态 |
-| `ludots.input.inject` | `press` / `release` / `action {value}`（复用 `PlayerInputHandler.Inject*`） |
-| `ludots.screenshot` | **（deferred，v1 未实现）** host 能力；Raylib 宿主注入时输出 PNG 到 `artifacts/agent-bridge/shots/`，否则显式报不可用 |
+| `ludots.input.state` | 输入上下文栈、动作清单、指针快照、UI 捕获状态、窗口层虚拟设备状态 |
+| `ludots.input.inject` | **语义动作层**：`press` / `release` / `action {value}`（复用 `PlayerInputHandler.Inject*`） |
+| `ludots.input.raw` | **窗口原始层**：`pointerMove/pointerDown/pointerUp/click/scroll/keyDown/keyUp/press/type/releaseAll`（经 `SyntheticInputDevice` 进入宿主轮询点，与物理输入同管线——UI 命中、捕获、绑定全部生效） |
+| `ludots.screenshot` | 经 `IHostFrameCapture` 端口抓下一呈现帧 PNG 到 `artifacts/agent-bridge/shots/`；暂停下可用 |
+| `ludots.recording.start` / `ludots.recording.stop` | 录屏为 PNG 序列（`intervalMs/maxFrames`），stop 写 `manifest.json`；agent 可按需抽帧阅读 |
 
 错误协议：JSON-RPC error，`-32602` 参数错，`-32601` 未知工具，`-32000` 域错误并带 `data.code`（如 `entity.not_found`、`service.unavailable:<key>`、`capability.unavailable:<name>`）。
+
+### 六边形端口（host 能力）
+
+截图/录屏与窗口层输入不焊死 Raylib，端口定义在引擎无关层，宿主适配器实现：
+
+| 端口 | 位置 | 语义 | Raylib 实现 |
+|------|------|------|-------------|
+| `IHostFrameCapture` | `Ludots.Platform.Abstractions` | `CapturePngAsync()` 请求-兑现模型，下一呈现帧完成时返回 PNG 字节 | `RaylibFrameCaptureService`：host loop 在 `EndDrawing` 后 `OnFramePresented()` 回读帧缓冲（复用 evidence 截图同一机制） |
+| `SyntheticInputDevice` | `Ludots.Core.Input.Runtime` | 引擎无关虚拟设备：指针位置覆写、按钮/键盘边沿、滚轮、字符；宿主每帧 `AdvanceFrame()` 后在轮询点叠加虚拟状态 | `RaylibInputBackend`（玩法路径）+ `RaylibHostLoop.UpdateInput/ForwardKeyboardInput`（UI 路径）咨询同一实例 |
+
+未来 Unity / Unreal / Godot 宿主只需各自实现这两个端口（Unity: `ScreenCapture` + InputSystem `QueueEvent`；Unreal: screenshot request + `FSlateApplication` 事件；Godot: viewport 回读 + `Input.parse_input_event`），桥工具零改动。宿主未实现时工具显式报 `service.unavailable`，无 fallback。
+
+录屏不在端口上单独开口：桥侧以 `intervalMs` 节奏重复调用一次性截图原语实现，端口保持单方法。
 
 ## 6 启用方式
 
@@ -127,6 +142,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 ### 验收结果（2026-08-17，worktree `feat/agent-debug-bridge`）
 
-- 13/13 工具经 curl 人工自测通过；MCP 适配器 initialize / tools/list / tools/call 冒烟通过（目录与 HTTP 一致）。
+- 全部工具经 curl 人工自测通过（v1 13 个 + v2 帧捕获与窗口层输入 4 个）；MCP 适配器 initialize / tools/list / tools/call 冒烟通过（目录与 HTTP 一致）。
+- 截图目验为真实帧缓冲（UI + 3D 场景）；录屏 20/20 帧 + manifest 落盘；`input.raw` 点击工具栏按钮实测驱动相机跟随。
 - pi + deepseek-v4-flash 验收通过：自主完成全部 6 步 + bonus（stop 订单闭环），并在镜头停留在场外时**自发用 `ui.click` 点击工具栏"Follow selection"按钮把镜头转回实体群**——这正是结构化 UI 树 + 操控工具替代 computer-use 的目标行为。
 - pi 反馈并已修复：`time.control step` 响应增加 `targetTick`（步进在后续帧执行）；`ui.click` elementId 未命中时错误信息指向 `ui.tree`/`ui.query` 发现路径。
