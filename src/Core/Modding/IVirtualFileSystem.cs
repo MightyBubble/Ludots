@@ -1,8 +1,10 @@
 using System.IO;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Modding
 {
-    public interface IVirtualFileSystem
+    public interface IVirtualFileSystem : IRenderAssetPathResolver
     {
         void Mount(string modId, string physicalPath);
         bool Unmount(string modId);

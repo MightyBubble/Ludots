@@ -40,7 +40,7 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         Assert.That(runtime.Metrics.Detail, Does.Contain("35"));
         Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(65f).Within(0.01f));
 
-        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
         runtime.DrawOverlay(debugDraw);
         Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "read board must draw the memo board frame");
     }
@@ -55,7 +55,7 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         Assert.That(write.Metrics.Detail, Does.Contain("35"));
         Assert.That(write.Context.ActorHealth[1], Is.EqualTo(write.Vignette.Actors[1].Health).Within(0.01f));
 
-        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
         write.DrawOverlay(debugDraw);
         Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "write board must draw the dashed hand-to-slot line");
 
@@ -89,7 +89,7 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         Assert.That(runtime.Metrics.Detail, Does.Contain("82"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("64"));
 
-        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
         runtime.DrawOverlay(debugDraw);
         Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "config book must draw the ticket row");
     }
@@ -103,7 +103,7 @@ public sealed class GraphOpsNodeGalleryBlackboardAcceptanceTests
         Assert.That(runtime.Metrics.Detail, Does.Contain("品阶"));
         Assert.That(runtime.Metrics.Detail, Does.Contain("2"));
 
-        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
         runtime.DrawOverlay(debugDraw);
         Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "config book must draw the tier scale");
     }

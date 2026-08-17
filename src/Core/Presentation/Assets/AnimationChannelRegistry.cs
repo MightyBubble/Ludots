@@ -1,13 +1,15 @@
 using System;
 using Ludots.Core.Registry;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Presentation.Assets
 {
     public static class AnimationChannelRegistry
     {
-        public const string Locomotion = "locomotion";
-        public const string AimYaw = "aim_yaw";
-        public const string Recoil = "recoil";
+        public const string Locomotion = WellKnownAnimationChannelNames.Locomotion;
+        public const string AimYaw = WellKnownAnimationChannelNames.AimYaw;
+        public const string Recoil = WellKnownAnimationChannelNames.Recoil;
 
         private static StringIntRegistry _ids = CreateRegistry();
 

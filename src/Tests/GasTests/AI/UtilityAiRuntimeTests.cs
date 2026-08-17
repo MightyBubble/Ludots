@@ -19,6 +19,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Arch.Buffer;
 using Arch.Core;
@@ -17,6 +17,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using CombatStanceBehaviorMod.Components;
 using CombatStanceBehaviorMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace CombatStanceBehaviorMod.Systems;
 

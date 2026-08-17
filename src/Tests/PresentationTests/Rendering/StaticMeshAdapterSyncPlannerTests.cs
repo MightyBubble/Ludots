@@ -1,9 +1,11 @@
 using System.Numerics;
-using Ludots.Core.Presentation.AdapterSync;
+using Ludots.Raylib.Render;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.Presentation
 {

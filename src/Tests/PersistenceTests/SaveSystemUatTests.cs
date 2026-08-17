@@ -134,7 +134,7 @@ public sealed class SaveSystemUatTests
             Assert.That(TryFindByName(target.World, "Saved Contract Pilot"), Is.EqualTo(Entity.Null));
             Entity preserved = FindSingleByName(target.World, "Current Mission Survives");
             ref readonly WorldPositionCm preservedPosition = ref target.World.Get<WorldPositionCm>(preserved);
-            Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(33, 44)));
+            Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(33, 44)));
         });
     }
 

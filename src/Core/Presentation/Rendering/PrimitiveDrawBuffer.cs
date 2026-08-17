@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Rendering
 {
-    public sealed class PrimitiveDrawBuffer
+    public sealed class PrimitiveDrawBuffer : IPrimitiveDrawSnapshot
     {
         public const string OverflowErrorCode = "PRIMITIVE_DRAW_BUFFER_OVERFLOW";
 

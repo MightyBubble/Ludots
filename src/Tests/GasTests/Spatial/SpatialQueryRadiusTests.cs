@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace GasTests
 {

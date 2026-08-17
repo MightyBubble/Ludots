@@ -20,6 +20,7 @@ using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
 using UiPlayerAggregateGraphMvpShowcaseMod.Input;
 using UiPlayerAggregateGraphMvpShowcaseMod.UI;
+using Ludots.Platform.Abstractions;
 
 namespace UiPlayerAggregateGraphMvpShowcaseMod.Runtime;
 
@@ -373,7 +374,7 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
             }
 
             ref WorldPositionCm pos = ref world.Get<WorldPositionCm>(entity);
-            System.Numerics.Vector3 meters = WorldUnits.WorldCmToVisualMeters(in pos.Value);
+            System.Numerics.Vector3 meters = WorldUnitsFix64.WorldCmToVisualMeters(in pos.Value);
             if (!world.Has<AttributeBuffer>(entity))
             {
                 throw new InvalidOperationException(

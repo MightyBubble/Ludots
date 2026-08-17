@@ -11,6 +11,7 @@ using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Persistence;
 
@@ -45,7 +46,7 @@ public sealed class WorldSnapshotOrchestrationTests
 
         Entity restored = FindSingleByName(target.World, "saved-actor");
         ref readonly WorldPositionCm restoredPosition = ref target.World.Get<WorldPositionCm>(restored);
-        Assert.That(restoredPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(100, 200)));
+        Assert.That(restoredPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(100, 200)));
         Assert.That(target.GameSession.CurrentTick, Is.EqualTo(snapshot.Header.Tick));
         Assert.That(target.GameSession.Globals["score"], Is.EqualTo(9));
         Assert.That(FindByName(target.World, "target-only"), Is.EqualTo(Entity.Null));
@@ -73,7 +74,7 @@ public sealed class WorldSnapshotOrchestrationTests
 
         Entity preserved = FindSingleByName(target.World, "target-survives");
         ref readonly WorldPositionCm preservedPosition = ref target.World.Get<WorldPositionCm>(preserved);
-        Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(3, 4)));
+        Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(3, 4)));
         Assert.That(target.GameSession.CurrentTick, Is.EqualTo(targetTickBeforeRestore));
     }
 

@@ -1,0 +1,8 @@
+{
+  "scene": "gpu_skinning",
+  "frames": 30,
+  "avgFrameMs": 11.352,
+  "p95FrameMs": 12.616,
+  "maxFrameMs": 15.818,
+  "wallMs": 589.7
+}

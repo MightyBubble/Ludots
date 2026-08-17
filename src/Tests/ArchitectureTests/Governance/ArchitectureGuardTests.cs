@@ -25,6 +25,8 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Tests.Architecture.Governance
 {

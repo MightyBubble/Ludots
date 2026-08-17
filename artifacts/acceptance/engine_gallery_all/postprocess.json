@@ -1,0 +1,8 @@
+{
+  "scene": "postprocess",
+  "frames": 30,
+  "avgFrameMs": 0.997,
+  "p95FrameMs": 0.693,
+  "maxFrameMs": 16.676,
+  "wallMs": 592.8
+}

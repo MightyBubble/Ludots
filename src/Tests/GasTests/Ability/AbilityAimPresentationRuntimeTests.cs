@@ -30,6 +30,7 @@ using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Registry;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {

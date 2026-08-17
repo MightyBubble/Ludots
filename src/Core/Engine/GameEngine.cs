@@ -59,6 +59,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
@@ -103,6 +104,7 @@ using Ludots.Core.Gameplay.Progression.Config;
 using Ludots.Core.Gameplay.Progression.Systems;
 using Ludots.Core.Persistence;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Engine
 {
@@ -207,8 +209,8 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
-        private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
-        private Ludots.Core.Presentation.Rendering.SplineRibbonBuffer _splineRibbonBuffer;
+        private Ludots.Platform.Abstractions.GroundOverlayBuffer _groundOverlayBuffer;
+        private Ludots.Platform.Abstractions.SplineRibbonBuffer _splineRibbonBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
@@ -2911,7 +2913,7 @@ namespace Ludots.Core.Engine
 
         private static int ResolveGroundOverlayShapeId(string key)
         {
-            if (Enum.TryParse<Ludots.Core.Presentation.Rendering.GroundOverlayShape>(key, ignoreCase: false, out var shape))
+            if (Enum.TryParse<Ludots.Platform.Abstractions.GroundOverlayShape>(key, ignoreCase: false, out var shape))
             {
                 return (int)shape;
             }

@@ -9,15 +9,17 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
-using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -315,7 +317,8 @@ namespace Ludots.Adapter.Raylib
             if (frame.DrawTerrain)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
-                _terrainRenderer.Render(_engine.VertexMap, frame.ActiveCamera);
+                var terrainSource = new Ludots.Client.Raylib.Rendering.VertexMapTerrainChunkMeshSource(_engine.VertexMap);
+                _terrainRenderer.Render(terrainSource, frame.ActiveCamera);
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _terrainRenderer.ChunkBuildMsLastFrame,

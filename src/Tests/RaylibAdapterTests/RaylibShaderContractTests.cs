@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.RaylibAdapter;
 
@@ -13,7 +14,7 @@ public sealed class RaylibShaderContractTests
             repoRoot,
             "src",
             "Client",
-            "Ludots.Client.Raylib",
+            "Ludots.Raylib.Render",
             "Rendering",
             "RaylibSkyEnvironment.cs"));
         string vertex = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "sky_daynight.vs"));
@@ -38,7 +39,7 @@ public sealed class RaylibShaderContractTests
             repoRoot,
             "src",
             "Client",
-            "Ludots.Client.Raylib",
+            "Ludots.Raylib.Render",
             "Rendering",
             "RaylibSkyboxRenderer.cs"));
         string vertex = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "skybox.vs"));

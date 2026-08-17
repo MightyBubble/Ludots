@@ -149,7 +149,7 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
                 runtime.Tick(0.35f);
             }
 
-            var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+            var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
             runtime.DrawOverlay(debugDraw);
             Assert.That(debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count, Is.GreaterThan(0), op);
         }

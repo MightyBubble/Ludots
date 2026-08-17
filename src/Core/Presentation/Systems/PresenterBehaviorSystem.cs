@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -989,7 +990,7 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.FacingDegrees:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, WorldPlane2D.RadToDegValue(ResolveFacingRadians(owner)), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, VisualMath.RadToDegValue(ResolveFacingRadians(owner)), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Constant:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
@@ -1018,7 +1019,7 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, facingRad, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.FacingDegrees:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, WorldPlane2D.RadToDegValue(facingRad), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, VisualMath.RadToDegValue(facingRad), 0, Vector4.Zero);
                         break;
                 }
             }
@@ -1446,12 +1447,12 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 parentScale,
             in AttachmentConfig config)
         {
-            Quaternion normalizedParentRot = WorldPlane2D.NormalizeOrIdentity(parentRot);
-            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+            Quaternion normalizedParentRot = VisualMath.NormalizeOrIdentity(parentRot);
+            Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
             Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
             SetTransform(entity, TransformSource.AttachedToParent,
                 parentPos + Vector3.Transform(scaledOffset, normalizedParentRot),
-                WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
+                VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
                 config.InheritScale ? normalizedParentScale : Vector3.One,
                 parentFacing);
         }
@@ -1477,11 +1478,11 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Quaternion normalizedBoneRotation = WorldPlane2D.NormalizeOrIdentity(boneRotation);
+            Quaternion normalizedBoneRotation = VisualMath.NormalizeOrIdentity(boneRotation);
             SetTransform(entity, TransformSource.BoneAttached,
                 bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation),
-                WorldPlane2D.NormalizeOrIdentity(normalizedBoneRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? WorldPlane2D.NormalizeScale(boneScale) : Vector3.One,
+                VisualMath.NormalizeOrIdentity(normalizedBoneRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
+                config.InheritScale ? VisualMath.NormalizeScale(boneScale) : Vector3.One,
                 World.Has<PresenterWorldFacing>(entity) ? World.Get<PresenterWorldFacing>(entity) : default);
         }
 
@@ -2081,12 +2082,12 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                Quaternion normalizedParentRot = WorldPlane2D.NormalizeOrIdentity(parentRot);
-                Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+                Quaternion normalizedParentRot = VisualMath.NormalizeOrIdentity(parentRot);
+                Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
                 Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
                 Vector3 resolvedPosition = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
                 Vector2 resolvedPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
-                Quaternion resolvedRotation = WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+                Quaternion resolvedRotation = VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset));
                 PresenterWorldFacing resolvedFacing = World.Has<PresenterWorldFacing>(parentEntity)
                     ? World.Get<PresenterWorldFacing>(parentEntity)
                     : default;

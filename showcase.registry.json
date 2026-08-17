@@ -6519,6 +6519,384 @@
       "video": "artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "engine_raylib_skybox",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·天空盒",
+      "summary": "SkyboxRenderer 六面天空——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_skybox",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_skybox",
+      "screenshot": "artifacts/acceptance/engine_raylib_skybox/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_sky_daynight",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·昼夜天空/日照",
+      "summary": "SkyEnvironment 六档渐变随时相推进——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_sky_daynight",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_sky_daynight",
+      "screenshot": "artifacts/acceptance/engine_raylib_sky_daynight/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_water",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·水面",
+      "summary": "反射/折射/DUDV 波动——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_water",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_water",
+      "screenshot": "artifacts/acceptance/engine_raylib_water/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_terrain_surface",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·地表着色",
+      "summary": "hex chunk 网格与顶点色——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_terrain_surface",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_terrain_surface",
+      "screenshot": "artifacts/acceptance/engine_raylib_terrain_surface/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_terrain_heightmap",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·视觉高度图",
+      "summary": "色带地形与超密降采样——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_terrain_heightmap",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_terrain_heightmap",
+      "screenshot": "artifacts/acceptance/engine_raylib_terrain_heightmap/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_atmosphere_fog",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·距离雾与环境色",
+      "summary": "深度雾与昼夜色 ramp——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_atmosphere_fog",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_atmosphere_fog",
+      "screenshot": "artifacts/acceptance/engine_raylib_atmosphere_fog/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_frame_lighting",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·帧光照",
+      "summary": "平行光/环境光相位扫描——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_frame_lighting",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_frame_lighting",
+      "screenshot": "artifacts/acceptance/engine_raylib_frame_lighting/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_postprocess",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·后处理调色",
+      "summary": "曝光/对比/饱和/暗角——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_postprocess",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_postprocess",
+      "screenshot": "artifacts/acceptance/engine_raylib_postprocess/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_gpu_skinning",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·GPU 骨骼蒙皮",
+      "summary": "GLB 骨骼动画多实例——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_gpu_skinning",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_skinning",
+      "screenshot": "artifacts/acceptance/engine_raylib_gpu_skinning/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_instancing",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·GPU 实例化合批",
+      "summary": "30k 实例 ISM 吞吐——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_instancing",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_instancing",
+      "screenshot": "artifacts/acceptance/engine_raylib_instancing/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_particles",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·Quarks 粒子",
+      "summary": "加色火花/贴图烟雾/拉伸火星——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_particles",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_particles",
+      "screenshot": "artifacts/acceptance/engine_raylib_particles/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_decal_projection",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·投影贴花",
+      "summary": "接收面投影与可插接收器——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_decal_projection",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_decal_projection",
+      "screenshot": "artifacts/acceptance/engine_raylib_decal_projection/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_vegetation_cutout",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·植被透贴",
+      "summary": "alpha-cutout 公告板植被——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_vegetation_cutout",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_vegetation_cutout",
+      "screenshot": "artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_material_binding",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·材质绑定",
+      "summary": "同一网格多材质对比——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_material_binding",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_material_binding",
+      "screenshot": "artifacts/acceptance/engine_raylib_material_binding/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_ribbon_overlay",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·样条带/地面覆盖",
+      "summary": "环形/扇形覆盖与样条带——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_ribbon_overlay",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_ribbon_overlay",
+      "screenshot": "artifacts/acceptance/engine_raylib_ribbon_overlay/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_skia_overlay",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·Skia GPU 2D 覆盖层",
+      "summary": "HUD 面板/帧时条/罗盘——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_skia_overlay",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_skia_overlay",
+      "screenshot": "artifacts/acceptance/engine_raylib_skia_overlay/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_debug_draw",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·调试绘制",
+      "summary": "线框/圆/箱体/视锥——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_debug_draw",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_debug_draw",
+      "screenshot": "artifacts/acceptance/engine_raylib_debug_draw/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_primitives",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·图元/群体渲染",
+      "summary": "彩色图元阵与群体动画——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_primitives",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_primitives",
+      "screenshot": "artifacts/acceptance/engine_raylib_primitives/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     }
   ]
 }

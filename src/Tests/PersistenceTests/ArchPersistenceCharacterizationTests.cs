@@ -8,6 +8,7 @@ using Ludots.Core.Persistence;
 using MessagePack;
 using NUnit.Framework;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Persistence;
 

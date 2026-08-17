@@ -1723,7 +1723,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             Assert.That(engine.World.Has<VisualTransform>(entity), Is.True);
             Quaternion visualRotation = engine.World.Get<VisualTransform>(entity).Rotation;
-            Assert.That(WorldPlane2D.TryExtractFacingRadFromVisualYRotation(visualRotation, out float visualFacingRad), Is.True);
+            Assert.That(VisualMath.TryExtractFacingRadFromVisualYRotation(visualRotation, out float visualFacingRad), Is.True);
             Assert.That(
                 WorldPlane2D.AngleDistanceRad(visualFacingRad, expectedFacingRad),
                 Is.LessThan(0.0001f),

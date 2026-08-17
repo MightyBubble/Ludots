@@ -18,6 +18,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Requests;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
@@ -1909,7 +1910,7 @@ namespace Ludots.Tests.Presentation
             var projector = new UnavailableGroundProjector();
             var heightmap = new VisualHeightmapRuntime(
                 VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new short[]
@@ -1950,7 +1951,7 @@ namespace Ludots.Tests.Presentation
 
             var heightmap = new VisualHeightmapRuntime(
                 VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 1000, 1000),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new short[]

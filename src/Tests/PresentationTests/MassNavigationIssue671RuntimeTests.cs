@@ -15,6 +15,7 @@ using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 

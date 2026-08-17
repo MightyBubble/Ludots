@@ -7,6 +7,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture.Governance
 {

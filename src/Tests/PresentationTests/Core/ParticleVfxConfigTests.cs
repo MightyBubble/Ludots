@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 

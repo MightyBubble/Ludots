@@ -17,6 +17,7 @@ using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using Raylib_cs;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.Presentation
 {

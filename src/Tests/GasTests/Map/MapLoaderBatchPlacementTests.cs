@@ -23,6 +23,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace GasTests
 {
@@ -173,7 +174,7 @@ namespace GasTests
                 new PresenterEntityRuntime(world),
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
-                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+                new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
             var map = new MapConfig { Id = MapId };
             map.Entities.Add(CreateSpawnWithPresenterParam(CreateOverrides("position-facing"), 0.25f));
 
@@ -239,7 +240,7 @@ namespace GasTests
                 presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
-                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+                new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
 
             var map = new MapConfig { Id = MapId };
             map.Entities.Add(CreateSpawnWithPresenterParam(
@@ -320,7 +321,7 @@ namespace GasTests
                 presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
-                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-200_000, -200_000, 400_000, 400_000), 100));
+                new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-200_000, -200_000, 400_000, 400_000), 100));
 
             var map = new MapConfig { Id = MapId };
             map.Entities.Add(CreateSpawnWithPresenterParam(
@@ -409,7 +410,7 @@ namespace GasTests
                 presenterRuntime,
                 definitions,
                 new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
-                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+                new WorldSizeSpec(new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
 
             var map = new MapConfig { Id = MapId };
             map.Entities.Add(CreateSpawn(null));

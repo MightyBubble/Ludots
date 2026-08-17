@@ -20,7 +20,7 @@ _None._
 | Master list | `docs/audits/raylib-client-parity/MASTER.md` |
 | Acceptance write-up | `docs/audits/raylib-client-parity/ACCEPTANCE.md` |
 | Showcase mod | `mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod` |
-| Capture tool | `tools/raylib_client_parity_acceptance` |
+| Capture tool | 引擎画廊 `Ludots.App.RaylibEngineGallery`（原独立工具已退役） |
 | Acceptance shots (repo) | `artifacts/raylib-client-parity/acceptance/` |
 | Acceptance shots (opt) | `/opt/cursor/artifacts/raylib-client-parity/acceptance/` |
 | `01_static_ism.png` | both acceptance dirs |

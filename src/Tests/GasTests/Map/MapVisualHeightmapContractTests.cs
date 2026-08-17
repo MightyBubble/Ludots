@@ -6,6 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Gas
 {
@@ -285,7 +286,7 @@ namespace Ludots.Tests.Gas
             using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.vhtm")))
             {
                 VisualHeightmapBinary.Write(stream, VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 100, 100),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new[] { (short)80, (short)80, (short)80, (short)80 }));
@@ -327,7 +328,7 @@ namespace Ludots.Tests.Gas
         private void WriteHeightmap(string fileName, short heightCm)
         {
             var asset = VisualHeightmapAsset.CreateSingleLayer(
-                new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
+                new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 100, 100),
                 sampleColumns: 2,
                 sampleRows: 2,
                 new[] { heightCm, heightCm, heightCm, heightCm });

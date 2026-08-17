@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Mathematics.FixedPoint;
 
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.Mathematics
 {
     /// <summary>
@@ -111,12 +113,6 @@ namespace Ludots.Core.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float RadToDegValue(float radians)
-        {
-            return radians * RadToDeg;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float NormalizeDegreesPositive(float degrees)
         {
             if (!float.IsFinite(degrees))
@@ -216,7 +212,7 @@ namespace Ludots.Core.Mathematics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 LogicCmToVisualMeters(in Fix64Vec2 logicCm, float heightMeters = 0f)
         {
-            return WorldUnits.WorldCmToVisualMeters(in logicCm, heightMeters);
+            return WorldUnitsFix64.WorldCmToVisualMeters(in logicCm, heightMeters);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -251,32 +247,6 @@ namespace Ludots.Core.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 FacingRadToVisualForward(float facingRad)
-        {
-            return new Vector3(MathF.Cos(facingRad), 0f, MathF.Sin(facingRad));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 FacingRadToVisualRight(float facingRad)
-        {
-            return new Vector3(-MathF.Sin(facingRad), 0f, MathF.Cos(facingRad));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 TransformVisualLocal2D(Vector3 origin, float facingRad, in Vector3 local)
-        {
-            Vector3 forward = FacingRadToVisualForward(facingRad);
-            Vector3 right = FacingRadToVisualRight(facingRad);
-            return origin + (forward * local.X) + (Vector3.UnitY * local.Y) + (right * local.Z);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 TransformVisualLocal(Vector3 origin, Quaternion rotation, Vector3 scale, in Vector3 local)
-        {
-            return origin + Vector3.Transform(local * NormalizeScale(scale), NormalizeOrIdentity(rotation));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector3 ResolveVisualAssetPosition(
             in Vector3 presenterWorldPosition,
             in Quaternion presenterWorldRotation,
@@ -288,10 +258,10 @@ namespace Ludots.Core.Mathematics
                 return presenterWorldPosition;
             }
 
-            return TransformVisualLocal(
+            return VisualMath.TransformVisualLocal(
                 presenterWorldPosition,
                 presenterWorldRotation,
-                NormalizeScale(presenterWorldScale),
+                VisualMath.NormalizeScale(presenterWorldScale),
                 in localOffset);
         }
 
@@ -306,7 +276,7 @@ namespace Ludots.Core.Mathematics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Quaternion ComposeVisualRotation(Quaternion worldRotation, Quaternion localRotation)
         {
-            return NormalizeOrIdentity(NormalizeOrIdentity(worldRotation) * NormalizeOrIdentity(localRotation));
+            return VisualMath.NormalizeOrIdentity(VisualMath.NormalizeOrIdentity(worldRotation) * VisualMath.NormalizeOrIdentity(localRotation));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -713,42 +683,6 @@ namespace Ludots.Core.Mathematics
             }
 
             return NormalizeBucketIndex(bucket, bucketCount) * TwoPi / bucketCount;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryExtractFacingRadFromVisualYRotation(Quaternion rotation, out float facingRad)
-        {
-            Quaternion normalized = NormalizeOrIdentity(rotation);
-            Vector3 forward = Vector3.Transform(Vector3.UnitX, normalized);
-            float planarLengthSq = (forward.X * forward.X) + (forward.Z * forward.Z);
-            if (!float.IsFinite(planarLengthSq) || planarLengthSq <= 0.000001f)
-            {
-                facingRad = 0f;
-                return false;
-            }
-
-            facingRad = MathF.Atan2(forward.Z, forward.X);
-            return float.IsFinite(facingRad);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            float lengthSquared = value.LengthSquared();
-            if (!float.IsFinite(lengthSquared) || lengthSquared <= 0.000001f)
-            {
-                return Quaternion.Identity;
-            }
-
-            return MathF.Abs(lengthSquared - 1f) <= 0.0001f
-                ? value
-                : Quaternion.Normalize(value);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 NormalizeScale(Vector3 value)
-        {
-            return value == Vector3.Zero ? Vector3.One : value;
         }
     }
 }

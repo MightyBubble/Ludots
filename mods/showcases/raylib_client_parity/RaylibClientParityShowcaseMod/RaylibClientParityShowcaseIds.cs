@@ -1,3 +1,4 @@
+
 namespace RaylibClientParityShowcaseMod;
 
 internal static class RaylibClientParityShowcaseIds

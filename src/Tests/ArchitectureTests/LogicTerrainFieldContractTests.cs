@@ -9,6 +9,7 @@ using Ludots.Tool;
 using NUnit.Framework;
 using System;
 using System.IO;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {

@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Spawning
 {

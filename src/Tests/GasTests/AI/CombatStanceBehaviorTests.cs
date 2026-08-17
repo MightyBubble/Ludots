@@ -17,6 +17,7 @@ using NUnit.Framework;
 using CombatStanceBehaviorMod.Components;
 using CombatStanceBehaviorMod.Runtime;
 using CombatStanceBehaviorMod.Systems;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS;
 

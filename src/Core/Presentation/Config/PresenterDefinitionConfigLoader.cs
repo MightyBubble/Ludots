@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -3281,7 +3282,7 @@ namespace Ludots.Core.Presentation.Config
                 Ownership = ParseEnum(obj["ownership"]?.GetValue<string>(), PresenterSurfaceChunkOwnership.PerChunk),
                 ChunkInfluencePolicy = obj["chunkInfluencePolicy"]?.GetValue<string>() ?? string.Empty,
                 RebakePolicy = obj["rebakePolicy"]?.GetValue<string>() ?? string.Empty,
-                UsageHint = ParseEnum(obj["usageHint"]?.GetValue<string>(), Assets.ProceduralMeshUsageHint.Static),
+                UsageHint = ParseEnum(obj["usageHint"]?.GetValue<string>(), ProceduralMeshUsageHint.Static),
             };
         }
 

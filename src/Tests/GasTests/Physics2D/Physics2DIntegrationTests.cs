@@ -20,6 +20,7 @@ using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace GasTests
 {

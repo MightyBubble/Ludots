@@ -1146,8 +1146,8 @@ namespace Ludots.Tests.Architecture
 
                 Assert.That(plan.RootModIds, Is.EqualTo(new[] { "RaylibClientParityShowcaseMod" }));
                 Assert.That(plan.OrderedModIds, Does.Contain("RaylibClientParityShowcaseMod"));
-                Assert.That(plan.OrderedModIds, Does.Contain("PresenterBlacksmithShowcaseMod"),
-                    "raylib_client_parity must depend on the Presenter-era blacksmith mod.");
+                Assert.That(plan.OrderedModIds, Does.Contain("RaylibPlatformMeshesMod"),
+                    "raylib_client_parity must pull its building meshes from the platform mesh fixture, not the presenter showcase.");
                 Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"),
                     "raylib_client_parity must not pull the legacy Performer blacksmith mod.");
 
@@ -1177,6 +1177,186 @@ namespace Ludots.Tests.Architecture
                 string hostAssetsJson = File.ReadAllText(Path.Combine(presentationRoot, "host_assets.json"));
                 Assert.That(hostAssetsJson, Does.Contain("PresenterBlacksmithShowcaseMod:"));
                 Assert.That(hostAssetsJson, Does.Not.Contain("PerformerBlacksmithShowcaseMod:"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_ResolvesEngineGallery_AsExecutableTargetWithoutModClosure()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-engine-gallery-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "$engine_gallery" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.IsExecutableTarget, Is.True);
+                Assert.That(plan.RootModIds, Is.Empty);
+                Assert.That(plan.OrderedModIds, Is.Empty);
+                Assert.That(plan.Mods, Is.Empty);
+                Assert.That(plan.BootstrapArtifactStrategy, Is.EqualTo("none"));
+                Assert.That(plan.BootstrapArtifactPath, Is.Empty);
+                Assert.That(plan.ExecutableArgs, Is.Empty);
+                Assert.That(plan.ExecutableProjectPath, Is.EqualTo(Path.Combine(
+                    repoRoot,
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
+                    "Ludots.App.RaylibEngineGallery.csproj")));
+                Assert.That(plan.AppAssemblyPath, Is.EqualTo(Path.Combine(
+                    repoRoot,
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
+                    "bin", "Release", "net8.0", "Ludots.App.RaylibEngineGallery.dll")));
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_PresetArgs_ReplaceBindingArgs_OnExecutableTarget()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-args-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                var configPath = Path.Combine(tempDirectory, "launcher.config.json");
+                var presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+                File.WriteAllText(configPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "bindings": [
+                    {
+                      "name": "executable_fixture",
+                      "target": {
+                        "type": "project",
+                        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj",
+                        "args": ["--scene", "terrain"]
+                      }
+                    }
+                  ],
+                  "adapters": { "default": "raylib" }
+                }
+                """);
+                File.WriteAllText(presetsPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "presets": [
+                    {
+                      "id": "executable_fixture_skybox",
+                      "name": "Executable Fixture Skybox",
+                      "selectors": ["$executable_fixture"],
+                      "adapterId": "raylib",
+                      "buildMode": "auto",
+                      "args": ["--scene", "skybox"]
+                    }
+                  ]
+                }
+                """);
+
+                var launcher = new LauncherService(repoRoot, configPath, presetsPath, preferencesPath, userConfigPath);
+
+                var presetPlan = launcher.Resolve(
+                    new[] { "preset:executable_fixture_skybox" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                Assert.That(presetPlan.IsExecutableTarget, Is.True);
+                Assert.That(presetPlan.ExecutableArgs, Is.EqualTo(new[] { "--scene", "skybox" }),
+                    "Preset args must fully replace binding args when present.");
+
+                var bindingPlan = launcher.Resolve(
+                    new[] { "$executable_fixture" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                Assert.That(bindingPlan.IsExecutableTarget, Is.True);
+                Assert.That(bindingPlan.ExecutableArgs, Is.EqualTo(new[] { "--scene", "terrain" }),
+                    "Binding args apply when the preset defines no args.");
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_FailsLoud_WhenProjectBindingPointsToMissingCsproj()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-missing-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                var configPath = Path.Combine(tempDirectory, "launcher.config.json");
+                var presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+                File.WriteAllText(configPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "bindings": [
+                    {
+                      "name": "missing_executable_fixture",
+                      "target": {
+                        "type": "project",
+                        "value": "src/Apps/Raylib/DoesNotExist/DoesNotExist.csproj"
+                      }
+                    }
+                  ],
+                  "adapters": { "default": "raylib" }
+                }
+                """);
+                File.WriteAllText(presetsPath, "{ \"schemaVersion\": 1, \"presets\": [] }");
+
+                var launcher = new LauncherService(repoRoot, configPath, presetsPath, preferencesPath, userConfigPath);
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => launcher.Resolve(new[] { "$missing_executable_fixture" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never));
+
+                Assert.That(ex!.Message, Does.Contain("Executable project target not found"));
+                Assert.That(ex.Message, Does.Contain("DoesNotExist.csproj"));
             }
             finally
             {

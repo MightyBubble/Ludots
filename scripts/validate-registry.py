@@ -48,7 +48,7 @@ if hasattr(sys.stdout, "reconfigure"):
 TIERS = {"T1", "T2", "T3", "T4"}
 CATEGORIES = {
     "capability", "genre", "panel", "stress",
-    "fixture", "demo", "tool", "example",
+    "fixture", "demo", "tool", "example", "engine",
 }
 STATUSES = {"active", "experimental", "retired"}
 REQUIRED_FIELDS = ("id", "tier", "category", "title")

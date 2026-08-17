@@ -134,7 +134,7 @@ public sealed class GraphOpsNodeGalleryFloatAcceptanceTests
         Assert.That(before, Is.EqualTo(100f).Within(0.01f));
         Assert.That(runtime.Context.ActorHealth[1], Is.EqualTo(70f).Within(0.01f));
 
-        var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+        var debugDraw = new Ludots.Platform.Abstractions.DebugDrawCommandBuffer();
         runtime.DrawOverlay(debugDraw);
         Assert.That(debugDraw.Lines.Count, Is.GreaterThan(0), "settle bench must draw the stretched-damage track");
     }

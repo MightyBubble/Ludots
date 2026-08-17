@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Systems
 {
@@ -1817,7 +1818,7 @@ namespace Ludots.Core.Systems
             out float halfWidthCm,
             out float halfDepthCm)
         {
-            Quaternion normalizedRotation = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Quaternion normalizedRotation = VisualMath.NormalizeOrIdentity(rotation);
             Vector3 scaledCenter = new Vector3(
                 localBounds.Center.X * scale.X,
                 localBounds.Center.Y * scale.Y,

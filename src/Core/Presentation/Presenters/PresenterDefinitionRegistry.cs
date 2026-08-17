@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Registry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Presenters
 {
@@ -213,7 +214,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 for (int r = 0; r < rules.Length; r++)
                 {
-                    if (rules[r].Event.Kind == Events.PresentationEventKind.PresenterCreated)
+                    if (rules[r].Event.Kind == PresentationEventKind.PresenterCreated)
                     {
                         _hasPresenterCreatedRules = true;
                         return;

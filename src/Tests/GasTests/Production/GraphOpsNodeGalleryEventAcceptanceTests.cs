@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;

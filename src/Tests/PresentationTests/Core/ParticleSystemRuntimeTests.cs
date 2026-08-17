@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Particles;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 

@@ -22,6 +22,7 @@ using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {

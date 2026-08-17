@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -390,7 +391,7 @@ namespace CoreInputMod.Systems
             }
 
             float widthMeters = WorldUnits.CmToM(isPrimary ? PrimaryLineWidthCm : SecondaryLineWidthCm);
-            float rotationDegrees = WorldPlane2D.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
+            float rotationDegrees = VisualMath.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
             PublishMovePathEvent(
                 PresentationEventKind.MovePathBegun,
                 _lineEventKeyId,
