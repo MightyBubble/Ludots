@@ -92,7 +92,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             Rl.EndMode3D();
-            Rl.DrawText($"skinned instances {InstanceCount}  clip frames {animation.frameCount}", 12, 28, 20, GalleryColors.RayWhite);
+            GalleryFont.Draw($"skinned instances {InstanceCount}  clip frames {animation.frameCount}", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         public void Dispose()

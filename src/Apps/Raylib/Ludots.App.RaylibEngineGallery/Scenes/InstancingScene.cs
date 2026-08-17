@@ -56,7 +56,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.EndMode3D();
 
             RaylibBenchmarkStats stats = _benchmark.LastStats;
-            Rl.DrawText(
+            GalleryFont.Draw(
                 $"instances {stats.VisibleCount}  buckets {stats.BucketCount}  draw {stats.CpuDrawMs:0.00}ms",
                 12,
                 28,

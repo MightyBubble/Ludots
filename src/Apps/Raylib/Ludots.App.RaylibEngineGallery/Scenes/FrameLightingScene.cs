@@ -72,7 +72,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.DrawLine3D(sunTip - new Vector3(0f, 2f, 0f), sunTip + new Vector3(0f, 2f, 0f), Color.YELLOW);
             Rl.EndMode3D();
 
-            Rl.DrawText($"day phase {phase:0.00}  sun Y {sun.Y:0.00}  ambient W {_lighting.AmbientRgba.W:0.00}", 12, 28, 20, GalleryColors.RayWhite);
+            GalleryFont.Draw($"day phase {phase:0.00}  sun Y {sun.Y:0.00}  ambient W {_lighting.AmbientRgba.W:0.00}", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         public void Dispose()

@@ -55,7 +55,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
-            Rl.DrawText($"primitive visuals {_primitives.LastMeshVisualCount}", 12, 28, 20, GalleryColors.RayWhite);
+            GalleryFont.Draw($"primitive visuals {_primitives.LastMeshVisualCount}", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         private void AppendColorField(float t)

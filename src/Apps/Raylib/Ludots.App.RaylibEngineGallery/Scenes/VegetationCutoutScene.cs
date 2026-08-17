@@ -134,7 +134,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
-            Rl.DrawText($"cutout billboards {_snapshot.Count} (tufts {_tufts.Length} + trees)", 12, 28, 20, GalleryColors.RayWhite);
+            GalleryFont.Draw($"cutout billboards {_snapshot.Count} (tufts {_tufts.Length} + trees)", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         private static (Vector3, float, int)[] BuildTufts()

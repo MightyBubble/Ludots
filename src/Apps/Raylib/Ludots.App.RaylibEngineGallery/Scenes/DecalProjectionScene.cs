@@ -116,7 +116,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _primitives.Draw(_snapshot, camera, _meshes, visualHeightmap: _heightmap, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
-            Rl.DrawText($"decals painted last frame {_primitives.LastDecalVisualCount}", 12, 28, 20, GalleryColors.RayWhite);
+            GalleryFont.Draw($"decals painted last frame {_primitives.LastDecalVisualCount}", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         public void Dispose()

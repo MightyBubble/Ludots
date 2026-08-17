@@ -82,6 +82,7 @@ namespace Ludots.App.RaylibEngineGallery
                     Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
                 }
 
+                GalleryFont.Flush();
                 Rl.EndDrawing();
                 drawn++;
             }
@@ -145,6 +146,7 @@ namespace Ludots.App.RaylibEngineGallery
                 Rl.BeginDrawing();
                 Rl.ClearBackground(new Color(18, 18, 24, 255));
                 DrawMenu(scenes, selected);
+                GalleryFont.Flush();
                 Rl.EndDrawing();
             }
 
@@ -173,8 +175,9 @@ namespace Ludots.App.RaylibEngineGallery
                 scene.Draw(dt, total, ref cam);
 
                 int y = 8;
-                Rl.DrawText($"[ESC] menu   [R] reset camera", 8, WindowHeight - 26, 18, GalleryColors.RayWhite);
-                Rl.DrawText($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
+                GalleryFont.Draw($"[ESC] menu   [R] reset camera", 8, WindowHeight - 26, 18, GalleryColors.RayWhite);
+                GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
+                GalleryFont.Flush();
                 Rl.EndDrawing();
             }
 
@@ -189,8 +192,8 @@ namespace Ludots.App.RaylibEngineGallery
 
         private static void DrawMenu(List<SceneDescriptor> scenes, int selected)
         {
-            Rl.DrawText("Ludots Engine Gallery — raylib 引擎渲染能力 18 项", 24, 20, 28, GalleryColors.RayWhite);
-            Rl.DrawText("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
+            GalleryFont.Draw("Ludots Engine Gallery — raylib 引擎渲染能力 18 项", 24, 20, 28, GalleryColors.RayWhite);
+            GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
 
             int y = 96;
             for (int i = 0; i < scenes.Count; i++)
@@ -198,8 +201,8 @@ namespace Ludots.App.RaylibEngineGallery
                 bool isActive = i == selected;
                 Color color = isActive ? new Color(120, 220, 160, 255) : new Color(200, 200, 210, 255);
                 string prefix = i < 10 ? ((i + 1) % 10).ToString() : char.ToString((char)('A' + i - 10));
-                Rl.DrawText(isActive ? "> " : "  ", 24, y, 20, color);
-                Rl.DrawText($"[{prefix}] {scenes[i].Title} — {scenes[i].Summary}", 52, y, 20, color);
+                GalleryFont.Draw(isActive ? "> " : "  ", 24, y, 20, color);
+                GalleryFont.Draw($"[{prefix}] {scenes[i].Title} — {scenes[i].Summary}", 52, y, 20, color);
                 y += 30;
             }
         }

@@ -116,7 +116,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             for (int i = 0; i < _slots.Length; i++)
             {
                 Rl.DrawRectangle(x - 6, 26, 4, 18, _slots[i].Panel);
-                Rl.DrawText($"[{i + 1}] {_slots[i].Label} ({_blendModes[i]})", x + 4, 26, 18, GalleryColors.RayWhite);
+                GalleryFont.Draw($"[{i + 1}] {_slots[i].Label} ({_blendModes[i]})", x + 4, 26, 18, GalleryColors.RayWhite);
                 x += 320;
             }
         }

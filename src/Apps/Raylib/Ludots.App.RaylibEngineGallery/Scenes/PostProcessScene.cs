@@ -54,7 +54,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.EndMode3D();
 
             _postProcess.EndWorldFrame(totalTimeSeconds, config);
-            Rl.DrawText(
+            GalleryFont.Draw(
                 $"exposure {config.Exposure:0.00}  contrast {config.Contrast:0.00}  saturation {config.Saturation:0.00}  vignette {config.VignetteStrength:0.00}",
                 12,
                 28,

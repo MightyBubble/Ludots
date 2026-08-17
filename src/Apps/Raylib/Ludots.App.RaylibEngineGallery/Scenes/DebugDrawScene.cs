@@ -39,7 +39,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _renderer.Draw(_commands);
 
             Rl.EndMode3D();
-            Rl.DrawText(
+            GalleryFont.Draw(
                 $"debug lines {_commands.Lines.Count}  circles {_commands.Circles.Count}  boxes {_commands.Boxes.Count}",
                 12,
                 28,
