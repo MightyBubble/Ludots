@@ -21,5 +21,11 @@
       "collectionKey": "controlplane.collection.ui.box",
       "title": "Control plane box acquisition"
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

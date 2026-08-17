@@ -1,3 +1,9 @@
 {
-  "startupMapId": "narrative_showcase_hub"
+  "startupMapId": "narrative_showcase_hub",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

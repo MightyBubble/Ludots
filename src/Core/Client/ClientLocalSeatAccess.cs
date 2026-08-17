@@ -63,8 +63,53 @@ namespace Ludots.Core.Client
         public static Entity RequireSolePossessedRep(IReadOnlyDictionary<string, object> globals) =>
             RequireRegistry(globals).RequireSolePossessedRep();
 
-        public static Entity RequireSolePossessedRep(GameEngine engine) =>
-            RequireRegistry(engine).RequireSolePossessedRep();
+        public static Entity RequireSolePossessedRep(GameEngine engine)
+        {
+            ClientLocalSeatRegistry registry = RequireRegistry(engine);
+            if (registry.TryGetSolePossessedRep(out Entity existing) && engine.World.IsAlive(existing))
+            {
+                return existing;
+            }
+
+            EnsureDefaultSoleSeat(engine);
+            return registry.RequireSolePossessedRep();
+        }
+
+        private static void EnsureDefaultSoleSeat(GameEngine engine)
+        {
+            ClientLocalSeatRegistry registry = RequireRegistry(engine);
+            Entity viewer = engine.World.Create(
+                new Ludots.Core.Gameplay.Components.PlayerIdentity { PlayerId = 1 },
+                new Ludots.Core.Gameplay.Components.PlayerOwner { PlayerId = 1 },
+                new Ludots.Core.Components.MapEntity { MapId = engine.CurrentMapSession?.MapId ?? new Ludots.Core.Map.MapId("default") },
+                Ludots.Core.Components.WorldPositionCm.FromCm(0, 0));
+            ClientLocalSeatBindings.BindSoleSeat(engine, viewer, 1, presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
+            WireAuthorityCameraServices(engine);
+        }
+
+        private static void WireAuthorityCameraServices(GameEngine engine)
+        {
+            if (!TryResolveSolePresentCamera(engine, out Ludots.Core.Gameplay.Camera.CameraManager camera, out _))
+            {
+                return;
+            }
+
+            if (camera.VirtualCameraBrain == null &&
+                engine.GetService(CoreServiceKeys.VirtualCameraRegistry) is Ludots.Core.Gameplay.Camera.VirtualCameraRegistry virtualCameras)
+            {
+                camera.SetVirtualCameraRegistry(virtualCameras);
+            }
+
+            if (engine.GetService(CoreServiceKeys.CameraImpulseRuntime) is Ludots.Core.Gameplay.Camera.CameraImpulseRuntime impulse)
+            {
+                camera.SetImpulseRuntime(impulse);
+            }
+
+            if (engine.GetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry) is Ludots.Core.Gameplay.Camera.PlatformManagedCameraDriverRegistry drivers)
+            {
+                camera.SetPlatformManagedCameraDriverRegistry(drivers);
+            }
+        }
 
         public static bool TryGetSolePossessedRep(IReadOnlyDictionary<string, object> globals, out Entity rep)
         {

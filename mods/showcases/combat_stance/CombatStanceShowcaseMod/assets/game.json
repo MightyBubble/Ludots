@@ -1,3 +1,9 @@
 {
-  "startupMapId": "combat_stance_showcase"
+  "startupMapId": "combat_stance_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

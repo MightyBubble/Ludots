@@ -80,21 +80,22 @@ namespace Ludots.Core.Client
                 PresentBinding = PresentBinding.FullScreen(viewId, presentResolution),
             });
 
+            var replacement = new Ludots.Core.Gameplay.Teams.PlayerEntityLookup();
+            replacement.Register(playerId, possessedRep);
             if (engine.CurrentMapSession != null)
             {
                 engine.CurrentMapSession.LocalSeats = new[]
                 {
                     new ResolvedLocalSeatPossession(seatId, playerId, possessedRep, ControlSchemeId: null),
                 };
+                engine.CurrentMapSession.PlayerEntityLookup?.ReplaceWith(replacement);
             }
 
-            UpsertSolePlayerLookup(engine, playerId, possessedRep);
+            UpsertSolePlayerLookup(engine, playerId, possessedRep, replacement);
         }
 
-        private static void UpsertSolePlayerLookup(GameEngine engine, int playerId, Entity possessedRep)
+        private static void UpsertSolePlayerLookup(GameEngine engine, int playerId, Entity possessedRep, Ludots.Core.Gameplay.Teams.PlayerEntityLookup replacement)
         {
-            var replacement = new Ludots.Core.Gameplay.Teams.PlayerEntityLookup();
-            replacement.Register(playerId, possessedRep);
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? lookupObj) &&
                 lookupObj is Ludots.Core.Gameplay.Teams.PlayerEntityLookup existing)
             {

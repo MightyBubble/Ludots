@@ -186,14 +186,22 @@ public sealed class ScopeSwitchRuntime
             engine.World.Add(entity, new MapEntity { MapId = ScopeSwitchIds.ShowcaseMap });
             engine.World.Add(entity, new ScopeRefBuffer());
             _entities.Add(new EntityRuntimeEntry(cfg, entity));
+            if (string.Equals(cfg.Id, _config.ViewerEntity, StringComparison.Ordinal))
+            {
+                _viewer = entity;
+            }
         }
 
-        _viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-        if (!engine.World.IsAlive(_viewer))
+        if (_viewer == Entity.Null)
         {
-            throw new InvalidOperationException(
-                "Scope switch showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+            throw new InvalidOperationException($"Scope switch viewer entity '{_config.ViewerEntity}' was not found.");
         }
+
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(
+            engine,
+            _viewer,
+            1,
+            presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
     }
 
     private void BuildScopes(GameEngine engine)

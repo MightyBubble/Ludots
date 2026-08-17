@@ -8,5 +8,11 @@
     "intValues": {
       "rtsRelationEntityCapacity": 16384
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

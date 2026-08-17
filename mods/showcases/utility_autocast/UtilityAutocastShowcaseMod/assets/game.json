@@ -1,3 +1,9 @@
 {
-  "startupMapId": "utility_autocast_showcase"
+  "startupMapId": "utility_autocast_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

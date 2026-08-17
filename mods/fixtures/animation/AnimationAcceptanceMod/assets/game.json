@@ -2,5 +2,11 @@
   "startupMapId": "animation_acceptance_entry",
   "startupInputContexts": [
     "Default_Gameplay"
+  ],
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
   ]
 }
