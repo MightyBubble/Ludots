@@ -16,8 +16,8 @@ namespace Ludots.Tests.Presentation
             AssertVector2(WorldPlane2D.DirectionFromFacingRad(0f), new Vector2(1f, 0f));
             AssertVector2(WorldPlane2D.DirectionFromFacingRad(MathF.PI * 0.5f), new Vector2(0f, 1f));
 
-            AssertVector3(WorldPlane2D.FacingRadToVisualForward(0f), new Vector3(1f, 0f, 0f));
-            AssertVector3(WorldPlane2D.FacingRadToVisualForward(MathF.PI * 0.5f), new Vector3(0f, 0f, 1f));
+            AssertVector3(VisualMath.FacingRadToVisualForward(0f), new Vector3(1f, 0f, 0f));
+            AssertVector3(VisualMath.FacingRadToVisualForward(MathF.PI * 0.5f), new Vector3(0f, 0f, 1f));
         }
 
         [Test]
@@ -58,10 +58,10 @@ namespace Ludots.Tests.Presentation
                 float facingRad = samples[i];
                 Quaternion rotation = WorldPlane2D.FacingRadToVisualYRotation(facingRad);
                 Vector3 visualLocalX = Vector3.Transform(Vector3.UnitX, rotation);
-                Vector3 visualForward = WorldPlane2D.FacingRadToVisualForward(facingRad);
+                Vector3 visualForward = VisualMath.FacingRadToVisualForward(facingRad);
 
                 AssertVector3(visualLocalX, visualForward);
-                Assert.That(WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float extracted), Is.True);
+                Assert.That(VisualMath.TryExtractFacingRadFromVisualYRotation(rotation, out float extracted), Is.True);
                 Assert.That(
                     WorldPlane2D.NormalizePositiveRad(extracted),
                     Is.EqualTo(WorldPlane2D.NormalizePositiveRad(facingRad)).Within(0.0001f));
@@ -71,16 +71,16 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void NormalizeOrIdentity_RejectsInvalidQuaternionsAtWorldPlaneBoundary()
         {
-            Assert.That(WorldPlane2D.NormalizeOrIdentity(default), Is.EqualTo(Quaternion.Identity));
+            Assert.That(VisualMath.NormalizeOrIdentity(default), Is.EqualTo(Quaternion.Identity));
             Assert.That(
-                WorldPlane2D.NormalizeOrIdentity(new Quaternion(float.PositiveInfinity, 0f, 0f, 1f)),
+                VisualMath.NormalizeOrIdentity(new Quaternion(float.PositiveInfinity, 0f, 0f, 1f)),
                 Is.EqualTo(Quaternion.Identity));
             Assert.That(
-                WorldPlane2D.NormalizeOrIdentity(new Quaternion(float.NaN, 0f, 0f, 1f)),
+                VisualMath.NormalizeOrIdentity(new Quaternion(float.NaN, 0f, 0f, 1f)),
                 Is.EqualTo(Quaternion.Identity));
 
             Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.25f);
-            AssertQuaternion(rotation, WorldPlane2D.NormalizeOrIdentity(rotation));
+            AssertQuaternion(rotation, VisualMath.NormalizeOrIdentity(rotation));
         }
 
         [Test]
@@ -144,10 +144,10 @@ namespace Ludots.Tests.Presentation
             Vector3 origin = new(10f, 2f, 20f);
 
             AssertVector3(
-                WorldPlane2D.TransformVisualLocal2D(origin, 0f, new Vector3(3f, 4f, 5f)),
+                VisualMath.TransformVisualLocal2D(origin, 0f, new Vector3(3f, 4f, 5f)),
                 new Vector3(13f, 6f, 25f));
             AssertVector3(
-                WorldPlane2D.TransformVisualLocal2D(origin, MathF.PI * 0.5f, new Vector3(3f, 4f, 5f)),
+                VisualMath.TransformVisualLocal2D(origin, MathF.PI * 0.5f, new Vector3(3f, 4f, 5f)),
                 new Vector3(5f, 6f, 23f));
         }
 

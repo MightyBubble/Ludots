@@ -72,9 +72,9 @@ namespace Ludots.Core.Presentation.Systems
                     VisualTransform ownerTransform = World.Get<VisualTransform>(state.OwnerEntity);
                     Vector3 newPosition = ownerTransform.Position;
                     Vector2 newPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in newPosition);
-                    Quaternion newRotation = WorldPlane2D.NormalizeOrIdentity(ownerTransform.Rotation);
+                    Quaternion newRotation = VisualMath.NormalizeOrIdentity(ownerTransform.Rotation);
                     PresenterWorldFacing newFacing = ResolveOwnerFacing(state.OwnerEntity);
-                    Vector3 newScale = WorldPlane2D.NormalizeScale(ownerTransform.Scale);
+                    Vector3 newScale = VisualMath.NormalizeScale(ownerTransform.Scale);
 
                     bool changed =
                         positions[index].Value != newPosition ||
@@ -136,7 +136,7 @@ namespace Ludots.Core.Presentation.Systems
                     VisualTransform ownerTransform = visuals[index];
                     Vector3 newPosition = ownerTransform.Position;
                     Vector2 newPlanePosition = worldPositions[index].Value.ToVector2();
-                    Quaternion newRotation = WorldPlane2D.NormalizeOrIdentity(ownerTransform.Rotation);
+                    Quaternion newRotation = VisualMath.NormalizeOrIdentity(ownerTransform.Rotation);
                     PresenterWorldFacing newFacing = hasFacings
                         ? new PresenterWorldFacing
                         {
@@ -144,7 +144,7 @@ namespace Ludots.Core.Presentation.Systems
                             HasValue = 1,
                         }
                         : default;
-                    Vector3 newScale = WorldPlane2D.NormalizeScale(ownerTransform.Scale);
+                    Vector3 newScale = VisualMath.NormalizeScale(ownerTransform.Scale);
 
                     ref PresenterWorldPosition position = ref World.Get<PresenterWorldPosition>(payload.SingleRootPresenter);
                     ref PresenterWorldPlanePosition planePosition = ref World.Get<PresenterWorldPlanePosition>(payload.SingleRootPresenter);
@@ -245,15 +245,15 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
-            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+            Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
+            Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
             Vector3 scaledOffset = config.InheritScale
                 ? normalizedParentScale * config.Offset
                 : config.Offset;
             Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
             Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
-            Quaternion nextRotation = WorldPlane2D.NormalizeOrIdentity(
-                normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+            Quaternion nextRotation = VisualMath.NormalizeOrIdentity(
+                normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
             Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
 
             ref PresenterTransformSource source = ref World.Get<PresenterTransformSource>(child);

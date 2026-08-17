@@ -7,6 +7,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib.Services
 {

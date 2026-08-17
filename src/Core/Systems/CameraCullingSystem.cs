@@ -1793,7 +1793,7 @@ namespace Ludots.Core.Systems
             out float halfWidthCm,
             out float halfDepthCm)
         {
-            Quaternion normalizedRotation = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Quaternion normalizedRotation = VisualMath.NormalizeOrIdentity(rotation);
             Vector3 scaledCenter = new Vector3(
                 localBounds.Center.X * scale.X,
                 localBounds.Center.Y * scale.Y,

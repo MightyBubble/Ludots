@@ -1,9 +1,8 @@
 using System;
-using Ludots.Core.Diagnostics;
 using SkiaSharp;
 using Raylib_cs;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed class RaylibSkiaRenderer : IDisposable
     {
@@ -19,7 +18,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public RaylibSkiaRenderer(int width, int height)
         {
-            Log.Info(in LogChannels.Presentation, "GPU Accelerated: False (raster UI compositor)");
+            RenderDiagnostics.Info("GPU Accelerated: False (raster UI compositor)");
             Resize(width, height);
         }
 

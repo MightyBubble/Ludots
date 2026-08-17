@@ -316,7 +316,8 @@ namespace Ludots.Adapter.Raylib
             if (frame.DrawTerrain)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
-                _terrainRenderer.Render(_engine.VertexMap, frame.ActiveCamera);
+                var terrainSource = new Ludots.Client.Raylib.Rendering.VertexMapTerrainChunkMeshSource(_engine.VertexMap);
+                _terrainRenderer.Render(terrainSource, frame.ActiveCamera);
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _terrainRenderer.ChunkBuildMsLastFrame,

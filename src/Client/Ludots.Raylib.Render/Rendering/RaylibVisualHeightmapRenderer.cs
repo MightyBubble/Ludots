@@ -5,17 +5,11 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
-using Ludots.Core.Config;
-using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
-using Ludots.Core.Navigation.GraphWorld;
-using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
-using Ludots.Raylib.Render;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
@@ -29,8 +23,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
-        private readonly IVirtualFileSystem? _vfs;
-        private readonly ConfigPipeline? _configs;
+        private readonly IRenderAssetPathResolver? _assetPaths;
         private readonly string _backendId;
         private readonly List<TerrainAlbedoDescriptor> _albedoDescriptors = new();
 
@@ -115,17 +108,15 @@ namespace Ludots.Client.Raylib.Rendering
         }
 
         public RaylibVisualHeightmapRenderer()
-            : this(vfs: null, configs: null)
+            : this(assetPathResolver: null)
         {
         }
 
         public RaylibVisualHeightmapRenderer(
-            IVirtualFileSystem? vfs,
-            ConfigPipeline? configs,
+            IRenderAssetPathResolver? assetPathResolver,
             string backendId = BackendIdRaylib)
         {
-            _vfs = vfs;
-            _configs = configs;
+            _assetPaths = assetPathResolver;
             if (string.IsNullOrWhiteSpace(backendId))
             {
                 throw new ArgumentException("Terrain albedo backendId must not be empty.", nameof(backendId));
@@ -134,21 +125,16 @@ namespace Ludots.Client.Raylib.Rendering
             _backendId = backendId.Trim();
         }
 
-        public void LoadAlbedoDescriptors(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        public void LoadAlbedoDescriptors(IReadOnlyList<MergedConfigEntry> merged)
         {
-            if (_vfs == null || _configs == null)
+            if (merged == null)
             {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} albedo descriptors require VFS and ConfigPipeline.");
+                throw new ArgumentNullException(nameof(merged));
             }
 
             _albedoDescriptors.Clear();
             ClearTerrainAlbedo();
 
-            ConfigCatalogEntry entry = ResolveAlbedoCatalogEntry(catalog);
-            IReadOnlyList<MergedConfigEntry> merged = report == null
-                ? _configs.MergeArrayByIdFromCatalog(in entry)
-                : _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
@@ -561,10 +547,10 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void ActivateAlbedoDescriptor(TerrainAlbedoDescriptor descriptor)
         {
-            if (_vfs == null)
+            if (_assetPaths == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot activate albedo without VFS.");
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot activate albedo without an asset path resolver.");
             }
 
             EnsureInitialized();
@@ -628,7 +614,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private Texture2D LoadTextureUriOrThrow(string uri, string descriptorId, string fieldLabel)
         {
-            if (!_vfs!.TryResolveFullPath(uri, out string fullPath))
+            if (!_assetPaths!.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' {fieldLabel}.");
@@ -713,16 +699,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return null;
-        }
-
-        private static ConfigCatalogEntry ResolveAlbedoCatalogEntry(ConfigCatalog? catalog)
-        {
-            if (catalog != null && catalog.TryGet(DefaultAlbedoRelativePath, out ConfigCatalogEntry found))
-            {
-                return found;
-            }
-
-            return new ConfigCatalogEntry(DefaultAlbedoRelativePath, ConfigMergePolicy.ArrayById, "id");
         }
 
         private static TerrainAlbedoDescriptor ParseAlbedoDescriptor(JsonObject obj, string fallbackId)
@@ -817,9 +793,14 @@ namespace Ludots.Client.Raylib.Rendering
             return node.GetValue<float>();
         }
 
+        private static long PackChunkKey(int x, int y)
+        {
+            return (long)(uint)x << 32 | (uint)y;
+        }
+
         private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)
         {
-            long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
+            long key = PackChunkKey(chunk.ChunkX, chunk.ChunkY);
             if (_chunks.TryGetValue(key, out ChunkGpu existing))
             {
                 if (existing.Revision == chunk.Revision)

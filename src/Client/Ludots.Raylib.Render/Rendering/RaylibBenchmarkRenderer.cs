@@ -1,18 +1,17 @@
 using System;
 using System.Diagnostics;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Platform.Abstractions;
 using Raylib_cs;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed class RaylibBenchmarkRenderer : IRaylibBenchmarkRenderer
     {
         private readonly RaylibPrimitiveRenderer _primitiveRenderer;
-        private readonly MeshAssetRegistry _meshes;
+        private readonly IRenderMeshAssets _meshes;
         private readonly RaylibIsmRenderBridge _benchmarkBridge = new();
 
-        public RaylibBenchmarkRenderer(RaylibPrimitiveRenderer primitiveRenderer, MeshAssetRegistry meshes)
+        public RaylibBenchmarkRenderer(RaylibPrimitiveRenderer primitiveRenderer, IRenderMeshAssets meshes)
         {
             _primitiveRenderer = primitiveRenderer ?? throw new ArgumentNullException(nameof(primitiveRenderer));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));

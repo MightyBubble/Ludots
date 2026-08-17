@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Ludots.Core.Config
+namespace Ludots.Platform.Abstractions
 {
     public readonly struct MergedConfigEntry
     {

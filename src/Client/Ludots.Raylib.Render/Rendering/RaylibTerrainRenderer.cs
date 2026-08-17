@@ -4,14 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Ludots.Core.Map.Hex;
-using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed unsafe class RaylibTerrainRenderer : IDisposable
     {
@@ -19,7 +17,6 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly VertexMapChunkMeshData _meshData = new VertexMapChunkMeshData();
         private readonly List<long> _evictKeys = new List<long>(256);
 
-        private VertexMapChunkMeshBuilder? _builder;
         private bool _initialized;
 
         private Shader _terrainShader;
@@ -207,27 +204,26 @@ namespace Ludots.Client.Raylib.Rendering
             _waterMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = default;
         }
 
-        public void Render(VertexMap map, in Camera3D camera)
+        public void Render(ITerrainChunkMeshSource source, in Camera3D camera)
         {
-            RenderInternal(map, in camera, drawTerrain: true, drawWater: true, bumpFrame: true);
+            RenderInternal(source, in camera, drawTerrain: true, drawWater: true, bumpFrame: true);
         }
 
-        public void RenderTerrainOnly(VertexMap map, in Camera3D camera)
+        public void RenderTerrainOnly(ITerrainChunkMeshSource source, in Camera3D camera)
         {
-            RenderInternal(map, in camera, drawTerrain: true, drawWater: false, bumpFrame: false);
+            RenderInternal(source, in camera, drawTerrain: true, drawWater: false, bumpFrame: false);
         }
 
-        public void RenderWaterOnly(VertexMap map, in Camera3D camera)
+        public void RenderWaterOnly(ITerrainChunkMeshSource source, in Camera3D camera)
         {
-            RenderInternal(map, in camera, drawTerrain: false, drawWater: true, bumpFrame: false);
+            RenderInternal(source, in camera, drawTerrain: false, drawWater: true, bumpFrame: false);
         }
 
-        private void RenderInternal(VertexMap map, in Camera3D camera, bool drawTerrain, bool drawWater, bool bumpFrame)
-
+        private void RenderInternal(ITerrainChunkMeshSource source, in Camera3D camera, bool drawTerrain, bool drawWater, bool bumpFrame)
         {
-            if (map == null) return;
+            if (source == null || source.WidthInChunks <= 0) return;
 
-            EnsureInitialized(map);
+            EnsureShadersInitialized();
             UpdateUniforms(camera);
 
             if (bumpFrame)
@@ -243,29 +239,28 @@ namespace Ludots.Client.Raylib.Rendering
             float cx = camera.target.X;
             float cz = camera.target.Z;
 
-            int minChunkX = (int)MathF.Floor((cx - VisibleRadius) / (HexCoordinates.HexWidth * VertexChunk.ChunkSize));
-            int maxChunkX = (int)MathF.Ceiling((cx + VisibleRadius) / (HexCoordinates.HexWidth * VertexChunk.ChunkSize));
-            int minChunkY = (int)MathF.Floor((cz - VisibleRadius) / (HexCoordinates.RowSpacing * VertexChunk.ChunkSize));
-            int maxChunkY = (int)MathF.Ceiling((cz + VisibleRadius) / (HexCoordinates.RowSpacing * VertexChunk.ChunkSize));
+            int minChunkX = (int)MathF.Floor((cx - VisibleRadius) / source.ChunkSpacingXMeters);
+            int maxChunkX = (int)MathF.Ceiling((cx + VisibleRadius) / source.ChunkSpacingXMeters);
+            int minChunkY = (int)MathF.Floor((cz - VisibleRadius) / source.ChunkSpacingYMeters);
+            int maxChunkY = (int)MathF.Ceiling((cz + VisibleRadius) / source.ChunkSpacingYMeters);
 
             minChunkX = Math.Max(0, minChunkX);
             minChunkY = Math.Max(0, minChunkY);
-            maxChunkX = Math.Min(map.WidthInChunks - 1, maxChunkX);
-            maxChunkY = Math.Min(map.HeightInChunks - 1, maxChunkY);
+            maxChunkX = Math.Min(source.WidthInChunks - 1, maxChunkX);
+            maxChunkY = Math.Min(source.HeightInChunks - 1, maxChunkY);
 
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    long key = HexCoordinates.GetChunkKey(x, y);
-                    float chunkWorldX = x * VertexChunk.ChunkSize * HexCoordinates.HexWidth;
-                    float chunkWorldZ = y * VertexChunk.ChunkSize * HexCoordinates.RowSpacing;
+                    float chunkWorldX = x * source.ChunkSpacingXMeters;
+                    float chunkWorldZ = y * source.ChunkSpacingYMeters;
                     float dx = chunkWorldX - cx;
                     float dz = chunkWorldZ - cz;
                     float dist = MathF.Sqrt(dx * dx + dz * dz);
 
                     bool simplified = dist > SimplifiedCliffRadius;
-                    ref ChunkGpu chunk = ref GetOrCreateChunk(map, x, y, simplified);
+                    ref ChunkGpu chunk = ref GetOrCreateChunk(source, x, y, simplified);
                     chunk.LastUsedFrame = _frameIndex;
 
                     RaylibMatrix identity = RaylibMatrix.Identity;
@@ -297,12 +292,6 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 EvictUnusedChunks(240);
             }
-        }
-
-        private void EnsureInitialized(VertexMap map)
-        {
-            EnsureShadersInitialized();
-            _builder ??= new VertexMapChunkMeshBuilder(map);
         }
 
         private void EnsureShadersInitialized()
@@ -393,9 +382,9 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.SetShaderValue(_waterShader, _locWaterIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
-        private ref ChunkGpu GetOrCreateChunk(VertexMap map, int chunkX, int chunkY, bool simplifiedCliffs)
+        private ref ChunkGpu GetOrCreateChunk(ITerrainChunkMeshSource source, int chunkX, int chunkY, bool simplifiedCliffs)
         {
-            long key = HexCoordinates.GetChunkKey(chunkX, chunkY);
+            long key = source.GetChunkKey(chunkX, chunkY);
             if (_chunks.TryGetValue(key, out var existing))
             {
                 if (existing.SimplifiedCliffs != simplifiedCliffs)
@@ -411,13 +400,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             long buildStart = Stopwatch.GetTimestamp();
-            if (_builder == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibTerrainRenderer)} chunk build requires {nameof(EnsureInitialized)}.");
-            }
-
-            _builder.BuildChunk(chunkX, chunkY, 0f, 0f, HeightScale, simplifiedCliffs, _meshData);
+            source.BuildChunk(chunkX, chunkY, simplifiedCliffs, HeightScale, _meshData);
             ChunkGpu gpu = new ChunkGpu();
             gpu.SimplifiedCliffs = simplifiedCliffs;
             gpu.TerrainMesh = CreateMesh(_meshData.Terrain);

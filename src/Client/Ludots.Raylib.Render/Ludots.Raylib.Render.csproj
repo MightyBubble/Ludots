@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PresentationTests" />
     <InternalsVisibleTo Include="Ludots.Adapter.Raylib.Tests" />
   </ItemGroup>
 

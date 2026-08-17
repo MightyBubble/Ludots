@@ -329,7 +329,7 @@ namespace Ludots.Core.Input.Orders
             float dx = targetWorldCm.X - actorWorldCm.X;
             float dy = targetWorldCm.Y - actorWorldCm.Y;
             float targetAngle = WorldPlane2D.FacingRadFromDirection(dx, dy);
-            return WorldPlane2D.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
+            return VisualMath.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
         }
     }
 }

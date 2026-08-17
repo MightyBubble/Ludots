@@ -1,26 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed unsafe class RaylibMaterialHostBinder : IDisposable
     {
         public const float DefaultRoughness = 0.85f;
         public const float DefaultMetallic = 0f;
 
-        private readonly IVirtualFileSystem _vfs;
-        private readonly PresentationMaterialRegistry _materials;
+        private readonly IRenderAssetPathResolver _vfs;
+        private readonly IRenderMaterialAssets _materials;
         private readonly Dictionary<int, HostMaterialBinding> _bindingsByMaterialId = new();
         private readonly HashSet<uint> _ownedTextureIds = new();
         private bool _disposed;
 
-        public RaylibMaterialHostBinder(IVirtualFileSystem vfs, PresentationMaterialRegistry materials)
+        public RaylibMaterialHostBinder(IRenderAssetPathResolver vfs, IRenderMaterialAssets materials)
         {
             _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
@@ -217,7 +215,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (!_materials.TryGet(materialAssetId, out MaterialAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} cannot bind materialId={materialAssetId}: material is not registered in {nameof(PresentationMaterialRegistry)}.");
+                    $"{nameof(RaylibMaterialHostBinder)} cannot bind materialId={materialAssetId}: material is not registered in {nameof(IRenderMaterialAssets)}.");
             }
 
             if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)

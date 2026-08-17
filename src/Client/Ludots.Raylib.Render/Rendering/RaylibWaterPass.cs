@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
-using Ludots.Core.Config;
-using Ludots.Core.Modding;
+using Ludots.Platform.Abstractions;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Planar reflection + refraction RenderTexture pass for VertexMap water meshes
@@ -21,8 +20,7 @@ namespace Ludots.Client.Raylib.Rendering
         public const string DefaultRelativePath = "Presentation/water_environments.json";
         public const string BackendIdRaylib = "raylib";
 
-        private readonly IVirtualFileSystem _vfs;
-        private readonly ConfigPipeline _configs;
+        private readonly IRenderAssetPathResolver _assetPaths;
         private readonly string _backendId;
         private readonly List<WaterEnvironmentDescriptor> _descriptors = new();
 
@@ -40,12 +38,10 @@ namespace Ludots.Client.Raylib.Rendering
         private bool _disposed;
 
         public RaylibWaterPass(
-            IVirtualFileSystem vfs,
-            ConfigPipeline configs,
+            IRenderAssetPathResolver assetPaths,
             string backendId = BackendIdRaylib)
         {
-            _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));
-            _configs = configs ?? throw new ArgumentNullException(nameof(configs));
+            _assetPaths = assetPaths ?? throw new ArgumentNullException(nameof(assetPaths));
             if (string.IsNullOrWhiteSpace(backendId))
             {
                 throw new ArgumentException("Water environment backendId must not be empty.", nameof(backendId));
@@ -92,16 +88,17 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        public void LoadDescriptors(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        public void LoadDescriptors(IReadOnlyList<MergedConfigEntry> merged)
         {
             ThrowIfDisposed();
+            if (merged == null)
+            {
+                throw new ArgumentNullException(nameof(merged));
+            }
+
             _descriptors.Clear();
             Deactivate();
 
-            ConfigCatalogEntry entry = ResolveCatalogEntry(catalog);
-            IReadOnlyList<MergedConfigEntry> merged = report == null
-                ? _configs.MergeArrayByIdFromCatalog(in entry)
-                : _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
@@ -304,7 +301,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             string dudvUri = descriptor.DudvUri;
-            if (!_vfs.TryResolveFullPath(dudvUri, out string fullPath))
+            if (!_assetPaths.TryResolveFullPath(dudvUri, out string fullPath))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibWaterPass)} cannot resolve water DUDV URI '{dudvUri}'.");
@@ -407,16 +404,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return null;
-        }
-
-        private static ConfigCatalogEntry ResolveCatalogEntry(ConfigCatalog? catalog)
-        {
-            if (catalog != null && catalog.TryGet(DefaultRelativePath, out ConfigCatalogEntry found))
-            {
-                return found;
-            }
-
-            return new ConfigCatalogEntry(DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
         }
 
         private static WaterEnvironmentDescriptor ParseDescriptor(JsonObject obj, string fallbackId)

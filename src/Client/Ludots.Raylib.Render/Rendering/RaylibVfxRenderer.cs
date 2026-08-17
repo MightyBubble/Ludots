@@ -3,30 +3,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Text;
-using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Particles;
-using Ludots.Core.Presentation.Presenters;
-using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     internal readonly record struct RaylibVfxKey(int StableId, int EffectAssetId);
 
     public sealed class RaylibVfxRenderer : IDisposable
     {
-        private readonly IVirtualFileSystem? _vfs;
+        private readonly IRenderAssetPathResolver? _vfs;
         private readonly Dictionary<RaylibVfxKey, RaylibParticleVfxInstance> _particleVfx = new();
         private readonly HashSet<RaylibVfxKey> _activeKeys = new();
         private readonly List<RaylibVfxKey> _inactiveKeys = new();
         private readonly Dictionary<int, Texture2D> _textureCache = new();
 
-        public RaylibVfxRenderer(IVirtualFileSystem? vfs = null)
+        public RaylibVfxRenderer(IRenderAssetPathResolver? vfs = null)
         {
             _vfs = vfs;
         }
@@ -41,7 +35,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastDrawnVfxCount = 0;
         }
 
-        public void Draw(in PrimitiveDrawItem visual, MeshAssetRegistry effectAssets, Camera3D camera, double timeSeconds, float scaleMul = 1f)
+        public void Draw(in PrimitiveDrawItem visual, IRenderMeshAssets effectAssets, Camera3D camera, double timeSeconds, float scaleMul = 1f)
         {
             if (effectAssets == null)
             {
@@ -130,7 +124,7 @@ namespace Ludots.Client.Raylib.Rendering
             in Vector3 scale,
             ParticleVfxAssetData effect,
             RaylibParticleVfxInstance particleVfx,
-            MeshAssetRegistry effectAssets,
+            IRenderMeshAssets effectAssets,
             Camera3D camera)
         {
             ParticleSystemSnapshot snapshot = particleVfx.Runtime.GetSnapshot();
@@ -143,7 +137,7 @@ namespace Ludots.Client.Raylib.Rendering
                     $"VFX item stableId={visual.StableId} requires a positive scale for particle sizing.");
             }
 
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
+            Quaternion rotation = VisualMath.NormalizeOrIdentity(visual.Rotation);
             Rl.BeginBlendMode(ToRaylibBlendMode(effect.BlendMode));
             try
             {
@@ -198,7 +192,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawTexturedBillboard(
             ParticleVfxAssetData effect,
-            MeshAssetRegistry effectAssets,
+            IRenderMeshAssets effectAssets,
             Camera3D camera,
             Vector3 position,
             Vector3 velocity,
@@ -232,7 +226,7 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawBillboardRec(camera, texture, source, position, new Vector2(width, height), tint);
         }
 
-        private Texture2D RequireTexture(ParticleVfxAssetData effect, MeshAssetRegistry effectAssets)
+        private Texture2D RequireTexture(ParticleVfxAssetData effect, IRenderMeshAssets effectAssets)
         {
             ParticleTextureSheetAsset textureSheet = effect.TextureSheet
                 ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");

@@ -3,21 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
-using Ludots.Core.Diagnostics;
-using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.AdapterSync;
-using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Presenters;
-using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public enum RaylibPrimitiveRenderMode : byte
     {
@@ -28,8 +19,15 @@ namespace Ludots.Client.Raylib.Rendering
     public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
     {
         private readonly RaylibPrimitiveRenderMode _mode;
-        private readonly IVirtualFileSystem? _vfs;
-        private readonly PresentationMaterialRegistry? _materials;
+        private readonly System.Func<string, int> _channelRegistrar;
+
+        private static int ThrowMissingChannelRegistrar(string name)
+        {
+            throw new System.InvalidOperationException(
+                $"{nameof(RaylibPrimitiveRenderer)} animation overlay requires a channel registrar (host wires AnimationChannelRegistry.Register).");
+        }
+        private readonly IRenderAssetPathResolver? _vfs;
+        private readonly IRenderMaterialAssets? _materials;
         private readonly RaylibMaterialHostBinder? _materialHostBinder;
         private readonly string? _diagnosticPath;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
@@ -178,10 +176,12 @@ namespace Ludots.Client.Raylib.Rendering
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
-            IVirtualFileSystem? vfs = null,
-            PresentationMaterialRegistry? materials = null)
+            IRenderAssetPathResolver? vfs = null,
+            IRenderMaterialAssets? materials = null,
+            System.Func<string, int>? channelRegistrar = null)
         {
             _mode = mode;
+            _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
             _materialHostBinder = vfs != null && materials != null
@@ -193,22 +193,22 @@ namespace Ludots.Client.Raylib.Rendering
             _vfxRenderer = new RaylibVfxRenderer(vfs);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
             Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
+        public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IPrimitiveDrawSnapshot? snapshot, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
             Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
         public void Draw(
-            PrimitiveDrawBuffer draw,
+            IPrimitiveDrawSnapshot draw,
             Camera3D camera,
-            PrimitiveDrawBuffer? snapshot,
-            SkinnedVisualBatchBuffer? skinnedBatch,
-            MeshAssetRegistry meshes,
+            IPrimitiveDrawSnapshot? snapshot,
+            ISkinnedVisualBatchSnapshot? skinnedBatch,
+            IRenderMeshAssets meshes,
             float scaleMul = 1f,
             IVisualHeightmap? visualHeightmap = null,
             double timeSeconds = 0d)
@@ -286,7 +286,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
+        private void DrawPersistentStaticLanes(Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
             foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
@@ -297,7 +297,7 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawImmediateWithDescriptors(
             ReadOnlySpan<PrimitiveDrawItem> span,
             Camera3D camera,
-            MeshAssetRegistry meshes,
+            IRenderMeshAssets meshes,
             float scaleMul,
             bool persistentStaticLanesActive,
             bool skinnedBatchActive)
@@ -340,7 +340,7 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawSnapshotDynamicLanes(
             ReadOnlySpan<PrimitiveDrawItem> span,
             Camera3D camera,
-            MeshAssetRegistry meshes,
+            IRenderMeshAssets meshes,
             float scaleMul,
             bool skinnedBatchActive)
         {
@@ -397,7 +397,7 @@ namespace Ludots.Client.Raylib.Rendering
             return _ismBridge.ActiveBindings.ContainsKey(item.StableId);
         }
 
-        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
+        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
             EnsureInitialized();
 
@@ -431,7 +431,7 @@ namespace Ludots.Client.Raylib.Rendering
         private bool TryDrawTypedPresenterChild(
             in PrimitiveDrawItem item,
             Camera3D camera,
-            MeshAssetRegistry meshes,
+            IRenderMeshAssets meshes,
             float scaleMul,
             bool instancedPrimitives)
         {
@@ -472,7 +472,7 @@ namespace Ludots.Client.Raylib.Rendering
                 DrawWireBox(
                     item.Position,
                     item.Scale * scaleMul,
-                    WorldPlane2D.NormalizeOrIdentity(item.Rotation),
+                    VisualMath.NormalizeOrIdentity(item.Rotation),
                     MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
                 return true;
             }
@@ -512,7 +512,7 @@ namespace Ludots.Client.Raylib.Rendering
             return true;
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int materialId = 0)
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, IRenderMeshAssets meshes, int materialId = 0)
         {
             DrawLeafAsset(meshAssetId, position, rotation, scale, color, camera, meshes, materialId, instancedPrimitives: true);
         }
@@ -522,7 +522,7 @@ namespace Ludots.Client.Raylib.Rendering
             uint key = PackRgba(color);
             var matrix = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(scale) *
-                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
 
             if (kind == PrimitiveMeshKind.Cube)
@@ -540,7 +540,7 @@ namespace Ludots.Client.Raylib.Rendering
             DrawPrimitive(kind, position, rotation, scale, color);
         }
 
-        private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
+        private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, IRenderMeshAssets meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
@@ -570,7 +570,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
+        private void DrawSkinnedBatch(ISkinnedVisualBatchSnapshot skinnedBatch, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
             var span = skinnedBatch.GetSpan();
             PrepareGpuSkinnedInstanceBatches();
@@ -616,7 +616,7 @@ namespace Ludots.Client.Raylib.Rendering
             _activeGpuSkinnedInstanceBatches.Clear();
         }
 
-        private bool TrySubmitGpuSkinnedInstance(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)
+        private bool TrySubmitGpuSkinnedInstance(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
             if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
@@ -659,7 +659,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             batch.Add(RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(item.Rotation)) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(item.Rotation)) *
                 Matrix4x4.CreateTranslation(item.Position)));
             LastGpuSkinnedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
             return true;
@@ -690,7 +690,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
         }
 
-        private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)
+        private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
@@ -720,7 +720,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static AnimationOverlayRequest ResolvePrototypeOverlay(
+        private AnimationOverlayRequest ResolvePrototypeOverlay(
             in AnimationOverlayRequest overlay,
             in AnimatorPackedState animator)
         {
@@ -737,13 +737,13 @@ namespace Ludots.Client.Raylib.Rendering
             return new AnimationOverlayRequest
             {
                 BaseClip = AnimationChannelState.Create(
-                    AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
+                    _channelRegistrar(WellKnownAnimationChannelNames.Locomotion),
                     animator.GetNormalizedTime01(),
                     weight01: 1f),
             };
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int materialId = 0)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, IRenderMeshAssets meshes, int materialId = 0)
         {
             DrawLeafAsset(meshAssetId, position, rotation, scale, color, camera, meshes, materialId, instancedPrimitives: false);
         }
@@ -755,7 +755,7 @@ namespace Ludots.Client.Raylib.Rendering
             Vector3 scale,
             Vector4 color,
             Camera3D camera,
-            MeshAssetRegistry meshes,
+            IRenderMeshAssets meshes,
             int materialId,
             bool instancedPrimitives,
             bool countAsMesh = true)
@@ -826,7 +826,7 @@ namespace Ludots.Client.Raylib.Rendering
             return $"typed-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnVfxCount},total={_vfxRenderer.TotalDrawnVfxCount})";
         }
 
-        public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
+        public string BuildPrimitiveLaneDiagnosticSummary(IRenderMeshAssets meshes)
         {
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
@@ -879,7 +879,7 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
             }
 
-            if (!WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
+            if (!VisualMath.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector is yaw-about-Y only; authored rotation is not a planar yaw.");
@@ -1063,7 +1063,7 @@ namespace Ludots.Client.Raylib.Rendering
             EnsureInitialized();
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(scale) *
-                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
             Color rayColor = ToRaylibColor(color);
 
@@ -1115,10 +1115,10 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
-            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, WellKnownAnimationChannelNames.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, WellKnownAnimationChannelNames.Locomotion);
+            float aimYaw = ResolveClipScalar0(overlay.LayerClip, WellKnownAnimationChannelNames.AimYaw) * ResolveClipWeight01(overlay.LayerClip, WellKnownAnimationChannelNames.AimYaw);
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, WellKnownAnimationChannelNames.Recoil);
             float treadBob = MathF.Sin(locomotionPhase * MathF.Tau) * unit * (0.03f + locomotionWeight * 0.08f);
             float turretYaw = baseYaw + aimYaw;
             float recoil = recoilPulse * unit * 0.35f;
@@ -1169,13 +1169,13 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, WellKnownAnimationChannelNames.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, WellKnownAnimationChannelNames.Locomotion);
             float lowerPhase = locomotionPhase * MathF.Tau;
             float stride = MathF.Sin(lowerPhase) * unit * (0.08f + locomotionWeight * 0.34f);
-            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
-            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * aimWeight;
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
+            float aimWeight = ResolveClipWeight01(overlay.LayerClip, WellKnownAnimationChannelNames.AimYaw);
+            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, WellKnownAnimationChannelNames.AimYaw) * aimWeight;
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, WellKnownAnimationChannelNames.Recoil);
             float chestLift = recoilPulse * unit * 0.08f;
 
             Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);
@@ -1245,22 +1245,22 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static float ResolveClipTime01(in AnimationChannelState clip, string channelName)
+        private float ResolveClipTime01(in AnimationChannelState clip, string channelName)
         {
             return MatchesChannel(clip, channelName) ? clip.NormalizedTime01 : 0f;
         }
 
-        private static float ResolveClipWeight01(in AnimationChannelState clip, string channelName)
+        private float ResolveClipWeight01(in AnimationChannelState clip, string channelName)
         {
             return MatchesChannel(clip, channelName) ? clip.Weight01 : 0f;
         }
 
-        private static float ResolveClipScalar0(in AnimationChannelState clip, string channelName)
+        private float ResolveClipScalar0(in AnimationChannelState clip, string channelName)
         {
             return MatchesChannel(clip, channelName) ? clip.Scalar0 : 0f;
         }
 
-        private static float ResolvePulse(in AnimationChannelState clip, string channelName)
+        private float ResolvePulse(in AnimationChannelState clip, string channelName)
         {
             if (!MatchesChannel(clip, channelName) || clip.Weight01 <= 0.001f)
             {
@@ -1270,9 +1270,9 @@ namespace Ludots.Client.Raylib.Rendering
             return MathF.Sin(clip.NormalizedTime01 * MathF.PI) * clip.Weight01;
         }
 
-        private static bool MatchesChannel(in AnimationChannelState clip, string channelName)
+        private bool MatchesChannel(in AnimationChannelState clip, string channelName)
         {
-            int expectedId = AnimationChannelRegistry.Register(channelName);
+            int expectedId = _channelRegistrar(channelName);
             return expectedId > 0 && clip.ChannelId == expectedId;
         }
 
@@ -1298,17 +1298,17 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static Vector3 TransformLocal(Vector3 origin, Quaternion rotation, Vector3 local)
         {
-            return origin + Vector3.Transform(local, WorldPlane2D.NormalizeOrIdentity(rotation));
+            return origin + Vector3.Transform(local, VisualMath.NormalizeOrIdentity(rotation));
         }
 
         private static Vector3 TransformLocal(Vector3 origin, float yawRad, Vector3 local)
         {
-            return WorldPlane2D.TransformVisualLocal2D(origin, yawRad, in local);
+            return VisualMath.TransformVisualLocal2D(origin, yawRad, in local);
         }
 
         private static float ExtractYawRad(Quaternion rotation)
         {
-            return WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float facingRad)
+            return VisualMath.TryExtractFacingRadFromVisualYRotation(rotation, out float facingRad)
                 ? facingRad
                 : 0f;
         }
@@ -1444,7 +1444,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             var transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(scale) *
-                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
 
             Rl.rlDisableBackfaceCulling();
@@ -1504,7 +1504,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_materials == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} requires {nameof(PresentationMaterialRegistry)} to validate procedural mesh material bindings.");
+                    $"{nameof(RaylibPrimitiveRenderer)} requires {nameof(IRenderMaterialAssets)} to validate procedural mesh material bindings.");
             }
 
             var materialIds = new int[procedural.SubmeshCount];
@@ -1702,9 +1702,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             string stableText = stableId > 0 ? $" stableId={stableId}" : string.Empty;
-            Log.Warn(
-                in LogChannels.Presentation,
-                $"Raylib renderer skipped {path}{stableText}: meshAssetId={meshAssetId} could not be loaded. No placeholder model is drawn.");
+            RenderDiagnostics.Warn($"Raylib renderer skipped {path}{stableText}: meshAssetId={meshAssetId} could not be loaded. No placeholder model is drawn.");
         }
 
         private static Mesh CreateProceduralMesh(ProceduralMeshAssetData proceduralMesh)
@@ -1841,7 +1839,7 @@ namespace Ludots.Client.Raylib.Rendering
                 MathF.Max(0.01f, MathF.Abs(size.X)) * 0.5f,
                 MathF.Max(0.01f, MathF.Abs(size.Y)) * 0.5f,
                 MathF.Max(0.01f, MathF.Abs(size.Z)) * 0.5f);
-            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Quaternion normalized = VisualMath.NormalizeOrIdentity(rotation);
             Span<Vector3> corners = stackalloc Vector3[8];
             corners[0] = TransformLocal(center, normalized, new Vector3(-half.X, -half.Y, -half.Z));
             corners[1] = TransformLocal(center, normalized, new Vector3(half.X, -half.Y, -half.Z));
@@ -1880,7 +1878,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Quaternion normalized = VisualMath.NormalizeOrIdentity(rotation);
             Color ringColor = ToRaylibColor(color);
             float step = MathF.Tau / segments;
             Vector3 previous = TransformLocal(center, normalized, new Vector3(radius, 0f, 0f));
@@ -1907,7 +1905,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_materials == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(PresentationMaterialRegistry)} was provided.");
+                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(IRenderMaterialAssets)} was provided.");
             }
 
             if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
@@ -2018,7 +2016,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
         {
-            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            Quaternion normalized = VisualMath.NormalizeOrIdentity(rotation);
             float w = Math.Clamp(normalized.W, -1f, 1f);
             float angleRad = 2f * MathF.Acos(w);
             float sinHalf = MathF.Sqrt(MathF.Max(0f, 1f - (w * w)));
@@ -2034,12 +2032,12 @@ namespace Ludots.Client.Raylib.Rendering
                 normalized.X / sinHalf,
                 normalized.Y / sinHalf,
                 normalized.Z / sinHalf);
-            angleDegrees = WorldPlane2D.RadToDegValue(angleRad);
+            angleDegrees = VisualMath.RadToDegValue(angleRad);
         }
 
         // ── Instanced rendering (unchanged from original) ──
 
-        public void DrawInstanced(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
+        public void DrawInstanced(IPrimitiveDrawSnapshot draw, IRenderMeshAssets meshes)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -2074,7 +2072,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedMatrixCacheMisses = 0;
         }
 
-        public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f)
+        public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, IRenderMeshAssets meshes, float scaleMul = 1f)
         {
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -2128,7 +2126,7 @@ namespace Ludots.Client.Raylib.Rendering
             FlushInstancedBatches();
         }
 
-        private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, MeshAssetRegistry meshes, float scaleMul)
+        private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, IRenderMeshAssets meshes, float scaleMul)
         {
             PrimitiveDrawItem first = items[0];
             if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
@@ -2196,7 +2194,7 @@ namespace Ludots.Client.Raylib.Rendering
                 PrimitiveDrawItem item = items[i];
                 RaylibMatrix matrix = RaylibMatrix.FromSystemNumerics(
                     Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                    Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(item.Rotation)) *
+                    Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(item.Rotation)) *
                     Matrix4x4.CreateTranslation(item.Position));
                 batch.Add(matrix);
             }
@@ -2338,9 +2336,7 @@ namespace Ludots.Client.Raylib.Rendering
                 int reportKey = HashCode.Combine(model.meshCount, meshIndex, model.materialCount);
                 if (_reportedInvalidInstancedMaterials.Add(reportKey))
                 {
-                    Log.Warn(
-                        in LogChannels.Presentation,
-                        $"Raylib instanced model skipped meshIndex={meshIndex}: imported model has no material. Host asset material import must provide an explicit material.");
+                    RenderDiagnostics.Warn($"Raylib instanced model skipped meshIndex={meshIndex}: imported model has no material. Host asset material import must provide an explicit material.");
                 }
 
                 return false;
@@ -2357,9 +2353,7 @@ namespace Ludots.Client.Raylib.Rendering
                 int reportKey = HashCode.Combine(model.meshCount, meshIndex, materialIndex);
                 if (_reportedInvalidInstancedMaterials.Add(reportKey))
                 {
-                    Log.Warn(
-                        in LogChannels.Presentation,
-                        $"Raylib instanced model skipped meshIndex={meshIndex}: meshMaterial index {materialIndex} is outside materialCount={model.materialCount}.");
+                    RenderDiagnostics.Warn($"Raylib instanced model skipped meshIndex={meshIndex}: meshMaterial index {materialIndex} is outside materialCount={model.materialCount}.");
                 }
 
                 material = default;

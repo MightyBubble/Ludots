@@ -3106,13 +3106,13 @@ namespace Ludots.Core.Presentation.Presenters
                         Vector3 parentScale = _world.Has<PresenterWorldScale>(parent)
                             ? _world.Get<PresenterWorldScale>(parent).Value
                             : Vector3.One;
-                        Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
-                        Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+                        Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
+                        Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
                         Vector3 scaledOffset = parentAttachment.InheritScale
                             ? normalizedParentScale * parentAttachment.Offset
                             : parentAttachment.Offset;
                         position = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-                        rotation = WorldPlane2D.NormalizeOrIdentity(normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(parentAttachment.RotationOffset));
+                        rotation = VisualMath.NormalizeOrIdentity(normalizedParentRotation * VisualMath.NormalizeOrIdentity(parentAttachment.RotationOffset));
                         scale = parentAttachment.InheritScale ? normalizedParentScale : Vector3.One;
                     }
 

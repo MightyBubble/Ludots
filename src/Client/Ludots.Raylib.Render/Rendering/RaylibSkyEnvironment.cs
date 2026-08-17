@@ -3,25 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Text.Json.Nodes;
-using Ludots.Core.Config;
-using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Camera;
-using Ludots.Core.Presentation.Events;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed unsafe class RaylibSkyEnvironment : IDisposable
     {
         public const string DefaultRelativePath = "Presentation/sky_environments.json";
         public const string BackendIdRaylib = "raylib";
 
-        private readonly IVirtualFileSystem _vfs;
-        private readonly ConfigPipeline _configs;
+        private readonly IRenderAssetPathResolver _assetPaths;
         private readonly string _backendId;
         private readonly string _shaderBaseDirectory;
         private readonly List<SkyEnvironmentDescriptor> _descriptors = new();
@@ -43,18 +36,15 @@ namespace Ludots.Client.Raylib.Rendering
         private float _dayPhase01;
         private bool _hasDayPhase;
         private bool _requireDayPhase;
-        private bool _phaseSourceBound;
         private bool _gpuReady;
         private bool _disposed;
 
         public RaylibSkyEnvironment(
-            IVirtualFileSystem vfs,
-            ConfigPipeline configs,
+            IRenderAssetPathResolver assetPaths,
             string backendId = BackendIdRaylib,
             string? shaderBaseDirectory = null)
         {
-            _vfs = vfs ?? throw new ArgumentNullException(nameof(vfs));
-            _configs = configs ?? throw new ArgumentNullException(nameof(configs));
+            _assetPaths = assetPaths ?? throw new ArgumentNullException(nameof(assetPaths));
             if (string.IsNullOrWhiteSpace(backendId))
             {
                 throw new ArgumentException("Sky environment backendId must not be empty.", nameof(backendId));
@@ -72,17 +62,18 @@ namespace Ludots.Client.Raylib.Rendering
 
         public bool HasDayPhase => _hasDayPhase;
 
-        public void LoadDescriptors(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        public void LoadDescriptors(IReadOnlyList<MergedConfigEntry> merged)
         {
             ThrowIfDisposed();
+            if (merged == null)
+            {
+                throw new ArgumentNullException(nameof(merged));
+            }
+
             _descriptors.Clear();
             _active = null;
             _activeMapId = null;
 
-            ConfigCatalogEntry entry = ResolveCatalogEntry(catalog);
-            IReadOnlyList<MergedConfigEntry> merged = report == null
-                ? _configs.MergeArrayByIdFromCatalog(in entry)
-                : _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
@@ -106,31 +97,10 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        public void BindPhaseSource(GlobalPresentationEventBuffer? globalEvents, bool requiredWhenActive)
+        public void SetPhaseSourceRequirement(bool requiredWhenActive)
         {
             ThrowIfDisposed();
             _requireDayPhase = requiredWhenActive;
-            _phaseSourceBound = globalEvents != null;
-            if (requiredWhenActive && globalEvents == null && _descriptors.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibSkyEnvironment)} requires {nameof(GlobalPresentationEventBuffer)} as the GlobalDayNight phase source when sky environments are configured for backend '{_backendId}'.");
-            }
-        }
-
-        public void ApplyDayNightEvents(ReadOnlySpan<GlobalPresentationEvent> events)
-        {
-            ThrowIfDisposed();
-            for (int i = 0; i < events.Length; i++)
-            {
-                ref readonly GlobalPresentationEvent evt = ref events[i];
-                if (evt.Kind != PresentationEventKind.GlobalDayNight)
-                {
-                    continue;
-                }
-
-                ApplyDayPhase(evt.Magnitude);
-            }
         }
 
         public void ApplyDayPhase(float phase01)
@@ -156,10 +126,10 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            if (_requireDayPhase && !_phaseSourceBound)
+            if (_requireDayPhase && !_hasDayPhase)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibSkyEnvironment)} sky is configured but GlobalDayNight phase source was not bound.");
+                    $"{nameof(RaylibSkyEnvironment)} sky is configured but no GlobalDayNight phase has been applied.");
             }
 
             if (_active != null &&
@@ -240,7 +210,7 @@ namespace Ludots.Client.Raylib.Rendering
             RaylibMatrix raylibView = RaylibMatrix.FromSystemNumerics(in view);
             Rl.SetShaderValueMatrix(_shader, _locMatView, raylibView);
 
-            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
+            CameraClipPlanes clipPlanes = cameraState.ResolveClipPlanes();
             float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
             Matrix4x4 projection = BuildProjection(in camera, in clipPlanes, aspect);
             RaylibMatrix raylibProjection = RaylibMatrix.FromSystemNumerics(in projection);
@@ -431,7 +401,7 @@ namespace Ludots.Client.Raylib.Rendering
         private void LoadGradientFromUri(SkyEnvironmentDescriptor descriptor)
         {
             string gradientUri = descriptor.GradientUri!;
-            if (!_vfs.TryResolveFullPath(gradientUri, out string fullPath))
+            if (!_assetPaths.TryResolveFullPath(gradientUri, out string fullPath))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibSkyEnvironment)} cannot resolve sky gradient URI '{gradientUri}'.");
@@ -594,7 +564,7 @@ namespace Ludots.Client.Raylib.Rendering
                     clipPlanes.FarMeters);
             }
 
-            float fovYRad = WorldPlane2D.DegToRadValue(camera.fovy);
+            float fovYRad = camera.fovy * MathF.PI / 180f;
             return Matrix4x4.CreatePerspectiveFieldOfView(
                 fovYRad,
                 aspect,
@@ -637,16 +607,6 @@ namespace Ludots.Client.Raylib.Rendering
             _locMatView = -1;
             _locMatProjection = -1;
             _gpuReady = false;
-        }
-
-        private static ConfigCatalogEntry ResolveCatalogEntry(ConfigCatalog? catalog)
-        {
-            if (catalog != null && catalog.TryGet(DefaultRelativePath, out ConfigCatalogEntry found))
-            {
-                return found;
-            }
-
-            return new ConfigCatalogEntry(DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
         }
 
         private static SkyEnvironmentDescriptor ParseDescriptor(JsonObject obj, string fallbackId)

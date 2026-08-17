@@ -435,7 +435,7 @@ namespace Ludots.Core.Presentation.Systems
                 ResolveOptionalFloatParam(entity, WellKnownPresenterParamKeys.SplineBorderWidth, 0f),
                 0f);
             Vector3 p0 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP0, position);
-            Vector3 defaultP3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(presenterWorldRotation));
+            Vector3 defaultP3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), VisualMath.NormalizeOrIdentity(presenterWorldRotation));
             Vector3 p3 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP3, defaultP3);
             Vector3 p1 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP1, Vector3.Lerp(p0, p3, 1f / 3f));
             Vector3 p2 = ResolveOptionalVector3Param(entity, WellKnownPresenterParamKeys.SplineP2, Vector3.Lerp(p0, p3, 2f / 3f));

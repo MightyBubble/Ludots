@@ -2,13 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
-using Ludots.Core.Diagnostics;
-using Ludots.Core.Presentation.AdapterSync;
-using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     public sealed class RaylibIsmRenderBridge
     {
@@ -81,7 +77,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public double LastPersistentSyncMs { get; private set; }
 
-        public void SyncPersistentLanes(PrimitiveDrawBuffer? snapshot)
+        public void SyncPersistentLanes(IPrimitiveDrawSnapshot? snapshot)
         {
             long syncStart = Stopwatch.GetTimestamp();
             if (snapshot == null)
@@ -458,9 +454,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (materialId > 0 && _reportedMissingBenchmarkMaterials.Add(materialId))
             {
-                Log.Warn(
-                    in LogChannels.Presentation,
-                    $"Raylib benchmark instance stableId={stableId} references materialId={materialId}, but the benchmark palette has no matching material color. The instance keeps its configured color.");
+                RenderDiagnostics.Warn($"Raylib benchmark instance stableId={stableId} references materialId={materialId}, but the benchmark palette has no matching material color. The instance keeps its configured color.");
             }
 
             return configuredColor;

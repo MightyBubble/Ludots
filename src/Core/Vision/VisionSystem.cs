@@ -228,7 +228,7 @@ namespace Ludots.Core.Vision
             }
 
             ref FacingDirection facing = ref World.Get<FacingDirection>(entity);
-            return (int)MathF.Round(WorldPlane2D.NormalizeDegreesPositive(WorldPlane2D.RadToDegValue(facing.AngleRad)));
+            return (int)MathF.Round(WorldPlane2D.NormalizeDegreesPositive(VisualMath.RadToDegValue(facing.AngleRad)));
         }
 
         private void EnsureLayerCapacity(int required)

@@ -3,7 +3,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Rendering
 {
-    public sealed class SkinnedVisualBatchBuffer
+    public sealed class SkinnedVisualBatchBuffer : ISkinnedVisualBatchSnapshot
     {
         private readonly SkinnedVisualBatchItem[] _buffer;
         private int _count;

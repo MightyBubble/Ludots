@@ -2,10 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Core.Presentation.AdapterSync
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// Diffs adapter-facing visual snapshots into platform-neutral create/update/remove ops
@@ -64,7 +63,7 @@ namespace Ludots.Core.Presentation.AdapterSync
             return false;
         }
 
-        public void Sync(PrimitiveDrawBuffer? snapshot)
+        public void Sync(IPrimitiveDrawSnapshot? snapshot)
         {
             Sync(snapshot != null ? snapshot.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty, snapshot?.ProjectionGeneration ?? 0);
         }

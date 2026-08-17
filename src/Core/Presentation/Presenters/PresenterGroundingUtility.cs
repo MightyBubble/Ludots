@@ -32,8 +32,8 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 case TransformSource.InheritParent:
                     basePosition = hasParent ? parent.WorldPosition : presenter.WorldPosition;
-                    baseRotation = hasParent ? WorldPlane2D.NormalizeOrIdentity(parent.WorldRotation) : WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = hasParent ? WorldPlane2D.NormalizeScale(parent.WorldScale) : WorldPlane2D.NormalizeScale(presenter.WorldScale);
+                    baseRotation = hasParent ? VisualMath.NormalizeOrIdentity(parent.WorldRotation) : VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
+                    baseScale = hasParent ? VisualMath.NormalizeScale(parent.WorldScale) : VisualMath.NormalizeScale(presenter.WorldScale);
                     baseFacing = hasParent ? parent.WorldFacing : presenter.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
@@ -47,8 +47,8 @@ namespace Ludots.Core.Presentation.Presenters
 
                 case TransformSource.EntityTransform:
                     basePosition = hasOwnerTransform ? ownerTransform.Position : presenter.WorldPosition;
-                    baseRotation = hasOwnerTransform ? WorldPlane2D.NormalizeOrIdentity(ownerTransform.Rotation) : WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = hasOwnerTransform ? WorldPlane2D.NormalizeScale(ownerTransform.Scale) : WorldPlane2D.NormalizeScale(presenter.WorldScale);
+                    baseRotation = hasOwnerTransform ? VisualMath.NormalizeOrIdentity(ownerTransform.Rotation) : VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
+                    baseScale = hasOwnerTransform ? VisualMath.NormalizeScale(ownerTransform.Scale) : VisualMath.NormalizeScale(presenter.WorldScale);
                     baseFacing = presenter.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
@@ -63,11 +63,11 @@ namespace Ludots.Core.Presentation.Presenters
                 case TransformSource.SplineDriven:
                     ComposeLocals(assetBinding, instanceOverride, out Vector3 splineOffset, out Quaternion splineRotation, out Vector3 splineScale);
                     basePosition = presenter.WorldPosition;
-                    baseRotation = WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation);
+                    baseRotation = VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
                     baseScale = splineScale;
                     baseFacing = presenter.WorldFacing;
                     return CreateResolvedTransform(
-                        WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, Vector3.One, in splineOffset),
+                        VisualMath.TransformVisualLocal(basePosition, baseRotation, Vector3.One, in splineOffset),
                         WorldPlane2D.ComposeVisualRotation(baseRotation, splineRotation),
                         baseScale,
                         baseFacing);
@@ -75,8 +75,8 @@ namespace Ludots.Core.Presentation.Presenters
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
                     basePosition = presenter.WorldPosition;
-                    baseRotation = WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = WorldPlane2D.NormalizeScale(presenter.WorldScale);
+                    baseRotation = VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
+                    baseScale = VisualMath.NormalizeScale(presenter.WorldScale);
                     baseFacing = presenter.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
@@ -91,10 +91,10 @@ namespace Ludots.Core.Presentation.Presenters
                 case TransformSource.WorldFixed:
                     ComposeLocals(assetBinding, instanceOverride, out Vector3 fixedOffset, out Quaternion fixedRotation, out Vector3 fixedScale);
                     Quaternion worldRotation = WorldPlane2D.ComposeVisualRotation(
-                        WorldPlane2D.NormalizeOrIdentity(presenter.WorldRotation),
+                        VisualMath.NormalizeOrIdentity(presenter.WorldRotation),
                         fixedRotation);
                     return CreateResolvedTransform(
-                        WorldPlane2D.TransformVisualLocal(presenter.WorldPosition, worldRotation, Vector3.One, in fixedOffset),
+                        VisualMath.TransformVisualLocal(presenter.WorldPosition, worldRotation, Vector3.One, in fixedOffset),
                         worldRotation,
                         fixedScale,
                         presenter.WorldFacing);
@@ -173,9 +173,9 @@ namespace Ludots.Core.Presentation.Presenters
 
         public static Quaternion AlignUpToNormal(Quaternion rotation, Vector3 targetNormal)
         {
-            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, WorldPlane2D.NormalizeOrIdentity(rotation));
+            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, VisualMath.NormalizeOrIdentity(rotation));
             Quaternion alignment = CreateRotationBetween(currentUp, targetNormal);
-            return WorldPlane2D.NormalizeOrIdentity(alignment * WorldPlane2D.NormalizeOrIdentity(rotation));
+            return VisualMath.NormalizeOrIdentity(alignment * VisualMath.NormalizeOrIdentity(rotation));
         }
 
         private static PresenterResolvedTransform ApplyLocalAndGrounding(
@@ -191,7 +191,7 @@ namespace Ludots.Core.Presentation.Presenters
             ComposeLocals(assetBinding, instanceOverride, out Vector3 localOffset, out Quaternion localRotation, out Vector3 localScale);
             Vector3 resolvedScale = inheritScale ? baseScale * localScale : localScale;
             Vector3 parentScale = inheritScale ? baseScale : Vector3.One;
-            Vector3 position = WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, parentScale, in localOffset);
+            Vector3 position = VisualMath.TransformVisualLocal(basePosition, baseRotation, parentScale, in localOffset);
             Quaternion rotation = WorldPlane2D.ComposeVisualRotation(baseRotation, localRotation);
 
             return CreateResolvedTransform(position, rotation, resolvedScale, baseFacing);
@@ -206,7 +206,7 @@ namespace Ludots.Core.Presentation.Presenters
         {
             localOffset = assetBinding.LocalOffset;
             localRotation = assetBinding.LocalRotation;
-            localScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
+            localScale = VisualMath.NormalizeScale(assetBinding.LocalScale);
             if (!instanceOverride.HasOverride)
             {
                 return;
@@ -214,7 +214,7 @@ namespace Ludots.Core.Presentation.Presenters
 
             localOffset += instanceOverride.LocalPosition;
             localRotation = instanceOverride.LocalRotation * localRotation;
-            localScale = WorldPlane2D.NormalizeScale(localScale * instanceOverride.LocalScale);
+            localScale = VisualMath.NormalizeScale(localScale * instanceOverride.LocalScale);
         }
 
         private static PresenterResolvedTransform CreateResolvedTransform(
@@ -328,7 +328,7 @@ namespace Ludots.Core.Presentation.Presenters
             Vector3 cross = Vector3.Cross(fromNormalized, toNormalized);
             float scale = MathF.Sqrt((1f + dot) * 2f);
             float invScale = 1f / scale;
-            return WorldPlane2D.NormalizeOrIdentity(new Quaternion(
+            return VisualMath.NormalizeOrIdentity(new Quaternion(
                 cross.X * invScale,
                 cross.Y * invScale,
                 cross.Z * invScale,

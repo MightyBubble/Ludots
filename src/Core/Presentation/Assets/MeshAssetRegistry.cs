@@ -4,7 +4,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Assets
 {
-    public sealed class MeshAssetRegistry
+    public sealed class MeshAssetRegistry : IRenderMeshAssets
     {
         private readonly StringIntRegistry _ids;
         private MeshAssetDescriptor[] _data;

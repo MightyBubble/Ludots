@@ -435,7 +435,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (world.IsAlive(ctx.Source) && world.Has<FacingDirection>(ctx.Source))
             {
                 float degrees = WorldPlane2D.NormalizeDegreesPositive(
-                    WorldPlane2D.RadToDegValue(world.Get<FacingDirection>(ctx.Source).AngleRad));
+                    VisualMath.RadToDegValue(world.Get<FacingDirection>(ctx.Source).AngleRad));
                 return (int)MathF.Round(degrees);
             }
 

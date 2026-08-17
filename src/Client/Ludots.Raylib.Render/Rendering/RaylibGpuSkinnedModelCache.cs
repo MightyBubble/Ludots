@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Client.Raylib.Rendering
+namespace Ludots.Raylib.Render
 {
     /// <summary>
     /// GpuSkinnedInstance model cache: Model + ModelAnimation* + animCount.
@@ -35,11 +33,11 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private readonly IVirtualFileSystem? _vfs;
+        private readonly IRenderAssetPathResolver? _vfs;
         private readonly Dictionary<int, Entry> _entries = new();
         private bool _disposed;
 
-        public RaylibGpuSkinnedModelCache(IVirtualFileSystem? vfs)
+        public RaylibGpuSkinnedModelCache(IRenderAssetPathResolver? vfs)
         {
             _vfs = vfs;
         }

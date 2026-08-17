@@ -3,6 +3,8 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Presentation.Events;
+using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -23,7 +25,17 @@ namespace Ludots.Adapter.Raylib
 
         public override void Update(in float dt)
         {
-            _skyEnvironment.ApplyDayNightEvents(_globalEvents.GetSpan());
+            ReadOnlySpan<GlobalPresentationEvent> events = _globalEvents.GetSpan();
+            for (int i = 0; i < events.Length; i++)
+            {
+                ref readonly GlobalPresentationEvent evt = ref events[i];
+                if (evt.Kind != PresentationEventKind.GlobalDayNight)
+                {
+                    continue;
+                }
+
+                _skyEnvironment.ApplyDayPhase(evt.Magnitude);
+            }
         }
     }
 }

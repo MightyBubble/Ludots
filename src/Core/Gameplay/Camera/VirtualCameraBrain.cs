@@ -363,7 +363,7 @@ namespace Ludots.Core.Gameplay.Camera
         private static float FacingRadToCameraYawDegrees(float facingRad)
         {
             return WorldPlane2D.NormalizeDegreesPositive(
-                WorldPlane2D.RadToDegValue(facingRad - (MathF.PI * 0.5f)));
+                VisualMath.RadToDegValue(facingRad - (MathF.PI * 0.5f)));
         }
 
         private void ResolveActiveCamera()

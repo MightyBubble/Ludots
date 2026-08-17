@@ -1,7 +1,7 @@
 using System;
 using System.Numerics;
 
-namespace Ludots.Core.Presentation.Rendering
+namespace Ludots.Platform.Abstractions
 {
     public readonly struct ProjectedDecalVolume : IEquatable<ProjectedDecalVolume>
     {

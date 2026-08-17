@@ -4,7 +4,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Assets
 {
-    public sealed class PresentationMaterialRegistry
+    public sealed class PresentationMaterialRegistry : IRenderMaterialAssets
     {
         public const string DefaultSurfaceKey = "default_surface";
 

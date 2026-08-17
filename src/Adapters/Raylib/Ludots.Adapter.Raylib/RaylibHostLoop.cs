@@ -45,6 +45,8 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibHostLoop
     {
+        private static VertexMapTerrainChunkMeshSource? _terrainSource;
+
         private const uint FlagWindowResizable = 4;
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
@@ -152,6 +154,11 @@ namespace Ludots.Adapter.Raylib
 
         public static void Run(RaylibHostSetup setup)
         {
+            Ludots.Raylib.Render.RenderDiagnostics.InfoSink = static message =>
+                Ludots.Core.Diagnostics.Log.Info(in Ludots.Core.Diagnostics.LogChannels.Presentation, message);
+            Ludots.Raylib.Render.RenderDiagnostics.WarnSink = static message =>
+                Ludots.Core.Diagnostics.Log.Warn(in Ludots.Core.Diagnostics.LogChannels.Presentation, message);
+
             var engine = setup.Engine;
             var config = setup.Config;
             var uiRoot = setup.UiRoot;
@@ -172,7 +179,8 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
             };
-            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS, engine.ConfigPipeline)
+            _terrainSource = new VertexMapTerrainChunkMeshSource(engine.VertexMap);
+            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS)
             {
                 VisibleRadiusCm = 140_000f,
             };
@@ -280,15 +288,18 @@ namespace Ludots.Adapter.Raylib
                 using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials, Ludots.Core.Presentation.Assets.AnimationChannelRegistry.Register);
                 primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer);
-                using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS, engine.ConfigPipeline);
-                skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
-                using var waterPass = new RaylibWaterPass(engine.VFS, engine.ConfigPipeline);
-                waterPass.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
-                visualHeightmapRenderer.LoadAlbedoDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS);
+                skyEnvironment.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibSkyEnvironment.DefaultRelativePath));
+                using var waterPass = new RaylibWaterPass(engine.VFS);
+                waterPass.LoadDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibWaterPass.DefaultRelativePath));
+                visualHeightmapRenderer.LoadAlbedoDescriptors(PresentationCatalogMerge.MergeEntries(
+                    engine.ConfigCatalog, engine.ConfigPipeline, engine.ConfigConflictReport, RaylibVisualHeightmapRenderer.DefaultAlbedoRelativePath));
                 GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
-                skyEnvironment.BindPhaseSource(globalPresentationEvents, requiredWhenActive: true);
+                skyEnvironment.SetPhaseSourceRequirement(requiredWhenActive: true);
                 skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
                 if (globalPresentationEvents != null)
                 {
@@ -551,7 +562,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, reflectionCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), reflectionCamera);
                             }
 
                             EndCoreMode3D();
@@ -577,7 +588,7 @@ namespace Ludots.Adapter.Raylib
                             }
                             else
                             {
-                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, activeCamera);
+                                terrainRenderer.RenderTerrainOnly(TerrainSourceFor(engine.VertexMap), activeCamera);
                             }
 
                             EndCoreMode3D();
@@ -657,7 +668,7 @@ namespace Ludots.Adapter.Raylib
                                 terrainRenderer.ClearReflectiveWater();
                             }
 
-                            terrainRenderer.Render(engine.VertexMap, activeCamera);
+                            terrainRenderer.Render(TerrainSourceFor(engine.VertexMap), activeCamera);
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
                                 terrainRenderer.ChunkBuildMsLastFrame,
@@ -2098,5 +2109,15 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
+
+    private static Ludots.Platform.Abstractions.ITerrainChunkMeshSource TerrainSourceFor(Ludots.Core.Map.Hex.VertexMap? map)
+    {
+        _terrainSource ??= new VertexMapTerrainChunkMeshSource(null);
+        if (!ReferenceEquals(_terrainSource.Map, map))
+        {
+            _terrainSource = new VertexMapTerrainChunkMeshSource(map);
+        }
+        return _terrainSource;
+    }
     }
 }
