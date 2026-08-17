@@ -1,57 +1,54 @@
-﻿## GAS Composition Gate — Self Review
+# GAS Composition Gate — Self Review
 
-- **Task / Issue**: #861 Epic — GAS L1 图作者 SSOT 收敛（单一边模型 + 唯一编译前门）
-- **Date**: 2026-08-11
-- **Agent / Author**: cursor cloud agent
+- **Task / Issue**: Epic #990 family 9 — 黑板与配置 13 op 零字幕重设计（BlackboardNodeDriver / AttrNodeDriver C 档演后果）
+- **Date**: 2026-08-17
+- **Agent / Author**: pi (epic/990-zero-caption-gallery)
 
-### 1. Core judgment
+## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（统一作者边模型与唯一编译前门；不新增 profile enum / preset 开关）
+新变体主要交付物是（A/B/C/D）: A — 已有 graph op 的连线/参数组合 + 驱动器可见化
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 把 Effect/Score/Validation/Derived 收进已有 ControlFlow 边模型，用 Kind 过滤 op 能力矩阵，废除按 JSON 外形猜编译器。
+一句话理由: 本家族没有新增任何 graph 节点或 profile 开关；全部行为变化都是「图 JSON 里把已有 op 连成尾巴」（cfgF→neg→hit / src→readF→neg→hit / cfgFx→explicit→applyDyn / beginTx→materialize），driver 只做断言升级与可见化。
 
-### 2. Layer assignment
+## 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| 作者 schema（controlEdges/valueEdges） | 2 | `GraphControlFlowDocument` |
-| Kind → 唯一编译前门 | 2 | `GraphProgramAuthoringFrontDoor` + Loader/Bridge |
-| op×Kind 作者白名单 | 2 | `GraphControlFlowCompiler` + `GraphAuthoringKindPolicy` |
-| 可执行 IR | 0 | 既有 `GraphInstruction[]` / L0 VM |
-| 运行时 opcode 策略 | 0/2 | 既有 `GraphKindOperationPolicy`（不平行） |
+| LoadConfigFloat 真结算 | Layer 2 | 图尾 `cfgF→neg→explicit→hit`（NegFloat+ModifyAttributeAdd 组合） |
+| ReadBlackboardFloat 真结算 | Layer 2 | 图尾 `src→readF→neg→explicit→hit` |
+| LoadConfigEffectId 悬空输出修复 | Layer 2 | 图重写 `cfgFx→explicit→applyDyn`（ApplyEffectDynamic 端口照抄 ApplyEffectDynamic.json） |
+| BeginLifecycleTransaction 造身 | Layer 1+2 | 图加 `materialize`（InvokeBuiltin MaterializeTemplate，复用 Effect.GraphOps.Lifecycle 的 targetEntityTemplate） |
+| InvokeBuiltin 正式演员 | Layer 2 | LastMaterializedTarget 经 GraphOpsStageVisuals.BindMapEntity 绑正式演员 |
+| 记事板/配置册/情境信封/台账 可见化 | Layer 3 | BlackboardNodeDriver.DrawOverlay 用共享视觉原语 P1-P11 |
 
-### 3. Reuse list
+## 3. Reuse list
 
-- Handlers: `GasGraphOpHandlerTable`（不改 opcode 语义）
-- Queues / Systems: 无新 System
-- Resolvers / Registries: `GraphProgramRegistry`、`GraphIdRegistry`、`GraphProgramSymbolPatcher`
-- Existing presets / graphs: 仓库内 Effect/Score/Derived `GAS/graphs.json` 迁到 CF 边模型
+- Handlers: `InvokeBuiltin`(MaterializeTemplate / ClearActiveEffects)、`ApplyEffectDynamic`、`ModifyAttributeAdd`、`NegFloat`、`LoadExplicitTarget`、`LoadConfig*`、`Read/WriteBlackboard*`（全部已有 op）
+- Queues / Systems: `EffectRequestQueue`（ApplyEffectDynamic 真结算）、runtime `SettlePendingEffectRequests`
+- Resolvers / Registries: `ConfigKeyRegistry`、`EffectTemplateIdRegistry`、`EffectTemplateRegistry`、`BuiltinHandlerRegistry`、`GraphOpsNodeActorBinding`
+- Existing presets / graphs: `Effect.GraphOps.Config`（power=40/tier=2/chainEffect=Strike）、`Effect.GraphOps.Lifecycle`（targetEntityTemplate=GraphOps.Ally）、`Effect.GraphOps.Strike`（-18）、ApplyEffectDynamic.json 端口模式、MulFloat.json graphSettled 图尾模式
 
-### 4. New Layer 0 ops (if any)
+## 4. New Layer 0 ops (if any)
 
-N/A — 不新增 `GraphNodeOp`。
+N/A
 
-### 5. Transaction boundary
+## 5. Transaction boundary
 
-必须原子 rollback 的步骤: 无（本任务只改作者编译前门，不改 lifecycle 事务）。
+BeginLifecycleTransaction 的真实回滚由 lifecycle 执行器承担；演出只画真实发生的三拍（Begin 执行拍 / 记账拍 / 关账拍），不为演出伪造失败事务。
 
-### 6. Config SSOT
+## 6. Config SSOT
 
-行为配置落在: `GAS/graphs.json`（ControlFlow 作者文档）+ 现有 effect template
+行为配置落在: effect template（Effect.GraphOps.Config / Effect.GraphOps.Lifecycle）+ graph 连线。未新增 JSON schema。
 
-是否新增 JSON schema: **NO** — 扩展既有 CF 文档字段（`effectTemplate` / `builtinHandler`），废除 next-chain 作为运行时真相。
-
-### 7. Red flag scan
+## 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（Loader 不再外形猜编译器；next-chain 硬拒）
+- [x] 未添加「说不清的」默认 fallback
 
-### 8. Next variant test
+## 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线**
-
-若选了 Core enum → FAIL
+「下一个 Mod 变体」将修改: graph 连线（换 config 值 / 换 effect 票即换伤数与效果）

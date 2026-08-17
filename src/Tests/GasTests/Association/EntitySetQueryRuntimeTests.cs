@@ -33,10 +33,16 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [SetUp]
+        public void SetUp()
+        {
+            ModRegistryAmbient.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Reset();
 
             if (!string.IsNullOrWhiteSpace(_tempRoot))
             {
@@ -281,7 +287,7 @@ namespace Ludots.Tests.GAS
                 world,
                 graph.Programs,
                 graph.OutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 graph.Collections,
                 graph.OutputValues);
 
@@ -412,7 +418,7 @@ namespace Ludots.Tests.GAS
             CallStackCount = 0,
         };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             Assert.That(state.TargetList.Count, Is.EqualTo(2));
             Assert.That(targets[0], Is.EqualTo(first));
@@ -431,7 +437,14 @@ namespace Ludots.Tests.GAS
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 initialCapacity: 16);
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
-            programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } }, GraphKind.Query);
+            programs.Register(
+                graphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                },
+                GraphKind.Query);
             var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
@@ -516,7 +529,7 @@ namespace Ludots.Tests.GAS
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 
@@ -538,6 +551,7 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
+            GraphIdRegistry.Clear();
             var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
@@ -764,6 +778,10 @@ namespace Ludots.Tests.GAS
         "id": "bestProductionCity",
         "op": "AggMaxEntityByAttribute",
         "attribute": "Health"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -821,6 +839,11 @@ namespace Ludots.Tests.GAS
         "from": "sumGold",
         "fromPort": "next",
         "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [
@@ -949,6 +972,10 @@ namespace Ludots.Tests.GAS
         "id": "fromCollection",
         "op": "QueryFromCollection",
         "collectionKey": "tests.graph.collection.cities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -956,6 +983,11 @@ namespace Ludots.Tests.GAS
         "from": "owner",
         "fromPort": "next",
         "to": "fromCollection"
+      },
+      {
+        "from": "fromCollection",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [

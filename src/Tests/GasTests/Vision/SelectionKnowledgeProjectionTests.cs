@@ -146,18 +146,18 @@ public sealed class SelectionKnowledgeProjectionTests
         var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
         Entity local = world.Create(
             new Team { Id = 1 },
-            new VisualTransform { Position = Vector3.Zero });
+            WorldPositionCm.FromCm(0, 0));
         Entity unknown = world.Create(
             new Team { Id = 2 },
-            new VisualTransform { Position = new Vector3(5f, 0f, 0f) },
+            WorldPositionCm.FromCm(500, 0),
             new CommandSourceSelectableTag());
         Entity lastKnown = world.Create(
             new Team { Id = 2 },
-            new VisualTransform { Position = new Vector3(10f, 0f, 0f) },
+            WorldPositionCm.FromCm(1000, 0),
             new CommandSourceSelectableTag());
         Entity live = world.Create(
             new Team { Id = 2 },
-            new VisualTransform { Position = new Vector3(15f, 0f, 0f) },
+            WorldPositionCm.FromCm(1500, 0),
             new CommandSourceSelectableTag());
         var globals = new Dictionary<string, object>
         {

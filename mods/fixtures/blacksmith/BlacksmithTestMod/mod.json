@@ -1,7 +1,7 @@
 {
   "name": "BlacksmithTestMod",
   "version": "1.0.0",
-  "description": "Performer blacksmith fixture mod for Wave 5 UAT.",
+  "description": "Presenter blacksmith fixture mod for Wave 5 UAT.",
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
   }

@@ -123,7 +123,7 @@ namespace Ludots.Core.Config
             if (string.Equals(componentName, "Presentation", System.StringComparison.Ordinal))
             {
                 throw new System.InvalidOperationException(
-                    "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/performers.json keyed lifecycle rules.");
+                    "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/presenters.json keyed lifecycle rules.");
             }
 
             ComponentRegistry.Apply(

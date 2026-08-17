@@ -97,7 +97,8 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 new StubSpatialQueryService(targetNormal, targetDowned),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -190,7 +191,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(target),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -267,7 +269,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -337,7 +340,8 @@ namespace Ludots.Tests.GAS
                 {
                     Assert.That(viewer, Is.EqualTo(actor), "the resolver gates with the acting entity as viewer.");
                     return candidate != deniedTarget;
-                });
+                },
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,

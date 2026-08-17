@@ -33,6 +33,7 @@
 ## 不变量
 
 - Core 不读取表现层 `VisualTransform` 作为玩法真相。
+- 选中与收令只读模拟真相：`WorldPositionCm`、`CommandSourceSelectableTag`、以及已有的 `KnowledgeProjectionStore` live inspect 通道；不读相机 `CullState`。
 - 热路径不调用 `World.Add`/`World.Remove`，不隐式扩容，不在查询中改变 archetype。
 - 配置、Registry、容量、Graph 服务和运行时状态装配各自只有一个 owner 和一个 SSOT。
 - 轻量 Ability Tag Grant 只由 Ability 执行域写入；有来源、叠层、刷新、驱散或条件结束的状态由 Effect 管理。

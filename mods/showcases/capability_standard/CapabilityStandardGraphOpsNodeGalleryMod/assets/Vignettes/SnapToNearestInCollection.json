@@ -1,0 +1,42 @@
+{
+  "op": "SnapToNearestInCollection",
+  "driver": "event",
+  "title": "吸到花名册里最近的人",
+  "beat": "落点吸到最近单位身上。",
+  "detailTemplate": "落点已经吸到花名册里最近的人。",
+  "assertDetailContains": [
+    "吸到"
+  ],
+  "featuredNodeId": "snapCol",
+  "graphKind": "Validation",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Ally",
+      "name": "近员",
+      "x": 0.5,
+      "y": 0.2,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "collections": [
+    {
+      "key": "showcase.graph_op.snap",
+      "members": [
+        "target"
+      ]
+    }
+  ]
+}

@@ -33,7 +33,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
         public int LoadedChunkCount => ActiveBoard?.LoadedChunksSource.ActiveChunkKeys.Count ?? 0;
         public int LoadedNodeCount => ActiveBoard?.GraphRuntime.CurrentGraph.NodeCount ?? 0;
 
-        public int LoadedRoadSplineCount
+        public int LoadedSplineRibbonCount
         {
             get
             {
@@ -45,7 +45,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 int total = 0;
                 foreach (long chunkKey in ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
                 {
-                    if (Scenario.TryGetRoadSplineChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadSplineSpec[]? chunkSplines))
+                    if (Scenario.TryGetRoadRibbonChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadRibbonSpec[]? chunkSplines))
                     {
                         total += chunkSplines.Length;
                     }
@@ -164,7 +164,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 Title: "Chunk Streaming Showcase",
                 Status: LastStatus,
                 Camera: $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})",
-                Chunks: $"Chunks {LoadedChunkCount} | Nodes {LoadedNodeCount} | Splines {LoadedRoadSplineCount}",
+                Chunks: $"Chunks {LoadedChunkCount} | Nodes {LoadedNodeCount} | Splines {LoadedSplineRibbonCount}",
                 Hint: "Jump west/center/east to verify chunk windows, loaded node counts, and spline batches change with the camera.");
         }
 

@@ -103,14 +103,14 @@ namespace Ludots.Tests.GAS
 
             string core = Path.Combine(root, "Core");
             string mod = Path.Combine(root, "ModA");
-            Directory.CreateDirectory(Path.Combine(core, "Configs"));
-            Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs"));
+            Directory.CreateDirectory(core);
+            Directory.CreateDirectory(Path.Combine(mod, "assets"));
 
-            Directory.CreateDirectory(Path.Combine(core, "Configs", "AI"));
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"A\" } ]");
+            Directory.CreateDirectory(Path.Combine(core, "AI"));
+            File.WriteAllText(Path.Combine(core, "AI", "atoms.json"), "[ { \"id\": \"A\" } ]");
 
-            Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
-            File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"id\": \"B\" } ]");
+            Directory.CreateDirectory(Path.Combine(mod, "assets", "AI"));
+            File.WriteAllText(Path.Combine(mod, "assets", "AI", "atoms.json"), "[ { \"id\": \"B\" } ]");
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
@@ -124,6 +124,61 @@ namespace Ludots.Tests.GAS
             Assert.That(node, Is.TypeOf<JsonArray>());
             var arr = (JsonArray)node!;
             Assert.That(arr.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ConfigPipeline_MergeFromCatalog_LoadsShardDirectoriesInStableOrder()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ConfigCatalogTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string core = Path.Combine(root, "Core");
+                string mod = Path.Combine(root, "ModA");
+                Directory.CreateDirectory(Path.Combine(core, "GAS", "abilities"));
+                Directory.CreateDirectory(Path.Combine(mod, "assets", "GAS", "abilities"));
+
+                File.WriteAllText(
+                    Path.Combine(core, "config_catalog.json"),
+                    """
+                    [
+                      {
+                        "Path": "GAS/abilities.json",
+                        "Policy": "ArrayById",
+                        "IdField": "id",
+                        "ShardDirectories": [ "GAS/abilities" ]
+                      }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(core, "GAS", "abilities.json"), "[{ \"id\": \"Core.Main\" }]");
+                File.WriteAllText(Path.Combine(core, "GAS", "abilities", "b_second.json"), "[{ \"id\": \"Core.ShardB\" }]");
+                File.WriteAllText(Path.Combine(core, "GAS", "abilities", "a_first.json"), "[{ \"id\": \"Core.ShardA\" }]");
+                File.WriteAllText(Path.Combine(mod, "assets", "GAS", "abilities", "mod.json"), "[{ \"id\": \"ModA.Shard\" }]");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", core);
+                vfs.Mount("ModA", mod);
+                var modLoader = new ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new Ludots.Core.Scripting.TriggerManager());
+                modLoader.LoadedModIds.Add("ModA");
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
+
+                var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
+
+                Assert.That(merged.Count, Is.EqualTo(4));
+                Assert.That(merged[0].Id, Is.EqualTo("Core.Main"));
+                Assert.That(merged[1].Id, Is.EqualTo("Core.ShardA"));
+                Assert.That(merged[2].Id, Is.EqualTo("Core.ShardB"));
+                Assert.That(merged[3].Id, Is.EqualTo("ModA.Shard"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
         }
 
         [Test]
@@ -144,9 +199,9 @@ namespace Ludots.Tests.GAS
             try
             {
                 string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs"));
+                Directory.CreateDirectory(core);
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "config_catalog.json"),
+                    Path.Combine(core, "config_catalog.json"),
                     "[{ \"Path\": \"MassNavigationConfig.json\", \"Policy\": \"replace\" }]");
 
                 var vfs = new VirtualFileSystem();
@@ -174,9 +229,9 @@ namespace Ludots.Tests.GAS
             try
             {
                 string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs"));
+                Directory.CreateDirectory(core);
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "config_catalog.json"),
+                    Path.Combine(core, "config_catalog.json"),
                     "[{ \"Path\": \"MassNavigationConfig.json\" }]");
 
                 var vfs = new VirtualFileSystem();
@@ -204,9 +259,9 @@ namespace Ludots.Tests.GAS
             try
             {
                 string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs"));
+                Directory.CreateDirectory(core);
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "game.json"),
+                    Path.Combine(core, "game.json"),
                     "{ \"startupMapId\": \"canonical_map\", \"windowWidth\": 1440 }");
 
                 var vfs = new VirtualFileSystem();
@@ -219,7 +274,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(config.WindowWidth, Is.EqualTo(1440));
 
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "game.json"),
+                    Path.Combine(core, "game.json"),
                     "{ \"StartupMapId\": \"alias_map\" }");
 
                 JsonException ex = Assert.Throws<JsonException>(() => pipeline.MergeGameConfig())!;
@@ -242,12 +297,12 @@ namespace Ludots.Tests.GAS
             try
             {
                 string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs", "Entities"));
+                Directory.CreateDirectory(Path.Combine(core, "Entities"));
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "config_catalog.json"),
+                    Path.Combine(core, "config_catalog.json"),
                     "[{ \"Path\": \"Entities/templates.json\", \"Policy\": \"ArrayById\", \"IdField\": \"id\" }]");
                 File.WriteAllText(
-                    Path.Combine(core, "Configs", "Entities", "templates.json"),
+                    Path.Combine(core, "Entities", "templates.json"),
                     "[{ \"id\": \"case.exact.template\", \"components\": {} }]");
 
                 var vfs = new VirtualFileSystem();

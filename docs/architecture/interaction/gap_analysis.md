@@ -124,7 +124,7 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 以 `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md` 为 stage boundary，建议按以下顺序继续：
 
 1. 在现有 `ContextGroupRegistry` / `ContextScoredOrderResolver` / `AbilityFormRoutingSystem` 之上补更多 acceptance，不把路由回写进 `AbilityDefinition`
-2. 在现有 aim presentation / performer rule / queued-order 路径上继续补更多交互切片，而不是新建第二套 preview 或 input stack
+2. 在现有 aim presentation / presenter rule / queued-order 路径上继续补更多交互切片，而不是新建第二套 preview 或 input stack
 3. 仅当某个 feature 确实需要 numeric/context activation gate 时，再在现有 `GraphExecutor.ExecuteValidation(...)` primitive 上增量扩展
 4. 环境结构变更类玩法统一复用 `RuntimeEntitySpawnQueue` / builtin handler，不在 Graph 中写结构变更伪代码
 

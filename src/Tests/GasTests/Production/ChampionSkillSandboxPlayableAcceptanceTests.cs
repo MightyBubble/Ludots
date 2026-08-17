@@ -33,7 +33,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Physics2D.Components;
@@ -766,7 +766,7 @@ namespace Ludots.Tests.GAS.Production
 
             StressCombatSnapshot active = ReadStressCombatSnapshot(engine.World);
             Assert.That(peakProjectiles, Is.GreaterThan(0), "Stress exchange should create live projectile traffic.");
-            Assert.That(peakPrimitives, Is.GreaterThan(0), "Stress exchange should emit performer feedback.");
+            Assert.That(peakPrimitives, Is.GreaterThan(0), "Stress exchange should emit presenter feedback.");
             Assert.That(peakWorldText, Is.GreaterThan(0), "Stress exchange should emit readable combat text.");
             Assert.That(active.TeamAInjured + active.TeamBInjured, Is.GreaterThan(0), "Frontline trading should injure live units.");
             Assert.That(sawHeal, Is.True, "Priests should heal damaged allies during the sustained exchange.");
@@ -2780,25 +2780,25 @@ namespace Ludots.Tests.GAS.Production
             sb.Append(BuildOverlayDiagnostics(overlays));
             sb.Append($" | baselineRings={baselineHoverRings}");
             sb.Append($" | hover={hoverEntityName}@({hoverPoint.X:0.##},{hoverPoint.Y:0.##})");
-            var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
-            var runtime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+            var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry);
+            var runtime = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
             if (definitions == null || runtime == null)
             {
-                sb.Append(" | performerServices=<missing>");
+                sb.Append(" | presenterServices=<missing>");
                 return sb.ToString();
             }
 
             int hoverDefId = definitions.GetId("champion_skill_sandbox.hover_indicator");
             int selectionDefId = definitions.GetId("champion_skill_sandbox.selection_indicator");
-            sb.Append($" | performerRuntime=active:{runtime.ActiveCount},dirtyRetained:{runtime.HasDirtyRetainedPresentationRequests},dirtyStatic:{runtime.HasDirtyStaticVisuals}");
-            sb.Append(" | performerDefs=");
+            sb.Append($" | presenterRuntime=active:{runtime.ActiveCount},dirtyRetained:{runtime.HasDirtyRetainedPresentationRequests},dirtyStatic:{runtime.HasDirtyStaticVisuals}");
+            sb.Append(" | presenterDefs=");
             sb.Append(runtime.BuildActiveDefinitionSummary(8));
-            sb.Append(" | hoverPerformers=");
+            sb.Append(" | hoverPresenters=");
 
             var samples = new List<string>(8);
             int hoverCount = 0;
-            var query = new QueryDescription().WithAll<PerformerState, PerformerEmitCache, PerformerCullState, PerformerWorldPosition>();
-            engine.World.Query(in query, (Entity entity, ref PerformerState state, ref PerformerEmitCache cache, ref PerformerCullState cull, ref PerformerWorldPosition position) =>
+            var query = new QueryDescription().WithAll<PresenterState, PresenterEmitCache, PresenterCullState, PresenterWorldPosition>();
+            engine.World.Query(in query, (Entity entity, ref PresenterState state, ref PresenterEmitCache cache, ref PresenterCullState cull, ref PresenterWorldPosition position) =>
             {
                 if (state.DefId != hoverDefId)
                 {
@@ -2820,14 +2820,14 @@ namespace Ludots.Tests.GAS.Production
             sb.Append(']');
 
             int selectionCount = 0;
-            engine.World.Query(in query, (ref PerformerState state) =>
+            engine.World.Query(in query, (ref PresenterState state) =>
             {
                 if (state.DefId == selectionDefId)
                 {
                     selectionCount++;
                 }
             });
-            sb.Append($" | selectionPerformers={selectionCount}");
+            sb.Append($" | selectionPresenters={selectionCount}");
             sb.Append(" | overlayRings=");
             sb.Append(string.Join(
                 ";",

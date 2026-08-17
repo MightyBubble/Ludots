@@ -1,93 +1,95 @@
-using System.Collections.Generic;
+using System;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Registry
 {
-    /// <summary>
-    /// Maps Attribute names to integer IDs.
-    /// Used by configuration system to resolve string keys to high-performance indices.
-    /// </summary>
     public static class AttributeRegistry
     {
-        private static readonly Dictionary<string, int> _nameToId = new();
-        private static readonly Dictionary<int, string> _idToName = new();
-        private static readonly AttributeConstraints[] _constraints = new AttributeConstraints[MaxAttributes];
-        private static int _nextId = 0;
-        private static bool _frozen;
-
         public const int InvalidId = -1;
         public const int MaxAttributes = 64;
 
-        public static bool IsFrozen => _frozen;
+        private static IdentityTable Table => ModRegistryAmbient.Current.Attributes;
+        private static AttributeConstraints[] Constraints => ModRegistryAmbient.Current.AttributeConstraints;
 
-        public static void Clear()
+        public static bool IsFrozen => Table.IsFrozen;
+
+        public static bool IsValidId(int attributeId)
         {
-            if (_frozen)
-            {
-                throw new System.InvalidOperationException("AttributeRegistry is frozen.");
-            }
-
-            _nameToId.Clear();
-            _idToName.Clear();
-            System.Array.Clear(_constraints, 0, _constraints.Length);
-            _nextId = 0;
+            return attributeId != InvalidId && Table.ContainsId(attributeId);
         }
 
-        public static void Freeze()
+        public static int RequireId(string name)
         {
-            _frozen = true;
-        }
-
-        public static int Register(string name)
-        {
-            if (_frozen)
+            if (string.IsNullOrWhiteSpace(name))
             {
-                throw new System.InvalidOperationException("AttributeRegistry is frozen.");
+                throw new ArgumentException("Attribute name is empty.", nameof(name));
             }
 
-            if (_nameToId.TryGetValue(name, out var id))
+            int id = GetId(name);
+            if (id == InvalidId)
             {
-                return id;
+                throw new ArgumentException($"Attribute '{name}' is not registered.", nameof(name));
             }
 
-            if (_nextId >= MaxAttributes)
-            {
-                throw new System.InvalidOperationException($"AttributeBuffer supports up to {MaxAttributes} attributes.");
-            }
-
-            id = _nextId++;
-            _nameToId[name] = id;
-            _idToName[id] = name;
             return id;
         }
 
-        public static int GetId(string name)
-        {
-            return _nameToId.TryGetValue(name, out var id) ? id : InvalidId;
-        }
+        public static void Clear() => ModRegistryAmbient.Current.ReplaceAttributes();
 
-        public static string GetName(int id)
-        {
-            return _idToName.TryGetValue(id, out var name) ? name : string.Empty;
-        }
+        public static void Freeze() => Table.Freeze();
 
-        public static RegistryMapping[] SnapshotMappings()
-        {
-            return RegistryMappingSnapshot.FromNameToId(_nameToId);
-        }
+        public static int Register(string name) => Table.Register(name);
+
+        public static int GetId(string name) => Table.GetId(name);
+
+        public static string GetName(int id) => Table.GetName(id);
+
+        public static RegistryMapping[] SnapshotMappings() => Table.SnapshotMappings();
 
         public static bool TryGetConstraints(int attributeId, out AttributeConstraints constraints)
         {
             constraints = default;
             if ((uint)attributeId >= (uint)MaxAttributes) return false;
-            constraints = _constraints[attributeId];
+            constraints = Constraints[attributeId];
             return constraints.HasAny;
         }
 
         public static void SetConstraints(int attributeId, in AttributeConstraints constraints)
         {
-            if ((uint)attributeId >= (uint)MaxAttributes) return;
-            _constraints[attributeId] = constraints;
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
+            }
+
+            Constraints[attributeId] = constraints;
+        }
+
+        public static void ReplaceConstraints(int attributeId, in AttributeConstraints constraints)
+        {
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
+            }
+
+            if (!Table.ContainsId(attributeId))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} is not registered; cannot ReplaceConstraints (new identities require EngineRestart).");
+            }
+
+            if (!Constraints[attributeId].HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} has no authored constraints; hot-apply cannot introduce a new constraint schema.");
+            }
+
+            if (!constraints.HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} replacement constraints are empty; deleting constraints requires MapReload/EngineRestart.");
+            }
+
+            Constraints[attributeId] = constraints;
         }
 
         public static void SetConstraints(string attributeName, in AttributeConstraints constraints)

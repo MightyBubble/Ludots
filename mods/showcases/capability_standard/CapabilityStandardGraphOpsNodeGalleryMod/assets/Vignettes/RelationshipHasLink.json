@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipHasLink",
+  "driver": "rel",
+  "title": "我们有没有连着",
+  "beat": "和好友的链环扣紧，就是连着。",
+  "detailTemplate": "和{friend}链着。",
+  "assertDetailContains": [
+    "链着"
+  ],
+  "featuredNodeId": "has",
+  "graphKind": "Effect",
+  "field": "rel"
+}

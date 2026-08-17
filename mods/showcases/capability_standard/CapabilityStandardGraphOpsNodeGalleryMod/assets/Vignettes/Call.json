@@ -1,0 +1,34 @@
+{
+  "op": "Call",
+  "driver": "script",
+  "title": "出门办事再回来",
+  "beat": "走到驿站办完事再回到原点，像叫了一声子程序。",
+  "detailTemplate": "出门办事再回来。人在{place}。",
+  "assertDetailContains": [
+    "回来"
+  ],
+  "featuredNodeId": "call",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "stop",
+      "role": "ally",
+      "template": "GraphOps.Ally",
+      "name": "驿站",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "op": "JumpIfFalse",
+  "driver": "script",
+  "title": "没满就再续一杯",
+  "beat": "茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。",
+  "detailTemplate": "没满就再续一杯。茶水 {water}/{limit}。",
+  "assertDetailContains": [
+    "再续"
+  ],
+  "featuredNodeId": "jif",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 0,
+      "healthMax": 3
+    }
+  ]
+}

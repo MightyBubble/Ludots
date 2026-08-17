@@ -1,0 +1,38 @@
+{
+  "op": "NegFloat",
+  "driver": "linear",
+  "title": "负债翻面成正数",
+  "beat": "负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。",
+  "detailTemplate": "翻面后的一刀是 {result}；木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": [
+    "翻面"
+  ],
+  "featuredNodeId": "negMod",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

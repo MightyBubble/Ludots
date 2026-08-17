@@ -434,14 +434,14 @@ app.MapGet("/api/mods/{modId}/entity-templates", (string modId) =>
     }
 });
 
-app.MapGet("/api/mods/{modId}/performers", (string modId) =>
+app.MapGet("/api/mods/{modId}/presenters", (string modId) =>
 {
     string repoRoot = FindAssetsRoot();
     try
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
-        var performers = EditorRepo.LoadMergedPerformers(ctx, includeSources: false, out _);
-        return Results.Ok(new { ok = true, performers });
+        var presenters = EditorRepo.LoadMergedPresenters(ctx, includeSources: false, out _);
+        return Results.Ok(new { ok = true, presenters });
     }
     catch (Exception ex)
     {
@@ -1591,7 +1591,7 @@ app.MapPut("/api/mods/{modId}/gas/graphs/{graphId}", async (string modId, string
     }
 
     if (bodyNode is not JsonObject bodyObj)
-        return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
+        return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
 
     if (!TryNormalizeGasGraphBody(bodyObj, graphId, out var normalizedId, out var normalizeError))
         return Results.BadRequest(new { ok = false, error = normalizeError });
@@ -1647,7 +1647,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
             }
 
             if (bodyNode is not JsonObject bodyObj)
-                return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
+                return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
 
             graphObj = bodyObj;
         }
@@ -1664,7 +1664,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
     }
     catch (JsonException ex)
     {
-        return Results.BadRequest(new { ok = false, error = $"Failed to deserialize GraphConfig: {ex.Message}" });
+        return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
     if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
@@ -3280,10 +3280,10 @@ static class EditorRepo
         return mergedNodes.Values.OrderBy(n => n?["id"]?.ToString() ?? string.Empty, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    public static JsonNode[] LoadMergedPerformers(ModContext ctx, bool includeSources, out List<string> sources)
+    public static JsonNode[] LoadMergedPresenters(ModContext ctx, bool includeSources, out List<string> sources)
     {
         var sourcesLocal = new List<string>();
-        var defs = new Dictionary<int, JsonNode>();
+        var defs = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
 
         void Load(string path)
         {
@@ -3294,23 +3294,22 @@ static class EditorRepo
             foreach (var item in arr)
             {
                 if (item is not JsonObject obj) continue;
-                int id = int.TryParse(obj["id"]?.GetValue<string>(), out int parsedId) ? parsedId : 0;
-                if (id <= 0) continue;
+                if (!TryReadId(obj, out string id)) continue;
                 defs[id] = obj.DeepClone();
             }
         }
 
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "performers.json"));
-        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "performers.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Presentation", "presenters.json"));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Presentation", "presenters.json"));
         for (int i = 0; i < ctx.LoadOrder.Count; i++)
         {
             var mod = ctx.ModsById[ctx.LoadOrder[i]];
-            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "performers.json"));
-            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "performers.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Presentation", "presenters.json"));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Presentation", "presenters.json"));
         }
 
         sources = sourcesLocal;
-        return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
+        return defs.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase).Select(kvp => kvp.Value).ToArray();
     }
 
     public static JsonNode LoadMergedNavigationJson(

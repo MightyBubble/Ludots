@@ -32,7 +32,7 @@ namespace ChunkStreamingShowcaseMod.Systems
         private readonly GameEngine _engine;
         private readonly ChunkStreamingShowcaseRuntime _runtime;
         private readonly PrimitiveDrawBuffer? _primitives;
-        private readonly RoadSplineBuffer? _roads;
+        private readonly SplineRibbonBuffer? _roads;
         private readonly ScreenOverlayBuffer? _overlay;
         private readonly int _cubeMeshId;
         private readonly int _sphereMeshId;
@@ -42,7 +42,7 @@ namespace ChunkStreamingShowcaseMod.Systems
             _engine = engine;
             _runtime = runtime;
             _primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            _roads = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            _roads = engine.GetService(CoreServiceKeys.SplineRibbonBuffer);
             _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
             _cubeMeshId = meshes?.GetId(WellKnownMeshKeys.Cube) ?? 1;
@@ -65,7 +65,7 @@ namespace ChunkStreamingShowcaseMod.Systems
             }
 
             EmitLoadedChunkTiles();
-            EmitRoadSplines();
+            EmitSplineRibbons();
             EmitLandmarkMarkers();
             EmitHud();
         }
@@ -118,7 +118,7 @@ namespace ChunkStreamingShowcaseMod.Systems
             }
         }
 
-        private void EmitRoadSplines()
+        private void EmitSplineRibbons()
         {
             if (_roads == null || _runtime.ActiveBoard == null || _runtime.Scenario == null)
             {
@@ -127,14 +127,14 @@ namespace ChunkStreamingShowcaseMod.Systems
 
             foreach (long chunkKey in _runtime.ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
             {
-                if (!_runtime.Scenario.TryGetRoadSplineChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadSplineSpec[]? chunkSplines))
+                if (!_runtime.Scenario.TryGetRoadRibbonChunk(chunkKey, out RoadNetworkScenarioDefinition.RoadRibbonSpec[]? chunkSplines))
                 {
                     continue;
                 }
 
                 for (int i = 0; i < chunkSplines.Length; i++)
                 {
-                    ref readonly RoadNetworkScenarioDefinition.RoadSplineSpec spec = ref chunkSplines[i];
+                    ref readonly RoadNetworkScenarioDefinition.RoadRibbonSpec spec = ref chunkSplines[i];
                     _roads.TryAdd(
                         spec.StableId,
                         spec.P0,
@@ -144,8 +144,7 @@ namespace ChunkStreamingShowcaseMod.Systems
                         spec.Width,
                         spec.Fill,
                         spec.Border,
-                        spec.BorderWidth,
-                        spec.Style);
+                        spec.BorderWidth);
                 }
             }
         }
@@ -188,7 +187,7 @@ namespace ChunkStreamingShowcaseMod.Systems
 
             Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State.TargetCm;
             string camera = $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})";
-            string chunks = $"Chunks {_runtime.LoadedChunkCount} | Nodes {_runtime.LoadedNodeCount} | Splines {_runtime.LoadedRoadSplineCount}";
+            string chunks = $"Chunks {_runtime.LoadedChunkCount} | Nodes {_runtime.LoadedNodeCount} | Splines {_runtime.LoadedSplineRibbonCount}";
             string status = _runtime.LastStatus;
 
             _overlay.AddRect(12, 12, 920, 156, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 9200, dirtySerial: 1);

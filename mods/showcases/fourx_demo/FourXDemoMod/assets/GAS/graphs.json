@@ -62,6 +62,10 @@
         "id": "bestProductionCity",
         "op": "AggMaxEntityByAttribute",
         "attribute": "Production"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -119,6 +123,11 @@
         "from": "totalGold",
         "fromPort": "next",
         "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [
@@ -299,6 +308,10 @@
         "op": "RelationshipAggMaxEntityByMetric",
         "relationshipType": "Diplomacy",
         "metric": "Trust"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -356,6 +369,11 @@
         "from": "tradeValueTotal",
         "fromPort": "next",
         "to": "bestPartner"
+      },
+      {
+        "from": "bestPartner",
+        "fromPort": "next",
+        "to": "halt"
       }
     ],
     "valueEdges": [

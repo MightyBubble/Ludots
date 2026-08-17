@@ -1,0 +1,16 @@
+[
+  {
+    "id": "showcase.graph_op.LoadSelfAttribute",
+    "kind": "Effect",
+    "entry": "selfHp",
+    "nodes": [
+      {
+        "id": "selfHp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

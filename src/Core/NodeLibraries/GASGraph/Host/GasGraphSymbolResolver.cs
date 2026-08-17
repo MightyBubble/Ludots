@@ -3,7 +3,6 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -19,7 +18,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
-        private readonly TagDisplayTableRegistry? _tagDisplayTables;
+        private readonly GraphLookupTableRegistry? _lookupTables;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -28,7 +27,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
-            TagDisplayTableRegistry? tagDisplayTables = null)
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -36,7 +35,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
-            _tagDisplayTables = tagDisplayTables;
+            _lookupTables = lookupTables;
+        }
+
+        public int ResolveGraphLookupTable(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup table '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetTableId(name);
+        }
+
+        public int ResolveGraphLookupField(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup field '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetFieldId(name);
         }
 
         public int ResolveTag(string name)
@@ -112,17 +133,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return id;
-        }
-
-        public int ResolveTagDisplayTable(string name)
-        {
-            if (_tagDisplayTables == null)
-            {
-                throw new InvalidOperationException(
-                    $"Graph references tag display table '{name}', but no TagDisplayTableRegistry was provided.");
-            }
-
-            return _tagDisplayTables.GetTableId(name);
         }
     }
 }

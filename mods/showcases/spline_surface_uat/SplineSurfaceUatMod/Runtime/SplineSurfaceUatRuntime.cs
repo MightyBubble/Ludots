@@ -117,7 +117,7 @@ namespace SplineSurfaceUatMod.Runtime
                 Status: LastStatus,
                 Camera: $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})",
                 Surfaces: "Road | River | Lake | Raw Mesh",
-                Hint: "Reset Camera returns to the shared overview. Focus buttons jump to each performer-authored chunk-baked procedural surface.");
+                Hint: "Reset Camera returns to the shared overview. Focus buttons jump to each presenter-authored chunk-baked procedural surface.");
         }
 
         public void SyncPanel(GameEngine engine)

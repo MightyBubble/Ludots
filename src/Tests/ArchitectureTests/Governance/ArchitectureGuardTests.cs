@@ -7,10 +7,23 @@ using System.Reflection.Emit;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Arch.Core;
+using Arch.System;
+using CoreInputMod.Systems;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Benchmarks;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Systems;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture.Governance
@@ -22,25 +35,62 @@ namespace Ludots.Tests.Architecture.Governance
         private static readonly OpCode[] SingleByteOpCodes = BuildSingleByteOpCodeMap();
         private static readonly OpCode[] TwoByteOpCodes = BuildTwoByteOpCodeMap();
 
+        private static readonly string[] DesignedSystemGroupOrder =
+        {
+            nameof(SystemGroup.SchemaUpdate),
+            nameof(SystemGroup.InputCollection),
+            nameof(SystemGroup.PostMovement),
+            nameof(SystemGroup.AbilityActivation),
+            nameof(SystemGroup.EffectProcessing),
+            nameof(SystemGroup.RuntimeEntityBinding),
+            nameof(SystemGroup.AttributeCalculation),
+            nameof(SystemGroup.DeferredTriggerCollection),
+            nameof(SystemGroup.Cleanup),
+            nameof(SystemGroup.EventDispatch),
+            nameof(SystemGroup.ClearPresentationFlags)
+        };
+
         [Test]
         public void SystemGroup_MustMatchDesignDocument()
         {
-            var expected = new[]
-            {
-                nameof(SystemGroup.SchemaUpdate),
-                nameof(SystemGroup.InputCollection),
-                nameof(SystemGroup.PostMovement),
-                nameof(SystemGroup.AbilityActivation),
-                nameof(SystemGroup.EffectProcessing),
-                nameof(SystemGroup.RuntimeEntityBinding),
-                nameof(SystemGroup.AttributeCalculation),
-                nameof(SystemGroup.DeferredTriggerCollection),
-                nameof(SystemGroup.Cleanup),
-                nameof(SystemGroup.EventDispatch),
-                nameof(SystemGroup.ClearPresentationFlags)
-            };
+            Assert.That(
+                Enum.GetNames<SystemGroup>(),
+                Is.EqualTo(DesignedSystemGroupOrder),
+                "SystemGroup enum declaration order must match the designed phase order.");
+        }
 
-            Assert.That(Enum.GetNames<SystemGroup>(), Is.EquivalentTo(expected));
+        [Test]
+        public void RuntimeSystemGroupOrder_EqualsEnumDeclarationOrder()
+        {
+            SystemGroup[] enumOrder = Enum.GetValues<SystemGroup>();
+            Assert.That(SystemGroupOrder.All, Is.EqualTo(enumOrder));
+            for (int i = 0; i < enumOrder.Length; i++)
+            {
+                Assert.That((int)enumOrder[i], Is.EqualTo(i));
+            }
+        }
+
+        [Test]
+        public void PhaseOrderedCooperativeSimulation_HasNoSecondPhaseOrderTable()
+        {
+            var repoRoot = FindRepoRoot();
+            string simulationSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Engine",
+                "Pacemaker",
+                "PhaseOrderedCooperativeSimulation.cs"));
+            string orderSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Contracts",
+                "SystemGroupOrder.cs"));
+
+            Assert.That(Regex.IsMatch(simulationSource, @"\bPhaseOrder\b"), Is.False);
+            Assert.That(simulationSource, Does.Contain("SystemGroupOrder.All"));
+            Assert.That(orderSource, Does.Contain("Enum.GetValues<SystemGroup>()"));
+            Assert.That(orderSource, Does.Not.Contain("SystemGroup."));
         }
 
         [Test]
@@ -311,15 +361,15 @@ namespace Ludots.Tests.Architecture.Governance
                 "src",
                 "Core",
                 "Presentation",
-                "Performers",
-                "WorldHudPerformBehavior.cs");
+                "Presenters",
+                "WorldHudPresentBehavior.cs");
             string phaseResolverPath = Path.Combine(
                 repoRoot,
                 "src",
                 "Core",
                 "Presentation",
-                "Performers",
-                "PerformPhaseResolver.cs");
+                "Presenters",
+                "PresentPhaseResolver.cs");
 
             string hudSource = File.ReadAllText(hudPath);
             string phaseResolverSource = File.ReadAllText(phaseResolverPath);
@@ -414,7 +464,7 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
-        public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPerformers()
+        public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPresenters()
         {
             var repoRoot = FindRepoRoot();
             string modsDir = Path.Combine(repoRoot, "mods");
@@ -424,10 +474,10 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 "indicator",
                 "aimVisual",
-                "areaPerformerId",
-                "rangeCirclePerformerId",
-                "previewPerformerId",
-                "performerId"
+                "areaPresenterId",
+                "rangeCirclePresenterId",
+                "previewPresenterId",
+                "presenterId"
             };
 
             var hits = new List<string>();
@@ -445,7 +495,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action performer rules:\n" +
+                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action presenter rules:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -503,13 +553,13 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                "Epic #322 ability aim presentation is an event/collection projection consumed by performer rules; overlay-named entry points must not return:\n" +
+                "Epic #322 ability aim presentation is an event/collection projection consumed by presenter rules; overlay-named entry points must not return:\n" +
                     string.Join("\n", hits));
             }
         }
 
         [Test]
-        public void Epic322_ChampionSandboxPresentation_DoesNotBypassPerformerRules()
+        public void Epic322_ChampionSandboxPresentation_DoesNotBypassPresenterRules()
         {
             var repoRoot = FindRepoRoot();
             string sandboxDir = Path.Combine(
@@ -534,7 +584,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 champion skill presentation must project events and let PerformerRuleSystem produce performer commands. Sandbox code must not consume GAS events or write presentation buffers directly:\n" +
+                    "Epic #322 champion skill presentation must project events and let PresenterRuleSystem produce presenter commands. Sandbox code must not consume GAS events or write presentation buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -579,7 +629,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; the old direct overlay bridge must not return:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -613,7 +663,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by presenter rules; it must not read or write render buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -637,9 +687,11 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 "GroundOverlayBuffer",
                 "RoadSplineBuffer",
+                "SplineRibbonBuffer",
                 "WorldHudBatchBuffer",
                 "new GroundOverlayItem",
                 "new RoadSplineItem",
+                "new SplineRibbonItem",
                 "new WorldHudItem",
                 ".TryAddLine(",
                 ".TryAdd(new GroundOverlayItem",
@@ -657,7 +709,90 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 showcase presentation systems must publish semantic world facts and let PerformerRuleSystem/performer emit own render buffers:\n" +
+                    "Epic #322 showcase presentation systems must publish semantic world facts and let PresenterRuleSystem/presenter emit own render buffers:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void PresentationSplineRibbon_HasNoRoadSplineArchitectureTypes()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Adapters"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "src", "Apps"),
+                Path.Combine(repoRoot, "src", "Tools"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] forbidden =
+            {
+                "RoadSplineBuffer",
+                "RoadSplineRequest",
+                "RoadSplineCapture",
+                "new RoadSplineItem",
+                "PresentationRequestKind.RoadSpline",
+                "RemoveRoadSpline",
+                "FromRoadSpline",
+                "RaylibFramePass.RoadSpline",
+                "HasRoadSplines",
+                "DrawRoadSpline",
+                "roadSplineCapacity"
+            };
+
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, directories, forbidden);
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Visible spline ribbons use SplineRibbon types. RoadSpline architecture names must not reappear:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void AnimationProfile_DoesNotKeepBuiltinClipEnumOrProfileBindings()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] forbiddenTypes =
+            {
+                "AnimatorBuiltinClipId",
+                "AnimatorBuiltinClipState",
+                "AnimationBuiltinClipBinding",
+                "TryResolveBuiltinClipId",
+            };
+
+            var hits = new List<string>();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Client"),
+                Path.Combine(repoRoot, "mods"),
+            };
+            for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+            {
+                foreach (string file in Directory.GetFiles(roots[rootIndex], "*.cs", SearchOption.AllDirectories))
+                {
+                    if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                        file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbiddenTypes, hits);
+                }
+            }
+
+            foreach (string file in Directory.GetFiles(Path.Combine(repoRoot, "mods"), "animation_profiles.json", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, ["\"builtinClips\"", "\"builtin_clips\""], hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Animation profiles keep packed-state clip bindings only. Overlay uses named channels, not builtin clip enums:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -777,7 +912,7 @@ namespace Ludots.Tests.Architecture.Governance
 
                 string gameJsonPath = Path.Combine(modDir, "assets", "game.json");
                 string templatesPath = Path.Combine(modDir, "assets", "Entities", "templates.json");
-                string configPath = Path.Combine(modDir, "assets", "Configs", "config_catalog.json");
+                string configPath = Path.Combine(modDir, "assets", "config_catalog.json");
                 string projectFile = Path.Combine(modDir, $"{spec.ModName}.csproj");
                 Assert.That(File.Exists(projectFile), Is.True, $"Missing {projectFile}");
                 Assert.That(File.Exists(gameJsonPath), Is.True, $"Missing {gameJsonPath}");
@@ -948,6 +1083,227 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Assert.Fail(
                     "Exchange runtime hot path should stay allocation-conscious and avoid LINQ/iterator patterns:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void SimulationPhaseSelectionAndInputSystems_MustNotReadVisualTransformOrCullState()
+        {
+            var hits = new List<string>();
+            Type[] types =
+            {
+                typeof(CommandSourceAcquisitionSystem),
+                typeof(CommandSourcePointerHitResolver),
+                typeof(CommandSourceEligibility),
+                typeof(SpatialBoundsUtility),
+                typeof(TabTargetCycleSystem),
+                typeof(LocalOrderSourceHelper),
+                typeof(AxisMoveOrderSystem),
+                typeof(GasInputResponseSystem),
+                typeof(AuthoritativeInputSnapshotSystem),
+                typeof(AuthoritativePointerButtonSnapshotSystem),
+                typeof(InputRuntimeSystem),
+            };
+
+            for (int i = 0; i < types.Length; i++)
+            {
+                AppendPresentationVisualReads(types[i], hits);
+            }
+
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourcePointerHitResolver.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
+            };
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                AppendForbiddenSourceTokens(repoRoot, files[fileIndex], new[] { "VisualTransform", "CullState" }, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Simulation-phase selection/input must use WorldPositionCm and Knowledge, not VisualTransform or CullState:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void SimulationPhaseGasSystems_MustNotReadVisualTransformOrCullState()
+        {
+            var hits = new List<string>();
+            foreach (Type type in typeof(AbilityExecSystem).Assembly.GetTypes())
+            {
+                if (type.Namespace == null ||
+                    !type.Namespace.StartsWith("Ludots.Core.Gameplay.GAS", StringComparison.Ordinal) ||
+                    !typeof(ISystem<float>).IsAssignableFrom(type) ||
+                    type.IsAbstract)
+                {
+                    continue;
+                }
+
+                AppendPresentationVisualReads(type, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "GAS simulation-phase systems must not read VisualTransform or CullState:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void CullStateIsVisible_RuntimeWriteOwnerIsCameraCullingSystem()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+            };
+            var hits = new List<string>();
+            for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
+            {
+                foreach (string file in Directory.EnumerateFiles(roots[rootIndex], "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Equals("src/Core/Systems/CameraCullingSystem.cs", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string[] lines = File.ReadAllLines(file);
+                    for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                    {
+                        string trimmed = lines[lineIndex].Trim();
+                        if (trimmed.StartsWith("//", StringComparison.Ordinal) ||
+                            trimmed.StartsWith("*", StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        if (trimmed.Contains("cull.IsVisible =", StringComparison.Ordinal) ||
+                            trimmed.Contains("cullState.IsVisible =", StringComparison.Ordinal))
+                        {
+                            hits.Add($"{relative}:{lineIndex + 1}: {trimmed}");
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "CullState.IsVisible runtime writes belong to CameraCullingSystem. Spawn may only construct a default hidden value:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void CrossLayerPresentationComponents_HaveDocumentedSingleWriteOwners()
+        {
+            var repoRoot = FindRepoRoot();
+            string layering = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "gitbook",
+                "architecture",
+                "entity-simulation-layering.md"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(layering, Does.Contain("### 5.1 跨层组件所有权"));
+                Assert.That(layering, Does.Contain("PresentationStableId"));
+                Assert.That(layering, Does.Contain("PresentationDestroyPending"));
+                Assert.That(layering, Does.Contain("CullState"));
+                Assert.That(layering, Does.Contain("write owner"));
+                Assert.That(layering, Does.Contain("CameraCullingSystem"));
+                Assert.That(layering, Does.Contain("WorldPositionCm"));
+                Assert.That(layering, Does.Contain("KnowledgeProjectionStore"));
+            });
+        }
+
+        [Test]
+        public void AttributeBufferWrites_MustComeFromWhitelistedCallers()
+        {
+            Type[] allowed =
+            {
+                typeof(AttributeBuffer),
+                typeof(AttributeMutationOps),
+                typeof(AttributeAggregatorSystem),
+                typeof(EffectModifierOps),
+                typeof(GasGraphRuntimeApi),
+                typeof(Ludots.Core.Config.ComponentRegistry),
+                typeof(TemplateEntityBatchSpawner),
+                typeof(QuestDefinitionRegistry),
+                typeof(ForceInput2DSink),
+                typeof(CameraBehaviorInputSink),
+                typeof(GasBenchmark),
+            };
+
+            var writeNames = new HashSet<string>(StringComparer.Ordinal)
+            {
+                nameof(AttributeBuffer.SetBase),
+                nameof(AttributeBuffer.SetCurrent),
+                nameof(AttributeBuffer.SetAggregatedCurrent),
+            };
+
+            var hits = new List<string>();
+            Assembly[] assemblies = CollectAttributeBufferWriteScanAssemblies();
+            Assert.That(
+                assemblies.Any(static assembly => !string.Equals(assembly.GetName().Name, "Ludots.Core", StringComparison.Ordinal)),
+                Is.True,
+                "AttributeBuffer write guard must scan showcase assemblies, not only Core.");
+
+            foreach (Assembly assembly in assemblies)
+            {
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    types = ex.Types.Where(static type => type != null).ToArray()!;
+                }
+
+                foreach (Type type in types)
+                {
+                    if (IsAllowedAttributeBufferWriter(type, allowed))
+                    {
+                        continue;
+                    }
+
+                    const BindingFlags flags =
+                        BindingFlags.Instance |
+                        BindingFlags.Static |
+                        BindingFlags.Public |
+                        BindingFlags.NonPublic |
+                        BindingFlags.DeclaredOnly;
+                    foreach (MethodInfo method in type.GetMethods(flags))
+                    {
+                        foreach (MethodBase called in EnumerateCalledMethods(method))
+                        {
+                            if (called.DeclaringType == typeof(AttributeBuffer) &&
+                                writeNames.Contains(called.Name))
+                            {
+                                hits.Add($"{type.FullName}.{method.Name} -> {called.DeclaringType.FullName}.{called.Name}");
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "AttributeBuffer write methods are not a gameplay API; callers must be on the settlement/init whitelist:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -1206,7 +1562,7 @@ namespace Ludots.Tests.Architecture.Governance
             string containerPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "ItemComponents.cs");
             string inventoryPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "InventoryRuntimeService.cs");
             string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
-            string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Configs", "Relationships", "catalog.json");
+            string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Relationships", "catalog.json");
             string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "ownership_cascade", "OwnershipCascadeShowcaseMod", "mod.json");
 
             Assert.That(File.Exists(containerPath), Is.True, $"Missing {containerPath}");
@@ -1294,7 +1650,7 @@ namespace Ludots.Tests.Architecture.Governance
                 Assert.That(runtime, Does.Contain("AttributeBuffer"));
                 Assert.That(runtime, Does.Contain("_attributeCosts"));
                 Assert.That(runtime, Does.Contain("AttributeCostRecord"));
-                Assert.That(runtime, Does.Contain("attributes.SetCurrent"));
+                Assert.That(runtime, Does.Contain("AttributeMutationOps.SetCurrent"));
                 Assert.That(loader, Does.Contain("AttributeRegistry.Register"));
                 Assert.That(loader, Does.Contain("inputs[{index}].attribute"));
             });
@@ -2058,6 +2414,183 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 return null;
             }
+        }
+
+        private static void AppendPresentationVisualReads(Type type, List<string> hits)
+        {
+            foreach (Type current in EnumerateTypeAndNested(type))
+            {
+                foreach (FieldInfo field in current.GetFields(
+                             BindingFlags.Instance |
+                             BindingFlags.Static |
+                             BindingFlags.Public |
+                             BindingFlags.NonPublic |
+                             BindingFlags.DeclaredOnly))
+                {
+                    if (ContainsPresentationVisual(field.FieldType))
+                    {
+                        hits.Add($"{current.FullName}.{field.Name} field {field.FieldType}");
+                    }
+                }
+
+                foreach (MethodInfo method in current.GetMethods(
+                             BindingFlags.Instance |
+                             BindingFlags.Static |
+                             BindingFlags.Public |
+                             BindingFlags.NonPublic |
+                             BindingFlags.DeclaredOnly))
+                {
+                    ParameterInfo[] parameters = method.GetParameters();
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        if (ContainsPresentationVisual(parameters[i].ParameterType))
+                        {
+                            hits.Add($"{current.FullName}.{method.Name} param {parameters[i].ParameterType}");
+                        }
+                    }
+
+                    if (method.IsAbstract)
+                    {
+                        continue;
+                    }
+
+                    foreach (MethodBase called in EnumerateCalledMethods(method))
+                    {
+                        if (called.IsGenericMethod)
+                        {
+                            Type[] genericArguments = called.GetGenericArguments();
+                            for (int i = 0; i < genericArguments.Length; i++)
+                            {
+                                if (genericArguments[i] == typeof(VisualTransform) ||
+                                    genericArguments[i] == typeof(CullState))
+                                {
+                                    hits.Add($"{current.FullName}.{method.Name} -> {called.DeclaringType?.FullName}.{called.Name}<{genericArguments[i].Name}>");
+                                }
+                            }
+                        }
+
+                        ParameterInfo[] calledParameters = called.GetParameters();
+                        for (int i = 0; i < calledParameters.Length; i++)
+                        {
+                            if (ContainsPresentationVisual(calledParameters[i].ParameterType))
+                            {
+                                hits.Add($"{current.FullName}.{method.Name} -> {called.DeclaringType?.FullName}.{called.Name}({calledParameters[i].ParameterType})");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<Type> EnumerateTypeAndNested(Type type)
+        {
+            yield return type;
+            Type[] nested = type.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
+            for (int i = 0; i < nested.Length; i++)
+            {
+                foreach (Type child in EnumerateTypeAndNested(nested[i]))
+                {
+                    yield return child;
+                }
+            }
+        }
+
+        private static bool ContainsPresentationVisual(Type type)
+        {
+            if (type == typeof(VisualTransform) || type == typeof(CullState))
+            {
+                return true;
+            }
+
+            if (type.IsByRef && type.HasElementType)
+            {
+                return ContainsPresentationVisual(type.GetElementType()!);
+            }
+
+            if (type.IsArray && type.HasElementType)
+            {
+                return ContainsPresentationVisual(type.GetElementType()!);
+            }
+
+            if (type.IsGenericType)
+            {
+                Type[] arguments = type.GetGenericArguments();
+                for (int i = 0; i < arguments.Length; i++)
+                {
+                    if (ContainsPresentationVisual(arguments[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        internal static Assembly[] CollectAttributeBufferWriteScanAssemblies()
+        {
+            string[] requiredNames =
+            {
+                "Ludots.Core",
+                "UiPlayerAggregateGraphMvpShowcaseMod",
+                "ItemSystemShowcaseMod",
+                "GenreInfoShowcaseMod",
+                "GoldMarketShowcaseMod",
+                "FourXAssociationShowcaseMod",
+                "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+                "CapabilityStandardGraphBehaviorCommon",
+                "CapabilityStandardGraphOpsNodeGalleryMod",
+                "PerformanceVisualizationMod",
+                "GasBenchmarkMod",
+            };
+
+            var assemblies = new List<Assembly>(requiredNames.Length);
+            for (int i = 0; i < requiredNames.Length; i++)
+            {
+                assemblies.Add(LoadRequiredAttributeWriteAssembly(requiredNames[i]));
+            }
+
+            return assemblies.ToArray();
+        }
+
+        private static Assembly LoadRequiredAttributeWriteAssembly(string assemblyName)
+        {
+            Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < loaded.Length; i++)
+            {
+                if (string.Equals(loaded[i].GetName().Name, assemblyName, StringComparison.Ordinal))
+                {
+                    return loaded[i];
+                }
+            }
+
+            string path = Path.Combine(AppContext.BaseDirectory, assemblyName + ".dll");
+            if (!File.Exists(path))
+            {
+                Assert.Fail(
+                    $"AttributeBuffer write guard must load showcase assembly '{assemblyName}' from '{path}'.");
+            }
+
+            return Assembly.LoadFrom(path);
+        }
+
+        private static bool IsAllowedAttributeBufferWriter(Type type, IReadOnlyList<Type> allowed)
+        {
+            Type? current = type;
+            while (current != null)
+            {
+                for (int i = 0; i < allowed.Count; i++)
+                {
+                    if (current == allowed[i])
+                    {
+                        return true;
+                    }
+                }
+
+                current = current.DeclaringType;
+            }
+
+            return false;
         }
 
         private static bool IsForbiddenAbilityExecStructuralCall(MethodBase method)

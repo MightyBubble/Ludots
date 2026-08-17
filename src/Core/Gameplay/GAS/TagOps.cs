@@ -1,6 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
-using System.Numerics;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -22,6 +24,7 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly TagRuleTransaction _transaction;
         private readonly GasBudget _budget;
         private readonly DirtyEntityQueue _dirtyEntities;
+        private readonly Dictionary<int, TagRuleSet> _authoredRuleSets = new();
 
         public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null)
         {
@@ -101,12 +104,35 @@ namespace Ludots.Core.Gameplay.GAS
         public void ClearRuleRegistry()
         {
             _rules.Clear();
+            _authoredRuleSets.Clear();
         }
 
         public void RegisterTagRuleSet(int tagId, TagRuleSet ruleSet)
         {
             _rules.Register(tagId, ruleSet);
+            _authoredRuleSets[tagId] = ruleSet;
         }
+
+        /// <summary>
+        /// NextCast-safe replace for an already-registered tag rule identity.
+        /// New tag ids (no live rule) require EngineRestart — not hot-applied.
+        /// </summary>
+        public void ReplaceTagRuleSet(int tagId, TagRuleSet ruleSet)
+        {
+            if (!_rules.HasRule(tagId))
+            {
+                throw new InvalidOperationException(
+                    $"Tag rule id {tagId} is not registered; cannot ReplaceTagRuleSet (new tag identities require EngineRestart).");
+            }
+
+            _rules.Register(tagId, ruleSet);
+            _authoredRuleSets[tagId] = ruleSet;
+        }
+
+        public bool TryGetAuthoredRuleSet(int tagId, out TagRuleSet ruleSet)
+            => _authoredRuleSets.TryGetValue(tagId, out ruleSet);
+
+        public bool HasTagRule(int tagId) => _rules.HasRule(tagId);
 
         public bool HasTag(ref GameplayTagContainer tagContainer, int tagId, TagSense sense)
         {

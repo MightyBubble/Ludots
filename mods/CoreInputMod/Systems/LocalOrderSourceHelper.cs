@@ -21,6 +21,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -457,7 +458,9 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
                 graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
-                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
+                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
+                !_globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) ||
+                graphHandlersObj is not GasGraphOpHandlerTable graphHandlers)
             {
                 return false;
             }
@@ -470,7 +473,7 @@ namespace CoreInputMod.Systems
             }
 
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget, graphHandlers);
             return true;
         }
 

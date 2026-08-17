@@ -1,13 +1,17 @@
 using System;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.Level;
+using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardLevelBlueprintTrialMod.Runtime;
 
 public sealed class LevelBlueprintTrialRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
+    private GraphProgramRegistry? _programs;
+    private GraphActionCatalog? _actions;
     private LevelDirector? _director;
     private GraphProgramLevelHost? _scriptHost;
     private float _accum;
@@ -34,18 +38,28 @@ public sealed class LevelBlueprintTrialRuntime
     public int LastScriptGraphId => _scriptHost?.LastRanGraphId ?? 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_level_blueprint_trial" };
 
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    {
+        _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+    }
+
     public void EnsureWorld()
     {
         if (_director != null) return;
-        _director = LevelBlueprintFactory.CreateTwoPhaseTrial("showcase.level.trial");
-        _scriptHost = new GraphProgramLevelHost(LevelScriptPrograms.CreateTwoPhaseTrialPrograms());
+        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
+
+        _director = LevelBlueprintFactory.CreateTwoPhaseTrial(
+            "showcase.level.trial",
+            GraphRegistryScriptResolver.RequireActionId(_actions, "level.phaseAdvance", GraphActionHost.Level));
+        _scriptHost = new GraphProgramLevelHost(_programs);
         _markerX = 0f;
         _markerY = -10f;
         _mx = new float[6];
         _my = new float[6];
         _mAlive = new bool[6];
         Metrics.AgentCount = _config.CrowdBandCount;
-        Metrics.Detail = "Level Script: walk in → spawn → clear → open gate";
+        Metrics.Detail = "Level Script from ActionLib";
     }
 
     public void Tick(float dt)
@@ -79,10 +93,7 @@ public sealed class LevelBlueprintTrialRuntime
             Metrics.Detail =
                 $"Level Script vignette phase={_director.Phase} script={LastScriptGraphId} fired={stats.Fired} last={Metrics.LastThinkMs:F3}ms";
 
-            if (_director.Phase >= 1 && !_spawned)
-            {
-                SpawnWave();
-            }
+            if (_director.Phase >= 1 && !_spawned) SpawnWave();
         }
 
         SimulateCombat();
@@ -92,14 +103,10 @@ public sealed class LevelBlueprintTrialRuntime
     {
         if (_director!.Phase < 2)
         {
-            // Walk into the trigger circle and wait out the fight
             if (_markerY < -8f) _markerY += 2.4f * dt;
             else _markerY = -7.8f;
         }
-        else if (_markerY < 7f)
-        {
-            _markerY += 3f * dt;
-        }
+        else if (_markerY < 7f) _markerY += 3f * dt;
     }
 
     private void SpawnWave()

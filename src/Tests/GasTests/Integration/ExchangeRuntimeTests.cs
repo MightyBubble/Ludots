@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Modding;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -30,7 +31,16 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
+            AttributeRegistry.Clear();
+            ModRegistryAmbient.Reset();
             EffectParamKeys.Initialize();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            AttributeRegistry.Clear();
+            ModRegistryAmbient.Reset();
         }
 
         [Test]
@@ -474,7 +484,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.Gold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 8f);
@@ -505,7 +515,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.SpendableGold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 30f);
@@ -535,7 +545,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0);
             int goldId = AttributeRegistry.Register("Exchange.Tests.RollbackGold");
@@ -569,7 +579,7 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 100, stashHeight: 1);
-            Entity actor = world.Create(new AttributeBuffer());
+            Entity actor = world.Create(new AttributeBuffer(), new DirtyFlags());
             fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             int goldId = AttributeRegistry.Register("Exchange.Tests.HotPathGold");
             world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 10_000f);
@@ -629,16 +639,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeRelGate", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    Path.Combine(root, "Core", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Exchange", "operations.json"),
                     """
                     [
                       {
@@ -722,16 +732,16 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeAttributeCost", Guid.NewGuid().ToString("N"));
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Exchange"));
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    Path.Combine(root, "Core", "config_catalog.json"),
                     """
                     [
                       { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    Path.Combine(root, "Core", "Exchange", "operations.json"),
                     """
                     [
                       {
@@ -870,7 +880,8 @@ namespace Ludots.Tests.GAS
             var operations = new ExchangeOperationRegistry();
             var scoped = new ExchangeScopedOperationStore();
             var effects = new EffectRequestQueue();
-            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects, relationships);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects, relationships, tagOps);
             return new ExchangeFixture(inventory, operations, scoped, runtime, relationships, stashLayout, targetLayout, diplomacyTypeId, trustMetricId, embargoFlagId);
         }
 

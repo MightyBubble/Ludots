@@ -75,7 +75,7 @@ namespace InteractionShowcaseMod.UI
         private UiElementBuilder BuildRoot(ReactiveContext<InteractionShowcasePanelState> context)
         {
             var state = context.State;
-            return Ui.Column(BuildMainPanel(state))
+            return Ui.Column(BuildMainPanel(state), BuildEntityInfoLayer(context))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Absolute(0f, 0f)

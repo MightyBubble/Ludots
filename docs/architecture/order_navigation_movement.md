@@ -11,7 +11,7 @@ This page records the current movement split after the navigation-domain unifica
 | Route planning | `PathServiceRouter`, road/nodegraph/navmesh services | Produce route points or movement plans |
 | Move planning | `Ludots.Core.MovePlanning` | Store waypoints, track current index, emit execution intents |
 | Execution | MassNavigationFlow / `MassNavigationSimulationRuntime` | Per-agent targets, arrival events, runtime obstacles, avoidance |
-| Presentation | performer/overlay systems | Show paths and movement feedback without owning movement truth |
+| Presentation | presenter/overlay systems | Show paths and movement feedback without owning movement truth |
 
 ## Data Flow
 

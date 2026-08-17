@@ -1,0 +1,26 @@
+[
+  {
+    "id": "Decision.GraphScore.Strike",
+    "TargetFilter": "TF.GraphScore.Hostile",
+    "Priority": 10,
+    "BaseScore": 0,
+    "Weight": 1,
+    "CooldownSteps": 45,
+    "AbilityKey": "Ability.GraphScore.Strike",
+    "AbilitySlotIndex": 0,
+    "SharedCooldownTag": "Cooldown.GraphScore.GCD",
+    "Autocast": true,
+    "OrdinaryAttack": true,
+    "RequiresTarget": true,
+    "Considerations": [
+      {
+        "Input": "Input.GraphScore.MissingHealth",
+        "Normalization": "Norm.GraphScore.Identity",
+        "Curve": "Curve.GraphScore.Linear",
+        "Aggregate": "WeightedSum",
+        "Weight": 1
+      }
+    ],
+    "Tasks": ["Task.GraphScore.Strike"]
+  }
+]

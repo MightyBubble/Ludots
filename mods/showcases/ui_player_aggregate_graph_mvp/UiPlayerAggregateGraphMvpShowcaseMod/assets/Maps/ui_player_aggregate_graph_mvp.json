@@ -23,13 +23,7 @@
       "InstanceId": "ui-player-aggregate-ore-depot",
       "Overrides": {
         "Name": { "Value": "Ore Depot Alpha" },
-        "WorldPositionCm": { "Value": { "X": 1320, "Y": 760 } },
-        "AttributeBuffer": {
-          "base": {
-            "Showcase.Resource.Ore": 120,
-            "Showcase.Resource.Crystal": 30
-          }
-        }
+        "WorldPositionCm": { "Value": { "X": 1320, "Y": 760 } }
       }
     },
     {
@@ -37,14 +31,11 @@
       "InstanceId": "ui-player-aggregate-crystal-hub",
       "Overrides": {
         "Name": { "Value": "Crystal Hub Beta" },
-        "WorldPositionCm": { "Value": { "X": 1680, "Y": 1040 } },
-        "AttributeBuffer": {
-          "base": {
-            "Showcase.Resource.Ore": 60,
-            "Showcase.Resource.Crystal": 90
-          }
-        }
+        "WorldPositionCm": { "Value": { "X": 1680, "Y": 1040 } }
       }
     }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "ui-player-aggregate-faction-owner" }
   ]
 }

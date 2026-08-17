@@ -1,0 +1,34 @@
+{
+  "op": "HasTag",
+  "driver": "sandbox",
+  "title": "身上有没有敌人标记",
+  "beat": "侦察兵带着敌人标记，检查为「有」。",
+  "detailTemplate": "侦察兵带着敌人标记，检查为「{result}」。",
+  "assertDetailContains": [
+    "标记"
+  ],
+  "featuredNodeId": "hasEnemy",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "target",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

@@ -9,7 +9,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -53,14 +53,14 @@ namespace Ludots.Adapter.Web
                 engine.SpatialQueries,
                 viewController,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
-            if (engine.GetService(CoreServiceKeys.PerformerEntityRuntime) is PerformerEntityRuntime performerInstances)
+            if (engine.GetService(CoreServiceKeys.PresenterEntityRuntime) is PresenterEntityRuntime presenterInstances)
             {
                 cullingSystem = new CameraCullingSystem(
                     engine.World,
                     ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                     engine.SpatialQueries,
                     viewController,
-                    performers: performerInstances,
+                    presenters: presenterInstances,
                     cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             }
             cullingSystem.DisarmPresentBindingCulling();

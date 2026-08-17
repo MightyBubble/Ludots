@@ -532,7 +532,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 validationProgram,
                 _graphApi,
-                kind);
+                kind,
+                programs: _graphProgramRegistry);
             return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
         }
 

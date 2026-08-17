@@ -187,6 +187,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -3.3f },
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
@@ -231,15 +232,15 @@ namespace Ludots.Tests.GAS
 
         private static void SetupEffectsJson(string root)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                 """
                 [
                   { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
                   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                 """
                 [
                   {
@@ -255,7 +256,7 @@ namespace Ludots.Tests.GAS
                   }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "preset_types.json"),
+            File.WriteAllText(Path.Combine(root, "GAS", "preset_types.json"),
                 """
                 [
                   {
@@ -277,9 +278,9 @@ namespace Ludots.Tests.GAS
             EffectTemplateRegistry templates)
         {
             var presetTypes = new PresetTypeRegistry();
-            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
+            new PresetTypeLoader(pipeline, presetTypes, builtinHandlers).Load(catalog);
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,

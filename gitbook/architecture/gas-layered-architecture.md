@@ -83,6 +83,22 @@ Core 提供属性修改、事件发布与 Effect 派发等原子操作。Mod Gra
 
 `Graph.Lifecycle.DeployConsumeSource` 组合多个生命周期原子操作。PresetType 只作为可选简写引用该 Graph，不承载部署规则本身。
 
+### Mod 扩展的 preset 与 graph（Mod-authored preset and graph extension）
+
+Mod-authored GAS variants must stay in the existing effect / graph pipeline:
+
+- C# behavior is registered as a phase handler key through `IModContext.Extensions.Gas.RegisterBuiltinHandler`.
+- Graph VM behavior is registered as an op key through `IModContext.Extensions.Gas.RegisterGraphOp`.
+- `preset_types.json` is the authoring IR for preset type composition. A preset type may point a phase at a
+  registered builtin handler key or a compiled graph id.
+- Core enum `EffectPresetType` is only for Core-owned concepts. A user variant should add a preset key,
+  graph wiring, or effect steps, not a new Core enum value.
+
+The runtime compiles graphs with the frozen `GasGraphOpRegistry`. Built-in execution paths use the frozen
+`GasGraphOpHandlerTable.Instance`; engine wiring builds an extension-aware `GasGraphOpHandlerTable` from the
+registry so mod-registered ops execute without touching the singleton. There is no enum-name fallback for
+resolving mod-authored builtin handlers.
+
 ## 5. 边界
 
 - 禁止用 Core enum 表达英雄、技能、地图或模式变体。
@@ -136,8 +152,11 @@ Feature: 用数据组合新的技能效果
     And 玩家不会进入使用了该无效规则的对局
 ```
 
+属性 current 的权威、有效上限、非法 id 失败关闭与注册表 Freeze 见 [属性写入权威](attribute-write-authority.md)。属性表必须在一个注册点统一 `Register` 并在装载结束时 `Freeze`。
+
 相关入口：
 
+- [属性写入权威](attribute-write-authority.md)
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
 - [实体生命周期原子操作](entity-lifecycle-atomic-ops.md)
 - [Graph Query Services](../reference/graph-query-services.md)

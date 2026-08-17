@@ -48,7 +48,7 @@ Q 冲击波击退单位、用 E 释放带初速度的巨石。
   窄相照常产出接触供事件边沿检测，求解器、位置修正、冲量与岛屿构建全部跳过。
   所以板永远不动、不吃修正、不需要锚定或插槽墙。板携带 `ContactEventEmitter2D`，
   EntityLayer `arena.plate` 在
-  `assets/Configs/Physics2D/kinematic.json` 的 `contactEventEmitterLayers` 允许清单里。
+  `assets/Physics2D/kinematic.json` 的 `contactEventEmitterLayers` 允许清单里。
   桥的 `ContactEventRouter2D` 把 Begin/End 事件路由给
   `CrowdPhysicsArenaPressurePlateDoorSystem`（按 agent 去重：N 单位过板恰好 N 次 Begin），
   agent ContactBegin 达到门模板的 `CrowdPhysicsArena.Door.OpenThresholdContacts`

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "showcase.graph_op.rank_display",
+    "keyKind": "Int",
+    "columns": [
+      { "id": "rankStars", "kind": "Int" },
+      { "id": "drainPower", "kind": "Float" }
+    ],
+    "rows": [
+      { "key": 2, "rankStars": 3, "drainPower": -2.0 }
+    ]
+  }
+]

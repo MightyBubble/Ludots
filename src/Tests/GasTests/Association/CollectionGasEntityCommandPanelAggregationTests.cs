@@ -16,6 +16,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Registry;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -54,11 +55,7 @@ namespace Ludots.Tests.GAS
         [SetUp]
         public void SetUp()
         {
-            // Family tags must exist before engine init so the by_family profile's catalog mask
-            // (compiled at profile install) includes them; stim registers first => lower tag id.
             TagRegistry.Clear();
-            TagRegistry.Register(StimFamilyTag);
-            TagRegistry.Register(ChargeFamilyTag);
         }
 
         [TearDown]
@@ -389,12 +386,13 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             // EntityCommandPanelMod loads through the real ModLoader so its
-            // assets/Configs/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
+            // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
             // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
                 Path.Combine(repoRoot, "assets"));
             InstallUiServices(engine);
+            InstallTestAggregationProfiles(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             return engine;
@@ -407,6 +405,35 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        private static void InstallTestAggregationProfiles(GameEngine engine)
+        {
+            TagRegistry.Register(StimFamilyTag);
+            TagRegistry.Register(ChargeFamilyTag);
+
+            var profileIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var registry = new AbilityAggregationProfileRegistry(profileIds);
+            registry.Install(new AbilityAggregationProfilesConfig
+            {
+                Profiles =
+                {
+                    new AbilityAggregationProfileDefinition
+                    {
+                        Id = ByFamilyProfileId,
+                        GroupBy = "catalog.castFamily",
+                        Overflow = "nextPanelSlot",
+                    },
+                    new AbilityAggregationProfileDefinition
+                    {
+                        Id = ByTemplateProfileId,
+                        GroupBy = "template.id",
+                        Overflow = "nextPanelSlot",
+                    },
+                }
+            });
+
+            engine.SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, registry);
         }
 
         private static void RegisterAbility(GameEngine engine, int abilityId, string label, string detail, string? catalogTag)

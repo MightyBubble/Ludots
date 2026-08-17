@@ -14,13 +14,16 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 ```text
 L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
-        │ BT ScriptSlice(GraphId) / HFSM GraphProgramHfsmHost / Level RunScript
+        │ ActionLib：GAS/action_lib.json → GraphActionCatalog（叶子/切片宿主解析）
+        │ 只引用 ActionLib / GraphProgramRegistry GraphId（禁止旁路 Dictionary/内嵌 Compile）
 L1 全 Kind 作者 SSOT ← GraphControlFlowDocument（controlEdges + valueEdges）
         │ Kind → GraphProgramAuthoringFrontDoor → GraphControlFlowCompiler
+        │ Func Lib：GAS/func_lib.json → GraphFunctionCatalog（InvokeScript.functionName，pure）
 L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ```
 
-说明（#861）：`GAS/graphs.json` **唯一加载前门**是 `GraphProgramAuthoringFrontDoor`——按 `kind` 校验作者 schema，再进 `GraphControlFlowCompiler`。正式资产必须写 `controlEdges` / `valueEdges`；`nodes[].next` 在加载路径硬拒（不得再按「有没有 controlEdges」猜编译器）。节点白名单按 Kind 过滤（Script / Query / Effect·Score·Validation·Derived 线性方言）。Query 列表流仍用 `list` 显式连接。旧 `GraphCompiler`（next-chain）仅保留给对照/研究测试，不是生产真相。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
+
+说明（#861）：`GAS/graphs.json` **唯一加载前门**是 `GraphProgramAuthoringFrontDoor`——按 `kind` 校验作者 schema，再进 `GraphControlFlowCompiler`。正式资产必须写 `controlEdges` / `valueEdges`；`nodes[].next` 在加载路径硬拒（不得再按「有没有 controlEdges」猜编译器）。节点白名单按 Kind 过滤（Script / Query / Effect·Score·Validation·Derived 线性方言）。Query 列表流仍用 `list` 显式连接。旧 `GraphCompiler`（next-chain）已删除；测试与生产均走 FrontDoor/ControlFlow。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
 
 ## 3. 详情
 
@@ -38,15 +41,15 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | Score | 效用打分 | 禁止 |
 | Validation / Query / Derived | 既有专项 | 禁止 |
 
-跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
+跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。`InvokeScript` 图在 `GraphProgramRegistry.Register` / `ReplaceProgram` 时必须是有向无环的；自调用或 A→B→A 以 `GAS.GRAPH.ERR.InvokeCycle` 失败关闭。运行期另有 `GraphVmLimits.MaxInvokeDepth`，且整棵调用树共享 `MaxInstructionsPerExecution`；超限抛错，禁止静默截断，也禁止把栈溢出当成可捕获错误。
 
-### Script 作者糖（编译期降级）
+### 作者糖（编译期降级）
 
-作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。仅 **Script** ControlFlow 文档可用；Query / Effect / Score / Validation / Derived 使用必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
+作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。`BranchBool` 可用于 **Script / Effect**（`IsBranchBoolAuthorable`）；`SwitchInt` / `Wait` / `While` / `Until` 仅 **Script**。Query / Score / Validation / Derived 使用上述糖名必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
 
 | 节点 | 端口 | 降级为 L0 | Kind |
 |------|------|-----------|------|
-| `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script only |
+| `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script, Effect |
 | `SwitchInt` | `selector`（int 值边）；`case:{N}` / `default`（控制边） | 每臂 `ConstInt` + `CompareEqInt` + `JumpIfFalse` + `Jump`，再 `Jump(default)` | Script only |
 | `Wait` | `next`（控制边） | 作者别名 → `Yield` | Script only |
 | `While` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→next` + `Jump→body`（回边由作者边闭合） | Script only |
@@ -54,19 +57,31 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 步数硬顶：`GraphVmLimits.MaxInstructionsPerExecution`（失控循环失败关闭，禁止静默截断当成功）。
 
-与 [#861](https://github.com/MightyBubble/Ludots/issues/861) / PR #863（`GraphAuthoringKindPolicy` Kind 矩阵）的合并约定：糖必须保持 **Script-only**；扩展线性 Kind 前门时不得把上述糖名放进 Effect/Score 白名单；两线改 `GraphControlFlowCompiler.ParseOps` 时以本表 + `GraphAuthoringSugar` 为名册 SSOT。
+与 [#861](https://github.com/MightyBubble/Ludots/issues/861) / PR #863（`GraphAuthoringKindPolicy` Kind 矩阵）的合并约定：`SwitchInt` / `Wait` / `While` / `Until` 保持 **Script-only**；`BranchBool` 另允许 Effect。扩展 Score / Validation / Derived 前门时不得把糖名放进白名单；两线改 `GraphControlFlowCompiler.ParseOps` 时以本表 + `GraphAuthoringSugar` 为名册 SSOT。
 
 ### Query ControlFlow
 
 - 列表流（`Query*` / `Relationship*` 过滤与聚合）必须用 `valueEdges` 的 `list` 显式连接；控制边 `next` 不隐含 TargetList。
 - 实体输入用 `source`；区间过滤用 `min` / `max`；`QueryFilterTeam` 的队伍来源必须二选一：节点字段 `teamId`，或 `teamId` int value pin。
 - 标量 / 实体结果绑 Summary；当前 TargetList 结果绑 EntityCollection（`collectionKey` 必填）。
+- 空间查询容量：节点字段 `queryCapacityPolicy` 为 `RequireComplete` 或 `AllowTruncated`；后者必须同时声明 `droppedOutput`（未声明则失败关闭）。
+
+### FrontDoor 作者面（已恢复）
+
+- Kind 白名单：`GraphOpDescriptorTable`（kinds × ports × operand roles）是唯一数据源；前门矩阵、`GetLinearOutputType` / `GetQueryOutputType`、端口白名单、覆盖表 `authorableKinds` 由它投影。Score / Validation 只投影 Pure 节点；Derived 额外投影 `WriteSelfAttribute`；Yield 只给 Script。覆盖登记：`assets/GAS/graph_node_op_coverage.registry.json`。
+- Tag / 显示作者糖（`GraphNodeOpParser`）：`ReadGameplayTag` → `SelectTagInMask`，`LookupTagDisplayText` → `LookupTagDisplayToken`（亦可直接写 L0 名）。字段：`displayTable`（必填）、`tagSelectPolicy`（`RequireOne` \| `AllowNone` \| `LowestId`，默认 `RequireOne`，仅 Select）。值边：`HasTag` / `SelectTagInMask` 用 `source`；`CompareEqEntity` 用 `a` / `b`；`LookupTagDisplayToken` 用 `a`（tagId）。登记与 Runtime：`TagDisplayTableRegistry`、`IGraphRuntimeApi.SelectEffectiveTagInMask` / `LookupTagDisplayToken`。详见 [Tag 显示查表](tag-display-lookup.md)。
+- Effect 线性复用：`InvokeScript.functionName` 只解析 FuncLib（禁 `graphId`、禁 ActionLib 名）。证据：`GraphEffectAuthoringExpressivenessTests`。
 
 ### L2 HFSM 绑定合同
 - **转移上配条件**：`ConditionGraphId`（Script/Validation）+ 可选快速 builtin（如 Stimulus）
 - **状态节点上配动作**：`OnEnterGraphId` / `OnTickGraphId` / `OnExitGraphId`（Script）
-- **Func lib**：`GraphFunctionCatalog` 名字 → 已登记 L1 图 id（Script/Validation/Score）
-- **Macro**：不支持编译期文本宏；复用走 Func lib + `InvokeScript` / Script 内 `Call`
+- **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 在 ActionLib 加载前解析为 GraphId。未登记到 FuncLib 的名字失败关闭，ActionLib 名不得通过 `functionName` 进入 Effect / 线性 Kind。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
+- **加载顺序**：graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载（详见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)）。
+- **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
+- **L2 数据作者面**：`AI/behavior_trees.json` + `AI/hfsm.json` → `GraphBehaviorDefinitionLoader`；叶子与生命周期绑定只写 ActionLib 名，禁止用 Core 工厂参数代替数据作者面。
+- **HFSM Yield**：禁止。OnTick 是 think-wave 节拍；含 Yield 的 `Hfsm` / `Level` 条目在 ActionLib 加载期失败关闭。
+- **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
+- **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
 
 ## 4. 场景

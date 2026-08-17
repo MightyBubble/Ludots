@@ -64,7 +64,15 @@ namespace InteractionShowcaseMod.Runtime
                 RequireShowcaseSolePossessedRep(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!);
                 EnsureShowcaseCommandSourceView(engine);
-                CloseEntityInfoPanels(context);
+                if (IsUiPanelSuppressed(engine))
+                {
+                    CloseEntityInfoPanels(context);
+                }
+                else
+                {
+                    EnsureEntityInfoPanels(context, engine);
+                }
+
                 RefreshPanel(engine);
             }
             else
@@ -112,10 +120,9 @@ namespace InteractionShowcaseMod.Runtime
 
             ApplyVisibleUatTimelines(engine);
 
-            if (engine.GlobalContext.TryGetValue(InteractionShowcaseIds.SuppressUiPanelKey, out var suppressObj) &&
-                suppressObj is bool suppress &&
-                suppress)
+            if (IsUiPanelSuppressed(engine))
             {
+                CloseEntityInfoPanels(engine);
                 ClearPanelIfOwned(engine);
                 return;
             }
@@ -558,6 +565,22 @@ namespace InteractionShowcaseMod.Runtime
             CloseIfPresent(context, handles, InteractionShowcaseIds.VanguardOverlayHandleKey);
         }
 
+        private static void CloseEntityInfoPanels(GameEngine engine)
+        {
+            if (engine.GetService(EntityInfoPanelServiceKeys.Service) is not EntityInfoPanelService service ||
+                engine.GetService(EntityInfoPanelServiceKeys.HandleStore) is not EntityInfoPanelHandleStore handles)
+            {
+                return;
+            }
+
+            CloseIfPresent(service, handles, InteractionShowcaseIds.SelectedComponentUiHandleKey);
+            CloseIfPresent(service, handles, InteractionShowcaseIds.SelectedGasUiHandleKey);
+            CloseIfPresent(service, handles, InteractionShowcaseIds.SelectedGasOverlayHandleKey);
+            CloseIfPresent(service, handles, InteractionShowcaseIds.SelectionViewUiHandleKey);
+            CloseIfPresent(service, handles, InteractionShowcaseIds.ArcweaverOverlayHandleKey);
+            CloseIfPresent(service, handles, InteractionShowcaseIds.VanguardOverlayHandleKey);
+        }
+
         private static void CloseIfPresent(ScriptContext context, EntityInfoPanelHandleStore handles, string handleKey)
         {
             if (!handles.TryGet(handleKey, out _))
@@ -569,6 +592,22 @@ namespace InteractionShowcaseMod.Runtime
             {
                 HandleSlotKey = handleKey
             }.ExecuteAsync(context).GetAwaiter().GetResult();
+        }
+
+        private static void CloseIfPresent(EntityInfoPanelService service, EntityInfoPanelHandleStore handles, string handleKey)
+        {
+            if (handles.TryGet(handleKey, out EntityInfoPanelHandle handle))
+            {
+                service.Close(handle);
+                handles.Remove(handleKey);
+            }
+        }
+
+        private static bool IsUiPanelSuppressed(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(InteractionShowcaseIds.SuppressUiPanelKey, out var suppressObj) &&
+                   suppressObj is bool suppress &&
+                   suppress;
         }
 
         private static void EnsureDefaultShowcaseMode(GameEngine engine)

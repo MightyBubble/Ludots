@@ -35,7 +35,7 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             var modPaths = RepoModPaths.ResolveExplicit(
                 repoRoot,
-                new[] { "LudotsCoreMod", "CoreInputMod", "PerformerBlacksmithShowcaseMod", "RaylibIsmBenchmarkShowcaseMod" });
+                new[] { "LudotsCoreMod", "CoreInputMod", "PresenterBlacksmithShowcaseMod", "RaylibIsmBenchmarkShowcaseMod" });
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));

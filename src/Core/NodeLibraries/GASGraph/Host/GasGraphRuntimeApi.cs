@@ -44,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -63,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            LookupTables = lookupTables;
         }
 
         public World World { get; }
@@ -78,6 +80,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
+        public GraphLookupTableRegistry? LookupTables { get; }
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
@@ -94,11 +97,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
         private readonly TagOps? _tagOps;
-        private readonly Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? _tagDisplayTables;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private readonly GraphLookupTableRegistry? _lookupTables;
         private LoadedGraphRuntime? _loadedGraphRuntime;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -177,7 +180,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                lookupTables: services.LookupTables);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -210,7 +214,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
-            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null)
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -222,7 +226,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
-            _tagDisplayTables = tagDisplayTables;
+            _lookupTables = lookupTables;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -232,6 +236,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        public int ResolveTableRow(int tableId, int key)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ResolveRow(tableId, key);
+        }
+
+        public int TableReadInt(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadInt(rowHandle, fieldId);
+        }
+
+        public float TableReadFloat(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadFloat(rowHandle, fieldId);
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)
@@ -523,7 +548,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             try
             {
                 registry.Invoke(
-                    (BuiltinHandlerId)builtinHandlerId,
+                    builtinHandlerId,
                     _world,
                     default,
                     ref context,
@@ -590,63 +615,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
-        }
-
-        public int SelectEffectiveTagInMask(Entity entity, int tableId, byte policy)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplaySelectUnavailable");
-
-            if (!_world.IsAlive(entity))
-            {
-                throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
-            }
-
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                throw new InvalidOperationException(TagOps.MissingGameplayTagContainerError);
-            }
-
-            GameplayTagContainer mask = tables.GetMask(tableId);
-
-            // 0Alloc: scan dense tag id space (≤255). Uses HasTag so staged side-effects stay in sync.
-            int matchCount = 0;
-            int firstTagId = 0;
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
-            {
-                if (!mask.HasTag(tagId) || !HasTag(entity, tagId))
-                {
-                    continue;
-                }
-
-                matchCount++;
-                if (firstTagId == 0)
-                {
-                    firstTagId = tagId;
-                }
-            }
-
-            var selectPolicy = (Ludots.Core.Presentation.TagDisplay.TagSelectPolicy)policy;
-            return selectPolicy switch
-            {
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectRequireOneFailed: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 0 => 0,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectAmbiguous: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.LowestId => firstTagId,
-                _ => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.UnknownTagSelectPolicy: {(byte)selectPolicy}."),
-            };
-        }
-
-        public int LookupTagDisplayToken(int tableId, int tagId)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
-            return tables.LookupToken(tableId, tagId);
         }
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
@@ -897,14 +865,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
             RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
         }
-        public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
-        public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer);
-        public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer);
-        public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer);
+        public RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
+        public RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            int count = RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer, out int dropped);
+            return new RelationshipQueryResult(count, dropped);
+        }
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
             => RequireEntityQueries().FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
         public int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)

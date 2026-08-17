@@ -1,6 +1,7 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
 
@@ -8,12 +9,16 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 {
     private readonly AbilityGraphSandboxRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
-    private readonly GraphShowcaseConfig _config = new();
+    private readonly ScreenOverlayBuffer _overlay;
 
-    public AbilityGraphSandboxPresentationSystem(AbilityGraphSandboxRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public AbilityGraphSandboxPresentationSystem(
+        AbilityGraphSandboxRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        ScreenOverlayBuffer overlay)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _overlay = overlay ?? throw new ArgumentNullException(nameof(overlay));
     }
 
     public void Initialize() { }
@@ -24,15 +29,7 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
-        GraphShowcaseStagePresenter.DrawActor(
-            _debugDraw, _runtime.CasterX, _runtime.CasterY, 0.7f, GraphShowcaseStagePresenter.CasterColor, 0.2f);
-
-        for (int i = 0; i < _runtime.TargetCount; i++)
-        {
-            var color = _runtime.Flash[i] > 0 ? DebugDrawColor.White : GraphShowcaseStagePresenter.EnemyColor;
-            GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.TargetX[i], _runtime.TargetY[i], 0.45f, color);
-        }
-
+        GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, _runtime.CasterX, _runtime.CasterY, 8f, armed: true);
         int hit = _runtime.LastHit;
         if (hit >= 0 && hit < _runtime.TargetCount)
         {
@@ -44,11 +41,6 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
                 _runtime.TargetY[hit]);
         }
 
-        if (_config.ShowCrowdBand)
-        {
-            GraphShowcaseStagePresenter.DrawCrowdBand(_debugDraw, _config.CrowdBandCount);
-        }
-
-        GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, "能力图沙盘", _runtime.Metrics.Detail);
     }
 }

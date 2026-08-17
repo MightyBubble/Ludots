@@ -1718,7 +1718,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact",
                     "aimVisual": {
-                      "areaPerformerId": "performer.aim.area"
+                      "areaPresenterId": "presenter.aim.area"
                     }
                   }
                 }
@@ -1731,14 +1731,14 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPerformerField()
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPresenterField()
         {
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
             var obj = JsonNode.Parse(
                 """
                 {
-                  "previewPerformerId": "performer.aim.preview",
+                  "previewPresenterId": "presenter.aim.preview",
                   "targeting": {
                     "castRangeCm": 620,
                     "impactEffect": "Effect.Guard.Impact"
@@ -1747,9 +1747,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 """)!.AsObject();
 
             var ex = Throws<InvalidOperationException>(() =>
-                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPresenter", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
+            That(ex!.Message, Does.Contain("field 'previewPresenterId' is removed"));
         }
 
         [Test]
@@ -2814,7 +2814,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             }, GraphKind.Validation);
 
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
@@ -2893,7 +2894,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
@@ -2938,7 +2940,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
@@ -2960,16 +2963,21 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void ExecuteValidation_EmptyProgram_ReturnsFalse()
+        public void ExecuteValidation_EmptyProgram_Throws()
         {
             using var world = World.Create();
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program: B[0] starts at 0 (reject). Missing/unwritten validation result fails closed.
-            ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
-            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
-            That(result, Is.False, "Empty validation program must fail closed (B[0]=0)");
+            // Empty program is invalid under the explicit-halt graph contract.
+            Assert.Throws<InvalidOperationException>(() =>
+                GasGraphExecutor.ExecuteValidation(
+                    world,
+                    caster,
+                    target,
+                    default,
+                    ReadOnlySpan<GraphInstruction>.Empty,
+                    null!));
         }
 
         [Test]
@@ -2986,7 +2994,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Dst = 0,  // register index B[0]
                 Imm = 0   // value = false
             };
-            ReadOnlySpan<GraphInstruction> program = new[] { instruction };
+            ReadOnlySpan<GraphInstruction> program = new[]
+            {
+                instruction,
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.False, "ConstBool B[0]=0 should cause validation to fail");
         }
@@ -3451,7 +3463,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Op = (ushort)GraphNodeOp.ConstBool,
                     Dst = 0,
                     Imm = 0
-                }
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt }
             };
         }
 

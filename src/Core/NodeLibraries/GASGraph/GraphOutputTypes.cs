@@ -31,7 +31,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string collectionKey,
             EntityCollectionRoleKind collectionRole,
             string title,
-            string summary)
+            string summary,
+            int collectionKeyId = 0)
         {
             Id = string.IsNullOrWhiteSpace(id)
                 ? throw new ArgumentException("Graph output id is required.", nameof(id))
@@ -42,6 +43,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             KeyId = keyId;
             Key = key ?? string.Empty;
             CollectionKey = collectionKey ?? string.Empty;
+            CollectionKeyId = collectionKeyId;
             CollectionRole = collectionRole;
             Title = title ?? string.Empty;
             Summary = summary ?? string.Empty;
@@ -54,6 +56,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public int KeyId { get; }
         public string Key { get; }
         public string CollectionKey { get; }
+
+        /// <summary>Resolved from <see cref="CollectionKey"/> through the entity collection key registry at load time; 0 when unresolved.</summary>
+        public int CollectionKeyId { get; }
+
         public EntityCollectionRoleKind CollectionRole { get; }
         public string Title { get; }
         public string Summary { get; }
@@ -70,7 +76,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 CollectionKey,
                 CollectionRole,
                 Title,
-                Summary);
+                Summary,
+                CollectionKeyId);
+        }
+
+        public GraphOutputBinding WithResolvedCollectionKeyId(int collectionKeyId)
+        {
+            return new GraphOutputBinding(
+                Id,
+                Destination,
+                ValueKind,
+                Register,
+                KeyId,
+                Key,
+                CollectionKey,
+                CollectionRole,
+                Title,
+                Summary,
+                collectionKeyId);
         }
     }
 

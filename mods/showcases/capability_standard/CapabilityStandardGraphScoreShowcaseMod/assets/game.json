@@ -1,0 +1,9 @@
+{
+  "startupMapId": "capability_standard_graph_score",
+  "startupLocalPlayerId": 1,
+  "windowTitle": "Ludots - 残血的分更高",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

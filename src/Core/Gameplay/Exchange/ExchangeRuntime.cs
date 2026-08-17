@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.Exchange
         private readonly InventoryRuntimeService _inventory;
         private readonly EffectRequestQueue _effects;
         private readonly RelationshipRuntime _relationships;
+        private readonly TagOps _tagOps;
         private readonly List<ItemConsumptionRecord> _consumed = new(16);
         private readonly List<AttributeCostRecord> _attributeCosts = new(8);
         private readonly List<CreatedItemRecord> _created = new(8);
@@ -29,7 +30,8 @@ namespace Ludots.Core.Gameplay.Exchange
             ExchangeScopedOperationStore scopedOperations,
             InventoryRuntimeService inventory,
             EffectRequestQueue effects,
-            RelationshipRuntime relationships)
+            RelationshipRuntime relationships,
+            TagOps tagOps)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _operations = operations ?? throw new ArgumentNullException(nameof(operations));
@@ -37,6 +39,7 @@ namespace Ludots.Core.Gameplay.Exchange
             _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
             _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
+            _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         }
 
         public ExchangeExecutionResult TryExecute(int operationId, in ExchangeExecutionContext context)
@@ -373,7 +376,7 @@ namespace Ludots.Core.Gameplay.Exchange
                 }
 
                 _attributeCosts.Add(new AttributeCostRecord(actor, input.AttributeId, previousValue));
-                attributes.SetCurrent(input.AttributeId, previousValue - input.Quantity);
+                AttributeMutationOps.SetCurrent(_world, actor, input.AttributeId, previousValue - input.Quantity, _tagOps);
                 return true;
             }
 
@@ -427,8 +430,7 @@ namespace Ludots.Core.Gameplay.Exchange
                 AttributeCostRecord record = _attributeCosts[i];
                 if (_world.IsAlive(record.Actor) && _world.Has<AttributeBuffer>(record.Actor))
                 {
-                    ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(record.Actor);
-                    attributes.SetCurrent(record.AttributeId, record.PreviousValue);
+                    AttributeMutationOps.SetCurrent(_world, record.Actor, record.AttributeId, record.PreviousValue, _tagOps);
                 }
             }
 

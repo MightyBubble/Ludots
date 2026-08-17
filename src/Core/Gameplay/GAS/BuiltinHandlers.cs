@@ -7,6 +7,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
@@ -27,6 +28,17 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        private static bool HasAssignedAttribute(int attributeId)
+        {
+            return attributeId != AttributeRegistry.InvalidId;
+        }
+
+        public const string MissingHandlerRuntimeError = "GAS.BUILTIN.ERR.MissingHandlerRuntime";
+        public const string MissingSpatialQueriesError = "GAS.BUILTIN.ERR.MissingSpatialQueries";
+        public const string MissingFanOutBudgetError = "GAS.BUILTIN.ERR.MissingFanOutBudget";
+        public const string MissingFanOutCommandsError = "GAS.BUILTIN.ERR.MissingFanOutCommands";
+        public const string MissingResolverBufferError = "GAS.BUILTIN.ERR.MissingResolverBuffer";
+
         private static void RejectNonTransactionalPersistentSideEffect(string operation)
         {
             if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
@@ -34,6 +46,17 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException(
                     $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
             }
+        }
+
+        private static BuiltinHandlerExecutionContext RequireHandlerRuntime()
+        {
+            BuiltinHandlerExecutionContext? runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime == null)
+            {
+                throw new InvalidOperationException(MissingHandlerRuntimeError);
+            }
+
+            return runtime;
         }
 
         public static void RegisterAll(BuiltinHandlerRegistry registry)
@@ -111,16 +134,16 @@ namespace Ludots.Core.Gameplay.GAS
             var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
             if (transaction?.IsActive == true)
             {
-                if (templateData.PresetAttribute0 > 0)
+                if (HasAssignedAttribute(templateData.PresetAttribute0))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
-                if (templateData.PresetAttribute1 > 0)
+                if (HasAssignedAttribute(templateData.PresetAttribute1))
                     transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
                 return;
             }
 
-            if (templateData.PresetAttribute0 > 0)
+            if (HasAssignedAttribute(templateData.PresetAttribute0))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
-            if (templateData.PresetAttribute1 > 0)
+            if (HasAssignedAttribute(templateData.PresetAttribute1))
                 AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
@@ -131,10 +154,14 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -155,10 +182,18 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.FanOutBudget == null)
             {
-                return;
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = runtime.ResolvedCandidateCount;
@@ -167,7 +202,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -178,10 +212,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -192,10 +224,22 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.FanOutBudget == null)
+            {
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -211,7 +255,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -222,10 +265,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 

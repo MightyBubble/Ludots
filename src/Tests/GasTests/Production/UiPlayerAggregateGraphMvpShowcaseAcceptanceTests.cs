@@ -6,9 +6,14 @@ using System.Numerics;
 using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using Ludots.UI;
@@ -46,6 +51,7 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
         AssertLauncherBinding(repoRoot);
         AssertLauncherPreset(repoRoot);
         AssertNoPresentationEntitySum(repoRoot);
+        AssertConfigHygieneArtifacts(repoRoot);
 
         string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "ui-player-aggregate-graph-mvp");
         string screensDir = Path.Combine(artifactDir, "screens");
@@ -66,6 +72,8 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
         float expectedOre = SumSeed(config.Buildings, static building => building.Ore);
         float expectedCrystal = SumSeed(config.Buildings, static building => building.Crystal);
 
+        AssertConfigIsRuntimeAuthority(engine, config);
+
         UiPlayerAggregateGraphMvpSnapshot initial = runtime.Snapshot;
         Assert.Multiple(() =>
         {
@@ -73,10 +81,14 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
             Assert.That(initial.OreTotal, Is.EqualTo(expectedOre).Within(0.001f));
             Assert.That(initial.CrystalTotal, Is.EqualTo(expectedCrystal).Within(0.001f));
             Assert.That(initial.BuildingShutDown, Is.False);
+            Assert.That(initial.OreSummaryKey, Is.EqualTo(config.OreBinding.GraphOutputKey));
+            Assert.That(initial.CrystalSummaryKey, Is.EqualTo(config.CrystalBinding.GraphOutputKey));
             IReadOnlyList<string> uiText = AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot);
             Assert.That(uiText, Does.Contain(config.Presentation.Title));
             Assert.That(string.Join('\n', uiText), Does.Contain("GraphOutputValueStore"));
             Assert.That(string.Join('\n', uiText), Does.Contain(config.GraphId));
+            Assert.That(string.Join('\n', uiText), Does.Contain(config.OreBinding.Label));
+            Assert.That(string.Join('\n', uiText), Does.Contain(config.CrystalBinding.Label));
             Assert.That(
                 uiRoot.Scene!.FindByElementId(UiPlayerAggregateGraphMvpIds.PanelRootElementId),
                 Is.Not.Null);
@@ -206,6 +218,117 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
             Assert.That(text, Does.Not.Contain("AttributeBuffer"));
             Assert.That(text, Does.Not.Contain("world.Query"));
         }
+    }
+
+    private static void AssertConfigHygieneArtifacts(string repoRoot)
+    {
+        string modDir = Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "ui_player_aggregate_graph_mvp",
+            ShowcaseModId);
+        string mapPath = Path.Combine(modDir, "assets", "Maps", "ui_player_aggregate_graph_mvp.json");
+        string graphsPath = Path.Combine(modDir, "assets", "GAS", "graphs.json");
+        string configPath = Path.Combine(modDir, "assets", "UiPlayerAggregateGraphMvpShowcaseConfig.json");
+        string modEntryPath = Path.Combine(modDir, "UiPlayerAggregateGraphMvpShowcaseModEntry.cs");
+
+        using JsonDocument mapDocument = JsonDocument.Parse(File.ReadAllText(mapPath));
+        foreach (JsonElement entity in mapDocument.RootElement.GetProperty("Entities").EnumerateArray())
+        {
+            if (!entity.TryGetProperty("Overrides", out JsonElement overrides))
+            {
+                continue;
+            }
+
+            Assert.That(
+                overrides.TryGetProperty("AttributeBuffer", out _),
+                Is.False,
+                "Map Overrides must not author AttributeBuffer stock; buildings[] in showcase config is the SSOT.");
+        }
+
+        using JsonDocument configDocument = JsonDocument.Parse(File.ReadAllText(configPath));
+        int playerTeamId = configDocument.RootElement.GetProperty("playerTeamId").GetInt32();
+        using JsonDocument graphsDocument = JsonDocument.Parse(File.ReadAllText(graphsPath));
+        int authoredGraphTeamId = RequireGraphTeamId(graphsDocument.RootElement);
+        Assert.That(
+            authoredGraphTeamId,
+            Is.Not.EqualTo(playerTeamId),
+            "graphs.json QueryFilterTeam.teamId must stay a non-authoritative compile placeholder; runtime Imm is injected from playerTeamId.");
+
+        string modEntry = File.ReadAllText(modEntryPath);
+        Assert.That(modEntry, Does.Not.Contain("AttributeRegistry.Register(\"Showcase.Resource."));
+        Assert.That(modEntry, Does.Contain("bootstrapConfig.Attributes"));
+    }
+
+    private static void AssertConfigIsRuntimeAuthority(GameEngine engine, UiPlayerAggregateGraphMvpConfig config)
+    {
+        int graphId = GraphIdRegistry.GetId(config.GraphId);
+        Assert.That(graphId, Is.GreaterThan(0));
+        GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+            ?? throw new InvalidOperationException("GraphProgramRegistry missing.");
+        Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
+        Assert.That(TryReadInjectedTeamId(program, out int injectedTeamId), Is.True);
+        Assert.That(injectedTeamId, Is.EqualTo(config.PlayerTeamId));
+
+        int oreAttributeId = AttributeRegistry.GetId(config.Attributes.Ore);
+        int crystalAttributeId = AttributeRegistry.GetId(config.Attributes.Crystal);
+        Assert.That(oreAttributeId, Is.Not.EqualTo(AttributeRegistry.InvalidId));
+        Assert.That(crystalAttributeId, Is.Not.EqualTo(AttributeRegistry.InvalidId));
+
+        for (int i = 0; i < config.Buildings.Length; i++)
+        {
+            UiPlayerAggregateBuildingSeed seed = config.Buildings[i];
+            Entity entity = FindEntityByName(engine.World, seed.Name);
+            Assert.That(engine.World.Get<Team>(entity).Id, Is.EqualTo(config.PlayerTeamId), seed.Name);
+            ref AttributeBuffer attributes = ref engine.World.Get<AttributeBuffer>(entity);
+            Assert.That(attributes.GetCurrent(oreAttributeId), Is.EqualTo(seed.Ore).Within(0.001f), seed.Name);
+            Assert.That(attributes.GetCurrent(crystalAttributeId), Is.EqualTo(seed.Crystal).Within(0.001f), seed.Name);
+        }
+
+        Entity owner = FindEntityByName(engine.World, config.FactionOwnerName);
+        Assert.That(engine.World.Get<Team>(owner).Id, Is.EqualTo(config.PlayerTeamId));
+    }
+
+    private static int RequireGraphTeamId(JsonElement graphsRoot)
+    {
+        foreach (JsonElement graph in graphsRoot.EnumerateArray())
+        {
+            if (!string.Equals(graph.GetProperty("id").GetString(), "ui.panel.player.resource.aggregate", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (JsonElement node in graph.GetProperty("nodes").EnumerateArray())
+            {
+                if (!string.Equals(node.GetProperty("op").GetString(), "QueryFilterTeam", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return node.GetProperty("teamId").GetInt32();
+            }
+        }
+
+        throw new InvalidOperationException("Aggregate graph QueryFilterTeam teamId is missing.");
+    }
+
+    private static bool TryReadInjectedTeamId(ReadOnlySpan<GraphInstruction> program, out int teamId)
+    {
+        teamId = 0;
+        int found = 0;
+        for (int i = 0; i < program.Length; i++)
+        {
+            if ((GraphNodeOp)program[i].Op != GraphNodeOp.QueryFilterTeam || program[i].Flags != 0)
+            {
+                continue;
+            }
+
+            teamId = program[i].Imm;
+            found++;
+        }
+
+        return found == 1;
     }
 
     private static void AssertLauncherBinding(string repoRoot)

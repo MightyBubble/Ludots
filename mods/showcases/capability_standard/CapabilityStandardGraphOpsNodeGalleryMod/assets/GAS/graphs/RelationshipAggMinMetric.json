@@ -1,0 +1,56 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipAggMinMetric",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "outgoing",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "min",
+        "op": "RelationshipAggMinMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "outgoing"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "next",
+        "to": "min"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoing",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "list",
+        "to": "min",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "min",
+        "toPort": "source"
+      }
+    ]
+  }
+]

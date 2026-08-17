@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
@@ -14,6 +15,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS.Graph
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class GraphContractTests
     {
         private string? _tempRoot;
@@ -54,47 +56,43 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphCompiler_RejectsNumericKindToken()
+        public void GraphProgramAuthoringFrontDoor_RejectsNumericKindToken()
         {
-            var cfg = new GraphConfig
-            {
-                Id = "tests.graph.numeric-kind",
-                Kind = "1",
-                Entry = "n0",
-                Nodes = new List<GraphNodeConfig>
-                {
-                    new GraphNodeConfig { Id = "n0", Op = "ConstBool", BoolValue = true }
-                }
-            };
+            var obj = JsonNode.Parse("""
+{
+  "kind": "1",
+  "entry": "n0",
+  "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""")!.AsObject();
 
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(package, Is.Null);
-            Assert.That(diagnostics.Exists(d => d.Code == GraphDiagnosticCodes.UnsupportedGraphKind), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                GraphProgramAuthoringFrontDoor.RequireKind(obj, "tests.graph.numeric-kind"))!;
+            Assert.That(ex.Message, Does.Contain("tests.graph.numeric-kind"));
         }
 
         [Test]
-        public void GraphCompiler_RejectsUnsupportedKind()
+        public void GraphProgramAuthoringFrontDoor_RejectsUnsupportedKind()
         {
-            var cfg = new GraphConfig
-            {
-                Id = "tests.graph.bad-kind",
-                Kind = "LegacyCompat",
-                Entry = "n0",
-                Nodes = new List<GraphNodeConfig>
-                {
-                    new GraphNodeConfig { Id = "n0", Op = "ConstBool", BoolValue = true }
-                }
-            };
+            var obj = JsonNode.Parse("""
+{
+  "kind": "LegacyCompat",
+  "entry": "n0",
+  "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""")!.AsObject();
 
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(package, Is.Null);
-            Assert.That(diagnostics.Exists(d =>
-                d.Code == GraphDiagnosticCodes.UnsupportedGraphKind &&
-                d.Message.Contains("LegacyCompat", StringComparison.Ordinal)), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                GraphProgramAuthoringFrontDoor.RequireKind(obj, "tests.graph.bad-kind"))!;
+            Assert.That(ex.Message, Does.Contain("requires an authored kind"));
         }
 
         [Test]
-        public void GraphCompiler_PersistsAuthoredKind_AndRegistryRejectsDuplicates()
+        public void GraphProgramConfigLoader_PersistsAuthoredKind_AndRegistryRejectsDuplicates()
         {
             const string json = """
 [
@@ -119,12 +117,12 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsQueryGraphOnNextChainPath()
+        public void GraphProgramConfigLoader_RejectsQueryGraphWithoutControlFlowEdges()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.query-next-chain",
+    "id": "tests.graph.query-legacy-shape",
     "kind": "Query",
     "entry": "allMap",
     "nodes": [
@@ -141,12 +139,12 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsEffectGraphOnNextChainPath()
+        public void GraphProgramConfigLoader_RejectsEffectGraphWithNodesNext()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.effect-next-chain",
+    "id": "tests.graph.effect-legacy-next",
     "kind": "Effect",
     "entry": "c0",
     "nodes": [
@@ -226,28 +224,25 @@ namespace Ludots.Tests.GAS.Graph
             Entity caster = world.Create();
             Entity target = world.Create();
 
-            Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, ReadOnlySpan<GraphInstruction>.Empty, null!),
-                Is.False);
+            Assert.Throws<InvalidOperationException>(() =>
+                GraphExecutor.ExecuteValidation(world, caster, target, default, ReadOnlySpan<GraphInstruction>.Empty, null!));
 
-            var rejectOnly = new GraphInstruction
+            var rejectOnly = new[]
             {
-                Op = (ushort)GraphNodeOp.ConstFloat,
-                Dst = 0,
-                ImmF = 9f
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 9f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
             Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, new[] { rejectOnly }, null!),
+                GraphExecutor.ExecuteValidation(world, caster, target, default, rejectOnly, null!),
                 Is.False);
 
-            var pass = new GraphInstruction
+            var pass = new[]
             {
-                Op = (ushort)GraphNodeOp.ConstBool,
-                Dst = 0,
-                Imm = 1
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
             };
             Assert.That(
-                GraphExecutor.ExecuteValidation(world, caster, target, default, new[] { pass }, null!),
+                GraphExecutor.ExecuteValidation(world, caster, target, default, pass, null!),
                 Is.True);
         }
 
@@ -401,7 +396,7 @@ namespace Ludots.Tests.GAS.Graph
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphContractTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 
@@ -412,6 +407,7 @@ namespace Ludots.Tests.GAS.Graph
             var catalog = new ConfigCatalog();
             catalog.Add(new ConfigCatalogEntry("GAS/graphs.json", ConfigMergePolicy.ArrayById, "id"));
 
+            GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
             var loader = new GraphProgramConfigLoader(pipeline, programs, new PassthroughGraphSymbolResolver());
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");

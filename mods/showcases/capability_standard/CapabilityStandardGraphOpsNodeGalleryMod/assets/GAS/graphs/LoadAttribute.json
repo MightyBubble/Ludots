@@ -1,0 +1,42 @@
+[
+  {
+    "id": "showcase.graph_op.LoadAttribute",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      {
+        "id": "caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "loadHp",
+        "op": "LoadAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "caster",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "loadHp"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "loadHp",
+        "toPort": "source"
+      }
+    ]
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "op": "InvokeBuiltin",
+  "driver": "attr",
+  "title": "账本里的步骤逐条办",
+  "beat": "造出新身体，再把新身体的效果挂架扫净。",
+  "detailTemplate": "新身体已上场，效果挂架已清空。",
+  "assertDetailContains": [
+    "新身体"
+  ],
+  "featuredNodeId": "invoke",
+  "graphKind": "Effect",
+  "configEffectId": "Effect.GraphOps.Lifecycle",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

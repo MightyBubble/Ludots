@@ -1,0 +1,12 @@
+﻿flowchart TD
+    A["Load control_plane_projection map"] --> B["Create headless RefereeRep and ForeignRep"]
+    B --> C["Seed CommandSource rows in referee, P1, P2, and foreign domains"]
+    C --> D["Grant Controls(referee->P1Rep) and Controls(referee->P2Rep)"]
+    D --> E["ControlPlaneView.CopyMembersWithDomain(referee)"]
+    E --> F{"Rows are owned=1, proxied=2, foreign=0?"}
+    F -->|yes| G["Remove Controls(referee->P2Rep)"]
+    F -->|no| X["Fail: wrong domain provenance or foreign leak"]
+    G --> H["ControlPlaneView.CopyMembersWithDomain(referee) again"]
+    H --> I{"Rows shrank to owned=1, proxied=1, foreign=0?"}
+    I -->|yes| J["Write battle-report, trace, path"]
+    I -->|no| Y["Fail: revoked domain stayed visible"]

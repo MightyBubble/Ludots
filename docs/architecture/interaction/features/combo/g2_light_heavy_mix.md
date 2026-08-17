@@ -72,7 +72,7 @@ R2 (heavy) with combo_stage:2 → heavy_finisher_B (reset combo)
           { "type": "RemoveTag", "tag": "combo_stage:1" }
         ]
       },
-      "performer": "heavy_slam_animation"
+      "presenter": "heavy_slam_animation"
     },
     {
       "id": "heavy_finisher_b",
@@ -84,7 +84,7 @@ R2 (heavy) with combo_stage:2 → heavy_finisher_B (reset combo)
           { "type": "RemoveTag", "tag": "combo_stage:2" }
         ]
       },
-      "performer": "heavy_spin_animation"
+      "presenter": "heavy_spin_animation"
     }
   ]
 }

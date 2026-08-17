@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
@@ -80,7 +80,7 @@ namespace CoreInputMod.Triggers
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner),
                 commandSourceAcquisitionConfig));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new CommandActorMovePathPresentationSystem(
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new CommandActorMovePathPresentationSystem(
                 engine.World,
                 engine.GlobalContext,
                 (out Entity owner) => TryResolveLocalCommandSourceOwner(engine, out owner)));

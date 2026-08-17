@@ -22,7 +22,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
@@ -339,6 +339,10 @@ namespace Ludots.Tests.GAS
                         Imm = graphSetup.PriorityMetricId,
                         Flags = 1,
                     },
+                    new GraphInstruction
+                    {
+                        Op = (ushort)GraphNodeOp.HaltReturnInt,
+                    },
                 }, GraphKind.Query);
             _runtime = new AbilityAimPresentationRuntime(
                 _world,
@@ -398,7 +402,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PerformerRules_ConsumeAimEvents_AndReuseScopedPerformer()
+        public void PresenterRules_ConsumeAimEvents_AndReuseScopedPresenter()
         {
             int effectId = RegisterEffect(
                 2005,
@@ -410,7 +414,7 @@ namespace Ludots.Tests.GAS
                 halfWidthCm: 40);
             RegisterAbility(1005, castRangeCm: 400f, effectId);
             Entity actor = CreateActor(1005);
-            var fixture = new PerformerFixture(_world, _events, _collections.KeyRegistry);
+            var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry);
 
             _runtime.UpdateAiming(
                 actor,
@@ -418,13 +422,13 @@ namespace Ludots.Tests.GAS
                 CreateInput(new Vector3(800f, 0f, 0f), AbilityAimInputSlot.VectorDirection));
             fixture.Tick();
 
-            Entity area = fixture.FindPerformer("test.aim.area.line");
-            Entity preview = fixture.FindPerformer("test.aim.preview");
-            Assert.That(_world.Get<PerformerWorldPosition>(area).Value.X, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(fixture.Runtime.ResolveFloat(area, WellKnownPerformerParamKeys.OverlayLength, -1f), Is.EqualTo(6f).Within(0.001f));
-            Assert.That(fixture.Runtime.ResolveFloat(area, WellKnownPerformerParamKeys.OverlayWidth, -1f), Is.EqualTo(0.8f).Within(0.001f));
-            Assert.That(_world.Get<PerformerWorldPosition>(preview).Value.X, Is.EqualTo(4f).Within(0.001f));
-            Assert.That(fixture.Runtime.ResolveFloat(preview, WellKnownPerformerParamKeys.MarkerScale, -1f), Is.EqualTo(1f).Within(0.001f));
+            Entity area = fixture.FindPresenter("test.aim.area.line");
+            Entity preview = fixture.FindPresenter("test.aim.preview");
+            Assert.That(_world.Get<PresenterWorldPosition>(area).Value.X, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(fixture.Runtime.ResolveFloat(area, WellKnownPresenterParamKeys.OverlayLength, -1f), Is.EqualTo(6f).Within(0.001f));
+            Assert.That(fixture.Runtime.ResolveFloat(area, WellKnownPresenterParamKeys.OverlayWidth, -1f), Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(_world.Get<PresenterWorldPosition>(preview).Value.X, Is.EqualTo(4f).Within(0.001f));
+            Assert.That(fixture.Runtime.ResolveFloat(preview, WellKnownPresenterParamKeys.MarkerScale, -1f), Is.EqualTo(1f).Within(0.001f));
 
             _runtime.UpdateAiming(
                 actor,
@@ -433,9 +437,9 @@ namespace Ludots.Tests.GAS
             fixture.Tick();
 
             Assert.That(fixture.Runtime.ActiveCount, Is.EqualTo(2));
-            Assert.That(fixture.FindPerformer("test.aim.area.line"), Is.EqualTo(area));
-            Assert.That(fixture.FindPerformer("test.aim.preview"), Is.EqualTo(preview));
-            Assert.That(_world.Get<PerformerWorldPosition>(preview).Value.X, Is.EqualTo(3f).Within(0.001f));
+            Assert.That(fixture.FindPresenter("test.aim.area.line"), Is.EqualTo(area));
+            Assert.That(fixture.FindPresenter("test.aim.preview"), Is.EqualTo(preview));
+            Assert.That(_world.Get<PresenterWorldPosition>(preview).Value.X, Is.EqualTo(3f).Within(0.001f));
 
             _runtime.Clear(actor);
             fixture.Tick();
@@ -512,13 +516,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PerformerRules_ConsumeCollectionRows_AsEntityAttachedHighlights()
+        public void PresenterRules_ConsumeCollectionRows_AsEntityAttachedHighlights()
         {
             Entity actor = _world.Create();
             Entity first = _world.Create(WorldPositionCm.FromCm(100, 200), new VisualTransform { Position = new Vector3(1f, 0f, 2f) });
             Entity second = _world.Create(WorldPositionCm.FromCm(300, 400), new VisualTransform { Position = new Vector3(3f, 0f, 4f) });
             var collectionEvents = new EntityCollectionPresentationEventSystem(_world, _collections, _events);
-            var fixture = new PerformerFixture(_world, _events, _collections.KeyRegistry);
+            var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry);
 
             Span<Entity> rows = stackalloc Entity[] { first, second };
             Span<int> roleIds = stackalloc int[] { 1, 0 };
@@ -550,12 +554,12 @@ namespace Ludots.Tests.GAS
             Assert.That(firstScope, Is.Not.EqualTo(secondScope));
             fixture.Tick();
 
-            Entity firstHighlight = fixture.FindPerformer("test.collection.highlight", first);
-            Entity secondHighlight = fixture.FindPerformer("test.collection.highlight", second);
-            Assert.That(_world.Get<PerformerState>(firstHighlight).OwnerEntity, Is.EqualTo(first));
-            Assert.That(_world.Get<PerformerState>(secondHighlight).OwnerEntity, Is.EqualTo(second));
+            Entity firstHighlight = fixture.FindPresenter("test.collection.highlight", first);
+            Entity secondHighlight = fixture.FindPresenter("test.collection.highlight", second);
+            Assert.That(_world.Get<PresenterState>(firstHighlight).OwnerEntity, Is.EqualTo(first));
+            Assert.That(_world.Get<PresenterState>(secondHighlight).OwnerEntity, Is.EqualTo(second));
             Assert.That(
-                fixture.Runtime.ResolveFloat(firstHighlight, WellKnownPerformerParamKeys.MarkerScale, -1f),
+                fixture.Runtime.ResolveFloat(firstHighlight, WellKnownPresenterParamKeys.MarkerScale, -1f),
                 Is.EqualTo(1f));
 
             _collections.Replace(
@@ -616,7 +620,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PerformerRules_PreserveViewerContext_AndResolveRelationshipColor()
+        public void PresenterRules_PreserveViewerContext_AndResolveRelationshipColor()
         {
             TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
             try
@@ -633,19 +637,19 @@ namespace Ludots.Tests.GAS
                     new VisualTransform { Position = new Vector3(1f, 0f, 2f) },
                     new Ludots.Core.Gameplay.Components.Team { Id = 2 });
                 var collectionEvents = new EntityCollectionPresentationEventSystem(_world, _collections, _events);
-                var fixture = new PerformerFixture(_world, _events, _collections.KeyRegistry);
+                var fixture = new PresenterFixture(_world, _events, _collections.KeyRegistry);
 
                 _world.Add(actor, new AbilityAimSessionState { Actor = actor, Viewer = hostileViewer, IsAiming = true });
                 ReplaceSingleAffected(actor, target);
                 collectionEvents.Update(0.016f);
                 fixture.Tick();
 
-                Entity hostileHighlight = fixture.FindPerformer("test.collection.highlight", target);
-                Assert.That(_world.Has<PerformerRelationContext>(hostileHighlight), Is.True);
-                Assert.That(_world.Get<PerformerRelationContext>(hostileHighlight).Viewer, Is.EqualTo(hostileViewer));
-                Assert.That(_world.Get<PerformerRelationContext>(hostileHighlight).Target, Is.EqualTo(actor));
+                Entity hostileHighlight = fixture.FindPresenter("test.collection.highlight", target);
+                Assert.That(_world.Has<PresenterRelationContext>(hostileHighlight), Is.True);
+                Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Viewer, Is.EqualTo(hostileViewer));
+                Assert.That(_world.Get<PresenterRelationContext>(hostileHighlight).Target, Is.EqualTo(actor));
                 Assert.That(
-                    fixture.Runtime.ResolveVector(hostileHighlight, WellKnownPerformerParamKeys.MarkerColorR, Vector4.Zero),
+                    fixture.Runtime.ResolveVector(hostileHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
                     Is.EqualTo(TeamColorResolver.Team2Color));
 
                 _events.Clear();
@@ -658,10 +662,10 @@ namespace Ludots.Tests.GAS
                 collectionEvents.Update(0.016f);
                 fixture.Tick();
 
-                Entity friendlyHighlight = fixture.FindPerformer("test.collection.highlight", target);
-                Assert.That(_world.Get<PerformerRelationContext>(friendlyHighlight).Viewer, Is.EqualTo(friendlyViewer));
+                Entity friendlyHighlight = fixture.FindPresenter("test.collection.highlight", target);
+                Assert.That(_world.Get<PresenterRelationContext>(friendlyHighlight).Viewer, Is.EqualTo(friendlyViewer));
                 Assert.That(
-                    fixture.Runtime.ResolveVector(friendlyHighlight, WellKnownPerformerParamKeys.MarkerColorR, Vector4.Zero),
+                    fixture.Runtime.ResolveVector(friendlyHighlight, WellKnownPresenterParamKeys.MarkerColorR, Vector4.Zero),
                     Is.EqualTo(TeamColorResolver.Team1Color));
             }
             finally
@@ -827,32 +831,32 @@ namespace Ludots.Tests.GAS
 
         private static int PreviewScope(Entity actor) => (actor.Id * 100000) + PreviewScopeOffset;
 
-        private sealed class PerformerFixture
+        private sealed class PresenterFixture
         {
             private readonly World _world;
-            public readonly PerformerDefinitionRegistry Definitions;
-            public readonly PerformerEntityRuntime Runtime;
+            public readonly PresenterDefinitionRegistry Definitions;
+            public readonly PresenterEntityRuntime Runtime;
             private readonly PresentationEventStream _events;
-            private readonly PerformerCommandBuffer _commands;
+            private readonly PresenterCommandBuffer _commands;
             private readonly StringIntRegistry _entityCollectionKeyRegistry;
-            private readonly PerformerRuleSystem _rules;
-            private readonly PerformerRuntimeSystem _runtimeSystem;
-            private readonly PerformerBehaviorSystem _behaviorSystem;
+            private readonly PresenterRuleSystem _rules;
+            private readonly PresenterRuntimeSystem _runtimeSystem;
+            private readonly PresenterBehaviorSystem _behaviorSystem;
 
-            public PerformerFixture(
+            public PresenterFixture(
                 World world,
                 PresentationEventStream events,
                 StringIntRegistry entityCollectionKeyRegistry)
             {
                 _world = world;
-                Definitions = new PerformerDefinitionRegistry();
-                Runtime = new PerformerEntityRuntime(world);
+                Definitions = new PresenterDefinitionRegistry();
+                Runtime = new PresenterEntityRuntime(world);
                 _events = events ?? throw new ArgumentNullException(nameof(events));
                 _entityCollectionKeyRegistry = entityCollectionKeyRegistry ?? throw new ArgumentNullException(nameof(entityCollectionKeyRegistry));
-                _commands = new PerformerCommandBuffer(256);
+                _commands = new PresenterCommandBuffer(256);
                 RegisterDefinitions();
                 var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
-                _rules = new PerformerRuleSystem(
+                _rules = new PresenterRuleSystem(
                     world,
                     _events,
                     _commands,
@@ -861,7 +865,7 @@ namespace Ludots.Tests.GAS
                     new GraphProgramRegistry(),
                     graphApi,
                     new Dictionary<string, object>());
-                _runtimeSystem = new PerformerRuntimeSystem(
+                _runtimeSystem = new PresenterRuntimeSystem(
                     world,
                     _commands,
                     _events,
@@ -870,7 +874,7 @@ namespace Ludots.Tests.GAS
                     Runtime,
                     new PresentationStableIdAllocator(),
                     Definitions);
-                _behaviorSystem = new PerformerBehaviorSystem(
+                _behaviorSystem = new PresenterBehaviorSystem(
                     world,
                     Runtime,
                     Definitions,
@@ -887,22 +891,22 @@ namespace Ludots.Tests.GAS
                 _events.Clear();
             }
 
-            public Entity FindPerformer(string performerId)
+            public Entity FindPresenter(string presenterId)
             {
-                return FindPerformer(performerId, owner: null);
+                return FindPresenter(presenterId, owner: null);
             }
 
-            public Entity FindPerformer(string performerId, Entity owner)
+            public Entity FindPresenter(string presenterId, Entity owner)
             {
-                return FindPerformer(performerId, (Entity?)owner);
+                return FindPresenter(presenterId, (Entity?)owner);
             }
 
-            private Entity FindPerformer(string performerId, Entity? owner)
+            private Entity FindPresenter(string presenterId, Entity? owner)
             {
-                int defId = Definitions.GetId(performerId);
+                int defId = Definitions.GetId(presenterId);
                 Entity found = Entity.Null;
-                var query = new QueryDescription().WithAll<PerformerState>();
-                _world.Query(in query, (Entity entity, ref PerformerState state) =>
+                var query = new QueryDescription().WithAll<PresenterState>();
+                _world.Query(in query, (Entity entity, ref PresenterState state) =>
                 {
                     if (state.DefId == defId && (owner == null || state.OwnerEntity == owner.Value))
                     {
@@ -910,7 +914,7 @@ namespace Ludots.Tests.GAS
                     }
                 });
 
-                Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Performer '{performerId}' was not created.");
+                Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Presenter '{presenterId}' was not created.");
                 return found;
             }
 
@@ -920,52 +924,52 @@ namespace Ludots.Tests.GAS
                 int previewId = Definitions.GetOrRegisterId("test.aim.preview");
                 int highlightId = Definitions.GetOrRegisterId("test.collection.highlight");
                 int affectedCollectionKeyId = _entityCollectionKeyRegistry.Register(EntityCollectionKeys.AbilityAimAffected);
-                Definitions.Register("test.aim.area.line", new PerformerDefinition
+                Definitions.Register("test.aim.area.line", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
                     ParamDefaults = new[]
                     {
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.OverlayLength, Lane = ParamLane.Float, FloatValue = 1f },
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.OverlayWidth, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.OverlayLength, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.OverlayWidth, Lane = ParamLane.Float, FloatValue = 1f },
                     },
                     Behaviors = SingleGroundOverlayBehavior(),
                 });
-                Definitions.Register("test.aim.preview", new PerformerDefinition
+                Definitions.Register("test.aim.preview", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
                     ParamDefaults = new[]
                     {
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.MarkerScale, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.MarkerScale, Lane = ParamLane.Float, FloatValue = 1f },
                     },
                     Behaviors = SingleMeshBehavior(),
                 });
-                Definitions.Register("test.collection.highlight", new PerformerDefinition
+                Definitions.Register("test.collection.highlight", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
                     ParamDefaults = new[]
                     {
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.MarkerScale, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.MarkerScale, Lane = ParamLane.Float, FloatValue = 1f },
                     },
                     Bindings = new[]
                     {
-                        new PerformerParamBinding
+                        new PresenterParamBinding
                         {
-                            ParamKey = WellKnownPerformerParamKeys.MarkerColorR,
+                            ParamKey = WellKnownPresenterParamKeys.MarkerColorR,
                             Value = ValueRef.FromEntityColorVector(),
                         },
                     },
                     Behaviors = SingleMeshBehavior(),
                 });
-                Definitions.Register("test.aim.rules", new PerformerDefinition
+                Definitions.Register("test.aim.rules", new PresenterDefinition
                 {
                     Rules = new[]
                     {
                         CreateRule(AbilityAimPresentationEventKeys.AreaLine, areaId),
-                        FloatParamRule(AbilityAimPresentationEventKeys.AreaLine, areaId, WellKnownPerformerParamKeys.OverlayLength, PerformerCommandValueSource.EventFloatA),
-                        FloatParamRule(AbilityAimPresentationEventKeys.AreaLine, areaId, WellKnownPerformerParamKeys.OverlayWidth, PerformerCommandValueSource.EventFloatB),
+                        FloatParamRule(AbilityAimPresentationEventKeys.AreaLine, areaId, WellKnownPresenterParamKeys.OverlayLength, PresenterCommandValueSource.EventFloatA),
+                        FloatParamRule(AbilityAimPresentationEventKeys.AreaLine, areaId, WellKnownPresenterParamKeys.OverlayWidth, PresenterCommandValueSource.EventFloatB),
                         EndRule(AbilityAimPresentationEventKeys.AreaLine, areaId),
                         CreateRule(AbilityAimPresentationEventKeys.Preview, previewId),
-                        FloatParamRule(AbilityAimPresentationEventKeys.Preview, previewId, WellKnownPerformerParamKeys.MarkerScale, PerformerCommandValueSource.EventFloatA),
+                        FloatParamRule(AbilityAimPresentationEventKeys.Preview, previewId, WellKnownPresenterParamKeys.MarkerScale, PresenterCommandValueSource.EventFloatA),
                         EndRule(AbilityAimPresentationEventKeys.Preview, previewId),
                         CollectionCreateRule(affectedCollectionKeyId, highlightId),
                         CollectionEndRule(affectedCollectionKeyId, highlightId),
@@ -973,31 +977,31 @@ namespace Ludots.Tests.GAS
                 });
             }
 
-            private static PerformerRule CreateRule(string key, int definitionId)
+            private static PresenterRule CreateRule(string key, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.AbilityAimBegun, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.CreatePerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.CreatePresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                         UseEventPosition = true,
                     }
                 };
             }
 
-            private static PerformerRule FloatParamRule(string key, int definitionId, int paramKey, PerformerCommandValueSource source)
+            private static PresenterRule FloatParamRule(string key, int definitionId, int paramKey, PresenterCommandValueSource source)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.AbilityAimUpdated, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.SetParam,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.SetParam,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                         UseEventPosition = true,
                         ParamKey = paramKey,
                         ParamLane = ParamLane.Float,
@@ -1006,48 +1010,48 @@ namespace Ludots.Tests.GAS
                 };
             }
 
-            private static PerformerRule EndRule(string key, int definitionId)
+            private static PresenterRule EndRule(string key, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.AbilityAimEnded, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.DestroyScopedPerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.DestroyScopedPresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                         UseEventPosition = true,
                     }
                 };
             }
 
-            private static PerformerRule CollectionCreateRule(int keyId, int definitionId)
+            private static PresenterRule CollectionCreateRule(int keyId, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.EntityCollectionMemberAdded, KeyId = keyId },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.CreatePerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
-                        OwnerSource = PerformerCommandEntitySource.EventSource,
+                        CommandKind = PresenterCommandKind.CreatePresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
+                        OwnerSource = PresenterCommandEntitySource.EventSource,
                         UseEventPosition = false,
                     }
                 };
             }
 
-            private static PerformerRule CollectionEndRule(int keyId, int definitionId)
+            private static PresenterRule CollectionEndRule(int keyId, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.EntityCollectionMemberRemoved, KeyId = keyId },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.DestroyScopedPerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
-                        OwnerSource = PerformerCommandEntitySource.EventSource,
+                        CommandKind = PresenterCommandKind.DestroyScopedPresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
+                        OwnerSource = PresenterCommandEntitySource.EventSource,
                         UseEventPosition = false,
                     }
                 };

@@ -1,0 +1,103 @@
+{
+  "camera": {
+    "virtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "targetXCm": 0,
+    "targetYCm": 0,
+    "distanceCm": 2800,
+    "pitch": 72,
+    "yaw": 180,
+    "fovYDeg": 50
+  },
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0.0,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "east",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "东格",
+      "x": 6.93,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "northeast",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "东北格",
+      "x": 3.46,
+      "y": -6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "northwest",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西北格",
+      "x": -3.46,
+      "y": -6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "west",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西格",
+      "x": -6.93,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "southwest",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "西南格",
+      "x": -3.46,
+      "y": 6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "southeast",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "东南格",
+      "x": 3.46,
+      "y": 6.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "outer",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "再远一格",
+      "x": 13.86,
+      "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    }
+  ],
+  "collections": [],
+  "links": []
+}

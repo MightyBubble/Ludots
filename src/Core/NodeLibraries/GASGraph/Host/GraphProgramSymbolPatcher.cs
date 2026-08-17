@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
@@ -9,15 +10,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
     public static class GraphProgramSymbolPatcher
     {
+        private static readonly ConditionalWeakTable<GraphInstruction[], object> PatchedPrograms = new();
+
         public static void Patch(
             string[] symbols,
             GraphInstruction[] program,
             IGraphSymbolResolver symbolResolver,
-            EntityCollectionStore? entityCollections = null)
+            EntityCollectionStore? entityCollections = null,
+            BuiltinHandlerRegistry? builtinHandlers = null)
         {
             if (symbols == null || symbols.Length == 0) return;
             if (program == null || program.Length == 0) return;
             if (symbolResolver == null) throw new ArgumentNullException(nameof(symbolResolver));
+            if (PatchedPrograms.TryGetValue(program, out _))
+            {
+                return;
+            }
 
             for (int i = 0; i < program.Length; i++)
             {
@@ -30,10 +38,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.SendEvent:
                     case GraphNodeOp.HasTag:
                         ins.Imm = symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.SelectTagInMask:
-                    case GraphNodeOp.LookupTagDisplayToken:
-                        ins.Imm = symbolResolver.ResolveTagDisplayTable(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
@@ -51,6 +55,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         break;
                     case GraphNodeOp.QueryFilterTemplate:
                         ins.Imm = symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.ResolveTableRow:
+                        ins.Imm = symbolResolver.ResolveGraphLookupTable(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.TableReadInt:
+                    case GraphNodeOp.TableReadFloat:
+                        ins.Imm = symbolResolver.ResolveGraphLookupField(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
@@ -82,8 +93,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.InvokeBuiltin:
-                        ins.Imm = (int)GasEnumParser.ParseBuiltinHandlerId(ResolveSymbol(symbols, ins.Imm));
+                    {
+                        string handlerKey = ResolveSymbol(symbols, ins.Imm);
+                        if (builtinHandlers == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph InvokeBuiltin symbol '{handlerKey}' requires a builtin handler registry.");
+                        }
+
+                        int handlerId = builtinHandlers.GetId(handlerKey);
+                        if (handlerId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph InvokeBuiltin references unknown builtin handler '{handlerKey}'.");
+                        }
+
+                        ins.Imm = handlerId;
                         break;
+                    }
                     case GraphNodeOp.RelationshipSetMetric:
                     case GraphNodeOp.RelationshipAddMetric:
                     case GraphNodeOp.RelationshipGetMetric:
@@ -164,6 +191,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         }
                         break;
                 }
+            }
+
+            PatchedPrograms.Add(program, PatchedPrograms);
+        }
+
+        /// <summary>
+        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>).
+        /// </summary>
+        public static void PatchFuncLib(string[] symbols, GraphInstruction[] program, GraphFunctionCatalog catalog)
+        {
+            if (program == null || program.Length == 0) return;
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+
+            for (int i = 0; i < program.Length; i++)
+            {
+                ref var ins = ref program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                {
+                    continue;
+                }
+
+                if ((ins.Flags & GraphInstructionFlags.FuncLibName) == 0)
+                {
+                    continue;
+                }
+
+                string functionName = ResolveSymbol(symbols, ins.Imm);
+                GraphFunctionEntry entry = catalog.Require(functionName);
+                ins.Imm = entry.GraphId;
+                ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
             }
         }
 

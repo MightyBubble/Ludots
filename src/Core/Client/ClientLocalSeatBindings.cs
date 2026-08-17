@@ -87,6 +87,23 @@ namespace Ludots.Core.Client
                     new ResolvedLocalSeatPossession(seatId, playerId, possessedRep, ControlSchemeId: null),
                 };
             }
+
+            UpsertSolePlayerLookup(engine, playerId, possessedRep);
+        }
+
+        private static void UpsertSolePlayerLookup(GameEngine engine, int playerId, Entity possessedRep)
+        {
+            var replacement = new Ludots.Core.Gameplay.Teams.PlayerEntityLookup();
+            replacement.Register(playerId, possessedRep);
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PlayerEntityLookup.Name, out object? lookupObj) &&
+                lookupObj is Ludots.Core.Gameplay.Teams.PlayerEntityLookup existing)
+            {
+                existing.ReplaceWith(replacement);
+            }
+            else
+            {
+                engine.GlobalContext[CoreServiceKeys.PlayerEntityLookup.Name] = replacement;
+            }
         }
 
         private static Vector2 ResolvePresentResolution(GameEngine engine, Vector2? presentResolutionPx)

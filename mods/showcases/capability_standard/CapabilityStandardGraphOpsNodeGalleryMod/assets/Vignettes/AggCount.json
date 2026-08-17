@@ -1,0 +1,13 @@
+{
+  "op": "AggCount",
+  "driver": "spatial",
+  "title": "圈里一共几个人",
+  "beat": "字幕报人数，舞台上那些人亮着。",
+  "detailTemplate": "圈里一共{count}个人。",
+  "assertDetailContains": [
+    "一共"
+  ],
+  "featuredNodeId": "count",
+  "graphKind": "Query",
+  "field": "spatial"
+}

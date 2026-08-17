@@ -37,8 +37,15 @@ internal sealed class CaptureSuite
 
 	public void Capture(string stepName, UiScene scene, string narrative)
 	{
-		scene.Layout(1280f, 720f);
-		using SKBitmap bitmap = RenderSceneBitmap(scene, 1280, 720);
+		CaptureAt(stepName, scene, 1280f, 720f, narrative);
+	}
+
+	public void CaptureAt(string stepName, UiScene scene, float width, float height, string narrative)
+	{
+		int pixelWidth = Math.Max(1, (int)Math.Ceiling(width));
+		int pixelHeight = Math.Max(1, (int)Math.Ceiling(height));
+		scene.Layout(width, height);
+		using SKBitmap bitmap = RenderSceneBitmap(scene, pixelWidth, pixelHeight);
 		string filePath = Path.Combine(_screens, stepName + ".png");
 		SaveBitmapAsPng(bitmap, filePath);
 		RecordCapture(stepName, narrative, filePath);

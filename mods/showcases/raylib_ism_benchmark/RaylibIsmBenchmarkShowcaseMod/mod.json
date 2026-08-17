@@ -1,12 +1,12 @@
 {
   "name": "RaylibIsmBenchmarkShowcaseMod",
   "version": "1.0.0",
-  "description": "Raylib adapter-side 30K ISM benchmark showcase that bypasses performer/entity pipelines and measures platform rendering overhead directly.",
+  "description": "Raylib adapter-side 30K ISM benchmark showcase that bypasses presenter/entity pipelines and measures platform rendering overhead directly.",
   "main": "bin/net8.0/RaylibIsmBenchmarkShowcaseMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "PerformerBlacksmithShowcaseMod": "^1.0.0"
+    "PresenterBlacksmithShowcaseMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["showcase", "raylib", "benchmark", "ism"]

@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipSortByMetric",
+  "driver": "rel",
+  "title": "按好感排个序",
+  "beat": "按好感高低挂出名次牌。",
+  "detailTemplate": "排第一是{friend}，好感 {loyalty}。",
+  "assertDetailContains": [
+    "排第一"
+  ],
+  "featuredNodeId": "sort",
+  "graphKind": "Query",
+  "field": "rel"
+}

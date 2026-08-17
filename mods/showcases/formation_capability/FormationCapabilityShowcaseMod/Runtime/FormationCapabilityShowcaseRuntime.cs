@@ -176,9 +176,9 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _showcaseStateSystem = showcaseStateSystem;
             engine.RegisterSystem(localOrderSourceSystem, SystemGroup.InputCollection);
             _localOrderSourceSystem = localOrderSourceSystem;
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(formationOutlinePresentationSystem);
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(formationOutlinePresentationSystem);
             _formationOutlinePresentationSystem = formationOutlinePresentationSystem;
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(obstacleOverlayPresentationSystem);
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(obstacleOverlayPresentationSystem);
             _obstacleOverlayPresentationSystem = obstacleOverlayPresentationSystem;
             _systemsInstalled = true;
         }

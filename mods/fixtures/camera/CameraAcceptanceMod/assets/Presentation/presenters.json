@@ -1,0 +1,179 @@
+[
+  {
+    "id": "entity_health_bar",
+    "__delete": true
+  },
+  {
+    "id": "entity_world_text",
+    "__delete": true
+  },
+  {
+    "id": "camera_acceptance_projection_cue_fixture",
+    "lifecycle": {
+      "durationSeconds": 0.45
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            0,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.15,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "camera_acceptance_projection_cue_decal",
+        "scopeTag": "decal"
+      },
+      {
+        "definitionId": "camera_acceptance_projection_cue_vfx",
+        "scopeTag": "vfx"
+      },
+      {
+        "definitionId": "camera_acceptance_projection_cue_surface",
+        "scopeTag": "surface"
+      }
+    ]
+  },
+  {
+    "id": "camera_acceptance_projection_cue_decal",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Decal",
+          "assetId": "camera.acceptance.cue.decal",
+          "materialId": "camera.acceptance.cue.decal",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            -0.13,
+            0
+          ],
+          "localScale": [
+            0.9,
+            0.9,
+            0.9
+          ]
+        },
+        "style": {
+          "color": [
+            0.2,
+            0.95,
+            1,
+            0.9
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "camera_acceptance_projection_cue_vfx",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "effect.camera.projection_cue",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.18,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        "style": {
+          "color": [
+            0.35,
+            0.95,
+            1,
+            0.85
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "camera_acceptance_projection_cue_surface",
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Surface",
+          "assetId": "cube",
+          "renderPath": "Surface",
+          "mobility": "Movable",
+          "surfaceLayerKey": "camera.acceptance.cue.surface",
+          "localOffset": [
+            0,
+            -0.08,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.03,
+            0.5
+          ]
+        },
+        "style": {
+          "color": [
+            0.1,
+            0.55,
+            1,
+            0.65
+          ]
+        }
+      }
+    ]
+  }
+]

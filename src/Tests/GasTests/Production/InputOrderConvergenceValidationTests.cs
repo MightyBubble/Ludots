@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS.Production
             foreach (string file in aiConfigFiles)
             {
                 string normalized = file.Replace('\\', '/');
-                if (!normalized.Contains("/assets/Configs/AI/", StringComparison.Ordinal))
+                if (!normalized.Contains("/assets/AI/", StringComparison.Ordinal))
                 {
                     continue;
                 }

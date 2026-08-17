@@ -1,16 +1,20 @@
 using CapabilityStandardScriptFlowSandboxMod.Runtime;
+using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
 {
-    [TestFixture]
-    [Category("ci-gate")]
-    public sealed class ScriptFlowSandboxShowcaseAcceptanceTests
+        [TestFixture]
+        [NonParallelizable]
+        [Category("ci-gate")]
+        public sealed class ScriptFlowSandboxShowcaseAcceptanceTests
     {
         [Test]
         public void DrinkUntilFull_YieldsThenHaltsAtLimit()
         {
+            var programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out var actions);
             var runtime = new ScriptFlowSandboxRuntime();
+            runtime.Bind(programs, actions);
             runtime.EnsureWorld();
             for (int i = 0; i < 20 && !runtime.Halted; i++)
             {

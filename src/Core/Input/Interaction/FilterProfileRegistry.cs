@@ -254,7 +254,7 @@ namespace Ludots.Core.Input.Interaction
             }
 
             // Load-time declaration into the shared tag id space (same precedent as
-            // RelationshipCatalogRuntime / PerformerDefinitionConfigLoader).
+            // RelationshipCatalogRuntime / PresenterDefinitionConfigLoader).
             return TagRegistry.Register(tagName);
         }
 

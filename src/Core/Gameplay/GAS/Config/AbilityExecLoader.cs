@@ -25,10 +25,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private static readonly string[] RemovedAimVisualFieldNames =
         {
             "aimVisual",
-            "areaPerformerId",
-            "rangeCirclePerformerId",
-            "previewPerformerId",
-            "performerId",
+            "areaPresenterId",
+            "rangeCirclePresenterId",
+            "previewPresenterId",
+            "presenterId",
         };
 
         public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
@@ -100,7 +100,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["indicator"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Presenter rules.");
             }
 
             RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
@@ -130,7 +130,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["cooldown"] is JsonObject cooldownObj)
             {
                 def.Cooldown = CompileCooldown(cooldownObj, id, path);
-                def.HasCooldown = def.Cooldown.CooldownValueAttributeId > 0 || def.Cooldown.CooldownTagId > 0;
+                def.HasCooldown = AttributeRegistry.IsValidId(def.Cooldown.CooldownValueAttributeId) || def.Cooldown.CooldownTagId > 0;
             }
 
             // ── blockTags ──
@@ -339,7 +339,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (!string.IsNullOrWhiteSpace(attrName))
             {
                 int attrId = AttributeRegistry.GetId(attrName);
-                if (attrId <= 0)
+                if (!AttributeRegistry.IsValidId(attrId))
                 {
                     throw new InvalidOperationException(
                         $"Ability '{id}' in '{path}' cooldown.valueAttribute references unknown attribute '{attrName}'.");
@@ -354,7 +354,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 cooldown.CooldownTagId = TagRegistry.Register(tagName);
             }
 
-            if (cooldown.CooldownValueAttributeId <= 0 && cooldown.CooldownTagId <= 0)
+            if (!AttributeRegistry.IsValidId(cooldown.CooldownValueAttributeId) && cooldown.CooldownTagId <= 0)
             {
                 throw new InvalidOperationException(
                     $"Ability '{id}' in '{path}' cooldown must declare valueAttribute or tag.");
@@ -605,7 +605,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         if (string.Equals(key, RemovedAimVisualFieldNames[i], StringComparison.Ordinal))
                         {
                             throw new InvalidOperationException(
-                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Performer event-condition-action rules.");
+                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Presenter event-condition-action rules.");
                         }
                     }
 

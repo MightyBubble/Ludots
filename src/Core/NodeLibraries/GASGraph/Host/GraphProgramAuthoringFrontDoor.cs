@@ -15,6 +15,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
             CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
         {
+            GraphControlFlowCompileResult result = CompileJsonObjectFull(obj, graphId, options);
+            return (result.Package, result.OutputSchema, result.Diagnostics);
+        }
+
+        public static GraphControlFlowCompileResult CompileJsonObjectFull(
+            JsonObject obj,
+            string graphId,
+            JsonSerializerOptions options)
+        {
             if (obj == null) throw new ArgumentNullException(nameof(obj));
             if (string.IsNullOrWhiteSpace(graphId)) throw new ArgumentException("graphId is required.", nameof(graphId));
             if (options == null) throw new ArgumentNullException(nameof(options));
@@ -54,7 +63,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 doc.Kind = kind.ToString();
             }
 
-            return GraphControlFlowCompiler.CompileWithOutputs(doc);
+            return GraphControlFlowCompiler.Compile(doc);
         }
 
         public static GraphKind RequireKind(JsonObject obj, string graphId)

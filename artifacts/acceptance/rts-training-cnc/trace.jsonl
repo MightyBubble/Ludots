@@ -1,0 +1,4 @@
+﻿{"Step":"idle","Producer":"War Factory","Resource":{"Name":"Credits","Value":2800},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"queued","Producer":"War Factory","Resource":{"Name":"Credits","Value":2700},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"mid_progress","Producer":"War Factory","Resource":{"Name":"Credits","Value":2700},"Orders":{"HasActive":true,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":0}
+{"Step":"complete","Producer":"War Factory","Resource":{"Name":"Credits","Value":1900},"Orders":{"HasActive":false,"QueuedCount":0,"HasPending":false},"ProducedUnitCount":1}

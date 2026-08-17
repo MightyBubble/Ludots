@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipQueryBetweenPair",
+  "driver": "rel",
+  "title": "这两人之间有没有链",
+  "beat": "这一对之间拉出一条双头链。",
+  "detailTemplate": "自己和{friend}之间查到 {friendCount} 条链。",
+  "assertDetailContains": [
+    "之间"
+  ],
+  "featuredNodeId": "between",
+  "graphKind": "Query",
+  "field": "rel"
+}

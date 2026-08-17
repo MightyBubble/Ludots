@@ -1,0 +1,8 @@
+flowchart LR
+    A["Load ux_prototype_battle"] --> B["Mount prototype HUD"]
+    B --> C["Queue construction + production + bake"]
+    C --> D["Tick simulation"]
+    D --> E["Spawn new farm + worker"]
+    D --> F["Finish navmesh bake"]
+    E --> G["Write acceptance artifacts"]
+    F --> G

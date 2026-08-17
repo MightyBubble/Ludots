@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipFilterFlag",
+  "driver": "rel",
+  "title": "只看挂了信任旗的",
+  "beat": "链上插着信任旗的才留下。",
+  "detailTemplate": "挂着信任旗的有 {friendCount} 人。",
+  "assertDetailContains": [
+    "信任旗"
+  ],
+  "featuredNodeId": "trusted",
+  "graphKind": "Query",
+  "field": "rel"
+}

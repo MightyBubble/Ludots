@@ -43,7 +43,7 @@ namespace Ludots.Tests.Presentation
                 view,
                 loadedChunks: null,
                 focusOverride: focusOverride,
-                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                presenters: engine.GetService(CoreServiceKeys.PresenterEntityRuntime),
                 timingDiagnostics: timings,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             culling.DisarmPresentBindingCulling();

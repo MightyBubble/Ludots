@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS
     public class AuditCoverageTests
     {
         // ════════════════════════════════════════════════════════════════════
-        //  Section 1: EffectPhaseExecutor — Builtin Handler Path
+        //  Section 1: EffectPhaseExecutor �?Builtin Handler Path
         //  (Previously zero coverage: all existing tests used empty PresetTypeRegistry)
         // ════════════════════════════════════════════════════════════════════
 
@@ -109,7 +109,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
-            // Empty template registry — template ID 999 does not exist
+            // Empty template registry �?template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
             var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 2: EffectProposalProcessingSystem — ResetSlice
+        //  Section 2: EffectProposalProcessingSystem �?ResetSlice
         //  (Previously: only behavior test that happened to pass even with no-op)
         // ════════════════════════════════════════════════════════════════════
 
@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = 1 // Force partial processing
                 };
 
-                // Begin processing — should enter active state
+                // Begin processing �?should enter active state
                 sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue);
 
                 // DebugWindowPhase > 0 means the system is in an active window phase
@@ -282,7 +282,7 @@ namespace Ludots.Tests.GAS
             }
             That(container.Count, Is.EqualTo(ActiveEffectContainer.CAPACITY));
 
-            // One more — should return false
+            // One more �?should return false
             var overflow = world.Create();
             bool overflowResult = container.Add(overflow);
             That(overflowResult, Is.False, "Overflow add must return false");
@@ -344,7 +344,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 4: EffectPhaseExecutor — PresetType integration
+        //  Section 4: EffectPhaseExecutor �?PresetType integration
         //  (Previously: all tests used the retired preset behavior registry constructor)
         // ════════════════════════════════════════════════════════════════════
 

@@ -1,0 +1,49 @@
+[
+  {
+    "id": "showcase.graph_op.CompareLtInt",
+    "kind": "Effect",
+    "entry": "healthNow",
+    "nodes": [
+      {
+        "id": "healthNow",
+        "op": "ConstInt",
+        "intValue": 50
+      },
+      {
+        "id": "fullLine",
+        "op": "ConstInt",
+        "intValue": 80
+      },
+      {
+        "id": "canFull",
+        "op": "CompareLtInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "healthNow",
+        "fromPort": "next",
+        "to": "fullLine"
+      },
+      {
+        "from": "fullLine",
+        "fromPort": "next",
+        "to": "canFull"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "healthNow",
+        "fromPort": "value",
+        "to": "canFull",
+        "toPort": "a"
+      },
+      {
+        "from": "fullLine",
+        "fromPort": "value",
+        "to": "canFull",
+        "toPort": "b"
+      }
+    ]
+  }
+]

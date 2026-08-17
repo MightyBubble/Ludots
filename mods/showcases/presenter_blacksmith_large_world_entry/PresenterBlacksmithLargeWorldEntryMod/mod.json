@@ -1,0 +1,10 @@
+{
+  "name": "PresenterBlacksmithLargeWorldEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for presenter blacksmith large-world minimap marker acceptance.",
+  "main": "bin/net8.0/PresenterBlacksmithLargeWorldEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PresenterBlacksmithShowcaseMod": "^1.0.0"
+  }
+}

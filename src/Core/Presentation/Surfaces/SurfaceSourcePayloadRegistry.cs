@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Surfaces
 {
@@ -59,7 +59,7 @@ namespace Ludots.Core.Presentation.Surfaces
     public readonly struct SurfacePayloadSnapshot
     {
         public SurfacePayloadSnapshot(
-            PerformerSurfaceKind kind,
+            PresenterSurfaceKind kind,
             int version,
             SurfaceSplineRibbonPayload splineRibbon,
             SurfaceClosedAreaPayload closedArea,
@@ -72,7 +72,7 @@ namespace Ludots.Core.Presentation.Surfaces
             RawProceduralMesh = rawProceduralMesh;
         }
 
-        public PerformerSurfaceKind Kind { get; }
+        public PresenterSurfaceKind Kind { get; }
         public int Version { get; }
         public SurfaceSplineRibbonPayload SplineRibbon { get; }
         public SurfaceClosedAreaPayload ClosedArea { get; }
@@ -92,7 +92,7 @@ namespace Ludots.Core.Presentation.Surfaces
             }
 
             _payloads[scopeId] = new SurfacePayloadSnapshot(
-                PerformerSurfaceKind.SplineRibbon,
+                PresenterSurfaceKind.SplineRibbon,
                 NextVersion(scopeId),
                 new SurfaceSplineRibbonPayload(segments),
                 default,
@@ -107,7 +107,7 @@ namespace Ludots.Core.Presentation.Surfaces
             }
 
             _payloads[scopeId] = new SurfacePayloadSnapshot(
-                PerformerSurfaceKind.ClosedArea,
+                PresenterSurfaceKind.ClosedArea,
                 NextVersion(scopeId),
                 default,
                 new SurfaceClosedAreaPayload(boundaryPoints),
@@ -122,7 +122,7 @@ namespace Ludots.Core.Presentation.Surfaces
             }
 
             _payloads[scopeId] = new SurfacePayloadSnapshot(
-                PerformerSurfaceKind.RawProceduralMesh,
+                PresenterSurfaceKind.RawProceduralMesh,
                 NextVersion(scopeId),
                 default,
                 default,

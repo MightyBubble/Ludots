@@ -77,16 +77,16 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void GraphCompiler_EffectWithWait_FailsClosed()
+        public void GraphControlFlowCompiler_EffectWithWait_FailsClosed()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "bad.effect.wait",
                 Kind = "Effect",
                 Entry = "wait",
                 Nodes =
                 {
-                    new GraphNodeConfig
+                    new GraphControlFlowNode
                     {
                         Id = "wait",
                         Op = GraphControlFlowCompiler.WaitOp
@@ -94,7 +94,7 @@ namespace Ludots.Tests.Gas.Graph
                 }
             };
 
-            var (pkg, _, diags) = GraphCompiler.CompileWithOutputs(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
             Assert.That(pkg.HasValue, Is.False);
             Assert.That(diags, Has.Some.Matches<GraphDiagnostic>(d =>
                 d.Severity == GraphDiagnosticSeverity.Error &&
@@ -102,38 +102,38 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void GraphCompiler_EffectWithYield_PolicyRejects()
+        public void GraphControlFlowCompiler_EffectWithYield_FailsClosed()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "bad.effect.yield",
                 Kind = "Effect",
                 Entry = "y",
                 Nodes =
                 {
-                    new GraphNodeConfig
+                    new GraphControlFlowNode
                     {
                         Id = "y",
-                        Op = nameof(GraphNodeOp.Yield),
-                        Next = "halt"
+                        Op = nameof(GraphNodeOp.Yield)
                     },
-                    new GraphNodeConfig
+                    new GraphControlFlowNode
                     {
                         Id = "halt",
                         Op = nameof(GraphNodeOp.ConstInt),
                         IntValue = 1
                     }
-                }
+                },
+                ControlEdges =
+                {
+                    new("y", GraphControlFlowPorts.Next, "halt")
+                },
             };
 
-            var (pkg, _, diags) = GraphCompiler.CompileWithOutputs(cfg);
-            // Next-chain may still emit Yield as an opcode; Effect must fail at kind policy (not silently run).
-            Assert.That(pkg.HasValue, Is.True, GraphScriptTestGraphs.FormatDiagnostics(diags));
-            Assert.Throws<InvalidOperationException>(() =>
-                GraphKindOperationPolicy.RequireAllowed(
-                    GraphKind.Effect,
-                    pkg!.Value.Program,
-                    GasGraphOpHandlerTable.Instance));
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+            Assert.That(pkg.HasValue, Is.False);
+            Assert.That(diags, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Code == GraphDiagnosticCodes.UnknownNodeOp));
         }
 
         [Test]

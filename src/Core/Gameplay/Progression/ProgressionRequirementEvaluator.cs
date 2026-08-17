@@ -393,7 +393,8 @@ namespace Ludots.Core.Gameplay.Progression
                 default(IntVector2),
                 program,
                 _graphApi,
-                kind);
+                kind,
+                programs: _graphPrograms);
         }
 
         private int CountMatchingEntities(in ProgressionRequirementNode node, in RoleResolverContext context)

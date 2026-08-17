@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
@@ -105,6 +106,7 @@ namespace Ludots.Core.Config
         public int AbilityExecSnapshotCapacity { get; set; }
         public int EffectLifetimeSnapshotCapacity { get; set; }
         public int EffectFanOutCommandCapacity { get; set; }
+        public int EffectRequestQueueCapacity { get; set; }
         public int OrderQueueCapacity { get; set; }
         public int ResponseChainOrderQueueCapacity { get; set; }
         public int OrderAdmissionResultCapacity { get; set; }
@@ -137,6 +139,14 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.effectFanOutCommandCapacity must be positive.");
+            }
+
+            if (EffectRequestQueueCapacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectRequestQueueCapacity must be at least " +
+                    "GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME so a single frame can publish the full " +
+                    "effect request batch without silent expansion.");
             }
 
             if (OrderQueueCapacity <= 0)

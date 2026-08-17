@@ -33,7 +33,7 @@
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Runtime/FormationCapabilityShowcaseRuntime.cs` | 场景生成与 showcase 生命周期 |
 | `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/Systems/FormationCommandActorExpander.cs` | anchor 到 member actor 的集群展开 |
 
-不要复制 `OrderQueue`、`OrderBuffer`、Command Router、spawn queue、MassNavigation runtime 或 performer runtime。
+不要复制 `OrderQueue`、`OrderBuffer`、Command Router、spawn queue、MassNavigation runtime 或 presenter runtime。
 
 ## Anchor 与 Member
 

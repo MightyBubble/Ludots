@@ -16,7 +16,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Primitives;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -236,8 +236,8 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
             var request = default(OrderRequest);
@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS
 
             That(orderRequests.TryEnqueue(request), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
             system.Update(0f);
 
             That(ui.Visible, Is.True);
@@ -281,11 +281,11 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
 
             var actor = world.Create();
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
 
             var first = default(OrderRequest);
             first.PlayerId = 1;
@@ -316,8 +316,9 @@ namespace Ludots.Tests.GAS
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
             var markers = new TransientMarkerBuffer();
-            var prefabs = new PrefabRegistry();
-            prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
+            var meshes = new MeshAssetRegistry();
+            var presenters = new PresenterDefinitionRegistry();
+            RegisterAuthoredCueMarker(meshes, presenters);
 
             var actor = world.Create(new VisualTransform { Position = new Vector3(2f, 0f, 3f), Scale = Vector3.One });
             That(telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -336,7 +337,7 @@ namespace Ludots.Tests.GAS
                 Outcome = ResponseChainResolveOutcome.AppliedInstant
             }), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, meshes, presenters);
             system.Update(0f);
 
             That(markers.Count, Is.EqualTo(1), "Only resolved response-chain telemetry should emit cue markers.");
@@ -614,6 +615,35 @@ namespace Ludots.Tests.GAS
             handler.PushContext("Gameplay");
             handler.Update();
             return (backend, handler);
+        }
+
+        private static void RegisterAuthoredCueMarker(MeshAssetRegistry meshes, PresenterDefinitionRegistry presenters)
+        {
+            int meshId = meshes.Register(
+                WellKnownMeshKeys.CueMarker,
+                MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube));
+            presenters.Register(WellKnownMeshKeys.CueMarker, new PresenterDefinition
+            {
+                DefaultLifetime = 0.35f,
+                PositionOffset = new Vector3(0f, 0.2f, 0f),
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = meshId,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(0.2f, 0.2f, 0.2f),
+                        },
+                    },
+                ],
+            });
         }
 
         private static void PressButton(PlayerInputHandler handler, TestInputBackend backend, string path)

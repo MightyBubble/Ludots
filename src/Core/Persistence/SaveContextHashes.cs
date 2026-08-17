@@ -9,7 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Hosting;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 
@@ -62,7 +62,7 @@ namespace Ludots.Core.Persistence
             AppendRegistry(builder, "contextGroup", ContextGroupIdRegistry.SnapshotMappings());
             AppendRegistry(builder, "graph", GraphIdRegistry.SnapshotMappings());
             AppendRegistry(builder, "orderBlackboardKey", OrderBlackboardKeyRegistry.SnapshotMappings());
-            AppendRegistry(builder, "performerParamKey", PerformerParamKeyRegistry.SnapshotMappings());
+            AppendRegistry(builder, "presenterParamKey", PresenterParamKeyRegistry.SnapshotMappings());
 
             if (engine.TryGetService(CoreServiceKeys.EntityTemplateKeyRegistry, out EntityTemplateKeyRegistry templateKeys))
             {
