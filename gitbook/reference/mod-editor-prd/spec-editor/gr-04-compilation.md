@@ -1,6 +1,6 @@
-# gr-03 editor spec · 编译与校验
+# gr-04 editor spec · 编译与校验
 
-> 编辑器实现任务书。编辑器需求见 [gr-03 UXD](../uxd/gr-04-compilation.md)；引擎侧见 [runtime spec](../spec-runtime/gr-04-compilation.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-04 UXD](../uxd/gr-04-compilation.md)；引擎侧见 [runtime spec](../spec-runtime/gr-04-compilation.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：编译器"只编译"入口、诊断码字典投影、糖 SSOT。
 - 验收：对 21 码各构造一例，编辑器全部呈现并定位；多错文档一次列全。
 
-**相关文档**：[gr-03 UXD](../uxd/gr-04-compilation.md) · [gr-03 runtime spec](../spec-runtime/gr-04-compilation.md)
+**相关文档**：[gr-04 UXD](../uxd/gr-04-compilation.md) · [gr-04 runtime spec](../spec-runtime/gr-04-compilation.md)

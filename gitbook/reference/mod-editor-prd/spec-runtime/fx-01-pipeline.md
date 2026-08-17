@@ -1,6 +1,6 @@
-# fx-00 runtime spec · 效果执行管线总览
+# fx-01 runtime spec · 效果执行管线总览
 
-> 引擎实现任务书。第一性需求见 [fx-00 PRD](../prd/fx-01-pipeline.md)；现状见 [reference](../reference/fx-01-pipeline.md)。
+> 引擎实现任务书。第一性需求见 [fx-01 PRD](../prd/fx-01-pipeline.md)；现状见 [reference](../reference/fx-01-pipeline.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-00 PRD](../prd/fx-01-pipeline.md) · [reference](../reference/fx-01-pipeline.md)
+**相关文档**：[fx-01 PRD](../prd/fx-01-pipeline.md) · [reference](../reference/fx-01-pipeline.md)

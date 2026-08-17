@@ -1,6 +1,6 @@
-# gr-08 editor spec · Query 图输出
+# gr-09 editor spec · Query 图输出
 
-> 编辑器实现任务书。编辑器需求见 [gr-08 UXD](../uxd/gr-09-outputs.md)；引擎侧见 [runtime spec](../spec-runtime/gr-09-outputs.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-09 UXD](../uxd/gr-09-outputs.md)；引擎侧见 [runtime spec](../spec-runtime/gr-09-outputs.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：编译器 schema 校验、节点输出类型表、输出值存储统计、运行预览接口。
 - 验收：两类 destination × 五类型全组合网格，编辑器与编译器接受集一致；预览读写不污染槽池。
 
-**相关文档**：[gr-08 UXD](../uxd/gr-09-outputs.md) · [gr-08 runtime spec](../spec-runtime/gr-09-outputs.md)
+**相关文档**：[gr-09 UXD](../uxd/gr-09-outputs.md) · [gr-09 runtime spec](../spec-runtime/gr-09-outputs.md)

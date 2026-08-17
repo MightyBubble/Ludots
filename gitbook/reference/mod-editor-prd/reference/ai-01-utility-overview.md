@@ -1,6 +1,6 @@
-# ai-00 reference · AI 行为层总论
+# ai-01 reference · AI 行为层总论
 
-> 现状参考。第一性需求见 [ai-00 PRD](../prd/ai-01-utility-overview.md)；配置说明见 [ai-00 配置说明](../config/ai-01-utility-overview.md)。
+> 现状参考。第一性需求见 [ai-01 PRD](../prd/ai-01-utility-overview.md)；配置说明见 [ai-01 配置说明](../config/ai-01-utility-overview.md)。
 
 ## 1. 现状快照
 
@@ -26,4 +26,4 @@
 | 主仓行为资产 | assets/AI/behavior_trees.json、assets/AI/hfsm.json |
 | mod 效用全集 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/ |
 
-**相关文档**：[ai-00 PRD](../prd/ai-01-utility-overview.md) · [ai-01 reference](ai-02-inputs.md)
+**相关文档**：[ai-01 PRD](../prd/ai-01-utility-overview.md) · [ai-02 reference](ai-02-inputs.md)

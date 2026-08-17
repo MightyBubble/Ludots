@@ -1,6 +1,6 @@
-# fx-20 editor spec · 进度完成
+# fx-21 editor spec · 进度完成
 
-> 编辑器实现任务书。编辑器需求见 [fx-20 UXD](../uxd/fx-21-progression.md)；引擎侧见 [runtime spec](../spec-runtime/fx-21-progression.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-21 UXD](../uxd/fx-21-progression.md)；引擎侧见 [runtime spec](../spec-runtime/fx-21-progression.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ CompleteProgression 效果表单的进度完成子表单：进度选择与阶梯
 - 消费：进度注册表、作用域注册表、进度表投影、保存管线。
 - 验收：导入 level+delta 同写数据被校验面板拦截；命名作用域悬空阻保存。
 
-**相关文档**：[fx-20 UXD](../uxd/fx-21-progression.md) · [fx-20 runtime spec](../spec-runtime/fx-21-progression.md)
+**相关文档**：[fx-21 UXD](../uxd/fx-21-progression.md) · [fx-21 runtime spec](../spec-runtime/fx-21-progression.md)

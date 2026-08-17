@@ -1,6 +1,6 @@
-# fx-13 reference · 参数化
+# fx-14 reference · 参数化
 
-> 现状参考。第一性需求见 [fx-13 PRD](../prd/fx-14-config-params.md)；配置说明见 [fx-13 配置说明](../config/fx-14-config-params.md)。
+> 现状参考。第一性需求见 [fx-14 PRD](../prd/fx-14-config-params.md)；配置说明见 [fx-14 配置说明](../config/fx-14-config-params.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | 力值 caller 优先 | EffectProposalProcessingSystem.cs:1385-1407 |
 | 容量常量 | src/Core/Gameplay/GAS/GasConstants.cs:50 |
 
-**相关文档**：[fx-13 PRD](../prd/fx-14-config-params.md) · [fx-13 配置说明](../config/fx-14-config-params.md)
+**相关文档**：[fx-14 PRD](../prd/fx-14-config-params.md) · [fx-14 配置说明](../config/fx-14-config-params.md)

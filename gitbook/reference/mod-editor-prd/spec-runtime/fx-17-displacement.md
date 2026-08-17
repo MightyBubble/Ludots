@@ -1,6 +1,6 @@
-# fx-16 runtime spec · 位移
+# fx-17 runtime spec · 位移
 
-> 引擎实现任务书。第一性需求见 [fx-16 PRD](../prd/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
+> 引擎实现任务书。第一性需求见 [fx-17 PRD](../prd/fx-17-displacement.md)；现状见 [reference](../reference/fx-17-displacement.md)。
 
 ## 1. 概述
 位移段合同：方向解析、状态组装、同目标替换语义、独占计划。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-16 PRD](../prd/fx-17-displacement.md) · [reference](../reference/fx-17-displacement.md)
+**相关文档**：[fx-17 PRD](../prd/fx-17-displacement.md) · [reference](../reference/fx-17-displacement.md)

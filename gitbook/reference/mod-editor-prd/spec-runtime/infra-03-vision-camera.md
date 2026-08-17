@@ -15,7 +15,7 @@
 ## 3. 精确语义与不变量
 
 - 预设字段跨 mod 深合并只赢写到的字段；min ≤ max 恒成立。
-- 迷雾层 id 在效果侧 revealArea 引用（fx-18 scope/layers）。
+- 迷雾层 id 在效果侧 revealArea 引用（fx-19 scope/layers）。
 - 运行期预设切换不改表；表变更重启生效。
 
 ## 4. 迁移与治理

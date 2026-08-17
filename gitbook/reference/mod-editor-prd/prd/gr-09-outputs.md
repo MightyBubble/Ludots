@@ -1,6 +1,6 @@
-# gr-08 · Query 图输出
+# gr-09 · Query 图输出
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-09-outputs.md)；编辑器需求见 [UXD](../uxd/gr-09-outputs.md)；引擎实现见 [runtime spec](../spec-runtime/gr-09-outputs.md)；编辑器实现见 [editor spec](../spec-editor/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-09-outputs.md)；编辑器需求见 [UXD](../uxd/gr-09-outputs.md)；引擎实现见 [runtime spec](../spec-runtime/gr-09-outputs.md)；editor spec 见 [editor spec](../spec-editor/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@ Query 图的输出合同：图跑完的 TargetList 与标量，按 outputs 声�
 
 非 Query 图声明 outputs、schema 校验失败、owner 或 caster 为空——装载或执行失败；去向与类型不匹配在编译期拒绝。
 
-**相关文档**：[配置说明](../config/gr-09-outputs.md) · [gr-02](gr-03-kinds.md) · [gr-07](gr-08-mount-points.md)
+**相关文档**：[配置说明](../config/gr-09-outputs.md) · [gr-03](gr-03-kinds.md) · [gr-08](gr-08-mount-points.md)

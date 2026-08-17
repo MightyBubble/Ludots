@@ -1,6 +1,6 @@
-# gr-05 editor spec · 函数库 FuncLib
+# gr-06 editor spec · 函数库 FuncLib
 
-> 编辑器实现任务书。编辑器需求见 [gr-05 UXD](../uxd/gr-06-funclib.md)；引擎侧见 [runtime spec](../spec-runtime/gr-06-funclib.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-06 UXD](../uxd/gr-06-funclib.md)；引擎侧见 [runtime spec](../spec-runtime/gr-06-funclib.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：函数目录、图注册表、纯度校验器、动作目录（撞名）。
 - 验收：构造含可达挂起/环/悬空引用三例，编辑器与引擎判定一致；入库往返无损。
 
-**相关文档**：[gr-05 UXD](../uxd/gr-06-funclib.md) · [gr-05 runtime spec](../spec-runtime/gr-06-funclib.md)
+**相关文档**：[gr-06 UXD](../uxd/gr-06-funclib.md) · [gr-06 runtime spec](../spec-runtime/gr-06-funclib.md)

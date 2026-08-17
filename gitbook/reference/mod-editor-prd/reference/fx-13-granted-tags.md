@@ -1,6 +1,6 @@
-# fx-12 reference · 效果授予 Tag
+# fx-13 reference · 效果授予 Tag
 
-> 现状参考。第一性需求见 [fx-12 PRD](../prd/fx-13-granted-tags.md)；配置说明见 [fx-12 配置说明](../config/fx-13-granted-tags.md)。
+> 现状参考。第一性需求见 [fx-13 PRD](../prd/fx-13-granted-tags.md)；配置说明见 [fx-13 配置说明](../config/fx-13-granted-tags.md)。
 
 ## 1. 现状快照
 
@@ -23,4 +23,4 @@
 | 授予容量常量 | src/Core/Gameplay/GAS/GasConstants.cs:54 |
 | 公式计算测试 | src/Tests/GasTests/GasCore/TagEffectArchitectureTests.cs:96-110 |
 
-**相关文档**：[fx-12 PRD](../prd/fx-13-granted-tags.md) · [fx-12 配置说明](../config/fx-13-granted-tags.md)
+**相关文档**：[fx-13 PRD](../prd/fx-13-granted-tags.md) · [fx-13 配置说明](../config/fx-13-granted-tags.md)

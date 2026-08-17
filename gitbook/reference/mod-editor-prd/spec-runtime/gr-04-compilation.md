@@ -1,6 +1,6 @@
-# gr-03 runtime spec · 编译与校验
+# gr-04 runtime spec · 编译与校验
 
-> 引擎实现任务书。第一性需求见 [gr-03 PRD](../prd/gr-04-compilation.md)；现状见 [reference](../reference/gr-04-compilation.md)。
+> 引擎实现任务书。第一性需求见 [gr-04 PRD](../prd/gr-04-compilation.md)；现状见 [reference](../reference/gr-04-compilation.md)。
 
 ## 1. 概述
 
@@ -25,4 +25,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-03 PRD](../prd/gr-04-compilation.md) · [reference](../reference/gr-04-compilation.md) · [gr-05 spec](gr-06-funclib.md)
+**相关文档**：[gr-04 PRD](../prd/gr-04-compilation.md) · [reference](../reference/gr-04-compilation.md) · [gr-06 spec](gr-06-funclib.md)

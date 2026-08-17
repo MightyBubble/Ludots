@@ -1,6 +1,6 @@
-# ai-02 reference · 归一化与响应曲线
+# ai-03 reference · 归一化与响应曲线
 
-> 现状参考。第一性需求见 [ai-02 PRD](../prd/ai-03-norm-curves.md)；配置说明见 [ai-02 配置说明](../config/ai-03-norm-curves.md)。
+> 现状参考。第一性需求见 [ai-03 PRD](../prd/ai-03-norm-curves.md)；配置说明见 [ai-03 配置说明](../config/ai-03-norm-curves.md)。
 
 ## 1. 现状快照
 
@@ -20,4 +20,4 @@
 | 定义结构 | src/Core/Gameplay/AI/Utility/UtilityAiCompiledRuntime.cs |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/normalizations.json、curves.json |
 
-**相关文档**：[ai-02 PRD](../prd/ai-03-norm-curves.md) · [ai-03 reference](ai-04-decisions.md)
+**相关文档**：[ai-03 PRD](../prd/ai-03-norm-curves.md) · [ai-04 reference](ai-04-decisions.md)

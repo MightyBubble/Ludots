@@ -1,6 +1,6 @@
-# ai-06 UXD · 任务的编辑器需求
+# ai-07 UXD · 任务的编辑器需求
 
-> ai-06 的编辑器需求（高保真规格）。第一性需求见 [ai-06 PRD](../prd/ai-07-tasks.md)；配置写法见 [ai-06 配置说明](../config/ai-07-tasks.md)；编辑器实现见 [editor spec](../spec-editor/ai-07-tasks.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-07 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -33,7 +33,7 @@
 | 技能选择器 | AbilityDefinitionRegistry | 可空；空则标注回退到决策级 |
 | 槽位框 | int | -1=未用；出口预览按回退链解析当前生效槽位 |
 | 出口预览 | 本地重放 Order 构造 | 展示 I0/I1/Spatial 落位 |
-| 被引用索引 | decisions.Tasks 扫描 | 区间连续性同 ai-03 检查 |
+| 被引用索引 | decisions.Tasks 扫描 | 区间连续性同 ai-04 检查 |
 
 ## 4. 关键交互流：配一条指向技能槽的自动施法任务
 
@@ -57,4 +57,4 @@
 - 组合 Kind 的现状语义（I5）在选定时即被警示，不误导为真编排。
 - 订单/技能引用全部下拉化，不手打。
 
-**相关文档**：[ai-06 PRD](../prd/ai-07-tasks.md) · [editor spec](../spec-editor/ai-07-tasks.md)
+**相关文档**：[ai-07 PRD](../prd/ai-07-tasks.md) · [editor spec](../spec-editor/ai-07-tasks.md)

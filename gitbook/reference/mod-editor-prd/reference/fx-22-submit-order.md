@@ -1,6 +1,6 @@
-# fx-21 reference · 出生下单
+# fx-22 reference · 出生下单
 
-> 现状参考。第一性需求见 [fx-21 PRD](../prd/fx-22-submit-order.md)；配置说明见 [fx-21 配置说明](../config/fx-22-submit-order.md)。
+> 现状参考。第一性需求见 [fx-22 PRD](../prd/fx-22-submit-order.md)；配置说明见 [fx-22 配置说明](../config/fx-22-submit-order.md)。
 
 ## 1. 现状快照
 
@@ -21,4 +21,4 @@
 | 黑板键注册表 | src/Core/Gameplay/GAS/Orders/OrderBlackboardKeyRegistry.cs |
 | 展示 mod 现货 | mods/showcases/rts_demo/RtsDemoMod/assets/GAS/effects.json |
 
-**相关文档**：[fx-21 PRD](../prd/fx-22-submit-order.md) · [fx-21 配置说明](../config/fx-22-submit-order.md)
+**相关文档**：[fx-22 PRD](../prd/fx-22-submit-order.md) · [fx-22 配置说明](../config/fx-22-submit-order.md)

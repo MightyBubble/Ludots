@@ -1,6 +1,6 @@
-# gr-04 reference · 执行模型
+# gr-05 reference · 执行模型
 
-> 现状参考。第一性需求见 [gr-04 PRD](../prd/gr-05-execution.md)；配置说明见 [gr-04 配置说明](../config/gr-05-execution.md)。
+> 现状参考。第一性需求见 [gr-05 PRD](../prd/gr-05-execution.md)；配置说明见 [gr-05 配置说明](../config/gr-05-execution.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | 宿主枚举与政策 | src/Core/GraphRuntime/GraphActionHost.cs:5-17 |
 | 装载期挂起可达校验 | src/Core/NodeLibraries/GASGraph/Host/GraphActionCatalogLoader.cs:104-114 |
 
-**相关文档**：[gr-04 PRD](../prd/gr-05-execution.md) · [gr-00 reference](gr-01-model.md) · [gr-06 reference](gr-07-actionlib.md)
+**相关文档**：[gr-05 PRD](../prd/gr-05-execution.md) · [gr-01 reference](gr-01-model.md) · [gr-07 reference](gr-07-actionlib.md)

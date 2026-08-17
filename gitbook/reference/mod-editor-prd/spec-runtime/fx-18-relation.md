@@ -1,6 +1,6 @@
-# fx-17 runtime spec · 关系操作
+# fx-18 runtime spec · 关系操作
 
-> 引擎实现任务书。第一性需求见 [fx-17 PRD](../prd/fx-18-relation.md)；现状见 [reference](../reference/fx-18-relation.md)。
+> 引擎实现任务书。第一性需求见 [fx-18 PRD](../prd/fx-18-relation.md)；现状见 [reference](../reference/fx-18-relation.md)。
 
 ## 1. 概述
 关系操作合同：三种操作、槽位与条件字段校验、事务边界与可执行性。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-17 PRD](../prd/fx-18-relation.md) · [reference](../reference/fx-18-relation.md)
+**相关文档**：[fx-18 PRD](../prd/fx-18-relation.md) · [reference](../reference/fx-18-relation.md)

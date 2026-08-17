@@ -1,6 +1,6 @@
-# fx-14 runtime spec · 弹道
+# fx-15 runtime spec · 弹道
 
-> 引擎实现任务书。第一性需求见 [fx-14 PRD](../prd/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
+> 引擎实现任务书。第一性需求见 [fx-15 PRD](../prd/fx-15-projectile.md)；现状见 [reference](../reference/fx-15-projectile.md)。
 
 ## 1. 概述
 弹道发射合同：原点与方向解析、ProjectileState 组装、经生成队列入世界。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-14 PRD](../prd/fx-15-projectile.md) · [reference](../reference/fx-15-projectile.md)
+**相关文档**：[fx-15 PRD](../prd/fx-15-projectile.md) · [reference](../reference/fx-15-projectile.md)

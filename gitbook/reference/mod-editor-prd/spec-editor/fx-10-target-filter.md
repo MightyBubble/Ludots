@@ -1,6 +1,6 @@
-# fx-09 editor spec · 目标过滤
+# fx-10 editor spec · 目标过滤
 
-> 编辑器实现任务书。编辑器需求见 [fx-09 UXD](../uxd/fx-10-target-filter.md)；引擎侧见 [runtime spec](../spec-runtime/fx-10-target-filter.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-10 UXD](../uxd/fx-10-target-filter.md)；引擎侧见 [runtime spec](../spec-runtime/fx-10-target-filter.md)。
 
 ## 1. 概述
 
@@ -9,7 +9,7 @@
 ## 2. 设计
 
 - 表单校验（必填、六值域、层注册）与 loader 同源。
-- 预览联动复用 fx-08 画布：过滤器只叠加着色，不复制候选计算。
+- 预览联动复用 fx-09 画布：过滤器只叠加着色，不复制候选计算。
 - 缺阵营候选的"将滤除"标注由预览数据侧标记。
 
 ## 3. 精确语义与不变量
@@ -22,4 +22,4 @@
 - 消费：效果表加载校验、层注册表、敌我关系判定接口（只读）。
 - 验收：改敌我/上限/层后预览候选数即时变化；六值悬停释义齐全。
 
-**相关文档**：[fx-09 UXD](../uxd/fx-10-target-filter.md) · [fx-09 runtime spec](../spec-runtime/fx-10-target-filter.md)
+**相关文档**：[fx-10 UXD](../uxd/fx-10-target-filter.md) · [fx-10 runtime spec](../spec-runtime/fx-10-target-filter.md)

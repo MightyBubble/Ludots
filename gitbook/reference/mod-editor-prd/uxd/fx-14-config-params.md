@@ -1,6 +1,6 @@
-# fx-13 UXD · 参数化的编辑器需求
+# fx-14 UXD · 参数化的编辑器需求
 
-> fx-13 的编辑器需求（高保真规格）。第一性需求见 [fx-13 PRD](../prd/fx-14-config-params.md)；配置写法见 [fx-13 配置说明](../config/fx-14-config-params.md)；编辑器实现见 [editor spec](../spec-editor/fx-14-config-params.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-14 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -51,4 +51,4 @@
 - 七类型的"值该写什么"一跳可见（类型旁内联提示）。
 - 任一保留键的"键名 + 用途 + 消费分篇"≤ 2 跳可达。
 
-**相关文档**：[fx-13 PRD](../prd/fx-14-config-params.md) · [editor spec](../spec-editor/fx-14-config-params.md)
+**相关文档**：[fx-14 PRD](../prd/fx-14-config-params.md) · [editor spec](../spec-editor/fx-14-config-params.md)

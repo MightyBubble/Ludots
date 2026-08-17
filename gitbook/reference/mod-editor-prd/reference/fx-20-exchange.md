@@ -1,6 +1,6 @@
-# fx-19 reference · 兑换
+# fx-20 reference · 兑换
 
-> 现状参考。第一性需求见 [fx-19 PRD](../prd/fx-20-exchange.md)；配置说明见 [fx-19 配置说明](../config/fx-20-exchange.md)。
+> 现状参考。第一性需求见 [fx-20 PRD](../prd/fx-20-exchange.md)；配置说明见 [fx-20 配置说明](../config/fx-20-exchange.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 操作注册表 | src/Core/Gameplay/Exchange/ExchangeOperationRegistry.cs |
 | 操作表现货 | mods/showcases/gold_market/GoldMarketShowcaseMod/assets/Exchange/operations.json |
 
-**相关文档**：[fx-19 PRD](../prd/fx-20-exchange.md) · [fx-19 配置说明](../config/fx-20-exchange.md)
+**相关文档**：[fx-20 PRD](../prd/fx-20-exchange.md) · [fx-20 配置说明](../config/fx-20-exchange.md)

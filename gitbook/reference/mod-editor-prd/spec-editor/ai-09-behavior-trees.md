@@ -1,6 +1,6 @@
-# ai-08 editor spec · 行为树
+# ai-09 editor spec · 行为树
 
-> 编辑器实现任务书。编辑器需求见 [ai-08 UXD](../uxd/ai-09-behavior-trees.md)；引擎侧见 [runtime spec](../spec-runtime/ai-09-behavior-trees.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-09 UXD](../uxd/ai-09-behavior-trees.md)；引擎侧见 [runtime spec](../spec-runtime/ai-09-behavior-trees.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 - 消费：behavior_trees 合并视图、schema 文件（结构提示）、GraphActionCatalog、BehaviorTreeWorld 运行态接口。
 - 验收：结构非法无法保存；action 断链编辑期可见；Tick 单步能看到节点三态与 Running 游标续跑。
 
-**相关文档**：[ai-08 UXD](../uxd/ai-09-behavior-trees.md) · [ai-08 runtime spec](../spec-runtime/ai-09-behavior-trees.md)
+**相关文档**：[ai-09 UXD](../uxd/ai-09-behavior-trees.md) · [ai-09 runtime spec](../spec-runtime/ai-09-behavior-trees.md)

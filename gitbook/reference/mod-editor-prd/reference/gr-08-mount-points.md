@@ -1,6 +1,6 @@
-# gr-07 reference · 挂接点总表
+# gr-08 reference · 挂接点总表
 
-> 现状参考。第一性需求见 [gr-07 PRD](../prd/gr-08-mount-points.md)；配置说明见 [gr-07 配置说明](../config/gr-08-mount-points.md)。
+> 现状参考。第一性需求见 [gr-08 PRD](../prd/gr-08-mount-points.md)；配置说明见 [gr-08 配置说明](../config/gr-08-mount-points.md)。
 
 ## 1. 现状快照
 
@@ -28,4 +28,4 @@
 | Score 图消费实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/GAS/graphs.json |
 | 相位 scratch 容量 | assets/game.json gasRuntimeCapacity（事实页） |
 
-**相关文档**：[gr-07 PRD](../prd/gr-08-mount-points.md) · [gr-02 reference](gr-03-kinds.md) · [gr-08 reference](gr-09-outputs.md)
+**相关文档**：[gr-08 PRD](../prd/gr-08-mount-points.md) · [gr-03 reference](gr-03-kinds.md) · [gr-09 reference](gr-09-outputs.md)

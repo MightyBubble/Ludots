@@ -1,6 +1,6 @@
-# ai-01 · 效用输入
+# ai-02 · 效用输入
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-02-inputs.md)；编辑器需求见 [UXD](../uxd/ai-02-inputs.md)；引擎实现见 [runtime spec](../spec-runtime/ai-02-inputs.md)；编辑器实现见 [editor spec](../spec-editor/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-02-inputs.md)；编辑器需求见 [UXD](../uxd/ai-02-inputs.md)；引擎实现见 [runtime spec](../spec-runtime/ai-02-inputs.md)；editor spec 见 [editor spec](../spec-editor/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@ input 是效用 AI 的感知原语：决策考量采样世界时的八种读法�
 
 未知 Kind、ActuatorId 非正、GraphScore 指非 Score 图或写 op 图、AbilityKey 未注册、Tag 未注册——启动失败并给 路径.字段。
 
-**相关文档**：[配置说明](../config/ai-02-inputs.md) · [ai-02](ai-03-norm-curves.md) · [ai-03](ai-04-decisions.md)
+**相关文档**：[配置说明](../config/ai-02-inputs.md) · [ai-03](ai-03-norm-curves.md) · [ai-04](ai-04-decisions.md)

@@ -1,6 +1,6 @@
 # tag-01 · Tag 表示与状态
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/tag-01-basics.md)；编辑器需求见 [UXD](../uxd/tag-01-basics.md)；引擎实现见 [runtime spec](../spec-runtime/tag-01-basics.md)；编辑器实现见 [editor spec](../spec-editor/tag-01-basics.md)；现状见 [reference](../reference/tag-01-basics.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/tag-01-basics.md)；编辑器需求见 [UXD](../uxd/tag-01-basics.md)；引擎实现见 [runtime spec](../spec-runtime/tag-01-basics.md)；editor spec 见 [editor spec](../spec-editor/tag-01-basics.md)；现状见 [reference](../reference/tag-01-basics.md)。
 
 ## 1. 定位
 

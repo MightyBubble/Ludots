@@ -1,6 +1,6 @@
-# fx-02 reference · Preset 类型系统
+# fx-03 reference · Preset 类型系统
 
-> 现状参考。第一性需求见 [fx-02 PRD](../prd/fx-03-preset-types.md)；配置说明见 [fx-02 配置说明](../config/fx-03-preset-types.md)。
+> 现状参考。第一性需求见 [fx-03 PRD](../prd/fx-03-preset-types.md)；配置说明见 [fx-03 配置说明](../config/fx-03-preset-types.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | components 声明性定位 | src/Core/Gameplay/GAS/EffectExecutionPlan.cs:480-498 |
 | presetType 解析序 | src/Core/Gameplay/GAS/Config/EffectTemplateLoader.cs:1161-1174 |
 
-**相关文档**：[fx-02 PRD](../prd/fx-03-preset-types.md) · [fx-01 reference](fx-02-template.md)
+**相关文档**：[fx-03 PRD](../prd/fx-03-preset-types.md) · [fx-02 reference](fx-02-template.md)

@@ -1,6 +1,6 @@
-# gr-01 runtime spec · 图文档格式
+# gr-02 runtime spec · 图文档格式
 
-> 引擎实现任务书。第一性需求见 [gr-01 PRD](../prd/gr-02-document.md)；现状见 [reference](../reference/gr-02-document.md)。
+> 引擎实现任务书。第一性需求见 [gr-02 PRD](../prd/gr-02-document.md)；现状见 [reference](../reference/gr-02-document.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-01 PRD](../prd/gr-02-document.md) · [reference](../reference/gr-02-document.md) · [gr-03 spec](gr-04-compilation.md)
+**相关文档**：[gr-02 PRD](../prd/gr-02-document.md) · [reference](../reference/gr-02-document.md) · [gr-04 spec](gr-04-compilation.md)

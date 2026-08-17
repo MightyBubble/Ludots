@@ -1,6 +1,6 @@
-# fx-12 runtime spec · 效果授予 Tag
+# fx-13 runtime spec · 效果授予 Tag
 
-> 引擎实现任务书。第一性需求见 [fx-12 PRD](../prd/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
+> 引擎实现任务书。第一性需求见 [fx-13 PRD](../prd/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
 
 ## 1. 概述
 tag 贡献公式与差量合并合同：Compute 三实现、全量快照回滚、staged 授予与回收。
@@ -21,4 +21,4 @@ tag 贡献公式与差量合并合同：Compute 三实现、全量快照回滚�
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-12 PRD](../prd/fx-13-granted-tags.md) · [reference](../reference/fx-13-granted-tags.md)
+**相关文档**：[fx-13 PRD](../prd/fx-13-granted-tags.md) · [reference](../reference/fx-13-granted-tags.md)

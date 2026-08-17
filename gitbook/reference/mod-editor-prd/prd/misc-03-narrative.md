@@ -1,6 +1,6 @@
 # misc-03 · 叙事与任务
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/misc-03-narrative.md)；编辑器需求见 [UXD](../uxd/misc-03-narrative.md)；引擎实现见 [runtime spec](../spec-runtime/misc-03-narrative.md)；编辑器实现见 [editor spec](../spec-editor/misc-03-narrative.md)；现状见 [reference](../reference/misc-03-narrative.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/misc-03-narrative.md)；编辑器需求见 [UXD](../uxd/misc-03-narrative.md)；引擎实现见 [runtime spec](../spec-runtime/misc-03-narrative.md)；editor spec 见 [editor spec](../spec-editor/misc-03-narrative.md)；现状见 [reference](../reference/misc-03-narrative.md)。
 
 ## 1. 定位
 

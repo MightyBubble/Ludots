@@ -44,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -63,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            LookupTables = lookupTables;
         }
 
         public World World { get; }
@@ -78,6 +80,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public RelationshipReasonRegistry ReasonRegistry { get; }
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
+        public GraphLookupTableRegistry? LookupTables { get; }
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
@@ -98,6 +101,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private readonly GraphLookupTableRegistry? _lookupTables;
         private LoadedGraphRuntime? _loadedGraphRuntime;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -176,7 +180,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                lookupTables: services.LookupTables);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -208,7 +213,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry? reasonRegistry = null,
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
-            EntitySetQueryRuntime? entityQueries = null)
+            EntitySetQueryRuntime? entityQueries = null,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -220,6 +226,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
+            _lookupTables = lookupTables;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -229,6 +236,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private TagOps RequireTagOps()
         {
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        public int ResolveTableRow(int tableId, int key)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ResolveRow(tableId, key);
+        }
+
+        public int TableReadInt(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadInt(rowHandle, fieldId);
+        }
+
+        public float TableReadFloat(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadFloat(rowHandle, fieldId);
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)

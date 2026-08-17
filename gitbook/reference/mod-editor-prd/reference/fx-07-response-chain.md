@@ -1,6 +1,6 @@
-# fx-06 reference · 响应链
+# fx-07 reference · 响应链
 
-> 现状参考。第一性需求见 [fx-06 PRD](../prd/fx-07-response-chain.md)；配置说明见 [fx-06 配置说明](../config/fx-07-response-chain.md)。
+> 现状参考。第一性需求见 [fx-07 PRD](../prd/fx-07-response-chain.md)；配置说明见 [fx-07 配置说明](../config/fx-07-response-chain.md)。
 
 ## 1. 现状快照
 
@@ -26,4 +26,4 @@
 | 根预算表结构 | src/Core/Gameplay/GAS/RootBudgetTable.cs:105-118, 128, 55-92 |
 | 预算超限报错 | src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs:294-298 |
 
-**相关文档**：[fx-06 PRD](../prd/fx-07-response-chain.md) · [fx-07 reference](fx-08-phase-listeners.md)
+**相关文档**：[fx-07 PRD](../prd/fx-07-response-chain.md) · [fx-08 reference](fx-08-phase-listeners.md)

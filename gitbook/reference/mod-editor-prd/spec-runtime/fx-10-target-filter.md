@@ -1,6 +1,6 @@
-# fx-09 runtime spec · 目标过滤
+# fx-10 runtime spec · 目标过滤
 
-> 引擎实现任务书。第一性需求见 [fx-09 PRD](../prd/fx-10-target-filter.md)；现状见 [reference](../reference/fx-10-target-filter.md)。
+> 引擎实现任务书。第一性需求见 [fx-10 PRD](../prd/fx-10-target-filter.md)；现状见 [reference](../reference/fx-10-target-filter.md)。
 
 ## 1. 概述
 
@@ -17,8 +17,8 @@
 
 ## 4. 迁移与治理
 
-现状即基线；与 E2 治理联动：过滤参数唯一正路为本块，查询描述符侧四个同名死字段删除后不得复活（见 fx-08 spec）。
+现状即基线；与 E2 治理联动：过滤参数唯一正路为本块，查询描述符侧四个同名死字段删除后不得复活（fx-09 spec）。
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-09 PRD](../prd/fx-10-target-filter.md) · [reference](../reference/fx-10-target-filter.md)
+**相关文档**：[fx-10 PRD](../prd/fx-10-target-filter.md) · [reference](../reference/fx-10-target-filter.md)

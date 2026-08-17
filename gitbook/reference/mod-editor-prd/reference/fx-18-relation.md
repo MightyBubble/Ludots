@@ -1,6 +1,6 @@
-# fx-17 reference · 关系操作
+# fx-18 reference · 关系操作
 
-> 现状参考。第一性需求见 [fx-17 PRD](../prd/fx-18-relation.md)；配置说明见 [fx-17 配置说明](../config/fx-18-relation.md)。
+> 现状参考。第一性需求见 [fx-18 PRD](../prd/fx-18-relation.md)；配置说明见 [fx-18 配置说明](../config/fx-18-relation.md)。
 
 ## 1. 现状快照
 
@@ -20,4 +20,4 @@
 | Unsupported fail-closed | src/Core/Gameplay/GAS/EffectExecutionPlan.cs:600-603 |
 | 行为固化测试 | src/Tests/GasTests/Effect/EffectExecutionPlanTests.cs:133-160 |
 
-**相关文档**：[fx-17 PRD](../prd/fx-18-relation.md) · [fx-17 配置说明](../config/fx-18-relation.md)
+**相关文档**：[fx-18 PRD](../prd/fx-18-relation.md) · [fx-18 配置说明](../config/fx-18-relation.md)

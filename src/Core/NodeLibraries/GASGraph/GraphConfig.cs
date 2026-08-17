@@ -25,6 +25,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public string? Tag { get; set; }
         public string? Attribute { get; set; }
+        /// <summary>GraphLookupTable id for ResolveTableRow / TableRead*.</summary>
+        public string? LookupTable { get; set; }
+        /// <summary>Column id within LookupTable for TableReadInt / TableReadFloat.</summary>
+        public string? LookupField { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }

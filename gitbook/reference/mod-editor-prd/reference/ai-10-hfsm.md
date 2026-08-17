@@ -1,6 +1,6 @@
-# ai-09 reference · 层次状态机
+# ai-10 reference · 层次状态机
 
-> 现状参考。第一性需求见 [ai-09 PRD](../prd/ai-10-hfsm.md)；配置说明见 [ai-09 配置说明](../config/ai-10-hfsm.md)。
+> 现状参考。第一性需求见 [ai-10 PRD](../prd/ai-10-hfsm.md)；配置说明见 [ai-10 配置说明](../config/ai-10-hfsm.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 生命周期图预算与缓存 | src/Core/Gameplay/AI/Fsm/GraphProgramHfsmHost.cs:10-72 |
 | 资产与 schema | assets/AI/hfsm.json、assets/AI/hfsm.schema.json |
 
-**相关文档**：[ai-09 PRD](../prd/ai-10-hfsm.md) · [ai-10 reference](ai-11-goap-htn.md)
+**相关文档**：[ai-10 PRD](../prd/ai-10-hfsm.md) · [ai-11 reference](ai-11-goap-htn.md)

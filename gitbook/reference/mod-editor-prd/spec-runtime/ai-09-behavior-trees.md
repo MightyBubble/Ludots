@@ -1,6 +1,6 @@
-# ai-08 runtime spec · 行为树
+# ai-09 runtime spec · 行为树
 
-> 引擎实现任务书。第一性需求见 [ai-08 PRD](../prd/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
+> 引擎实现任务书。第一性需求见 [ai-09 PRD](../prd/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
 
 ## 1. 概述
 
@@ -27,4 +27,4 @@ BT 加载与执行合同：扁平声明→BFS 打包、严格枚举、叶绑定�
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-08 PRD](../prd/ai-09-behavior-trees.md) · [reference](../reference/ai-09-behavior-trees.md)
+**相关文档**：[ai-09 PRD](../prd/ai-09-behavior-trees.md) · [reference](../reference/ai-09-behavior-trees.md)

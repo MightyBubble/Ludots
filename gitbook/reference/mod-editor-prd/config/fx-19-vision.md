@@ -1,6 +1,6 @@
-# fx-18 配置说明 · 视野揭示
+# fx-19 配置说明 · 视野揭示
 
-> 配置写法与行为。第一性需求见 [fx-18 PRD](../prd/fx-19-vision.md)；编辑器需求见 [UXD](../uxd/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
+> 配置写法与行为。第一性需求见 [fx-19 PRD](../prd/fx-19-vision.md)；编辑器需求见 [UXD](../uxd/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
 
 ## 1. 示例配置
 
@@ -61,4 +61,4 @@ loader 校验范围/记忆合同并解析 scope 与层名为 id；运行期经�
 
 - 周期揭示 + 衰减：`src/Tests/GasTests/Integration/CoreHeroSkillInfraTests.cs`（hero_reveal，测试内嵌 JSON）
 
-**相关文档**：[fx-18 PRD](../prd/fx-19-vision.md) · 见 infra-03（视野基建，第二期）
+**相关文档**：[fx-19 PRD](../prd/fx-19-vision.md) · 见 infra-03（视野基建，第二期）

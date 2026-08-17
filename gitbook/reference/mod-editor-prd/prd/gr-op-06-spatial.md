@@ -1,6 +1,6 @@
 # gr-op-06 · 节点：空间查询
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-06-spatial.md)；编辑器需求见 [UXD](../uxd/gr-op-06-spatial.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-06-spatial.md)；编辑器实现见 [editor spec](../spec-editor/gr-op-06-spatial.md)；现状见 [reference](../reference/gr-op-06-spatial.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-06-spatial.md)；编辑器需求见 [UXD](../uxd/gr-op-06-spatial.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-06-spatial.md)；editor spec 见 [editor spec](../spec-editor/gr-op-06-spatial.md)；现状见 [reference](../reference/gr-op-06-spatial.md)。
 
 ## 1. 定位
 

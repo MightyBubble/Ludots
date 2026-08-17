@@ -1,6 +1,6 @@
-# gr-05 UXD · 函数库 FuncLib 的编辑器需求
+# gr-06 UXD · 函数库 FuncLib 的编辑器需求
 
-> gr-05 的编辑器需求（高保真规格）。第一性需求见 [gr-05 PRD](../prd/gr-06-funclib.md)；配置写法见 [gr-05 配置说明](../config/gr-06-funclib.md)；编辑器实现见 [editor spec](../spec-editor/gr-06-funclib.md)。
+> gr-06 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 。
 
 ## 1. 界面定位
 
@@ -47,4 +47,4 @@
 - 纯度失败从发现到看见违规路径 ≤ 2 跳。
 - 入库动作在编辑器内不可能产生装载失败（校验前置同源）。
 
-**相关文档**：[gr-05 PRD](../prd/gr-06-funclib.md) · [editor spec](../spec-editor/gr-06-funclib.md) · [gr-06 UXD](gr-07-actionlib.md)
+**相关文档**：[gr-06 PRD](../prd/gr-06-funclib.md) · [editor spec](../spec-editor/gr-06-funclib.md) · [gr-07 UXD](gr-07-actionlib.md)

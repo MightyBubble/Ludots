@@ -1,6 +1,6 @@
 # attr-05 · 属性绑定与 Sink
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-05-bindings.md)；编辑器需求见 [UXD](../uxd/attr-05-bindings.md)；引擎实现见 [runtime spec](../spec-runtime/attr-05-bindings.md)；编辑器实现见 [editor spec](../spec-editor/attr-05-bindings.md)；现状见 [reference](../reference/attr-05-bindings.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/attr-05-bindings.md)；编辑器需求见 [UXD](../uxd/attr-05-bindings.md)；引擎实现见 [runtime spec](../spec-runtime/attr-05-bindings.md)；editor spec 见 [editor spec](../spec-editor/attr-05-bindings.md)；现状见 [reference](../reference/attr-05-bindings.md)。
 
 ## 1. 定位
 

@@ -1,6 +1,6 @@
-# fx-05 editor spec · 提案窗口与 Instant 内联
+# fx-06 editor spec · 提案窗口与 Instant 内联
 
-> 编辑器实现任务书。编辑器需求见 [fx-05 UXD](../uxd/fx-06-proposal-window.md)；引擎侧见 [runtime spec](../spec-runtime/fx-06-proposal-window.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-06 UXD](../uxd/fx-06-proposal-window.md)；引擎侧见 [runtime spec](../spec-runtime/fx-06-proposal-window.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：执行计划四窗口编译结果、图 VM 试运行入口、错误码字典。
 - 验收：拒绝用例可在编辑器内复现寄存器终值；独占冲突可视并可跳转。
 
-**相关文档**：[fx-05 UXD](../uxd/fx-06-proposal-window.md) · [fx-05 runtime spec](../spec-runtime/fx-06-proposal-window.md)
+**相关文档**：[fx-06 UXD](../uxd/fx-06-proposal-window.md) · [fx-06 runtime spec](../spec-runtime/fx-06-proposal-window.md)

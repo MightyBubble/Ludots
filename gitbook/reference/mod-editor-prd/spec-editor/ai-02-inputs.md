@@ -1,6 +1,6 @@
-# ai-01 editor spec · 效用输入
+# ai-02 editor spec · 效用输入
 
-> 编辑器实现任务书。编辑器需求见 [ai-01 UXD](../uxd/ai-02-inputs.md)；引擎侧见 [runtime spec](../spec-runtime/ai-02-inputs.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-02 UXD](../uxd/ai-02-inputs.md)；引擎侧见 [runtime spec](../spec-runtime/ai-02-inputs.md)。
 
 ## 1. 概述
 
@@ -23,4 +23,4 @@
 - 消费：图注册表（Score 过滤）、tag 注册表、AbilityDefinitionRegistry、decisions 合并视图。
 - 验收：八种 Kind 均可建-引-删；写 op 图保存被拒；无引用输入删除不产生断链。
 
-**相关文档**：[ai-01 UXD](../uxd/ai-02-inputs.md) · [ai-01 runtime spec](../spec-runtime/ai-02-inputs.md)
+**相关文档**：[ai-02 UXD](../uxd/ai-02-inputs.md) · [ai-02 runtime spec](../spec-runtime/ai-02-inputs.md)

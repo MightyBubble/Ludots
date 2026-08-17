@@ -1,6 +1,6 @@
-# fx-01 · 效果模板骨架
+# fx-02 · 效果模板骨架
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-02-template.md)；编辑器需求见 [UXD](../uxd/fx-02-template.md)；引擎实现见 [runtime spec](../spec-runtime/fx-02-template.md)；编辑器实现见 [editor spec](../spec-editor/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-02-template.md)；编辑器需求见 [UXD](../uxd/fx-02-template.md)；引擎实现见 [runtime spec](../spec-runtime/fx-02-template.md)；editor spec 见 [editor spec](../spec-editor/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@
 
 id 不一致、tags 超一枚、presetType 未注册、lifetime 非三值、标量时长、非法参数块组合、冻结后注册、重复 id——启动失败并指明条目。
 
-**相关文档**：[配置说明](../config/fx-02-template.md) · [fx-00](fx-01-pipeline.md) · [fx-02](fx-03-preset-types.md) · [fx-03](fx-04-lifetime.md)
+**相关文档**：[配置说明](../config/fx-02-template.md) · [fx-01](fx-01-pipeline.md) · [fx-03](fx-03-preset-types.md) · [fx-04](fx-04-lifetime.md)

@@ -1,6 +1,6 @@
 # ab-06 · 槽位系统
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-06-slots.md)；编辑器需求见 [UXD](../uxd/ab-06-slots.md)；引擎实现见 [runtime spec](../spec-runtime/ab-06-slots.md)；编辑器实现见 [editor spec](../spec-editor/ab-06-slots.md)；现状见 [reference](../reference/ab-06-slots.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-06-slots.md)；编辑器需求见 [UXD](../uxd/ab-06-slots.md)；引擎实现见 [runtime spec](../spec-runtime/ab-06-slots.md)；editor spec 见 [editor spec](../spec-editor/ab-06-slots.md)；现状见 [reference](../reference/ab-06-slots.md)。
 
 ## 1. 定位
 

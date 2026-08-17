@@ -1,6 +1,6 @@
-# fx-12 · 效果授予 Tag
+# fx-13 · 效果授予 Tag
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-13-granted-tags.md)；编辑器需求见 [UXD](../uxd/fx-13-granted-tags.md)；引擎实现见 [runtime spec](../spec-runtime/fx-13-granted-tags.md)；编辑器实现见 [editor spec](../spec-editor/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-13-granted-tags.md)；编辑器需求见 [UXD](../uxd/fx-13-granted-tags.md)；引擎实现见 [runtime spec](../spec-runtime/fx-13-granted-tags.md)；editor spec 见 [editor spec](../spec-editor/fx-13-granted-tags.md)；现状见 [reference](../reference/fx-13-granted-tags.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ grantedTags 让效果把 tag 作为"有主状态"授给目标：效果在则 tag
 
 tag 规则拒绝、计数容量满——事务失败并指明效果与 tag；GraphProgram 公式在加载期一律拒绝，理由写明"tag 贡献图评估器未接线"。
 
-**相关文档**：[配置说明](../config/fx-13-granted-tags.md) · [tag-01](tag-01-basics.md) · 见 fx-02、fx-12 前后各篇（总目录见 README）
+**相关文档**： ·  · fx-12、fx-14 前后各篇（总目录见 README）

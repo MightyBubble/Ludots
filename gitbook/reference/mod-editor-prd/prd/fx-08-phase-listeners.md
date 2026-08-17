@@ -1,6 +1,6 @@
-# fx-07 · 相位监听器
+# fx-08 · 相位监听器
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-08-phase-listeners.md)；编辑器需求见 [UXD](../uxd/fx-08-phase-listeners.md)；引擎实现见 [runtime spec](../spec-runtime/fx-08-phase-listeners.md)；编辑器实现见 [editor spec](../spec-editor/fx-08-phase-listeners.md)；现状见 [reference](../reference/fx-08-phase-listeners.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-08-phase-listeners.md)；编辑器需求见 [UXD](../uxd/fx-08-phase-listeners.md)；引擎实现见 [runtime spec](../spec-runtime/fx-08-phase-listeners.md)；editor spec 见 [editor spec](../spec-editor/fx-08-phase-listeners.md)；现状见 [reference](../reference/fx-08-phase-listeners.md)。
 
 ## 1. 定位
 
@@ -16,10 +16,10 @@
 
 ## 3. 运行行为
 
-模板携带的监听器在宿主效果应用时以宿主实体 id 注册、延迟回放；收集先于相位执行、执行晚于相位三槽（fx-04）。即时效果不得携带监听器。
+模板携带的监听器在宿主效果应用时以宿主实体 id 注册、延迟回放；收集先于相位执行、执行晚于相位三槽（fx-05）。即时效果不得携带监听器。
 
 ## 4. 异常承诺
 
 动作组合非法、声明与动作不对应、纯相位发布事件、超容量、即时效果携带——加载或运行期报错并指明模板。
 
-**相关文档**：[配置说明](../config/fx-08-phase-listeners.md) · [fx-04](fx-05-phases.md) · [fx-05](fx-06-proposal-window.md) · [tag-01](tag-01-basics.md)
+**相关文档**：[配置说明](../config/fx-08-phase-listeners.md) · [fx-05](fx-05-phases.md) · [fx-06](fx-06-proposal-window.md) · [tag-01](tag-01-basics.md)

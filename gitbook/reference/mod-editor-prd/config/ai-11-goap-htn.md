@@ -1,6 +1,6 @@
-# ai-10 配置说明 · GOAP 与 HTN 规划
+# ai-11 配置说明 · GOAP 与 HTN 规划
 
-> 配置写法与行为。第一性需求见 [ai-10 PRD](../prd/ai-11-goap-htn.md)；编辑器需求见 [UXD](../uxd/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
+> 配置写法与行为。第一性需求见 [ai-11 PRD](../prd/ai-11-goap-htn.md)；编辑器需求见 [UXD](../uxd/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
 
 ## 1. 示例配置
 
@@ -71,4 +71,4 @@ atoms 先注册，projection 随后建 WorldStateProjectionTable（Order 黑板�
 
 - `mods/showcases/ai_demo/AIDemoMod/assets/AI/`（真实：atoms/projection/utility/goap_actions/goap_goals 各 1 条 + htn_domain 空表）
 
-**相关文档**：[ai-10 PRD](../prd/ai-11-goap-htn.md) · [ai-00 配置说明](ai-01-utility-overview.md) · [cfg-07 配置说明](cfg-07-merge-rules.md)
+**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [ai-01 配置说明](ai-01-utility-overview.md) · [cfg-07 配置说明](cfg-07-merge-rules.md)

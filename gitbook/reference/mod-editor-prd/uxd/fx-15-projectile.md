@@ -1,6 +1,6 @@
-# fx-14 UXD · 弹道的编辑器需求
+# fx-15 UXD · 弹道的编辑器需求
 
-> fx-14 的编辑器需求（高保真规格）。第一性需求见 [fx-14 PRD](../prd/fx-15-projectile.md)；配置写法见 [fx-14 配置说明](../config/fx-15-projectile.md)；编辑器实现见 [editor spec](../spec-editor/fx-15-projectile.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-15 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -52,4 +52,4 @@ LaunchProjectile 效果编辑页的弹道表单：飞行、命中策略、碰撞
 - 四组参数在单屏无滚动可见。
 - "贯穿需要哪些字段"（策略→maxHitCount 联动）无需查文档即可正确完成。
 
-**相关文档**：[fx-14 PRD](../prd/fx-15-projectile.md) · [editor spec](../spec-editor/fx-15-projectile.md)
+**相关文档**：[fx-15 PRD](../prd/fx-15-projectile.md) · [editor spec](../spec-editor/fx-15-projectile.md)

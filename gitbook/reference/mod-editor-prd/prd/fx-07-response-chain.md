@@ -1,6 +1,6 @@
-# fx-06 · 响应链
+# fx-07 · 响应链
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-07-response-chain.md)；编辑器需求见 [UXD](../uxd/fx-07-response-chain.md)；引擎实现见 [runtime spec](../spec-runtime/fx-07-response-chain.md)；编辑器实现见 [editor spec](../spec-editor/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-07-response-chain.md)；编辑器需求见 [UXD](../uxd/fx-07-response-chain.md)；引擎实现见 [runtime spec](../spec-runtime/fx-07-response-chain.md)；editor spec 见 [editor spec](../spec-editor/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@
 
 响应超容量、连锁超深、根预算超限、步数熔断——报错或作废并指明根效果，不静默截断。
 
-**相关文档**：[配置说明](../config/fx-07-response-chain.md) · [fx-05](fx-06-proposal-window.md) · [fx-10](fx-11-target-dispatch.md) · [rt-02](rt-02-budgets.md)
+**相关文档**：[配置说明](../config/fx-07-response-chain.md) · [fx-06](fx-06-proposal-window.md) · [fx-11](fx-11-target-dispatch.md) · [rt-02](rt-02-budgets.md)

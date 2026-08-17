@@ -1,6 +1,6 @@
-# fx-11 · 堆叠
+# fx-12 · 堆叠
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-12-stack.md)；编辑器需求见 [UXD](../uxd/fx-12-stack.md)；引擎实现见 [runtime spec](../spec-runtime/fx-12-stack.md)；编辑器实现见 [editor spec](../spec-editor/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-12-stack.md)；编辑器需求见 [UXD](../uxd/fx-12-stack.md)；引擎实现见 [runtime spec](../spec-runtime/fx-12-stack.md)；editor spec 见 [editor spec](../spec-editor/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@
 
 三字段缺一即失败；层数上限非正值当前按"无上限"放行——属已知陷阱，治理中（todo/effect.md E3）。
 
-**相关文档**：[配置说明](../config/fx-12-stack.md) · [fx-03](fx-04-lifetime.md) · [fx-12](fx-13-granted-tags.md) · [tag-01](tag-01-basics.md)
+**相关文档**：[配置说明](../config/fx-12-stack.md) · [fx-04](fx-04-lifetime.md) · [fx-13](fx-13-granted-tags.md) · [tag-01](tag-01-basics.md)

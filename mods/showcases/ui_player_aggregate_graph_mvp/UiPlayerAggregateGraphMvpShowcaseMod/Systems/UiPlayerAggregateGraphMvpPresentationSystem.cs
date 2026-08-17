@@ -52,38 +52,46 @@ internal sealed class UiPlayerAggregateGraphMvpPresentationSystem : ISystem<floa
         }
 
         _debugDraw.Clear();
+        UiPlayerAggregateMarkerStyle style = _runtime.RequireMarkerStyle();
         ReadOnlySpan<UiPlayerAggregateProducerMarker> markers = _runtime.ProducerMarkers;
         for (int i = 0; i < markers.Length; i++)
         {
             UiPlayerAggregateProducerMarker marker = markers[i];
             DebugDrawColor color = marker.Offline
-                ? new DebugDrawColor(180, 70, 70)
-                : new DebugDrawColor(80, 200, 140);
+                ? ToDebugColor(style.OfflineColor)
+                : ToDebugColor(style.OnlineColor);
 
-            float half = 0.85f;
+            float half = style.HalfSizeMeters;
             _debugDraw.Boxes.Add(new DebugDrawBox2D
             {
                 Center = new Vector2(marker.XMeters, marker.ZMeters),
                 HalfWidth = half,
                 HalfHeight = half,
-                Thickness = 0.1f,
+                Thickness = style.OuterThickness,
                 Color = color
             });
             _debugDraw.Boxes.Add(new DebugDrawBox2D
             {
                 Center = new Vector2(marker.XMeters, marker.ZMeters),
-                HalfWidth = half * 0.55f,
-                HalfHeight = half * 0.55f,
-                Thickness = 0.08f,
+                HalfWidth = half * style.InnerScale,
+                HalfHeight = half * style.InnerScale,
+                Thickness = style.InnerThickness,
                 Color = color
             });
             _debugDraw.Circles.Add(new DebugDrawCircle2D
             {
                 Center = new Vector2(marker.XMeters, marker.ZMeters),
-                Radius = marker.Offline ? 0.28f : 0.42f,
-                Thickness = 0.08f,
-                Color = marker.Offline ? DebugDrawColor.Red : DebugDrawColor.Yellow
+                Radius = marker.Offline ? style.OfflineDotRadius : style.OnlineDotRadius,
+                Thickness = style.DotThickness,
+                Color = marker.Offline
+                    ? ToDebugColor(style.OfflineDotColor)
+                    : ToDebugColor(style.OnlineDotColor)
             });
         }
+    }
+
+    private static DebugDrawColor ToDebugColor(UiPlayerAggregateRgbaColor color)
+    {
+        return new DebugDrawColor(color.R, color.G, color.B, color.A);
     }
 }

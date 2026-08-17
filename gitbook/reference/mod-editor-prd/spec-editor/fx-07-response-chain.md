@@ -1,6 +1,6 @@
-# fx-06 editor spec · 响应链
+# fx-07 editor spec · 响应链
 
-> 编辑器实现任务书。编辑器需求见 [fx-06 UXD](../uxd/fx-07-response-chain.md)；引擎侧见 [runtime spec](../spec-runtime/fx-07-response-chain.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-07 UXD](../uxd/fx-07-response-chain.md)；引擎侧见 [runtime spec](../spec-runtime/fx-07-response-chain.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：窗口状态快照、回应收集缓冲、根预算表读接口、错误码。
 - 验收：Modify/Hook/Chain 三类用例的呈现与引擎日志一致；熔断用例能定位根效果。
 
-**相关文档**：[fx-06 UXD](../uxd/fx-07-response-chain.md) · [fx-06 runtime spec](../spec-runtime/fx-07-response-chain.md)
+**相关文档**：[fx-07 UXD](../uxd/fx-07-response-chain.md) · [fx-07 runtime spec](../spec-runtime/fx-07-response-chain.md)

@@ -1,6 +1,6 @@
-# gr-08 runtime spec · Query 图输出
+# gr-09 runtime spec · Query 图输出
 
-> 引擎实现任务书。第一性需求见 [gr-08 PRD](../prd/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
+> 引擎实现任务书。第一性需求见 [gr-09 PRD](../prd/gr-09-outputs.md)；现状见 [reference](../reference/gr-09-outputs.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-08 PRD](../prd/gr-09-outputs.md) · [reference](../reference/gr-09-outputs.md) · [gr-07 spec](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [reference](../reference/gr-09-outputs.md) · [gr-08 spec](gr-08-mount-points.md)

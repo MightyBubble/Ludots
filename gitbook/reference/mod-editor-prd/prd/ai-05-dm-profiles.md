@@ -1,6 +1,6 @@
-# ai-04 · 决策者与档案
+# ai-05 · 决策者与档案
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-05-dm-profiles.md)；编辑器需求见 [UXD](../uxd/ai-05-dm-profiles.md)；引擎实现见 [runtime spec](../spec-runtime/ai-05-dm-profiles.md)；编辑器实现见 [editor spec](../spec-editor/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-05-dm-profiles.md)；编辑器需求见 [UXD](../uxd/ai-05-dm-profiles.md)；引擎实现见 [runtime spec](../spec-runtime/ai-05-dm-profiles.md)；editor spec 见 [editor spec](../spec-editor/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@ decision maker 把一组决策排成竞技场，profile 把决策者打包成可
 
 Decisions 为空或不连续、DecisionMakers 为空或不连续、DecisionIntervalSteps/MaxCandidates 非正、DefaultStanceId 数字写法、十表非空而无 profile——启动失败并带路径。
 
-**相关文档**：[配置说明](../config/ai-05-dm-profiles.md) · [ai-03](ai-04-decisions.md) · [ai-07](ai-08-stances-actuators.md)
+**相关文档**：[配置说明](../config/ai-05-dm-profiles.md) · [ai-04](ai-04-decisions.md) · [ai-08](ai-08-stances-actuators.md)

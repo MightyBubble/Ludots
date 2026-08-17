@@ -1,6 +1,6 @@
-# fx-04 runtime spec · 八相位执行
+# fx-05 runtime spec · 八相位执行
 
-> 引擎实现任务书。第一性需求见 [fx-04 PRD](../prd/fx-05-phases.md)；现状见 [reference](../reference/fx-05-phases.md)。
+> 引擎实现任务书。第一性需求见 [fx-05 PRD](../prd/fx-05-phases.md)；现状见 [reference](../reference/fx-05-phases.md)。
 
 ## 1. 概述
 
@@ -18,8 +18,8 @@
 
 ## 4. 迁移与治理
 
-现状即基线；监听器收集注释的语义治理见 fx-07 spec（E6）。
+现状即基线；监听器收集注释的语义治理fx-08 spec（E6）。
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-04 PRD](../prd/fx-05-phases.md) · [reference](../reference/fx-05-phases.md)
+**相关文档**：[fx-05 PRD](../prd/fx-05-phases.md) · [reference](../reference/fx-05-phases.md)

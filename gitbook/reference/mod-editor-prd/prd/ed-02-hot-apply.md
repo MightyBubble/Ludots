@@ -1,6 +1,6 @@
 # ed-02 · 热应用白名单与边界
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ed-02-hot-apply.md)；编辑器需求见 [UXD](../uxd/ed-02-hot-apply.md)；引擎实现见 [runtime spec](../spec-runtime/ed-02-hot-apply.md)；编辑器实现见 [editor spec](../spec-editor/ed-02-hot-apply.md)；现状见 [reference](../reference/ed-02-hot-apply.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ed-02-hot-apply.md)；编辑器需求见 [UXD](../uxd/ed-02-hot-apply.md)；引擎实现见 [runtime spec](../spec-runtime/ed-02-hot-apply.md)；editor spec 见 [editor spec](../spec-editor/ed-02-hot-apply.md)；现状见 [reference](../reference/ed-02-hot-apply.md)。
 
 ## 1. 定位
 

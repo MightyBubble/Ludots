@@ -1,6 +1,6 @@
-# fx-15 runtime spec · 造单位
+# fx-16 runtime spec · 造单位
 
-> 引擎实现任务书。第一性需求见 [fx-15 PRD](../prd/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
+> 引擎实现任务书。第一性需求见 [fx-16 PRD](../prd/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
 
 ## 1. 概述
 批量生成合同：摆放与朝向计算、两种生成 Kind、出生效果链与归属开关。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-15 PRD](../prd/fx-16-unit-creation.md) · [reference](../reference/fx-16-unit-creation.md)
+**相关文档**：[fx-16 PRD](../prd/fx-16-unit-creation.md) · [reference](../reference/fx-16-unit-creation.md)

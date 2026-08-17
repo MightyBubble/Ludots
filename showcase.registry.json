@@ -6438,6 +6438,87 @@
       "screenshot": null,
       "status": "active",
       "notes": "截图证据待 CI 验收产物补录"
+    },
+    {
+      "id": "capability_standard_graph_op_ResolveTableRow",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpResolveTableRowEntryMod",
+      "projectPath": "CapabilityStandardGraphOpResolveTableRowEntryMod.csproj",
+      "title": "按编号翻名册点将",
+      "summary": "报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ResolveTableRow"
+      ],
+      "binding": "capability_standard_graph_op_ResolveTableRow",
+      "preset": "capability_standard_graph_op_ResolveTableRow_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ResolveTableRow.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ResolveTableRow",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ResolveTableRow/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ResolveTableRow/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_TableReadFloat",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadFloatEntryMod",
+      "projectPath": "CapabilityStandardGraphOpTableReadFloatEntryMod.csproj",
+      "title": "读名册上的扣血力度",
+      "summary": "同一行名册，读出这一击该扣多少血，木桩照单落账。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "TableReadFloat"
+      ],
+      "binding": "capability_standard_graph_op_TableReadFloat",
+      "preset": "capability_standard_graph_op_TableReadFloat_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/TableReadFloat.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_TableReadFloat",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_TableReadFloat/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_TableReadFloat/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_TableReadInt",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadIntEntryMod",
+      "projectPath": "CapabilityStandardGraphOpTableReadIntEntryMod.csproj",
+      "title": "读名册上的星数",
+      "summary": "点到 2 号那行，册上记着三颗星，照数挂印。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "TableReadInt"
+      ],
+      "binding": "capability_standard_graph_op_TableReadInt",
+      "preset": "capability_standard_graph_op_TableReadInt_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/TableReadInt.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_TableReadInt",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_TableReadInt/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # infra-03 · 视野与相机
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-03-vision-camera.md)；编辑器需求见 [UXD](../uxd/infra-03-vision-camera.md)；引擎实现见 [runtime spec](../spec-runtime/infra-03-vision-camera.md)；编辑器实现见 [editor spec](../spec-editor/infra-03-vision-camera.md)；现状见 [reference](../reference/infra-03-vision-camera.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-03-vision-camera.md)；编辑器需求见 [UXD](../uxd/infra-03-vision-camera.md)；引擎实现见 [runtime spec](../spec-runtime/infra-03-vision-camera.md)；editor spec 见 [editor spec](../spec-editor/infra-03-vision-camera.md)；现状见 [reference](../reference/infra-03-vision-camera.md)。
 
 ## 1. 定位
 
@@ -21,4 +21,4 @@
 
 层 id 缺失、cellSizeCm/updateHz 非正、相机 id 缺失或重复、rigKind 非法、边界区间倒置（min > max）、edgePanMarginPx ≤ 0——启动失败并指明条目与位置。
 
-**相关文档**：[配置说明](../config/infra-03-vision-camera.md) · [fx-18](fx-19-vision.md) · [misc-03](misc-03-narrative.md)
+**相关文档**：[配置说明](../config/infra-03-vision-camera.md) · [fx-19](fx-19-vision.md) · [misc-03](misc-03-narrative.md)

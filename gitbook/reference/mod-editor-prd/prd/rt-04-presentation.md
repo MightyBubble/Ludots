@@ -1,6 +1,6 @@
 # rt-04 · 表现事件
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-04-presentation.md)；编辑器需求见 [UXD](../uxd/rt-04-presentation.md)；引擎实现见 [runtime spec](../spec-runtime/rt-04-presentation.md)；编辑器实现见 [editor spec](../spec-editor/rt-04-presentation.md)；现状见 [reference](../reference/rt-04-presentation.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/rt-04-presentation.md)；编辑器需求见 [UXD](../uxd/rt-04-presentation.md)；引擎实现见 [runtime spec](../spec-runtime/rt-04-presentation.md)；editor spec 见 [editor spec](../spec-editor/rt-04-presentation.md)；现状见 [reference](../reference/rt-04-presentation.md)。
 
 ## 1. 定位
 

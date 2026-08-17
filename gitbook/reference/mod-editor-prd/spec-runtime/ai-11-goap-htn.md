@@ -1,6 +1,6 @@
-# ai-10 runtime spec · GOAP 与 HTN 规划
+# ai-11 runtime spec · GOAP 与 HTN 规划
 
-> 引擎实现任务书。第一性需求见 [ai-10 PRD](../prd/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
+> 引擎实现任务书。第一性需求见 [ai-11 PRD](../prd/ai-11-goap-htn.md)；现状见 [reference](../reference/ai-11-goap-htn.md)。
 
 ## 1. 概述
 
@@ -28,4 +28,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-10 PRD](../prd/ai-11-goap-htn.md) · [reference](../reference/ai-11-goap-htn.md)
+**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [reference](../reference/ai-11-goap-htn.md)

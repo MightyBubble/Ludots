@@ -1,6 +1,6 @@
 # ent-01 · 实体模板
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ent-01-templates.md)；编辑器需求见 [UXD](../uxd/ent-01-templates.md)；引擎实现见 [runtime spec](../spec-runtime/ent-01-templates.md)；编辑器实现见 [editor spec](../spec-editor/ent-01-templates.md)；现状见 [reference](../reference/ent-01-templates.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ent-01-templates.md)；编辑器需求见 [UXD](../uxd/ent-01-templates.md)；引擎实现见 [runtime spec](../spec-runtime/ent-01-templates.md)；editor spec 见 [editor spec](../spec-editor/ent-01-templates.md)；现状见 [reference](../reference/ent-01-templates.md)。
 
 ## 1. 定位
 

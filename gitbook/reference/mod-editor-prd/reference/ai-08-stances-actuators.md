@@ -1,6 +1,6 @@
-# ai-07 reference · 战斗姿态与执行器门
+# ai-08 reference · 战斗姿态与执行器门
 
-> 现状参考。第一性需求见 [ai-07 PRD](../prd/ai-08-stances-actuators.md)；配置说明见 [ai-07 配置说明](../config/ai-08-stances-actuators.md)。
+> 现状参考。第一性需求见 [ai-08 PRD](../prd/ai-08-stances-actuators.md)；配置说明见 [ai-08 配置说明](../config/ai-08-stances-actuators.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | stance 唯一消费（打印） | mods/AIInspectorMod/Triggers/PrintAiConfigTrigger.cs:58 |
 | 空占位实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/stances.json、actuators.json |
 
-**相关文档**：[ai-07 PRD](../prd/ai-08-stances-actuators.md) · [ai-08 reference](ai-09-behavior-trees.md)
+**相关文档**：[ai-08 PRD](../prd/ai-08-stances-actuators.md) · [ai-09 reference](ai-09-behavior-trees.md)

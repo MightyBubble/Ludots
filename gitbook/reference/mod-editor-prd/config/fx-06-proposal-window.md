@@ -1,6 +1,6 @@
-# fx-05 配置说明 · 提案窗口与 Instant 内联
+# fx-06 配置说明 · 提案窗口与 Instant 内联
 
-> 配置写法与行为。第一性需求见 [fx-05 PRD](../prd/fx-06-proposal-window.md)；编辑器需求见 [UXD](../uxd/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
+> 配置写法与行为。第一性需求见 [fx-06 PRD](../prd/fx-06-proposal-window.md)；编辑器需求见 [UXD](../uxd/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
 
 ## 1. 示例配置
 
@@ -27,7 +27,7 @@
 | `OnCalculate` 挂图 | Effect kind；纯计算，产数值供后续相位 |
 | 纯相位监听图 | 只许纯图（非纯相位只许纯/事务图） |
 | 空相位 | 未挂 OnPropose 图直接通过 |
-| Instant 内联 | 模板 Instant 且无周期：同帧走完，不建实体（fx-03） |
+| Instant 内联 | 模板 Instant 且无周期：同帧走完，不建实体（fx-04） |
 
 外部原子独占律（激活窗口）——只有满足全部条件才合法：
 
@@ -36,7 +36,7 @@
 
 ## 3. 文件结构
 
-提案窗口不引入新文件：验证/计算图在 `GAS/graphs.json`，经模板 phaseGraphs 挂接（fx-04）。
+提案窗口不引入新文件：验证/计算图在 `GAS/graphs.json`，经模板 phaseGraphs 挂接（fx-05）。
 
 ## 4. 运行时加载效果
 
@@ -55,4 +55,4 @@
 - 内联消费：`mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/GAS/effects.json` 的全部 Instant 条目（无 phaseGraphs，走默认处理器）
 - 纯相位验证图暂无仓库实装样例——示例缺口随 todo/effect.md E1 一并补样
 
-**相关文档**：[fx-05 PRD](../prd/fx-06-proposal-window.md) · [fx-04 配置说明](fx-05-phases.md) · [gr-04](gr-04-compilation.md)
+**相关文档**：[fx-06 PRD](../prd/fx-06-proposal-window.md) · [fx-05 配置说明](fx-05-phases.md) · [gr-04](gr-04-compilation.md)

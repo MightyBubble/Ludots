@@ -1,6 +1,6 @@
-# fx-08 runtime spec · 目标查询
+# fx-09 runtime spec · 目标查询
 
-> 引擎实现任务书。第一性需求见 [fx-08 PRD](../prd/fx-09-target-query.md)；现状见 [reference](../reference/fx-09-target-query.md)。
+> 引擎实现任务书。第一性需求见 [fx-09 PRD](../prd/fx-09-target-query.md)；现状见 [reference](../reference/fx-09-target-query.md)。
 
 ## 1. 概述
 
@@ -13,7 +13,7 @@
 
 ## 3. 精确语义与不变量
 
-- 查询块只产出候选，不做敌我与数量裁剪（裁剪序见 fx-09）；同一形状边界字段组合非法即拒绝，不存在缺省补零。
+- 查询块只产出候选，不做敌我与数量裁剪（裁剪序fx-10）；同一形状边界字段组合非法即拒绝，不存在缺省补零。
 
 ## 4. 迁移与治理
 
@@ -21,4 +21,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-08 PRD](../prd/fx-09-target-query.md) · [reference](../reference/fx-09-target-query.md)
+**相关文档**：[fx-09 PRD](../prd/fx-09-target-query.md) · [reference](../reference/fx-09-target-query.md)

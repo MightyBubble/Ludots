@@ -1,6 +1,6 @@
-# fx-03 reference · 生命周期与时长
+# fx-04 reference · 生命周期与时长
 
-> 现状参考。第一性需求见 [fx-03 PRD](../prd/fx-04-lifetime.md)；配置说明见 [fx-03 配置说明](../config/fx-04-lifetime.md)。
+> 现状参考。第一性需求见 [fx-04 PRD](../prd/fx-04-lifetime.md)；配置说明见 [fx-04 配置说明](../config/fx-04-lifetime.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 过期条件与到期路径 | EffectLifetimeSystem.cs:595-630 |
 | 过期/取消展示事件 | EffectLifetimeSystem.cs:644-654 |
 
-**相关文档**：[fx-03 PRD](../prd/fx-04-lifetime.md) · [fx-04 reference](fx-05-phases.md)
+**相关文档**：[fx-04 PRD](../prd/fx-04-lifetime.md) · [fx-05 reference](fx-05-phases.md)

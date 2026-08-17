@@ -1,6 +1,6 @@
-# fx-00 reference · 效果执行管线总览
+# fx-01 reference · 效果执行管线总览
 
-> 现状参考。第一性需求见 [fx-00 PRD](../prd/fx-01-pipeline.md)；配置说明见 [fx-00 配置说明](../config/fx-01-pipeline.md)。
+> 现状参考。第一性需求见 [fx-01 PRD](../prd/fx-01-pipeline.md)；配置说明见 [fx-01 配置说明](../config/fx-01-pipeline.md)。
 
 ## 1. 现状快照
 
@@ -23,4 +23,4 @@
 | 事务类定位与暂存范围 | src/Core/Gameplay/GAS/EffectPhaseSideEffectTransaction.cs:11-15, 32-131 |
 | Commit 顺序与回滚 | EffectPhaseSideEffectTransaction.cs:851-997, 999-1021 |
 
-**相关文档**：[fx-00 PRD](../prd/fx-01-pipeline.md) · [fx-01 reference](fx-02-template.md)
+**相关文档**：[fx-01 PRD](../prd/fx-01-pipeline.md) · [fx-02 reference](fx-02-template.md)

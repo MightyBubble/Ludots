@@ -1,6 +1,6 @@
-# gr-08 reference · Query 图输出
+# gr-09 reference · Query 图输出
 
-> 现状参考。第一性需求见 [gr-08 PRD](../prd/gr-09-outputs.md)；配置说明见 [gr-08 配置说明](../config/gr-09-outputs.md)。
+> 现状参考。第一性需求见 [gr-09 PRD](../prd/gr-09-outputs.md)；配置说明见 [gr-09 配置说明](../config/gr-09-outputs.md)。
 
 ## 1. 现状快照
 
@@ -20,4 +20,4 @@
 | 容量接线 | src/Core/Engine/GameEngine.cs:927-929 |
 | 实体销毁清理 | src/Core/Gameplay/GAS/Systems/GraphOutputValueCleanupSystem.cs:8-39 |
 
-**相关文档**：[gr-08 PRD](../prd/gr-09-outputs.md) · [gr-01 reference](gr-02-document.md) · [gr-07 reference](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-02 reference](gr-02-document.md) · [gr-08 reference](gr-08-mount-points.md)

@@ -1,6 +1,6 @@
-# fx-15 · 造单位
+# fx-16 · 造单位
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-16-unit-creation.md)；编辑器需求见 [UXD](../uxd/fx-16-unit-creation.md)；引擎实现见 [runtime spec](../spec-runtime/fx-16-unit-creation.md)；编辑器实现见 [editor spec](../spec-editor/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-16-unit-creation.md)；编辑器需求见 [UXD](../uxd/fx-16-unit-creation.md)；引擎实现见 [runtime spec](../spec-runtime/fx-16-unit-creation.md)；editor spec 见 [editor spec](../spec-editor/fx-16-unit-creation.md)；现状见 [reference](../reference/fx-16-unit-creation.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@ CreateUnit 效果一次生成若干单位：模板实体或 unitType 装配，�
 
 来源二选一违例、图案字段违例、未知出生效果引用、count 非正——启动失败并指明字段；运行期队列容量满——执行失败抛错。
 
-**相关文档**：[配置说明](../config/fx-16-unit-creation.md) · [ent-01](ent-01-templates.md) · 见 fx-21（出生后自动下单）
+**相关文档**： ·  · fx-22（出生后自动下单）

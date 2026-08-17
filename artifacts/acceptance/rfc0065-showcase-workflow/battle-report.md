@@ -4,7 +4,7 @@
 - build: GasTests / Show5Show6Workflow_PointerCommandRoutesThroughIntentDispatchAndOrderBuffer
 - seed: interaction_showcase_hub deterministic headless run
 - clock: engine fixed step sampled through 1/60s test ticks
-- execution timestamp UTC: 2026-08-16T18:37:33.4015643+00:00
+- execution timestamp UTC: 2026-08-17T05:56:52.5674586+00:00
 
 ## Scenario Card
 - Player goal: issue a ground pointer command with three command-source actors active.
@@ -29,12 +29,12 @@
 ## Runtime Values
 | Field | Value |
 |---|---|
-| local player | Entity = { Id = 8, WorldId = 12, Version = 1 } |
+| local player | Entity = { Id = 8, WorldId = 13, Version = 1 } |
 | scheme.default registry id | 1 |
 | intent.command.default registry id | 1 |
 | dispatch.all_together registry id | 1 |
-| command source rows | Entity = { Id = 6, WorldId = 12, Version = 1 }, Entity = { Id = 7, WorldId = 12, Version = 1 }, Entity = { Id = 8, WorldId = 12, Version = 1 } |
-| hover entity ignored by ground command | Entity = { Id = 7, WorldId = 12, Version = 1 } |
+| command source rows | Entity = { Id = 6, WorldId = 13, Version = 1 }, Entity = { Id = 7, WorldId = 13, Version = 1 }, Entity = { Id = 8, WorldId = 13, Version = 1 } |
+| hover entity ignored by ground command | Entity = { Id = 7, WorldId = 13, Version = 1 } |
 | shared order id | 1 |
 | target world cm | (2080, 1080) |
 
@@ -48,6 +48,6 @@
 ## Orders
 | Actor | Order id | Type id | Player | Target X | Target Z |
 |---|---:|---:|---:|---:|---:|
-| Entity = { Id = 6, WorldId = 12, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
-| Entity = { Id = 7, WorldId = 12, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
-| Entity = { Id = 8, WorldId = 12, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 6, WorldId = 13, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 7, WorldId = 13, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |
+| Entity = { Id = 8, WorldId = 13, Version = 1 } | 1 | 101 | 1 | 2080 | 1080 |

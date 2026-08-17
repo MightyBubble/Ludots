@@ -1,6 +1,6 @@
-# ai-06 runtime spec · 任务
+# ai-07 runtime spec · 任务
 
-> 引擎实现任务书。第一性需求见 [ai-06 PRD](../prd/ai-07-tasks.md)；现状见 [reference](../reference/ai-07-tasks.md)。
+> 引擎实现任务书。第一性需求见 [ai-07 PRD](../prd/ai-07-tasks.md)；现状见 [reference](../reference/ai-07-tasks.md)。
 
 ## 1. 概述
 
@@ -27,4 +27,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-06 PRD](../prd/ai-07-tasks.md) · [reference](../reference/ai-07-tasks.md)
+**相关文档**：[ai-07 PRD](../prd/ai-07-tasks.md) · [reference](../reference/ai-07-tasks.md)

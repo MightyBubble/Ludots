@@ -33,6 +33,8 @@ namespace Ludots.Core.GraphRuntime
         public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
+        public string? LookupTable { get; set; }
+        public string? LookupField { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }

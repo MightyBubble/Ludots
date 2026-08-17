@@ -1,6 +1,6 @@
-# fx-20 配置说明 · 进度完成
+# fx-21 配置说明 · 进度完成
 
-> 配置写法与行为。第一性需求见 [fx-20 PRD](../prd/fx-21-progression.md)；编辑器需求见 [UXD](../uxd/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
+> 配置写法与行为。第一性需求见 [fx-21 PRD](../prd/fx-21-progression.md)；编辑器需求见 [UXD](../uxd/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
 
 ## 1. 示例配置
 
@@ -56,4 +56,4 @@ loader 把进度名解析为注册 id、把 scope 解析为作用域键、把 le
 - 三作用域示例族：`mods/showcases/progression_scope/ProgressionScopeShowcaseMod/assets/GAS/effects.json`（CityDrill/FactionMandate/ProvinceLogistics）
 - 团队科研完成：`mods/showcases/team_research/TeamResearchShowcaseMod/assets/GAS/effects.json`（SignalRelayComplete）
 
-**相关文档**：[fx-20 PRD](../prd/fx-21-progression.md) · 见 misc-01（进度域，第三期）
+**相关文档**：[fx-21 PRD](../prd/fx-21-progression.md) · 见 misc-01（进度域，第三期）

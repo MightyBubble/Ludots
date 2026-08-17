@@ -1,6 +1,6 @@
-# fx-11 editor spec · 堆叠
+# fx-12 editor spec · 堆叠
 
-> 编辑器实现任务书。编辑器需求见 [fx-11 UXD](../uxd/fx-12-stack.md)；引擎侧见 [runtime spec](../spec-runtime/fx-12-stack.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-12 UXD](../uxd/fx-12-stack.md)；引擎侧见 [runtime spec](../spec-runtime/fx-12-stack.md)。
 
 ## 1. 概述
 
@@ -10,7 +10,7 @@
 
 - 表单三控件映射 stack 块；上限输入以正整数下限约束（与 E3 治理同源，引擎未收紧前编辑器先行拦截并提示现状语义）。
 - 堆叠视图读目标容器运行时快照：层数、剩余时长、宿主模板导航。
-- 策略悬停示意用统一图解资产，与 fx-03 时间带复用。
+- 策略悬停示意用统一图解资产，与 fx-04 时间带复用。
 
 ## 3. 精确语义与不变量
 
@@ -22,4 +22,4 @@
 - 消费：效果表加载校验、目标容器快照接口、授予标签贡献只读投影。
 - 验收：三层叠加会话中视图 1→2→3 正确；RejectNew 第四次施加层数不变。
 
-**相关文档**：[fx-11 UXD](../uxd/fx-12-stack.md) · [fx-11 runtime spec](../spec-runtime/fx-12-stack.md)
+**相关文档**：[fx-12 UXD](../uxd/fx-12-stack.md) · [fx-12 runtime spec](../spec-runtime/fx-12-stack.md)

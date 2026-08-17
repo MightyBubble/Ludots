@@ -1,6 +1,6 @@
-# gr-00 reference · 图编程模型
+# gr-01 reference · 图编程模型
 
-> 现状参考。第一性需求见 [gr-00 PRD](../prd/gr-01-model.md)；配置说明见 [gr-00 配置说明](../config/gr-01-model.md)。
+> 现状参考。第一性需求见 [gr-01 PRD](../prd/gr-01-model.md)；配置说明见 [gr-01 配置说明](../config/gr-01-model.md)。
 
 ## 1. 现状快照
 
@@ -30,4 +30,4 @@
 | 图名上限与冻结 | src/Core/NodeLibraries/GASGraph/Host/GraphIdRegistry.cs:5-8；GraphProgramConfigLoader.cs:145 |
 | 帧绑定 E0-E2 | src/Core/NodeLibraries/GASGraph/GraphFrame.cs:8-14,87-104 |
 
-**相关文档**：[gr-00 PRD](../prd/gr-01-model.md) · [gr-01 reference](gr-02-document.md) · [gr-02 reference](gr-03-kinds.md)
+**相关文档**：[gr-01 PRD](../prd/gr-01-model.md) · [gr-02 reference](gr-02-document.md) · [gr-03 reference](gr-03-kinds.md)

@@ -1,6 +1,6 @@
-# fx-15 reference · 造单位
+# fx-16 reference · 造单位
 
-> 现状参考。第一性需求见 [fx-15 PRD](../prd/fx-16-unit-creation.md)；配置说明见 [fx-15 配置说明](../config/fx-16-unit-creation.md)。
+> 现状参考。第一性需求见 [fx-16 PRD](../prd/fx-16-unit-creation.md)；配置说明见 [fx-16 配置说明](../config/fx-16-unit-creation.md)。
 
 ## 1. 现状快照
 
@@ -17,4 +17,4 @@
 | 生成处理器 | src/Core/Gameplay/GAS/BuiltinHandlers.cs:358-415 |
 | unitType 注册表 | src/Core/Gameplay/GAS/Registry/UnitTypeRegistry.cs:7 |
 
-**相关文档**：[fx-15 PRD](../prd/fx-16-unit-creation.md) · [fx-15 配置说明](../config/fx-16-unit-creation.md)
+**相关文档**：[fx-16 PRD](../prd/fx-16-unit-creation.md) · [fx-16 配置说明](../config/fx-16-unit-creation.md)

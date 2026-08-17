@@ -1,2 +1,2 @@
 armed_triggers,action_graphs,peak_units,T_ms,checked,notes
-128,128,10000,1.268,128,ElapsedThinkWaves high threshold no fire
+128,128,10000,0.003,128,ElapsedThinkWaves high threshold no fire

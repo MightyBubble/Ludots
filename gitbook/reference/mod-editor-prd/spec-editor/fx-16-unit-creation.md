@@ -1,6 +1,6 @@
-# fx-15 editor spec · 造单位
+# fx-16 editor spec · 造单位
 
-> 编辑器实现任务书。编辑器需求见 [fx-15 UXD](../uxd/fx-16-unit-creation.md)；引擎侧见 [runtime spec](../spec-runtime/fx-16-unit-creation.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-16 UXD](../uxd/fx-16-unit-creation.md)；引擎侧见 [runtime spec](../spec-runtime/fx-16-unit-creation.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ CreateUnit 效果表单的造单位子表单：来源互斥、图案联动、归
 - 消费：实体模板注册表、unitType 注册表、效果模板注册表、保存管线。
 - 验收：Circle 缺起始角保存被拒；归属开关关闭后 JSON 中无该字段。
 
-**相关文档**：[fx-15 UXD](../uxd/fx-16-unit-creation.md) · [fx-15 runtime spec](../spec-runtime/fx-16-unit-creation.md)
+**相关文档**：[fx-16 UXD](../uxd/fx-16-unit-creation.md) · [fx-16 runtime spec](../spec-runtime/fx-16-unit-creation.md)

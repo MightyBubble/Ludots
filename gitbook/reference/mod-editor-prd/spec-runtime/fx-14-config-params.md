@@ -1,6 +1,6 @@
-# fx-13 runtime spec · 参数化
+# fx-14 runtime spec · 参数化
 
-> 引擎实现任务书。第一性需求见 [fx-13 PRD](../prd/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
+> 引擎实现任务书。第一性需求见 [fx-14 PRD](../prd/fx-14-config-params.md)；现状见 [reference](../reference/fx-14-config-params.md)。
 
 ## 1. 概述
 模板参数槽合同：七类型加载期解析、三条合并路径、caller 覆盖语义。
@@ -22,4 +22,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-13 PRD](../prd/fx-14-config-params.md) · [reference](../reference/fx-14-config-params.md)
+**相关文档**：[fx-14 PRD](../prd/fx-14-config-params.md) · [reference](../reference/fx-14-config-params.md)

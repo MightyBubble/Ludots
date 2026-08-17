@@ -1,6 +1,6 @@
-# fx-11 UXD · 堆叠的编辑器需求
+# fx-12 UXD · 堆叠的编辑器需求
 
-> 堆叠的编辑器需求（高保真规格）。第一性需求见 [fx-11 PRD](../prd/fx-12-stack.md)；配置写法见 [fx-11 配置说明](../config/fx-12-stack.md)；编辑器实现见 [editor spec](../spec-editor/fx-12-stack.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 堆叠的编辑器需求（高保真规格）。第一性需求见 [fx-12 PRD](../prd/fx-12-stack.md)；配置写法见 [fx-12 配置说明](../config/fx-12-stack.md)；编辑器实现见 [editor spec](../spec-editor/fx-12-stack.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -46,4 +46,4 @@
 - 三策略对"剩余时长"的作用一图可懂（悬停示意）。
 - 运行会话中任一目标的层数与剩余时长实时可见。
 
-**相关文档**：[fx-11 PRD](../prd/fx-12-stack.md) · [editor spec](../spec-editor/fx-12-stack.md)
+**相关文档**：[fx-12 PRD](../prd/fx-12-stack.md) · [editor spec](../spec-editor/fx-12-stack.md)

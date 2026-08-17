@@ -1,6 +1,6 @@
 # input-03 · 交互上下文档案
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-03-interaction-context.md)；编辑器需求见 [UXD](../uxd/input-03-interaction-context.md)；引擎实现见 [runtime spec](../spec-runtime/input-03-interaction-context.md)；编辑器实现见 [editor spec](../spec-editor/input-03-interaction-context.md)；现状见 [reference](../reference/input-03-interaction-context.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/input-03-interaction-context.md)；编辑器需求见 [UXD](../uxd/input-03-interaction-context.md)；引擎实现见 [runtime spec](../spec-runtime/input-03-interaction-context.md)；editor spec 见 [editor spec](../spec-editor/input-03-interaction-context.md)；现状见 [reference](../reference/input-03-interaction-context.md)。
 
 ## 1. 定位
 

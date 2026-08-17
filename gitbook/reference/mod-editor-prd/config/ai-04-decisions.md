@@ -1,6 +1,6 @@
-# ai-03 配置说明 · 决策
+# ai-04 配置说明 · 决策
 
-> 配置写法与行为。第一性需求见 [ai-03 PRD](../prd/ai-04-decisions.md)；编辑器需求见 [UXD](../uxd/ai-04-decisions.md)；现状见 [reference](../reference/ai-04-decisions.md)。
+> 配置写法与行为。第一性需求见 [ai-04 PRD](../prd/ai-04-decisions.md)；编辑器需求见 [UXD](../uxd/ai-04-decisions.md)；现状见 [reference](../reference/ai-04-decisions.md)。
 
 ## 1. 示例配置
 
@@ -36,7 +36,7 @@ Flags 数组写法与布尔等价：`"Flags": ["Autocast", "RequiresTarget"]`。
 
 | 字段 | 默认 | 这样配会产生什么效果 |
 |---|---|---|
-| TargetFilter | 必填 | 候选目标来自哪个过滤器（ai-05） |
+| TargetFilter | 必填 | 候选目标来自哪个过滤器（ai-06） |
 | Considerations[] | 可空 | 每条：Input/Normalization/Curve 必填引用；Weight 默认 1；Aggregate 默认 Multiply |
 | Aggregate | Multiply | Multiply 入乘积；WeightedSum/PriorityBucket 入加权和（后者另计优先桶）；Veto curved≤0 整决策归 0 |
 | Tasks | 必填 ≥1 | 任务 id 数组；须解析为编译任务表的**连续区间**（问题 I3：跨 mod 分片拆同一决策者任务易触发 contiguous 报错） |
@@ -68,4 +68,4 @@ Flags 数组写法与布尔等价：`"Flags": ["Autocast", "RequiresTarget"]`。
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decisions.json`（真实，3 条：Attack/HealBurst/Curse）
 
-**相关文档**：[ai-03 PRD](../prd/ai-04-decisions.md) · [ai-04 配置说明](ai-05-dm-profiles.md) · [ai-06 配置说明](ai-07-tasks.md)
+**相关文档**：[ai-04 PRD](../prd/ai-04-decisions.md) · [ai-05 配置说明](ai-05-dm-profiles.md) · [ai-07 配置说明](ai-07-tasks.md)

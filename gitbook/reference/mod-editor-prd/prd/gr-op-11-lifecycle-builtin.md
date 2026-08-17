@@ -1,6 +1,6 @@
 # gr-op-11 · 节点：生命周期与内建
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-11-lifecycle-builtin.md)；编辑器需求见 [UXD](../uxd/gr-op-11-lifecycle-builtin.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-11-lifecycle-builtin.md)；编辑器实现见 [editor spec](../spec-editor/gr-op-11-lifecycle-builtin.md)；现状见 [reference](../reference/gr-op-11-lifecycle-builtin.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/gr-op-11-lifecycle-builtin.md)；编辑器需求见 [UXD](../uxd/gr-op-11-lifecycle-builtin.md)；引擎实现见 [runtime spec](../spec-runtime/gr-op-11-lifecycle-builtin.md)；editor spec 见 [editor spec](../spec-editor/gr-op-11-lifecycle-builtin.md)；现状见 [reference](../reference/gr-op-11-lifecycle-builtin.md)。
 
 ## 1. 定位
 

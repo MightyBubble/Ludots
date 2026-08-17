@@ -19,4 +19,4 @@
 | 引擎默认资产 | assets/Relationships/catalog.json |
 | mod 增量资产 | mods/LudotsCoreMod/assets/Relationships/catalog.json 等 |
 
-**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [gr-01 reference](gr-02-document.md) · [cfg-05 reference](cfg-05-config-pipeline.md)
+**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [gr-02 reference](gr-02-document.md) · [cfg-05 reference](cfg-05-config-pipeline.md)

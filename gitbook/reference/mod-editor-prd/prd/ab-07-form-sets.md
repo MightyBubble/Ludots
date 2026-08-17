@@ -1,6 +1,6 @@
 # ab-07 · 形态路由
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-07-form-sets.md)；编辑器需求见 [UXD](../uxd/ab-07-form-sets.md)；引擎实现见 [runtime spec](../spec-runtime/ab-07-form-sets.md)；编辑器实现见 [editor spec](../spec-editor/ab-07-form-sets.md)；现状见 [reference](../reference/ab-07-form-sets.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ab-07-form-sets.md)；编辑器需求见 [UXD](../uxd/ab-07-form-sets.md)；引擎实现见 [runtime spec](../spec-runtime/ab-07-form-sets.md)；editor spec 见 [editor spec](../spec-editor/ab-07-form-sets.md)；现状见 [reference](../reference/ab-07-form-sets.md)。
 
 ## 1. 定位
 

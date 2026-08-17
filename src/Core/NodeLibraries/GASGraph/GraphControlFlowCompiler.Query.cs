@@ -25,6 +25,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             switch (op.NodeOp)
             {
                 case GraphNodeOp.ConstFloat:
+                case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
@@ -303,6 +304,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 case GraphNodeOp.ConstFloat:
                     instruction.ImmF = node.FloatValue;
+                    break;
+                case GraphNodeOp.ConstInt:
+                    instruction.Imm = node.IntValue;
                     break;
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:

@@ -1,6 +1,6 @@
-# ai-01 配置说明 · 效用输入
+# ai-02 配置说明 · 效用输入
 
-> 配置写法与行为。第一性需求见 [ai-01 PRD](../prd/ai-02-inputs.md)；编辑器需求见 [UXD](../uxd/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
+> 配置写法与行为。第一性需求见 [ai-02 PRD](../prd/ai-02-inputs.md)；编辑器需求见 [UXD](../uxd/ai-02-inputs.md)；现状见 [reference](../reference/ai-02-inputs.md)。
 
 ## 1. 示例配置
 
@@ -62,4 +62,4 @@ CompileInputs 逐条解析 Kind 与参数，登记进 inputIds 字典（Ordinal�
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/inputs.json`（真实，2 条）
 
-**相关文档**：[ai-01 PRD](../prd/ai-02-inputs.md) · [ai-02 配置说明](ai-03-norm-curves.md) · [ai-03 配置说明](ai-04-decisions.md)
+**相关文档**：[ai-02 PRD](../prd/ai-02-inputs.md) · [ai-03 配置说明](ai-03-norm-curves.md) · [ai-04 配置说明](ai-04-decisions.md)

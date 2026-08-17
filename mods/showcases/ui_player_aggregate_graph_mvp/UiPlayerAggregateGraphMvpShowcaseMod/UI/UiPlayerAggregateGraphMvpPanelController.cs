@@ -62,23 +62,24 @@ internal sealed class UiPlayerAggregateGraphMvpPanelController
     private UiElementBuilder BuildRoot(ReactiveContext<UiPlayerAggregateGraphMvpPanelState> context)
     {
         UiPlayerAggregateGraphMvpPanelState state = context.State;
+        UiPlayerAggregatePanelStyle style = state.PanelStyle;
         return Ui.Column(
                 Ui.Panel(
-                        Ui.Text(state.Title).FontSize(20f).Bold().Color("#F4F7FB"),
+                        Ui.Text(state.Title).FontSize(20f).Bold().Color(style.TitleColor),
                         Ui.Row(
-                                ResourceChip("Ore", state.OreTotal, "#F0C36B"),
-                                ResourceChip("Crystal", state.CrystalTotal, "#7CC4FF"))
-                            .Gap(18f),
+                                ResourceChip(state.OreBinding.Label, state.OreTotal, state.OreBinding.Accent, style.ChipValueColor),
+                                ResourceChip(state.CrystalBinding.Label, state.CrystalTotal, state.CrystalBinding.Accent, style.ChipValueColor))
+                            .Gap(style.ChipGap),
                         Ui.Text(state.Copy)
                             .FontSize(11.5f)
-                            .Color("#B7C9DA")
+                            .Color(style.CopyColor)
                             .WhiteSpace(UiWhiteSpace.Normal),
-                        Ui.Text($"Graph `{state.GraphId}` → `{state.OreSummaryKey}` / `{state.CrystalSummaryKey}`")
+                        Ui.Text($"Graph `{state.GraphId}` → `{state.OreBinding.GraphOutputKey}` / `{state.CrystalBinding.GraphOutputKey}`")
                             .FontSize(10.5f)
-                            .Color("#8096AA")
+                            .Color(style.GraphMetaColor)
                             .WhiteSpace(UiWhiteSpace.Normal),
-                        Ui.Text(state.Status).FontSize(12f).Color("#F5C66E").WhiteSpace(UiWhiteSpace.Normal),
-                        Ui.Text(state.Controls).FontSize(11f).Color("#94D2FF"),
+                        Ui.Text(state.Status).FontSize(12f).Color(style.StatusColor).WhiteSpace(UiWhiteSpace.Normal),
+                        Ui.Text(state.Controls).FontSize(11f).Color(style.ControlsColor),
                         Ui.Button(
                                 state.BuildingShutDown
                                     ? $"{state.ShutDownBuildingName} offline"
@@ -97,28 +98,28 @@ internal sealed class UiPlayerAggregateGraphMvpPanelController
                                     }
                                 })
                             .Id(UiPlayerAggregateGraphMvpIds.ShutDownButtonElementId)
-                            .Padding(12f, 8f)
-                            .Radius(8f)
-                            .Background(state.BuildingShutDown ? "#243140" : "#3B5F7A")
-                            .Color("#F5F7FA"))
+                            .Padding(style.ButtonPaddingX, style.ButtonPaddingY)
+                            .Radius(style.ButtonRadius)
+                            .Background(state.BuildingShutDown ? style.ButtonOfflineBackground : style.ButtonBackground)
+                            .Color(style.ButtonColor))
                     .Id(UiPlayerAggregateGraphMvpIds.PanelRootElementId)
-                    .Width(560f)
-                    .Padding(16f)
-                    .Gap(10f)
-                    .Radius(10f)
-                    .Background("#0A1320")
-                    .Border(1f, ParseColor("#2F475E"))
+                    .Width(style.Width)
+                    .Padding(style.Padding)
+                    .Gap(style.Gap)
+                    .Radius(style.Radius)
+                    .Background(style.Background)
+                    .Border(style.BorderThickness, ParseColor(style.BorderColor))
                     .Absolute(16f, 16f))
             .WidthPercent(100f)
             .HeightPercent(100f)
             .ZIndex(42);
     }
 
-    private static UiElementBuilder ResourceChip(string label, float total, string accent)
+    private static UiElementBuilder ResourceChip(string label, float total, string accent, string valueColor)
     {
         return Ui.Column(
                 Ui.Text(label).FontSize(11f).Bold().Color(accent),
-                Ui.Text(FormatNumber(total)).FontSize(28f).Bold().Color("#F7FBFF"))
+                Ui.Text(FormatNumber(total)).FontSize(28f).Bold().Color(valueColor))
             .Gap(2f);
     }
 

@@ -1600,6 +1600,33 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ResolveTableRow_raylib",
+      "name": "Graph Op ResolveTableRow Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ResolveTableRow"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_TableReadFloat_raylib",
+      "name": "Graph Op TableReadFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_TableReadFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_TableReadInt_raylib",
+      "name": "Graph Op TableReadInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_TableReadInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

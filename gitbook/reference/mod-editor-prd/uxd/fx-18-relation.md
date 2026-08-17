@@ -1,6 +1,6 @@
-# fx-17 UXD · 关系操作的编辑器需求
+# fx-18 UXD · 关系操作的编辑器需求
 
-> fx-17 的编辑器需求（高保真规格）。第一性需求见 [fx-17 PRD](../prd/fx-18-relation.md)；配置写法见 [fx-17 配置说明](../config/fx-18-relation.md)；编辑器实现见 [editor spec](../spec-editor/fx-18-relation.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-18 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -46,4 +46,4 @@ Relation 效果编辑页的关系表单：操作、两端槽位、条件字段�
 - 操作切换后的可见字段集与合法集一致；越权字段不落盘。
 - "哪些操作当前可执行"在表单内一跳可见（警示条）。
 
-**相关文档**：[fx-17 PRD](../prd/fx-18-relation.md) · [editor spec](../spec-editor/fx-18-relation.md)
+**相关文档**：[fx-18 PRD](../prd/fx-18-relation.md) · [editor spec](../spec-editor/fx-18-relation.md)

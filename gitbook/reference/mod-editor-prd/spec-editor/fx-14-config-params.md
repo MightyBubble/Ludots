@@ -1,6 +1,6 @@
-# fx-13 editor spec · 参数化
+# fx-14 editor spec · 参数化
 
-> 编辑器实现任务书。编辑器需求见 [fx-13 UXD](../uxd/fx-14-config-params.md)；引擎侧见 [runtime spec](../spec-runtime/fx-14-config-params.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-14 UXD](../uxd/fx-14-config-params.md)；引擎侧见 [runtime spec](../spec-runtime/fx-14-config-params.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：ConfigKeyRegistry、各引用注册表枚举、EffectParamKeys 常量、效果保存管线。
 - 验收：EffectTemplate 引用选未注册名即拒；caller 同键覆盖预览显示新值与新类型。
 
-**相关文档**：[fx-13 UXD](../uxd/fx-14-config-params.md) · [fx-13 runtime spec](../spec-runtime/fx-14-config-params.md)
+**相关文档**：[fx-14 UXD](../uxd/fx-14-config-params.md) · [fx-14 runtime spec](../spec-runtime/fx-14-config-params.md)

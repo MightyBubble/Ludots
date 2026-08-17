@@ -1,6 +1,6 @@
-# gr-02 runtime spec · 六种 Kind
+# gr-03 runtime spec · 六种 Kind
 
-> 引擎实现任务书。第一性需求见 [gr-02 PRD](../prd/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
+> 引擎实现任务书。第一性需求见 [gr-03 PRD](../prd/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
 
 ## 1. 概述
 
@@ -19,10 +19,10 @@ kind 策略合同：返回槽映射、节点白名单、监听相容、预设寄
 
 ## 4. 迁移与治理
 
-现状即基线；返回槽与 I[0] 环境约定的成文化归 gr-03（G3）。
+现状即基线；返回槽与 I[0] 环境约定的成文化归 gr-04（G3）。
 
 ## 变更记录
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-02 PRD](../prd/gr-03-kinds.md) · [reference](../reference/gr-03-kinds.md) · [gr-03 spec](gr-04-compilation.md)
+**相关文档**：[gr-03 PRD](../prd/gr-03-kinds.md) · [reference](../reference/gr-03-kinds.md) · [gr-04 spec](gr-04-compilation.md)

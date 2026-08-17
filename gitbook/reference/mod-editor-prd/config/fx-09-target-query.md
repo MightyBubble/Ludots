@@ -1,6 +1,6 @@
-# fx-08 配置说明 · 目标查询
+# fx-09 配置说明 · 目标查询
 
-> 配置写法与行为。第一性需求见 [fx-08 PRD](../prd/fx-09-target-query.md)；编辑器需求见 [UXD](../uxd/fx-09-target-query.md)；现状见 [reference](../reference/fx-09-target-query.md)。
+> 配置写法与行为。第一性需求见 [fx-09 PRD](../prd/fx-09-target-query.md)；编辑器需求见 [UXD](../uxd/fx-09-target-query.md)；现状见 [reference](../reference/fx-09-target-query.md)。
 
 ## 1. 示例配置
 
@@ -39,15 +39,15 @@ champion 演示 mod 的四种形状（真实）：
 |---|---|
 | `origin: Default / Source` | 查询中心参考；方向形状（锥/线/矩形）始终偏施法者 |
 | `kind: GraphProgram` + `graphProgramId` | 动态查询；九个空间字段全禁 |
-| 过滤类字段 | 不写在查询块——过滤正路是 `targetFilter`（fx-09） |
+| 过滤类字段 | 不写在查询块——过滤正路是 `targetFilter`（fx-10） |
 
 ## 3. 文件结构
 
-`targetQuery` 是效果模板顶层组件块（fx-01）；查询图在 `GAS/graphs.json`。Search/PeriodicSearch 的组件清单声明本块（声明性提示，合法性以模板联动规则为准）。
+`targetQuery` 是效果模板顶层组件块（fx-02）；查询图在 `GAS/graphs.json`。Search/PeriodicSearch 的组件清单声明本块（声明性提示，合法性以模板联动规则为准）。
 
 ## 4. 运行时加载效果
 
-loader 按形状互斥矩阵校验边界字段；运行期查询在裁决相位产出候选数，供过滤与派发消费（fx-09/10）。
+loader 按形状互斥矩阵校验边界字段；运行期查询在裁决相位产出候选数，供过滤与派发消费（fx-10/11）。
 
 ## 5. 异常处理
 
@@ -61,4 +61,4 @@ loader 按形状互斥矩阵校验边界字段；运行期查询在裁决相位�
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（圆/锥/线/环各有实例）
 - `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/effects.json`（origin: Source）
 
-**相关文档**：[fx-08 PRD](../prd/fx-09-target-query.md) · [fx-09 配置说明](fx-10-target-filter.md)
+**相关文档**：[fx-09 PRD](../prd/fx-09-target-query.md) · [fx-10 配置说明](fx-10-target-filter.md)

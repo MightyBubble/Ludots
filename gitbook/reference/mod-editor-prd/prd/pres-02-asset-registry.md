@@ -1,6 +1,6 @@
 # pres-02 · 表现资产清单
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-02-asset-registry.md)；编辑器需求见 [UXD](../uxd/pres-02-asset-registry.md)；引擎实现见 [runtime spec](../spec-runtime/pres-02-asset-registry.md)；编辑器实现见 [editor spec](../spec-editor/pres-02-asset-registry.md)；现状见 [reference](../reference/pres-02-asset-registry.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/pres-02-asset-registry.md)；编辑器需求见 [UXD](../uxd/pres-02-asset-registry.md)；引擎实现见 [runtime spec](../spec-runtime/pres-02-asset-registry.md)；editor spec 见 [editor spec](../spec-editor/pres-02-asset-registry.md)；现状见 [reference](../reference/pres-02-asset-registry.md)。
 
 ## 1. 定位
 

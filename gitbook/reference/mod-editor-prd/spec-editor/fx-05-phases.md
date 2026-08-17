@@ -1,6 +1,6 @@
-# fx-04 editor spec · 八相位执行
+# fx-05 editor spec · 八相位执行
 
-> 编辑器实现任务书。编辑器需求见 [fx-04 UXD](../uxd/fx-05-phases.md)；引擎侧见 [runtime spec](../spec-runtime/fx-05-phases.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-05 UXD](../uxd/fx-05-phases.md)；引擎侧见 [runtime spec](../spec-runtime/fx-05-phases.md)。
 
 ## 1. 概述
 
@@ -21,4 +21,4 @@
 - 消费：效果模板加载产物、图注册表（按 kind 过滤）、preset 默认处理器表。
 - 验收：拖图入格即时校验 kind 与互斥；保存后重编译提示正确。
 
-**相关文档**：[fx-04 UXD](../uxd/fx-05-phases.md) · [fx-04 runtime spec](../spec-runtime/fx-05-phases.md)
+**相关文档**：[fx-05 UXD](../uxd/fx-05-phases.md) · [fx-05 runtime spec](../spec-runtime/fx-05-phases.md)

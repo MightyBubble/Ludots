@@ -1,6 +1,6 @@
-# ai-06 reference · 任务
+# ai-07 reference · 任务
 
-> 现状参考。第一性需求见 [ai-06 PRD](../prd/ai-07-tasks.md)；配置说明见 [ai-06 配置说明](../config/ai-07-tasks.md)。
+> 现状参考。第一性需求见 [ai-07 PRD](../prd/ai-07-tasks.md)；配置说明见 [ai-07 配置说明](../config/ai-07-tasks.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 另一任务执行系统（黑板节点） | src/Core/Gameplay/AI/Systems/TaskNodeExecutionSystem.cs |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/tasks.json |
 
-**相关文档**：[ai-06 PRD](../prd/ai-07-tasks.md) · [ai-07 reference](ai-08-stances-actuators.md)
+**相关文档**：[ai-07 PRD](../prd/ai-07-tasks.md) · [ai-08 reference](ai-08-stances-actuators.md)

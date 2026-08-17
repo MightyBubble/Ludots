@@ -1,6 +1,6 @@
-# ai-05 UXD · 目标过滤器的编辑器需求
+# ai-06 UXD · 目标过滤器的编辑器需求
 
-> ai-05 的编辑器需求（高保真规格）。第一性需求见 [ai-05 PRD](../prd/ai-06-target-filters.md)；配置写法见 [ai-05 配置说明](../config/ai-06-target-filters.md)；编辑器实现见 [editor spec](../spec-editor/ai-06-target-filters.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-06 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -37,7 +37,7 @@
 
 1. 选中 TF.Hostile，试验台框选一片战场实体。
 2. RadiusCm 从 1600 下调，观察"留 5/淘汰 3"实时变化与原因分布。
-3. 确认后保存；被引用决策（ai-03）即时反映候选集变化。
+3. 确认后保存；被引用决策（ai-04）即时反映候选集变化。
 
 ## 5. 状态设计
 
@@ -54,4 +54,4 @@
 - 试验台淘汰原因与运行时 trace 拒绝码一致。
 - op 顺序调整对判定结果的影响在试验台可见。
 
-**相关文档**：[ai-05 PRD](../prd/ai-06-target-filters.md) · [editor spec](../spec-editor/ai-06-target-filters.md)
+**相关文档**：[ai-06 PRD](../prd/ai-06-target-filters.md) · [editor spec](../spec-editor/ai-06-target-filters.md)

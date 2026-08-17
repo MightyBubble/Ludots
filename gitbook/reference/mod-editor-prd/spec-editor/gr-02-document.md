@@ -1,6 +1,6 @@
-# gr-01 editor spec · 图文档格式
+# gr-02 editor spec · 图文档格式
 
-> 编辑器实现任务书。编辑器需求见 [gr-01 UXD](../uxd/gr-02-document.md)；引擎侧见 [runtime spec](../spec-runtime/gr-02-document.md)。
+> 编辑器实现任务书。编辑器需求见 [gr-02 UXD](../uxd/gr-02-document.md)；引擎侧见 [runtime spec](../spec-runtime/gr-02-document.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：文档 schema 投影、端口常量表、FrontDoor。
 - 验收：对全部主线资产图做往返测试零丢失；导出文档装载零诊断。
 
-**相关文档**：[gr-01 UXD](../uxd/gr-02-document.md) · [gr-01 runtime spec](../spec-runtime/gr-02-document.md)
+**相关文档**：[gr-02 UXD](../uxd/gr-02-document.md) · [gr-02 runtime spec](../spec-runtime/gr-02-document.md)

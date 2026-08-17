@@ -1,6 +1,6 @@
-# ai-01 reference · 效用输入
+# ai-02 reference · 效用输入
 
-> 现状参考。第一性需求见 [ai-01 PRD](../prd/ai-02-inputs.md)；配置说明见 [ai-01 配置说明](../config/ai-02-inputs.md)。
+> 现状参考。第一性需求见 [ai-02 PRD](../prd/ai-02-inputs.md)；配置说明见 [ai-02 配置说明](../config/ai-02-inputs.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 组件来源 | src/Core/Gameplay/AI/Components/UtilityAiRuntimeComponents.cs:51-74 |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/inputs.json |
 
-**相关文档**：[ai-01 PRD](../prd/ai-02-inputs.md) · [ai-02 reference](ai-03-norm-curves.md)
+**相关文档**：[ai-02 PRD](../prd/ai-02-inputs.md) · [ai-03 reference](ai-03-norm-curves.md)

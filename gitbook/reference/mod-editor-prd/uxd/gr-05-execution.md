@@ -1,6 +1,6 @@
-# gr-04 UXD · 执行模型的编辑器需求
+# gr-05 UXD · 执行模型的编辑器需求
 
-> gr-04 的编辑器需求（高保真规格）。第一性需求见 [gr-04 PRD](../prd/gr-05-execution.md)；配置写法见 [gr-04 配置说明](../config/gr-05-execution.md)；编辑器实现见 [editor spec](../spec-editor/gr-05-execution.md)；上限数值以 [事实与取值表](../facts.md) 与 gr-00 reference 为准。
+> gr-05 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  与 gr-01 reference 为准。
 
 ## 1. 界面定位
 
@@ -22,9 +22,9 @@
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
 | 游标高亮 | 执行游标快照（指令位置） | 实时标出当前节点 |
-| 步数仪表 | 游标步数 vs 上限（事实页 / gr-00 reference） | 递增条 + 临界变色 |
+| 步数仪表 | 游标步数 vs 上限（事实页 / gr-01 reference） | 递增条 + 临界变色 |
 | 挂起徽标 | 游标状态五态 | Yielded/BudgetSuspended 区分呈现 |
-| 宿主政策提示 | 宿主×挂起允许表（gr-06） | 图含 Yield 时提示可挂宿主 |
+| 宿主政策提示 | 宿主×挂起允许表（gr-07） | 图含 Yield 时提示可挂宿主 |
 | 入口切换 | run-to-halt / 切片 | 选错入口时呈现引擎同款错误 |
 
 ## 4. 关键交互流：调一次挂起循环
@@ -47,4 +47,4 @@
 - 挂起原因与恢复点一屏可见。
 - 预算条与引擎实测步数一致（同源）。
 
-**相关文档**：[gr-04 PRD](../prd/gr-05-execution.md) · [editor spec](../spec-editor/gr-05-execution.md) · [gr-00 UXD](gr-01-model.md)
+**相关文档**：[gr-05 PRD](../prd/gr-05-execution.md) · [editor spec](../spec-editor/gr-05-execution.md) · [gr-01 UXD](gr-01-model.md)

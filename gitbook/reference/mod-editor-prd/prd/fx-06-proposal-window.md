@@ -1,6 +1,6 @@
-# fx-05 · 提案窗口与 Instant 内联
+# fx-06 · 提案窗口与 Instant 内联
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-06-proposal-window.md)；编辑器需求见 [UXD](../uxd/fx-06-proposal-window.md)；引擎实现见 [runtime spec](../spec-runtime/fx-06-proposal-window.md)；编辑器实现见 [editor spec](../spec-editor/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-06-proposal-window.md)；编辑器需求见 [UXD](../uxd/fx-06-proposal-window.md)；引擎实现见 [runtime spec](../spec-runtime/fx-06-proposal-window.md)；editor spec 见 [editor spec](../spec-editor/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
 
 ## 1. 定位
 
@@ -22,4 +22,4 @@
 
 纯相位带副作用、监听图调用内建或读配置、外部原子组合违例——编译期或运行期立即拒绝并指明模板与窗口。
 
-**相关文档**：[配置说明](../config/fx-06-proposal-window.md) · [fx-04](fx-05-phases.md) · [fx-06](fx-07-response-chain.md) · [gr-03](gr-03-kinds.md)
+**相关文档**：[配置说明](../config/fx-06-proposal-window.md) · [fx-05](fx-05-phases.md) · [fx-07](fx-07-response-chain.md) · [gr-03](gr-03-kinds.md)

@@ -1,6 +1,6 @@
-# ai-04 runtime spec · 决策者与档案
+# ai-05 runtime spec · 决策者与档案
 
-> 引擎实现任务书。第一性需求见 [ai-04 PRD](../prd/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
+> 引擎实现任务书。第一性需求见 [ai-05 PRD](../prd/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
 
 ## 1. 概述
 
@@ -29,4 +29,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-04 PRD](../prd/ai-05-dm-profiles.md) · [reference](../reference/ai-05-dm-profiles.md)
+**相关文档**：[ai-05 PRD](../prd/ai-05-dm-profiles.md) · [reference](../reference/ai-05-dm-profiles.md)

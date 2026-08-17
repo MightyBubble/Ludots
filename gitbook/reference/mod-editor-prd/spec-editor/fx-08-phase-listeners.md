@@ -1,6 +1,6 @@
-# fx-07 editor spec · 相位监听器
+# fx-08 editor spec · 相位监听器
 
-> 编辑器实现任务书。编辑器需求见 [fx-07 UXD](../uxd/fx-08-phase-listeners.md)；引擎侧见 [runtime spec](../spec-runtime/fx-08-phase-listeners.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-08 UXD](../uxd/fx-08-phase-listeners.md)；引擎侧见 [runtime spec](../spec-runtime/fx-08-phase-listeners.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：效果注册表、图注册表、事件标签表、效果表加载校验。
 - 验收：EssenceFlux 类三条监听可全程选择器化重建；Instant 宿主拦截有原因提示。
 
-**相关文档**：[fx-07 UXD](../uxd/fx-08-phase-listeners.md) · [fx-07 runtime spec](../spec-runtime/fx-08-phase-listeners.md)
+**相关文档**：[fx-08 UXD](../uxd/fx-08-phase-listeners.md) · [fx-08 runtime spec](../spec-runtime/fx-08-phase-listeners.md)

@@ -1,6 +1,6 @@
-# fx-10 runtime spec · 目标派发
+# fx-11 runtime spec · 目标派发
 
-> 引擎实现任务书。第一性需求见 [fx-10 PRD](../prd/fx-11-target-dispatch.md)；现状见 [reference](../reference/fx-11-target-dispatch.md)。
+> 引擎实现任务书。第一性需求见 [fx-11 PRD](../prd/fx-11-target-dispatch.md)；现状见 [reference](../reference/fx-11-target-dispatch.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-10 PRD](../prd/fx-11-target-dispatch.md) · [reference](../reference/fx-11-target-dispatch.md)
+**相关文档**：[fx-11 PRD](../prd/fx-11-target-dispatch.md) · [reference](../reference/fx-11-target-dispatch.md)

@@ -1,6 +1,6 @@
-# ai-02 runtime spec · 归一化与响应曲线
+# ai-03 runtime spec · 归一化与响应曲线
 
-> 引擎实现任务书。第一性需求见 [ai-02 PRD](../prd/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
+> 引擎实现任务书。第一性需求见 [ai-03 PRD](../prd/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
 
 ## 1. 概述
 
@@ -26,4 +26,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[ai-02 PRD](../prd/ai-03-norm-curves.md) · [reference](../reference/ai-03-norm-curves.md)
+**相关文档**：[ai-03 PRD](../prd/ai-03-norm-curves.md) · [reference](../reference/ai-03-norm-curves.md)

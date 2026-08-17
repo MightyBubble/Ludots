@@ -1,6 +1,6 @@
 # infra-02 · 导航配置
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-02-navigation.md)；编辑器需求见 [UXD](../uxd/infra-02-navigation.md)；引擎实现见 [runtime spec](../spec-runtime/infra-02-navigation.md)；编辑器实现见 [editor spec](../spec-editor/infra-02-navigation.md)；现状见 [reference](../reference/infra-02-navigation.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/infra-02-navigation.md)；编辑器需求见 [UXD](../uxd/infra-02-navigation.md)；引擎实现见 [runtime spec](../spec-runtime/infra-02-navigation.md)；editor spec 见 [editor spec](../spec-editor/infra-02-navigation.md)；现状见 [reference](../reference/infra-02-navigation.md)。
 
 ## 1. 定位
 

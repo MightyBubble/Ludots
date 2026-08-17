@@ -1,6 +1,6 @@
-# ai-05 配置说明 · 目标过滤器
+# ai-06 配置说明 · 目标过滤器
 
-> 配置写法与行为。第一性需求见 [ai-05 PRD](../prd/ai-06-target-filters.md)；编辑器需求见 [UXD](../uxd/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
+> 配置写法与行为。第一性需求见 [ai-06 PRD](../prd/ai-06-target-filters.md)；编辑器需求见 [UXD](../uxd/ai-06-target-filters.md)；现状见 [reference](../reference/ai-06-target-filters.md)。
 
 ## 1. 示例配置
 
@@ -77,4 +77,4 @@
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/target_filters.json`（真实，2 条：Hostile 1600cm/Friendly 1200cm，均 MaxResults 16）
 
-**相关文档**：[ai-05 PRD](../prd/ai-06-target-filters.md) · [ai-03 配置说明](ai-04-decisions.md) · [ai-01 配置说明](ai-02-inputs.md)
+**相关文档**：[ai-06 PRD](../prd/ai-06-target-filters.md) · [ai-04 配置说明](ai-04-decisions.md) · [ai-02 配置说明](ai-02-inputs.md)
