@@ -129,7 +129,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
-            _sky.Dispose();
+            _sky?.Dispose();
             _sky = null!;
             _disposed = true;
         }

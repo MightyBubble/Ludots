@@ -1146,8 +1146,8 @@ namespace Ludots.Tests.Architecture
 
                 Assert.That(plan.RootModIds, Is.EqualTo(new[] { "RaylibClientParityShowcaseMod" }));
                 Assert.That(plan.OrderedModIds, Does.Contain("RaylibClientParityShowcaseMod"));
-                Assert.That(plan.OrderedModIds, Does.Contain("PresenterBlacksmithShowcaseMod"),
-                    "raylib_client_parity must depend on the Presenter-era blacksmith mod.");
+                Assert.That(plan.OrderedModIds, Does.Contain("RaylibPlatformMeshesMod"),
+                    "raylib_client_parity must pull its building meshes from the platform mesh fixture, not the presenter showcase.");
                 Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"),
                     "raylib_client_parity must not pull the legacy Performer blacksmith mod.");
 

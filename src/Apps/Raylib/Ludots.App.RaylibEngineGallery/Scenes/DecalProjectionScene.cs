@@ -127,7 +127,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
-            _terrain.Dispose();
+            _terrain?.Dispose();
             _terrain = null!;
             _disposed = true;
         }

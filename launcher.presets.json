@@ -1602,16 +1602,327 @@
       "buildMode": "auto"
     },
     {
-      "id": "engine_gallery_skybox",
-      "name": "Engine Gallery Skybox",
+      "id": "engine_raylib_skybox",
+      "name": "引擎画廊·skybox",
       "selectors": [
         "$engine_gallery"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto",
       "args": [
         "--scene",
-        "skybox"
+        "skybox",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_skybox/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_skybox/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_sky_daynight",
+      "name": "引擎画廊·sky_daynight",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "sky_daynight",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_sky_daynight/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_sky_daynight/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_water",
+      "name": "引擎画廊·water",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "water",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_water/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_water/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_terrain_surface",
+      "name": "引擎画廊·terrain_surface",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "terrain_surface",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_terrain_surface/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_terrain_surface/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_terrain_heightmap",
+      "name": "引擎画廊·terrain_heightmap",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "terrain_heightmap",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_terrain_heightmap/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_terrain_heightmap/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_atmosphere_fog",
+      "name": "引擎画廊·atmosphere_fog",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "atmosphere_fog",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_atmosphere_fog/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_atmosphere_fog/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_frame_lighting",
+      "name": "引擎画廊·frame_lighting",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "frame_lighting",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_frame_lighting/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_frame_lighting/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_postprocess",
+      "name": "引擎画廊·postprocess",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "postprocess",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_postprocess/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_postprocess/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_gpu_skinning",
+      "name": "引擎画廊·gpu_skinning",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "gpu_skinning",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_gpu_skinning/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_gpu_skinning/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_instancing",
+      "name": "引擎画廊·instancing",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "instancing",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_instancing/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_instancing/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_particles",
+      "name": "引擎画廊·particles",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "particles",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_particles/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_particles/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_decal_projection",
+      "name": "引擎画廊·decal_projection",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "decal_projection",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_decal_projection/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_decal_projection/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_vegetation_cutout",
+      "name": "引擎画廊·vegetation_cutout",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "vegetation_cutout",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_vegetation_cutout/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_vegetation_cutout/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_material_binding",
+      "name": "引擎画廊·material_binding",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "material_binding",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_material_binding/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_material_binding/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_ribbon_overlay",
+      "name": "引擎画廊·ribbon_overlay",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "ribbon_overlay",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_ribbon_overlay/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_ribbon_overlay/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_skia_overlay",
+      "name": "引擎画廊·skia_overlay",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "skia_overlay",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_skia_overlay/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_skia_overlay/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_debug_draw",
+      "name": "引擎画廊·debug_draw",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "debug_draw",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_debug_draw/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_debug_draw/stats.json"
+      ]
+    },
+    {
+      "id": "engine_raylib_primitives",
+      "name": "引擎画廊·primitives",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "args": [
+        "--scene",
+        "primitives",
+        "--frames",
+        "120",
+        "--screenshot",
+        "artifacts/acceptance/engine_raylib_primitives/screen.png",
+        "--json",
+        "artifacts/acceptance/engine_raylib_primitives/stats.json"
       ]
     }
   ]

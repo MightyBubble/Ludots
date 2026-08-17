@@ -102,7 +102,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _modelCache.Dispose();
+            _modelCache?.Dispose();
             _modelCache = null!;
             _disposed = true;
         }

@@ -69,7 +69,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _postProcess.Dispose();
+            _postProcess?.Dispose();
             _postProcess = null!;
             _disposed = true;
         }

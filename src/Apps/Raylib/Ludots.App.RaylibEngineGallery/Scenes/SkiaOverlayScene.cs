@@ -123,8 +123,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _panelLayer.Dispose();
-            _skia.Dispose();
+            _panelLayer?.Dispose();
+            _skia?.Dispose();
             _typeface?.Dispose();
             _skia = null!;
             _disposed = true;

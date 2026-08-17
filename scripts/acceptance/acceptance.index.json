@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 24,
+    "runnable": 42,
     "testOnly": 0,
-    "total": 24
+    "total": 42
   },
   "runnable": [
     {
@@ -114,6 +114,150 @@
       "testFilter": "ControlPlaneProjectionShowcaseAcceptanceTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
+    },
+    {
+      "id": "engine_raylib_atmosphere_fog",
+      "preset": "engine_raylib_atmosphere_fog",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_atmosphere_fog",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_debug_draw",
+      "preset": "engine_raylib_debug_draw",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_debug_draw",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_decal_projection",
+      "preset": "engine_raylib_decal_projection",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_decal_projection",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_frame_lighting",
+      "preset": "engine_raylib_frame_lighting",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_frame_lighting",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_gpu_skinning",
+      "preset": "engine_raylib_gpu_skinning",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_gpu_skinning",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_instancing",
+      "preset": "engine_raylib_instancing",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_instancing",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_material_binding",
+      "preset": "engine_raylib_material_binding",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_material_binding",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_particles",
+      "preset": "engine_raylib_particles",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_particles",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_postprocess",
+      "preset": "engine_raylib_postprocess",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_postprocess",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_primitives",
+      "preset": "engine_raylib_primitives",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_primitives",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_ribbon_overlay",
+      "preset": "engine_raylib_ribbon_overlay",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_ribbon_overlay",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_skia_overlay",
+      "preset": "engine_raylib_skia_overlay",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_skia_overlay",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_sky_daynight",
+      "preset": "engine_raylib_sky_daynight",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_sky_daynight",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_skybox",
+      "preset": "engine_raylib_skybox",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_skybox",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_terrain_heightmap",
+      "preset": "engine_raylib_terrain_heightmap",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_terrain_heightmap",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_terrain_surface",
+      "preset": "engine_raylib_terrain_surface",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_terrain_surface",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_vegetation_cutout",
+      "preset": "engine_raylib_vegetation_cutout",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_vegetation_cutout",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "engine_raylib_water",
+      "preset": "engine_raylib_water",
+      "binding": "engine_gallery",
+      "testFilter": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_water",
+      "hasScreenshotEvidence": true
     },
     {
       "id": "entity_command_panel",

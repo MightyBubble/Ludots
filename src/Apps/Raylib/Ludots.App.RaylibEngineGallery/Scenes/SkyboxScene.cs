@@ -67,7 +67,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _skybox.Dispose();
+            _skybox?.Dispose();
             _skybox = null!;
             _disposed = true;
         }

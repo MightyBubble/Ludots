@@ -114,9 +114,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _terrainRenderer.Dispose();
-            _skybox.Dispose();
-            _water.Dispose();
+            _terrainRenderer?.Dispose();
+            _skybox?.Dispose();
+            _water?.Dispose();
             _water = null!;
             _terrainRenderer = null!;
             _skybox = null!;

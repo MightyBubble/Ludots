@@ -51,7 +51,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 return;
             }
 
-            _renderer.Dispose();
+            _renderer?.Dispose();
             _renderer = null!;
             _disposed = true;
         }
