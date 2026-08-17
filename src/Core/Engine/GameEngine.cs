@@ -2441,6 +2441,11 @@ namespace Ludots.Core.Engine
             }
         }
 
+        internal void ApplyDefaultCameraToCurrentViews()
+        {
+            ApplyDefaultCamera(CurrentMapSession?.MapConfig);
+        }
+
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
             if (ShouldSkipDefaultCameraOnLoad(mapConfig))

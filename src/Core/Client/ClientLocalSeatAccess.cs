@@ -85,6 +85,7 @@ namespace Ludots.Core.Client
                 Ludots.Core.Components.WorldPositionCm.FromCm(0, 0));
             ClientLocalSeatBindings.BindSoleSeat(engine, viewer, 1, presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
             WireAuthorityCameraServices(engine);
+            engine.ApplyDefaultCameraToCurrentViews();
         }
 
         private static void WireAuthorityCameraServices(GameEngine engine)
