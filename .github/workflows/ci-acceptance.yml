@@ -58,6 +58,15 @@ jobs:
             }
           }
 
+      - name: Run presentation visibility contract benchmarks
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/PresentationTests/PresentationTests.csproj -c Debug --no-build `
+            --filter "FullyQualifiedName~Benchmark_ScatterBlacksmithShowcase|FullyQualifiedName~PresentationHotpathBenchmark" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
       # 单条失败/超时不阻断后续条目；结果写入 ci-acceptance-results.json，最后由 Gate 步骤统一判定。
       - name: Run runnable acceptance entries
         shell: pwsh

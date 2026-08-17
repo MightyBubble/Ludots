@@ -4,8 +4,7 @@ namespace Ludots.Core.Presentation.Components
     {
         High = 0,
         Medium = 1,
-        Low = 2,
-        Culled = 255
+        Low = 2
     }
 
     /// <summary>

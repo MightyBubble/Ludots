@@ -95,7 +95,7 @@ namespace Ludots.Tests.ThreeC
 
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(50000, 50000),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new VisualTransform
                 {
                     Position = new Vector3(500f, 0f, 500f),

@@ -1992,7 +1992,7 @@ namespace Ludots.Tests.Presentation
 
             Entity visibleOwner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity hiddenOwner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
-            Entity culledOwner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            Entity culledOwner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
 
             Entity visiblePresenter = instances.Create(visibleDef, visibleOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 101, Entity.Null, default);
             Entity hiddenPresenter = instances.Create(hiddenDef, hiddenOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 202, Entity.Null, default);
@@ -2055,7 +2055,7 @@ namespace Ludots.Tests.Presentation
             AssertQuaternionEquivalent(snapshotsByTemplateId[hiddenDef].Rotation, hiddenRotation);
 
             Assert.That(snapshotsByTemplateId[culledDef].Visibility, Is.EqualTo(VisualVisibility.Culled));
-            Assert.That(snapshotsByTemplateId[culledDef].LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(snapshotsByTemplateId[culledDef].LOD, Is.EqualTo(LODLevel.Low));
             Assert.That(snapshotsByTemplateId[culledDef].Scale, Is.EqualTo(new Vector3(3f, 2f, 1f)));
             AssertQuaternionEquivalent(snapshotsByTemplateId[culledDef].Rotation, culledRotation);
 
@@ -2529,7 +2529,7 @@ namespace Ludots.Tests.Presentation
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
-            ownerCull.LOD = LODLevel.Culled;
+            ownerCull.LOD = LODLevel.Low;
             instances.SyncCullVisibility();
 
             emit.Update(0.016f);
@@ -2543,7 +2543,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(drawBuffer.Count, Is.EqualTo(0));
             Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
             Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Culled));
-            Assert.That(snapshotBuffer.GetSpan()[0].LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(snapshotBuffer.GetSpan()[0].LOD, Is.EqualTo(LODLevel.Low));
 
             ownerCull.IsVisible = true;
             ownerCull.LOD = LODLevel.High;

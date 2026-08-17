@@ -550,7 +550,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var culled = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new CommandSourceSelectableTag());
             var offCamera = world.Create(
                 WorldPositionCm.FromCm(2600, 1600),
@@ -648,7 +648,7 @@ namespace Ludots.Tests.GAS
             var actor = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
                 new VisualTransform { Position = new Vector3(80f, 0f, 80f) },
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new CommandSourceSelectableTag());
             var globals = new Dictionary<string, object>
             {

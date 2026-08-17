@@ -544,7 +544,7 @@ namespace Ludots.Tests.Presentation
         public void PresenterEntityRuntime_SyncCullVisibility_SkipsOwnerCulledChildren()
         {
             using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             int parentDef = definitions.Register("culled.parent", new PresenterDefinition());
@@ -585,13 +585,13 @@ namespace Ludots.Tests.Presentation
             instances.SyncCullVisibility();
 
             world.Get<CullState>(ownerA).IsVisible = false;
-            world.Get<CullState>(ownerA).LOD = LODLevel.Culled;
+            world.Get<CullState>(ownerA).LOD = LODLevel.Low;
             instances.SyncCullVisibility([ownerA]);
 
             Assert.That(world.Get<PresenterCullState>(ownerARoot).OwnerCullVisible, Is.False);
-            Assert.That(world.Get<PresenterCullState>(ownerARoot).LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(world.Get<PresenterCullState>(ownerARoot).LOD, Is.EqualTo(LODLevel.Low));
             Assert.That(world.Get<PresenterCullState>(ownerAChild).OwnerCullVisible, Is.False);
-            Assert.That(world.Get<PresenterCullState>(ownerAChild).LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(world.Get<PresenterCullState>(ownerAChild).LOD, Is.EqualTo(LODLevel.Low));
             Assert.That(world.Get<PresenterCullState>(ownerBRoot).OwnerCullVisible, Is.True);
             Assert.That(world.Get<PresenterCullState>(ownerBRoot).LOD, Is.EqualTo(LODLevel.High));
         }
@@ -603,7 +603,7 @@ namespace Ludots.Tests.Presentation
             var attributes = default(AttributeBuffer);
             attributes.SetBase(3, 100f);
             attributes.SetCurrent(3, 25f);
-            Entity owner = world.Create(attributes, new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            Entity owner = world.Create(attributes, new CullState { IsVisible = false, LOD = LODLevel.Low });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             int defId = definitions.Register("culled.behavior", new PresenterDefinition
@@ -1002,7 +1002,7 @@ namespace Ludots.Tests.Presentation
         public void PresenterEmitSystem_OwnerCulled_SkipsAssetProjection()
         {
             using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
@@ -1032,7 +1032,7 @@ namespace Ludots.Tests.Presentation
         public void PresenterEmitSystem_OwnerCulled_StillExpiresLifetimeInstances()
         {
             using var world = World.Create();
-            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Low });
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();

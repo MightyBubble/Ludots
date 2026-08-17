@@ -1682,11 +1682,6 @@ namespace Ludots.Core.Systems
         private void ForceCull(Entity owner, ref CullState cull)
         {
             bool changed = cull.IsVisible;
-            if (cull.LOD == LODLevel.Culled)
-            {
-                cull.LOD = LODLevel.Low;
-            }
-
             cull.IsVisible = false;
             cull.ScreenCoverage01 = 0f;
             if (changed)

@@ -1,0 +1,7 @@
+flowchart TD
+    A[start idle state] --> B{blackboard trigger param #12 set}
+    B -->|yes| C[consume trigger]
+    C --> D[enter attack state]
+    D --> E{normalized time >= 1.0}
+    E -->|yes| F[return to idle]
+    E -->|no| D

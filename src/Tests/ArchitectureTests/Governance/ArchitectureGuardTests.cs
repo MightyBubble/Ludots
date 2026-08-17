@@ -51,6 +51,15 @@ namespace Ludots.Tests.Architecture.Governance
         };
 
         [Test]
+        public void LODLevel_DoesNotEncodeCameraVisibility()
+        {
+            Assert.That(
+                Enum.GetNames(typeof(Ludots.Core.Presentation.Components.LODLevel)),
+                Does.Not.Contain("Culled"),
+                "LODLevel is a quality tier only; camera visibility lives in CullState.IsVisible (issue #999). Re-adding a Culled member reintroduces the conflated visibility contract.");
+        }
+
+        [Test]
         public void SystemGroup_MustMatchDesignDocument()
         {
             Assert.That(
