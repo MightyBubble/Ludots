@@ -17,6 +17,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Core.Presentation.Rendering;
 
 namespace DiagnosticsOverlayMod.Systems
 {

@@ -30,7 +30,7 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 12 | decal_projection | 投影贴花 | decal_project + IRaylibReceiverMeshProjector |
 | 13 | vegetation_cutout | 植被透贴 | vegetation_cutout |
 | 14 | material_binding | 材质绑定 | RaylibMaterialHostBinder |
-| 15 | ribbon_overlay | 样条带/地面覆盖 | SplineRibbonBuffer + GroundOverlayBuffer |
+| 15 | ribbon_overlay | 样条带/地面覆盖 | RaylibWorldOverlayRenderer（绘制核唯一实现，宿主与画廊共用） |
 | 16 | skia_overlay | Skia GPU 2D 覆盖层 | RaylibSkiaRenderer + SkiaRasterLayer |
 | 17 | debug_draw | 调试绘制 | RaylibDebugDrawRenderer + DebugDrawCommandBuffer |
 | 18 | primitives | 图元/群体渲染与群体动画 | RaylibPrimitiveRenderer |

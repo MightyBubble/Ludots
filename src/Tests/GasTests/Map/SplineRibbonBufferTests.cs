@@ -1,6 +1,6 @@
 using System;
 using System.Numerics;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS

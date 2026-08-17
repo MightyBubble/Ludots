@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace Ludots.Core.Presentation.Rendering
+namespace Ludots.Platform.Abstractions
 {
     /// <summary>
     /// Per-frame zero-allocation spline ribbon buffer.

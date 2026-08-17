@@ -59,6 +59,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
@@ -209,7 +210,7 @@ namespace Ludots.Core.Engine
         private GasPresentationEventBuffer _gasPresentationEvents;
         private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Platform.Abstractions.GroundOverlayBuffer _groundOverlayBuffer;
-        private Ludots.Core.Presentation.Rendering.SplineRibbonBuffer _splineRibbonBuffer;
+        private Ludots.Platform.Abstractions.SplineRibbonBuffer _splineRibbonBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;

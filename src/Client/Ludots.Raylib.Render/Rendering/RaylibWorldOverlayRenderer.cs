@@ -1,15 +1,12 @@
 using System;
 using System.Numerics;
-using Ludots.Client.Raylib.Rendering;
-using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using Ludots.Platform.Abstractions;
-using Ludots.Raylib.Render;
 
-namespace Ludots.Adapter.Raylib
+namespace Ludots.Raylib.Render
 {
-    internal static class RaylibWorldOverlayRenderer
+    public static class RaylibWorldOverlayRenderer
     {
         public static void DrawGroundOverlays(GroundOverlayBuffer overlays)
         {
