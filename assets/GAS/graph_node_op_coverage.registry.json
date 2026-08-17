@@ -1639,6 +1639,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_CountMatchesSeededMapEntities",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryAllMapEntities_ScanLightsUnitsProgressively",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1656,7 +1657,9 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFromCollection_LightsTheRoster",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFromCollection_ResultWavePullsRosterLinesToSixMembers",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1674,6 +1677,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTeam_KeepsHostileCamp",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
@@ -1692,6 +1696,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTemplate_FullAndResultWavesAlternateCirclesAndGhosts",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1709,6 +1715,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1726,6 +1733,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTagAny_CrownsNineEnemyBadges",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1743,6 +1752,8 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFilterTagNone_BadgesTheDeadUnitAndGhostsItInTheResultWave",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1778,6 +1789,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1795,6 +1807,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1812,6 +1825,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1828,7 +1842,9 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.AggMinAttribute_ResultWaveExitsCirclesAndKeepsOnlyThePanel",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1847,6 +1863,7 @@
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
         "GraphOpsNodeGalleryQueryAcceptanceTests.AggMaxEntityByAttribute_NamesTheThickest",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
@@ -1863,7 +1880,9 @@
         "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
         "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
         "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.AggMinEntityByAttribute_NamesTheWeakestWithBadgeLineAndHpFloat",
         "GraphOpsNodeGalleryQueryAcceptanceTests.EveryQueryGallery_HasChineseNumbers_AndNonZeroCount",
+        "GraphOpsNodeGalleryQueryAcceptanceTests.QueryFamily_CaptionsCarryRealCountsAndAggregates",
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
