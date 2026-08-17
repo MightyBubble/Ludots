@@ -1,6 +1,6 @@
-# 从记事板读出点名的人
+# 照记事板点名叫阵
 
-板上记着木桩，读出来锁定他。
+板上那格贴着木桩的画像，读出来就套住他。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从记事板读出点名的人，锁定了{named}。
+> 点名格指向{named}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从记事板读出点名的人
+Feature: 照记事板点名叫阵
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ReadBlackboardEntity
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ReadBlackboardEntity/play.mp4
     When 短剧演完
-    Then 字幕讲的是「板上记着木桩，读出来锁定他。」这类人话
+    Then 字幕讲的是「板上那格贴着木桩的画像，读出来就套住他。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -2,7 +2,7 @@
   "op": "RelationshipQueryOutgoing",
   "driver": "rel",
   "title": "我主动交的朋友",
-  "beat": "从自己出发的链，亮出那些朋友。",
+  "beat": "箭头从自己射出去的链才算。",
   "detailTemplate": "我交的朋友有 {friendCount} 人。",
   "assertDetailContains": [
     "我交的"

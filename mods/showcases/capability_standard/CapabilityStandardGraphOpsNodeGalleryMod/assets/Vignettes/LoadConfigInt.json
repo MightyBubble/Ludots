@@ -1,11 +1,11 @@
 {
   "op": "LoadConfigInt",
   "driver": "blackboard",
-  "title": "从技能配置读出阶位",
-  "beat": "配置阶位 2。",
-  "detailTemplate": "从技能配置读出阶位 {result}。",
+  "title": "翻开技能册认品阶",
+  "beat": "册上品阶两颗星，头顶徽章照着点亮。",
+  "detailTemplate": "册上品阶 {result}，徽章已点亮。",
   "assertDetailContains": [
-    "阶位"
+    "品阶"
   ],
   "featuredNodeId": "cfgI",
   "graphKind": "Effect",

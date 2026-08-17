@@ -1,6 +1,6 @@
-# 从配置读出要放的效果
+# 册上贴哪张效果票，就照票开打
 
-配置指着某效果再打出去。
+撕下打击票，木桩真挨票面那一下。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从配置读出要放的效果，木桩挨了一下。
+> 照册上的打击票，木桩血量 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从配置读出要放的效果
+Feature: 册上贴哪张效果票，就照票开打
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadConfigEffectId
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadConfigEffectId/play.mp4
     When 短剧演完
-    Then 字幕讲的是「配置指着某效果再打出去。」这类人话
+    Then 字幕讲的是「撕下打击票，木桩真挨票面那一下。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

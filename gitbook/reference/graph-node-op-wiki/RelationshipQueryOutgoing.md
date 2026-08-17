@@ -1,6 +1,6 @@
 # 我主动交的朋友
 
-从自己出发的链，亮出那些朋友。
+箭头从自己射出去的链才算。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 我主动交的朋友
     Given 玩家打开 capability_standard_graph_op_RelationshipQueryOutgoing
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/play.mp4
     When 短剧演完
-    Then 字幕讲的是「从自己出发的链，亮出那些朋友。」这类人话
+    Then 字幕讲的是「箭头从自己射出去的链才算。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

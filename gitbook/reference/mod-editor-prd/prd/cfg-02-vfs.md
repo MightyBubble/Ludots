@@ -1,6 +1,6 @@
 # cfg-02 · 虚拟文件系统
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-02-vfs.md)；编辑器需求见 [UXD](../uxd/cfg-02-vfs.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-02-vfs.md)；编辑器实现见 [editor spec](../spec-editor/cfg-02-vfs.md)；现状见 [reference](../reference/cfg-02-vfs.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/cfg-02-vfs.md)；编辑器需求见 [UXD](../uxd/cfg-02-vfs.md)；引擎实现见 [runtime spec](../spec-runtime/cfg-02-vfs.md)；editor spec 见 [editor spec](../spec-editor/cfg-02-vfs.md)；现状见 [reference](../reference/cfg-02-vfs.md)。
 
 ## 1. 定位
 

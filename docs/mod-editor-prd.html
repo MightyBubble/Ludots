@@ -125,6 +125,7 @@
   var AB_DIR = PRD_BASE + "reference/";
   var CONFIG_DIR = PRD_BASE + "config/";
   var UXD_DIR = PRD_BASE + "uxd/";
+  var TODO_DIR = PRD_BASE + "todo/";
   var DEFAULT_DOC = PRD_BASE + "README.md";
   var currentDoc = null;
 
@@ -137,6 +138,7 @@
     { key: "prd", label: "PRD", dir: PRD_DIR, hint: "第一性需求 · 冻结" },
     { key: "config", label: "Config", dir: CONFIG_DIR, hint: "配置说明 · 跟着写" },
     { key: "uxd", label: "UXD", dir: UXD_DIR, hint: "编辑器需求 · 逐篇" },
+    { key: "todo", label: "TODO", dir: TODO_DIR, hint: "治理与易用性总账 · 全局" },
     { key: "specrt", label: "Spec·引擎", dir: SPEC_RT_DIR, hint: "runtime spec · 引擎实现任务书" },
     { key: "speced", label: "Spec·编辑", dir: SPEC_ED_DIR, hint: "editor spec · 编辑器实现任务书" },
     { key: "reference", label: "Reference", dir: AB_DIR, hint: "现状参考 · 如实记录" }
@@ -162,6 +164,15 @@
     }
     var nav = window.PRD_NAV;
     var layer = layerByKey(activeLayer);
+    if (layer.key === "todo") {
+      var docs = (nav.todo && nav.todo.length) ? nav.todo : [];
+      var th = '<div class="tree-title">TODO · 治理与易用性（' + docs.length + "）</div>";
+      for (var t = 0; t < docs.length; t++) th += setEntry(docs[t].file, docs[t].title);
+      if (!docs.length) th += '<div class="entry todo">暂无 TODO 文档</div>';
+      host.innerHTML = th;
+      markActive();
+      return;
+    }
     var html = '<div class="tree-title">' + esc(layer.label) + " 层目录（已写 " + nav.written + " / " + nav.total + "）</div>";
     html += '<div class="grp"><div class="entry"><span class="id">README</span>总篇 · 结构与路线</div>' +
       '<div class="children">' + setEntry("README.md", "总篇：定位·模板·阅读路线") + "</div></div>";
@@ -318,6 +329,11 @@
       var btn = e.target.closest(".layerbtn");
       if (!btn) return;
       var target = layerByKey(btn.getAttribute("data-layer"));
+      if (target.key === "todo") {
+        activeLayer = "todo";
+        buildTree();
+        return;
+      }
       var cur = docLayerOf(currentDoc || "");
       if (cur) {
         loadDoc(target.dir + currentDoc.slice(cur.dir.length));

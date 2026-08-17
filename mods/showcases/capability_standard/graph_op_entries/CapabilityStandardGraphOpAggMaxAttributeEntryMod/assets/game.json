@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_AggMaxAttribute",
-  "windowTitle": "Ludots - 最高生命是多少",
+  "windowTitle": "Ludots - 全场最高血量",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
 # 好感落在区间里的人
 
-只留好感 30~80 的。
+好感量尺卡在 30 到 80 之间才留。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 好感落在 30 到 80 区间里的有 {friendCount} 人。
+> 好感 30~80 的有 {friendCount} 人。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 好感落在区间里的人
     Given 玩家打开 capability_standard_graph_op_RelationshipFilterMetricRange
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipFilterMetricRange/play.mp4
     When 短剧演完
-    Then 字幕讲的是「只留好感 30~80 的。」这类人话
+    Then 字幕讲的是「好感量尺卡在 30 到 80 之间才留。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

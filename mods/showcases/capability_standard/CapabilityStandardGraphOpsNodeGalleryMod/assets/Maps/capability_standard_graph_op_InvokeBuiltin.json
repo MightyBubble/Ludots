@@ -56,33 +56,9 @@
           }
         }
       }
-    },
-    {
-      "InstanceId": "mark",
-      "Template": "GraphOps.Ally",
-      "Overrides": {
-        "Name": {
-          "Value": "印记"
-        },
-        "WorldPositionCm": {
-          "Value": {
-            "X": 100,
-            "Y": 160
-          }
-        },
-        "AttributeBuffer": {
-          "base": {
-            "Health": 40
-          }
-        }
-      }
     }
   ],
   "Teams": [
-    {
-      "TeamId": 1,
-      "RepresentativeInstanceId": "mark"
-    },
     {
       "TeamId": 2,
       "RepresentativeInstanceId": "target"

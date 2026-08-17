@@ -1,6 +1,6 @@
-# 跑一个内置步骤
+# 账本里的步骤逐条办
 
-事务里先生成新身体，再清掉新身体上的残留效果。
+造出新身体，再把新身体的效果挂架扫净。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/poster.png" src="artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4`。
@@ -10,7 +10,7 @@
 
 这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
 
-- 家族：黑板与配置
+- 家族：属性与效果
 - 启动绑定：`capability_standard_graph_op_InvokeBuiltin`
 - 作者记号：`InvokeBuiltin`（给写图的人对照，不出现在玩家字幕里）
 
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 内置步骤清掉了新身体上的印记。
+> 新身体已上场，效果挂架已清空。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 跑一个内置步骤
+Feature: 账本里的步骤逐条办
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_InvokeBuiltin
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_InvokeBuiltin/play.mp4
     When 短剧演完
-    Then 字幕讲的是「事务里先生成新身体，再清掉新身体上的残留效果。」这类人话
+    Then 字幕讲的是「造出新身体，再把新身体的效果挂架扫净。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

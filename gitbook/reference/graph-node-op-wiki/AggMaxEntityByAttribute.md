@@ -1,6 +1,6 @@
-# 谁最能打（血最厚）
+# 点名最能扛的
 
-最厚的人被点名。
+全场退成灰影，满血条那个被点名徽钉住。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 最厚的是{label}，生命{hp}。
+> 被点名的是{label}，血{hp}，血条顶格还顶着点名徽。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 谁最能打（血最厚）
+Feature: 点名最能扛的
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggMaxEntityByAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMaxEntityByAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「最厚的人被点名。」这类人话
+    Then 字幕讲的是「全场退成灰影，满血条那个被点名徽钉住。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

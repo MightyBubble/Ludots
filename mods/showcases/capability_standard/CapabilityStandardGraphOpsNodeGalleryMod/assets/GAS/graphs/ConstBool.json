@@ -1,16 +1,99 @@
 [
   {
     "id": "showcase.graph_op.ConstBool",
-    "kind": "Validation",
+    "kind": "Effect",
     "entry": "permit",
     "nodes": [
       {
         "id": "permit",
         "op": "ConstBool",
         "boolValue": true
+      },
+      {
+        "id": "jif",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "eight",
+        "op": "ConstFloat",
+        "floatValue": 8
+      },
+      {
+        "id": "negEight",
+        "op": "NegFloat"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      },
+      {
+        "id": "done",
+        "op": "ConstFloat",
+        "floatValue": 0
       }
     ],
-    "controlEdges": [],
-    "valueEdges": []
+    "controlEdges": [
+      {
+        "from": "permit",
+        "fromPort": "next",
+        "to": "jif"
+      },
+      {
+        "from": "jif",
+        "fromPort": "true",
+        "to": "explicit"
+      },
+      {
+        "from": "jif",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "eight"
+      },
+      {
+        "from": "eight",
+        "fromPort": "next",
+        "to": "negEight"
+      },
+      {
+        "from": "negEight",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "permit",
+        "fromPort": "value",
+        "to": "jif",
+        "toPort": "condition"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "eight",
+        "fromPort": "value",
+        "to": "negEight",
+        "toPort": "value"
+      },
+      {
+        "from": "negEight",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      }
+    ]
   }
 ]

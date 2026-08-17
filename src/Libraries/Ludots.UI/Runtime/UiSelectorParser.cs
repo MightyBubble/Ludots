@@ -36,6 +36,7 @@ public static class UiSelectorParser
 	{
 		List<UiSelectorPart> list = new List<UiSelectorPart>();
 		UiSelectorCombinator uiSelectorCombinator = UiSelectorCombinator.None;
+		UiPseudoElement pseudoElement = UiPseudoElement.None;
 		int i = 0;
 		while (i < selectorText.Length)
 		{
@@ -122,14 +123,18 @@ public static class UiSelectorParser
 			if (text.Length != 0)
 			{
 				UiSelectorCombinator combinator = ((list.Count != 0) ? ((uiSelectorCombinator == UiSelectorCombinator.None) ? UiSelectorCombinator.Descendant : uiSelectorCombinator) : UiSelectorCombinator.None);
-				list.Add(ParseToken(text, combinator));
+				list.Add(ParseToken(text, combinator, out UiPseudoElement tokenPseudoElement));
+				if (tokenPseudoElement != UiPseudoElement.None)
+				{
+					pseudoElement = tokenPseudoElement;
+				}
 				uiSelectorCombinator = UiSelectorCombinator.None;
 			}
 		}
-		return new UiSelector(list);
+		return new UiSelector(list, pseudoElement);
 	}
 
-	private static UiSelectorPart ParseToken(string token, UiSelectorCombinator combinator)
+	private static UiSelectorPart ParseToken(string token, UiSelectorCombinator combinator, out UiPseudoElement pseudoElement)
 	{
 		string text = null;
 		string id = null;
@@ -138,6 +143,7 @@ public static class UiSelectorParser
 		List<UiStructuralPseudo> structuralPseudos = new List<UiStructuralPseudo>();
 		List<UiSelectorLogicalPseudo> logicalPseudos = new List<UiSelectorLogicalPseudo>();
 		UiPseudoState pseudoState = UiPseudoState.None;
+		pseudoElement = UiPseudoElement.None;
 		int i = 0;
 		while (i < token.Length)
 		{
@@ -158,13 +164,29 @@ public static class UiSelectorParser
 				break;
 			}
 			case ':':
+			{
 				i++;
+				bool doubleColon = false;
 				if (i < token.Length && token[i] == ':')
 				{
+					doubleColon = true;
 					i++;
 				}
-				ApplyPseudo(ReadPseudoToken(token, ref i), ref pseudoState, structuralPseudos, logicalPseudos);
+				string pseudoToken = ReadPseudoToken(token, ref i);
+				if (TryParsePseudoElement(pseudoToken, out UiPseudoElement parsedPseudoElement))
+				{
+					pseudoElement = parsedPseudoElement;
+				}
+				else if (!doubleColon)
+				{
+					ApplyPseudo(pseudoToken, ref pseudoState, structuralPseudos, logicalPseudos);
+				}
+				else
+				{
+					pseudoElement = UiPseudoElement.Unsupported;
+				}
 				break;
+			}
 			case '[':
 			{
 				i++;
@@ -221,6 +243,23 @@ public static class UiSelectorParser
 			text = "*";
 		}
 		return new UiSelectorPart(text, id, list, list2, structuralPseudos, logicalPseudos, pseudoState, combinator);
+	}
+
+	private static bool TryParsePseudoElement(string value, out UiPseudoElement pseudoElement)
+	{
+		string text = value.Trim().ToLowerInvariant();
+		if (text == "before")
+		{
+			pseudoElement = UiPseudoElement.Before;
+			return true;
+		}
+		if (text == "after")
+		{
+			pseudoElement = UiPseudoElement.After;
+			return true;
+		}
+		pseudoElement = UiPseudoElement.None;
+		return false;
 	}
 
 	private static string ReadIdentifier(string token, ref int index)

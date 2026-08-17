@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_MulFloat",
-  "windowTitle": "Ludots - 伤害乘倍率",
+  "windowTitle": "Ludots - 伤害拉长一半",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

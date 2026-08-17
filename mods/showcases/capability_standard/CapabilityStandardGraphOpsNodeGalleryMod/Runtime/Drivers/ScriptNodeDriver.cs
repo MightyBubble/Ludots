@@ -17,6 +17,11 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
     public const string ConstSevenCalleeFile = "_constSevenCallee.json";
     public const string ConstSevenCalleeGraphKey = "showcase.graph_op._constSevenCallee";
     private const int SliceBudget = 64;
+    private const float TeaCupOffsetX = 2.2f;
+    private const float TeaCupRadius = 1.1f;
+    private const float TeaCellBottomOffset = 0.62f;
+    private const float TeaCellSpacing = 0.55f;
+    private const float TeaCellHalf = 0.21f;
 
     private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
@@ -34,6 +39,7 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
+        HideSoloOpHud(ctx);
         if (!_seeded)
         {
             int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
@@ -84,6 +90,11 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
 
     public void DrawOverlay(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
     {
+        if (IsDrinkOp(ctx))
+        {
+            DrawTeaCup(ctx, debugDraw);
+        }
+
         if (!IsPatrolOp(ctx))
         {
             return;
@@ -102,6 +113,43 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
                 new Vector2(ctx.Vignette.Actors[ally].X, ctx.Vignette.Actors[ally].Y)
             ],
             GraphShowcaseStagePresenter.PathColor);
+    }
+
+    private void DrawTeaCup(GraphOpsNodeDriverContext ctx, DebugDrawCommandBuffer debugDraw)
+    {
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        if (caster < 0)
+        {
+            return;
+        }
+
+        GraphOpsNodeActor actor = ctx.Vignette.Actors[caster];
+        float cupX = actor.X + TeaCupOffsetX;
+        float cupY = actor.Y;
+        GraphShowcaseStagePresenter.DrawThickOutlineCircle(
+            debugDraw,
+            cupX,
+            cupY,
+            TeaCupRadius,
+            GraphShowcaseStagePresenter.OutlineDark,
+            GraphShowcaseStagePresenter.GhostColor);
+
+        int limit = actor.HealthMax > 0f ? (int)actor.HealthMax : 0;
+        int water = Math.Clamp(_ints[0], 0, limit);
+        DebugDrawColor fill = _cursor.Status == GraphExecutionStatus.Halted
+            ? DebugDrawColor.Green
+            : DebugDrawColor.Cyan;
+        for (int i = 0; i < water; i++)
+        {
+            debugDraw.Boxes.Add(new DebugDrawBox2D
+            {
+                Center = new Vector2(cupX, cupY - TeaCellBottomOffset + i * TeaCellSpacing),
+                HalfWidth = TeaCellHalf,
+                HalfHeight = TeaCellHalf,
+                Thickness = TeaCellHalf * 2f,
+                Color = fill
+            });
+        }
     }
 
     private GraphSliceResult ExecuteFeaturedSlice(GraphOpsNodeDriverContext ctx)
@@ -260,10 +308,33 @@ public sealed class ScriptNodeDriver : IGraphOpsNodeDriver
         => string.Equals(ctx.Vignette.Op, nameof(GraphNodeOp.InvokeScript), StringComparison.Ordinal);
 
     private static bool IsDrinkOp(GraphOpsNodeDriverContext ctx)
-        => ctx.Vignette.Op is nameof(GraphNodeOp.Jump)
+        => IsDrinkOp(ctx.Vignette.Op);
+
+    private static bool IsDrinkOp(string op)
+        => op is nameof(GraphNodeOp.Jump)
             or nameof(GraphNodeOp.JumpIfFalse)
             or nameof(GraphNodeOp.Yield);
 
     private static bool IsPatrolOp(GraphOpsNodeDriverContext ctx)
         => ctx.Vignette.Op is nameof(GraphNodeOp.Call) or nameof(GraphNodeOp.Return);
+
+    private static void HideSoloOpHud(GraphOpsNodeDriverContext ctx)
+    {
+        if (!HidesCasterHud(ctx.Vignette.Op))
+        {
+            return;
+        }
+
+        int caster = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "caster");
+        if (caster >= 0)
+        {
+            GraphOpsNodeActorBinding.SetHudLit(ctx, caster, false);
+        }
+    }
+
+    private static bool HidesCasterHud(string op)
+        => IsDrinkOp(op)
+            || op is nameof(GraphNodeOp.MoveInt)
+                or nameof(GraphNodeOp.HaltReturnInt)
+                or nameof(GraphNodeOp.InvokeScript);
 }

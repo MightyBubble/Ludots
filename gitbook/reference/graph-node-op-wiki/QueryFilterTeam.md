@@ -1,6 +1,6 @@
-# 只留下敌对阵营
+# 圈出对面十个
 
-友军被滤掉，敌人亮。
+红的一排留圈，蓝的退成灰影。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 友军被滤掉后，敌对阵营还剩{count}人。
+> 红方{count}个个个有圈，蓝方两个全退成灰影。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 只留下敌对阵营
+Feature: 圈出对面十个
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryFilterTeam
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryFilterTeam/play.mp4
     When 短剧演完
-    Then 字幕讲的是「友军被滤掉，敌人亮。」这类人话
+    Then 字幕讲的是「红的一排留圈，蓝的退成灰影。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

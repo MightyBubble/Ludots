@@ -1,6 +1,6 @@
 # 读出这个人的好感
 
-点名好友，字幕和好感条显示读到的数。
+从链上抽出读数牌，写着 85。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 点名{friend}，读到好感 {loyalty}。
+> 读到{friend}的好感 {loyalty}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 读出这个人的好感
     Given 玩家打开 capability_standard_graph_op_RelationshipGetMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipGetMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「点名好友，字幕和好感条显示读到的数。」这类人话
+    Then 字幕讲的是「从链上抽出读数牌，写着 85。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

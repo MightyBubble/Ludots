@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_DivFloat",
-  "windowTitle": "Ludots - 按距离摊薄",
+  "windowTitle": "Ludots - 一刀摊给两根木桩",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

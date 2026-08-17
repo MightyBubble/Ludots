@@ -1,11 +1,11 @@
 {
   "op": "QuerySortByAttribute",
   "driver": "query",
-  "title": "按生命排个序",
-  "beat": "血最多的排前面。",
-  "detailTemplate": "按生命从高到低排，最前面是{label}，生命{hp}。",
+  "title": "按血量从厚到薄排队",
+  "beat": "最厚的顶着三道杠，箭头顺着血条一路排下去。",
+  "detailTemplate": "头名{label}血{hp}顶着三道杠，箭头一路指向更薄的血条。",
   "assertDetailContains": [
-    "按生命"
+    "三道杠"
   ],
   "featuredNodeId": "sortHp",
   "graphKind": "Query",

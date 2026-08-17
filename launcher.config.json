@@ -209,6 +209,14 @@
       }
     },
     {
+      "name": "ui_nineslice_panel_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
+        "projectPath": "UiNineSlicePanelShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_react_flow_showcase",
       "target": {
         "type": "path",

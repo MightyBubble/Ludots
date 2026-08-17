@@ -1,11 +1,11 @@
 {
   "op": "LoadConfigEffectId",
   "driver": "blackboard",
-  "title": "从配置读出要放的效果",
-  "beat": "配置指着某效果再打出去。",
-  "detailTemplate": "从配置读出要放的效果，木桩挨了一下。",
+  "title": "册上贴哪张效果票，就照票开打",
+  "beat": "撕下打击票，木桩真挨票面那一下。",
+  "detailTemplate": "照册上的打击票，木桩血量 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "要放的效果"
+    "打击票"
   ],
   "featuredNodeId": "cfgFx",
   "graphKind": "Effect",

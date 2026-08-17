@@ -2,8 +2,8 @@
   "op": "RelationshipAggAverageMetric",
   "driver": "rel",
   "title": "好感平均多少",
-  "beat": "字幕报平均。",
-  "detailTemplate": "好感平均 {avg}。",
+  "beat": "四份好感倒进算式台，除以四人。",
+  "detailTemplate": "四人好感平均 {avg}（230÷4 截断）。",
   "assertDetailContains": [
     "平均"
   ],

@@ -2,10 +2,10 @@
   "op": "RelationshipSetFlag",
   "driver": "rel",
   "title": "打上失和标记",
-  "beat": "断链或失和后插上失和旗。",
-  "detailTemplate": "给{friend}打上失和标记。",
+  "beat": "最弱那条链上插起失和旗。",
+  "detailTemplate": "给{friend}的链插上失和旗。",
   "assertDetailContains": [
-    "失和"
+    "失和旗"
   ],
   "featuredNodeId": "setFlag",
   "graphKind": "Effect",

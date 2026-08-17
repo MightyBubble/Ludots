@@ -1,6 +1,6 @@
 # 这两人之间有没有链
 
-自己和某好友之间查到链。
+这一对之间拉出一条双头链。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/play.mp4`。
@@ -51,7 +51,7 @@ Feature: 这两人之间有没有链
     Given 玩家打开 capability_standard_graph_op_RelationshipQueryBetweenPair
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipQueryBetweenPair/play.mp4
     When 短剧演完
-    Then 字幕讲的是「自己和某好友之间查到链。」这类人话
+    Then 字幕讲的是「这一对之间拉出一条双头链。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

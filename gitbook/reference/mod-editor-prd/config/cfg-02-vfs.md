@@ -30,7 +30,7 @@ void OnLoad(IModContext context)
 
 ## 3. 文件结构
 
-VFS 不是文件，是寻址层：挂载随 mod 装配建立。作者只写地址；mod 内两个合法位置（`assets/` 与 `assets/Configs/`）的地址形态见 cfg-04。
+VFS 不是文件，是寻址层：挂载随 mod 装配建立。作者只写地址；mod 内两个合法位置（`assets/` 与 仓库 `assets/` 根（引擎默认））的地址形态见 cfg-04。
 
 ## 4. 运行时加载效果
 

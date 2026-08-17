@@ -1,6 +1,6 @@
 # map-02 · 地图触发器
 
-> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/map-02-triggers.md)；编辑器需求见 [UXD](../uxd/map-02-triggers.md)；引擎实现见 [runtime spec](../spec-runtime/map-02-triggers.md)；编辑器实现见 [editor spec](../spec-editor/map-02-triggers.md)；现状见 [reference](../reference/map-02-triggers.md)。
+> 第一性需求 · 已冻结。配置写法见 [配置说明](../config/map-02-triggers.md)；编辑器需求见 [UXD](../uxd/map-02-triggers.md)；引擎实现见 [runtime spec](../spec-runtime/map-02-triggers.md)；editor spec 见 [editor spec](../spec-editor/map-02-triggers.md)；现状见 [reference](../reference/map-02-triggers.md)。
 
 ## 1. 定位
 
