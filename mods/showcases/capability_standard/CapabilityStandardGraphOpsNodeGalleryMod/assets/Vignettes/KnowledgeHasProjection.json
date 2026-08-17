@@ -1,9 +1,9 @@
 {
   "op": "KnowledgeHasProjection",
   "driver": "event",
-  "title": "观众知不知道那个人",
-  "beat": "观众对木桩有知识投影就显示看得见。",
-  "detailTemplate": "观众对木桩看得见。",
+  "title": "观众名下有记录才看得见",
+  "beat": "木桩有记录、亮着；陌生人没记录，连血条都不显示。",
+  "detailTemplate": "观众对{result}。",
   "assertDetailContains": [
     "看得见"
   ],
@@ -24,9 +24,9 @@
       "id": "caster",
       "role": "caster",
       "template": "GraphOps.Ally",
-      "name": "施法者",
-      "x": 0,
-      "y": 0,
+      "name": "陌生人",
+      "x": 1.5,
+      "y": 3,
       "health": 100,
       "healthMax": 100
     },

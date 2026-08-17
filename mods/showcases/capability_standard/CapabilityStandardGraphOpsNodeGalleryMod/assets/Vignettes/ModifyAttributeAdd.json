@@ -1,11 +1,11 @@
 {
   "op": "ModifyAttributeAdd",
   "driver": "attr",
-  "title": "直接扣血",
-  "beat": "不绕圈子，木桩血条按加算结果往下掉。",
-  "detailTemplate": "直接扣血，木桩从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "直接在血条上做加法",
+  "beat": "一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。",
+  "detailTemplate": "加算 {delta}，木桩从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
-    "扣"
+    "加算"
   ],
   "featuredNodeId": "hit",
   "graphKind": "Effect",

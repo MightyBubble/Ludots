@@ -1,6 +1,6 @@
-# 血量够不够打全力
+# 血量过线没：过线轻击，没过线全力
 
-木桩血低于 80 就打全力，否则轻击。
+木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_CompareLtInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 木桩血量偏低，这一刀打{style}。
+> 木桩 {healthBefore} 低于 80，打{style}，掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 血量够不够打全力
+Feature: 血量过线没：过线轻击，没过线全力
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_CompareLtInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_CompareLtInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「木桩血低于 80 就打全力，否则轻击。」这类人话
+    Then 字幕讲的是「木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

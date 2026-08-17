@@ -1,6 +1,6 @@
-# fx-06 配置说明 · Preset 类型系统
+# fx-03 配置说明 · Preset 类型系统
 
-> 配置写法与行为。第一性需求见 [fx-05 PRD](../prd/fx-03-preset-types.md)；编辑器需求见 [UXD](../uxd/fx-03-preset-types.md)；现状见 [reference](../reference/fx-03-preset-types.md)。
+> 配置写法与行为。第一性需求见 [fx-03 PRD](../prd/fx-03-preset-types.md)；编辑器需求见 [UXD](../uxd/fx-03-preset-types.md)；现状见 [reference](../reference/fx-03-preset-types.md)。
 
 ## 1. 示例配置
 
@@ -17,7 +17,7 @@
 | 字段 | 这样配会产生什么效果 |
 |---|---|
 | `id` | 原型名，效果模板 presetType 引用它；全字段必填 |
-| `components` | 提示作者要配哪些块的元数据，不驱动校验（校验在 fx-04 模板侧）；组件名→配置块名映射见 reference，TargetFilterParams 无 preset 声明 |
+| `components` | 提示作者要配哪些块的元数据，不驱动校验（校验在 fx-02 模板侧）；组件名→配置块名映射见 reference，TargetFilterParams 无 preset 声明 |
 | `activePhases` / `allowedLifetimes` | 该原型的活跃相位与允许寿命集合，模板 lifetime 须在其中 |
 | `defaultPhaseHandlers` | 各相位默认处理器；`type` 仅 `builtin` 或 `graph` |
 
@@ -56,10 +56,10 @@
 |---|---|
 | 原型任一字段缺失 / type 非 builtin·graph | 启动失败 |
 | Freeze 后注册、超出 mod id 段上限 | 启动失败 |
-| 效果引用未注册 presetType | 启动失败（fx-04） |
+| 效果引用未注册 presetType | 启动失败（fx-02） |
 
 ## 6. 实例
 
 - `assets/GAS/preset_types.json`（16 条全量）；消费侧见 `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（Buff/DoT/Search/LaunchProjectile/CreateUnit 皆有实例）
 
-**相关文档**：[fx-05 PRD](../prd/fx-03-preset-types.md) · [fx-04 配置说明](fx-02-template.md)
+**相关文档**：[fx-03 PRD](../prd/fx-03-preset-types.md) · [fx-02 配置说明](fx-02-template.md)

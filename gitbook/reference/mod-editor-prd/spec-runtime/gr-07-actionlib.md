@@ -1,6 +1,6 @@
-# gr-09 runtime spec · 动作库 ActionLib
+# gr-07 runtime spec · 动作库 ActionLib
 
-> 引擎实现任务书。第一性需求见 [gr-09 PRD](../prd/gr-07-actionlib.md)；现状见 [reference](../reference/gr-07-actionlib.md)。
+> 引擎实现任务书。第一性需求见 [gr-07 PRD](../prd/gr-07-actionlib.md)；现状见 [reference](../reference/gr-07-actionlib.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-09 PRD](../prd/gr-07-actionlib.md) · [reference](../reference/gr-07-actionlib.md) · [gr-06 spec](gr-05-execution.md)
+**相关文档**：[gr-07 PRD](../prd/gr-07-actionlib.md) · [reference](../reference/gr-07-actionlib.md) · [gr-05 spec](gr-05-execution.md)

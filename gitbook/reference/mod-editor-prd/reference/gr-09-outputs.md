@@ -20,4 +20,4 @@
 | 容量接线 | src/Core/Engine/GameEngine.cs:927-929 |
 | 实体销毁清理 | src/Core/Gameplay/GAS/Systems/GraphOutputValueCleanupSystem.cs:8-39 |
 
-**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-03 reference](gr-02-document.md) · [gr-09 reference](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [gr-02 reference](gr-02-document.md) · [gr-08 reference](gr-08-mount-points.md)

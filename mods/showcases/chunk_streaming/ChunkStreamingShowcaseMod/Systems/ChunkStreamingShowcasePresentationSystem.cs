@@ -14,6 +14,7 @@ using Ludots.Core.Physics;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Runtime;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Client;
 
 namespace ChunkStreamingShowcaseMod.Systems
 {
@@ -186,7 +187,7 @@ namespace ChunkStreamingShowcaseMod.Systems
                 return;
             }
 
-            Vector2 cameraTarget = _engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State.TargetCm;
             string camera = $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})";
             string chunks = $"Chunks {_runtime.LoadedChunkCount} | Nodes {_runtime.LoadedNodeCount} | Splines {_runtime.LoadedSplineRibbonCount}";
             string status = _runtime.LastStatus;

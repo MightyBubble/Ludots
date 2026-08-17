@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using CoreInputMod.ViewMode;
 using RoadNetworkShowcaseMod.Gameplay;
@@ -122,7 +124,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 LastSubmitStatus = status;
             }
 
-            var target = engine.GameSession.Camera.State.TargetCm;
+            var target = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             ActiveBoard.LoadedChunksSource.Update(
                 (int)target.X,
                 (int)target.Y,
@@ -251,16 +253,11 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
-            Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
-            if (owner == Entity.Null)
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return;
-            }
-
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
-            if (engine.World.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-            {
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
+                throw new InvalidOperationException(
+                    "Road network showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
@@ -331,8 +328,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private void PublishSelectableKnowledge(GameEngine engine)
         {
             if (string.IsNullOrWhiteSpace(_activeMapId) ||
-                !engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Entity viewer ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer))
             {
                 return;
@@ -551,8 +547,14 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
-            if (TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
-                EntityCollectionContextRuntime.TryGetPrimary(
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
+            {
+                throw new InvalidOperationException(
+                    "Road network showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+            }
+
+            if (EntityCollectionContextRuntime.TryGetPrimary(
                     engine.World,
                     engine.GlobalContext,
                     owner,
@@ -563,27 +565,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return selected;
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
-                actorObj is Entity actor &&
-                engine.World.IsAlive(actor))
-            {
-                return actor;
-            }
-
-            return ResolveNamedEntity(engine, PrimaryPlayerColumnName);
-        }
-
-        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
-        {
-            owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
-            {
-                return false;
-            }
-
-            owner = local;
-            return true;
+            return owner;
         }
 
         private static string DescribeActor(GameEngine engine, Entity actor)

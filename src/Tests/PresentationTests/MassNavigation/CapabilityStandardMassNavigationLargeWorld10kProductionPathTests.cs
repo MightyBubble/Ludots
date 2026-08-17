@@ -31,6 +31,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -179,7 +180,7 @@ namespace Ludots.Tests.Presentation
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
 
             Entity[] agents = CollectMassNavigationAgents(engine, expectedAgents);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ReplaceCommandSource(engine, localPlayer, agents);
 
             Assert.That(SnapshotCommandSource(engine), Has.Length.EqualTo(expectedAgents));
@@ -289,7 +290,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.Not.Empty);
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();
@@ -324,8 +326,8 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertStartupParticipantBindings(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupLocalPlayerId;
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            int playerId = engine.MergedConfig.StartupLocalSeats[0].PlayerId;
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.IsAlive(localPlayer), Is.True);
 
@@ -784,8 +786,7 @@ namespace Ludots.Tests.Presentation
         {
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
             var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
-            Entity localPlayer = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            Entity localPlayer = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local)
                     ? local
                     : default;
@@ -946,7 +947,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertCommandActorsAreCommandable(GameEngine engine, ReadOnlySpan<Entity> commandActors)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             for (int i = 0; i < commandActors.Length; i++)
             {
@@ -961,7 +962,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertLocalScenarioAgentsAreCommandable(GameEngine engine)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             MassNavigationSimulationRuntime simulation = RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
 
@@ -997,7 +998,7 @@ namespace Ludots.Tests.Presentation
         private static string DescribeEntityCommandState(GameEngine engine, Entity entity)
         {
             string alive = engine.World.IsAlive(entity) ? "alive" : "dead";
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ControlDomainQuery? controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery);
             bool controllable = controlDomains?.IsControllableBy(localPlayer, entity) == true;
             string controlDomain = controlDomains != null && controlDomains.TryResolveControlDomain(entity, out Entity domain)
@@ -1027,14 +1028,14 @@ namespace Ludots.Tests.Presentation
 
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
-            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
         }
 
         private static bool TryDescribeCommandSourceView(GameEngine engine, out EntityCollectionView view)
         {
             view = default;
-            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections))
             {
                 return false;

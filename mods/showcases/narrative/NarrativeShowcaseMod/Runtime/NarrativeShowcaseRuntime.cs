@@ -18,6 +18,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using NarrativeFrontendMod;
 using NarrativeFrontendMod.Runtime;
@@ -29,7 +30,6 @@ namespace NarrativeShowcaseMod.Runtime
     internal sealed class NarrativeShowcaseRuntime
     {
         private const int ShowcaseLocalPlayerId = 1;
-        private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription().WithAll<Name, PlayerOwner, MapEntity, AbilityStateBuffer>();
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
@@ -79,7 +79,7 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 ActivateInputContexts(input);
                 EnsureViewMode(engine);
-                EnsureShowcaseLocalPlayer(engine, activeMapId);
+                RequireShowcaseSolePossessedRep(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
                 EnsureBootstrapped(engine);
                 RebindEntities(engine);
@@ -665,99 +665,24 @@ namespace NarrativeShowcaseMod.Runtime
             }
         }
 
-        private static void EnsureShowcaseLocalPlayer(GameEngine engine, string activeMapId)
+        private static Entity RequireShowcaseSolePossessedRep(GameEngine engine, string activeMapId)
         {
-            if (TryResolveExistingLocalPlayer(engine, activeMapId, out _))
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(possessed) ||
+                !engine.World.TryGet(possessed, out PlayerOwner owner) ||
+                !engine.World.TryGet(possessed, out MapEntity mapEntity) ||
+                owner.PlayerId != ShowcaseLocalPlayerId ||
+                !string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
             {
-                return;
+                throw new InvalidOperationException(
+                    "Narrative showcase requires sole ClientLocalSeat possession of map playerId 1 from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity firstCandidate = Entity.Null;
-            Entity preferredCandidate = Entity.Null;
-            int firstPlayerId = 0;
-            int preferredPlayerId = 0;
-
-            engine.World.Query(in LocalPlayerCandidateQuery, (Entity entity, ref Name name, ref PlayerOwner owner, ref MapEntity mapEntity, ref AbilityStateBuffer _) =>
-            {
-                if (!IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
-                {
-                    return;
-                }
-
-                if (firstCandidate == Entity.Null)
-                {
-                    firstCandidate = entity;
-                    firstPlayerId = owner.PlayerId;
-                }
-
-                if (string.Equals(name.Value, NarrativeShowcaseIds.PlayerName, StringComparison.OrdinalIgnoreCase))
-                {
-                    preferredCandidate = entity;
-                    preferredPlayerId = owner.PlayerId;
-                }
-            });
-
-            Entity resolved = preferredCandidate != Entity.Null ? preferredCandidate : firstCandidate;
-            int resolvedPlayerId = preferredCandidate != Entity.Null ? preferredPlayerId : firstPlayerId;
-            if (resolved == Entity.Null)
-            {
-                return;
-            }
-
-            PublishShowcaseLocalPlayer(engine, resolved, resolvedPlayerId);
+            return possessed;
         }
-
-        private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
-        {
-            localPlayer = Entity.Null;
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
-                !engine.World.IsAlive(existing) ||
-                !engine.World.TryGet(existing, out PlayerOwner owner) ||
-                !engine.World.TryGet(existing, out MapEntity mapEntity) ||
-                !IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
-            {
-                return false;
-            }
-
-            localPlayer = existing;
-            PublishShowcaseLocalPlayer(engine, existing, owner.PlayerId);
-            return true;
-        }
-
-        private static void PublishShowcaseLocalPlayer(GameEngine engine, Entity localPlayer, int playerId)
-        {
-            if (playerId <= 0)
-            {
-                return;
-            }
-
-            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
-                lookup == null ||
-                (lookup.TryGet(playerId, out Entity existing) && existing != localPlayer))
-            {
-                lookup = new PlayerEntityLookup();
-                engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
-            }
-
-            if (!lookup.TryGet(playerId, out _))
-            {
-                lookup.Register(playerId, localPlayer);
-            }
-
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-        }
-
-        private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
-        {
-            return owner.PlayerId == ShowcaseLocalPlayerId &&
-                   string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
-        }
-
         private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Entity viewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer))
             {
                 return;

@@ -1,6 +1,6 @@
-# 办完事交回
+# 办完差事，交回原点
 
-子程序结束，人回到主线。
+差事办完这一步，人从驿站那格退回原点，虚影收回真人。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Return/poster.png" src="artifacts/evidence/capability_standard_graph_op_Return/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Return/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 办完事交回主线。人在{place}。
+> 差事办完了，人退回{place}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 办完事交回
+Feature: 办完差事，交回原点
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_Return
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_Return/play.mp4
     When 短剧演完
-    Then 字幕讲的是「子程序结束，人回到主线。」这类人话
+    Then 字幕讲的是「差事办完这一步，人从驿站那格退回原点，虚影收回真人。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

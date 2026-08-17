@@ -3,6 +3,7 @@ using System.IO;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Arch.Core.Extensions;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
@@ -940,14 +941,14 @@ namespace Ludots.Tests.Presentation
                 var behavior = new WorldHudPresentBehavior();
                 var ownerGlobals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1);
                 var hostileGlobals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1);
 
                 bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PresentPhaseResult ownerPhase);
                 bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PresentPhaseResult hostilePhase);
@@ -993,9 +994,9 @@ namespace Ludots.Tests.Presentation
                 var behavior = new WorldHudPresentBehavior();
                 var globals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, hostileAudience, 1);
 
                 bool transientTextProjected = behavior.TryResolveProjection(
                     world,
@@ -1049,9 +1050,9 @@ namespace Ludots.Tests.Presentation
             var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = configuredViewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, configuredViewer, 1);
 
             bool projected = behavior.TryResolveProjection(world, globals, target, LODLevel.High, out PresentPhaseResult phase);
 
@@ -1084,9 +1085,9 @@ namespace Ludots.Tests.Presentation
                 var behavior = new WorldHudPresentBehavior();
                 var globals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = allyAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, allyAudience, 1);
 
                 bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
 
@@ -1128,9 +1129,9 @@ namespace Ludots.Tests.Presentation
             var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, audience, 1);
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
 
             bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out PresentPhaseResult phase);
@@ -1161,9 +1162,9 @@ namespace Ludots.Tests.Presentation
             var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, audience, 1);
 
             bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
 
@@ -1243,9 +1244,9 @@ namespace Ludots.Tests.Presentation
             var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, audience, 1);
             int[] requiredAttributes = [healthAttributeId];
 
             Assert.That(behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _), Is.True);
@@ -1336,9 +1337,9 @@ namespace Ludots.Tests.Presentation
 
                 var ownerGlobals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(ownerGlobals, ownerAudience, 1);
                 using var behaviorSystem = new PresenterBehaviorSystem(
                     world,
                     instances,
@@ -1366,9 +1367,9 @@ namespace Ludots.Tests.Presentation
 
                 var hostileGlobals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(hostileGlobals, hostileAudience, 1);
 
                 using (var hostileSystem = new PresenterEmitSystem(
                            world,
@@ -1476,9 +1477,9 @@ namespace Ludots.Tests.Presentation
                     projectionStore);
                 var globals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
 
                 instances.BindDefinitions(definitions);
                 Entity presenter = instances.Create(
@@ -1553,9 +1554,9 @@ namespace Ludots.Tests.Presentation
                     projectionStore);
                 var globals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
 
                 var behavior = new WorldHudPresentBehavior();
                 ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
@@ -1625,9 +1626,9 @@ namespace Ludots.Tests.Presentation
                     projectionStore);
                 var globals = new Dictionary<string, object>
                 {
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
 
                 var behavior = new WorldHudPresentBehavior();
                 ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };

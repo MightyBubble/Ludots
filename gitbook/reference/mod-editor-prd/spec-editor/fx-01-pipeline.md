@@ -1,6 +1,6 @@
-# fx-04 editor spec · 效果执行管线总览
+# fx-01 editor spec · 效果执行管线总览
 
-> 编辑器实现任务书。编辑器需求见 [fx-03 UXD](../uxd/fx-01-pipeline.md)；引擎侧见 [runtime spec](../spec-runtime/fx-01-pipeline.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-01 UXD](../uxd/fx-01-pipeline.md)；引擎侧见 [runtime spec](../spec-runtime/fx-01-pipeline.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：阶段机当前态、切片预算用量、请求队列快照、事务事件流。
 - 验收：暂停帧显示的阶段与预算和引擎日志一致；回滚行含原因。
 
-**相关文档**：[fx-03 UXD](../uxd/fx-01-pipeline.md) · [fx-03 runtime spec](../spec-runtime/fx-01-pipeline.md)
+**相关文档**：[fx-01 UXD](../uxd/fx-01-pipeline.md) · [fx-01 runtime spec](../spec-runtime/fx-01-pipeline.md)

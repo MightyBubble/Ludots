@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -1828,8 +1829,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 return condition.Inline switch
                 {
-                    InlineConditionKind.SourceIsLocalPlayer => IsLocalPlayer(owner),
-                    InlineConditionKind.TargetIsLocalPlayer => IsLocalPlayer(owner),
+                    InlineConditionKind.SourceIsSolePossessedRep => IsSolePossessedRep(owner),
+                    InlineConditionKind.TargetIsSolePossessedRep => IsSolePossessedRep(owner),
                     InlineConditionKind.SourceIsAlive => World.IsAlive(owner),
                     InlineConditionKind.TargetIsAlive => World.IsAlive(owner),
                     InlineConditionKind.OwnerCullVisible => IsOwnerCullVisible(owner),
@@ -1848,10 +1849,9 @@ namespace Ludots.Core.Presentation.Systems
             return true;
         }
 
-        private bool IsLocalPlayer(Entity owner)
+        private bool IsSolePossessedRep(Entity owner)
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? candidate) &&
-                   candidate is Entity localPlayer &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                    localPlayer == owner;
         }
 

@@ -33,7 +33,7 @@
 
 ## 3. 文件结构
 
-效果条目在 `assets/GAS/effects.json`；目标模板在 `Entities/templates.json`（见 ent-01）；默认图在 `assets/GAS/graphs.json`、预设声明在 `assets/GAS/preset_types.json`（@@fx3@@）。
+效果条目在 `assets/GAS/effects.json`；目标模板在 `Entities/templates.json`（见 ent-01）；默认图在 `assets/GAS/graphs.json`、预设声明在 `assets/GAS/preset_types.json`（fx-03）。
 
 ## 4. 运行时加载效果
 
@@ -55,4 +55,4 @@ loader 强制三件必配检查（模板键为正、来源合法、至少一条�
 - 生命周期参数三件套：`mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/effects.json`（Effect.GraphOps.Lifecycle）
 - 六步链与原子性测试：`src/Tests/GasTests/Integration/LifecycleArchitectureTests.cs`（直连执行器验证）
 
-**相关文档**：[fx-23 PRD](../prd/fx-23-lifecycle-atomic.md) · [fx-17 配置说明](fx-14-config-params.md)
+**相关文档**：[fx-23 PRD](../prd/fx-23-lifecycle-atomic.md) · [fx-14 配置说明](fx-14-config-params.md)

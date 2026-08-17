@@ -1,4 +1,4 @@
-# ai-10 · 战斗姿态与执行器门
+# ai-08 · 战斗姿态与执行器门
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-08-stances-actuators.md)；编辑器需求见 [UXD](../uxd/ai-08-stances-actuators.md)；引擎实现见 [runtime spec](../spec-runtime/ai-08-stances-actuators.md)；editor spec 见 [editor spec](../spec-editor/ai-08-stances-actuators.md)；现状见 [reference](../reference/ai-08-stances-actuators.md)。
 
@@ -21,4 +21,4 @@ stance 描述单位的交战姿态（自动索敌、反击、追击许可 + 专�
 
 TargetFilter/ReadinessInput/AimGateInput/DefaultStance 引用未定义、DefaultStanceId 数字写法——启动失败并带路径。
 
-**相关文档**：[配置说明](../config/ai-08-stances-actuators.md) · [ai-06](ai-05-dm-profiles.md) · [ai-03](ai-02-inputs.md)
+**相关文档**：[配置说明](../config/ai-08-stances-actuators.md) · [ai-05](ai-05-dm-profiles.md) · [ai-02](ai-02-inputs.md)

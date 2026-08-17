@@ -4,7 +4,7 @@
 - scenario name: projection_map presenter skinned vs static lane contract
 - build/version: local PresentationTests
 - seed/map/clock: deterministic fixture / camera_acceptance_projection / 5 ticks @ 60 Hz
-- execution timestamp: 2026-08-17T08:04:17.4651339Z
+- execution timestamp: 2026-08-17T07:34:24.6607669Z
 
 ## Timeline
 - [T+005] Hero#2796580.Emit -> lane SkinnedMesh | Animator controller 1 bound | result = presenter skinned contract valid

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryFilterNotEntity",
-  "windowTitle": "Ludots - 圈人时排除自己",
+  "windowTitle": "Ludots - 圈人时把你自己抠出去",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

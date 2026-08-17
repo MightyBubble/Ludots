@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -48,8 +49,8 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
             return;
         }
 
-        Entity localPlayer = ResolveLocalPlayer();
-        ref AttributeBuffer attributes = ref ResolveAttributes(localPlayer);
+        Entity solePossessedRep = RequireSolePossessedRep();
+        ref AttributeBuffer attributes = ref ResolveAttributes(solePossessedRep);
         Vector2 moveIntent = new(
             attributes.GetCurrent(_moveXAttributeId),
             attributes.GetCurrent(_moveYAttributeId));
@@ -60,7 +61,7 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
         }
 
         moveIntent = WorldPlane2D.NormalizeOrDefault(moveIntent, Vector2.Zero);
-        Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(_engine.GameSession.Camera.State.Yaw, moveIntent);
+        Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State.Yaw, moveIntent);
         if (move.LengthSquared() <= 0.000001f)
         {
             return;
@@ -72,48 +73,47 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
             return;
         }
 
-        ref WorldPositionCm position = ref _engine.World.Get<WorldPositionCm>(localPlayer);
+        ref WorldPositionCm position = ref _engine.World.Get<WorldPositionCm>(solePossessedRep);
         Vector2 current = position.Value.ToVector2();
         Vector2 next = ClampToWorldBounds(current + (move * speedCmPerSecond * dt));
         position = WorldPositionCm.FromCm((int)MathF.Round(next.X), (int)MathF.Round(next.Y));
-        UpdateFacing(localPlayer, move);
+        UpdateFacing(solePossessedRep, move);
     }
 
-    private Entity ResolveLocalPlayer()
+    private Entity RequireSolePossessedRep()
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity localPlayer ||
-            localPlayer == Entity.Null ||
-            !_engine.World.IsAlive(localPlayer))
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var solePossessedRep) ||
+            solePossessedRep == Entity.Null ||
+            !_engine.World.IsAlive(solePossessedRep))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase requires a live LocalPlayerEntity avatar.");
+                "Capability standard virtual camera showcase requires a live sole ClientLocalSeat possession avatar.");
         }
 
-        if (!_engine.World.Has<WorldPositionCm>(localPlayer))
+        if (!_engine.World.Has<WorldPositionCm>(solePossessedRep))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires WorldPositionCm.");
+                "Capability standard virtual camera showcase sole ClientLocalSeat possession requires WorldPositionCm.");
         }
 
-        if (!_engine.World.Has<FacingDirection>(localPlayer))
+        if (!_engine.World.Has<FacingDirection>(solePossessedRep))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires FacingDirection.");
+                "Capability standard virtual camera showcase sole ClientLocalSeat possession requires FacingDirection.");
         }
 
-        return localPlayer;
+        return solePossessedRep;
     }
 
-    private ref AttributeBuffer ResolveAttributes(Entity localPlayer)
+    private ref AttributeBuffer ResolveAttributes(Entity solePossessedRep)
     {
-        if (!_engine.World.Has<AttributeBuffer>(localPlayer))
+        if (!_engine.World.Has<AttributeBuffer>(solePossessedRep))
         {
             throw new InvalidOperationException(
-                "Capability standard virtual camera showcase LocalPlayerEntity requires AttributeBuffer.");
+                "Capability standard virtual camera showcase sole ClientLocalSeat possession requires AttributeBuffer.");
         }
 
-        return ref _engine.World.Get<AttributeBuffer>(localPlayer);
+        return ref _engine.World.Get<AttributeBuffer>(solePossessedRep);
     }
 
     private float ResolveMoveSpeedCmPerSecond(in AttributeBuffer attributes)

@@ -1,6 +1,6 @@
-# 身上有没有敌人标记
+# 查一查身上有没有那枚标记
 
-侦察兵带着敌人标记，检查为「有」。
+带标记的侦察兵亮绿圈，没标记的那个查完没反应。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_HasTag/poster.png" src="artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 侦察兵带着敌人标记，检查为「{result}」。
+> 带标记的查为「{result}」，没标记的查为「无」。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 身上有没有敌人标记
+Feature: 查一查身上有没有那枚标记
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_HasTag
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4
     When 短剧演完
-    Then 字幕讲的是「侦察兵带着敌人标记，检查为「有」。」这类人话
+    Then 字幕讲的是「带标记的侦察兵亮绿圈，没标记的那个查完没反应。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

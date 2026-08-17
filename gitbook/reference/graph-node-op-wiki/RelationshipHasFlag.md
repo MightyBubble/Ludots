@@ -1,6 +1,6 @@
-# 这条关系受不受信任
+# 这条关系上插没插信任旗
 
-信任旗开着，字幕说信得过。
+青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 信任旗开着，{result}。
+> 信任旗插着，检查结果：{result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 这条关系受不受信任
+Feature: 这条关系上插没插信任旗
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RelationshipHasFlag
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipHasFlag/play.mp4
     When 短剧演完
-    Then 字幕讲的是「信任旗开着，字幕说信得过。」这类人话
+    Then 字幕讲的是「青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

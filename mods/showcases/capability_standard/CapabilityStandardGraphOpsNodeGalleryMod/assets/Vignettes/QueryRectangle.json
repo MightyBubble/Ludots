@@ -1,11 +1,11 @@
 {
   "op": "QueryRectangle",
   "driver": "spatial",
-  "title": "矩形里有谁",
-  "beat": "身前一块矩形框人。",
+  "title": "身前这块矩形里有谁",
+  "beat": "身前的框描出来，框里的人亮。",
   "detailTemplate": "身前矩形框到{count}人。",
   "assertDetailContains": [
-    "矩形"
+    "身前矩形"
   ],
   "featuredNodeId": "rect",
   "graphKind": "Query",

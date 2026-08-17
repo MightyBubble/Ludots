@@ -121,7 +121,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             mapping.SetHoveredEntityProvider((out Entity entity) =>
             {

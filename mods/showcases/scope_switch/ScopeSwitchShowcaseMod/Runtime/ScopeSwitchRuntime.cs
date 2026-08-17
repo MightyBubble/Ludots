@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
@@ -196,7 +197,11 @@ public sealed class ScopeSwitchRuntime
             throw new InvalidOperationException($"Scope switch viewer entity '{_config.ViewerEntity}' was not found.");
         }
 
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, _viewer);
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(
+            engine,
+            _viewer,
+            1,
+            presentResolutionPx: new System.Numerics.Vector2(1920f, 1080f));
     }
 
     private void BuildScopes(GameEngine engine)

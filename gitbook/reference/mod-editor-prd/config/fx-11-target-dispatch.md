@@ -1,6 +1,6 @@
-# fx-15 配置说明 · 目标派发
+# fx-11 配置说明 · 目标派发
 
-> 配置写法与行为。第一性需求见 [fx-14 PRD](../prd/fx-11-target-dispatch.md)；编辑器需求见 [UXD](../uxd/fx-11-target-dispatch.md)；现状见 [reference](../reference/fx-11-target-dispatch.md)。
+> 配置写法与行为。第一性需求见 [fx-11 PRD](../prd/fx-11-target-dispatch.md)；编辑器需求见 [UXD](../uxd/fx-11-target-dispatch.md)；现状见 [reference](../reference/fx-11-target-dispatch.md)。
 
 ## 1. 示例配置
 
@@ -42,7 +42,7 @@
 
 ## 3. 文件结构
 
-`targetDispatch` 是效果模板顶层组件块（fx-04）；预设表 `GAS/target_dispatch_presets.json`（加载序在效果表之前）。
+`targetDispatch` 是效果模板顶层组件块（fx-02）；预设表 `GAS/target_dispatch_presets.json`（加载序在效果表之前）。
 
 ## 4. 运行时加载效果
 
@@ -61,4 +61,4 @@ loader 校验互斥、载荷注册与槽值域；运行期内建链为：纯查�
 - `assets/GAS/target_dispatch_presets.json`（4 条内建预设）
 - `mods/showcases/moba_demo/MobaDemoMod/assets/GAS/effects.json`（显式映射用例）
 
-**相关文档**：[fx-14 PRD](../prd/fx-11-target-dispatch.md) · [fx-12 配置说明](fx-10-target-filter.md)
+**相关文档**：[fx-11 PRD](../prd/fx-11-target-dispatch.md) · [fx-10 配置说明](fx-10-target-filter.md)

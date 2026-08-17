@@ -307,16 +307,8 @@ public sealed class GraphOpsStageVisuals
     private void BindViewer(Entity viewer)
     {
         _viewer = viewer;
-        _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = viewer;
-        _engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = LocalViewerPlayerId;
         _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true;
-        _engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
-        _engine.SetService(CoreServiceKeys.LocalPlayerId, LocalViewerPlayerId);
-        if (_engine.CurrentMapSession != null)
-        {
-            _engine.CurrentMapSession.LocalPlayerEntity = viewer;
-            _engine.CurrentMapSession.LocalPlayerId = LocalViewerPlayerId;
-        }
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, viewer, LocalViewerPlayerId);
     }
 
     public void GateWorldHudByKnowledge()

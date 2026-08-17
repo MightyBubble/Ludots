@@ -1,6 +1,6 @@
-# ai-03 配置说明 · AI 行为层总论
+# ai-01 配置说明 · AI 行为层总论
 
-> 配置写法与行为。第一性需求见 [ai-02 PRD](../prd/ai-01-utility-overview.md)；编辑器需求见 [UXD](../uxd/ai-01-utility-overview.md)；现状见 [reference](../reference/ai-01-utility-overview.md)。
+> 配置写法与行为。第一性需求见 [ai-01 PRD](../prd/ai-01-utility-overview.md)；编辑器需求见 [UXD](../uxd/ai-01-utility-overview.md)；现状见 [reference](../reference/ai-01-utility-overview.md)。
 
 ## 1. 示例配置
 
@@ -29,11 +29,11 @@ profiles.json  stances.json  actuators.json
 
 | 组 | 表 | 专篇 |
 |---|---|---|
-| 效用感知 | inputs / normalizations / curves | ai-03 / ai-04 |
-| 效用决断 | target_filters / decisions / decision_makers / profiles | ai-07 / ai-05 / ai-06 |
-| 效用行动 | tasks / stances / actuators | ai-08 / ai-09 |
+| 效用感知 | inputs / normalizations / curves | ai-02 / ai-03 |
+| 效用决断 | target_filters / decisions / decision_makers / profiles | ai-06 / ai-04 / ai-05 |
+| 效用行动 | tasks / stances / actuators | ai-07 / ai-08 |
 | 世界状态 | atoms / projection / utility / goap_actions / goap_goals / htn_domain | ai-11 |
-| 图行为 | behavior_trees / hfsm | ai-10 / ai-11 |
+| 图行为 | behavior_trees / hfsm | ai-09 / ai-10 |
 
 全部 ArrayById 按 `id` 去重合并；唯 `htn_domain.json` DeepObject。
 
@@ -55,8 +55,8 @@ AiConfigLoader.LoadAndCompile 按固定序消费 18 表：先注册 atoms 与投
 
 ## 6. 实例
 
-- 主仓：`assets/AI/behavior_trees.json`、`assets/AI/hfsm.json`（各配 schema，@@ai8@@/ai-11）
+- 主仓：`assets/AI/behavior_trees.json`、`assets/AI/hfsm.json`（各配 schema，见 ai-09/ai-10）
 - mod 全集：`mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/`（11 文件）
 - 旧栈样本：`mods/showcases/ai_demo/AIDemoMod/assets/AI/`（世界状态五文件）
 
-**相关文档**：[ai-02 PRD](../prd/ai-01-utility-overview.md) · [ai-03 配置说明](ai-02-inputs.md) · [cfg-04 配置说明](cfg-04-config-tables.md)
+**相关文档**：[ai-01 PRD](../prd/ai-01-utility-overview.md) · [ai-02 配置说明](ai-02-inputs.md) · [cfg-04 配置说明](cfg-04-config-tables.md)

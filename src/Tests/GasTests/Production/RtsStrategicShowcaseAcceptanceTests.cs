@@ -23,6 +23,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
@@ -30,6 +31,7 @@ using Ludots.UI.Skia;
 using NUnit.Framework;
 using RtsDemoMod.Systems;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -1266,7 +1268,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(engine.World.IsAlive(owner), Is.True, "Local player selection owner should exist on RTS map.");
             Assert.That(engine.World.IsAlive(target), Is.True, "Selection target should exist.");
 
@@ -1281,7 +1283,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "RTS strategic command source",
                 summary: "1 actor");
             collections.Replace(owner, in descriptor, next, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
         }
 
         private static string ReadName(World world, Entity entity)

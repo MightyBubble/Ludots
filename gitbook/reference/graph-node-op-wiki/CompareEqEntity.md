@@ -1,6 +1,6 @@
-# 打的是不是自己
+# 先对脸：打的是不是自己
 
-点名目标和施法者不是同一人，这一刀打出去；若是自己就收手。
+残影演示点名自己→同一个人，收手；点名木桩→不是同一人，一刀扣 18。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_CompareEqEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_CompareEqEntity/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_CompareEqEntity/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 打的不是自己，这一刀打出去。
+> 木桩不是施法者本人，这一刀打了出去，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 打的是不是自己
+Feature: 先对脸：打的是不是自己
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_CompareEqEntity
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_CompareEqEntity/play.mp4
     When 短剧演完
-    Then 字幕讲的是「点名目标和施法者不是同一人，这一刀打出去；若是自己就收手。」这类人话
+    Then 字幕讲的是「残影演示点名自己→同一个人，收手；点名木桩→不是同一人，一刀扣 18。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

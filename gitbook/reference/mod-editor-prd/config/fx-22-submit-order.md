@@ -1,6 +1,6 @@
-# fx-23 配置说明 · 出生下单
+# fx-22 配置说明 · 出生下单
 
-> 配置写法与行为。第一性需求见 [fx-23 PRD](../prd/fx-22-submit-order.md)；编辑器需求见 [UXD](../uxd/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
+> 配置写法与行为。第一性需求见 [fx-22 PRD](../prd/fx-22-submit-order.md)；编辑器需求见 [UXD](../uxd/fx-22-submit-order.md)；现状见 [reference](../reference/fx-22-submit-order.md)。
 
 ## 1. 示例配置
 
@@ -62,4 +62,4 @@ loader 校验槽位与五键、把订单类型 key 解析为 id；运行期读�
 
 - 出生集结：`mods/showcases/rts_demo/RtsDemoMod/assets/GAS/effects.json`（ApplySpawnTargetOrder，与造单位效果同链使用）
 
-**相关文档**：[fx-23 PRD](../prd/fx-22-submit-order.md) · [fx-19 配置说明](fx-16-unit-creation.md)
+**相关文档**：[fx-22 PRD](../prd/fx-22-submit-order.md) · [fx-16 配置说明](fx-16-unit-creation.md)

@@ -1,4 +1,4 @@
-# ai-09 · 任务
+# ai-07 · 任务
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-07-tasks.md)；编辑器需求见 [UXD](../uxd/ai-07-tasks.md)；引擎实现见 [runtime spec](../spec-runtime/ai-07-tasks.md)；editor spec 见 [editor spec](../spec-editor/ai-07-tasks.md)；现状见 [reference](../reference/ai-07-tasks.md)。
 
@@ -21,4 +21,4 @@ task 是决策胜出后的动作槽：四种 Kind 中只有 SubmitOrder 真正�
 
 未知 Kind、SubmitOrder 缺 OrderType 引用或双写不一致、SubmitMode 越界、AbilityKey 未注册——启动失败并带路径。
 
-**相关文档**：[配置说明](../config/ai-07-tasks.md) · [ai-05](ai-04-decisions.md) · [cfg-04](cfg-04-config-tables.md)
+**相关文档**：[配置说明](../config/ai-07-tasks.md) · [ai-04](ai-04-decisions.md) · [cfg-04](cfg-04-config-tables.md)

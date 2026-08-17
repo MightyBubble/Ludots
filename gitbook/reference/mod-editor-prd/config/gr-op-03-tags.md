@@ -42,7 +42,7 @@ kind 缩写同 gr-op-01。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`tag` 字段写 tag 名（符号），见 gr-04。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`tag` 字段写 tag 名（符号），见 gr-02。
 
 ## 4. 运行时加载效果
 

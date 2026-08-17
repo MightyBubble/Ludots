@@ -1,11 +1,11 @@
 {
   "op": "SendEvent",
   "driver": "event",
-  "title": "打出一记并广播出去",
-  "beat": "木桩挨打，同时这件事被广播给听事件的人。",
-  "detailTemplate": "打出一记并广播出去，木桩血条从 {healthBefore} 掉到 {healthAfter}。",
+  "title": "打出去，对方听得见",
+  "beat": "木桩挨打掉血，头顶的铃同时被这一下敲亮。",
+  "detailTemplate": "木桩血条从 {healthBefore} 掉到 {healthAfter}，铃亮了。",
   "assertDetailContains": [
-    "广播"
+    "铃亮"
   ],
   "featuredNodeId": "send",
   "graphKind": "Effect",

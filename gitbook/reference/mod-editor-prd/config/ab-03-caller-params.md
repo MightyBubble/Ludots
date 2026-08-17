@@ -35,7 +35,7 @@
 
 合并与注入语义：
 
-- **同键覆盖**：效果模板自带 configParams 与调用方参数同键时，调用方值胜（fx-18 合并律在效果侧生效）。
+- **同键覆盖**：效果模板自带 configParams 与调用方参数同键时，调用方值胜（fx-14 合并律在效果侧生效）。
 - **空间参数自动注入**：时间轴实例带目标位置时自动追加 `TargetPosX/TargetPosY`；带原点时追加 `TargetOriginX/TargetOriginY`（效果侧读这四个键免声明）。
 - 注入的前提是池里有余位：余位不足整技能失败（不是只丢坐标）。
 
@@ -60,4 +60,4 @@
 
 - 教学骨架见上；真实使用待演示场景首个参数化技能落地后回填。
 
-**相关文档**：[ab-03 PRD](../prd/ab-03-caller-params.md) · [ab-02 配置说明](ab-02-exec-timeline.md) · [fx-18 配置说明](fx-14-config-params.md)
+**相关文档**：[ab-03 PRD](../prd/ab-03-caller-params.md) · [ab-02 配置说明](ab-02-exec-timeline.md) · [fx-14 配置说明](fx-14-config-params.md)

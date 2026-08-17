@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Tests
@@ -76,7 +77,7 @@ namespace Ludots.Tests
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (local == Entity.Null || !engine.World.IsAlive(local))
             {
                 return false;

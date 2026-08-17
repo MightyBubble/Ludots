@@ -1,6 +1,6 @@
-# fx-10 配置说明 · 响应链
+# fx-07 配置说明 · 响应链
 
-> 配置写法与行为。第一性需求见 [fx-09 PRD](../prd/fx-07-response-chain.md)；编辑器需求见 [UXD](../uxd/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
+> 配置写法与行为。第一性需求见 [fx-07 PRD](../prd/fx-07-response-chain.md)；编辑器需求见 [UXD](../uxd/fx-07-response-chain.md)；现状见 [reference](../reference/fx-07-response-chain.md)。
 
 ## 1. 示例配置
 
@@ -32,7 +32,7 @@
 
 ## 3. 文件结构
 
-模板开关在效果表（fx-04）；回应本体属实体运行时组件，由实体模板或代码扩展面装载，无独立 JSON 表。
+模板开关在效果表（fx-02）；回应本体属实体运行时组件，由实体模板或代码扩展面装载，无独立 JSON 表。
 
 ## 4. 运行时加载效果
 
@@ -50,4 +50,4 @@
 
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（多条 Search/伤害模板 `participatesInResponse: true`）
 
-**相关文档**：[fx-09 PRD](../prd/fx-07-response-chain.md) · [fx-08 配置说明](fx-06-proposal-window.md) · [rt-02](rt-02-budgets.md)
+**相关文档**：[fx-07 PRD](../prd/fx-07-response-chain.md) · [fx-06 配置说明](fx-06-proposal-window.md) · [rt-02](rt-02-budgets.md)

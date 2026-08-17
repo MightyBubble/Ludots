@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryRectangle",
-  "windowTitle": "Ludots - 矩形里有谁",
+  "windowTitle": "Ludots - 身前这块矩形里有谁",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

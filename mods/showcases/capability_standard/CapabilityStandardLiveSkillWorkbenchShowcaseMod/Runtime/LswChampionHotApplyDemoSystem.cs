@@ -438,16 +438,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
             return;
         }
 
-        // WorldHud projection requires a local viewer in GlobalContext + attribute knowledge disclosure.
-        _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = caster;
-        _engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = 1;
-        _engine.SetService(CoreServiceKeys.LocalPlayerEntity, caster);
-        _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
-        if (_engine.CurrentMapSession != null)
-        {
-            _engine.CurrentMapSession.LocalPlayerEntity = caster;
-            _engine.CurrentMapSession.LocalPlayerId = 1;
-        }
+        // WorldHud projection requires a local viewer seat + attribute knowledge disclosure.
+        Ludots.Core.Client.ClientLocalSeatBindings.BindSoleSeat(_engine, caster, 1);
 
         _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true;
 

@@ -1,5 +1,6 @@
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.ChunkDebug;
@@ -185,7 +186,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 
 	private Entity ResolveOrCreateViewer()
 	{
-		if (TryResolveViewer(CoreServiceKeys.LocalPlayerEntity.Name, out Entity viewer))
+		if (ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity viewer))
 		{
 			_viewer = viewer;
 			return viewer;

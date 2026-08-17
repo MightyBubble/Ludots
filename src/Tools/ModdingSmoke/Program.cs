@@ -11,6 +11,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 
 namespace ModdingTest
 {
@@ -190,7 +191,7 @@ namespace ModdingTest
                 inputHandler.Update();
                 engine.Tick(0.016f);
 
-                var yaw = engine.GameSession.Camera.State.Yaw;
+                var yaw = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.Yaw;
                 Console.WriteLine($"Camera Yaw After Drag: {yaw:F2} (Expected > 0)");
                 if (yaw > 0.1f)
                 {

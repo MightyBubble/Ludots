@@ -12,6 +12,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Runtime;
 
@@ -75,20 +76,17 @@ namespace RtsDemoMod.Triggers
 
         private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (world.IsAlive(owner))
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!world.IsAlive(owner))
             {
-                return;
+                throw new InvalidOperationException(
+                    "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
-
-            owner = world.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
         }
 
         private static void EnsureDefaultCommandSource(GameEngine engine, World world)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
             {
                 return;

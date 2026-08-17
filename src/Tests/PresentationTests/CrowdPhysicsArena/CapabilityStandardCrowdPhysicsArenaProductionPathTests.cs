@@ -26,6 +26,7 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -133,7 +134,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(cratesBefore, Has.Count.EqualTo(6), "The arena map authors six crates in the corridor.");
 
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ReplaceCommandSource(engine, localPlayer, squad.ToArray());
 
             // The crate corridor sits at x 4250..4510; marching from the west spawn (~2400) to just
@@ -182,7 +183,7 @@ namespace Ludots.Tests.Presentation
             List<Entity> squad = CollectAgents(engine, controllable: true);
             Assert.That(squad, Has.Count.EqualTo(ExpectedSquadSize));
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
 
             // Phase 1: send exactly four units straight across the plate (plate box: x 5560..5640,
             // y 4580..5420), each on its own lane with its own arrival point so the runners never
@@ -251,7 +252,7 @@ namespace Ludots.Tests.Presentation
             List<Entity> squad = CollectAgents(engine, controllable: true);
             Assert.That(squad, Has.Count.EqualTo(ExpectedSquadSize));
             var backend = RequireBackend(engine);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             PoseAuthorityArbiter arbiter = RequireService(engine, CoreServiceKeys.PoseAuthorityArbiter);
 
             // March into the open south-western field: the knockback scenario asserts full-squad
@@ -572,7 +573,7 @@ namespace Ludots.Tests.Presentation
 
         private static List<Entity> CollectAgents(GameEngine engine, bool controllable)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ControlDomainQuery domains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             var result = new List<Entity>();
             var query = new QueryDescription().WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
@@ -819,7 +820,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo("crowd_physics_arena"));
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();

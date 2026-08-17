@@ -1,6 +1,6 @@
-# fx-23 reference · 视野揭示
+# fx-19 reference · 视野揭示
 
-> 现状参考。第一性需求见 [fx-22 PRD](../prd/fx-19-vision.md)；配置说明见 [fx-22 配置说明](../config/fx-19-vision.md)。
+> 现状参考。第一性需求见 [fx-19 PRD](../prd/fx-19-vision.md)；配置说明见 [fx-19 配置说明](../config/fx-19-vision.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 揭示运行时 | src/Core/Vision/KnowledgeAreaRevealRuntime.cs:30-32 |
 | 测试内嵌实例 | src/Tests/GasTests/Integration/CoreHeroSkillInfraTests.cs:236-258 |
 
-**相关文档**：[fx-22 PRD](../prd/fx-19-vision.md) · [fx-22 配置说明](../config/fx-19-vision.md)
+**相关文档**：[fx-19 PRD](../prd/fx-19-vision.md) · [fx-19 配置说明](../config/fx-19-vision.md)

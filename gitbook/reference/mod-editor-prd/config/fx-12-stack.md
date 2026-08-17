@@ -1,6 +1,6 @@
-# fx-16 配置说明 · 堆叠
+# fx-12 配置说明 · 堆叠
 
-> 配置写法与行为。第一性需求见 [fx-15 PRD](../prd/fx-12-stack.md)；编辑器需求见 [UXD](../uxd/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
+> 配置写法与行为。第一性需求见 [fx-12 PRD](../prd/fx-12-stack.md)；编辑器需求见 [UXD](../uxd/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
 
 ## 1. 示例配置
 
@@ -30,11 +30,11 @@ champion 演示 mod 的标记 Buff（真实）：上限 1、刷新时长、满�
 | 已有 1 层再施加 | 刷新剩余 240 tick，层数仍 1 |
 | 换 overflow=RemoveOldest | 挤掉旧层换新（上限内等价"重上"） |
 
-授予标签随层数差量增减（公式与回收细节@@fx12@@）；图公式当前被 loader 拒绝，勿写。
+授予标签随层数差量增减（公式与回收细节fx-13）；图公式当前被 loader 拒绝，勿写。
 
 ## 3. 文件结构
 
-`stack` 是效果模板顶层组件块（fx-04）；三字段全必填。即时寿命模板不参与合并（内联即完成）。
+`stack` 是效果模板顶层组件块（fx-02）；三字段全必填。即时寿命模板不参与合并（内联即完成）。
 
 ## 4. 运行时加载效果
 
@@ -53,4 +53,4 @@ loader 校验三字段必填；运行期提案时按模板身份在目标容器�
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（EssenceFluxHit）
 - `mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod/assets/GAS/effects.json`
 
-**相关文档**：[fx-15 PRD](../prd/fx-12-stack.md) · [fx-06 配置说明](fx-04-lifetime.md) · [fx-16 配置说明](fx-13-granted-tags.md)
+**相关文档**：[fx-12 PRD](../prd/fx-12-stack.md) · [fx-04 配置说明](fx-04-lifetime.md) · [fx-13 配置说明](fx-13-granted-tags.md)

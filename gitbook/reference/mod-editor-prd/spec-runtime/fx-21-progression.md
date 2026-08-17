@@ -1,6 +1,6 @@
-# fx-23 runtime spec · 进度完成
+# fx-21 runtime spec · 进度完成
 
-> 引擎实现任务书。第一性需求见 [fx-23 PRD](../prd/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
+> 引擎实现任务书。第一性需求见 [fx-21 PRD](../prd/fx-21-progression.md)；现状见 [reference](../reference/fx-21-progression.md)。
 
 ## 1. 概述
 进度完成合同：作用域宿主解析、等级变更应用、独占计划。
@@ -21,4 +21,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-23 PRD](../prd/fx-21-progression.md) · [reference](../reference/fx-21-progression.md)
+**相关文档**：[fx-21 PRD](../prd/fx-21-progression.md) · [reference](../reference/fx-21-progression.md)

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_SnapToNearestInCollection",
-  "windowTitle": "Ludots - 吸到花名册里最近的人",
+  "windowTitle": "Ludots - 贴到花名册里最近的人",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

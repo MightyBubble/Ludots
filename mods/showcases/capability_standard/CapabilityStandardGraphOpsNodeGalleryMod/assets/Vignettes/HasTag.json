@@ -1,9 +1,9 @@
 {
   "op": "HasTag",
   "driver": "sandbox",
-  "title": "身上有没有敌人标记",
-  "beat": "侦察兵带着敌人标记，检查为「有」。",
-  "detailTemplate": "侦察兵带着敌人标记，检查为「{result}」。",
+  "title": "查一查身上有没有那枚标记",
+  "beat": "带标记的侦察兵亮绿圈，没标记的那个查完没反应。",
+  "detailTemplate": "带标记的查为「{result}」，没标记的查为「无」。",
   "assertDetailContains": [
     "标记"
   ],

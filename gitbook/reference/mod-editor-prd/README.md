@@ -27,7 +27,7 @@ gitbook/reference/mod-editor-prd/
   reference/<编号>-<名>.md 现状参考——如实记录现状与代码锚点
 ```
 
-编号规则：`卷前缀-序号`（`fx-06` = 效果卷第 5 篇）。引用格式：`见 fx-06`（指 prd 篇）、`见 fx-06 config`、`见 fx-06 uxd`、`见 fx-06 spec-runtime`、`见 fx-06 spec-editor`、`见 fx-06 reference`。
+编号规则：`卷前缀-序号`（`fx-05` = 效果卷第 5 篇）。引用格式：`见 fx-05`（指 prd 篇）、`见 fx-05 config`、`见 fx-05 uxd`、`见 fx-05 spec-runtime`、`见 fx-05 spec-editor`、`见 fx-05 reference`。
 
 ## 2. 演示场景与示例纪律
 
@@ -155,12 +155,12 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 |---|---|
 | 搞懂 mod 的组成与启动 | 按卷 1 顺序通读：cfg-01 → cfg-02 → cfg-03 → cfg-04 → cfg-05 → cfg-06 → cfg-07 → cfg-08 |
 | 有一张能进游戏的地图 | cfg-06（启动地图）→ map-01 → map-02 → ent-01（卷 2） |
-| 一个伤害或治疗技能 | cfg-05 → fx-02/02/03 → ab-01/02/04 → fx-09/09/10 |
-| Buff、Debuff 或状态流 | tag-01/02 → fx-13/12 → fx-05 → attr-02/03 |
-| 自定义伤害公式或复杂逻辑 | gr-02/02/03 → gr-op-02/04/10 → fx-06/06 |
-| 弹道、召唤或位移技能 | fx-16/15/16 → ab-02 → fx-15 |
-| AI 自动施法 | ai-02 到 ai-09（第二期）+ ab-04/06 |
-| 单位生产、建造或经济 | fx-17/20/21 → ab-09 → attr-01 |
+| 一个伤害或治疗技能 | cfg-05 → fx-01/02/03 → ab-01/02/04 → fx-09/10/11 |
+| Buff、Debuff 或状态流 | tag-01/02 → fx-13/12 → fx-04 → attr-02/03 |
+| 自定义伤害公式或复杂逻辑 | gr-01/02/03 → gr-op-02/04/10 → fx-06 |
+| 弹道、召唤或位移技能 | fx-15/16/17 → ab-02 → fx-15 |
+| AI 自动施法 | ai-01 到 ai-08（第二期）+ ab-04/06 |
+| 单位生产、建造或经济 | fx-16/20/21 → ab-09 → attr-01 |
 | 理解运行时为什么这样跑 | rt-01 到 rt-05 |
 | 配引擎与平台基建（物理/导航/视野/界面） | infra-01 到 infra-04（卷 13） |
 | 编辑器该做成什么样 | 全目录 prd 层 + ed-01 到 ed-03 |
@@ -188,7 +188,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `map-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线、跨 mod 地图合并 | P1 | **已写** |
+| `ab-01-definition.md` | 地图定义 | Maps/*.json、地图资产管线、跨 mod 地图合并 | P1 | **已写** |
 | `map-02-triggers.md` | 地图触发器 | 地图内触发器与棋盘、剧情与胜负判定 | P1 | **已写** |
 | `ent-01-templates.md` | 实体模板 | Entities/templates.json、组件与初始值、出生效果 | P1 | **已写** |
 
@@ -197,14 +197,14 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
 | `tag-01-basics.md` | Tag 表示与状态 | 位图、层数、定时、快照、有效缓存、惰性注册 | P1 | **已写** |
-| `tag-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | **已写** |
+| `ord-02-rules.md` | Tag 规则 | 六类规则、事务与预算、热替换边界 | P1 | **已写** |
 | `tag-03-changed-events.md` | Tag 变化与事件 | 延迟触发器、变化事件、一帧延迟语义 | P1 | **已写** |
 
 ### 卷 4 · Attribute
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `attr-01-definition.md` | 属性定义与约束 | attribute_constraints.json、Base/Cap/Current、clampToBase、64 上限 | P1 | **已写** |
+| `ab-01-definition.md` | 属性定义与约束 | attribute_constraints.json、Base/Cap/Current、clampToBase、64 上限 | P1 | **已写** |
 | `attr-02-modifiers.md` | 修改器 | Add/Multiply/Override、聚合与即时的区别、写入权威 | P1 | **已写** |
 | `attr-03-aggregation.md` | 聚合管线 | Buff 重聚合、持久 Current、Cap 取聚合值 | P1 | **已写** |
 | `attr-04-derived.md` | 派生属性图 | Derived 图、实体绑定、原子提交 | P1 | **已写** |
@@ -215,28 +215,28 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `fx-02-pipeline.md` | 效果执行管线总览 | 从提案到移除的端到端时序、三个事务边界 | P1 | **已写** |
-| `fx-03-template.md` | 效果模板骨架 | effects.json 顶层、presetType 与 lifetime 合法组合 | P1 | **已写** |
-| `fx-04-preset-types.md` | Preset 类型系统 | preset_types.json、16 种 preset 全表、默认相位处理器 | P1 | **已写** |
-| `fx-05-lifetime.md` | 生命周期与时长 | Instant/After/Infinite、duration 块、周期、过期条件 | P1 | **已写** |
-| `fx-06-phases.md` | 八相位执行 | 相位顺序、Pre/Main/Post 三槽、skipMain、纯相位限制 | P1 | **已写** |
-| `fx-07-proposal-window.md` | 提案窗口与 Instant 内联 | OnPropose 验证图、OnCalculate、外部原子独占律 | P1 | **已写** |
-| `fx-08-response-chain.md` | 响应链 | Hook/Modify/Chain/PromptInput、窗口深度、fan-out 预算 | P1 | **已写** |
-| `fx-09-phase-listeners.md` | 相位监听器 | phaseListeners、Source 与 Target 视角、通配、随宿主清理 | P1 | **已写** |
-| `fx-10-target-query.md` | 目标查询 | 五种空间形状、origin、GraphProgram 动态查询 | P1 | **已写** |
-| `fx-12-target-filter.md` | 目标过滤 | 敌我关系、排除源、数量上限、层掩码 | P1 | **已写** |
-| `fx-13-target-dispatch.md` | 目标派发 | preset 与 contextMapping、payloadEffect、FanOut 链 | P1 | **已写** |
-| `fx-14-stack.md` | 堆叠 | 三种策略、两种溢出处理、无 stack 时的独立实体 | P1 | **已写** |
-| `fx-15-granted-tags.md` | 效果授予 Tag | Fixed/Linear/LinearPlusBase 公式、层数回收 | P1 | **已写** |
-| `fx-16-config-params.md` | 参数化 | configParams 七类型、`_ep.` 保留键全表、CallerParams 覆盖 | P1 | **已写** |
-| `fx-17-projectile.md` | 弹道 | projectile 全字段、直射与追踪、命中与落点子效果 | P1 | **已写** |
-| `fx-18-unit-creation.md` | 造单位 | placement 与 facing、onSpawnEffect、父与玩家归属 | P1 | **已写** |
-| `fx-19-displacement.md` | 位移 | 四种朝向模式、导航接管、叠加即替换 | P1 | **已写** |
-| `fx-20-relation.md` | 关系操作 | SetParent、RemoveParent、EnsureLink | P1 | **已写** |
-| `fx-21-vision.md` | 视野揭示 | revealArea、scope/layers、记忆时长、探测强度 | P1 | **已写** |
-| `fx-22-exchange.md` | 兑换 | exchange 块、exchangeOperationId 参数 | P1 | **已写** |
-| `fx-23-progression.md` | 进度完成 | id 与 scope、level 与 delta 互斥 | P1 | **已写** |
-| `fx-23-submit-order.md` | 出生下单 | submitOrderFromBlackboard、五个黑板键、提交模式 | P1 | **已写** |
+| `fx-01-pipeline.md` | 效果执行管线总览 | 从提案到移除的端到端时序、三个事务边界 | P1 | **已写** |
+| `fx-02-template.md` | 效果模板骨架 | effects.json 顶层、presetType 与 lifetime 合法组合 | P1 | **已写** |
+| `fx-03-preset-types.md` | Preset 类型系统 | preset_types.json、16 种 preset 全表、默认相位处理器 | P1 | **已写** |
+| `fx-04-lifetime.md` | 生命周期与时长 | Instant/After/Infinite、duration 块、周期、过期条件 | P1 | **已写** |
+| `fx-05-phases.md` | 八相位执行 | 相位顺序、Pre/Main/Post 三槽、skipMain、纯相位限制 | P1 | **已写** |
+| `fx-06-proposal-window.md` | 提案窗口与 Instant 内联 | OnPropose 验证图、OnCalculate、外部原子独占律 | P1 | **已写** |
+| `fx-07-response-chain.md` | 响应链 | Hook/Modify/Chain/PromptInput、窗口深度、fan-out 预算 | P1 | **已写** |
+| `fx-08-phase-listeners.md` | 相位监听器 | phaseListeners、Source 与 Target 视角、通配、随宿主清理 | P1 | **已写** |
+| `fx-09-target-query.md` | 目标查询 | 五种空间形状、origin、GraphProgram 动态查询 | P1 | **已写** |
+| `fx-10-target-filter.md` | 目标过滤 | 敌我关系、排除源、数量上限、层掩码 | P1 | **已写** |
+| `fx-11-target-dispatch.md` | 目标派发 | preset 与 contextMapping、payloadEffect、FanOut 链 | P1 | **已写** |
+| `fx-12-stack.md` | 堆叠 | 三种策略、两种溢出处理、无 stack 时的独立实体 | P1 | **已写** |
+| `fx-13-granted-tags.md` | 效果授予 Tag | Fixed/Linear/LinearPlusBase 公式、层数回收 | P1 | **已写** |
+| `fx-14-config-params.md` | 参数化 | configParams 七类型、`_ep.` 保留键全表、CallerParams 覆盖 | P1 | **已写** |
+| `fx-15-projectile.md` | 弹道 | projectile 全字段、直射与追踪、命中与落点子效果 | P1 | **已写** |
+| `fx-16-unit-creation.md` | 造单位 | placement 与 facing、onSpawnEffect、父与玩家归属 | P1 | **已写** |
+| `fx-17-displacement.md` | 位移 | 四种朝向模式、导航接管、叠加即替换 | P1 | **已写** |
+| `fx-18-relation.md` | 关系操作 | SetParent、RemoveParent、EnsureLink | P1 | **已写** |
+| `fx-19-vision.md` | 视野揭示 | revealArea、scope/layers、记忆时长、探测强度 | P1 | **已写** |
+| `fx-20-exchange.md` | 兑换 | exchange 块、exchangeOperationId 参数 | P1 | **已写** |
+| `fx-21-progression.md` | 进度完成 | id 与 scope、level 与 delta 互斥 | P1 | **已写** |
+| `fx-22-submit-order.md` | 出生下单 | submitOrderFromBlackboard、五个黑板键、提交模式 | P1 | **已写** |
 | `fx-23-lifecycle-atomic.md` | 生命周期原子操作 | DeployConsumeSource 链、六个生命周期内建操作 | P1 | **已写** |
 
 ### 卷 6 · Ability
@@ -260,8 +260,8 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 |---|---|---|---|---|
 | `ord-01-types.md` | 订单类型 | order_types.json 三段结构、全字段表、语义 key 分配 | P1 | **已写** |
 | `ord-02-rules.md` | 订单规则与打断 | orderRules、阻止与打断、同类型与满队策略 | P1 | **已写** |
-| `ord-03-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | **已写** |
-| `ord-04-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | **已写** |
+| `fx-01-pipeline.md` | 订单流水 | 全局队列、准入、实体缓冲、终态、17 种失败原因 | P1 | **已写** |
+| `gr-op-05-blackboard.md` | 黑板 | 四种 buffer、内置键、persistentStoredTarget 五键 | P1 | **已写** |
 | `ord-05-input-protocol.md` | 输入协议 | InputRequest 与 Response、三种 Gate 的等待与改写目标 | P1 | **已写** |
 | `ord-06-input-mappings.md` | 输入映射 | input_order_mappings.json、argsTemplate、路由候选、用户覆写 | P1 | **已写** |
 | `input-01-command-intent.md` | 命令意图档案 | command_intent_profiles.json、指针命令意图路由 | P2 | **已写** |
@@ -276,14 +276,14 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `gr-02-model.md` | 图编程模型 | L0/L1/L2 分层、编译流水线、寄存器机、限额总表 | P1 | **已写** |
-| `gr-03-document.md` | 图文档格式 | 顶层字段、节点字段全表、端口、边表强制、next 禁用 | P1 | **已写** |
-| `gr-04-kinds.md` | 六种 Kind | 返回约定、创作白名单与执行闸、预设寄存器 | P1 | **已写** |
-| `gr-05-compilation.md` | 编译与校验 | 编译期检查全清单、符号解析、注册终态与热替换边界 | P1 | **已写** |
-| `gr-06-execution.md` | 执行模型 | Run-to-Halt 与切片、Yield 宿主政策、步数预算、零分配 | P1 | **已写** |
-| `gr-07-funclib.md` | FuncLib | func_lib.json、纯度闭包校验、跨图调用 | P1 | **已写** |
-| `gr-08-actionlib.md` | ActionLib | action_lib.json、四种 host、yield 政策 | P1 | **已写** |
-| `gr-09-mount-points.md` | 挂接点总表 | 八个挂点与各自要求的 kind | P1 | **已写** |
+| `gr-01-model.md` | 图编程模型 | L0/L1/L2 分层、编译流水线、寄存器机、限额总表 | P1 | **已写** |
+| `gr-02-document.md` | 图文档格式 | 顶层字段、节点字段全表、端口、边表强制、next 禁用 | P1 | **已写** |
+| `gr-03-kinds.md` | 六种 Kind | 返回约定、创作白名单与执行闸、预设寄存器 | P1 | **已写** |
+| `gr-04-compilation.md` | 编译与校验 | 编译期检查全清单、符号解析、注册终态与热替换边界 | P1 | **已写** |
+| `gr-05-execution.md` | 执行模型 | Run-to-Halt 与切片、Yield 宿主政策、步数预算、零分配 | P1 | **已写** |
+| `gr-06-funclib.md` | FuncLib | func_lib.json、纯度闭包校验、跨图调用 | P1 | **已写** |
+| `gr-07-actionlib.md` | ActionLib | action_lib.json、四种 host、yield 政策 | P1 | **已写** |
+| `gr-08-mount-points.md` | 挂接点总表 | 八个挂点与各自要求的 kind | P1 | **已写** |
 | `gr-09-outputs.md` | Query 图输出 | outputs 声明、实体集合与摘要标量、槽位清理 | P1 | **已写** |
 | `gr-op-01-context.md` | 节点：常量与上下文 | Const 三件、LoadCaster/Target/Viewer、Context 三件、EventPayload、TargetPos | P1 | **已写** |
 | `gr-op-02-math.md` | 节点：数学与比较 | 四则、clamp、abs、random、比较、SelectEntity | P1 | **已写** |
@@ -305,16 +305,16 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `ai-02-utility-overview.md` | Utility AI 总论 | 十表关系、与 GAS 和 Graph 的三个接缝 | P2 | **已写** |
-| `ai-03-inputs.md` | 打分输入 | 8 种输入、GraphScore 接 Score 图 | P2 | **已写** |
-| `ai-04-norm-curves.md` | 归一化与曲线 | Identity/Range/RangeInverse × Linear/Power/Inverse | P2 | **已写** |
-| `ai-05-decisions.md` | 决策 | 四种聚合、节流、autocast | P2 | **已写** |
-| `ai-06-dm-profiles.md` | 决策者与档案 | UtilityScore 与 FixedPriority、决策间隔 | P2 | **已写** |
-| `ai-07-target-filters.md` | 目标过滤 | 9 种操作 | P2 | **已写** |
-| `ai-08-tasks.md` | 任务 | SubmitOrder 落到 Order 系统 | P2 | **已写** |
-| `ai-09-stances-actuators.md` | 姿态与执行器 | stance 与 actuator | P2 | **已写** |
-| `ai-10-behavior-trees.md` | 行为树 | behavior_trees.json、ScriptSlice、跨波次挂起 | P2 | **已写** |
-| `ai-11-hfsm.md` | 层次状态机 | hfsm.json、三个生命周期钩子、转移谓词 | P2 | **已写** |
+| `ai-01-utility-overview.md` | Utility AI 总论 | 十表关系、与 GAS 和 Graph 的三个接缝 | P2 | **已写** |
+| `ai-02-inputs.md` | 打分输入 | 8 种输入、GraphScore 接 Score 图 | P2 | **已写** |
+| `ai-03-norm-curves.md` | 归一化与曲线 | Identity/Range/RangeInverse × Linear/Power/Inverse | P2 | **已写** |
+| `ai-04-decisions.md` | 决策 | 四种聚合、节流、autocast | P2 | **已写** |
+| `ai-05-dm-profiles.md` | 决策者与档案 | UtilityScore 与 FixedPriority、决策间隔 | P2 | **已写** |
+| `ai-06-target-filters.md` | 目标过滤 | 9 种操作 | P2 | **已写** |
+| `ai-07-tasks.md` | 任务 | SubmitOrder 落到 Order 系统 | P2 | **已写** |
+| `ai-08-stances-actuators.md` | 姿态与执行器 | stance 与 actuator | P2 | **已写** |
+| `ai-09-behavior-trees.md` | 行为树 | behavior_trees.json、ScriptSlice、跨波次挂起 | P2 | **已写** |
+| `ai-10-hfsm.md` | 层次状态机 | hfsm.json、三个生命周期钩子、转移谓词 | P2 | **已写** |
 | `ai-11-goap-htn.md` | GOAP 与 HTN | 旧栈五文件、256 位世界状态 | P2 | **已写** |
 
 ### 卷 10 · 运行时横切
@@ -325,7 +325,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 | `rt-02-budgets.md` | 预算与容量 | 帧预算、单根 fan-out 上限、容量总表、报错语义 | P1 | **已写** |
 | `rt-03-diagnostics.md` | 诊断与错误码 | 9 域 20 指标、错误码字典 | P1 | **已写** |
 | `rt-04-presentation.md` | 表现事件 | 施法与效果九种事件、属性增量、溢出报错 | P1 | **已写** |
-| `rt-05-events.md` | 事件总线与帧延迟 | 双缓冲、一帧延迟语义、Reaction 消费 | P1 | **已写** |
+| `attr-06-events.md` | 事件总线与帧延迟 | 双缓冲、一帧延迟语义、Reaction 消费 | P1 | **已写** |
 
 ### 卷 11 · 编辑器能力与需求
 
@@ -357,7 +357,7 @@ target_dispatch_presets → clock → attribute_constraints → graphs → prese
 
 | 文件 | 篇名 | 范围 | 优先级 | 状态 |
 |---|---|---|---|---|
-| `misc-01-progression.md` | 进度域 | scopes、progressions、requirements 三张表 | P3 | **已写** |
+| `fx-21-progression.md` | 进度域 | scopes、progressions、requirements 三张表 | P3 | **已写** |
 | `misc-02-items-exchange.md` | 物品与兑换 | shapes、layouts、definitions、operations | P3 | **已写** |
 | `misc-03-narrative.md` | 叙事与任务 | variables、quests、dialogues、cinematics | P3 | **已写** |
 | `misc-04-entity-info.md` | 实体信息档案 | insight_profiles | P3 | **已写** |

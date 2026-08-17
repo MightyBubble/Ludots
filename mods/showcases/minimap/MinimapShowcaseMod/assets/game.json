@@ -6,5 +6,11 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExtentMode": "FullMap"
     }
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

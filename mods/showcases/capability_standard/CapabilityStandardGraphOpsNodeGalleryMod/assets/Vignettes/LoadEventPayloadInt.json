@@ -1,11 +1,11 @@
 {
   "op": "LoadEventPayloadInt",
   "driver": "event",
-  "title": "读出事件里的整数",
-  "beat": "事件带来的整数载荷显示在字幕。",
-  "detailTemplate": "事件里的整数是 {result}。",
+  "title": "从飞来的那一发里读出编号",
+  "beat": "信号落地后，编号从事件里飞进信件板。",
+  "detailTemplate": "这一发带来的编号是 {result}。",
   "assertDetailContains": [
-    "整数"
+    "编号"
   ],
   "featuredNodeId": "payloadInt",
   "graphKind": "Validation",

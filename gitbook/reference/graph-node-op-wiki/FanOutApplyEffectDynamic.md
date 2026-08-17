@@ -1,6 +1,6 @@
-# 按读到的模板打圈里所有人
+# 翻出一张牌，圈里每人照牌挨一下
 
-动态模板扇出。
+先翻牌再动手：圈内五个人同时掉一截血，圈外没事。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/poster.png" src="artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按读到的模板打圈里所有人，状态已经挂上了。
+> 翻到的牌是打击，圈内{applied}人每人挨一下。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 按读到的模板打圈里所有人
+Feature: 翻出一张牌，圈里每人照牌挨一下
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_FanOutApplyEffectDynamic
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_FanOutApplyEffectDynamic/play.mp4
     When 短剧演完
-    Then 字幕讲的是「动态模板扇出。」这类人话
+    Then 字幕讲的是「先翻牌再动手：圈内五个人同时掉一截血，圈外没事。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

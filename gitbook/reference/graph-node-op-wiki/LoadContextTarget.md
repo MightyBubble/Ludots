@@ -1,6 +1,6 @@
-# 从这一击的情境里取出目标
+# 这一击的单据上写着打谁
 
-情境里的目标就是木桩，读出来再扣血。
+从这一击自带单据里取出目标，取到木桩，扣 12 血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadContextTarget/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 从这一击的情境里取出目标，木桩挨了这一刀。
+> 单据取出的目标是木桩，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 从这一击的情境里取出目标
+Feature: 这一击的单据上写着打谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadContextTarget
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadContextTarget/play.mp4
     When 短剧演完
-    Then 字幕讲的是「情境里的目标就是木桩，读出来再扣血。」这类人话
+    Then 字幕讲的是「从这一击自带单据里取出目标，取到木桩，扣 12 血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,6 +1,6 @@
-# fx-16 runtime spec · 堆叠
+# fx-12 runtime spec · 堆叠
 
-> 引擎实现任务书。第一性需求见 [fx-15 PRD](../prd/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
+> 引擎实现任务书。第一性需求见 [fx-12 PRD](../prd/fx-12-stack.md)；现状见 [reference](../reference/fx-12-stack.md)。
 
 ## 1. 概述
 
@@ -21,4 +21,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-15 PRD](../prd/fx-12-stack.md) · [reference](../reference/fx-12-stack.md)
+**相关文档**：[fx-12 PRD](../prd/fx-12-stack.md) · [reference](../reference/fx-12-stack.md)

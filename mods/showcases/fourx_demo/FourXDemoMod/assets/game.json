@@ -1,5 +1,6 @@
 {
   "startupMapId": "fourx_entry",
-  "startupInputContexts": ["Default_Gameplay"]
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ]
 }
-

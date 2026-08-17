@@ -1,6 +1,6 @@
-# fx-05 runtime spec · 效果模板骨架
+# fx-02 runtime spec · 效果模板骨架
 
-> 引擎实现任务书。第一性需求见 [fx-04 PRD](../prd/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
+> 引擎实现任务书。第一性需求见 [fx-02 PRD](../prd/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-04 PRD](../prd/fx-02-template.md) · [reference](../reference/fx-02-template.md)
+**相关文档**：[fx-02 PRD](../prd/fx-02-template.md) · [reference](../reference/fx-02-template.md)

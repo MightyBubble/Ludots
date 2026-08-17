@@ -1,6 +1,6 @@
-# 按预设把效果派给圈里的人
+# 按预设发同一招给全圈
 
-圈中单位同时挨打、挂上派发出来的状态。
+卡一亮，圈内三人一起掉 18 血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/poster.png" src="artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按预设把效果派给圈里 {count} 人，木桩血条从 {healthBefore} 掉到 {healthAfter}。
+> 派给圈里 {count} 人，各掉 {damage} 血。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 按预设把效果派给圈里的人
+Feature: 按预设发同一招给全圈
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_FanOutDispatchEffect
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_FanOutDispatchEffect/play.mp4
     When 短剧演完
-    Then 字幕讲的是「圈中单位同时挨打、挂上派发出来的状态。」这类人话
+    Then 字幕讲的是「卡一亮，圈内三人一起掉 18 血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

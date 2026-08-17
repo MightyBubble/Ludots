@@ -19,7 +19,7 @@
     "rotateMode": "None",
     "enableZoom": false,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "LocalPlayer",
+    "followTargetKind": "SolePossessedRep",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": false

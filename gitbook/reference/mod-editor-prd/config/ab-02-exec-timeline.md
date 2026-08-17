@@ -62,4 +62,4 @@ item 公共字段：`kind`、`tick` 必填；`duration`（Clip 时长）；`cloc
 
 - rts 底座 `mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/GAS/abilities.json`（TagClip+EffectSignal+TagSignal+End）；champion 沙盒 `.../champion_skill_sandbox/.../abilities.json`（TagClip 冷却 + dispatchTarget:Source）
 
-**相关文档**：[ab-02 PRD](../prd/ab-02-exec-timeline.md) · [ab-01 配置说明](ab-01-definition.md) · [fx-05 配置说明](fx-02-template.md)
+**相关文档**：[ab-02 PRD](../prd/ab-02-exec-timeline.md) · [ab-01 配置说明](ab-01-definition.md) · [fx-02 配置说明](fx-02-template.md)

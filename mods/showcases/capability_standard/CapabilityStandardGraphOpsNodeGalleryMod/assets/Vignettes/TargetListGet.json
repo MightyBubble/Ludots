@@ -1,11 +1,11 @@
 {
   "op": "TargetListGet",
   "driver": "spatial",
-  "title": "点名单上的第一个",
-  "beat": "名单第一人被点名，血条或高亮在他身上。",
-  "detailTemplate": "点名第一个，是{name}。",
+  "title": "按名单取第一个",
+  "beat": "名单按序编号，红线只连 1 号。",
+  "detailTemplate": "名单第 1 个，是{name}。",
   "assertDetailContains": [
-    "第一个"
+    "第 1 个"
   ],
   "featuredNodeId": "get0",
   "graphKind": "Query",

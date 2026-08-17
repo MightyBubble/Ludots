@@ -6,9 +6,9 @@ using CoreInputMod;
 using CoreInputMod.ViewMode;
 using CoreInputMod.Triggers;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
@@ -146,42 +146,16 @@ namespace CameraAcceptanceMod.Runtime
                 return false;
             }
 
-            if (!TryFindEntityByName(engine.World, CameraAcceptanceIds.HeroName, out Entity hero))
+            owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return false;
-            }
-
-            owner = hero;
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = owner;
-            }
-
-            if (TryResolvePlayerId(engine.World, owner, out int playerId))
-            {
-                engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerId = playerId;
-                }
+                throw new System.InvalidOperationException(
+                    "Camera acceptance requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);
             PublishLocalKnowledge(engine, owner);
             return true;
-        }
-
-        private static bool TryResolvePlayerId(World world, Entity owner, out int playerId)
-        {
-            playerId = 0;
-            if (owner == Entity.Null || !world.IsAlive(owner) || !world.Has<PlayerOwner>(owner))
-            {
-                return false;
-            }
-
-            playerId = world.Get<PlayerOwner>(owner).PlayerId;
-            return playerId > 0;
         }
 
         private static void PublishEmptyCommandSourceCollection(GameEngine engine, Entity owner)

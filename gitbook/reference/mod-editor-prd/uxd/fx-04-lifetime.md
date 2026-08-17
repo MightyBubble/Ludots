@@ -1,6 +1,6 @@
-# fx-07 UXD · 生命周期与时长的编辑器需求
+# fx-04 UXD · 生命周期与时长的编辑器需求
 
-> 生命周期与时长的编辑器需求（高保真规格）。第一性需求见 [fx-06 PRD](../prd/fx-04-lifetime.md)；配置写法见 [fx-06 配置说明](../config/fx-04-lifetime.md)；编辑器实现见 [editor spec](../spec-editor/fx-04-lifetime.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 生命周期与时长的编辑器需求（高保真规格）。第一性需求见 [fx-04 PRD](../prd/fx-04-lifetime.md)；配置写法见 [fx-04 配置说明](../config/fx-04-lifetime.md)；编辑器实现见 [editor spec](../spec-editor/fx-04-lifetime.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -50,4 +50,4 @@
 - 任一寿命下的 duration 矩阵违例输入即报，无需保存试错。
 - 周期效果能看到"首拍由散相声明的承诺"而不是空白。
 
-**相关文档**：[fx-06 PRD](../prd/fx-04-lifetime.md) · [editor spec](../spec-editor/fx-04-lifetime.md)
+**相关文档**：[fx-04 PRD](../prd/fx-04-lifetime.md) · [editor spec](../spec-editor/fx-04-lifetime.md)

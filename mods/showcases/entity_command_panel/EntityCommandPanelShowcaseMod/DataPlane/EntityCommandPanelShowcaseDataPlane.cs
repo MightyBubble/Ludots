@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
@@ -361,7 +362,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             owner = Entity.Null;
             error = string.Empty;
 
-            if (!_engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity localPlayer) ||
                 localPlayer == Entity.Null ||
                 !_engine.World.IsAlive(localPlayer))
             {

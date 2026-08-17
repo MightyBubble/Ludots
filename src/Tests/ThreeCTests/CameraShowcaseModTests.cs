@@ -11,8 +11,13 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
+using Ludots.Core.Map;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.ThreeC.Acceptance
 {
@@ -72,26 +77,26 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            var brain = engine.AuthorityCamera().VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
             Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
-            Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
+            Assert.That(engine.AuthorityCamera().State.IsFollowing, Is.False);
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
 
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
             SetCommandSource(engine, captain);
             Tick(engine, 3);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
             ClearCommandSource(engine);
             Tick(engine, 3);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
-            Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
+            Assert.That(engine.AuthorityCamera().State.IsFollowing, Is.False);
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
         }
 
         [Test]
@@ -104,11 +109,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             LoadMap(engine, "entry");
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             LoadMap(engine, CameraShowcaseIds.HubMapId);
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
         }
 
         [Test]
@@ -121,11 +126,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             LoadMap(engine, "entry");
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(engine.GlobalContext.ContainsKey(ViewModeManager.ActiveModeIdKey), Is.False);
         }
 
@@ -136,25 +141,25 @@ namespace Ludots.Tests.ThreeC.Acceptance
             LoadMap(engine, CameraShowcaseIds.StackMapId);
             Tick(engine, BlendSettleFrames);
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            var brain = engine.AuthorityCamera().VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
             Assert.That(brain!.HasActiveCamera, Is.True);
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.RevealShotId));
             Assert.That(brain.IsActive(CameraShowcaseIds.FollowProfileId), Is.True);
-            Assert.That(engine.GameSession.Camera.State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
             {
                 Clear = true
             });
-            TickUntil(engine, () => engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId == CameraShowcaseIds.FollowProfileId);
+            TickUntil(engine, () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CameraShowcaseIds.FollowProfileId);
             Tick(engine, BlendSettleFrames);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.FollowProfileId));
-            Assert.That(engine.GameSession.Camera.State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(1200f, 800f)));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.FollowProfileId));
+            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.EqualTo(new Vector2(1200f, 800f)));
         }
 
         [Test]
@@ -163,24 +168,24 @@ namespace Ludots.Tests.ThreeC.Acceptance
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.CommandSourceFollowMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
-            Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
+            Assert.That(engine.AuthorityCamera().State.IsFollowing, Is.False);
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
 
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
             SetCommandSource(engine, captain);
             TickCamera(engine, 3);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
             ClearCommandSource(engine);
             TickCamera(engine, 3);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
-            Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
+            Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
+            Assert.That(engine.AuthorityCamera().State.IsFollowing, Is.False);
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
         }
 
         [Test]
@@ -189,10 +194,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.BootstrapMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TacticalProfileId));
-            Assert.That(engine.GameSession.Camera.State.RigKind, Is.EqualTo(CameraRigKind.Orbit));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4000f, 2500f)));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(8100f));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TacticalProfileId));
+            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.Orbit));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4000f, 2500f)));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(8100f));
         }
 
         [Test]
@@ -201,7 +206,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.CommandSourceFollowMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
             {
@@ -212,9 +217,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             });
             Tick(engine, 1);
 
-            Assert.That(engine.GameSession.Camera.State.Pitch, Is.EqualTo(55f).Within(0.001f));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(3600f).Within(0.001f));
-            Assert.That(engine.GameSession.Camera.State.FovYDeg, Is.EqualTo(48f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.Pitch, Is.EqualTo(55f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(3600f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.FovYDeg, Is.EqualTo(48f).Within(0.001f));
         }
 
         private static GameEngine CreateEngine(params string[] modIds)
@@ -232,7 +237,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static void LoadMap(GameEngine engine, string mapId, int frames = 5)
         {
-            engine.LoadMap(mapId);
+            // Bootstrap map has no Players; pass an explicit empty launch so cold-start seats are not injected.
+            if (string.Equals(mapId, CameraShowcaseIds.BootstrapMapId, StringComparison.Ordinal))
+            {
+                engine.LoadMap(MapLoadRequest.FromMapId(mapId, new MapLaunchContext()));
+            }
+            else
+            {
+                // Seat maps need a present surface so LogicView cameras get ConfigureRuntime + PresentBinding metrics.
+                if (engine.GetService(CoreServiceKeys.ViewController) == null)
+                {
+                    engine.SetService(CoreServiceKeys.ViewController, new StubViewController());
+                }
+
+                engine.LoadMap(mapId);
+            }
+
             Tick(engine, frames);
         }
 
@@ -263,7 +283,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             for (int i = 0; i < frames; i++)
             {
-                engine.GameSession.Camera.Update(1f / 60f);
+                engine.AuthorityCamera().Update(1f / 60f);
             }
         }
 
@@ -298,8 +318,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                    engine.World.IsAlive(local)
                 ? local
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");
@@ -381,6 +400,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private sealed class StubViewController : IViewController
+        {
+            public Vector2 Resolution => new(1920f, 1080f);
+            public float Fov => 60f;
+            public float AspectRatio => 16f / 9f;
         }
     }
 }

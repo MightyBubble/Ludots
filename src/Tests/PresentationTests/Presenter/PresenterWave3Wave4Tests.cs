@@ -1,3 +1,4 @@
+using Ludots.Tests.TestCommon;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -879,9 +880,9 @@ namespace Ludots.Tests.Presentation
                     revision: 1));
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();

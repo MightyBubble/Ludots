@@ -1,6 +1,6 @@
-# fx-23 runtime spec · 视野揭示
+# fx-19 runtime spec · 视野揭示
 
-> 引擎实现任务书。第一性需求见 [fx-22 PRD](../prd/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
+> 引擎实现任务书。第一性需求见 [fx-19 PRD](../prd/fx-19-vision.md)；现状见 [reference](../reference/fx-19-vision.md)。
 
 ## 1. 概述
 知识区域揭示合同：范围/层/记忆/强度参数、周期刷新与移除衰减、可执行性。
@@ -20,4 +20,4 @@
 ## 变更记录
 - v1（2026-08-15）：初版。
 
-**相关文档**：[fx-22 PRD](../prd/fx-19-vision.md) · [reference](../reference/fx-19-vision.md)
+**相关文档**：[fx-19 PRD](../prd/fx-19-vision.md) · [reference](../reference/fx-19-vision.md)

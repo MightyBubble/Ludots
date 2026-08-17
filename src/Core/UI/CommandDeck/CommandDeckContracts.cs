@@ -29,8 +29,8 @@ namespace Ludots.Core.UI.CommandDeck
     /// </summary>
     public enum CommandDeckSourceKind : byte
     {
-        /// <summary>Local player rep as collection/control-plane owner (no focused entity required).</summary>
-        LocalPlayerRep = 0,
+        /// <summary>Sole possessed rep as collection/control-plane owner (no focused entity required).</summary>
+        SolePossessedRep = 0,
 
         /// <summary>Explicit entity supplied by the binding context.</summary>
         ExplicitEntity = 1,
@@ -38,7 +38,7 @@ namespace Ludots.Core.UI.CommandDeck
         /// <summary>EntityCollectionStore addressed by (owner, collectionKey) via sourceRef.</summary>
         EntityCollection = 2,
 
-        /// <summary>ControlPlaneView members for the local player rep and collection key in sourceRef.</summary>
+        /// <summary>ControlPlaneView members for the sole possessed rep and collection key in sourceRef.</summary>
         ControlPlaneView = 3
     }
 
@@ -132,20 +132,20 @@ namespace Ludots.Core.UI.CommandDeck
     public readonly struct CommandDeckBindingContext
     {
         public CommandDeckBindingContext(
-            Entity localPlayerRep,
+            Entity solePossessedRep,
             Entity focusedEntity,
             Entity collectionOwner,
             string instanceKey,
             bool visibilityConditionSatisfied)
         {
-            LocalPlayerRep = localPlayerRep;
+            SolePossessedRep = solePossessedRep;
             FocusedEntity = focusedEntity;
             CollectionOwner = collectionOwner;
             InstanceKey = instanceKey ?? string.Empty;
             VisibilityConditionSatisfied = visibilityConditionSatisfied;
         }
 
-        public Entity LocalPlayerRep { get; }
+        public Entity SolePossessedRep { get; }
         public Entity FocusedEntity { get; }
         public Entity CollectionOwner { get; }
         public string InstanceKey { get; }
@@ -261,7 +261,7 @@ namespace Ludots.Core.UI.CommandDeck
 
     public static class CommandDeckSourceKindIds
     {
-        public const string LocalPlayerRep = "localPlayerRep";
+        public const string SolePossessedRep = "solePossessedRep";
         public const string ExplicitEntity = "explicitEntity";
         public const string EntityCollection = "entityCollection";
         public const string ControlPlaneView = "controlPlaneView";

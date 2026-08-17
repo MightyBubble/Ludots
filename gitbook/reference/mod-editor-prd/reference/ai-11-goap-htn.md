@@ -29,4 +29,4 @@
 | 目标选择/计划执行系统 | src/Core/Gameplay/AI/Systems/AIGoalSelectionSystem.cs、AIPlanExecutionSystem.cs、HtnPlanningSystem.cs、WorldStateProjectionSystem.cs |
 | 真实例 | mods/showcases/ai_demo/AIDemoMod/assets/AI/ |
 
-**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [ai-02 reference](ai-01-utility-overview.md)
+**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [ai-01 reference](ai-01-utility-overview.md)

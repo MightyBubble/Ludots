@@ -12,6 +12,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -394,7 +395,7 @@ internal sealed class ParticipantViewPanelController
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;

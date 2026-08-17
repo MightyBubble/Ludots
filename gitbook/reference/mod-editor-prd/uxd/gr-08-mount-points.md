@@ -1,6 +1,6 @@
-# gr-09 UXD · 挂接点总表的编辑器需求
+# gr-08 UXD · 挂接点总表的编辑器需求
 
-> gr-09 的编辑器需求（高保真规格）。第一性需求见 [gr-09 PRD](../prd/gr-08-mount-points.md)；配置写法见 [gr-09 配置说明](../config/gr-08-mount-points.md)；编辑器实现见 [editor spec](../spec-editor/gr-08-mount-points.md)。
+> gr-08 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 。
 
 ## 1. 界面定位
 
@@ -26,7 +26,7 @@
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
 | 挂点卡片 | 挂接点表 × kind 合同（引擎同源） | 显示只收 kind 与消费时机 |
-| 当前图过滤器 | 图 kind（gr-04） | 高亮可挂点、灰显不可挂点 |
+| 当前图过滤器 | 图 kind（gr-03） | 高亮可挂点、灰显不可挂点 |
 | 挂点详情 | 挂点注册信息 | 已挂图清单 + 跳转各域配置 |
 | 次要挂点组 | 次要挂点五项 | 展开呈现（含 Query 两项 → gr-09） |
 
@@ -49,4 +49,4 @@
 - 任一图"能挂到哪"一屏读完；反向任一挂点"收什么"同屏可查。
 - 导航的 kind 过滤与引擎终检判定一致。
 
-**相关文档**：[gr-09 PRD](../prd/gr-08-mount-points.md) · [editor spec](../spec-editor/gr-08-mount-points.md) · [gr-04 UXD](gr-03-kinds.md)
+**相关文档**：[gr-08 PRD](../prd/gr-08-mount-points.md) · [editor spec](../spec-editor/gr-08-mount-points.md) · [gr-03 UXD](gr-03-kinds.md)

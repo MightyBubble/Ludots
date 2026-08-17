@@ -3,7 +3,7 @@
     "Id": "Camera.Acceptance.Mode.Rts",
     "DisplayName": "RTS/MOBA",
     "VirtualCameraId": "Shared3C.Profile.RtsMoba",
-    "FollowTargetKind": "LocalPlayer",
+    "FollowTargetKind": "SolePossessedRep",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeRts"
@@ -12,7 +12,7 @@
     "Id": "Camera.Acceptance.Mode.Tps",
     "DisplayName": "TPS Aim",
     "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim",
-    "FollowTargetKind": "LocalPlayer",
+    "FollowTargetKind": "SolePossessedRep",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeTps"

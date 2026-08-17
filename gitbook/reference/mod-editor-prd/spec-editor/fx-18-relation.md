@@ -1,6 +1,6 @@
-# fx-22 editor spec · 关系操作
+# fx-18 editor spec · 关系操作
 
-> 编辑器实现任务书。编辑器需求见 [fx-21 UXD](../uxd/fx-18-relation.md)；引擎侧见 [runtime spec](../spec-runtime/fx-18-relation.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-18 UXD](../uxd/fx-18-relation.md)；引擎侧见 [runtime spec](../spec-runtime/fx-18-relation.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@ Relation 效果表单的关系子表单：操作联动、槽位约束、可执�
 - 消费：关系类型注册表、效果计划编译器的操作认证结果、保存管线。
 - 验收：SetParent 下链型字段不落盘；选 RemoveParent 出现警示条且文案与启动错误同源。
 
-**相关文档**：[fx-21 UXD](../uxd/fx-18-relation.md) · [fx-21 runtime spec](../spec-runtime/fx-18-relation.md)
+**相关文档**：[fx-18 UXD](../uxd/fx-18-relation.md) · [fx-18 runtime spec](../spec-runtime/fx-18-relation.md)

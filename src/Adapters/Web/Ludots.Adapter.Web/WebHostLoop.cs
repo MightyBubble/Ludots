@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Client;
 
 namespace Ludots.Adapter.Web
 {
@@ -34,8 +35,8 @@ namespace Ludots.Adapter.Web
             var cameraAdapter = setup.CameraAdapter;
             var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+            var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+            var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
@@ -48,7 +49,7 @@ namespace Ludots.Adapter.Web
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                 engine.SpatialQueries,
                 viewController,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
@@ -56,12 +57,13 @@ namespace Ludots.Adapter.Web
             {
                 cullingSystem = new CameraCullingSystem(
                     engine.World,
-                    engine.GameSession.Camera,
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                     engine.SpatialQueries,
                     viewController,
                     presenters: presenterInstances,
                     cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             }
+            cullingSystem.DisarmPresentBindingCulling();
             engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
@@ -90,6 +92,13 @@ namespace Ludots.Adapter.Web
             }
 
             engine.LoadStartupMap();
+            Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                engine,
+                screenProjector,
+                screenRayProvider,
+                viewController.Fov,
+                viewController,
+                cullingSystem);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
 
             BuildAndSendMeshMap(engine, setup.Transport);
@@ -127,10 +136,40 @@ namespace Ludots.Adapter.Web
                     {
                         bool uiCaptured = setup.UiBridge.Update(dt);
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                            engine,
+                            screenProjector,
+                            screenRayProvider,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
                         engine.Tick(dt);
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        cameraPresenter.Update(engine.GameSession!.Camera, cameraAlpha, renderCameraDebug);
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
+                                engine,
+                                cameraPresenter,
+                                screenProjector,
+                                screenRayProvider,
+                                cameraAlpha,
+                                viewController.Fov,
+                                renderCameraDebug,
+                                viewController,
+                                cullingSystem))
+                        {
+                            if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out Ludots.Core.Client.ClientLocalSeatRegistry? seats) &&
+                                seats != null &&
+                                seats.Count > 0)
+                            {
+                                throw new InvalidOperationException(
+                                    "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
+                            }
+
+                            cameraPresenter.Update(
+                                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
+                                cameraAlpha,
+                                renderCameraDebug);
+                        }
                         hudProjection?.Update(dt);
 
                         if (setup.Transport.HasClients)

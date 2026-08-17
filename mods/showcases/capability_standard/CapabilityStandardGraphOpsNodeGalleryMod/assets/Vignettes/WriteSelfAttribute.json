@@ -1,11 +1,11 @@
 {
   "op": "WriteSelfAttribute",
   "driver": "attr",
-  "title": "给自己回一口",
-  "beat": "施法者血从 60 写回 90，金块血条涨上去。",
-  "detailTemplate": "给自己回一口，生命从 {casterBefore} 回到 {casterAfter}。",
+  "title": "把血直接写成 90",
+  "beat": "施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。",
+  "detailTemplate": "直接写入生命值，从 {casterBefore} 写成 {casterAfter}。",
   "assertDetailContains": [
-    "回"
+    "写成"
   ],
   "featuredNodeId": "healSelf",
   "graphKind": "Effect",

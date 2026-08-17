@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -179,7 +179,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.SmartCast);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -208,7 +208,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;
@@ -247,7 +247,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             InputOrderMappingSystem mapping = CreateMappingSystem(submitted, InteractionModeType.AimCast);
-            mapping.SetLocalPlayer(fixture.CollectionOwner, 7);
+            mapping.SetSolePossessedActor(fixture.CollectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = fixture.CollectionOwner;

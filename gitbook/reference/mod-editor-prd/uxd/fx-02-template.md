@@ -1,6 +1,6 @@
-# fx-05 UXD · 效果模板骨架的编辑器需求
+# fx-02 UXD · 效果模板骨架的编辑器需求
 
-> 效果模板骨架的编辑器需求（高保真规格）。第一性需求见 [fx-04 PRD](../prd/fx-02-template.md)；配置写法见 [fx-04 配置说明](../config/fx-02-template.md)；编辑器实现见 [editor spec](../spec-editor/fx-02-template.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 效果模板骨架的编辑器需求（高保真规格）。第一性需求见 [fx-02 PRD](../prd/fx-02-template.md)；配置写法见 [fx-02 配置说明](../config/fx-02-template.md)；编辑器实现见 [editor spec](../spec-editor/fx-02-template.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -25,8 +25,8 @@
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
 | 模板清单 | 效果注册表 + 合并视图 | 引用计数；热改标记 |
-| presetType 下拉 | preset 类型注册表（fx-05） | 切换即重算合法块集 |
-| lifetime 三选一 | 内建三值 | 与 duration 表单联动（fx-06） |
+| presetType 下拉 | preset 类型注册表（fx-03） | 切换即重算合法块集 |
+| lifetime 三选一 | 内建三值 | 与 duration 表单联动（fx-04） |
 | 参数块折叠组 | 17 组件块 schema | 非法块置灰带原因；必填块红点 |
 | 块导航 chips | 当前模板已用块 | 点击滚动定位 |
 
@@ -50,4 +50,4 @@
 - 任一非法组合在输入时即被发现，不等到保存。
 - 切换 presetType 后必填块一屏可见，无需查文档。
 
-**相关文档**：[fx-04 PRD](../prd/fx-02-template.md) · [editor spec](../spec-editor/fx-02-template.md)
+**相关文档**：[fx-02 PRD](../prd/fx-02-template.md) · [editor spec](../spec-editor/fx-02-template.md)

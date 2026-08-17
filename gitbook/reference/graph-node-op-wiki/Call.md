@@ -1,6 +1,6 @@
-# 出门办事再回来
+# 出门办事，办完回家
 
-走到驿站办完事再回到原点，像叫了一声子程序。
+人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Call/poster.png" src="artifacts/evidence/capability_standard_graph_op_Call/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Call/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 出门办事再回来。人在{place}。
+> 出了趟门办件差事。人在{place}，原点{homeState}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 出门办事再回来
+Feature: 出门办事，办完回家
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_Call
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_Call/play.mp4
     When 短剧演完
-    Then 字幕讲的是「走到驿站办完事再回到原点，像叫了一声子程序。」这类人话
+    Then 字幕讲的是「人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

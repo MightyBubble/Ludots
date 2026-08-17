@@ -1,6 +1,6 @@
-# fx-07 配置说明 · 生命周期与时长
+# fx-04 配置说明 · 生命周期与时长
 
-> 配置写法与行为。第一性需求见 [fx-06 PRD](../prd/fx-04-lifetime.md)；编辑器需求见 [UXD](../uxd/fx-04-lifetime.md)；现状见 [reference](../reference/fx-04-lifetime.md)。
+> 配置写法与行为。第一性需求见 [fx-04 PRD](../prd/fx-04-lifetime.md)；编辑器需求见 [UXD](../uxd/fx-04-lifetime.md)；现状见 [reference](../reference/fx-04-lifetime.md)。
 
 ## 1. 示例配置
 
@@ -35,7 +35,7 @@
 
 ## 3. 文件结构
 
-写在效果模板顶层（`GAS/effects.json` 分片，@@fx1@@）；时钟 id 来自 clock 表（rt-01）。Turn 时钟已移除，存量写法迁移为 FixedFrame。
+写在效果模板顶层（`GAS/effects.json` 分片，fx-02）；时钟 id 来自 clock 表（rt-01）。Turn 时钟已移除，存量写法迁移为 FixedFrame。
 
 ## 4. 运行时加载效果
 
@@ -55,4 +55,4 @@ loader 按 lifetime 逐块校验 duration 矩阵与周期字段；运行期存�
 - `mods/showcases/presenter_blacksmith/PresenterBlacksmithShowcaseMod/assets/GAS/effects.json`（RandomDrift：Infinite + 周期 60）
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（CourageAura：Infinite + expireCondition）
 
-**相关文档**：[fx-06 PRD](../prd/fx-04-lifetime.md) · [fx-15 配置说明](fx-12-stack.md) · [rt-01](rt-01-clocks.md)
+**相关文档**：[fx-04 PRD](../prd/fx-04-lifetime.md) · [fx-12 配置说明](fx-12-stack.md) · [rt-01](rt-01-clocks.md)

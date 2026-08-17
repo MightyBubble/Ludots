@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 
@@ -409,21 +410,19 @@ namespace GenreInfoShowcaseMod.Runtime
         private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity viewer)
         {
             collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
-            viewer = EnsureCollectionViewer(engine);
-            return collections != null && viewer != Entity.Null && engine.World.IsAlive(viewer);
+            viewer = RequireCollectionViewer(engine);
+            return collections != null;
         }
 
-        private static Entity EnsureCollectionViewer(GameEngine engine)
+        private static Entity RequireCollectionViewer(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) &&
-                viewerObj is Entity localViewer &&
-                engine.World.IsAlive(localViewer))
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
             {
-                return localViewer;
+                throw new InvalidOperationException(
+                    "GenreInfo showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity viewer = engine.World.Create(new Name { Value = "GenreInfo Showcase Viewer" });
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = viewer;
             return viewer;
         }
 

@@ -21,4 +21,4 @@
 
 层 id 缺失、cellSizeCm/updateHz 非正、相机 id 缺失或重复、rigKind 非法、边界区间倒置（min > max）、edgePanMarginPx ≤ 0——启动失败并指明条目与位置。
 
-**相关文档**：[配置说明](../config/infra-03-vision-camera.md) · [fx-22](fx-19-vision.md) · [misc-03](misc-03-narrative.md)
+**相关文档**：[配置说明](../config/infra-03-vision-camera.md) · [fx-19](fx-19-vision.md) · [misc-03](misc-03-narrative.md)

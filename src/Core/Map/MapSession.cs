@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
@@ -32,8 +33,7 @@ namespace Ludots.Core.Map
         public TeamEntityLookup TeamEntityLookup { get; set; } = new TeamEntityLookup();
         public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
         public MapLoadEntityIndex EntityIndex { get; set; } = new MapLoadEntityIndex();
-        public int LocalPlayerId { get; set; }
-        public Entity LocalPlayerEntity { get; set; }
+        public IReadOnlyList<ResolvedLocalSeatPossession> LocalSeats { get; set; } = Array.Empty<ResolvedLocalSeatPossession>();
         public TeamRelationshipSnapshot? TeamRelationships { get; set; }
         public MapLaunchContext? LaunchContext { get; set; }
 

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_IsPointInCircle",
-  "windowTitle": "Ludots - 这一点在不在圈里",
+  "windowTitle": "Ludots - 圈里圈外，当场见分晓",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

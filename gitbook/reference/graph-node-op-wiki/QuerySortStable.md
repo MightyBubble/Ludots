@@ -1,6 +1,6 @@
-# 圈里的人排个稳定顺序
+# 点名名单按编号排好，次次一样
 
-同样距离时顺序不乱跳。
+每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QuerySortStable/poster.png" src="artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 名单顺序稳住了：{order}。
+> 点名顺序稳定：{order}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 圈里的人排个稳定顺序
+Feature: 点名名单按编号排好，次次一样
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QuerySortStable
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QuerySortStable/play.mp4
     When 短剧演完
-    Then 字幕讲的是「同样距离时顺序不乱跳。」这类人话
+    Then 字幕讲的是「每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

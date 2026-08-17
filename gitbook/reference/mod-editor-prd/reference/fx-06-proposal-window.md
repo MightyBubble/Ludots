@@ -1,6 +1,6 @@
-# fx-09 reference · 提案窗口与 Instant 内联
+# fx-06 reference · 提案窗口与 Instant 内联
 
-> 现状参考。第一性需求见 [fx-08 PRD](../prd/fx-06-proposal-window.md)；配置说明见 [fx-08 配置说明](../config/fx-06-proposal-window.md)。
+> 现状参考。第一性需求见 [fx-06 PRD](../prd/fx-06-proposal-window.md)；配置说明见 [fx-06 配置说明](../config/fx-06-proposal-window.md)。
 
 ## 1. 现状快照
 
@@ -26,4 +26,4 @@
 | External 域三枚 | src/Core/Gameplay/GAS/BuiltinHandlers.cs:64-81 |
 | 图侧 Unsupported op | src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs:176-184 |
 
-**相关文档**：[fx-08 PRD](../prd/fx-06-proposal-window.md) · [fx-09 reference](fx-07-response-chain.md)
+**相关文档**：[fx-06 PRD](../prd/fx-06-proposal-window.md) · [fx-07 reference](fx-07-response-chain.md)

@@ -1,11 +1,12 @@
 {
   "op": "QueryFilterRelationship",
   "driver": "spatial",
-  "title": "只打敌对关系",
-  "beat": "不是敌人关系的不进名单。",
-  "detailTemplate": "只留敌对关系，名单{count}人。",
+  "title": "只留敌对关系的人",
+  "beat": "扇内先亮一片，敌对关系的留下。",
+  "detailTemplate": "敌对关系滤过，名单剩{count}人。",
   "assertDetailContains": [
-    "敌对关系"
+    "敌对关系",
+    "名单剩"
   ],
   "featuredNodeId": "relFilter",
   "graphKind": "Query",

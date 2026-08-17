@@ -26,6 +26,7 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
@@ -233,8 +234,8 @@ namespace Ludots.Adapter.Raylib
                 engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
                 var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
-                var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-                var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+                var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+                var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
                 screenProjector.BindPresenter(cameraPresenter);
                 screenRayProvider.BindPresenter(cameraPresenter);
                 screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
@@ -247,7 +248,7 @@ namespace Ludots.Adapter.Raylib
                 var presenterInstances = engine.GetService(CoreServiceKeys.PresenterEntityRuntime);
                 var cullingSystem = new CameraCullingSystem(
                     engine.World,
-                    engine.GameSession.Camera,
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                     engine.SpatialQueries,
                     viewController,
                     loadedChunks: null,
@@ -255,6 +256,7 @@ namespace Ludots.Adapter.Raylib
                     presenters: presenterInstances,
                     timingDiagnostics: presentationTiming,
                     cullingConfig: config.Presentation.CameraCulling);
+                cullingSystem.DisarmPresentBindingCulling();
                 engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
                 engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
@@ -325,6 +327,13 @@ namespace Ludots.Adapter.Raylib
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
                 engine.LoadStartupMap();
+                Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                    engine,
+                    screenProjector,
+                    screenRayProvider,
+                    viewController.Fov,
+                    viewController,
+                    cullingSystem);
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -445,20 +454,49 @@ namespace Ludots.Adapter.Raylib
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
+                        Ludots.Core.Client.PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                            engine,
+                            screenProjector,
+                            screenRayProvider,
+                            viewController.Fov,
+                            viewController,
+                            cullingSystem);
+
                         engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
                         engine.Tick(dt);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
                         {
-                            CameraState cameraState = engine.GameSession.Camera.State;
-                            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+                            var authorityCamera = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine);
+                            CameraState cameraState = authorityCamera.State;
+                            authorityCamera.ApplyPose(new CameraPoseRequest
                             {
                                 Yaw = WorldPlane2D.NormalizeDegreesPositive(cameraState.Yaw + (autoOrbitDegPerSecond * dt))
                             });
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
+                                engine,
+                                cameraPresenter,
+                                screenProjector,
+                                screenRayProvider,
+                                cameraAlpha,
+                                viewController.Fov,
+                                renderCameraDebug,
+                                viewController,
+                                cullingSystem))
+                        {
+                            if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
+                                seats != null &&
+                                seats.Count > 0)
+                            {
+                                throw new InvalidOperationException(
+                                    "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
+                            }
+
+                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), cameraAlpha, renderCameraDebug);
+                        }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(
                             presentationTiming,
@@ -1850,7 +1888,7 @@ namespace Ludots.Adapter.Raylib
                 captured;
 
             string dragSummary = "drag=inactive";
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
                 engine.World.Has<CommandSourceDragState>(localPlayer))
             {
@@ -1870,7 +1908,7 @@ namespace Ludots.Adapter.Raylib
             out EntityCollectionStore collections)
         {
             collections = default!;
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner) &&
                    engine.World.IsAlive(owner) &&
                    engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out collections) &&
                    collections != null;

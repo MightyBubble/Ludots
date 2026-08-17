@@ -8,6 +8,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
@@ -325,7 +326,7 @@ internal sealed class UxPrototypeRuntime
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;

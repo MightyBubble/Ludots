@@ -1,6 +1,6 @@
-# fx-07 editor spec · 生命周期与时长
+# fx-04 editor spec · 生命周期与时长
 
-> 编辑器实现任务书。编辑器需求见 [fx-06 UXD](../uxd/fx-04-lifetime.md)；引擎侧见 [runtime spec](../spec-runtime/fx-04-lifetime.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-04 UXD](../uxd/fx-04-lifetime.md)；引擎侧见 [runtime spec](../spec-runtime/fx-04-lifetime.md)。
 
 ## 1. 概述
 
@@ -21,4 +21,4 @@
 - 消费：效果表加载校验、clock 表、热替换管线。
 - 验收：三种寿命往返无损；全零块被即时拦截；热改时长下次施放生效。
 
-**相关文档**：[fx-06 UXD](../uxd/fx-04-lifetime.md) · [fx-06 runtime spec](../spec-runtime/fx-04-lifetime.md)
+**相关文档**：[fx-04 UXD](../uxd/fx-04-lifetime.md) · [fx-04 runtime spec](../spec-runtime/fx-04-lifetime.md)

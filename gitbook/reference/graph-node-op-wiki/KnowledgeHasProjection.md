@@ -1,6 +1,6 @@
-# 观众知不知道那个人
+# 观众名下有记录才看得见
 
-观众对木桩有知识投影就显示看得见。
+木桩有记录、亮着；陌生人没记录，连血条都不显示。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/poster.png" src="artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 观众对木桩看得见。
+> 观众对{result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 观众知不知道那个人
+Feature: 观众名下有记录才看得见
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_KnowledgeHasProjection
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_KnowledgeHasProjection/play.mp4
     When 短剧演完
-    Then 字幕讲的是「观众对木桩有知识投影就显示看得见。」这类人话
+    Then 字幕讲的是「木桩有记录、亮着；陌生人没记录，连血条都不显示。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

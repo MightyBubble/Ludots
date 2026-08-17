@@ -1,6 +1,6 @@
-# 贴着的六格邻居
+# 贴身六格邻居
 
-身边六格各站一个人就亮，再远一格的人是暗的。
+六个邻格描出来，格里的亮，多一格的灰着。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 身边六格亮了{count}个人，外面那个没亮。
+> 六格邻居{count}人亮，多一格都不算。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 贴着的六格邻居
+Feature: 贴身六格邻居
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryHexNeighbors
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryHexNeighbors/play.mp4
     When 短剧演完
-    Then 字幕讲的是「身边六格各站一个人就亮，再远一格的人是暗的。」这类人话
+    Then 字幕讲的是「六个邻格描出来，格里的亮，多一格的灰着。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

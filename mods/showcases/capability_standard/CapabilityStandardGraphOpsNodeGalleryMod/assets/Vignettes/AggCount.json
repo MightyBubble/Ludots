@@ -1,11 +1,11 @@
 {
   "op": "AggCount",
   "driver": "spatial",
-  "title": "圈里一共几个人",
-  "beat": "字幕报人数，舞台上那些人亮着。",
-  "detailTemplate": "圈里一共{count}个人。",
+  "title": "扇形里数出几个人",
+  "beat": "扇内每人头顶弹一下，刻痕一道道加上去。",
+  "detailTemplate": "扇形内共{count}人。",
   "assertDetailContains": [
-    "一共"
+    "扇形内共"
   ],
   "featuredNodeId": "count",
   "graphKind": "Query",

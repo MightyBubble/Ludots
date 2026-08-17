@@ -1,6 +1,6 @@
-# ai-07 配置说明 · 决策者与档案
+# ai-05 配置说明 · 决策者与档案
 
-> 配置写法与行为。第一性需求见 [ai-06 PRD](../prd/ai-05-dm-profiles.md)；编辑器需求见 [UXD](../uxd/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
+> 配置写法与行为。第一性需求见 [ai-05 PRD](../prd/ai-05-dm-profiles.md)；编辑器需求见 [UXD](../uxd/ai-05-dm-profiles.md)；现状见 [reference](../reference/ai-05-dm-profiles.md)。
 
 ## 1. 示例配置
 
@@ -57,7 +57,7 @@ profiles：
 | DecisionMakers | 必填 ≥1 | 决策者 id 数组；须连续区间 |
 | DecisionIntervalSteps | 1 | 思考步频，须为正 |
 | MaxCandidates | 64 | 单次评估候选上限，须为正 |
-| DefaultStance | 可选 | 语义键；`DefaultStanceId` 数字写法显式拒绝（编译了但暂无系统消费，@@ai7@@） |
+| DefaultStance | 可选 | 语义键；`DefaultStanceId` 数字写法显式拒绝（编译了但暂无系统消费，见 ai-08） |
 
 ## 3. 文件结构
 
@@ -80,4 +80,4 @@ profiles：
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decision_makers.json`（1 条）与 `profiles.json`（1 条，interval 1 / MaxCandidates 32）
 
-**相关文档**：[ai-06 PRD](../prd/ai-05-dm-profiles.md) · [ai-05 配置说明](ai-04-decisions.md) · [ent-01 配置说明](ent-01-templates.md)
+**相关文档**：[ai-05 PRD](../prd/ai-05-dm-profiles.md) · [ai-04 配置说明](ai-04-decisions.md) · [ent-01 配置说明](ent-01-templates.md)

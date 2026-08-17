@@ -29,7 +29,7 @@ namespace CoreInputMod.Systems
 
         public override void Update(in float dt)
         {
-            if (!_context.TryGetLocalPlayerId(out int playerId))
+            if (!_context.TryGetSolePossessedPlayerId(out int playerId))
             {
                 return;
             }

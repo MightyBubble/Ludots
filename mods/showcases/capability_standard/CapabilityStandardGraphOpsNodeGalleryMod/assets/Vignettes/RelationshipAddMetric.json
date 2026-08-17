@@ -2,10 +2,10 @@
   "op": "RelationshipAddMetric",
   "driver": "sandbox",
   "title": "好感再加一截",
-  "beat": "好感从 40 加到 70。",
-  "detailTemplate": "好感再加一截，写成{loyalty}。",
+  "beat": "记事板上好感条原本四成，新亮的一截补到七成。",
+  "detailTemplate": "好感从 40 加 30，记事板停在{loyalty}。",
   "assertDetailContains": [
-    "再加"
+    "记事板停在"
   ],
   "featuredNodeId": "addMetric",
   "graphKind": "Effect",

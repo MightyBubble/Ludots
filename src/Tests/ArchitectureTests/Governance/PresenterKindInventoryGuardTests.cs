@@ -53,6 +53,7 @@ namespace Ludots.Tests.Architecture.Governance
         {
             string[] expected =
             {
+                nameof(BehaviorKind.None),
                 nameof(BehaviorKind.AssetBinding),
                 nameof(BehaviorKind.AttributeBinding),
                 nameof(BehaviorKind.TagBinding),
@@ -66,6 +67,7 @@ namespace Ludots.Tests.Architecture.Governance
                 nameof(BehaviorKind.WorldText),
                 nameof(BehaviorKind.SurfaceSource),
                 nameof(BehaviorKind.InstancedBatch),
+                nameof(BehaviorKind.Extension),
             };
 
             AssertKindAllowlist(
@@ -85,6 +87,7 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That((byte)BehaviorKind.WorldText, Is.EqualTo(11));
             Assert.That((byte)BehaviorKind.SurfaceSource, Is.EqualTo(12));
             Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
+            Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
         }
 
         [Test]

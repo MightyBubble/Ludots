@@ -1,6 +1,6 @@
-# 吸到花名册里最近的人
+# 贴到花名册里最近的人
 
-落点吸到最近单位身上。
+X 标记离开原地，压到花名册里够得着的最近那人身上。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/poster.png" src="artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 落点已经吸到花名册里最近的人。
+> 落点吸到{result}身上。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 吸到花名册里最近的人
+Feature: 贴到花名册里最近的人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_SnapToNearestInCollection
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_SnapToNearestInCollection/play.mp4
     When 短剧演完
-    Then 字幕讲的是「落点吸到最近单位身上。」这类人话
+    Then 字幕讲的是「X 标记离开原地，压到花名册里够得着的最近那人身上。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

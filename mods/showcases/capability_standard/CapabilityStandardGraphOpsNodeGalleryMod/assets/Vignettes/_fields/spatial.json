@@ -38,8 +38,8 @@
       "role": "enemy",
       "template": "GraphOps.Target",
       "name": "北格的人",
-      "x": 3.46,
-      "y": 6.0,
+      "x": 2.6,
+      "y": 5.0,
       "health": 100,
       "healthMax": 100,
       "team": 2
@@ -71,8 +71,8 @@
       "role": "enemy",
       "template": "GraphOps.Target",
       "name": "西北格的人",
-      "x": -3.46,
-      "y": 6.0,
+      "x": -2.6,
+      "y": 5.0,
       "health": 100,
       "healthMax": 100,
       "team": 2
@@ -93,8 +93,8 @@
       "role": "enemy",
       "template": "GraphOps.Target",
       "name": "近处的人",
-      "x": 0.6,
-      "y": 0.2,
+      "x": 2.4,
+      "y": 1.96,
       "health": 100,
       "healthMax": 100,
       "team": 2
@@ -139,6 +139,39 @@
       "name": "西边的人",
       "x": -9.0,
       "y": 0.0,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "mercenary",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "雇佣兵",
+      "x": -1.2,
+      "y": 4.6,
+      "health": 100,
+      "healthMax": 100,
+      "team": 2
+    },
+    {
+      "id": "traitor",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "内奸",
+      "x": 1.2,
+      "y": 4.6,
+      "health": 100,
+      "healthMax": 100,
+      "team": 1
+    },
+    {
+      "id": "edgeOut",
+      "role": "enemy",
+      "template": "GraphOps.Target",
+      "name": "贴边的人",
+      "x": 4.1,
+      "y": 5.9,
       "health": 100,
       "healthMax": 100,
       "team": 2

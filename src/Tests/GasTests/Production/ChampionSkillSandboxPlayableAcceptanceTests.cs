@@ -37,6 +37,7 @@ using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -44,6 +45,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -209,7 +211,7 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "move_reposition");
             timeline.Add($"[T+006] Ezreal Alpha.Move(RMB) -> X {ezrealStart.X:0} to {ezrealAfterMove.X:0} to create spacing with a visible path overlay");
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            engine.AuthorityCamera().ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = SandboxTacticalCameraId,
                 TargetCm = new Vector2(2860f, 1620f),
@@ -222,7 +224,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => IsCameraNear(engine.GameSession.Camera.State, new Vector2(1850f, 980f), 3900f, 54f, 42f),
+                () => IsCameraNear(engine.AuthorityCamera().State, new Vector2(1850f, 980f), 3900f, 54f, 42f),
                 maxFrames: 6);
             Tick(engine, 2, frameTimesMs);
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "camera_reset");
@@ -686,7 +688,7 @@ namespace Ludots.Tests.GAS.Production
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "formations_saturated");
             timeline.Add($"[T+002] Formations saturated | A={saturated.TeamA} (W/F/L/P {saturated.TeamAWarriors}/{saturated.TeamAFireMages}/{saturated.TeamALaserMages}/{saturated.TeamAPriests}) | B={saturated.TeamB} (W/F/L/P {saturated.TeamBWarriors}/{saturated.TeamBFireMages}/{saturated.TeamBLaserMages}/{saturated.TeamBPriests})");
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity[] playerSelection =
             {
                 FindEntityByName(engine.World, "StressFireMageA"),
@@ -959,14 +961,14 @@ namespace Ludots.Tests.GAS.Production
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
@@ -1010,11 +1012,11 @@ namespace Ludots.Tests.GAS.Production
         private static void SelectNamedEntity(GameEngine engine, TestInputBackend backend, string name, List<double> frameTimesMs)
         {
             Entity target = FindEntityByName(engine.World, name);
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.World.IsAlive(owner))
             {
                 owner = target;
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+                ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
             }
 
             Span<Entity> next = stackalloc Entity[1];
@@ -1046,7 +1048,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
         }
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
@@ -1311,11 +1313,11 @@ namespace Ludots.Tests.GAS.Production
                 ActiveModeId: GetActiveModeId(engine),
                 SelectedEntity: selectedName,
                 Camera: new CameraSnapshot(
-                    engine.GameSession.Camera.State.TargetCm.X,
-                    engine.GameSession.Camera.State.TargetCm.Y,
-                    engine.GameSession.Camera.State.DistanceCm,
-                    engine.GameSession.Camera.State.Pitch,
-                    engine.GameSession.Camera.State.FovYDeg),
+                    engine.AuthorityCamera().State.TargetCm.X,
+                    engine.AuthorityCamera().State.TargetCm.Y,
+                    engine.AuthorityCamera().State.DistanceCm,
+                    engine.AuthorityCamera().State.Pitch,
+                    engine.AuthorityCamera().State.FovYDeg),
                 PanelSlots: CopySelectedSlots(engine),
                 OverlayCounts: new Dictionary<string, int>(StringComparer.Ordinal)
                 {
@@ -1981,7 +1983,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
         }
 
         private static string ReadHoveredEntityName(GameEngine engine)

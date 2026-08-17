@@ -6,21 +6,21 @@
 
 ## 事件与吸附
 
-- [从观众自己看](LoadViewer.md) — 镜头和观众实体被读出，字幕说从自己这侧看。
-- [吸到花名册里最近的人](SnapToNearestInCollection.md) — 落点吸到最近单位身上。
-- [打出一记并广播出去](SendEvent.md) — 木桩挨打，同时这件事被广播给听事件的人。
-- [找出谁说了算](ControlDomainResolve.md) — 单位归属到控制域代表，字幕说了算的是队长。
-- [按预设把效果派给圈里的人](FanOutDispatchEffect.md) — 圈中单位同时挨打、挂上派发出来的状态。
-- [模板号读出来再派发](FanOutDispatchEffectDynamic.md) — 先从事件里读出模板号，再按这个号把效果扇出给圈里的人。
+- [一路问到说了算的人](ControlDomainResolve.md) — 从小兵往上问，问到插旗的队长为止。
+- [从飞来的那一发里读出小数](LoadEventPayloadFloat.md) — 信号落地后，2.5 从事件里飞进信件板。
+- [从飞来的那一发里读出编号](LoadEventPayloadInt.md) — 信号落地后，编号从事件里飞进信件板。
+- [先接飞来的卡，再照卡发招](FanOutDispatchEffectDynamic.md) — 芯片插进空槽，圈里三人各挂上一枚铃。
+- [取出镜头背后的人](LoadViewer.md) — 眼睛徽章落在观众头上，观众飞进镜位槽。
+- [同一个兵，不是谁都指挥得动](ControlDomainControls.md) — 队长指挥队员是实线；反过来队员指挥队长，线断在半路。
+- [圈里圈外，当场见分晓](IsPointInCircle.md) — 圈里的点亮绿勾，圈外的点吃红叉。
+- [打出去，对方听得见](SendEvent.md) — 木桩挨打掉血，头顶的铃同时被这一下敲亮。
+- [按预设发同一招给全圈](FanOutDispatchEffect.md) — 卡一亮，圈内三人一起掉 18 血。
 - [离路太远就拽回路边](SnapToNearestGraphEdge.md) — X 从半空掉到路上，原位留下残影。
 - [落点拉回够得着的地方](ClampTargetToRange.md) — 点太远会被拉回射程圈内。
-- [观众知不知道那个人](KnowledgeHasProjection.md) — 观众对木桩有知识投影就显示看得见。
-- [读出事件里的小数](LoadEventPayloadFloat.md) — 事件带来的小数载荷显示在字幕。
-- [读出事件里的整数](LoadEventPayloadInt.md) — 事件带来的整数载荷显示在字幕。
-- [读出击落点的前后](LoadTargetPosY.md) — 落点前后坐标被读出，字幕报纵深位置。
-- [读出击落点的左右](LoadTargetPosX.md) — 落点左右坐标被读出，字幕报水平位置。
-- [这一点在不在圈里](IsPointInCircle.md) — 落点在圈内显示在圈里，圈外显示在圈外。
-- [这个人能不能指挥那个](ControlDomainControls.md) — 队长能指挥队员显示管得着。
+- [观众名下有记录才看得见](KnowledgeHasProjection.md) — 木桩有记录、亮着；陌生人没记录，连血条都不显示。
+- [读出落点在东西标尺上的读数](LoadTargetPosX.md) — 虚线打到标尺上，亮出 360。
+- [读出落点在南北标尺上的读数](LoadTargetPosY.md) — 虚线打到标尺上，亮出 200。
+- [贴到花名册里最近的人](SnapToNearestInCollection.md) — X 标记离开原地，压到花名册里够得着的最近那人身上。
 
 ## 关系与好感
 
@@ -44,55 +44,55 @@
 
 ## 名单筛选与汇总
 
-- [只留下侦察兵](QueryFilterTemplate.md) — 士兵暗、侦察兵亮。
-- [只留下敌对阵营](QueryFilterTeam.md) — 友军被滤掉，敌人亮。
-- [只留下残血的人](QueryFilterAttributeRange.md) — 生命低于阈值的人亮。
-- [只看花名册上的人](QueryFromCollection.md) — 小队花名册里的人亮，册外的不亮。
-- [平均生命多少](AggAverageAttribute.md) — 字幕报平均。
-- [把场上的人都找出来](QueryAllMapEntities.md) — 全图搜到一圈人，字幕报人数。
-- [把生命加总](AggSumAttribute.md) — 字幕报生命总和。
+- [全场平均血量](AggAverageAttribute.md) — 十三个人的血条凑上台面，台面亮出平均数。
+- [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
+- [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
+- [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
+- [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
+- [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
+- [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
+- [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
+- [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
 - [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
-- [最低生命是多少](AggMinAttribute.md) — 最低值。
-- [最高生命是多少](AggMaxAttribute.md) — 最高值+对应人高亮。
-- [没有阵亡标记的人](QueryFilterTagNone.md) — 死掉的被滤掉。
-- [谁最残](AggMinEntityByAttribute.md) — 最残的人被点名。
-- [谁最能打（血最厚）](AggMaxEntityByAttribute.md) — 最厚的人被点名。
-- [身上带着敌人标记的人](QueryFilterTagAny.md) — 有敌人标记的亮。
+- [摘掉阵亡徽的留下](QueryFilterTagNone.md) — 戴阵亡徽的退成灰影，没戴徽的留着圈。
+- [点名最残的那个](AggMinEntityByAttribute.md) — 全场退成灰影，空血条那个被点名徽钉住。
+- [点名最能扛的](AggMaxEntityByAttribute.md) — 全场退成灰影，满血条那个被点名徽钉住。
+- [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。
 
 ## 属性与效果
 
-- [从这一击的情境里取出目标](LoadContextTarget.md) — 情境里的目标就是木桩，读出来再扣血。
+- [先对脸：打的是不是自己](CompareEqEntity.md) — 残影演示点名自己→同一个人，收手；点名木桩→不是同一人，一刀扣 18。
 - [先开生命台账再动土](BeginLifecycleTransaction.md) — 账本一开，造身记上一笔；账一关，新身体已站在场上。
-- [先看对方还有多少血](LoadAttribute.md) — 出手前先读木桩当前生命，字幕报出读到的数。
-- [写死的整数](ConstInt.md) — 这一刀的层数写死是 3，不读装备。
-- [层数有没有叠满](CompareEqInt.md) — 当前 3 层对比满层 3，叠满就爆。
-- [打的是不是自己](CompareEqEntity.md) — 点名目标和施法者不是同一人，这一刀打出去；若是自己就收手。
-- [把状态卸掉](RemoveEffectTemplate.md) — 先挂上再卸掉，字幕说卸效果。
-- [有条件就换目标](SelectEntity.md) — 条件成立时改打木桩，不成立打自己。
-- [直接扣血](ModifyAttributeAdd.md) — 不绕圈子，木桩血条按加算结果往下掉。
-- [看自己还剩多少血](LoadSelfAttribute.md) — 不靠情境，施法者读自己生命，字幕报出。
+- [先认出是谁出手](LoadCaster.md) — 白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。
+- [写死的整数：一刀三层](ConstInt.md) — 铭牌铸死数字 3，带锁印；取数后木桩头顶亮三层空圈。
+- [出手前先看一眼对方的血](LoadAttribute.md) — 黄虚线搭到木桩，读出当前生命，头顶浮出 80。
+- [层数叠满就引爆](CompareEqInt.md) — 三层火苗对满层 3，天平对齐，爆出一击扣 18 血。
+- [岔路口选人打](SelectEntity.md) — 残影幕条件不成立→挑了自己挨打；正幕条件成立→挑了木桩，扣 18。
+- [把血直接写成 90](WriteSelfAttribute.md) — 施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。
+- [把身上的状态摘掉](RemoveEffectTemplate.md) — 木桩头顶紫色标记先挂着，白弧扫过，标记碎掉消失，血条不动。
+- [点名谁就打谁](LoadExplicitTarget.md) — 红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。
+- [直接在血条上做加法](ModifyAttributeAdd.md) — 一刀 -25 写进血条，木桩 100 掉到 75，头顶浮出 -25。
+- [看自己还剩多少血](LoadSelfAttribute.md) — 自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 - [给木桩挂上看得见的状态](ApplyEffectTemplate.md) — 红线贴附不扣血：木桩头顶钉上紫色标记，带光环，血条不动。
-- [给自己回一口](WriteSelfAttribute.md) — 施法者血从 60 写回 90，金块血条涨上去。
-- [血量够不够打全力](CompareLtInt.md) — 木桩血低于 80 就打全力，否则轻击。
-- [认出自己](LoadCaster.md) — 图从施法者自己读起，确认出手的人是台上这个金块。
+- [血量过线没：过线轻击，没过线全力](CompareLtInt.md) — 木桩 50 血低于 80 刻线，标尺闪红，全力一击扣 18，掉到 32。
 - [账本里的步骤逐条办](InvokeBuiltin.md) — 造出新身体，再把新身体的效果挂架扫净。
-- [连击数加一](AddInt.md) — 连击从 2 加到 3，字幕报连击。
-- [锁定点名目标](LoadExplicitTarget.md) — 点到谁就打谁，血条在被点名的红块上掉。
+- [这一击的单据上写着打谁](LoadContextTarget.md) — 从这一击自带单据里取出目标，取到木桩，扣 12 血。
+- [连击数加一](AddInt.md) — 两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。
 
 ## 空间圈人
 
-- [只取这一圈六角环](QueryHexRing.md) — 只有环上的人亮，里圈和环外都不亮。
-- [只打敌对关系](QueryFilterRelationship.md) — 不是敌人关系的不进名单。
-- [只打敌对层](QueryFilterLayer.md) — 友军层被滤掉，只留敌人。
-- [圈人时排除自己](QueryFilterNotEntity.md) — 自己在圈里但不进名单。
-- [圈里一共几个人](AggCount.md) — 字幕报人数，舞台上那些人亮着。
-- [扇形里有谁](QueryCone.md) — 面前扇形扫过，扇里的人亮、扇外的人暗。
-- [点名单上的第一个](TargetListGet.md) — 名单第一人被点名，血条或高亮在他身上。
-- [矩形里有谁](QueryRectangle.md) — 身前一块矩形框人。
-- [谁离我最近](AggMinByDistance.md) — 最近的那个人闪出来。
-- [贴着的六格邻居](QueryHexNeighbors.md) — 身边六格各站一个人就亮，再远一格的人是暗的。
-- [这几格六角范围内](QueryHexRange.md) — 两格以内的人亮，再远一格的人是暗的。
-- [这条线上有谁](QueryLine.md) — 一道直线穿过去点到的人。
+- [两格以内的六角范围](QueryHexRange.md) — 范围内格子描黄框，第三格描灰框，人也不亮。
+- [只取半径 2 的六角环](QueryHexRing.md) — 描边那一圈上的人亮，里圈和更外圈都不亮。
+- [只留敌对关系的人](QueryFilterRelationship.md) — 扇内先亮一片，敌对关系的留下。
+- [只留敌方层的人](QueryFilterLayer.md) — 扇内先亮一片，敌方层的留下。
+- [圈人时把你自己抠出去](QueryFilterNotEntity.md) — 滤前自己也在名单里，一步后自己暗掉。
+- [扇形里数出几个人](AggCount.md) — 扇内每人头顶弹一下，刻痕一道道加上去。
+- [扇形里谁离我最近](AggMinByDistance.md) — 每人拉一条线，最短的那条留下。
+- [按名单取第一个](TargetListGet.md) — 名单按序编号，红线只连 1 号。
+- [朝这个方向的扇形里有谁](QueryCone.md) — 描边扇形罩住的人亮，贴着边站歪一点的不亮。
+- [贴身六格邻居](QueryHexNeighbors.md) — 六个邻格描出来，格里的亮，多一格的灰着。
+- [身前这块矩形里有谁](QueryRectangle.md) — 身前的框描出来，框里的人亮。
+- [这条窄线穿过谁](QueryLine.md) — 带内的人亮，贴着带边差几厘米的也不亮。
 
 ## 算术与比较
 
@@ -103,37 +103,40 @@
 - [伤害拉长一半](MulFloat.md) — 20 的伤害段被拉长一半，原样留着影子，拉成多长就掉多少血。
 - [刻死的一刀](ConstFloat.md) — 台上没有表盘，只有一块刻好长度的铭牌；每一刀都和铭牌一样长。
 - [对折零轴取长度](AbsFloat.md) — 负 8 的修正段沿零轴对折，折过来的长度是多少就打多少。
+- [按编号翻名册点将](ResolveTableRow.md) — 报出 2 号，名册翻到那一行，册上的扣血照着木桩落下。
 - [撞到上限就停](ClampFloat.md) — 90 的伤害段沿轨道左移，撞上 40 的墙就停住，打出去的是停下来的那一段。
 - [格挡先咬掉一截](SubFloat.md) — 50 的伤害段送到木桩前，格挡块先咬掉头上的 12，剩下的才进血条。
 - [永远放行的许可](ConstBool.md) — 门闩每一拍都开着，亮一个绿点放一刀，一排刻记里从来没有红点。
 - [砍不砍得死，比一下](CompareGtFloat.md) — 同样长的一刀，血条比它长的木桩挨不动，血条比它短的木桩一刀就没。
+- [读名册上的扣血力度](TableReadFloat.md) — 同一行名册，读出这一击该扣多少血，木桩照单落账。
+- [读名册上的星数](TableReadInt.md) — 点到 2 号那行，册上记着三颗星，照数挂印。
 - [负债翻面成正数](NegFloat.md) — 负 8 的欠条摆在零轴左边，沿零轴翻到右边变成正 8，翻过来的就是打出去的一刀。
 - [骰子决定这一刀](RandomFloat01.md) — 每一拍重掷一次骰子，掷出多长这一刀就多长，一列掷点史里没有两根一样长。
 
 ## 组合短剧
 
-- [先把关系链接上](RelationshipEnsureLink.md) — 施法者和盟友之间出现友谊/好感链。
-- [只点最近的几个](QueryLimit.md) — 圈里很多人，只留下前 3 个。
-- [圈里每人挂一层](FanOutApplyEffect.md) — 圈中单位都被挂上状态，血条或字幕说挂上了。
-- [圈里的人排个稳定顺序](QuerySortStable.md) — 同样距离时顺序不乱跳。
-- [好感再加一截](RelationshipAddMetric.md) — 好感从 40 加到 70。
-- [把好感写成指定值](RelationshipSetMetric.md) — 好感被写成 80。
-- [按读到的模板打到点名目标](ApplyEffectDynamic.md) — 模板号不是写死的，读出来再打木桩。
-- [按读到的模板打圈里所有人](FanOutApplyEffectDynamic.md) — 动态模板扇出。
-- [摸一圈看看谁在近处](QueryRadius.md) — 施法者周围一圈亮起来，圈外的人不动。
-- [身上有没有敌人标记](HasTag.md) — 侦察兵带着敌人标记，检查为「有」。
-- [这条关系受不受信任](RelationshipHasFlag.md) — 信任旗开着，字幕说信得过。
+- [先翻出一张效果牌，再照着打](ApplyEffectDynamic.md) — 施法者从抽屉翻出一张牌，木桩照着牌掉了一截血。
+- [名单取前三个](QueryLimit.md) — 圈里五个人各有一个编号，亮着的是编号最靠前的三个。
+- [圈里每人挨一记](FanOutApplyEffect.md) — 黄圈内五个人同时掉一截血，圈外两个没事。
+- [好感再加一截](RelationshipAddMetric.md) — 记事板上好感条原本四成，新亮的一截补到七成。
+- [好感直接写成指定值](RelationshipSetMetric.md) — 灰色的旧条被一条更长的绿条整个换掉。
+- [把两人连成一条关系链](RelationshipEnsureLink.md) — 灰色虚线先比划一下，然后咔哒扣成青色实线。
+- [查一查身上有没有那枚标记](HasTag.md) — 带标记的侦察兵亮绿圈，没标记的那个查完没反应。
+- [点名名单按编号排好，次次一样](QuerySortStable.md) — 每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。
+- [站圈心喊一嗓子，看看圈里有谁](QueryRadius.md) — 黄圈内五个兵亮起来，施法者自己不算，圈外两人没反应。
+- [翻出一张牌，圈里每人照牌挨一下](FanOutApplyEffectDynamic.md) — 先翻牌再动手：圈内五个人同时掉一截血，圈外没事。
+- [这条关系上插没插信任旗](RelationshipHasFlag.md) — 青色链上插着绿旗，旗子闪两下；没链的那位啥也没有。
 
 ## 脚本控制流
 
-- [出门办事再回来](Call.md) — 走到驿站办完事再回到原点，像叫了一声子程序。
-- [办完事交回](Return.md) — 子程序结束，人回到主线。
-- [把定数管线跑一遍](InvokeScript.md) — 叫另一张图来算出 7。
-- [把数字挪到下一个格子](MoveInt.md) — 3 被挪到结果槽，字幕报 3。
-- [没满就再续一杯](JumpIfFalse.md) — 茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。
-- [算出一个整数就收工](HaltReturnInt.md) — 管线算出 7 就停，字幕报 7。
+- [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
+- [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
+- [叫另一张图来帮忙算](InvokeScript.md) — 主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
+- [把 3 抄一份到结果槽](MoveInt.md) — 左边格子里的 3 原样不动，右边结果格里多出一份 3。
+- [没满就再续一杯](JumpIfFalse.md) — 茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
+- [满了就跳过续杯](Jump.md) — 杯是满的：续杯那几行被划掉，指针直接飞到收工行。
+- [算出一个整数就收工](HaltReturnInt.md) — 数落进托盘、卷轴拉下打烊条、人挪到答案旁边——这三件事同时发生，就是收工。
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
-- [跳过这一口](Jump.md) — 茶杯已经满了，直接跳到收束，不再续杯。
 
 ## 黑板与配置
 

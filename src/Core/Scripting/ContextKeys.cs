@@ -87,7 +87,8 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRequest = "VirtualCameraRequest";
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
-        public const string LocalPlayerEntity = "LocalPlayerEntity";
+        public const string ClientLocalSeatRegistry = "ClientLocalSeatRegistry";
+        public const string LogicViewRegistry = "LogicViewRegistry";
         public const string TabTargetEntity = "TabTargetEntity";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";

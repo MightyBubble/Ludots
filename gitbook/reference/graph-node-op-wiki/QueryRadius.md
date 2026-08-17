@@ -1,6 +1,6 @@
-# 摸一圈看看谁在近处
+# 站圈心喊一嗓子，看看圈里有谁
 
-施法者周围一圈亮起来，圈外的人不动。
+黄圈内五个兵亮起来，施法者自己不算，圈外两人没反应。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryRadius/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryRadius/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryRadius/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 施法者周围一圈亮起来，摸到{count}个近处的人，圈外的人不动。
+> 圈内亮起{count}个兵，不含施法者；圈外两人不亮。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 摸一圈看看谁在近处
+Feature: 站圈心喊一嗓子，看看圈里有谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryRadius
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryRadius/play.mp4
     When 短剧演完
-    Then 字幕讲的是「施法者周围一圈亮起来，圈外的人不动。」这类人话
+    Then 字幕讲的是「黄圈内五个兵亮起来，施法者自己不算，圈外两人没反应。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

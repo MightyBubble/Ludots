@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryHexRing",
-  "windowTitle": "Ludots - 只取这一圈六角环",
+  "windowTitle": "Ludots - 只取半径 2 的六角环",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

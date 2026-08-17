@@ -9,7 +9,7 @@ public sealed class OwnershipCascadeConfig
     public string Header { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public string Controls { get; set; } = string.Empty;
-    public string LocalPlayerName { get; set; } = string.Empty;
+    public string PlayerRepName { get; set; } = string.Empty;
     public string EnemyPlayerName { get; set; } = string.Empty;
     public string CityName { get; set; } = string.Empty;
     public string GarrisonName { get; set; } = string.Empty;
@@ -26,7 +26,7 @@ public sealed class OwnershipCascadeConfig
             ?? throw new InvalidOperationException("Ownership cascade config is empty.");
 
         Require(config.Header, nameof(Header));
-        Require(config.LocalPlayerName, nameof(LocalPlayerName));
+        Require(config.PlayerRepName, nameof(PlayerRepName));
         Require(config.EnemyPlayerName, nameof(EnemyPlayerName));
         Require(config.CityName, nameof(CityName));
         Require(config.GarrisonName, nameof(GarrisonName));

@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformanceVisualizationMod.UI;
@@ -37,7 +38,6 @@ namespace PerformanceVisualizationMod.Runtime
 
         private const int SpawnBatchSize = 2048;
         private const int DestroyBatchSize = 2048;
-        private const int ShowcaseLocalPlayerId = 1;
         private const int LiveKnowledgeConfidencePermille = 1000;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
@@ -65,7 +65,6 @@ namespace PerformanceVisualizationMod.Runtime
         private int _healthAttributeId;
         private int _benchmarkCubeDefinitionId;
         private Entity _audienceViewer = Entity.Null;
-        private bool _ownsAudienceViewer;
         private uint _directHudRandomState = 0x5EED_1000u;
 
         public VisualBenchmarkRuntime(IModContext context)
@@ -290,13 +289,13 @@ namespace PerformanceVisualizationMod.Runtime
 
         internal VisualBenchmarkPanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new VisualBenchmarkPanelState(
                 Title: "Visual Benchmark Showcase",
                 Status: _status,
                 Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
                 Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | ScreenHUD Items: {_screenHudCount:N0} | Drops W:{_lastHudDropped:N0}/S:{_screenHudDropped:N0}",
-                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
+                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm:0}",
                 Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate presenter HUD, 32K for pure visual stress, HUD100K/SkiaHotpath for direct screen-HUD overlay throughput.",
                 Actions: new[]
                 {
@@ -539,69 +538,18 @@ namespace PerformanceVisualizationMod.Runtime
         {
             if (_audienceViewer != Entity.Null && engine.World.IsAlive(_audienceViewer))
             {
-                PublishBenchmarkAudience(engine, _audienceViewer);
                 return _audienceViewer;
             }
 
-            if (TryResolveLiveLocalPlayer(engine, out Entity existingViewer))
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
             {
-                _audienceViewer = existingViewer;
-                _ownsAudienceViewer = false;
-                return existingViewer;
+                throw new InvalidOperationException(
+                    "PerformanceVisualizationMod requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity viewer = engine.World.Create(
-                new Name { Value = "Performance Visualization Viewer" },
-                new PlayerOwner { PlayerId = ShowcaseLocalPlayerId });
             _audienceViewer = viewer;
-            _ownsAudienceViewer = true;
-            PublishBenchmarkAudience(engine, viewer);
             return viewer;
-        }
-
-        private static bool TryResolveLiveLocalPlayer(GameEngine engine, out Entity viewer)
-        {
-            viewer = Entity.Null;
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
-                serviceViewer != Entity.Null &&
-                engine.World.IsAlive(serviceViewer))
-            {
-                viewer = serviceViewer;
-                return true;
-            }
-
-            Entity sessionViewer = engine.CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
-            if (sessionViewer != Entity.Null && engine.World.IsAlive(sessionViewer))
-            {
-                viewer = sessionViewer;
-                return true;
-            }
-
-            return false;
-        }
-
-        private static void PublishBenchmarkAudience(GameEngine engine, Entity viewer)
-        {
-            if (viewer == Entity.Null || !engine.World.IsAlive(viewer))
-            {
-                throw new InvalidOperationException("PerformanceVisualizationMod requires a live local audience before publishing benchmark HUD knowledge.");
-            }
-
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
-
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = viewer;
-            }
-
-            if (engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0)
-            {
-                engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
-                }
-            }
         }
 
         private static KnowledgeProjectionStore RequireKnowledgeStore(GameEngine engine)
@@ -624,33 +572,8 @@ namespace PerformanceVisualizationMod.Runtime
 
         private void ClearOwnedBenchmarkAudience(GameEngine engine)
         {
-            if (!_ownsAudienceViewer || _audienceViewer == Entity.Null)
-            {
-                _audienceViewer = Entity.Null;
-                _ownsAudienceViewer = false;
-                return;
-            }
-
-            Entity viewer = _audienceViewer;
-            if (engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is KnowledgeProjectionStore knowledge)
-            {
-                knowledge.ClearViewer(viewer);
-            }
-
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
-                serviceViewer == viewer)
-            {
-                engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
-                engine.RemoveService(CoreServiceKeys.LocalPlayerId);
-            }
-
-            if (engine.World.IsAlive(viewer))
-            {
-                engine.World.Destroy(viewer);
-            }
-
+            _ = engine;
             _audienceViewer = Entity.Null;
-            _ownsAudienceViewer = false;
         }
 
         private static bool MatchesScenarioEntity(in MapEntity mapEntity, in Name name, in MapId currentMapId)

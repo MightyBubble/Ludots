@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadTargetPosY",
-  "windowTitle": "Ludots - 读出击落点的前后",
+  "windowTitle": "Ludots - 读出落点在南北标尺上的读数",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,
