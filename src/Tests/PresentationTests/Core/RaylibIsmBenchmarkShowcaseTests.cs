@@ -9,6 +9,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.Presentation
 {
@@ -35,7 +36,7 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             var modPaths = RepoModPaths.ResolveExplicit(
                 repoRoot,
-                new[] { "LudotsCoreMod", "CoreInputMod", "PresenterBlacksmithShowcaseMod", "RaylibIsmBenchmarkShowcaseMod" });
+                new[] { "LudotsCoreMod", "CoreInputMod", "RaylibPlatformMeshesMod", "RaylibIsmBenchmarkShowcaseMod" });
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
