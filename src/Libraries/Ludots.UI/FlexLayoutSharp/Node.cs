@@ -31,8 +31,8 @@ public class Node
 
 	internal readonly Value[] resolvedDimensions = new Value[2]
 	{
-		Flex.ValueUndefined,
-		Flex.ValueUndefined
+		new Value(float.NaN, Unit.Undefined),
+		new Value(float.NaN, Unit.Undefined)
 	};
 
 	public object Context;

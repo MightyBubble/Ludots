@@ -35,6 +35,7 @@ void RunComposeSuite()
     suite.CaptureFocus("compose-phase5-mid", scene, "compose-phase5-pulse", "Compose Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Compose keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("compose-phase5-end", scene, "compose-phase5-pulse", "Compose Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("compose-phase6", scene, "compose-phase6-panel", "Compose Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "compose-transition-probe", "Compose transition probe enters focus state on the same DOM node.");
     suite.Advance(scene, 0.16f, "Compose transition runtime advances native tween interpolation.");
     suite.CaptureFocus("compose-transition", scene, "compose-appearance-row", "Compose transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);
@@ -82,6 +83,7 @@ void RunReactiveSuite()
     suite.CaptureFocus("reactive-phase5-mid", scene, "reactive-phase5-pulse", "Reactive Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Reactive keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("reactive-phase5-end", scene, "reactive-phase5-pulse", "Reactive Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("reactive-phase6", scene, "reactive-phase6-panel", "Reactive Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "reactive-transition-probe", "Reactive transition probe enters focus state on the same DOM node.");
     suite.Advance(scene, 0.16f, "Reactive transition runtime advances native tween interpolation.");
     suite.CaptureFocus("reactive-transition", scene, "reactive-appearance-row", "Reactive transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);
@@ -129,6 +131,7 @@ void RunMarkupSuite()
     suite.CaptureFocus("markup-phase5-mid", scene, "markup-phase5-pulse", "Markup Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Markup keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("markup-phase5-end", scene, "markup-phase5-pulse", "Markup Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("markup-phase6", scene, "markup-phase6-panel", "Markup Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "markup-transition-probe", "Markup transition probe enters focus state without JS.");
     suite.Advance(scene, 0.16f, "Markup transition runtime advances native tween interpolation.");
     suite.CaptureFocus("markup-transition", scene, "markup-appearance-row", "Markup transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);
@@ -215,8 +218,8 @@ void RunNineSlicePanelSuite()
     CaptureSuite suite = new("UI Ink Frame Lab", root, renderer);
     UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(textMeasurer, imageSizeProvider);
     suite.Capture("frame-nine", scene, "Ink-wash nine-slice scroll with SVG seal overlay.");
-    suite.Advance(scene, 0.45f, "Let the SVG seal breathe once.");
-    suite.Capture("frame-nine-breathe", scene, "Seal opacity mid-breath proves CSS animation clock.");
+    suite.Advance(scene, 0.45f, "Let the SVG seal breathe and rotate once.");
+    suite.Capture("frame-nine-breathe", scene, "Seal opacity and transform mid-breath prove CSS animation clock.");
     suite.Click(scene, "mode-three", "Switch to three-slice ink ribbons.");
     suite.Capture("frame-three", scene, "Short vs long ink tags: brush tips fixed, middle paper stretches.");
     suite.Click(scene, "mode-two", "Switch to two-way continuous cloud strips.");
@@ -224,14 +227,14 @@ void RunNineSlicePanelSuite()
     suite.Click(scene, "mode-four", "Switch to four-way bamboo mist tile.");
     suite.Capture("frame-four", scene, "Seamless ink tile fill across the stage.");
     suite.Click(scene, "mode-motion", "Switch to SVG motion lab.");
-    suite.Capture("frame-motion", scene, "SVG brush and seal with breathing opacity and border pulse.");
+    suite.Capture("frame-motion", scene, "SVG brush and seal with translate/rotate/scale and border pulse.");
     suite.Advance(scene, 0.5f, "Advance motion lab animations.");
-    suite.Capture("frame-motion-breathe", scene, "Motion lab mid-breath state.");
+    suite.Capture("frame-motion-breathe", scene, "Motion lab mid-transform state.");
     suite.WriteReport(
         new[]
         {
             "- PASS: ink-wash nine/three-slice and two/four-way tiles share the same contracts.",
-            "- PASS: SVG seal/brush load via data URI and breathe through UiScene.AdvanceTime.",
+            "- PASS: SVG seal/brush load via data URI; keyframes drive opacity and transform via UiScene.AdvanceTime.",
             "- PASS: mode chips switch visible demos; chip labels stay centered."
         },
         "flowchart TD\n    A[Nine] --> B[Advance breathe]\n    B --> C[Three]\n    C --> D[Two]\n    D --> E[Four]\n    E --> F[SVG Motion]\n    F --> G[Advance breathe]\n");
@@ -239,3 +242,4 @@ void RunNineSlicePanelSuite()
     string gallery = Path.Combine(root, "nineslice-compact.png");
     File.Copy(hero, gallery, overwrite: true);
 }
+

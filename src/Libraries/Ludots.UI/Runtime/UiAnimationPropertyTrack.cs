@@ -11,6 +11,8 @@ internal sealed class UiAnimationPropertyTrack
 
 	private readonly UiAnimationColorStop[] _colorStops;
 
+	private readonly UiAnimationTransformStop[] _transformStops;
+
 	public string PropertyName { get; }
 
 	private UiAnimationPropertyTrack(string propertyName, UiAnimationFloatStop[] floatStops)
@@ -19,6 +21,7 @@ internal sealed class UiAnimationPropertyTrack
 		_kind = UiAnimationTrackKind.Float;
 		_floatStops = floatStops;
 		_colorStops = Array.Empty<UiAnimationColorStop>();
+		_transformStops = Array.Empty<UiAnimationTransformStop>();
 	}
 
 	private UiAnimationPropertyTrack(string propertyName, UiAnimationColorStop[] colorStops)
@@ -27,6 +30,16 @@ internal sealed class UiAnimationPropertyTrack
 		_kind = UiAnimationTrackKind.Color;
 		_colorStops = colorStops;
 		_floatStops = Array.Empty<UiAnimationFloatStop>();
+		_transformStops = Array.Empty<UiAnimationTransformStop>();
+	}
+
+	private UiAnimationPropertyTrack(string propertyName, UiAnimationTransformStop[] transformStops)
+	{
+		PropertyName = propertyName;
+		_kind = UiAnimationTrackKind.Transform;
+		_transformStops = transformStops;
+		_floatStops = Array.Empty<UiAnimationFloatStop>();
+		_colorStops = Array.Empty<UiAnimationColorStop>();
 	}
 
 	public static UiAnimationPropertyTrack CreateFloat(string propertyName, UiAnimationFloatStop[] stops)
@@ -39,17 +52,20 @@ internal sealed class UiAnimationPropertyTrack
 		return new UiAnimationPropertyTrack(propertyName, stops);
 	}
 
+	public static UiAnimationPropertyTrack CreateTransform(string propertyName, UiAnimationTransformStop[] stops)
+	{
+		return new UiAnimationPropertyTrack(propertyName, stops);
+	}
+
 	public UiStyle Apply(UiStyle style, float progress)
 	{
-		UiAnimationTrackKind kind = _kind;
-		if (1 == 0)
+		return _kind switch
 		{
-		}
-		UiStyle result = ((kind != UiAnimationTrackKind.Float) ? UiTransitionMath.ApplyColor(style, PropertyName, Evaluate(_colorStops, progress)) : UiTransitionMath.ApplyFloat(style, PropertyName, Evaluate(_floatStops, progress)));
-		if (1 == 0)
-		{
-		}
-		return result;
+			UiAnimationTrackKind.Float => UiTransitionMath.ApplyFloat(style, PropertyName, Evaluate(_floatStops, progress)),
+			UiAnimationTrackKind.Color => UiTransitionMath.ApplyColor(style, PropertyName, Evaluate(_colorStops, progress)),
+			UiAnimationTrackKind.Transform => UiTransitionMath.ApplyTransform(style, Evaluate(_transformStops, progress)),
+			_ => style,
+		};
 	}
 
 	private static float Evaluate(IReadOnlyList<UiAnimationFloatStop> stops, float progress)
@@ -64,14 +80,15 @@ internal sealed class UiAnimationPropertyTrack
 		}
 		for (int i = 1; i < stops.Count; i++)
 		{
-			UiAnimationFloatStop uiAnimationFloatStop = stops[i];
-			if (!(progress > uiAnimationFloatStop.Offset))
+			UiAnimationFloatStop next = stops[i];
+			if (progress > next.Offset)
 			{
-				UiAnimationFloatStop uiAnimationFloatStop2 = stops[i - 1];
-				float num = Math.Max(0.0001f, uiAnimationFloatStop.Offset - uiAnimationFloatStop2.Offset);
-				float progress2 = Math.Clamp((progress - uiAnimationFloatStop2.Offset) / num, 0f, 1f);
-				return UiTransitionMath.Lerp(uiAnimationFloatStop2.Value, uiAnimationFloatStop.Value, progress2);
+				continue;
 			}
+			UiAnimationFloatStop previous = stops[i - 1];
+			float span = Math.Max(0.0001f, next.Offset - previous.Offset);
+			float local = Math.Clamp((progress - previous.Offset) / span, 0f, 1f);
+			return UiTransitionMath.Lerp(previous.Value, next.Value, local);
 		}
 		return stops[stops.Count - 1].Value;
 	}
@@ -88,14 +105,44 @@ internal sealed class UiAnimationPropertyTrack
 		}
 		for (int i = 1; i < stops.Count; i++)
 		{
-			UiAnimationColorStop uiAnimationColorStop = stops[i];
-			if (!(progress > uiAnimationColorStop.Offset))
+			UiAnimationColorStop next = stops[i];
+			if (progress > next.Offset)
 			{
-				UiAnimationColorStop uiAnimationColorStop2 = stops[i - 1];
-				float num = Math.Max(0.0001f, uiAnimationColorStop.Offset - uiAnimationColorStop2.Offset);
-				float progress2 = Math.Clamp((progress - uiAnimationColorStop2.Offset) / num, 0f, 1f);
-				return UiTransitionMath.Lerp(uiAnimationColorStop2.Value, uiAnimationColorStop.Value, progress2);
+				continue;
 			}
+			UiAnimationColorStop previous = stops[i - 1];
+			float span = Math.Max(0.0001f, next.Offset - previous.Offset);
+			float local = Math.Clamp((progress - previous.Offset) / span, 0f, 1f);
+			return UiTransitionMath.Lerp(previous.Value, next.Value, local);
+		}
+		return stops[stops.Count - 1].Value;
+	}
+
+	private static UiTransform Evaluate(IReadOnlyList<UiAnimationTransformStop> stops, float progress)
+	{
+		if (stops.Count == 0)
+		{
+			return UiTransform.Identity;
+		}
+		if (progress <= stops[0].Offset)
+		{
+			return stops[0].Value;
+		}
+		for (int i = 1; i < stops.Count; i++)
+		{
+			UiAnimationTransformStop next = stops[i];
+			if (progress > next.Offset)
+			{
+				continue;
+			}
+			UiAnimationTransformStop previous = stops[i - 1];
+			float span = Math.Max(0.0001f, next.Offset - previous.Offset);
+			float local = Math.Clamp((progress - previous.Offset) / span, 0f, 1f);
+			if (!UiTransitionMath.TryLerp(previous.Value, next.Value, local, out UiTransform lerped))
+			{
+				return previous.Value;
+			}
+			return lerped;
 		}
 		return stops[stops.Count - 1].Value;
 	}

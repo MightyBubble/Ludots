@@ -6145,7 +6145,7 @@
       "path": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
       "projectPath": "UiNineSlicePanelShowcaseMod.csproj",
       "title": "墨痕怎么裁、怎么铺",
-      "summary": "水墨风拟物框：九/三宫格、二方/四方连续，外加 SVG 朱印与墨迹呼吸动效。",
+      "summary": "水墨风拟物框：九/三宫格、二方/四方连续，外加 SVG 朱印与位移/旋转/缩放动效。",
       "tier": "T2",
       "category": "panel",
       "binding": "ui_nineslice_panel_showcase",
