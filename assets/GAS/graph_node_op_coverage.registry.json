@@ -2137,9 +2137,12 @@
     {
       "op": "ResolveTableRow",
       "authorableKinds": [
+        "Derived",
         "Effect",
         "Query",
-        "Script"
+        "Score",
+        "Script",
+        "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_ResolveTableRow",
       "status": "covered",
@@ -2273,9 +2276,12 @@
     {
       "op": "TableReadFloat",
       "authorableKinds": [
+        "Derived",
         "Effect",
         "Query",
-        "Script"
+        "Score",
+        "Script",
+        "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_TableReadFloat",
       "status": "covered",
@@ -2291,9 +2297,12 @@
     {
       "op": "TableReadInt",
       "authorableKinds": [
+        "Derived",
         "Effect",
         "Query",
-        "Script"
+        "Score",
+        "Script",
+        "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_TableReadInt",
       "status": "covered",
