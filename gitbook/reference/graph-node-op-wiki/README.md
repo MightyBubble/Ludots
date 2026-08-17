@@ -44,20 +44,20 @@
 
 ## 名单筛选与汇总
 
-- [只留下侦察兵](QueryFilterTemplate.md) — 士兵暗、侦察兵亮。
-- [只留下敌对阵营](QueryFilterTeam.md) — 友军被滤掉，敌人亮。
-- [只留下残血的人](QueryFilterAttributeRange.md) — 生命低于阈值的人亮。
-- [只看花名册上的人](QueryFromCollection.md) — 小队花名册里的人亮，册外的不亮。
-- [平均生命多少](AggAverageAttribute.md) — 字幕报平均。
-- [把场上的人都找出来](QueryAllMapEntities.md) — 全图搜到一圈人，字幕报人数。
-- [把生命加总](AggSumAttribute.md) — 字幕报生命总和。
+- [全场平均血量](AggAverageAttribute.md) — 十三个人的血条凑上台面，台面亮出平均数。
+- [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
+- [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
+- [全场生命合计](AggSumAttribute.md) — 十三根血条一根根收进台面，台面亮出总数。
+- [只圈残血的](QueryFilterAttributeRange.md) — 全场先亮一圈，再只剩短血条的留着。
+- [只挑侦察兵](QueryFilterTemplate.md) — 全场先亮一圈，再只剩两个矮个子亮着。
+- [圈出对面十个](QueryFilterTeam.md) — 红的一排留圈，蓝的退成灰影。
+- [戴敌徽的全圈出来](QueryFilterTagAny.md) — 头顶红徽的九个留圈，没徽的退成灰影。
+- [把场上的人全点名](QueryAllMapEntities.md) — 扫描弧从指挥席扫过全场，点到谁谁亮。
 - [按血量从厚到薄排队](QuerySortByAttribute.md) — 最厚的顶着三道杠，箭头顺着血条一路排下去。
-- [最低生命是多少](AggMinAttribute.md) — 最低值。
-- [最高生命是多少](AggMaxAttribute.md) — 最高值+对应人高亮。
-- [没有阵亡标记的人](QueryFilterTagNone.md) — 死掉的被滤掉。
-- [谁最残](AggMinEntityByAttribute.md) — 最残的人被点名。
-- [谁最能打（血最厚）](AggMaxEntityByAttribute.md) — 最厚的人被点名。
-- [身上带着敌人标记的人](QueryFilterTagAny.md) — 有敌人标记的亮。
+- [摘掉阵亡徽的留下](QueryFilterTagNone.md) — 戴阵亡徽的退成灰影，没戴徽的留着圈。
+- [点名最残的那个](AggMinEntityByAttribute.md) — 全场退成灰影，空血条那个被点名徽钉住。
+- [点名最能扛的](AggMaxEntityByAttribute.md) — 全场退成灰影，满血条那个被点名徽钉住。
+- [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。
 
 ## 属性与效果
 

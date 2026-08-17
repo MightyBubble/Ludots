@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_AggMinAttribute",
-  "windowTitle": "Ludots - 最低生命是多少",
+  "windowTitle": "Ludots - 全场最低血量",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

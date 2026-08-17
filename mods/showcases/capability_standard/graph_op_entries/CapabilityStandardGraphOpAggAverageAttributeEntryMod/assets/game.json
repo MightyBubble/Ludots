@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_AggAverageAttribute",
-  "windowTitle": "Ludots - 平均生命多少",
+  "windowTitle": "Ludots - 全场平均血量",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -5,7 +5,7 @@
 - seed: map-authored deterministic scenario
 - map: interaction_showcase_hub
 - clock: engine fixed step sampled through 1/60s test ticks
-- execution timestamp UTC: 2026-08-16T17:44:22.9202139+00:00
+- execution timestamp UTC: 2026-08-16T18:33:15.4141217+00:00
 - host mod: EntityCommandPanelShowcaseMod
 - launcher binding: `entity_command_panel_showcase`
 - manual GUI command: `.\scripts\run-mod-launcher.cmd cli launch entity_command_panel_showcase --adapter raylib`
@@ -30,9 +30,9 @@
 - t+004: showcase host published `collection.command.source` for Arcweaver, Vanguard, and Commander.
 - t+005: toolbar provider exposed Template, Family, and Ability profile buttons with Family active.
 - t+006: WebUI DataPlane snapshot reported ready=true, sourceActorCount=3, and active profile tile counts.
-- t+profile: activated Family (`aggregation.by_family`), revision 1043881925, copied 8 slots.
-- t+profile: activated Template (`aggregation.by_template`), revision 4165225071, copied 24 slots.
-- t+profile: activated Ability (`aggregation.by_ability_id`), revision 3580174180, copied 21 slots.
+- t+profile: activated Family (`aggregation.by_family`), revision 2835078549, copied 8 slots.
+- t+profile: activated Template (`aggregation.by_template`), revision 3958214495, copied 24 slots.
+- t+profile: activated Ability (`aggregation.by_ability_id`), revision 1355513060, copied 21 slots.
 
 ## Outcome
 - result: success

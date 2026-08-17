@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_AggSumAttribute",
-  "windowTitle": "Ludots - 把生命加总",
+  "windowTitle": "Ludots - 全场生命合计",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

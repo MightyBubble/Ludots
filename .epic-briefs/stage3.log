@@ -1,0 +1,11 @@
+[09:56:18] === F3 start (13 ops) ===
+[10:02:19] pi fam3 exit=0 report_saved (2465 chars)
+[10:03:00] F3 tests green: 有可用的工作负载更新。有关详细信息，请运行 `dotnet workload list`。
+[10:08:48] record 13 ops -> OK
+od\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_AggMinEntityByAttribute\play.mp4 (125029 bytes), poster.png
+[12/13] Recording capability_standard_graph_op_AggMaxEntityByAttribute
+  wrote C:\001_AI\LudotsProd\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_AggMaxEntityByAttribute\play.mp4 (124791 bytes), poster.png
+[13/13] Recording capability_standard_graph_op_QueryFilterTagAny
+  wrote C:\001_AI\LudotsProd\.worktrees\epic-990\artifacts\evidence\capability_standard_graph_op_QueryFilterTagAny\play.mp4 (122766 bytes), poster.png
+Recorded 13/13; failed 0
+
