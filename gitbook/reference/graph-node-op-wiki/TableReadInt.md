@@ -2,9 +2,6 @@
 
 点到 2 号那行，册上记着三颗星，照数挂印。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_TableReadInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4`。
-</video>
 
 ## 1. 概述
 
@@ -18,8 +15,6 @@
 
 | 角色 | 路径 |
 |------|------|
-| 玩家录像 | `artifacts/evidence/capability_standard_graph_op_TableReadInt/play.mp4` |
-| 画廊海报 | `artifacts/evidence/capability_standard_graph_op_TableReadInt/poster.png` |
 | 剧本 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/TableReadInt.json` |
 | 作者图 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/TableReadInt.json` |
 | 数据表 | `assets/GraphTables/lookup_tables.json` |
