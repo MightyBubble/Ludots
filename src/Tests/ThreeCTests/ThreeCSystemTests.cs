@@ -637,14 +637,14 @@ namespace Ludots.Tests.ThreeC
             spatial.Entities.Add(entity);
             ref var cullBefore = ref world.Get<CullState>(entity);
             cullBefore.IsVisible = false;
-            cullBefore.LOD = LODLevel.Culled;
+            cullBefore.LOD = LODLevel.Low;
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
             system.DisarmPresentBindingCulling();
             system.Update(0.016f);
 
             That(world.Get<CullState>(entity).IsVisible, Is.False);
-            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Culled));
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Low));
 
             system.RebindPresentBinding(manager, view);
             system.Update(0.016f);
