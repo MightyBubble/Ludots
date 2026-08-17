@@ -1,6 +1,6 @@
-# ai-05 editor spec · 归一化与响应曲线
+# ai-03 editor spec · 归一化与响应曲线
 
-> 编辑器实现任务书。编辑器需求见 [ai-04 UXD](../uxd/ai-03-norm-curves.md)；引擎侧见 [runtime spec](../spec-runtime/ai-03-norm-curves.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-03 UXD](../uxd/ai-03-norm-curves.md)；引擎侧见 [runtime spec](../spec-runtime/ai-03-norm-curves.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：两张表的合并视图、decisions 引用扫描、共享求值函数。
 - 验收：三种归一化×三种曲线的预览与运行一致；非法参数无法保存；被引用条目删除被阻。
 
-**相关文档**：[ai-04 UXD](../uxd/ai-03-norm-curves.md) · [ai-04 runtime spec](../spec-runtime/ai-03-norm-curves.md)
+**相关文档**：[ai-03 UXD](../uxd/ai-03-norm-curves.md) · [ai-03 runtime spec](../spec-runtime/ai-03-norm-curves.md)

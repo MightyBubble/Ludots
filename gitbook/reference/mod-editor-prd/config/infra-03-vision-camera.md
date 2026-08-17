@@ -38,7 +38,7 @@
 
 | 表 | 字段 | 这样配会产生什么效果 |
 |---|---|---|
-| fog_layers | `id` | 迷雾层名；效果侧 revealArea 按 scope/layers 引用（见 fx-22） |
+| fog_layers | `id` | 迷雾层名；效果侧 revealArea 按 scope/layers 引用（见 fx-19） |
 | fog_layers | `cellSizeCm` | 格子粒度；小格子精但贵 |
 | fog_layers | `updateHz` | 层重算频率；低频层省算力 |
 | virtual_cameras | `rigKind` | Orbit / TopDown / ThirdPerson / FirstPerson 四骨架 |

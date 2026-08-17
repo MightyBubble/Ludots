@@ -1,6 +1,6 @@
-# 圈人时排除自己
+# 圈人时把你自己抠出去
 
-自己在圈里但不进名单。
+滤前自己也在名单里，一步后自己暗掉。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 排除自己，{self}，其余{count}人在名单里。
+> 排除自己，{self}，名单剩{count}人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 圈人时排除自己
+Feature: 圈人时把你自己抠出去
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryFilterNotEntity
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryFilterNotEntity/play.mp4
     When 短剧演完
-    Then 字幕讲的是「自己在圈里但不进名单。」这类人话
+    Then 字幕讲的是「滤前自己也在名单里，一步后自己暗掉。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

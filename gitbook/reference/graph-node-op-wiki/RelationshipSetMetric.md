@@ -1,6 +1,6 @@
-# 把好感写成指定值
+# 好感直接写成指定值
 
-好感被写成 80。
+灰色的旧条被一条更长的绿条整个换掉。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/poster.png" src="artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 好感被写成{loyalty}。
+> 好感不看原来多少，直接写成{loyalty}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 把好感写成指定值
+Feature: 好感直接写成指定值
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_RelationshipSetMetric
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_RelationshipSetMetric/play.mp4
     When 短剧演完
-    Then 字幕讲的是「好感被写成 80。」这类人话
+    Then 字幕讲的是「灰色的旧条被一条更长的绿条整个换掉。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

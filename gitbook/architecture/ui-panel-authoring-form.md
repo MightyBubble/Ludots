@@ -115,15 +115,15 @@ Instance = templateId + scope（多开；Router 另册）
 
 ## 4. 场景
 
-1. **实体信息卡**：变量 `hp` / `lastKill` / `curState`；选中实体后 — `LoadAttribute`(血量)、`ReadBlackboard`(上次击杀)、`ReadGameplayTag`→`LookupTagDisplayText`(状态文案)；Reactive `TState` 三字段同构。  
-   > Tag 快捷 L0（`SelectTagInMask` / `LookupTagDisplayToken`）见运行时线 #868；编辑器仍是作者糖。仍欠：Text BB、表资产装载、表面 token→文案。禁止 Attribute 假冒。  
+1. **实体信息卡**：变量 `hp`(Float) / `lastKill`(Int token) / `curState`(Int token)；选中实体后 — `LoadAttribute`(血量)、黑板读上次击杀 token、读当前状态 tagId → **作者自建通用表** `ResolveTableRow` + `TableReadInt(displayToken)`；图出口类型必须是 `GraphOutputValueKind`（Bool/Int/Float/Entity/TargetList），**禁止** `TextToken`。  
+   > 查表唯一路径见 [`graph-table-lookup.md`](graph-table-lookup.md)。**禁止** `TagDisplay*` 专表/专 op。通用表装载已交付。仍欠：玩法纯读 tag id（作者画布用灰态意图标注，不是假 op）、Text BB、表面 token→文案。禁止 Attribute 假冒。  
 2. **资源总览条**：变量 `oreTotal` / `crystalTotal`；Query 聚合 → Summary；WebUI `aggregateProjection`。  
 3. **切换表面**：同一模板把 `surfaceKind` 从 Reactive 换成 WebUI，变量与图不变，仅右侧投影形态变。  
 4. **试玩 / 配置**：编辑器工作区含「试玩」（玩家情景）与「配置」（导出 `ludots.ui.panel_template/v1` JSON，样例见 `Ludots.Editor.React/public/samples/panel_templates.json`）。
 
 ## 5. 边界
 
-- 本页定义**作者形态**；Template/Instance/Router 运行时落地见 #858 子单  
+- 本页定义**作者形态**；Template/Instance/Router **合同**见 [`ui-panel-template-instance-router.md`](ui-panel-template-instance-router.md)（ADR [#880](https://github.com/MightyBubble/Ludots/issues/880)）；运行时落地见 #858 后续切片 
 - Markup 不扩展为表达式语言；需要绑定走 code-behind 或换 Reactive/WebUI  
 - 图编辑真机仍走 GAS 图工具链；本编辑器中心画布是作者形态样板，可与真编译器对接但不得平行 VM
 

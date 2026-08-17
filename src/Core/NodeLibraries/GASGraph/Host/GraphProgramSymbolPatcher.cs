@@ -56,6 +56,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFilterTemplate:
                         ins.Imm = symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ResolveTableRow:
+                        ins.Imm = symbolResolver.ResolveGraphLookupTable(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.TableReadInt:
+                    case GraphNodeOp.TableReadFloat:
+                        ins.Imm = symbolResolver.ResolveGraphLookupField(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;

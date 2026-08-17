@@ -18,6 +18,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MobaDemoMod.Triggers;
@@ -144,7 +145,7 @@ namespace MobaDemoMod.Systems
             // Entity collection providers
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -197,7 +198,7 @@ namespace MobaDemoMod.Systems
                             CommandKind = PresenterCommandKind.CreatePresenter,
                             PresenterDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
-                            Source = TryGetLocalPlayerId(out int playerId)
+                            Source = TryGetSolePossessedPlayerId(out int playerId)
                                 ? GetControlledActor(playerId)
                                 : default
                         });
@@ -227,11 +228,10 @@ namespace MobaDemoMod.Systems
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
-                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) &&
-                    actorObj is Entity localPlayer &&
+                if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                     _world.IsAlive(localPlayer))
                 {
-                    if (!TryGetLocalPlayerId(out int playerId))
+                    if (!TryGetSolePossessedPlayerId(out int playerId))
                     {
                         return;
                     }
@@ -242,7 +242,7 @@ namespace MobaDemoMod.Systems
                         return;
                     }
 
-                    _inputOrderMapping.SetLocalPlayer(actor, playerId);
+                    _inputOrderMapping.SetSolePossessedActor(actor, playerId);
                     _inputOrderMapping.Update(dt);
                 }
             }
@@ -250,17 +250,16 @@ namespace MobaDemoMod.Systems
             RenderModeHud();
         }
 
-        private bool TryGetLocalPlayerId(out int playerId)
+        private bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -271,7 +270,7 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out var localPlayer))
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
@@ -369,8 +368,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetLocalCollectionOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }

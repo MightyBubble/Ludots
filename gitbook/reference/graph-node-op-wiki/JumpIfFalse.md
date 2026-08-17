@@ -1,6 +1,6 @@
 # 没满就再续一杯
 
-茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。
+茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_JumpIfFalse/poster.png" src="artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 没满就再续一杯。茶水 {water}/{limit}。
+> 没满就再续一杯。茶水 {water}/{limit}，满了就走收工那条道。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 没满就再续一杯
     Given 玩家打开 capability_standard_graph_op_JumpIfFalse
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_JumpIfFalse/play.mp4
     When 短剧演完
-    Then 字幕讲的是「茶没满时继续续，满了才停。头顶那根条是水位示意，不是血量。」这类人话
+    Then 字幕讲的是「茶杯一格格见满：没满时绿箭头带着续一杯，满了那一下改走黄箭头，直接收工。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

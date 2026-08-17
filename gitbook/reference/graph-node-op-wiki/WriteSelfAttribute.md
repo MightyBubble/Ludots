@@ -1,6 +1,6 @@
-# 给自己回一口
+# 把血直接写成 90
 
-施法者血从 60 写回 90，金块血条涨上去。
+施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 给自己回一口，生命从 {casterBefore} 回到 {casterAfter}。
+> 直接写入生命值，从 {casterBefore} 写成 {casterAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 给自己回一口
+Feature: 把血直接写成 90
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_WriteSelfAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_WriteSelfAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「施法者血从 60 写回 90，金块血条涨上去。」这类人话
+    Then 字幕讲的是「施法者血 60，一道写入线落下，血条直接抬到 90，头顶浮出 =90。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Core.Client;
 
 namespace ChunkStreamingShowcaseMod.Runtime
 {
@@ -109,7 +110,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 return;
             }
 
-            Vector2 target = _commandedCameraTargetCm ?? engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = _commandedCameraTargetCm ?? ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             ActiveBoard.LoadedChunksSource.Update(
                 (int)target.X,
                 (int)target.Y,
@@ -158,7 +159,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
 
         public ChunkStreamingShowcasePanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = _commandedCameraTargetCm ?? engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = _commandedCameraTargetCm ?? ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new ChunkStreamingShowcasePanelState(
                 Title: "Chunk Streaming Showcase",
                 Status: LastStatus,
@@ -174,7 +175,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 return;
             }
 
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             _commandedCameraTargetCm = target;
             ActiveBoard.LoadedChunksSource.Update(
                 (int)target.X,
@@ -209,8 +210,8 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 registry.TryGet(TacticalCameraId, out VirtualCameraDefinition? definition) &&
                 definition != null)
             {
-                engine.GameSession.Camera.ResetVirtualCameras();
-                engine.GameSession.Camera.ActivateVirtualCamera(
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ResetVirtualCameras();
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
                     TacticalCameraId,
                     blendDurationSeconds: 0f,
                     followTarget: CameraFollowTargetFactory.Build(
@@ -222,7 +223,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                     snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
             }
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = TacticalCameraId,
                 TargetCm = targetCm

@@ -21,4 +21,4 @@ ProgressionScopeBindingSystem 维护 scope 成员；RequirementEvaluator 在效�
 
 scope 引用未配置集合、progression 引用未声明 scope、条件树结构非法（未知 kind/缺参）、CompleteProgression 效果非 Instant 或缺 progression 块、progression.id 未注册——启动失败并指明条目与位置。
 
-**相关文档**：[配置说明](../config/misc-01-progression.md) · [fx-23](fx-21-progression.md) · [attr-01](attr-01-definition.md)
+**相关文档**：[配置说明](../config/misc-01-progression.md) · [fx-21](fx-21-progression.md) · [attr-01](attr-01-definition.md)

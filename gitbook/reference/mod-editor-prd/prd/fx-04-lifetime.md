@@ -1,4 +1,4 @@
-# fx-07 · 生命周期与时长
+# fx-04 · 生命周期与时长
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-04-lifetime.md)；编辑器需求见 [UXD](../uxd/fx-04-lifetime.md)；引擎实现见 [runtime spec](../spec-runtime/fx-04-lifetime.md)；editor spec 见 [editor spec](../spec-editor/fx-04-lifetime.md)；现状见 [reference](../reference/fx-04-lifetime.md)。
 
@@ -22,4 +22,4 @@
 
 Instant 带时长块、After 缺时长或时长非正、显式全零时长块、未注册时钟——启动失败并指明条目。
 
-**相关文档**：[配置说明](../config/fx-04-lifetime.md) · [fx-04](fx-02-template.md) · [fx-07](fx-05-phases.md) · [rt-01](rt-01-clocks.md)
+**相关文档**：[配置说明](../config/fx-04-lifetime.md) · [fx-02](fx-02-template.md) · [fx-05](fx-05-phases.md) · [rt-01](rt-01-clocks.md)

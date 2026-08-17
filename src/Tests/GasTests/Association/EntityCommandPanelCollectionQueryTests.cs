@@ -141,7 +141,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             var mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(collectionOwner, 7);
+            mapping.SetSolePossessedActor(collectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = collectionOwner;
@@ -189,7 +189,7 @@ namespace Ludots.Tests.GAS
             });
 
             var mapping = CreateMappingSystem(new List<Order>());
-            mapping.SetLocalPlayer(collectionOwner, 7);
+            mapping.SetSolePossessedActor(collectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = collectionOwner;

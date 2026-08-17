@@ -1112,7 +1112,6 @@ namespace Ludots.Tests.Architecture.Governance
                 typeof(GasInputResponseSystem),
                 typeof(AuthoritativeInputSnapshotSystem),
                 typeof(AuthoritativePointerButtonSnapshotSystem),
-                typeof(LocalPlayerEntityResolverSystem),
                 typeof(InputRuntimeSystem),
             };
 

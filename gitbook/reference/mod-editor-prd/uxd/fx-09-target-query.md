@@ -1,6 +1,6 @@
-# fx-12 UXD · 目标查询的编辑器需求
+# fx-09 UXD · 目标查询的编辑器需求
 
-> 目标查询的编辑器需求（高保真规格）。第一性需求见 [fx-11 PRD](../prd/fx-09-target-query.md)；配置写法见 [fx-11 配置说明](../config/fx-09-target-query.md)；编辑器实现见 [editor spec](../spec-editor/fx-09-target-query.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 目标查询的编辑器需求（高保真规格）。第一性需求见 [fx-09 PRD](../prd/fx-09-target-query.md)；配置写法见 [fx-09 配置说明](../config/fx-09-target-query.md)；编辑器实现见 [editor spec](../spec-editor/fx-09-target-query.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -17,7 +17,7 @@
 │ halfAngle [  40 ]       │     ╲        ╱                            │
 │ origin [Default ▾]      │      ╲______╱   候选高亮 ●●                │
 │ ▸ 切换 GraphProgram…    │                                          │
-├─ 底部：单位换算 cm（cellSize 见事实页）· 过滤去 fx-12 ───────────────┤
+├─ 底部：单位换算 cm（cellSize 见事实页）· 过滤去 fx-10 ───────────────┤
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -35,7 +35,7 @@
 
 1. 打开技能效果的查询编辑区，形状切到 Cone。
 2. 拖预览手柄把半径拉到 300、半角 40；字段同步。
-3. 预览高亮候选（含敌我着色，来自 fx-12 联动只读）。
+3. 预览高亮候选（含敌我着色，来自 fx-10 联动只读）。
 4. 保存；互斥矩阵违例（如 Cone 缺半角）无法离开字段。
 
 ## 5. 状态设计
@@ -51,4 +51,4 @@
 - 五种形状均能"改字段见图形、拖图形改字段"。
 - 互斥矩阵违例不允许保存；环内径边界用预览直接可感。
 
-**相关文档**：[fx-11 PRD](../prd/fx-09-target-query.md) · [editor spec](../spec-editor/fx-09-target-query.md)
+**相关文档**：[fx-09 PRD](../prd/fx-09-target-query.md) · [editor spec](../spec-editor/fx-09-target-query.md)

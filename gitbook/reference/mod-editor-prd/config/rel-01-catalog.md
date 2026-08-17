@@ -44,14 +44,14 @@ mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：`"types": [ { "id
 
 ## 4. 运行时加载效果
 
-管线按目录装载，九块分别按 id 覆盖合并（stance 整对象替换）；加载完成后关系系统装配，图节点的关系符号（relationshipType/metric/reason/flag，gr-03 字段族）引用此目录解析。
+管线按目录装载，九块分别按 id 覆盖合并（stance 整对象替换）；加载完成后关系系统装配，图节点的关系符号（relationshipType/metric/reason/flag，gr-02 字段族）引用此目录解析。
 
 ## 5. 异常处理
 
 | 异常情形 | 系统响应 |
 |---|---|
 | JSON 反序列化失败（类型不符等） | 装载失败，指明片段 |
-| 图节点引用目录外的关系 id | 图装载失败（gr-05 符号解析） |
+| 图节点引用目录外的关系 id | 图装载失败（gr-04 符号解析） |
 | 条目缺 id 或 id 为空白 | 该条目跳过不合并 |
 
 ## 6. 实例
@@ -59,4 +59,4 @@ mod 增量示例（`mods/LudotsCoreMod`，同文件合并）：`"types": [ { "id
 - 引擎默认：`assets/Relationships/catalog.json`；mod 增量：`mods/LudotsCoreMod/assets/Relationships/catalog.json`、`mods/CombatStanceBehaviorMod/assets/Relationships/catalog.json`
 - 目录登记与启用分片计数见 [事实与取值表](../facts.md)
 
-**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [gr-03 配置说明](gr-02-document.md) · [cfg-05 配置说明](cfg-05-config-pipeline.md)
+**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [gr-02 配置说明](gr-02-document.md) · [cfg-05 配置说明](cfg-05-config-pipeline.md)

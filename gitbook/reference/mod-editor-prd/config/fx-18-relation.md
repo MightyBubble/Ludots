@@ -1,6 +1,6 @@
-# fx-22 配置说明 · 关系操作
+# fx-18 配置说明 · 关系操作
 
-> 配置写法与行为。第一性需求见 [fx-21 PRD](../prd/fx-18-relation.md)；编辑器需求见 [UXD](../uxd/fx-18-relation.md)；现状见 [reference](../reference/fx-18-relation.md)。
+> 配置写法与行为。第一性需求见 [fx-18 PRD](../prd/fx-18-relation.md)；编辑器需求见 [UXD](../uxd/fx-18-relation.md)；现状见 [reference](../reference/fx-18-relation.md)。
 
 ## 1. 示例配置
 
@@ -55,4 +55,4 @@ loader 校验操作与槽位合同、解析 relationshipType 为类型 id；运�
 
 - 进驻建筑：`mods/showcases/rts_demo/RtsDemoMod/assets/GAS/effects.json`（EnterGarrison）
 
-**相关文档**：[fx-21 PRD](../prd/fx-18-relation.md) · 见 rel-01（关系目录，第二期）
+**相关文档**：[fx-18 PRD](../prd/fx-18-relation.md) · 见 rel-01（关系目录，第二期）

@@ -44,7 +44,7 @@ kind 全族为 E（Effect 专属）。imm 一律为符号。
 
 互斥与陷阱：
 
-- **a/b 是保留通道**：ApplyEffectTemplate 的 a/b 直通模板 CallerParams 的 ForceX/Y——不是通用参数口；要传业务参数走效果 configParams（fx-18），别挪用 a/b。
+- **a/b 是保留通道**：ApplyEffectTemplate 的 a/b 直通模板 CallerParams 的 ForceX/Y——不是通用参数口；要传业务参数走效果 configParams（fx-14），别挪用 a/b。
 - Dynamic 与模板号的分工：号从哪来（LoadConfigEffectId、事件载荷、黑板）是图的事，节点只认 value 里的号。
 - ModifyAttributeAdd 与 WriteSelfAttribute（gr-op-04）语义不同：前者对任意目标走提案聚合，后者直写自身 Current——治疗/伤害用前者，派生图回写用后者。
 - 扇出件消费管线 TargetList：链上没有列表时编译期即发现（引脚不接列表）。
@@ -52,7 +52,7 @@ kind 全族为 E（Effect 专属）。imm 一律为符号。
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`effectTemplate`/`dispatchPreset`/`eventTag`/`attribute` 写符号，见 gr-04。效果模板在 `assets/GAS/effects.json`（分片 `GAS/effects/`）；派发预设见 fx-15。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`effectTemplate`/`dispatchPreset`/`eventTag`/`attribute` 写符号，见 gr-02。效果模板在 `assets/GAS/effects.json`（分片 `GAS/effects/`）；派发预设见 fx-11。
 
 ## 4. 运行时加载效果
 
@@ -71,4 +71,4 @@ kind 全族为 E（Effect 专属）。imm 一律为符号。
 - `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ApplyEffectTemplate.json`
 - 同目录 `FanOutApplyEffect.json`、`ApplyEffectDynamic.json`、`FanOutApplyEffectDynamic.json`、`RemoveEffectTemplate.json`、`FanOutDispatchEffect.json`、`FanOutDispatchEffectDynamic.json`、`ModifyAttributeAdd.json`、`SendEvent.json`
 
-**相关文档**：[gr-op-10 PRD](../prd/gr-op-10-effect-actions.md) · [fx-15 配置说明](fx-11-target-dispatch.md) · [gr-op-04 配置说明](gr-op-04-attributes.md)
+**相关文档**：[gr-op-10 PRD](../prd/gr-op-10-effect-actions.md) · [fx-11 配置说明](fx-11-target-dispatch.md) · [gr-op-04 配置说明](gr-op-04-attributes.md)

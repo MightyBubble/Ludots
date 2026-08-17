@@ -27,5 +27,11 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072
-  }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

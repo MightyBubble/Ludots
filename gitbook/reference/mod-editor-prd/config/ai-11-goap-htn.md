@@ -71,4 +71,4 @@ atoms 先注册，projection 随后建 WorldStateProjectionTable（Order 黑板�
 
 - `mods/showcases/ai_demo/AIDemoMod/assets/AI/`（真实：atoms/projection/utility/goap_actions/goap_goals 各 1 条 + htn_domain 空表）
 
-**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [ai-02 配置说明](ai-01-utility-overview.md) · [cfg-07 配置说明](cfg-07-merge-rules.md)
+**相关文档**：[ai-11 PRD](../prd/ai-11-goap-htn.md) · [ai-01 配置说明](ai-01-utility-overview.md) · [cfg-07 配置说明](cfg-07-merge-rules.md)

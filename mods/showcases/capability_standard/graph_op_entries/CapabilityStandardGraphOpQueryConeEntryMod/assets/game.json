@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryCone",
-  "windowTitle": "Ludots - 扇形里有谁",
+  "windowTitle": "Ludots - 朝这个方向的扇形里有谁",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

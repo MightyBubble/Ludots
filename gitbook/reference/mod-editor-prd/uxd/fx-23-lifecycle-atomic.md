@@ -1,6 +1,6 @@
 # fx-23 UXD · 生命周期原子操作的编辑器需求
 
-> fx-23 的编辑器需求（高保真规格）。第一性需求见 [fx-23 PRD](../prd/fx-23-lifecycle-atomic.md)；配置写法见 [fx-23 配置说明](../config/fx-23-lifecycle-atomic.md)；编辑器实现见 [editor spec](../spec-editor/fx-23-lifecycle-atomic.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> fx-23 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 

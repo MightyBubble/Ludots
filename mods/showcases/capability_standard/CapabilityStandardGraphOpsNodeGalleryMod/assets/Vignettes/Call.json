@@ -1,11 +1,11 @@
 {
   "op": "Call",
   "driver": "script",
-  "title": "出门办事再回来",
-  "beat": "走到驿站办完事再回到原点，像叫了一声子程序。",
-  "detailTemplate": "出门办事再回来。人在{place}。",
+  "title": "出门办事，办完回家",
+  "beat": "人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。",
+  "detailTemplate": "出了趟门办件差事。人在{place}，原点{homeState}。",
   "assertDetailContains": [
-    "回来"
+    "差事"
   ],
   "featuredNodeId": "call",
   "graphKind": "Script",

@@ -1,6 +1,6 @@
-# fx-12 reference · 目标查询
+# fx-09 reference · 目标查询
 
-> 现状参考。第一性需求见 [fx-11 PRD](../prd/fx-09-target-query.md)；配置说明见 [fx-11 配置说明](../config/fx-09-target-query.md)。
+> 现状参考。第一性需求见 [fx-09 PRD](../prd/fx-09-target-query.md)；配置说明见 [fx-09 配置说明](../config/fx-09-target-query.md)。
 
 ## 1. 现状快照
 
@@ -19,4 +19,4 @@
 | 查询中心解析 | src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs:132-155 |
 | 描述符死字段 | src/Core/Gameplay/GAS/EffectTemplateRegistry.cs:126-129 |
 
-**相关文档**：[fx-11 PRD](../prd/fx-09-target-query.md) · [fx-12 reference](fx-10-target-filter.md)
+**相关文档**：[fx-09 PRD](../prd/fx-09-target-query.md) · [fx-10 reference](fx-10-target-filter.md)

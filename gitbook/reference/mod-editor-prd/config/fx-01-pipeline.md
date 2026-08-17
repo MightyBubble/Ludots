@@ -1,10 +1,10 @@
-# fx-04 配置说明 · 效果执行管线总览
+# fx-01 配置说明 · 效果执行管线总览
 
-> 配置写法与行为。第一性需求见 [fx-03 PRD](../prd/fx-01-pipeline.md)；编辑器需求见 [UXD](../uxd/fx-01-pipeline.md)；现状见 [reference](../reference/fx-01-pipeline.md)。
+> 配置写法与行为。第一性需求见 [fx-01 PRD](../prd/fx-01-pipeline.md)；编辑器需求见 [UXD](../uxd/fx-01-pipeline.md)；现状见 [reference](../reference/fx-01-pipeline.md)。
 
 ## 1. 示例配置
 
-效果表全字段@@fx1@@；本篇用同一张表里两种归宿的条目展示管线两端（rts 底座，真实）：
+效果表全字段fx-02；本篇用同一张表里两种归宿的条目展示管线两端（rts 底座，真实）：
 
 ```json
 [
@@ -23,11 +23,11 @@
 
 | 字段规则 | 这样配会产生什么效果 |
 |---|---|
-| `lifetime` 三值 | 管线路由依据：Instant 同帧内联，After/Infinite 实体化（fx-06） |
-| `duration.periodTicks` | 存活段周期节拍，>0 才有周期相位（fx-06） |
-| `presetType` | 在 preset_types 之后解析——加载序即引用许可序（fx-05） |
-| `grantedTags` / `phaseListeners` | 随效果实体生灭的资源，移除时统一回收（fx-16 / fx-10） |
-| `stack` | 同类效果在目标容器内的合并规则（fx-15） |
+| `lifetime` 三值 | 管线路由依据：Instant 同帧内联，After/Infinite 实体化（fx-04） |
+| `duration.periodTicks` | 存活段周期节拍，>0 才有周期相位（fx-04） |
+| `presetType` | 在 preset_types 之后解析——加载序即引用许可序（fx-03） |
+| `grantedTags` / `phaseListeners` | 随效果实体生灭的资源，移除时统一回收（fx-13 / fx-08） |
+| `stack` | 同类效果在目标容器内的合并规则（fx-12） |
 
 ## 3. 文件结构
 
@@ -52,4 +52,4 @@
 - `mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/GAS/effects.json`（10 条：代价、建造、训练、部署）
 - `assets/GAS/effects.json`（核心表现状仅 1 条，见 todo/effect.md E1）
 
-**相关文档**：[fx-03 PRD](../prd/fx-01-pipeline.md) · [fx-04 配置说明](fx-02-template.md) · [rt-02](rt-02-budgets.md)
+**相关文档**：[fx-01 PRD](../prd/fx-01-pipeline.md) · [fx-02 配置说明](fx-02-template.md) · [rt-02](rt-02-budgets.md)

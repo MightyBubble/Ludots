@@ -1,6 +1,6 @@
-# 认出自己
+# 先认出是谁出手
 
-图从施法者自己读起，确认出手的人是台上这个金块。
+白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadCaster/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 出手的是自己。
+> 出手的确认是自己。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 认出自己
+Feature: 先认出是谁出手
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadCaster
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadCaster/play.mp4
     When 短剧演完
-    Then 字幕讲的是「图从施法者自己读起，确认出手的人是台上这个金块。」这类人话
+    Then 字幕讲的是「白光柱落在施法者头顶，亮出出手人徽章，攻击线才从这亮起。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

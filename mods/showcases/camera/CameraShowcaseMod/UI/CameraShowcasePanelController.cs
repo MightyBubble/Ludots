@@ -129,7 +129,7 @@ namespace CameraShowcaseMod.UI
                 return;
             }
 
-            var state = engine.GameSession.Camera.State;
+            var state = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
             float minDistance = definition.MinDistanceCm > 0f ? definition.MinDistanceCm : 100f;
             float maxDistance = definition.MaxDistanceCm > 0f ? definition.MaxDistanceCm : System.MathF.Max(minDistance, state.DistanceCm);
             float minPitch = definition.MinPitchDeg < definition.MaxPitchDeg ? definition.MinPitchDeg : -89f;
@@ -169,7 +169,7 @@ namespace CameraShowcaseMod.UI
             activeCameraId = string.Empty;
             definition = null!;
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            var brain = Ludots.Core.Client.ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain;
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             if (brain == null || !brain.HasActiveCamera || registry == null)
             {

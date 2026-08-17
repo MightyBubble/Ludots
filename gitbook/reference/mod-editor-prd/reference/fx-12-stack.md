@@ -1,6 +1,6 @@
-# fx-16 reference · 堆叠
+# fx-12 reference · 堆叠
 
-> 现状参考。第一性需求见 [fx-15 PRD](../prd/fx-12-stack.md)；配置说明见 [fx-15 配置说明](../config/fx-12-stack.md)。
+> 现状参考。第一性需求见 [fx-12 PRD](../prd/fx-12-stack.md)；配置说明见 [fx-12 配置说明](../config/fx-12-stack.md)。
 
 ## 1. 现状快照
 
@@ -24,4 +24,4 @@
 | 标签层数溢出 | EffectTagContributionHelper.cs:143-147, 191-195 |
 | 图公式拒绝（死代码起点） | EffectTemplateLoader.cs:1988-1992 |
 
-**相关文档**：[fx-15 PRD](../prd/fx-12-stack.md) · [fx-03 reference](fx-01-pipeline.md)
+**相关文档**：[fx-12 PRD](../prd/fx-12-stack.md) · [fx-01 reference](fx-01-pipeline.md)

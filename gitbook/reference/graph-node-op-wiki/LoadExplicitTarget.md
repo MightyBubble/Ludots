@@ -1,6 +1,6 @@
-# 锁定点名目标
+# 点名谁就打谁
 
-点到谁就打谁，血条在被点名的红块上掉。
+红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 点名到木桩，准备出手。
+> 点名木桩，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 锁定点名目标
+Feature: 点名谁就打谁
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadExplicitTarget
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadExplicitTarget/play.mp4
     When 短剧演完
-    Then 字幕讲的是「点到谁就打谁，血条在被点名的红块上掉。」这类人话
+    Then 字幕讲的是「红色准星飞出锁扣木桩，一刀沿线打下，木桩 100 掉到 85。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

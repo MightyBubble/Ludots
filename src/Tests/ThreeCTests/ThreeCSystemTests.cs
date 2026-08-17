@@ -622,6 +622,37 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void Culling_DisarmedWithoutPresentBinding_DoesNotWriteCullState()
+        {
+            using var world = World.Create();
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var entity = CreateCullableEntity(world, 100, 100);
+            spatial.Entities.Add(entity);
+            ref var cullBefore = ref world.Get<CullState>(entity);
+            cullBefore.IsVisible = false;
+            cullBefore.LOD = LODLevel.Culled;
+
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, presenters: null);
+            system.DisarmPresentBindingCulling();
+            system.Update(0.016f);
+
+            That(world.Get<CullState>(entity).IsVisible, Is.False);
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.Culled));
+
+            system.RebindPresentBinding(manager, view);
+            system.Update(0.016f);
+            That(world.Get<CullState>(entity).IsVisible, Is.True);
+            That(world.Get<CullState>(entity).LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
         public void Culling_MediumDistance_MediumLOD()
         {
             using var world = World.Create();
@@ -1225,7 +1256,7 @@ namespace Ludots.Tests.ThreeC
 
             using var world = World.Create();
             var player = world.Create();
-            system.SetLocalPlayer(player, 1);
+            system.SetSolePossessedActor(player, 1);
 
             // Frame 1: no press
             handler.Update();

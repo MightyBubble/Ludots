@@ -1,6 +1,6 @@
-# ai-10 editor spec · 战斗姿态与执行器门
+# ai-08 editor spec · 战斗姿态与执行器门
 
-> 编辑器实现任务书。编辑器需求见 [ai-09 UXD](../uxd/ai-08-stances-actuators.md)；引擎侧见 [runtime spec](../spec-runtime/ai-08-stances-actuators.md)。
+> 编辑器实现任务书。编辑器需求见 [ai-08 UXD](../uxd/ai-08-stances-actuators.md)；引擎侧见 [runtime spec](../spec-runtime/ai-08-stances-actuators.md)。
 
 ## 1. 概述
 
@@ -23,4 +23,4 @@
 - 消费：stances/actuators 合并视图、inputs/target_filters/abilities 三注册视图、实体模板组件 schema。
 - 验收：半成品警示在空表与非空表均呈现；门控试验可复现 AimGateNotReady；组件注入保存后实体查询可见。
 
-**相关文档**：[ai-09 UXD](../uxd/ai-08-stances-actuators.md) · [ai-09 runtime spec](../spec-runtime/ai-08-stances-actuators.md)
+**相关文档**：[ai-08 UXD](../uxd/ai-08-stances-actuators.md) · [ai-08 runtime spec](../spec-runtime/ai-08-stances-actuators.md)

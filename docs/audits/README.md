@@ -17,6 +17,7 @@
 * [RFC-0065 PR581 Workflow Closeout](rfc_0065_pr581_workflow_closeout.md)
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
+* [#858 / #875 落地架构审计交接](875-or-858-audit-handoff.md)（issue #883）
 * [PR895 图基建 + LSW 审计交接](pr895_graph_infra_and_lsw_audit_handoff.md)
 * [PR895 图基建 + LSW 架构审计](pr895_graph_infra_and_lsw_architecture_audit.md)
 * [PR911 审计需求交接](pr911_funclib_actionlib_audit_handoff.md)
@@ -42,5 +43,9 @@
 
 ## 3 相关文档
 
+* 文档总览：见 [../README.md](../README.md)
+* 开发规范：见 [../conventions/README.md](../conventions/README.md)
+* 架构文档：见 [../architecture/README.md](../architecture/README.md)
+- [886 debt land audit handoff](886-debt-land-audit-handoff.md)
 * 正式文档：见 [../../gitbook/README.md](../../gitbook/README.md)
 * 文档治理：见 [../../gitbook/contributing/documentation-governance.md](../../gitbook/contributing/documentation-governance.md)

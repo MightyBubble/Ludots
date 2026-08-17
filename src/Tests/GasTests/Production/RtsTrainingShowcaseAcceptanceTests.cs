@@ -17,11 +17,13 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -411,7 +413,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(engine.World.IsAlive(owner), Is.True);
             Assert.That(engine.World.IsAlive(target), Is.True);
 
@@ -426,7 +428,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "RTS training command source",
                 summary: "1 actor");
             collections.Replace(owner, in descriptor, next, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
         }
 
         private static string ReadName(World world, Entity entity)

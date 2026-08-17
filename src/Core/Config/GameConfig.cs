@@ -1,8 +1,11 @@
-using System.Text.Json.Serialization;
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Config
@@ -29,11 +32,34 @@ namespace Ludots.Core.Config
         public string StartupMapId { get; set; }
 
         /// <summary>
-        /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
+        /// Cold-start local seat recipe. Injected into <see cref="MapLaunchContext.LocalSeats"/> on
+        /// <c>LoadStartupMap</c>. Not map identity; not runtime seat truth after load.
         /// </summary>
-        public int StartupLocalPlayerId { get; set; }
+        public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
+
+        public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
+
+        /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
+        public MapLaunchContext? CreateStartupLaunchContext(
+            IReadOnlyDictionary<string, object>? metadata = null)
+        {
+            if (!HasStartupLocalSeats)
+            {
+                return MapLaunchContext.Create(Array.Empty<LocalSeatLaunchBinding>(), metadata);
+            }
+
+            var bindings = new LocalSeatLaunchBinding[StartupLocalSeats.Count];
+            for (int i = 0; i < StartupLocalSeats.Count; i++)
+            {
+                StartupLocalSeatConfig seat = StartupLocalSeats[i]
+                    ?? throw new InvalidOperationException($"GameConfig.startupLocalSeats[{i}] is null.");
+                bindings[i] = seat.ToLaunchBinding();
+            }
+
+            return MapLaunchContext.Create(bindings, metadata);
+        }
 
         // Engine-level defaults (these stay in Core's game.json)
         public int WindowWidth { get; set; } = 1280;

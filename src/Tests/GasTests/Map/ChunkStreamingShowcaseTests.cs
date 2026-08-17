@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map.Board;
 using NUnit.Framework;
 using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS
 {
@@ -77,7 +78,7 @@ namespace Ludots.Tests.GAS
 
             return new ChunkSnapshot(
                 step,
-                engine.GameSession.Camera.State.TargetCm,
+                engine.AuthorityCamera().State.TargetCm,
                 board.LoadedChunksSource.ActiveChunkKeys.Count,
                 board.GraphRuntime.CurrentGraph.NodeCount,
                 splineCount,

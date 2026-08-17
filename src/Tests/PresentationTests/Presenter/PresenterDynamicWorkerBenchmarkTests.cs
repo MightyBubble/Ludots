@@ -25,6 +25,7 @@ using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using PresenterBlacksmithShowcaseMod.Runtime;
 using SkiaSharp;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.Presentation
 {
@@ -156,10 +157,10 @@ namespace Ludots.Tests.Presentation
             IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
                 ?? throw new InvalidOperationException("VisualHeightmap missing.");
             Assert.That(heightmap.TrySampleHeightCm(
-                engine.GameSession.Camera.State.TargetCm.X,
-                engine.GameSession.Camera.State.TargetCm.Y,
+                engine.AuthorityCamera().State.TargetCm.X,
+                engine.AuthorityCamera().State.TargetCm.Y,
                 out float expectedHeightCm), Is.True);
-            Assert.That(engine.GameSession.Camera.State.TargetHeightCm, Is.EqualTo(expectedHeightCm + definition.TargetHeightOffsetCm).Within(0.01f));
+            Assert.That(engine.AuthorityCamera().State.TargetHeightCm, Is.EqualTo(expectedHeightCm + definition.TargetHeightOffsetCm).Within(0.01f));
 
             string assetPath = Path.Combine(
                 PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
@@ -730,9 +731,9 @@ namespace Ludots.Tests.Presentation
         private static Vector2 ResolveDefaultCameraTargetMeters(GameEngine engine)
         {
             float targetXCm = engine.CurrentMapSession?.MapConfig?.DefaultCamera?.TargetXCm
-                ?? engine.GameSession.Camera.State.TargetCm.X;
+                ?? engine.AuthorityCamera().State.TargetCm.X;
             float targetYCm = engine.CurrentMapSession?.MapConfig?.DefaultCamera?.TargetYCm
-                ?? engine.GameSession.Camera.State.TargetCm.Y;
+                ?? engine.AuthorityCamera().State.TargetCm.Y;
             return new Vector2(targetXCm * 0.01f, targetYCm * 0.01f);
         }
 

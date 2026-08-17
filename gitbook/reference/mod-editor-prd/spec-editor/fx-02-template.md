@@ -1,6 +1,6 @@
-# fx-05 editor spec · 效果模板骨架
+# fx-02 editor spec · 效果模板骨架
 
-> 编辑器实现任务书。编辑器需求见 [fx-04 UXD](../uxd/fx-02-template.md)；引擎侧见 [runtime spec](../spec-runtime/fx-02-template.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-02 UXD](../uxd/fx-02-template.md)；引擎侧见 [runtime spec](../spec-runtime/fx-02-template.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：preset 类型注册表枚举、效果表加载校验入口、工作台热替换管线。
 - 验收：新建 DoT 全程无查文档；非法组合输入即报；热字段改动下次施放生效。
 
-**相关文档**：[fx-04 UXD](../uxd/fx-02-template.md) · [fx-04 runtime spec](../spec-runtime/fx-02-template.md)
+**相关文档**：[fx-02 UXD](../uxd/fx-02-template.md) · [fx-02 runtime spec](../spec-runtime/fx-02-template.md)

@@ -1,6 +1,6 @@
-# 圈里一共几个人
+# 扇形里数出几个人
 
-字幕报人数，舞台上那些人亮着。
+扇内每人头顶弹一下，刻痕一道道加上去。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AggCount/poster.png" src="artifacts/evidence/capability_standard_graph_op_AggCount/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AggCount/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 圈里一共{count}个人。
+> 扇形内共{count}人。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 圈里一共几个人
+Feature: 扇形里数出几个人
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_AggCount
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggCount/play.mp4
     When 短剧演完
-    Then 字幕讲的是「字幕报人数，舞台上那些人亮着。」这类人话
+    Then 字幕讲的是「扇内每人头顶弹一下，刻痕一道道加上去。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

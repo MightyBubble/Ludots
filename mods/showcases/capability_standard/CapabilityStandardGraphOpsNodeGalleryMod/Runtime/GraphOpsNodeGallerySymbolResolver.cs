@@ -9,7 +9,10 @@ using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
@@ -25,6 +28,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
     private readonly RelationshipFlagRegistry _flags;
     private readonly RelationshipReasonRegistry _reasons;
     private readonly TargetDispatchPresetRegistry _dispatchPresets;
+    private readonly GraphLookupTableRegistry? _lookupTables;
 
     public GraphOpsNodeGallerySymbolResolver(
         EntityTemplateKeyRegistry templates,
@@ -32,7 +36,8 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         RelationshipMetricRegistry metrics,
         RelationshipFlagRegistry flags,
         RelationshipReasonRegistry reasons,
-        TargetDispatchPresetRegistry dispatchPresets)
+        TargetDispatchPresetRegistry dispatchPresets,
+        GraphLookupTableRegistry? lookupTables = null)
     {
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -40,6 +45,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _flags = flags ?? throw new ArgumentNullException(nameof(flags));
         _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
         _dispatchPresets = dispatchPresets ?? throw new ArgumentNullException(nameof(dispatchPresets));
+        _lookupTables = lookupTables;
     }
 
     public static GraphOpsNodeGallerySymbolResolver CreateStandalone(string assetsRoot)
@@ -72,7 +78,64 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
                 PayloadTargetContext = ContextSlot.OriginalSource
             });
         RegisterAuthoredCompileSymbols(assetsRoot);
-        return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets);
+        return new GraphOpsNodeGallerySymbolResolver(
+            templates,
+            types,
+            metrics,
+            flags,
+            reasons,
+            presets,
+            LoadLookupTables(Path.Combine(assetsRoot, "GraphTables")));
+    }
+
+    public int ResolveGraphLookupTable(string name)
+    {
+        if (_lookupTables == null)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup table '{name}', but gallery assets ship no GraphTables.");
+        }
+
+        return _lookupTables.GetTableId(name);
+    }
+
+    public int ResolveGraphLookupField(string name)
+    {
+        if (_lookupTables == null)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup field '{name}', but gallery assets ship no GraphTables.");
+        }
+
+        int separator = name.IndexOf('/');
+        if (separator <= 0 || separator >= name.Length - 1)
+        {
+            throw new InvalidOperationException(
+                $"Graph lookup field symbol '{name}' must be encoded as '<tableId>/<fieldId>'.");
+        }
+
+        return _lookupTables.GetFieldId(name[..separator], name[(separator + 1)..]);
+    }
+
+    internal static GraphLookupTableRegistry? LoadLookupTables(string graphTablesDir)
+    {
+        string tablePath = Path.Combine(graphTablesDir, "lookup_tables.json");
+        if (!File.Exists(tablePath))
+        {
+            return null;
+        }
+
+        var vfs = new VirtualFileSystem();
+        vfs.Mount("Core", Path.GetDirectoryName(graphTablesDir.TrimEnd(Path.DirectorySeparatorChar)) ?? ".");
+        var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+        var pipeline = new ConfigPipeline(vfs, modLoader);
+        var catalog = new ConfigCatalog();
+        catalog.Add(new ConfigCatalogEntry(
+            GraphLookupTableLoader.ConfigPath,
+            ConfigMergePolicy.ArrayById,
+            "id",
+            allowEmpty: true));
+        return new GraphLookupTableLoader(pipeline).Load(catalog);
     }
 
     public int ResolveTag(string name)

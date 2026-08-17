@@ -21,4 +21,4 @@
 
 未知字段、引用不存在的目录 id——装载失败并指明块与条目。
 
-**相关文档**：[配置说明](../config/rel-01-catalog.md) · [gr-02](gr-01-model.md) · [gr-04](gr-03-kinds.md)
+**相关文档**：[配置说明](../config/rel-01-catalog.md) · [gr-01](gr-01-model.md) · [gr-03](gr-03-kinds.md)

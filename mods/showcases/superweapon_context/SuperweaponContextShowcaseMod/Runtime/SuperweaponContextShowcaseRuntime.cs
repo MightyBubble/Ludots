@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using SuperweaponContextShowcaseMod.UI;
 
@@ -69,13 +70,13 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private void Enable(GameEngine engine)
         {
-            State.LocalPlayer = ResolveLocalPlayer(engine);
+            State.SolePossessedRep = RequireSolePossessedRep(engine);
             State.Commander = ResolveNamedEntity(engine, InteractionShowcaseIds.CommanderName);
             State.Arcweaver = ResolveNamedEntity(engine, InteractionShowcaseIds.ArcweaverName);
             State.Vanguard = ResolveNamedEntity(engine, InteractionShowcaseIds.VanguardName);
             State.AbilityId = AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId);
 
-            if (State.LocalPlayer == Entity.Null ||
+            if (State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 State.Arcweaver == Entity.Null ||
                 State.Vanguard == Entity.Null ||
@@ -105,7 +106,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
         public void Update(GameEngine engine)
         {
             if (!State.IsActive ||
-                State.LocalPlayer == Entity.Null ||
+                State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 !engine.World.IsAlive(State.Commander))
             {
@@ -341,7 +342,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;
             targets[1] = State.Vanguard;
-            writer.CommitCast(State.LocalPlayer, targets, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(State.SolePossessedRep, targets, EntityCollectionSourceKind.UiAcquisition);
             State.RoutedTargetCount = targets.Length;
         }
 
@@ -435,10 +436,10 @@ namespace SuperweaponContextShowcaseMod.Runtime
             return id;
         }
 
-        private static Entity ResolveLocalPlayer(GameEngine engine)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer)
-                ? localPlayer
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity solePossessedRep)
+                ? solePossessedRep
                 : Entity.Null;
         }
 

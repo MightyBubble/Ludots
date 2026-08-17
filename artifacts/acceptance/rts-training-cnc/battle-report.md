@@ -18,7 +18,7 @@
 ## Expected Outcomes
 - Primary success condition: progress/status and queue rows stay readable throughout training.
 - Failure branch condition: queue labels collapse to `Cast Ability`, progress never starts, or resource movement mismatches the style.
-- Key metrics: start Credits=2800, end Credits=1900, avg frame ms=0.549.
+- Key metrics: start Credits=2800, end Credits=1900, avg frame ms=0.206.
 
 ## Timeline
 - [T+001] War Factory is selected by default and ready to train.

@@ -1,3 +1,4 @@
+using Ludots.Core.Client;
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -134,8 +135,8 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
                 $"Raylib visual atmosphere showcase requires virtual camera '{cameraId}'.");
         }
 
-        engine.GameSession.Camera.ResetVirtualCameras();
-        engine.GameSession.Camera.ActivateVirtualCamera(
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ResetVirtualCameras();
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
             cameraId,
             blendDurationSeconds: 0f,
             followTarget: CameraFollowTargetFactory.Build(
@@ -150,7 +151,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         Vector2? targetCm = definition.TargetSource == VirtualCameraTargetSource.Fixed
             ? definition.FixedTargetCm
             : null;
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
         {
             VirtualCameraId = cameraId,
             TargetCm = targetCm,
@@ -159,7 +160,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             DistanceCm = definition.DistanceCm,
             FovYDeg = definition.FovYDeg,
         });
-        engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SynchronizeActiveVirtualCameraBoundsAndHeight();
     }
 
     private static CaptureShot ResolveCaptureShot()

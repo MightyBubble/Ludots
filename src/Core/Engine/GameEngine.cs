@@ -815,13 +815,18 @@ namespace Ludots.Core.Engine
                 visionFogFieldStore,
                 visionResolver,
                 fogKnowledgeProjector);
+            // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
+            var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var graphLookupTables = new GraphLookupTableLoader(ConfigPipeline, presentationTextCatalog)
+                .Load(ConfigCatalog, ConfigConflictReport);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
-                MapLoader.EntityTemplateKeys);
+                MapLoader.EntityTemplateKeys,
+                lookupTables: graphLookupTables);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -944,7 +949,8 @@ namespace Ludots.Core.Engine
                 entitySetQueryRuntime,
                 controlDomainQuery,
                 knowledgeProjectionResolver,
-                clock);
+                clock,
+                graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
@@ -1118,7 +1124,6 @@ namespace Ludots.Core.Engine
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
-            var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             if (presentationTextCatalog.DefaultLocaleId > 0)
             {
@@ -1466,6 +1471,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GraphLookupTableRegistry, graphLookupTables);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(CoreServiceKeys.GraphActionCatalog, graphActionCatalog);
             var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps);
@@ -1515,6 +1521,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
+            var clientLocalSeatRegistry = new Client.ClientLocalSeatRegistry();
+            var logicViewRegistry = new Client.LogicViewRegistry();
+            SetService(CoreServiceKeys.ClientLocalSeatRegistry, clientLocalSeatRegistry);
+            SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
@@ -1654,13 +1664,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SurfaceSourceRuntimeRegistry, surfaceRuntime);
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
             SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
-            GameSession.Camera.SetPlatformManagedCameraDriverRegistry(platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
-            GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
-            GameSession.Camera.SetImpulseRuntime(cameraImpulseRuntime);
             var questDefinitions = new QuestDefinitionRegistry();
             new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var questRuntime = new QuestRuntimeService(World, questDefinitions);
@@ -1672,7 +1679,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             AttributeRegistry.Freeze();
-            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
+            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
@@ -1684,7 +1691,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
-            RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
@@ -2139,7 +2146,8 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
-                session.LaunchContext = request.LaunchContext;
+                // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
+                session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
                 BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
@@ -2466,38 +2474,88 @@ namespace Ludots.Core.Engine
                 virtualCameraId = definition.Id;
             }
 
-            GameSession.Camera.ResetVirtualCameras();
-            GameSession.Camera.ActivateVirtualCamera(
-                virtualCameraId,
-                blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(
-                    World,
-                    GlobalContext,
-                    definition.FollowTargetKind,
-                    ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
-                    definition.FollowCollectionKey),
-                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
-
-            if (cam != null)
-            {
-                GameSession.Camera.ApplyPose(new CameraPoseRequest
-                {
-                    VirtualCameraId = virtualCameraId,
-                    TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
-                        ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
-                        : null,
-                    Yaw = cam.Yaw,
-                    Pitch = cam.Pitch,
-                    DistanceCm = cam.DistanceCm,
-                    FovYDeg = cam.FovYDeg
-                });
-            }
+            var followTarget = CameraFollowTargetFactory.Build(
+                World,
+                GlobalContext,
+                definition.FollowTargetKind,
+                ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
+                definition.FollowCollectionKey);
 
             EnsureCameraRuntimeConfigured();
-            GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
+            CollectDefaultCameraTargets(targets);
+            Ludots.Core.Gameplay.Camera.CameraManager? logged = null;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                Ludots.Core.Gameplay.Camera.CameraManager camera = targets[i];
+                EnsureAuthorityCameraServices(camera);
+                camera.ResetVirtualCameras();
+                camera.ActivateVirtualCamera(
+                    virtualCameraId,
+                    blendDurationSeconds: 0f,
+                    followTarget: followTarget,
+                    snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
-            var state = GameSession.Camera.State;
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+                if (cam != null)
+                {
+                    camera.ApplyPose(new CameraPoseRequest
+                    {
+                        VirtualCameraId = virtualCameraId,
+                        TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                            ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
+                            : null,
+                        Yaw = cam.Yaw,
+                        Pitch = cam.Pitch,
+                        DistanceCm = cam.DistanceCm,
+                        FovYDeg = cam.FovYDeg
+                    });
+                }
+
+                camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+                logged ??= camera;
+            }
+
+            if (logged != null)
+            {
+                var state = logged.State;
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+            }
+        }
+
+        private void CollectDefaultCameraTargets(System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager> targets)
+        {
+            targets.Clear();
+            Client.LogicViewRegistry views = GetService(CoreServiceKeys.LogicViewRegistry)
+                ?? throw new InvalidOperationException(
+                    "LogicViewRegistry is required before applying DefaultCamera.");
+            if (views.Count == 0)
+            {
+                views.EnsureClientPresentView();
+            }
+
+            views.CopyCameras(targets);
+        }
+
+        private void EnsureAuthorityCameraServices(Ludots.Core.Gameplay.Camera.CameraManager camera)
+        {
+            ArgumentNullException.ThrowIfNull(camera);
+            if (camera.VirtualCameraBrain == null)
+            {
+                var virtualCameras = GetService(CoreServiceKeys.VirtualCameraRegistry)
+                    ?? throw new InvalidOperationException(
+                        "VirtualCameraRegistry is required before activating LogicView / authority cameras.");
+                camera.SetVirtualCameraRegistry(virtualCameras);
+            }
+
+            if (GetService(CoreServiceKeys.CameraImpulseRuntime) is Ludots.Core.Gameplay.Camera.CameraImpulseRuntime impulse)
+            {
+                camera.SetImpulseRuntime(impulse);
+            }
+
+            if (GetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry) is Ludots.Core.Gameplay.Camera.PlatformManagedCameraDriverRegistry drivers)
+            {
+                camera.SetPlatformManagedCameraDriverRegistry(drivers);
+            }
         }
 
         private Entity ResolveDefaultCameraFollowCollectionOwner(CameraFollowTargetKind followTargetKind)
@@ -2507,14 +2565,20 @@ namespace Ludots.Core.Engine
                 return Entity.Null;
             }
 
-            Entity sessionLocal = CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
-            if (sessionLocal != Entity.Null && World.IsAlive(sessionLocal))
+            if (CurrentMapSession?.LocalSeats is { Count: > 0 } seats)
             {
-                return sessionLocal;
+                for (int i = 0; i < seats.Count; i++)
+                {
+                    Entity sessionLocal = seats[i].RepEntity;
+                    if (sessionLocal != Entity.Null && World.IsAlive(sessionLocal))
+                    {
+                        return sessionLocal;
+                    }
+                }
             }
 
-            Entity serviceLocal = GetService(CoreServiceKeys.LocalPlayerEntity);
-            return serviceLocal != Entity.Null && World.IsAlive(serviceLocal)
+            return Client.ClientLocalSeatAccess.TryGetSolePossessedRep(this, out Entity serviceLocal) &&
+                   World.IsAlive(serviceLocal)
                 ? serviceLocal
                 : Entity.Null;
         }
@@ -3289,9 +3353,7 @@ namespace Ludots.Core.Engine
                 throw new InvalidOperationException("StartupMapId is required.");
             }
 
-            MapLaunchContext? launchContext = MergedConfig!.StartupLocalPlayerId > 0
-                ? MapLaunchContext.Create(MergedConfig.StartupLocalPlayerId)
-                : null;
+            MapLaunchContext? launchContext = MergedConfig!.CreateStartupLaunchContext();
             LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
         }
 
@@ -3554,13 +3616,32 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            if (!GameSession.Camera.IsRuntimeConfigured)
+            void Configure(Ludots.Core.Gameplay.Camera.CameraManager camera)
             {
-                GameSession.Camera.ConfigureRuntime(
+                // Always (re)bind providers so LogicView cameras get world bounds / heightmap after publish.
+                camera.ConfigureRuntime(
                     behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
+            }
+
+            if (!TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) ||
+                views == null)
+            {
+                return;
+            }
+
+            if (views.Count == 0)
+            {
+                return;
+            }
+
+            var cameras = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(views.Count);
+            views.CopyCameras(cameras);
+            for (int i = 0; i < cameras.Count; i++)
+            {
+                Configure(cameras[i]);
             }
         }
 

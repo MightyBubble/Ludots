@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryFilterRelationship",
-  "windowTitle": "Ludots - 只打敌对关系",
+  "windowTitle": "Ludots - 只留敌对关系的人",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

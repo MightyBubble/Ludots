@@ -1,6 +1,6 @@
-# gr-04 UXD · 图文档格式的编辑器需求
+# gr-02 UXD · 图文档格式的编辑器需求
 
-> gr-03 的编辑器需求（高保真规格）。第一性需求见 [gr-03 PRD](../prd/gr-02-document.md)；配置写法见 [gr-03 配置说明](../config/gr-02-document.md)；编辑器实现见 [editor spec](../spec-editor/gr-02-document.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> gr-02 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -23,7 +23,7 @@
 | 控件 | 数据源与取值 | 行为 |
 |---|---|---|
 | 画布连线 | 端口常量表（引擎同源） | 吸附合法端口；非法连线原地拒绝并提示 |
-| 分支出边 | BranchBool 等糖的端口集（gr-05） | true/false 双出边自动呈现 |
+| 分支出边 | BranchBool 等糖的端口集（gr-04） | true/false 双出边自动呈现 |
 | 节点 id | 装载器补全规则 | 默认自动命名，可改；重复即时标红 |
 | 符号字段 | tag/attribute/图名注册表 | 引用补全 + 未注册名预警 |
 | 落盘导出 | FrontDoor | 导出必过门，缺边键即拒 |
@@ -48,4 +48,4 @@
 - 界面上不存在任何会被装载拒绝的保存产物（next、缺键等错误在编辑期全部拦截）。
 - 任一节点字段与落盘 JSON 一一对应，无界面私有字段。
 
-**相关文档**：[gr-03 PRD](../prd/gr-02-document.md) · [editor spec](../spec-editor/gr-02-document.md) · [gr-02 UXD](gr-01-model.md)
+**相关文档**：[gr-02 PRD](../prd/gr-02-document.md) · [editor spec](../spec-editor/gr-02-document.md) · [gr-01 UXD](gr-01-model.md)

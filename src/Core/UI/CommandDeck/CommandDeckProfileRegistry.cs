@@ -123,12 +123,12 @@ namespace Ludots.Core.UI.CommandDeck
             switch (displayMode)
             {
                 case CommandDeckDisplayMode.Global:
-                    if (sourceKind is not (CommandDeckSourceKind.LocalPlayerRep
+                    if (sourceKind is not (CommandDeckSourceKind.SolePossessedRep
                         or CommandDeckSourceKind.EntityCollection
                         or CommandDeckSourceKind.ControlPlaneView))
                     {
                         throw new InvalidOperationException(
-                            $"CommandDeck profile '{definition.Id}' global mode requires localPlayerRep, entityCollection, or controlPlaneView sourceKind.");
+                            $"CommandDeck profile '{definition.Id}' global mode requires solePossessedRep, entityCollection, or controlPlaneView sourceKind.");
                     }
 
                     break;
@@ -157,7 +157,7 @@ namespace Ludots.Core.UI.CommandDeck
 
                     if (sourceKind is not (CommandDeckSourceKind.EntityCollection
                         or CommandDeckSourceKind.ControlPlaneView
-                        or CommandDeckSourceKind.LocalPlayerRep))
+                        or CommandDeckSourceKind.SolePossessedRep))
                     {
                         throw new InvalidOperationException(
                             $"CommandDeck profile '{definition.Id}' aggregateFiltered mode requires a collection/control-plane sourceKind.");
@@ -176,7 +176,7 @@ namespace Ludots.Core.UI.CommandDeck
             }
 
             if (sourceKind is CommandDeckSourceKind.EntityCollection or CommandDeckSourceKind.ControlPlaneView
-                or CommandDeckSourceKind.LocalPlayerRep)
+                or CommandDeckSourceKind.SolePossessedRep)
             {
                 if (string.IsNullOrWhiteSpace(definition.SourceRef))
                 {
@@ -261,7 +261,7 @@ namespace Ludots.Core.UI.CommandDeck
         {
             return value switch
             {
-                CommandDeckSourceKindIds.LocalPlayerRep => CommandDeckSourceKind.LocalPlayerRep,
+                CommandDeckSourceKindIds.SolePossessedRep => CommandDeckSourceKind.SolePossessedRep,
                 CommandDeckSourceKindIds.ExplicitEntity => CommandDeckSourceKind.ExplicitEntity,
                 CommandDeckSourceKindIds.EntityCollection => CommandDeckSourceKind.EntityCollection,
                 CommandDeckSourceKindIds.ControlPlaneView => CommandDeckSourceKind.ControlPlaneView,

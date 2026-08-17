@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Relationships;
@@ -503,8 +504,8 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
 
             Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);
 

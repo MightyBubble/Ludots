@@ -1,6 +1,6 @@
-# ai-11 配置说明 · 层次状态机
+# ai-10 配置说明 · 层次状态机
 
-> 配置写法与行为。第一性需求见 [ai-11 PRD](../prd/ai-10-hfsm.md)；编辑器需求见 [UXD](../uxd/ai-10-hfsm.md)；现状见 [reference](../reference/ai-10-hfsm.md)。
+> 配置写法与行为。第一性需求见 [ai-10 PRD](../prd/ai-10-hfsm.md)；编辑器需求见 [UXD](../uxd/ai-10-hfsm.md)；现状见 [reference](../reference/ai-10-hfsm.md)。
 
 ## 1. 示例配置
 
@@ -64,4 +64,4 @@ GraphBehaviorDefinitionLoader 逐台解析：state kind 与 predicate 严格枚�
 
 - 引擎默认：`assets/AI/hfsm.json`（hfsm.sentry 纯谓词版 + hfsm.sentry.scripted 生命周期版，各 6 状态 4 转移）
 
-**相关文档**：[ai-11 PRD](../prd/ai-10-hfsm.md) · [ai-10 配置说明](ai-09-behavior-trees.md) · [ai-02 配置说明](ai-01-utility-overview.md)
+**相关文档**：[ai-10 PRD](../prd/ai-10-hfsm.md) · [ai-09 配置说明](ai-09-behavior-trees.md) · [ai-01 配置说明](ai-01-utility-overview.md)

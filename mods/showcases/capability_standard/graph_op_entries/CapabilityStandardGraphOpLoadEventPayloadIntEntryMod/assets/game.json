@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_LoadEventPayloadInt",
-  "windowTitle": "Ludots - 读出事件里的整数",
+  "windowTitle": "Ludots - 从飞来的那一发里读出编号",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

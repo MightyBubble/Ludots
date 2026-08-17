@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_RelationshipHasFlag",
-  "windowTitle": "Ludots - 这条关系受不受信任",
+  "windowTitle": "Ludots - 这条关系上插没插信任旗",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

@@ -1,6 +1,6 @@
-# ai-11 配置说明 · 行为树
+# ai-09 配置说明 · 行为树
 
-> 配置写法与行为。第一性需求见 [ai-10 PRD](../prd/ai-09-behavior-trees.md)；编辑器需求见 [UXD](../uxd/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
+> 配置写法与行为。第一性需求见 [ai-09 PRD](../prd/ai-09-behavior-trees.md)；编辑器需求见 [UXD](../uxd/ai-09-behavior-trees.md)；现状见 [reference](../reference/ai-09-behavior-trees.md)。
 
 ## 1. 示例配置
 
@@ -60,4 +60,4 @@ GraphBehaviorDefinitionLoader 逐树解析：校验 id 去重与枚举严格匹�
 - 引擎默认：`assets/AI/behavior_trees.json`（bt.patrolChaseAttack，9 节点）
 - 驱动侧真实例：`mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod/Runtime/BehaviorTreeArenaRuntime.cs:129-131`（RestartAllThinking + TickAll 32）
 
-**相关文档**：[ai-10 PRD](../prd/ai-09-behavior-trees.md) · [ai-11 配置说明](ai-10-hfsm.md) · [ai-02 配置说明](ai-01-utility-overview.md)
+**相关文档**：[ai-09 PRD](../prd/ai-09-behavior-trees.md) · [ai-10 配置说明](ai-10-hfsm.md) · [ai-01 配置说明](ai-01-utility-overview.md)

@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_ApplyEffectDynamic",
-  "windowTitle": "Ludots - 按读到的模板打到点名目标",
+  "windowTitle": "Ludots - 先翻出一张效果牌，再照着打",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

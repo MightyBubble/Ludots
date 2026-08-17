@@ -1,6 +1,6 @@
-# gr-05 配置说明 · 六种 Kind
+# gr-03 配置说明 · 六种 Kind
 
-> 配置写法与行为。第一性需求见 [gr-04 PRD](../prd/gr-03-kinds.md)；编辑器需求见 [UXD](../uxd/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
+> 配置写法与行为。第一性需求见 [gr-03 PRD](../prd/gr-03-kinds.md)；编辑器需求见 [UXD](../uxd/gr-03-kinds.md)；现状见 [reference](../reference/gr-03-kinds.md)。
 
 ## 1. 示例配置
 
@@ -14,11 +14,11 @@ kind 写在 graphs.json 条目头。真实实例五种：
 { "id": "Tests.DerivedAttributeGraph.EngineOwned", "kind": "Derived", "entry": "source", "nodes": [ … LoadSelfAttribute → MulFloat → WriteSelfAttribute … ] }
 ```
 
-Query 现状无主线实例，写法@@gr8@@。
+Query 现状无主线实例，写法gr-09。
 
 ## 2. 字段与行为
 
-| kind | 返回约定 | 典型挂点（gr-09） |
+| kind | 返回约定 | 典型挂点（gr-08） |
 |---|---|---|
 | `Effect` | 无返回；做事节点全放行 | 效果相位图、相位监听 |
 | `Query` | 产出 TargetList，按 outputs 物化（gr-09） | 瞄准预览、查询物化 |
@@ -31,7 +31,7 @@ Query 现状无主线实例，写法@@gr8@@。
 
 ## 3. 文件结构
 
-无独立文件——kind 是 graphs.json 条目字段（gr-03）。
+无独立文件——kind 是 graphs.json 条目字段（gr-02）。
 
 ## 4. 运行时加载效果
 
@@ -52,4 +52,4 @@ Query 现状无主线实例，写法@@gr8@@。
 - Score：`mods/showcases/capability_standard/CapabilityStandardGraphScoreShowcaseMod/assets/GAS/graphs.json`
 - Validation：同目录 NodeGallery 分片；Derived：`mods/fixtures/gas/DerivedAttributeGraphAcceptanceMod/assets/GAS/graphs.json`
 
-**相关文档**：[gr-04 PRD](../prd/gr-03-kinds.md) · [gr-03 配置说明](gr-02-document.md) · [gr-09 配置说明](gr-08-mount-points.md)
+**相关文档**：[gr-03 PRD](../prd/gr-03-kinds.md) · [gr-02 配置说明](gr-02-document.md) · [gr-08 配置说明](gr-08-mount-points.md)

@@ -1,6 +1,6 @@
-# fx-05 配置说明 · 效果模板骨架
+# fx-02 配置说明 · 效果模板骨架
 
-> 配置写法与行为。第一性需求见 [fx-04 PRD](../prd/fx-02-template.md)；编辑器需求见 [UXD](../uxd/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
+> 配置写法与行为。第一性需求见 [fx-02 PRD](../prd/fx-02-template.md)；编辑器需求见 [UXD](../uxd/fx-02-template.md)；现状见 [reference](../reference/fx-02-template.md)。
 
 ## 1. 示例配置
 
@@ -26,17 +26,17 @@ rts 底座效果表节选（真实）：一条 Buff、一条即时伤害：
 |---|---|
 | `id` | 模板身份；与所在条目 id 逐字一致，不一致启动失败 |
 | `tags` | 效果身份标签，至多一枚 |
-| `presetType` | 必填；按 preset_types 注册表→内建枚举序解析（fx-05） |
-| `lifetime` | 必填，精确三值 Instant / After / Infinite（fx-06） |
-| `participatesInResponse` | 必填布尔；false 的效果不收响应链回应（fx-09） |
-| `duration` | 对象块；规则矩阵@@fx3@@ |
-| `expireCondition` | 可选块 kind/tag/sense；独立于时长的过期条件（fx-06） |
-| 17 个组件块 | modifiers、targetQuery、targetFilter、targetDispatch、configParams、grantedTags、phaseGraphs、phaseListeners、stack、projectile、unitCreation、displacement、relation、progression、submitOrderFromBlackboard 等，分篇@@fx3@@ 起 |
-| `stack` | 可选；三字段全必填（fx-15） |
+| `presetType` | 必填；按 preset_types 注册表→内建枚举序解析（fx-03） |
+| `lifetime` | 必填，精确三值 Instant / After / Infinite（fx-04） |
+| `participatesInResponse` | 必填布尔；false 的效果不收响应链回应（fx-07） |
+| `duration` | 对象块；规则矩阵fx-04 |
+| `expireCondition` | 可选块 kind/tag/sense；独立于时长的过期条件（fx-04） |
+| 17 个组件块 | modifiers、targetQuery、targetFilter、targetDispatch、configParams、grantedTags、phaseGraphs、phaseListeners、stack、projectile、unitCreation、displacement、relation、progression、submitOrderFromBlackboard 等，分篇fx-04 起 |
+| `stack` | 可选；三字段全必填（fx-12） |
 
 跨字段规则：modifiers 容量与 ApplyForce2D 预留见事实页；Instant 效果禁带 phaseListeners；displacement/relation/progression/projectile/unitCreation/submitOrderFromBlackboard 六块只在对应 presetType 下合法且必须携带。
 
-禁用字段：顶层 `period`（写进 duration 块）、标量 `duration`、`lifecycleDeploy`（部署链路走 configParams 保留键与 preset 图，@@fx22@@）。
+禁用字段：顶层 `period`（写进 duration 块）、标量 `duration`、`lifecycleDeploy`（部署链路走 configParams 保留键与 preset 图，fx-23）。
 
 ## 3. 文件结构
 
@@ -62,4 +62,4 @@ rts 底座效果表节选（真实）：一条 Buff、一条即时伤害：
 - `mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod/assets/GAS/effects.json`
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/effects.json`（51 条，块用法最全）
 
-**相关文档**：[fx-04 PRD](../prd/fx-02-template.md) · [fx-05 配置说明](fx-03-preset-types.md) · [ed-02](ed-02-hot-apply.md)
+**相关文档**：[fx-02 PRD](../prd/fx-02-template.md) · [fx-03 配置说明](fx-03-preset-types.md) · [ed-02](ed-02-hot-apply.md)

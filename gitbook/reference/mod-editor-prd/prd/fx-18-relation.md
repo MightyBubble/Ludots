@@ -1,4 +1,4 @@
-# fx-22 · 关系操作
+# fx-18 · 关系操作
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-18-relation.md)；编辑器需求见 [UXD](../uxd/fx-18-relation.md)；引擎实现见 [runtime spec](../spec-runtime/fx-18-relation.md)；editor spec 见 [editor spec](../spec-editor/fx-18-relation.md)；现状见 [reference](../reference/fx-18-relation.md)。
 
@@ -22,4 +22,4 @@ SetParent 可选把 subject 吸附到父位置；EnsureLink 经关系运行时�
 
 槽位为 None、条件字段越权、relationshipType 未注册——启动失败并指明字段；运行期实体失效——抛错带实体 id；RemoveParent/EnsureLink 现状在计划编译期被拒。
 
-**相关文档**：[配置说明](../config/fx-18-relation.md) · @@fx6@@（独占与认证）、rel-01（关系目录）
+**相关文档**：[配置说明](../config/fx-18-relation.md) · fx-06（独占与认证）、rel-01（关系目录）

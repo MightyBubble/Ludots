@@ -564,6 +564,17 @@
   border-color: rgba(111, 207, 151, 0.4);
 }
 
+.upa-gnode.kind-intent {
+  border-style: dashed;
+  border-color: rgba(160, 160, 160, 0.45);
+  opacity: 0.72;
+  background: rgba(28, 32, 30, 0.85);
+}
+
+.upa-gnode.kind-intent .upa-gnode-kind {
+  color: rgba(180, 180, 180, 0.9);
+}
+
 .upa-gnode.kind-panel {
   border-color: rgba(212, 180, 131, 0.7);
   background: linear-gradient(160deg, rgba(212, 180, 131, 0.14), rgba(20, 26, 23, 0.98));

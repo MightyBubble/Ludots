@@ -1,6 +1,6 @@
-# 跳过这一口
+# 满了就跳过续杯
 
-茶杯已经满了，直接跳到收束，不再续杯。
+杯是满的：续杯那几行被划掉，指针直接飞到收工行。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_Jump/poster.png" src="artifacts/evidence/capability_standard_graph_op_Jump/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_Jump/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 满了就跳过续杯。茶水 {water}/{limit}。
+> 满了就不续了。茶水 {water}/{limit}，续杯那几行划掉，直接收工。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 跳过这一口
+Feature: 满了就跳过续杯
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_Jump
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_Jump/play.mp4
     When 短剧演完
-    Then 字幕讲的是「茶杯已经满了，直接跳到收束，不再续杯。」这类人话
+    Then 字幕讲的是「杯是满的：续杯那几行被划掉，指针直接飞到收工行。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

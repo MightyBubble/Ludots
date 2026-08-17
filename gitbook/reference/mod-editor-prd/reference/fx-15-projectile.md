@@ -1,6 +1,6 @@
-# fx-19 reference · 弹道
+# fx-15 reference · 弹道
 
-> 现状参考。第一性需求见 [fx-18 PRD](../prd/fx-15-projectile.md)；配置说明见 [fx-18 配置说明](../config/fx-15-projectile.md)。
+> 现状参考。第一性需求见 [fx-15 PRD](../prd/fx-15-projectile.md)；配置说明见 [fx-15 配置说明](../config/fx-15-projectile.md)。
 
 ## 1. 现状快照
 
@@ -19,4 +19,4 @@
 | 发射处理器 | src/Core/Gameplay/GAS/BuiltinHandlers.cs:273-356 |
 | 命中历史容量 | src/Core/Gameplay/GAS/ProjectileState.cs:9 |
 
-**相关文档**：[fx-18 PRD](../prd/fx-15-projectile.md) · [fx-18 配置说明](../config/fx-15-projectile.md)
+**相关文档**：[fx-15 PRD](../prd/fx-15-projectile.md) · [fx-15 配置说明](../config/fx-15-projectile.md)

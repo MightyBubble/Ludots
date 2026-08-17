@@ -1,6 +1,6 @@
 # 看自己还剩多少血
 
-不靠情境，施法者读自己生命，字幕报出。
+自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 自己还剩 {hp} 点血。
+> 读自己的生命，还剩 {hp} 点。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 看自己还剩多少血
     Given 玩家打开 capability_standard_graph_op_LoadSelfAttribute
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadSelfAttribute/play.mp4
     When 短剧演完
-    Then 字幕讲的是「不靠情境，施法者读自己生命，字幕报出。」这类人话
+    Then 字幕讲的是「自查线绕回施法者自己，头顶浮出 62；木桩满血没人碰。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

@@ -1,6 +1,6 @@
 # 连击数加一
 
-连击从 2 加到 3，字幕报连击。
+两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_AddInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_AddInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_AddInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 连击从 2 加到 {combo}。
+> 连击 2 加 1，算出 {combo}。
 
 ## 4. 场景
 
@@ -51,7 +51,7 @@ Feature: 连击数加一
     Given 玩家打开 capability_standard_graph_op_AddInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AddInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「连击从 2 加到 3，字幕报连击。」这类人话
+    Then 字幕讲的是「两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

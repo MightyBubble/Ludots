@@ -1,3 +1,5 @@
+using UiPlayerAggregateGraphMvpShowcaseMod.Runtime;
+
 namespace UiPlayerAggregateGraphMvpShowcaseMod.UI;
 
 internal readonly record struct UiPlayerAggregateGraphMvpPanelState(
@@ -6,9 +8,10 @@ internal readonly record struct UiPlayerAggregateGraphMvpPanelState(
     string Controls,
     string Status,
     string GraphId,
-    string OreSummaryKey,
-    string CrystalSummaryKey,
+    UiPlayerAggregatePanelBinding OreBinding,
+    UiPlayerAggregatePanelBinding CrystalBinding,
     float OreTotal,
     float CrystalTotal,
     bool BuildingShutDown,
-    string ShutDownBuildingName);
+    string ShutDownBuildingName,
+    UiPlayerAggregatePanelStyle PanelStyle);

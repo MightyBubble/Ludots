@@ -1,6 +1,6 @@
-# fx-23 reference · 进度完成
+# fx-21 reference · 进度完成
 
-> 现状参考。第一性需求见 [fx-23 PRD](../prd/fx-21-progression.md)；配置说明见 [fx-23 配置说明](../config/fx-21-progression.md)。
+> 现状参考。第一性需求见 [fx-21 PRD](../prd/fx-21-progression.md)；配置说明见 [fx-21 配置说明](../config/fx-21-progression.md)。
 
 ## 1. 现状快照
 
@@ -21,4 +21,4 @@
 | 作用域注册表（revealArea 共用） | src/Core/Gameplay/GAS/Config/EffectTemplateLoader.cs:1572-1591 |
 | 展示 mod 现货 | mods/showcases/progression_scope/ProgressionScopeShowcaseMod/assets/GAS/effects.json |
 
-**相关文档**：[fx-23 PRD](../prd/fx-21-progression.md) · [fx-23 配置说明](../config/fx-21-progression.md)
+**相关文档**：[fx-21 PRD](../prd/fx-21-progression.md) · [fx-21 配置说明](../config/fx-21-progression.md)

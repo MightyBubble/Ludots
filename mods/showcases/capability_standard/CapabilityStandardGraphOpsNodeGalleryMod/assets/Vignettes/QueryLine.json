@@ -1,11 +1,12 @@
 {
   "op": "QueryLine",
   "driver": "spatial",
-  "title": "这条线上有谁",
-  "beat": "一道直线穿过去点到的人。",
-  "detailTemplate": "一道直线点到{count}人。",
+  "title": "这条窄线穿过谁",
+  "beat": "带内的人亮，贴着带边差几厘米的也不亮。",
+  "detailTemplate": "半宽 25cm 的线上{count}人，贴边的没进。",
   "assertDetailContains": [
-    "直线"
+    "半宽 25cm",
+    "贴边的没进"
   ],
   "featuredNodeId": "line",
   "graphKind": "Query",

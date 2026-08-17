@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_Jump",
-  "windowTitle": "Ludots - 跳过这一口",
+  "windowTitle": "Ludots - 满了就跳过续杯",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

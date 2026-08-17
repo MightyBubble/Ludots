@@ -1,6 +1,6 @@
-# gr-05 UXD · 六种 Kind 的编辑器需求
+# gr-03 UXD · 六种 Kind 的编辑器需求
 
-> gr-04 的编辑器需求（高保真规格）。第一性需求见 [gr-04 PRD](../prd/gr-03-kinds.md)；配置写法见 [gr-04 配置说明](../config/gr-03-kinds.md)；编辑器实现见 [editor spec](../spec-editor/gr-03-kinds.md)；上限数值以 [事实与取值表](../facts.md) 与 gr-02 reference 为准。
+> gr-03 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  与 gr-01 reference 为准。
 
 ## 1. 界面定位
 
@@ -33,7 +33,7 @@ kind 是建图第一决策：新建向导一次讲清六种的返回约定与能
 
 1. 新建图 → 选 Validation → 命名。
 2. 画布只出现纯读节点 + 判定收尾；控制流糖不出现。
-3. 保存 → 预编译零诊断 → 挂到能力前置（gr-09），kind 校验通过。
+3. 保存 → 预编译零诊断 → 挂到能力前置（gr-08），kind 校验通过。
 
 ## 5. 状态设计
 
@@ -48,4 +48,4 @@ kind 是建图第一决策：新建向导一次讲清六种的返回约定与能
 - 建 kind 决策所需信息（返回约定、白名单、实例数）一屏读完。
 - 编辑器内不可能出现越权节点（面板、粘贴、导入三路全部拦截）。
 
-**相关文档**：[gr-04 PRD](../prd/gr-03-kinds.md) · [editor spec](../spec-editor/gr-03-kinds.md) · [gr-09 UXD](gr-08-mount-points.md)
+**相关文档**：[gr-03 PRD](../prd/gr-03-kinds.md) · [editor spec](../spec-editor/gr-03-kinds.md) · [gr-08 UXD](gr-08-mount-points.md)

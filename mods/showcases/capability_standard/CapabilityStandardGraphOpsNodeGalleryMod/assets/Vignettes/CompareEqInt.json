@@ -1,9 +1,9 @@
 {
   "op": "CompareEqInt",
   "driver": "attr",
-  "title": "层数有没有叠满",
-  "beat": "当前 3 层对比满层 3，叠满就爆。",
-  "detailTemplate": "层数已经叠满，这一刀会爆。",
+  "title": "层数叠满就引爆",
+  "beat": "三层火苗对满层 3，天平对齐，爆出一击扣 18 血。",
+  "detailTemplate": "层数对满层，叠满引爆，木桩从 {healthBefore} 掉到 {healthAfter}。",
   "assertDetailContains": [
     "叠满"
   ],

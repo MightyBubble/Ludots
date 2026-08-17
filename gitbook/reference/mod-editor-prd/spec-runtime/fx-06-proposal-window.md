@@ -1,6 +1,6 @@
-# fx-09 runtime spec · 提案窗口与 Instant 内联
+# fx-06 runtime spec · 提案窗口与 Instant 内联
 
-> 引擎实现任务书。第一性需求见 [fx-08 PRD](../prd/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
+> 引擎实现任务书。第一性需求见 [fx-06 PRD](../prd/fx-06-proposal-window.md)；现状见 [reference](../reference/fx-06-proposal-window.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 
 **变更记录**：v1（2026-08-15）：初版。
 
-**相关文档**：[fx-08 PRD](../prd/fx-06-proposal-window.md) · [reference](../reference/fx-06-proposal-window.md)
+**相关文档**：[fx-06 PRD](../prd/fx-06-proposal-window.md) · [reference](../reference/fx-06-proposal-window.md)

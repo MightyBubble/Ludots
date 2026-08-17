@@ -1,6 +1,6 @@
-# 读出事件里的小数
+# 从飞来的那一发里读出小数
 
-事件带来的小数载荷显示在字幕。
+信号落地后，2.5 从事件里飞进信件板。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/poster.png" src="artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 事件里的小数是 {result}。
+> 这一发带来的小数是 {result}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 读出事件里的小数
+Feature: 从飞来的那一发里读出小数
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_LoadEventPayloadFloat
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadEventPayloadFloat/play.mp4
     When 短剧演完
-    Then 字幕讲的是「事件带来的小数载荷显示在字幕。」这类人话
+    Then 字幕讲的是「信号落地后，2.5 从事件里飞进信件板。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

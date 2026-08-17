@@ -24,4 +24,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [reference](../reference/gr-09-outputs.md) · [gr-09 spec](gr-08-mount-points.md)
+**相关文档**：[gr-09 PRD](../prd/gr-09-outputs.md) · [reference](../reference/gr-09-outputs.md) · [gr-08 spec](gr-08-mount-points.md)

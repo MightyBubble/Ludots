@@ -99,7 +99,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 
 禁止行为：
 
-- 直接写 `session.Camera.State`
+- 直接写已删除的 `GameSession.Camera` / 绕过 LogicView 写镜头权威
 - 在 Adapter / Presenter / Mod 内再造一套 camera tween
 - 引入 `CameraPresetRequest`、`ApplyPreset()` 之类的旧入口
 

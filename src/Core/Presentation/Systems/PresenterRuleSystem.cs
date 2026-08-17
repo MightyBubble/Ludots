@@ -10,6 +10,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
@@ -212,11 +213,11 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.None:
                     return true;
 
-                case InlineConditionKind.SourceIsLocalPlayer:
-                    return IsLocalPlayer(evt.Source);
+                case InlineConditionKind.SourceIsSolePossessedRep:
+                    return IsSolePossessedRep(evt.Source);
 
-                case InlineConditionKind.TargetIsLocalPlayer:
-                    return IsLocalPlayer(evt.Target);
+                case InlineConditionKind.TargetIsSolePossessedRep:
+                    return IsSolePossessedRep(evt.Target);
 
                 case InlineConditionKind.SourceIsAlive:
                     return World.IsAlive(evt.Source);
@@ -250,9 +251,9 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private bool IsLocalPlayer(Entity entity)
+        private bool IsSolePossessedRep(Entity entity)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj)) return false;
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity obj)) return false;
             return obj is Entity lp && lp == entity;
         }
 

@@ -131,6 +131,30 @@ public sealed class GraphOpsNodeGalleryScriptAcceptanceTests
         }
     }
 
+    [Test]
+    public void ScriptOps_DrawOverlayDoesNotThrow()
+    {
+        string[] ops =
+        [
+            "Jump", "JumpIfFalse", "Call", "Return", "Yield",
+            "HaltReturnInt", "InvokeScript", "MoveInt"
+        ];
+        foreach (string op in ops)
+        {
+            using var runtime = new GraphOpsNodeGalleryRuntime();
+            runtime.BindOp(op);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 6; i++)
+            {
+                runtime.Tick(0.35f);
+            }
+
+            var debugDraw = new Ludots.Core.Presentation.DebugDraw.DebugDrawCommandBuffer();
+            runtime.DrawOverlay(debugDraw);
+            Assert.That(debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count, Is.GreaterThan(0), op);
+        }
+    }
+
     private static void AssertBannedPlayerCopy(string detail)
     {
         Assert.That(detail, Does.Not.Contain("tally"));

@@ -21,4 +21,4 @@
 
 实体不在任何控制域——解析出无效句柄不报错；指挥/知情判定对无效实体返回假。引脚类型不符——编译失败。
 
-**相关文档**：[配置说明](../config/gr-op-13-topology.md) · [gr-op-01](gr-op-01-context.md) · [fx-23](fx-19-vision.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)
+**相关文档**：[配置说明](../config/gr-op-13-topology.md) · [gr-op-01](gr-op-01-context.md) · [fx-19](fx-19-vision.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)

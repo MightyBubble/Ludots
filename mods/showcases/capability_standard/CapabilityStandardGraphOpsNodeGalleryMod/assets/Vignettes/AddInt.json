@@ -2,8 +2,8 @@
   "op": "AddInt",
   "driver": "attr",
   "title": "连击数加一",
-  "beat": "连击从 2 加到 3，字幕报连击。",
-  "detailTemplate": "连击从 2 加到 {combo}。",
+  "beat": "两刀打进算式台 2+1，翻牌翻出 3，木桩头顶亮三枚连击火花。",
+  "detailTemplate": "连击 2 加 1，算出 {combo}。",
   "assertDetailContains": [
     "连击"
   ],

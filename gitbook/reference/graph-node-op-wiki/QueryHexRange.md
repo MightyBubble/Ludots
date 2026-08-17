@@ -1,6 +1,6 @@
-# 这几格六角范围内
+# 两格以内的六角范围
 
-两格以内的人亮，再远一格的人是暗的。
+范围内格子描黄框，第三格描灰框，人也不亮。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_QueryHexRange/poster.png" src="artifacts/evidence/capability_standard_graph_op_QueryHexRange/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_QueryHexRange/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 两格范围内亮了{count}人，更远那个没亮。
+> 两格内{count}人亮，第三格不算。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 这几格六角范围内
+Feature: 两格以内的六角范围
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_QueryHexRange
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_QueryHexRange/play.mp4
     When 短剧演完
-    Then 字幕讲的是「两格以内的人亮，再远一格的人是暗的。」这类人话
+    Then 字幕讲的是「范围内格子描黄框，第三格描灰框，人也不亮。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

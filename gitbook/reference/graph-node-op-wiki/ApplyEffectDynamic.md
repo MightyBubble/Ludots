@@ -1,6 +1,6 @@
-# 按读到的模板打到点名目标
+# 先翻出一张效果牌，再照着打
 
-模板号不是写死的，读出来再打木桩。
+施法者从抽屉翻出一张牌，木桩照着牌掉了一截血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/poster.png" src="artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 按读到的模板打到点名目标木桩。
+> 黑板里读到的这张牌是打击，照牌把木桩打掉一截血。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 按读到的模板打到点名目标
+Feature: 先翻出一张效果牌，再照着打
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_ApplyEffectDynamic
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ApplyEffectDynamic/play.mp4
     When 短剧演完
-    Then 字幕讲的是「模板号不是写死的，读出来再打木桩。」这类人话
+    Then 字幕讲的是「施法者从抽屉翻出一张牌，木桩照着牌掉了一截血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

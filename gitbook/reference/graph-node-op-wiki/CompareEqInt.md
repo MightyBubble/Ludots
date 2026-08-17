@@ -1,6 +1,6 @@
-# 层数有没有叠满
+# 层数叠满就引爆
 
-当前 3 层对比满层 3，叠满就爆。
+三层火苗对满层 3，天平对齐，爆出一击扣 18 血。
 
 <video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_CompareEqInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_CompareEqInt/play.mp4">
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_CompareEqInt/play.mp4`。
@@ -27,7 +27,7 @@
 
 字幕模板（占位符由短剧填上）：
 
-> 层数已经叠满，这一刀会爆。
+> 层数对满层，叠满引爆，木桩从 {healthBefore} 掉到 {healthAfter}。
 
 ## 4. 场景
 
@@ -45,13 +45,13 @@
 ## 6. UAT
 
 ```gherkin
-Feature: 层数有没有叠满
+Feature: 层数叠满就引爆
 
   Scenario: 新玩家看懂这场短剧
     Given 玩家打开 capability_standard_graph_op_CompareEqInt
     And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_CompareEqInt/play.mp4
     When 短剧演完
-    Then 字幕讲的是「当前 3 层对比满层 3，叠满就爆。」这类人话
+    Then 字幕讲的是「三层火苗对满层 3，天平对齐，爆出一击扣 18 血。」这类人话
     And 画面反馈和字幕说的是同一件事
 ```
 

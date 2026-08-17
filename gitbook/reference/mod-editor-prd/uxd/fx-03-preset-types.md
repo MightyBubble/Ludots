@@ -1,6 +1,6 @@
-# fx-06 UXD · Preset 类型系统的编辑器需求
+# fx-03 UXD · Preset 类型系统的编辑器需求
 
-> Preset 类型系统的编辑器需求（高保真规格）。第一性需求见 [fx-05 PRD](../prd/fx-03-preset-types.md)；配置写法见 [fx-05 配置说明](../config/fx-03-preset-types.md)；编辑器实现见 [editor spec](../spec-editor/fx-03-preset-types.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> Preset 类型系统的编辑器需求（高保真规格）。第一性需求见 [fx-03 PRD](../prd/fx-03-preset-types.md)；配置写法见 [fx-03 配置说明](../config/fx-03-preset-types.md)；编辑器实现见 [editor spec](../spec-editor/fx-03-preset-types.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -50,4 +50,4 @@ preset 类型面板是效果原型的字典页：每种原型一屏看全相位�
 - 任一原型的"声明 + 全部消费者"≤2 跳可达。
 - 新建原型不需要查 loader 规则——表单只呈现合法形态。
 
-**相关文档**：[fx-05 PRD](../prd/fx-03-preset-types.md) · [editor spec](../spec-editor/fx-03-preset-types.md)
+**相关文档**：[fx-03 PRD](../prd/fx-03-preset-types.md) · [editor spec](../spec-editor/fx-03-preset-types.md)

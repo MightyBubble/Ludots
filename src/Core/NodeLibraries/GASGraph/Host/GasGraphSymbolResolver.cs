@@ -18,6 +18,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
+        private readonly GraphLookupTableRegistry? _lookupTables;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -25,7 +26,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipFlagRegistry flags,
             RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
-            EntityTemplateKeyRegistry? entityTemplateKeys = null)
+            EntityTemplateKeyRegistry? entityTemplateKeys = null,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -33,6 +35,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
+            _lookupTables = lookupTables;
+        }
+
+        public int ResolveGraphLookupTable(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup table '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetTableId(name);
+        }
+
+        public int ResolveGraphLookupField(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup field '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetFieldId(name);
         }
 
         public int ResolveTag(string name)
