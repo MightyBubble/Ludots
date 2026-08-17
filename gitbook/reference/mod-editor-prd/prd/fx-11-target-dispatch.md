@@ -1,4 +1,4 @@
-# fx-15 · 目标派发
+# fx-11 · 目标派发
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-11-target-dispatch.md)；编辑器需求见 [UXD](../uxd/fx-11-target-dispatch.md)；引擎实现见 [runtime spec](../spec-runtime/fx-11-target-dispatch.md)；editor spec 见 [editor spec](../spec-editor/fx-11-target-dispatch.md)；现状见 [reference](../reference/fx-11-target-dispatch.md)。
 
@@ -16,10 +16,10 @@
 
 ## 3. 运行行为
 
-命令落地时按三槽重映射发布每个载荷请求；根预算在发布前把关（fx-09）。
+命令落地时按三槽重映射发布每个载荷请求；根预算在发布前把关（fx-07）。
 
 ## 4. 异常承诺
 
 预设与映射同写、槽值域外、载荷未注册——启动失败并指明模板。
 
-**相关文档**：[配置说明](../config/fx-11-target-dispatch.md) · [fx-11](fx-09-target-query.md) · [fx-12](fx-10-target-filter.md) · [fx-09](fx-07-response-chain.md)
+**相关文档**：[配置说明](../config/fx-11-target-dispatch.md) · [fx-09](fx-09-target-query.md) · [fx-10](fx-10-target-filter.md) · [fx-07](fx-07-response-chain.md)

@@ -22,4 +22,4 @@ Effect 图的动作面九件：上效果（模板/动态、单体/扇出）、�
 
 模板/派发预设/事件 tag/属性符号未注册——编译失败并指明节点与符号。扇出超预算——运行失败并报预算计数。非 Effect 图使用——编译拒绝。
 
-**相关文档**：[配置说明](../config/gr-op-10-effect-actions.md) · [fx-15](fx-11-target-dispatch.md) · [gr-op-04](gr-op-04-attributes.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)
+**相关文档**：[配置说明](../config/gr-op-10-effect-actions.md) · [fx-11](fx-11-target-dispatch.md) · [gr-op-04](gr-op-04-attributes.md) · [节点画廊 wiki](../../graph-node-op-wiki/README.md)

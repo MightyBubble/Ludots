@@ -21,4 +21,4 @@ Query 图的输出合同：图跑完的 TargetList 与标量，按 outputs 声�
 
 非 Query 图声明 outputs、schema 校验失败、owner 或 caster 为空——装载或执行失败；去向与类型不匹配在编译期拒绝。
 
-**相关文档**：[配置说明](../config/gr-09-outputs.md) · [gr-04](gr-03-kinds.md) · [gr-09](gr-08-mount-points.md)
+**相关文档**：[配置说明](../config/gr-09-outputs.md) · [gr-03](gr-03-kinds.md) · [gr-08](gr-08-mount-points.md)

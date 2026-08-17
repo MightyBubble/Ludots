@@ -1,4 +1,4 @@
-# fx-08 · 八相位执行
+# fx-05 · 八相位执行
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/fx-05-phases.md)；编辑器需求见 [UXD](../uxd/fx-05-phases.md)；引擎实现见 [runtime spec](../spec-runtime/fx-05-phases.md)；editor spec 见 [editor spec](../spec-editor/fx-05-phases.md)；现状见 [reference](../reference/fx-05-phases.md)。
 
@@ -22,4 +22,4 @@
 
 主槽与跳过同写、监听器超容量、绑定步超上限——启动或运行期报错，不静默降级。
 
-**相关文档**：[配置说明](../config/fx-05-phases.md) · [fx-05](fx-03-preset-types.md) · [fx-08](fx-06-proposal-window.md) · [fx-10](fx-08-phase-listeners.md)
+**相关文档**：[配置说明](../config/fx-05-phases.md) · [fx-03](fx-03-preset-types.md) · [fx-06](fx-06-proposal-window.md) · [fx-08](fx-08-phase-listeners.md)

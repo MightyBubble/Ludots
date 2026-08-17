@@ -73,7 +73,7 @@ kind 缩写同 gr-op-01。关系类型/度量/旗标符号均来自关系目录�
 
 ## 3. 文件结构
 
-图文档放 `assets/GAS/graphs.json` 或分片目录；`relationshipType`/`metric`/旗标字段写目录符号，见 gr-04。关系类型/度量/旗标在 `assets/Relationships/catalog.json` 声明（rel-01）。
+图文档放 `assets/GAS/graphs.json` 或分片目录；`relationshipType`/`metric`/旗标字段写目录符号，见 gr-02。关系类型/度量/旗标在 `assets/Relationships/catalog.json` 声明（rel-01）。
 
 ## 4. 运行时加载效果
 

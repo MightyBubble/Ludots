@@ -1,4 +1,4 @@
-# ai-03 · AI 行为层总论
+# ai-01 · AI 行为层总论
 
 > 第一性需求 · 已冻结。配置写法见 [配置说明](../config/ai-01-utility-overview.md)；编辑器需求见 [UXD](../uxd/ai-01-utility-overview.md)；引擎实现见 [runtime spec](../spec-runtime/ai-01-utility-overview.md)；editor spec 见 [editor spec](../spec-editor/ai-01-utility-overview.md)；现状见 [reference](../reference/ai-01-utility-overview.md)。
 
@@ -21,4 +21,4 @@ AI 行为层让 mod 以纯配置定义"单位自己会做什么"：效用 AI 十
 
 引用未定义的 input/normalization/curve/task/decision/decision maker/profile、Tasks/Decisions/DecisionMakers 非连续区间、无 profile 的效用配置、utility 配置缺校验上下文——启动失败并给出表名+条目+字段路径。
 
-**相关文档**：[配置说明](../config/ai-01-utility-overview.md) · [ai-03](ai-02-inputs.md) · [ai-10](ai-09-behavior-trees.md) · [ai-11](ai-11-goap-htn.md)
+**相关文档**：[配置说明](../config/ai-01-utility-overview.md) · [ai-02](ai-02-inputs.md) · [ai-09](ai-09-behavior-trees.md) · [ai-11](ai-11-goap-htn.md)

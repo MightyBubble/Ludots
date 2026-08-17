@@ -61,4 +61,4 @@
 
 - `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/context_groups.json`（3 组：arcweaver/vanguard/commander）
 
-**相关文档**：[ab-10 PRD](../prd/ab-10-context-groups.md) · [ab-01 配置说明](ab-01-definition.md) · [gr-05 配置说明](gr-03-kinds.md)
+**相关文档**：[ab-10 PRD](../prd/ab-10-context-groups.md) · [ab-01 配置说明](ab-01-definition.md) · [gr-03 配置说明](gr-03-kinds.md)

@@ -1,6 +1,6 @@
-# ai-11 reference · 行为树
+# ai-09 reference · 行为树
 
-> 现状参考。第一性需求见 [ai-10 PRD](../prd/ai-09-behavior-trees.md)；配置说明见 [ai-10 配置说明](../config/ai-09-behavior-trees.md)。
+> 现状参考。第一性需求见 [ai-09 PRD](../prd/ai-09-behavior-trees.md)；配置说明见 [ai-09 配置说明](../config/ai-09-behavior-trees.md)。
 
 ## 1. 现状快照
 
@@ -22,4 +22,4 @@
 | 真实驱动例 | mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod/Runtime/BehaviorTreeArenaRuntime.cs:129-131 |
 | 资产与 schema | assets/AI/behavior_trees.json、assets/AI/behavior_trees.schema.json |
 
-**相关文档**：[ai-10 PRD](../prd/ai-09-behavior-trees.md) · [ai-11 reference](ai-10-hfsm.md)
+**相关文档**：[ai-09 PRD](../prd/ai-09-behavior-trees.md) · [ai-10 reference](ai-10-hfsm.md)

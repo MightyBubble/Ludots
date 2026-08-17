@@ -1,6 +1,6 @@
-# ai-07 reference · 决策者与档案
+# ai-05 reference · 决策者与档案
 
-> 现状参考。第一性需求见 [ai-06 PRD](../prd/ai-05-dm-profiles.md)；配置说明见 [ai-06 配置说明](../config/ai-05-dm-profiles.md)。
+> 现状参考。第一性需求见 [ai-05 PRD](../prd/ai-05-dm-profiles.md)；配置说明见 [ai-05 配置说明](../config/ai-05-dm-profiles.md)。
 
 ## 1. 现状快照
 
@@ -23,4 +23,4 @@
 | 组件 | src/Core/Gameplay/AI/Components/UtilityAiRuntimeComponents.cs:5-24 |
 | 真实例 | mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/decision_makers.json、profiles.json |
 
-**相关文档**：[ai-06 PRD](../prd/ai-05-dm-profiles.md) · [ai-07 reference](ai-06-target-filters.md)
+**相关文档**：[ai-05 PRD](../prd/ai-05-dm-profiles.md) · [ai-06 reference](ai-06-target-filters.md)

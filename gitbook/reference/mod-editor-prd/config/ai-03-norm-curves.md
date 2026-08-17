@@ -1,6 +1,6 @@
-# ai-05 配置说明 · 归一化与响应曲线
+# ai-03 配置说明 · 归一化与响应曲线
 
-> 配置写法与行为。第一性需求见 [ai-04 PRD](../prd/ai-03-norm-curves.md)；编辑器需求见 [UXD](../uxd/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
+> 配置写法与行为。第一性需求见 [ai-03 PRD](../prd/ai-03-norm-curves.md)；编辑器需求见 [UXD](../uxd/ai-03-norm-curves.md)；现状见 [reference](../reference/ai-03-norm-curves.md)。
 
 ## 1. 示例配置
 
@@ -68,4 +68,4 @@ curves：
 
 - `mods/showcases/utility_autocast/UtilityAutocastShowcaseMod/assets/AI/normalizations.json`（3 条）与 `curves.json`（1 条）
 
-**相关文档**：[ai-04 PRD](../prd/ai-03-norm-curves.md) · [ai-03 配置说明](ai-02-inputs.md) · [ai-05 配置说明](ai-04-decisions.md)
+**相关文档**：[ai-03 PRD](../prd/ai-03-norm-curves.md) · [ai-02 配置说明](ai-02-inputs.md) · [ai-04 配置说明](ai-04-decisions.md)

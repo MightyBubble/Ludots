@@ -1,6 +1,6 @@
-# fx-09 UXD · 提案窗口与 Instant 内联的编辑器需求
+# fx-06 UXD · 提案窗口与 Instant 内联的编辑器需求
 
-> 提案窗口与 Instant 内联的编辑器需求（高保真规格）。第一性需求见 [fx-08 PRD](../prd/fx-06-proposal-window.md)；配置写法见 [fx-08 配置说明](../config/fx-06-proposal-window.md)；编辑器实现见 [editor spec](../spec-editor/fx-06-proposal-window.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 提案窗口与 Instant 内联的编辑器需求（高保真规格）。第一性需求见 [fx-06 PRD](../prd/fx-06-proposal-window.md)；配置写法见 [fx-06 配置说明](../config/fx-06-proposal-window.md)；编辑器实现见 [editor spec](../spec-editor/fx-06-proposal-window.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -49,4 +49,4 @@
 - 验证图的通过/拒绝可以在编辑器内离线模拟，不必进游戏。
 - 独占律冲突在编辑期可视化，错误信息能指到具体块。
 
-**相关文档**：[fx-08 PRD](../prd/fx-06-proposal-window.md) · [editor spec](../spec-editor/fx-06-proposal-window.md)
+**相关文档**：[fx-06 PRD](../prd/fx-06-proposal-window.md) · [editor spec](../spec-editor/fx-06-proposal-window.md)

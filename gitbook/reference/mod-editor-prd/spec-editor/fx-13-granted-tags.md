@@ -1,6 +1,6 @@
-# fx-17 editor spec · 效果授予 Tag
+# fx-13 editor spec · 效果授予 Tag
 
-> 编辑器实现任务书。编辑器需求见 [fx-16 UXD](../uxd/fx-13-granted-tags.md)；引擎侧见 [runtime spec](../spec-runtime/fx-13-granted-tags.md)。
+> 编辑器实现任务书。编辑器需求见 [fx-13 UXD](../uxd/fx-13-granted-tags.md)；引擎侧见 [runtime spec](../spec-runtime/fx-13-granted-tags.md)。
 
 ## 1. 概述
 
@@ -22,4 +22,4 @@
 - 消费：tag 注册表枚举、效果模板保存管线。
 - 验收：Linear amount=2 时层 2→3 试算从 4 变 6；LinearPlusBase 缺 base 保存被拒并指明字段。
 
-**相关文档**：[fx-16 UXD](../uxd/fx-13-granted-tags.md) · [fx-16 runtime spec](../spec-runtime/fx-13-granted-tags.md)
+**相关文档**：[fx-13 UXD](../uxd/fx-13-granted-tags.md) · [fx-13 runtime spec](../spec-runtime/fx-13-granted-tags.md)

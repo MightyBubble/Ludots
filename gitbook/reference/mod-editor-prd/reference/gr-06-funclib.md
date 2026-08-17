@@ -1,6 +1,6 @@
-# gr-09 reference · 函数库 FuncLib
+# gr-06 reference · 函数库 FuncLib
 
-> 现状参考。第一性需求见 [gr-08 PRD](../prd/gr-06-funclib.md)；配置说明见 [gr-08 配置说明](../config/gr-06-funclib.md)。
+> 现状参考。第一性需求见 [gr-06 PRD](../prd/gr-06-funclib.md)；配置说明见 [gr-06 配置说明](../config/gr-06-funclib.md)。
 
 ## 1. 现状快照
 
@@ -21,4 +21,4 @@
 | 装载链位置 | src/Core/Engine/GameEngine.cs:834,897-908 |
 | 资产 | assets/GAS/func_lib.json |
 
-**相关文档**：[gr-08 PRD](../prd/gr-06-funclib.md) · [gr-05 reference](gr-04-compilation.md) · [gr-09 reference](gr-07-actionlib.md)
+**相关文档**：[gr-06 PRD](../prd/gr-06-funclib.md) · [gr-04 reference](gr-04-compilation.md) · [gr-07 reference](gr-07-actionlib.md)

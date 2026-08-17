@@ -1,6 +1,6 @@
-# ai-10 UXD · 战斗姿态与执行器门的编辑器需求
+# ai-08 UXD · 战斗姿态与执行器门的编辑器需求
 
-> ai-09 的编辑器需求（高保真规格）。第一性需求见 [ai-09 PRD](../prd/ai-08-stances-actuators.md)；配置写法见 [ai-09 配置说明](../config/ai-08-stances-actuators.md)；编辑器实现见 [editor spec](../spec-editor/ai-08-stances-actuators.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> ai-08 的编辑器需求（高保真规格）。第一性需求见 ；配置写法见 ；编辑器实现见 ；上限数值以  为准。
 
 ## 1. 界面定位
 
@@ -37,7 +37,7 @@
 
 1. 姿态区新建：AutoAcquire=off、Retaliate=on、AllowMoveChase=off。
 2. 绑过滤器 TF.Precise；面板顶部显示"编译保留 · 无系统消费（I6）"。
-3. 保存后在 profile（ai-06）DefaultStance 挂此姿态——状态注明"仅存值"。
+3. 保存后在 profile（ai-05）DefaultStance 挂此姿态——状态注明"仅存值"。
 4. （接线落地后）战斗验证单位不主动索敌、被打才还手。
 
 ## 5. 状态设计
@@ -55,4 +55,4 @@
 - 执行器门控试验与运行时 PassesActuatorGates 判定同源。
 - 组件注入与实体模板面板双向可达。
 
-**相关文档**：[ai-09 PRD](../prd/ai-08-stances-actuators.md) · [editor spec](../spec-editor/ai-08-stances-actuators.md)
+**相关文档**：[ai-08 PRD](../prd/ai-08-stances-actuators.md) · [editor spec](../spec-editor/ai-08-stances-actuators.md)

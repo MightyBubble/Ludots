@@ -24,7 +24,7 @@
 |---|---|---|
 | 九块页签 | 目录九块 + 计数 | 空块引导新增 |
 | 条目表单 | 各块字段与缺省（度量 -100..100 等） | 缺省值预填 |
-| 引用计数 | 图节点关系符号扫描（gr-03 字段族） | 点击定位引用图 |
+| 引用计数 | 图节点关系符号扫描（gr-02 字段族） | 点击定位引用图 |
 | 姿态编辑 | stance 词表与三个缺省 | 整对象替换提示（合并语义） |
 | 合并预览 | 跨 mod DeepObject 合并结果 | 显示引擎默认 vs mod 覆盖 |
 
@@ -47,4 +47,4 @@
 - 任一条目"定义+全部引用"≤ 2 跳。
 - 改名/删除前能看到受影响引用清单。
 
-**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [editor spec](../spec-editor/rel-01-catalog.md) · [gr-03 UXD](gr-02-document.md)
+**相关文档**：[rel-01 PRD](../prd/rel-01-catalog.md) · [editor spec](../spec-editor/rel-01-catalog.md) · [gr-02 UXD](gr-02-document.md)

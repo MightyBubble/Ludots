@@ -1,6 +1,6 @@
-# gr-03 runtime spec · 图编程模型
+# gr-01 runtime spec · 图编程模型
 
-> 引擎实现任务书。第一性需求见 [gr-02 PRD](../prd/gr-01-model.md)；现状见 [reference](../reference/gr-01-model.md)。
+> 引擎实现任务书。第一性需求见 [gr-01 PRD](../prd/gr-01-model.md)；现状见 [reference](../reference/gr-01-model.md)。
 
 ## 1. 概述
 
@@ -10,8 +10,8 @@
 
 - **指令**：GraphInstruction 九字段封闭（Op/Dst/A/B/C/Flags/Imm/ImmF）；Flags 目前仅 FuncLibName 一位，新增位必须显式定义。
 - **注册终态**：Register 全量校验（graphId 有效、kind 显式、拒重复，失败回滚移除）；ReplaceProgram 仅新 id 重启、kind 不变、失败回滚；图名注册表 InvalidId=0、装载尾 Freeze。
-- **游标**：五态 NotStarted/Yielded/Halted/BudgetSuspended/Running；IsSuspended=Yielded 或 BudgetSuspended；挂起语义归 gr-06。
-- **分层**：宿主调度（BT/HFSM/Level/Script，gr-06）不是图 kind——L2 概念不得进 GraphKind 枚举。
+- **游标**：五态 NotStarted/Yielded/Halted/BudgetSuspended/Running；IsSuspended=Yielded 或 BudgetSuspended；挂起语义归 gr-05。
+- **分层**：宿主调度（BT/HFSM/Level/Script，gr-05）不是图 kind——L2 概念不得进 GraphKind 枚举。
 
 ## 3. 精确语义与不变量
 
@@ -25,4 +25,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-02 PRD](../prd/gr-01-model.md) · [reference](../reference/gr-01-model.md) · [gr-06 spec](gr-05-execution.md)
+**相关文档**：[gr-01 PRD](../prd/gr-01-model.md) · [reference](../reference/gr-01-model.md) · [gr-05 spec](gr-05-execution.md)

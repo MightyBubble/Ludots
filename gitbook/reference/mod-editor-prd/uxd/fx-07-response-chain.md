@@ -1,6 +1,6 @@
-# fx-10 UXD · 响应链的编辑器需求
+# fx-07 UXD · 响应链的编辑器需求
 
-> 响应链的编辑器需求（高保真规格）。第一性需求见 [fx-09 PRD](../prd/fx-07-response-chain.md)；配置写法见 [fx-09 配置说明](../config/fx-07-response-chain.md)；编辑器实现见 [editor spec](../spec-editor/fx-07-response-chain.md)；上限数值以 [事实与取值表](../facts.md) 为准。
+> 响应链的编辑器需求（高保真规格）。第一性需求见 [fx-07 PRD](../prd/fx-07-response-chain.md)；配置写法见 [fx-07 配置说明](../config/fx-07-response-chain.md)；编辑器实现见 [editor spec](../spec-editor/fx-07-response-chain.md)；上限数值以 [事实与取值表](../facts.md) 为准。
 
 ## 1. 界面定位
 
@@ -48,4 +48,4 @@
 - 任一裁决结果能回溯到"哪些回应以什么顺序参与了改写"。
 - 熔断与预算超限的错误能定位到根效果。
 
-**相关文档**：[fx-09 PRD](../prd/fx-07-response-chain.md) · [editor spec](../spec-editor/fx-07-response-chain.md)
+**相关文档**：[fx-07 PRD](../prd/fx-07-response-chain.md) · [editor spec](../spec-editor/fx-07-response-chain.md)

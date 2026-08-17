@@ -1,6 +1,6 @@
-# gr-09 runtime spec · 挂接点总表
+# gr-08 runtime spec · 挂接点总表
 
-> 引擎实现任务书。第一性需求见 [gr-09 PRD](../prd/gr-08-mount-points.md)；现状见 [reference](../reference/gr-08-mount-points.md)。
+> 引擎实现任务书。第一性需求见 [gr-08 PRD](../prd/gr-08-mount-points.md)；现状见 [reference](../reference/gr-08-mount-points.md)。
 
 ## 1. 概述
 
@@ -24,4 +24,4 @@
 
 - v1（2026-08-15）：初版。
 
-**相关文档**：[gr-09 PRD](../prd/gr-08-mount-points.md) · [reference](../reference/gr-08-mount-points.md) · [gr-09 spec](gr-09-outputs.md)
+**相关文档**：[gr-08 PRD](../prd/gr-08-mount-points.md) · [reference](../reference/gr-08-mount-points.md) · [gr-09 spec](gr-09-outputs.md)
