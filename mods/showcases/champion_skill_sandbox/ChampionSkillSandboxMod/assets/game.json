@@ -1,11 +1,5 @@
 {
   "startupMapId": "champion_skill_sandbox",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "ChampionSkillSandbox.Controls"

@@ -1,11 +1,5 @@
 {
   "startupMapId": "capability_standard_transport_network",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots Engine - Capability Standard Transport Network",
   "targetFps": 0,
   "worldWidthInMacroTiles": 2,

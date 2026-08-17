@@ -1,11 +1,5 @@
 {
   "startupMapId": "team_research_showcase",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "TeamResearchShowcase.Controls"

@@ -1,9 +1,3 @@
 {
-  "startupMapId": "spatial_bounds_showcase",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ]
+  "startupMapId": "spatial_bounds_showcase"
 }

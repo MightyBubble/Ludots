@@ -1,11 +1,5 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "CapabilityStandard.VirtualCamera.Controls"

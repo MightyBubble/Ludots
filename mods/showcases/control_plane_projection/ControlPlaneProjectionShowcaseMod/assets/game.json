@@ -1,11 +1,5 @@
 {
   "startupMapId": "control_plane_projection",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots - Control Plane Projection Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,

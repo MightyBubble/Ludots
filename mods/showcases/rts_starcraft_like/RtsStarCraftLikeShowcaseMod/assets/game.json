@@ -1,11 +1,5 @@
 {
   "startupMapId": "rts_starcraft_like",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots Engine - RTS StarCraft Like Production Showcase",
   "windowWidth": 1440,
   "windowHeight": 900,

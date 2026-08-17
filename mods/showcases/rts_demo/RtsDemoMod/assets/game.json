@@ -1,11 +1,5 @@
 {
   "startupMapId": "rts_entry",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "Rts_Gameplay"

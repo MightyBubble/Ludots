@@ -1,11 +1,5 @@
 {
   "startupMapId": "diplomacy_trade_gate_showcase",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "DiplomacyTradeGate.Controls"

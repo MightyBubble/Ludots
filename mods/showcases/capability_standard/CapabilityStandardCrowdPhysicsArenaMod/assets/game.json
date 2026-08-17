@@ -1,11 +1,5 @@
 {
   "startupMapId": "crowd_physics_arena",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "CrowdPhysicsArena.Controls"

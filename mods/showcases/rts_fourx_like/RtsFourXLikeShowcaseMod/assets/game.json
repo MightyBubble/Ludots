@@ -1,11 +1,5 @@
 {
   "startupMapId": "rts_fourx_like",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots Engine - RTS 4X Like Production Showcase",
   "windowWidth": 1440,
   "windowHeight": 900,

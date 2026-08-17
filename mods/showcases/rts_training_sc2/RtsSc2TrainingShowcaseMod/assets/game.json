@@ -1,9 +1,3 @@
 {
-  "startupMapId": "rts_sc2_training",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ]
+  "startupMapId": "rts_sc2_training"
 }

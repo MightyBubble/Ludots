@@ -1,11 +1,5 @@
 {
   "startupMapId": "road_network_showcase_chunked",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "startupInputContexts": [
     "Default_Gameplay",
     "RoadNetwork_Showcase"

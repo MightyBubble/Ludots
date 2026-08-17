@@ -1,11 +1,5 @@
 {
   "startupMapId": "visual_terrain_editor",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "presentation": {
     "presenterInstanceCapacity": 4096,
     "gasPresentationEventCapacity": 65536

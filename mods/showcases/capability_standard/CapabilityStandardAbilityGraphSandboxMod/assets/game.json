@@ -1,11 +1,5 @@
 {
   "startupMapId": "capability_standard_ability_graph_sandbox",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots - Ability Graph Sandbox",
   "targetFps": 60,
   "windowWidth": 1600,

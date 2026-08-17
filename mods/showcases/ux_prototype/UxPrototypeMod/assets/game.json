@@ -1,11 +1,5 @@
 {
   "startupMapId": "ux_prototype_battle",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "commandSource": {
     "clickPickRadiusPixels": 72,
     "dragThresholdPixels": 6

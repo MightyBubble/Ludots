@@ -1,9 +1,3 @@
 {
-  "startupMapId": "camera_acceptance_hotpath",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ]
+  "startupMapId": "camera_acceptance_hotpath"
 }

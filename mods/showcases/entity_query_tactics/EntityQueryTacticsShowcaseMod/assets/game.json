@@ -1,11 +1,5 @@
 {
   "startupMapId": "entity_query_tactics_showcase",
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots - Entity Query Tactics Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,
