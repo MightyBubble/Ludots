@@ -1414,6 +1414,30 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
         "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ResolveTableRow",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpResolveTableRowEntryMod",
+        "projectPath": "CapabilityStandardGraphOpResolveTableRowEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_TableReadFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpTableReadFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_TableReadInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTableReadIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpTableReadIntEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

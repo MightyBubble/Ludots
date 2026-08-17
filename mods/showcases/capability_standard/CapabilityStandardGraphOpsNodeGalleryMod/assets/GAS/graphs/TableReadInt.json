@@ -1,0 +1,99 @@
+[
+  {
+    "id": "showcase.graph_op.TableReadInt",
+    "kind": "Effect",
+    "entry": "key",
+    "nodes": [
+      {
+        "id": "key",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "row",
+        "op": "ResolveTableRow",
+        "lookupTable": "showcase.graph_op.rank_display"
+      },
+      {
+        "id": "stars",
+        "op": "TableReadInt",
+        "lookupTable": "showcase.graph_op.rank_display",
+        "lookupField": "rankStars"
+      },
+      {
+        "id": "drain",
+        "op": "TableReadFloat",
+        "lookupTable": "showcase.graph_op.rank_display",
+        "lookupField": "drainPower"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "key",
+        "fromPort": "next",
+        "to": "row"
+      },
+      {
+        "from": "row",
+        "fromPort": "next",
+        "to": "stars"
+      },
+      {
+        "from": "stars",
+        "fromPort": "next",
+        "to": "drain"
+      },
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "key",
+        "fromPort": "value",
+        "to": "row",
+        "toPort": "a"
+      },
+      {
+        "from": "row",
+        "fromPort": "value",
+        "to": "stars",
+        "toPort": "a"
+      },
+      {
+        "from": "row",
+        "fromPort": "value",
+        "to": "drain",
+        "toPort": "a"
+      },
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

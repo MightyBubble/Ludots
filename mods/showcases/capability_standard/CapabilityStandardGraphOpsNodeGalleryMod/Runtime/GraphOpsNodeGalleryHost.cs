@@ -80,7 +80,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         host.EntityIndex = engine.CurrentMapSession?.EntityIndex
             ?? throw new InvalidOperationException(
                 $"Node gallery map '{mapId}' is not loaded. EnsureWorld must run after MapLoaded.");
-        host.FinishResolver();
+        host.FinishResolver(Path.Combine(assetsRoot, "GraphTables"));
         GraphOpsNodeGallerySymbolResolver.RegisterAuthoredCompileSymbols(assetsRoot);
         return host;
     }
@@ -256,7 +256,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
     }
 
-    private void FinishResolver()
+    private void FinishResolver(string? graphTablesDir)
     {
         Resolver = new GraphOpsNodeGallerySymbolResolver(
             Templates,
@@ -264,7 +264,8 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             RelationshipMetrics,
             RelationshipFlags,
             RelationshipReasons,
-            DispatchPresets);
+            DispatchPresets,
+            graphTablesDir == null ? null : GraphOpsNodeGallerySymbolResolver.LoadLookupTables(graphTablesDir));
     }
 
     private Entity[] BindMapActors(GraphOpsNodeVignette vignette, string mapId)
