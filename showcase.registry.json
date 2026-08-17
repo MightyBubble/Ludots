@@ -20,6 +20,11 @@
       "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardModExtensibleRuntimeShowcaseShared",
       "reason": "shared panel runtime for extensible-mod-runtime showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "engine_gallery",
+      "reason": "engine gallery entries land with scene acceptance wiring"
     }
   ],
   "showcases": [

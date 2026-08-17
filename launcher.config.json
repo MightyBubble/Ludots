@@ -1406,6 +1406,13 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpYieldEntryMod",
         "projectPath": "CapabilityStandardGraphOpYieldEntryMod.csproj"
       }
+    },
+    {
+      "name": "engine_gallery",
+      "target": {
+        "type": "project",
+        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
+      }
     }
   ],
   "adapters": {

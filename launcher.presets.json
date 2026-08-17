@@ -1591,6 +1591,28 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "engine_gallery",
+      "name": "Engine Gallery",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "engine_gallery_skybox",
+      "name": "Engine Gallery Skybox",
+      "selectors": [
+        "$engine_gallery"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "args": [
+        "--scene",
+        "skybox"
+      ]
     }
   ]
 }
