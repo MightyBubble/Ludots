@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterTemplate",
+  "driver": "query",
+  "title": "只挑侦察兵",
+  "beat": "全场先亮一圈，再只剩两个矮个子亮着。",
+  "detailTemplate": "矮个侦察兵留圈{count}个，高个士兵全退成灰影。",
+  "assertDetailContains": [
+    "侦察兵"
+  ],
+  "featuredNodeId": "tmpl",
+  "graphKind": "Query",
+  "field": "query"
+}

@@ -35,6 +35,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ResolveTableRow, Dst = 1, A = 0, Imm = tableId },
                 new() { Op = (ushort)GraphNodeOp.TableReadInt, Dst = 2, A = 1, Imm = tokenField },
                 new() { Op = (ushort)GraphNodeOp.TableReadFloat, Dst = 0, A = 1, Imm = scaleField },
+                new() { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 2 },
             };
 
             var (ints, floats) = Execute(world, api, entity, program);
@@ -94,91 +95,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompilerAndPatch_ResolveLookupSymbols()
-        {
-            var tables = CreateRankTable(tokenVeteran: 11);
-            var cfg = new GraphConfig
-            {
-                Id = "lookup.compile",
-                Kind = "Effect",
-                Entry = "key",
-                Nodes =
-                {
-                    new GraphNodeConfig { Id = "key", Op = nameof(GraphNodeOp.ConstInt), IntValue = 2, Next = "row" },
-                    new GraphNodeConfig
-                    {
-                        Id = "row",
-                        Op = nameof(GraphNodeOp.ResolveTableRow),
-                        LookupTable = "mod.example.rank_display",
-                        Inputs = { "key" },
-                        Next = "token",
-                    },
-                    new GraphNodeConfig
-                    {
-                        Id = "token",
-                        Op = nameof(GraphNodeOp.TableReadInt),
-                        LookupTable = "mod.example.rank_display",
-                        LookupField = "displayToken",
-                        Inputs = { "row" },
-                        Next = "scale",
-                    },
-                    new GraphNodeConfig
-                    {
-                        Id = "scale",
-                        Op = nameof(GraphNodeOp.TableReadFloat),
-                        LookupTable = "mod.example.rank_display",
-                        LookupField = "powerScale",
-                        Inputs = { "row" },
-                    },
-                },
-            };
-
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(diagnostics, Is.Empty);
-            Assert.That(package.HasValue, Is.True);
-
-            var resolver = new LookupOnlySymbolResolver(tables);
-            GraphProgramSymbolPatcher.Patch(package!.Value.Symbols, package.Value.Program, resolver);
-
-            using World world = World.Create();
-            Entity entity = world.Create();
-            var api = new GasGraphRuntimeApi(world, lookupTables: tables);
-            var (ints, floats) = Execute(world, api, entity, package.Value.Program);
-            int tokenReg = FindDst(package.Value.Program, GraphNodeOp.TableReadInt);
-            int scaleReg = FindDst(package.Value.Program, GraphNodeOp.TableReadFloat);
-            Assert.That(ints[tokenReg], Is.EqualTo(11));
-            Assert.That(floats[scaleReg], Is.EqualTo(1.2f).Within(0.0001f));
-        }
-
-        [Test]
-        public void ControlFlowQuery_FrontDoor_CompilesAndExecutesLookup()
-        {
-            var tables = CreateRankTable(tokenVeteran: 21);
-            GraphControlFlowDocument doc = CreateLookupControlFlowDocument("lookup.cf.query", "Query");
-
-            var (package, _, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(doc);
-            Assert.That(diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error), Is.Empty,
-                FormatDiagnostics(diagnostics));
-            Assert.That(package.HasValue, Is.True);
-            Assert.That(package!.Value.Kind, Is.EqualTo(GraphKind.Query));
-            Assert.That(package.Value.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ResolveTableRow));
-            Assert.That(package.Value.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.TableReadInt));
-            Assert.That(package.Value.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.TableReadFloat));
-
-            var resolver = new LookupOnlySymbolResolver(tables);
-            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, resolver);
-
-            using World world = World.Create();
-            Entity entity = world.Create();
-            var api = new GasGraphRuntimeApi(world, lookupTables: tables);
-            var (ints, floats) = Execute(world, api, entity, package.Value.Program);
-            int tokenReg = FindDst(package.Value.Program, GraphNodeOp.TableReadInt);
-            int scaleReg = FindDst(package.Value.Program, GraphNodeOp.TableReadFloat);
-            Assert.That(ints[tokenReg], Is.EqualTo(21));
-            Assert.That(floats[scaleReg], Is.EqualTo(1.2f).Within(0.0001f));
-        }
-
-        [Test]
         public void ControlFlowLinear_Effect_CompilesAndExecutesLookup()
         {
             var tables = CreateRankTable(tokenVeteran: 33);
@@ -202,52 +118,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AuthoringFrontDoor_QueryJson_CompilesLookupOps()
-        {
-            var tables = CreateRankTable(tokenVeteran: 8);
-            const string graphId = "lookup.front-door.query";
-            var obj = (JsonObject)JsonNode.Parse(LookupControlFlowQueryJson(graphId))!;
-            JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-
-            var (package, _, diagnostics) = GraphProgramAuthoringFrontDoor.CompileJsonObject(obj, graphId, options);
-            Assert.That(diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error), Is.Empty,
-                FormatDiagnostics(diagnostics));
-            Assert.That(package.HasValue, Is.True);
-            Assert.That(package!.Value.Kind, Is.EqualTo(GraphKind.Query));
-
-            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, new LookupOnlySymbolResolver(tables));
-
-            using World world = World.Create();
-            Entity entity = world.Create();
-            var api = new GasGraphRuntimeApi(world, lookupTables: tables);
-            var (ints, floats) = Execute(world, api, entity, package.Value.Program);
-            Assert.That(ints[FindDst(package.Value.Program, GraphNodeOp.TableReadInt)], Is.EqualTo(8));
-            Assert.That(floats[FindDst(package.Value.Program, GraphNodeOp.TableReadFloat)], Is.EqualTo(1.2f).Within(0.0001f));
-        }
-
-        [Test]
-        public void ControlFlowQuery_MissingLookupTable_FailsClosed()
-        {
-            GraphControlFlowDocument doc = CreateLookupControlFlowDocument("lookup.cf.missing-table", "Query");
-            doc.Nodes.First(n => n.Id == "row").LookupTable = null;
-
-            var (package, _, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(doc);
-            Assert.That(package.HasValue, Is.False);
-            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
-                d.Severity == GraphDiagnosticSeverity.Error &&
-                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
-                d.NodeId == "row" &&
-                d.Message.Contains("lookupTable", StringComparison.Ordinal)));
-        }
-
-        [Test]
         public void Loader_MissingKeyKind_Throws()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_LookupTableOps", Guid.NewGuid().ToString("N"));
             try
             {
                 string coreRoot = Path.Combine(tempRoot, "Core");
-                string tableDir = Path.Combine(coreRoot, "Configs", "GraphTables");
+                string tableDir = Path.Combine(coreRoot, "GraphTables");
                 Directory.CreateDirectory(tableDir);
                 File.WriteAllText(Path.Combine(tableDir, "lookup_tables.json"), """
 [

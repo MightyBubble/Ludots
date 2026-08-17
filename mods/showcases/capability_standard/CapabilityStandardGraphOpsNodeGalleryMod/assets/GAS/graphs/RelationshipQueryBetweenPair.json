@@ -1,0 +1,78 @@
+[
+  {
+    "id": "showcase.graph_op.RelationshipQueryBetweenPair",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "outgoing",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "SocialBond"
+      },
+      {
+        "id": "pick",
+        "op": "RelationshipAggMaxEntityByMetric",
+        "relationshipType": "SocialBond",
+        "metric": "Loyalty"
+      },
+      {
+        "id": "between",
+        "op": "RelationshipQueryBetweenPair",
+        "relationshipType": "SocialBond"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "outgoing"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "next",
+        "to": "pick"
+      },
+      {
+        "from": "pick",
+        "fromPort": "next",
+        "to": "between"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoing",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoing",
+        "fromPort": "list",
+        "to": "pick",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "pick",
+        "toPort": "source"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "between",
+        "toPort": "source"
+      },
+      {
+        "from": "pick",
+        "fromPort": "value",
+        "to": "between",
+        "toPort": "b"
+      }
+    ]
+  }
+]

@@ -24,10 +24,12 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
 using Ludots.Presentation.Skia;
@@ -72,6 +74,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             int beforeDummyCount = CountEntitiesByName(engine.World, "Dummy");
             ClickGround(engine, backend, new Vector2(3200f, 2000f));
+            Tick(engine, 2);
 
             int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
             Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + spawnBatch), "Ground click should enqueue the configured runtime spawn batch.");
@@ -82,32 +85,50 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(HasNamedEntityAt(engine.World, "Dummy", new WorldCmInt2(3200, 2000)), Is.True, "Random scatter should still stay anchored to the clicked point.");
             Assert.That(AllPositionsWithinRadius(positions, new WorldCmInt2(3200, 2000), 1800), Is.True, "Projection scatter should remain near the clicked point.");
 
+            var definitions = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry missing.");
+            int fixtureDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueFixturePresenterId);
+            int decalDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueDecalPresenterId);
+            int vfxDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueVfxPresenterId);
+            int surfaceDefId = definitions.GetId(CameraAcceptanceIds.ProjectionCueSurfacePresenterId);
+            Assert.That(fixtureDefId, Is.GreaterThan(0), "Projection cue fixture presenter must be registered.");
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, fixtureDefId),
+                Is.EqualTo(1),
+                "Ground click must spawn the authored Mesh+Decal+VFX+Surface presenter tree, not a leaf mesh marker.");
+            Assert.That(CountPresentersWithDefinition(engine.World, decalDefId), Is.EqualTo(1));
+            Assert.That(CountPresentersWithDefinition(engine.World, vfxDefId), Is.EqualTo(1));
+            Assert.That(CountPresentersWithDefinition(engine.World, surfaceDefId), Is.EqualTo(1));
+            Assert.That(
+                TryGetAuthoredCueGroundingOffsetMeters(definitions, fixtureDefId, out float cueLiftMeters),
+                Is.True,
+                "Projection cue fixture must author SnapToGround offset; click spawn must not invent a lift.");
+            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: cueLiftMeters);
+            Assert.That(
+                TryGetSinglePresenterWorldPosition(engine.World, fixtureDefId, out Vector3 fixtureWorldPosition),
+                Is.True,
+                "Ground click must place exactly one cue fixture presenter in the world.");
+            Assert.That(
+                fixtureWorldPosition,
+                Is.EqualTo(cueMarkerPosition),
+                "The cue fixture presenter must sit at the clicked ground point, lifted off the floor.");
+
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient performer marker.");
-            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
-            bool foundCueMarker = false;
-            foreach (ref readonly var primitive in primitives.GetSpan())
-            {
-                if (primitive.Position == cueMarkerPosition)
-                {
-                    foundCueMarker = true;
-                    break;
-                }
-            }
-            Assert.That(foundCueMarker, Is.True, "Ground click should emit a transient cue marker at the raycast point.");
+            Assert.That(
+                HasPrimitiveNear(primitives!, cueMarkerPosition),
+                Is.True,
+                "Ground click should draw the authored cue mesh at the presenter world position.");
 
             Tick(engine, 60);
-            foundCueMarker = false;
-            foreach (ref readonly var primitive in primitives.GetSpan())
-            {
-                if (primitive.Position == cueMarkerPosition)
-                {
-                    foundCueMarker = true;
-                    break;
-                }
-            }
-            Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
+            Assert.That(
+                CountPresentersWithDefinition(engine.World, fixtureDefId),
+                Is.EqualTo(0),
+                "Authored cue presenter tree must expire with lifecycle.durationSeconds.");
+            Assert.That(
+                HasPrimitiveNear(primitives!, cueMarkerPosition),
+                Is.False,
+                "The authored cue mesh must disappear after the presenter tree expires.");
         }
 
         [Test]
@@ -272,9 +293,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             Assert.That(barCount, Is.EqualTo(0),
-                "Camera acceptance should disable entity health bars at performer-config level so WorldHud bar items are not emitted.");
+                "Camera acceptance should disable entity health bars at presenter-config level so WorldHud bar items are not emitted.");
             Assert.That(textCount, Is.EqualTo(0),
-                "Camera acceptance should disable entity health numbers at performer-config level so WorldHud text items are not emitted.");
+                "Camera acceptance should disable entity health numbers at presenter-config level so WorldHud text items are not emitted.");
         }
 
         [Test]
@@ -700,7 +721,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraAcceptanceMod_ProjectionMap_BoxSelect_UsesVisualTransformHeightForScreenSpaceHitTesting()
+        public void CameraAcceptanceMod_ProjectionMap_BoxSelect_UsesSpatialBoundsHeightForScreenSpaceHitTesting()
         {
             using var engine = CreateEngine(AcceptanceMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
@@ -716,17 +737,21 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var sharedWorldCm = new WorldCmInt2(2600, 1600);
             ApplyEntityProjectionOverride(engine, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
             ApplyEntityProjectionOverride(engine, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+            ApplySimulationBoundsHeight(engine, hero, localCenterYCm: 0);
+            ApplySimulationBoundsHeight(engine, scout, localCenterYCm: 450);
 
-            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
-            Vector2 scoutScreen = ProjectEntity(engine, projector!, scout);
+            Vector2 heroScreen = ProjectEntityBySimulationPose(engine, projector!, hero);
+            Vector2 scoutScreen = ProjectEntityBySimulationPose(engine, projector!, scout);
             Assert.That(Vector2.Distance(heroScreen, scoutScreen), Is.GreaterThan(40f),
-                "Regression setup must create a visible screen-space separation from VisualTransform height alone.");
+                "Regression setup must create a visible screen-space separation from SpatialBounds height alone.");
 
             var backend = GetInputBackend(engine);
             Action<GameEngine> reapplyVisualOverrides = runtime =>
             {
                 ApplyEntityProjectionOverride(runtime, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
                 ApplyEntityProjectionOverride(runtime, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+                ApplySimulationBoundsHeight(runtime, hero, localCenterYCm: 0);
+                ApplySimulationBoundsHeight(runtime, scout, localCenterYCm: 450);
             };
 
             DragMouse(
@@ -1495,6 +1520,88 @@ namespace Ludots.Tests.ThreeC.Acceptance
             TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeRelease, maxFrames: 8);
         }
 
+        private static int CountPresentersWithDefinition(World world, int definitionId)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<PresenterState>();
+            world.Query(in query, (ref PresenterState state) =>
+            {
+                if (state.DefId == definitionId)
+                {
+                    count++;
+                }
+            });
+            return count;
+        }
+
+        private static bool TryGetAuthoredCueGroundingOffsetMeters(
+            PresenterDefinitionRegistry definitions,
+            int fixtureDefId,
+            out float offsetMeters)
+        {
+            if (!definitions.TryGet(fixtureDefId, out PresenterDefinition definition))
+            {
+                offsetMeters = 0f;
+                return false;
+            }
+
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                BehaviorSlot slot = definition.Behaviors[i];
+                if (slot.Kind != BehaviorKind.Grounding)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode != GroundingMode.SnapToGround ||
+                    !float.IsFinite(slot.Grounding.Offset) ||
+                    slot.Grounding.Offset <= 0f)
+                {
+                    offsetMeters = 0f;
+                    return false;
+                }
+
+                offsetMeters = slot.Grounding.Offset;
+                return true;
+            }
+
+            offsetMeters = 0f;
+            return false;
+        }
+
+        private static bool TryGetSinglePresenterWorldPosition(World world, int definitionId, out Vector3 position)
+        {
+            Vector3 found = default;
+            int count = 0;
+            var query = new QueryDescription().WithAll<PresenterState, PresenterWorldPosition>();
+            world.Query(in query, (ref PresenterState state, ref PresenterWorldPosition worldPosition) =>
+            {
+                if (state.DefId != definitionId)
+                {
+                    return;
+                }
+
+                found = worldPosition.Value;
+                count++;
+            });
+            position = found;
+            return count == 1;
+        }
+
+        private static bool HasPrimitiveNear(PrimitiveDrawBuffer primitives, Vector3 expected)
+        {
+            const float maxDistanceSquared = 0.0001f;
+            foreach (ref readonly var primitive in primitives.GetSpan())
+            {
+                if (Vector3.DistanceSquared(primitive.Position, expected) <= maxDistanceSquared)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static Entity FindEntityByName(World world, string name)
         {
             Entity result = Entity.Null;
@@ -1610,7 +1717,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(
                 WorldPlane2D.AngleDistanceRad(visualFacingRad, expectedFacingRad),
                 Is.LessThan(0.0001f),
-                "The owner VisualTransform must preserve the same facing before performer emission.");
+                "The owner VisualTransform must preserve the same facing before presenter emission.");
         }
 
         private static bool AllPositionsWithinRadius(List<WorldCmInt2> positions, in WorldCmInt2 center, int radiusCm)
@@ -1804,6 +1911,31 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             ref var visual = ref engine.World.Get<VisualTransform>(entity);
             visual.Position = visualPosition;
+        }
+
+        private static void ApplySimulationBoundsHeight(GameEngine engine, Entity entity, int localCenterYCm)
+        {
+            if (engine.World.Has<SpatialBounds>(entity))
+            {
+                ref var bounds = ref engine.World.Get<SpatialBounds>(entity);
+                bounds.LocalCenterYCm = localCenterYCm;
+                return;
+            }
+
+            engine.World.Add(entity, new SpatialBounds
+            {
+                Kind = SpatialBoundsKind.Point,
+                LocalCenterYCm = localCenterYCm,
+            });
+        }
+
+        private static Vector2 ProjectEntityBySimulationPose(GameEngine engine, IScreenProjector projector, Entity entity)
+        {
+            Assert.That(
+                SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect bounds),
+                Is.True,
+                $"Entity #{entity.Id} must project from WorldPositionCm.");
+            return new Vector2((bounds.MinX + bounds.MaxX) * 0.5f, (bounds.MinY + bounds.MaxY) * 0.5f);
         }
 
         private static void UpdateHeadlessCamera(GameEngine engine)
@@ -2518,10 +2650,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
             string diagnosticText = File.ReadAllText(diagnosticPath);
             Match match = Regex.Match(
                 diagnosticText,
-                @"prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
+                @"typed-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
                 RegexOptions.CultureInvariant | RegexOptions.RightToLeft);
             Assert.That(match.Success, Is.True,
-                $"Expected Raylib diagnostic '{diagnosticPath}' to contain prefab visual counts for the screenshot frame.");
+                $"Expected Raylib diagnostic '{diagnosticPath}' to contain typed visual counts for the screenshot frame.");
 
             return new RaylibTypedVisualEvidenceStatus(
                 screenshotPath,

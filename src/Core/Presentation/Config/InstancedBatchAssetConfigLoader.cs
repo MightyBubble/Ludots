@@ -7,7 +7,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -44,7 +44,8 @@ namespace Ludots.Core.Presentation.Config
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             var entry = ConfigPipeline.RequireEntry(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = PresentationAssetConfigIdGuard.CollectUniqueArrayByIdFragments(_configs, in entry);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -483,7 +484,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             if (kind == InstancedBatchSourceKind.PresentationEvent &&
-                eventKind is PresentationEventKind.PerformerCreated or PresentationEventKind.PerformerDestroyed &&
+                eventKind is PresentationEventKind.PresenterCreated or PresentationEventKind.PresenterDestroyed &&
                 keyId == -1)
             {
                 return false;
@@ -598,10 +599,16 @@ namespace Ludots.Core.Presentation.Config
                 node,
                 $"Instanced batch '{batchKey}' behavior '{behaviorKey}' target.effectAssetId");
             int effectAssetId = _meshes.GetId(effectKey);
-            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out _))
+            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException(
                     $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references unknown effect asset '{effectKey}'.");
+            }
+
+            if (!descriptor.VfxData.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references effect asset '{effectKey}' without VFX particle data.");
             }
 
             return effectAssetId;

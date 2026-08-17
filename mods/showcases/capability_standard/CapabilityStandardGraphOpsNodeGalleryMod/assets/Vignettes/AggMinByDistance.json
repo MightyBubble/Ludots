@@ -1,0 +1,13 @@
+{
+  "op": "AggMinByDistance",
+  "driver": "spatial",
+  "title": "谁离我最近",
+  "beat": "最近的那个人闪出来。",
+  "detailTemplate": "最近的是{name}。",
+  "assertDetailContains": [
+    "最近"
+  ],
+  "featuredNodeId": "nearest",
+  "graphKind": "Query",
+  "field": "spatial"
+}

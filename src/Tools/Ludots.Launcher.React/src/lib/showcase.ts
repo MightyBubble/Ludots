@@ -54,6 +54,10 @@ export async function fetchShowcaseRegistry(): Promise<ShowcaseRegistry | null> 
  * selector grammar (RFC-0001): `$binding` or `preset:<id>`.
  */
 export function launchHint(entry: ShowcaseEntry): string | null {
+  if (entry.status === "retired") {
+    return null;
+  }
+
   if (entry.binding) {
     return `ludots launch $${entry.binding} --adapter raylib`;
   }

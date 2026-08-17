@@ -54,6 +54,66 @@
       <Link>water.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\skinning_instanced.vs">
+      <Link>skinning_instanced.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skinning_instanced.fs">
+      <Link>skinning_instanced.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vfx_unlit_tint.vs">
+      <Link>vfx_unlit_tint.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vfx_unlit_tint.fs">
+      <Link>vfx_unlit_tint.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\decal_project.vs">
+      <Link>decal_project.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\decal_project.fs">
+      <Link>decal_project.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vegetation_cutout.vs">
+      <Link>vegetation_cutout.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vegetation_cutout.fs">
+      <Link>vegetation_cutout.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.vs">
+      <Link>skybox.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.fs">
+      <Link>skybox.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\sky_daynight.vs">
+      <Link>sky_daynight.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\sky_daynight.fs">
+      <Link>sky_daynight.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\postprocess.fs">
+      <Link>postprocess.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\ambient_day_ramp.json">
+      <Link>ambient_day_ramp.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\distance_fog.json">
+      <Link>distance_fog.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="launcher.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -61,6 +121,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="launcher.visual-terrain-editor.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="launcher.mass-navigation.runtime.json">

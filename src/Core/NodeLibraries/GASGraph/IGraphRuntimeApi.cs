@@ -54,6 +54,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
         SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
         SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+
+        int ResolveTableRow(int tableId, int key)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        int TableReadInt(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        float TableReadFloat(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -202,22 +217,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
-        int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        RelationshipQueryResult CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
             throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
@@ -322,21 +337,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void WriteBlackboardInt(Entity entity, int keyId, int value);
         void WriteBlackboardEntity(Entity entity, int keyId, Entity value);
 
-        int ResolveTableRow(int tableId, int key)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
-        }
-
-        int TableReadInt(int fieldId, int rowHandle)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
-        }
-
-        float TableReadFloat(int fieldId, int rowHandle)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
-        }
-
         // ── Config parameter reading (from current EffectTemplate context) ──
 
         bool TryLoadConfigFloat(int keyId, out float value);
@@ -372,14 +372,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
-        int ResolveRelationshipType(string name);
-        int ResolveRelationshipMetric(string name);
-        int ResolveRelationshipFlag(string name);
-        int ResolveRelationshipReason(string name);
-        int ResolveTargetDispatchPreset(string name);
-        int ResolveEntityTemplate(string name);
-
-
         int ResolveGraphLookupTable(string name)
         {
             throw new InvalidOperationException(
@@ -391,5 +383,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException(
                 $"Graph references lookup field '{name}', but no GraphLookupTableRegistry resolver is available.");
         }
+
+        int ResolveRelationshipType(string name);
+        int ResolveRelationshipMetric(string name);
+        int ResolveRelationshipFlag(string name);
+        int ResolveRelationshipReason(string name);
+        int ResolveTargetDispatchPreset(string name);
+        int ResolveEntityTemplate(string name);
     }
 }

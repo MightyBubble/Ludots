@@ -27,8 +27,10 @@ namespace Ludots.Core.GraphRuntime
         public int IntValue { get; set; }
         public float FloatValue { get; set; }
         public bool BoolValue { get; set; }
-        /// <summary>Optional target Script graph id for InvokeScript (patched or literal).</summary>
+        /// <summary>Optional target Script graph id for InvokeScript (literal; mutually exclusive with FunctionName).</summary>
         public int GraphId { get; set; }
+        /// <summary>Func Lib name for InvokeScript; resolved to GraphId at patch time.</summary>
+        public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
         public string? LookupTable { get; set; }
@@ -36,6 +38,7 @@ namespace Ludots.Core.GraphRuntime
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
+        public string? PayloadPreset { get; set; }
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
@@ -43,7 +46,11 @@ namespace Ludots.Core.GraphRuntime
         public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }
         public string? Flag { get; set; }
+        /// <summary>Event payload slot index for LoadEventPayloadInt (0..1) / LoadEventPayloadFloat (0..3).</summary>
+        public int Slot { get; set; }
         public string? QueryCapacityPolicy { get; set; }
+        public string? DroppedOutput { get; set; }
+        public string? ValidOutput { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }

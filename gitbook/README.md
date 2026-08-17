@@ -13,6 +13,7 @@ Ludots 是一个基于 Arch ECS 的高性能 C# 游戏框架，核心约束如�
 - 新成员先看 [快速开始](quick-start.md)
 - 参与开发先看 [贡献与开发](contributing/README.md)
 - 理解引擎设计先看 [架构](architecture/README.md)
+- 图能力的进度和还开着的活，只看 [图能力唯一入口](architecture/graph-capability-status.md)
 - 查命令、入口和目录时看 [参考资料](reference/README.md)
 
 ## 文档边界

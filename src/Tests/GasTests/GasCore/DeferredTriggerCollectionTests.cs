@@ -28,6 +28,44 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void DeferredTriggerQueue_WhenMainAndOverflowAreFull_ThrowsNamingCapacityAndSource()
+        {
+            var queue = new DeferredTriggerQueue();
+            int totalCapacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME * 2;
+            for (int i = 0; i < totalCapacity; i++)
+            {
+                queue.EnqueueAttributeChanged(new AttributeChangedTrigger { AttributeId = i });
+            }
+
+            var error = Throws<System.InvalidOperationException>(() =>
+                queue.EnqueueAttributeChanged(new AttributeChangedTrigger { AttributeId = 9001 }));
+
+            That(error!.Message, Does.StartWith(DeferredTriggerQueue.CapacityExceededError));
+            That(error.Message, Does.Contain("source=AttributeChanged"));
+            That(error.Message, Does.Contain($"capacity={GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME}"));
+            That(error.Message, Does.Contain("attributeId=9001"));
+            That(queue.AttributeTriggerCount, Is.EqualTo(GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME));
+        }
+
+        [Test]
+        public void DeferredTriggerQueue_TagChanged_WhenMainAndOverflowAreFull_ThrowsNamingSource()
+        {
+            var queue = new DeferredTriggerQueue();
+            int totalCapacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME * 2;
+            for (int i = 0; i < totalCapacity; i++)
+            {
+                queue.EnqueueTagChanged(new TagChangedTrigger { TagId = i });
+            }
+
+            var error = Throws<System.InvalidOperationException>(() =>
+                queue.EnqueueTagChanged(new TagChangedTrigger { TagId = 42 }));
+
+            That(error!.Message, Does.StartWith(DeferredTriggerQueue.CapacityExceededError));
+            That(error.Message, Does.Contain("source=TagChanged"));
+            That(error.Message, Does.Contain("tagId=42"));
+        }
+
+        [Test]
         public void DeferredTrigger_AttributeChanged_UsesSnapshotOldValue()
         {
             using var world = World.Create();

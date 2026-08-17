@@ -38,6 +38,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _lookupTables = lookupTables;
         }
 
+        public int ResolveGraphLookupTable(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup table '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetTableId(name);
+        }
+
+        public int ResolveGraphLookupField(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup field '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetFieldId(name);
+        }
+
         public int ResolveTag(string name)
         {
             int id = TagRegistry.GetId(name);
@@ -111,29 +133,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return id;
-        }
-
-
-        public int ResolveGraphLookupTable(string name)
-        {
-            if (_lookupTables == null)
-            {
-                throw new InvalidOperationException(
-                    $"Graph references lookup table '{name}', but no GraphLookupTableRegistry was provided.");
-            }
-
-            return _lookupTables.GetTableId(name);
-        }
-
-        public int ResolveGraphLookupField(string name)
-        {
-            if (_lookupTables == null)
-            {
-                throw new InvalidOperationException(
-                    $"Graph references lookup field '{name}', but no GraphLookupTableRegistry was provided.");
-            }
-
-            return _lookupTables.GetFieldId(name);
         }
     }
 }

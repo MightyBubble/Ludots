@@ -11,8 +11,18 @@ namespace Ludots.Core.Config
 
         public void Add(in ConfigCatalogEntry entry)
         {
-            if (string.IsNullOrWhiteSpace(entry.RelativePath)) return;
-            _entries[Normalize(entry.RelativePath)] = entry;
+            if (string.IsNullOrWhiteSpace(entry.RelativePath))
+            {
+                throw new InvalidOperationException("Config catalog entry path must be non-empty.");
+            }
+
+            string normalized = Normalize(entry.RelativePath);
+            if (_entries.ContainsKey(normalized))
+            {
+                throw new InvalidOperationException($"Config catalog contains duplicate path '{normalized}'.");
+            }
+
+            _entries.Add(normalized, entry);
         }
 
         public bool TryGet(string relativePath, out ConfigCatalogEntry entry)
@@ -28,4 +38,3 @@ namespace Ludots.Core.Config
         }
     }
 }
-

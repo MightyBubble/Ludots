@@ -99,7 +99,7 @@ Q press 3:
           { "type": "RemoveTag", "tag": "q_stage:2" }
         ]
       },
-      "performer": "rising_kick_animation"
+      "presenter": "rising_kick_animation"
     }
   ]
 }

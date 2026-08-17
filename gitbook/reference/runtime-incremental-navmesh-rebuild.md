@@ -51,7 +51,7 @@ dotnet test src\Tests\GasTests\GasTests.csproj --filter "RuntimeNavMeshObstacleD
 
 ## Configuration
 
-`assets/Configs/Navigation/navmesh.json` must include an explicit `runtimeIncremental` object. Runtime dirty services are registered only when the top-level config selects runtime mode:
+`assets/Navigation/navmesh.json` must include an explicit `runtimeIncremental` object. Runtime dirty services are registered only when the top-level config selects runtime mode:
 
 ```json
 {

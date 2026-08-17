@@ -1,0 +1,4 @@
+{"step":"layers","groundCellSize":100,"airCellSize":250,"detectionCellSize":100}
+{"step":"knowledge","visible":"LiveVisible","memory":"Known","concealed":"HiddenWithSource","detected":"LiveVisible"}
+{"step":"snapshot","changedCell":{"X":4,"Y":0}}
+{"step":"shared_explored","sharedCell":{"X":5,"Y":0}}

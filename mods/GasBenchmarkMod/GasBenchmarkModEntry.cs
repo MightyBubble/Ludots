@@ -127,11 +127,10 @@ namespace GasBenchmarkMod
                 var e = world.Create(archetype);
                 entities[i] = e;
 
-                ref var attr = ref world.Get<AttributeBuffer>(e);
-                attr.SetBase(healthId, 100f);
-                attr.SetBase(manaId, 100f);
-                attr.SetCurrent(healthId, 100f);
-                attr.SetCurrent(manaId, 100f);
+                AttributeMutationOps.SetBase(world, e, healthId, 100f, tagOps);
+                AttributeMutationOps.SetBase(world, e, manaId, 100f, tagOps);
+                AttributeMutationOps.SetCurrent(world, e, healthId, 100f, tagOps);
+                AttributeMutationOps.SetCurrent(world, e, manaId, 100f, tagOps);
 
                 ref var abilities = ref world.Get<AbilityStateBuffer>(e);
                 abilities.AddAbility(abilityTemplateEntity);

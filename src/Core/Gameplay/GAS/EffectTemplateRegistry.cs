@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Vision;
@@ -325,8 +326,21 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public int TagId;
         public EffectPresetType PresetType;
+        public int PresetTypeId;
+
+        /// <summary>
+        /// Loader-compiled templates carry the registry id; programmatically built templates
+        /// may only set the builtin enum. Execution paths must use this, not the raw fields.
+        /// </summary>
+        public int EffectivePresetTypeId => PresetTypeId != 0 ? PresetTypeId : (int)PresetType;
         public int PresetAttribute0;
         public int PresetAttribute1;
+
+        public EffectTemplateData()
+        {
+            PresetAttribute0 = AttributeRegistry.InvalidId;
+            PresetAttribute1 = AttributeRegistry.InvalidId;
+        }
         public EffectLifetimeKind LifetimeKind;
         public GasClockId ClockId;
         public int DurationTicks;
@@ -453,6 +467,207 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             data = _templates[templateId];
+            return true;
+        }
+
+        /// <summary>
+        /// NextCast-safe numeric field replace for already-registered templates.
+        /// Does not Clear/re-Register; identity (templateId) stays fixed.
+        /// Supported paths: duration.durationTicks, duration.periodTicks.
+        /// </summary>
+        public bool TryReplaceHotNumericField(int templateId, string fieldPath, double numericValue, out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldPath))
+            {
+                failureReason = "fieldPath is required.";
+                return false;
+            }
+
+            string path = fieldPath.Trim();
+            if (path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.durationTicks must be >= 0.";
+                    return false;
+                }
+
+                data.DurationTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.periodTicks must be >= 0.";
+                    return false;
+                }
+
+                data.PeriodTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase))
+            {
+                if (data.Modifiers.Count <= 0)
+                {
+                    failureReason = "modifiers.0.value requires at least one authored modifier.";
+                    return false;
+                }
+
+                unsafe
+                {
+                    data.Modifiers.Values[0] = (float)numericValue;
+                }
+
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason =
+                $"Field path '{fieldPath}' is not NextCast-hot-editable; MapReload or EngineRestart is required.";
+            return false;
+        }
+
+        /// <summary>
+        /// NextCast-safe replace of projectile impact/presentation effect refs (stable template id).
+        /// </summary>
+        public bool TryReplaceHotProjectileEffectRef(
+            int templateId,
+            string fieldPath,
+            int targetEffectTemplateId,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (targetEffectTemplateId <= 0 || !TryGet(targetEffectTemplateId, out _))
+            {
+                failureReason = $"Target effect template id {targetEffectTemplateId} is not registered.";
+                return false;
+            }
+
+            if (data.PresetType != EffectPresetType.LaunchProjectile)
+            {
+                failureReason = "Projectile effect refs require LaunchProjectile preset.";
+                return false;
+            }
+
+            string path = (fieldPath ?? string.Empty).Trim();
+            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.ImpactEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.HitEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.PresentationEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason = $"Field path '{fieldPath}' is not a hot-editable projectile effect ref.";
+            return false;
+        }
+
+        /// <summary>
+        /// Restores a previously snapshotted template body for atomic NextCast commit rollback.
+        /// Identity must already be registered; does not Clear/re-Register.
+        /// </summary>
+        public void RestoreHotTemplate(int templateId, in EffectTemplateData snapshot)
+        {
+            if (!TryGetRef(templateId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template id {templateId} is not registered; cannot restore hot snapshot.");
+            }
+
+            _templates[templateId] = snapshot;
+        }
+
+        /// <summary>
+        /// NextCast-safe grant of one Fixed tag contribution on an existing template (debuff).
+        /// </summary>
+        public bool TryReplaceHotGrantedTagFixed(
+            int templateId,
+            int tagId,
+            ushort amount,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (tagId <= 0)
+            {
+                failureReason = "tagId must be > 0.";
+                return false;
+            }
+
+            // Replace slot 0 if present; otherwise append.
+            unsafe
+            {
+                if (data.GrantedTags.Count <= 0)
+                {
+                    if (!data.GrantedTags.Add(new TagContribution
+                    {
+                        TagId = tagId,
+                        Formula = TagContributionFormula.Fixed,
+                        Amount = amount,
+                        Base = 0,
+                        GraphProgramId = 0
+                    }))
+                    {
+                        failureReason = "GrantedTags capacity exceeded.";
+                        return false;
+                    }
+                }
+                else
+                {
+                    data.GrantedTags.TagIds[0] = tagId;
+                    data.GrantedTags.Formulas[0] = (byte)TagContributionFormula.Fixed;
+                    data.GrantedTags.Amounts[0] = amount;
+                    data.GrantedTags.Bases[0] = 0;
+                    data.GrantedTags.GraphProgramIds[0] = 0;
+                }
+            }
+
+            _templates[templateId] = data;
+            failureReason = null;
             return true;
         }
 

@@ -5,13 +5,19 @@ namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
     /// Named reusable L1 Script/Validation/Score entries ("func lib").
-    /// Macros (compile-time textual expand) are intentionally NOT supported — reuse via
-    /// catalog name → graph id + InvokeScript/Call instead (SSOT programs in the registry).
+    /// Macros are not supported — reuse via name → graph id + InvokeScript/Call.
     /// </summary>
     public sealed class GraphFunctionCatalog
     {
         private readonly Dictionary<string, GraphFunctionEntry> _byName =
             new(StringComparer.Ordinal);
+        private readonly Dictionary<int, GraphFunctionEntry> _byGraphId = new();
+
+        public void Clear()
+        {
+            _byName.Clear();
+            _byGraphId.Clear();
+        }
 
         public void Register(string name, int graphId, GraphKind kind)
         {
@@ -44,16 +50,22 @@ namespace Ludots.Core.GraphRuntime
                 throw new InvalidOperationException(
                     $"Graph function '{entry.Name}' is already registered.");
             }
+
+            _byGraphId.TryAdd(entry.GraphId, entry);
         }
 
         public bool TryGet(string name, out GraphFunctionEntry entry)
             => _byName.TryGetValue(name, out entry);
 
+        public bool TryGetByGraphId(int graphId, out GraphFunctionEntry entry)
+            => _byGraphId.TryGetValue(graphId, out entry);
+
         public GraphFunctionEntry Require(string name)
         {
             if (!TryGet(name, out GraphFunctionEntry entry))
             {
-                throw new InvalidOperationException($"Graph function '{name}' is not registered.");
+                throw new InvalidOperationException(
+                    $"Graph function '{name}' is not registered in FuncLib. ActionLib entries cannot be called through InvokeScript.functionName.");
             }
 
             return entry;

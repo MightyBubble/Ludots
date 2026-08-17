@@ -5,14 +5,14 @@ using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Presentation.Systems
 {
     public sealed class InstancedBatchBehaviorSystem : BaseSystem<World, float>
     {
-        private readonly PerformerDefinitionRegistry _definitions;
-        private readonly PerformerEntityRuntime _runtime;
+        private readonly PresenterDefinitionRegistry _definitions;
+        private readonly PresenterEntityRuntime _runtime;
         private readonly InstancedBatchAssetRegistry _batchAssets;
         private readonly InstancedBatchOperationBuffer _operations;
         private readonly PresentationEventStream _events;
@@ -20,8 +20,8 @@ namespace Ludots.Core.Presentation.Systems
 
         public InstancedBatchBehaviorSystem(
             World world,
-            PerformerDefinitionRegistry definitions,
-            PerformerEntityRuntime runtime,
+            PresenterDefinitionRegistry definitions,
+            PresenterEntityRuntime runtime,
             InstancedBatchAssetRegistry batchAssets,
             InstancedBatchOperationBuffer operations,
             PresentationEventStream events,
@@ -92,21 +92,21 @@ namespace Ludots.Core.Presentation.Systems
             float sourceValue,
             PresentationEventKind sourceEventKind = PresentationEventKind.None)
         {
-            if (!_runtime.TryGetActiveByOwner(owner, out PerformerEntityRuntime.OwnerPerformerBucket performers))
+            if (!_runtime.TryGetActiveByOwner(owner, out PresenterEntityRuntime.OwnerPresenterBucket presenters))
             {
                 return;
             }
 
-            for (int performerIndex = 0; performerIndex < performers.Count; performerIndex++)
+            for (int presenterIndex = 0; presenterIndex < presenters.Count; presenterIndex++)
             {
-                Entity performer = performers.GetAt(performerIndex);
-                if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
+                Entity presenter = presenters.GetAt(presenterIndex);
+                if (!World.IsAlive(presenter) || !World.Has<PresenterState>(presenter))
                 {
                     continue;
                 }
 
-                ref readonly PerformerState state = ref World.Get<PerformerState>(performer);
-                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                ref readonly PresenterState state = ref World.Get<PresenterState>(presenter);
+                if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
                     !definition.HasInstancedBatchBindings)
                 {
                     continue;
@@ -128,7 +128,7 @@ namespace Ludots.Core.Presentation.Systems
                     }
 
                     EmitMatchingBindings(
-                        performer,
+                        presenter,
                         in state,
                         asset,
                         sourceKind,
@@ -140,8 +140,8 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         private void EmitMatchingBindings(
-            Entity performer,
-            in PerformerState state,
+            Entity presenter,
+            in PresenterState state,
             InstancedBatchAsset asset,
             InstancedBatchSourceKind sourceKind,
             int sourceKeyId,
@@ -171,7 +171,7 @@ namespace Ludots.Core.Presentation.Systems
                     asset.Id,
                     state.StableId,
                     state.OwnerEntity,
-                    performer,
+                    presenter,
                     binding.Address,
                     binding.CustomDataSlot,
                     new Vector4(mapped, 0f, 0f, 0f),
@@ -209,7 +209,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return binding.SourceKind == InstancedBatchSourceKind.PresentationEvent &&
-                   binding.SourceEventKind is PresentationEventKind.PerformerCreated or PresentationEventKind.PerformerDestroyed &&
+                   binding.SourceEventKind is PresentationEventKind.PresenterCreated or PresentationEventKind.PresenterDestroyed &&
                    binding.SourceKeyId == -1;
         }
 
@@ -241,7 +241,7 @@ namespace Ludots.Core.Presentation.Systems
                 : (byte)0;
         }
 
-        private static bool IsBindingActive(in PerformerState state, in InstancedBatchBinding binding)
+        private static bool IsBindingActive(in PresenterState state, in InstancedBatchBinding binding)
         {
             int slotIndex = binding.SlotIndex;
             return slotIndex < 0 ||

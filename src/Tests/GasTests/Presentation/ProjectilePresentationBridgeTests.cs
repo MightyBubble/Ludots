@@ -10,7 +10,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -21,26 +21,26 @@ namespace Ludots.Tests.GAS
     public class ProjectilePresentationBridgeTests
     {
         [Test]
-        public void PerformerDefinitionConfigLoader_ResolvesProjectileSpawnedRuleKeys_AndSelfReferences()
+        public void PresenterDefinitionConfigLoader_ResolvesProjectileSpawnedRuleKeys_AndSelfReferences()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+                Directory.CreateDirectory(root);
+                Directory.CreateDirectory(Path.Combine(root, "Presentation"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     """
                     [
-                      { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
+                      { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Presentation", "performers.json"),
+                    Path.Combine(root, "Presentation", "presenters.json"),
                     """
                     [
                       {
-                        "id": "test.projectile.performer",
+                        "id": "test.projectile.presenter",
                         "behaviors": [
                           {
                             "slot": "body",
@@ -62,9 +62,9 @@ namespace Ludots.Tests.GAS
                               "key": "Effect.Test.ProjectileHit"
                             },
                             "command": {
-                              "kind": "CreatePerformer",
+                              "kind": "CreatePresenter",
                               "scopeSource": "EventPayloadA",
-                              "definitionId": "test.projectile.performer"
+                              "definitionId": "test.projectile.presenter"
                             }
                           },
                           {
@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS
                               "key": "*"
                             },
                             "command": {
-                              "kind": "DestroyPerformerScope",
+                              "kind": "DestroyPresenterScope",
                               "scopeSource": "EventPayloadA"
                             }
                           }
@@ -85,7 +85,7 @@ namespace Ludots.Tests.GAS
                 EffectTemplateIdRegistry.Clear();
                 int impactEffectId = EffectTemplateIdRegistry.Register("Effect.Test.ProjectileHit");
 
-                var performers = new PerformerDefinitionRegistry();
+                var presenters = new PresenterDefinitionRegistry();
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", root);
@@ -93,26 +93,26 @@ namespace Ludots.Tests.GAS
                 var pipeline = new ConfigPipeline(vfs, modLoader);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                var loader = new PerformerDefinitionConfigLoader(
+                var loader = new PresenterDefinitionConfigLoader(
                     pipeline,
-                    performers,
+                    presenters,
                     resolveEffectTemplateId: EffectTemplateIdRegistry.GetId,
                     resolveBehaviorAssetId: (kind, key) => kind == AssetKind.Mesh && key == "test.mesh" ? 1 : 0);
 
                 loader.Load(catalog);
 
-                int performerId = performers.GetId("test.projectile.performer");
-                That(performerId, Is.GreaterThan(0));
-                That(performers.TryGet(performerId, out var definition), Is.True);
+                int presenterId = presenters.GetId("test.projectile.presenter");
+                That(presenterId, Is.GreaterThan(0));
+                That(presenters.TryGet(presenterId, out var definition), Is.True);
                 That(definition.Rules.Length, Is.EqualTo(2));
                 That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.ProjectileSpawned));
                 That(definition.Rules[0].Event.KeyId, Is.EqualTo(impactEffectId));
-                That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
-                That(definition.Rules[0].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
-                That(definition.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(performerId));
+                That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresenterCommandKind.CreatePresenter));
+                That(definition.Rules[0].Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
+                That(definition.Rules[0].Command.PresenterDefinitionId, Is.EqualTo(presenterId));
                 That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
-                That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PerformerCommandKind.DestroyPerformerScope));
-                That(definition.Rules[1].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PresenterCommandKind.DestroyPresenterScope));
+                That(definition.Rules[1].Command.ScopeSource, Is.EqualTo(PresenterCommandScopeSource.EventPayloadA));
             }
             finally
             {

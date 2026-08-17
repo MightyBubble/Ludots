@@ -50,25 +50,5 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
         }
 
-        /// <summary>
-        /// Classic AI: Selector( Sequence(SeeEnemy Script, Selector(AttackIfInRange, Chase)), Patrol ).
-        /// Leaves are ScriptSlice keyed by <see cref="BehaviorTreeScriptBindings"/>.
-        /// </summary>
-        public static BehaviorTreeDefinition CreatePatrolChaseAttackTree(string id)
-        {
-            var nodes = new BehaviorTreeNode[]
-            {
-                new(BehaviorTreeNodeKind.Selector, childStart: 1, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Sequence, childStart: 3, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Patrol),
-                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.SeeEnemy),
-                new(BehaviorTreeNodeKind.Selector, childStart: 5, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Sequence, childStart: 7, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Chase),
-                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.InAttackRange),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Attack),
-            };
-            return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
-        }
     }
 }

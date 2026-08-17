@@ -1,0 +1,13 @@
+{
+  "op": "QuerySortByAttribute",
+  "driver": "query",
+  "title": "按血量从厚到薄排队",
+  "beat": "最厚的顶着三道杠，箭头顺着血条一路排下去。",
+  "detailTemplate": "头名{label}血{hp}顶着三道杠，箭头一路指向更薄的血条。",
+  "assertDetailContains": [
+    "三道杠"
+  ],
+  "featuredNodeId": "sortHp",
+  "graphKind": "Query",
+  "field": "query"
+}

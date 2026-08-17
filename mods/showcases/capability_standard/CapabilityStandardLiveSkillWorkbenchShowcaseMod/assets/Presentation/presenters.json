@@ -1,0 +1,357 @@
+[
+  {
+    "id": "lsw.unit_combat_hud_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_health_bar",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.bar"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_health_text",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.text"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_chill_bar",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.bar"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_chill_countdown",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.text"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_health_bar",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.bar"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_health_text",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.text"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_chill_bar",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.bar"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "lsw.unit_chill_countdown",
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.text"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_health_bar",
+    "extends": "entity_health_bar",
+    "visibility": {
+      "inline": "None"
+    },
+    "maxVisibilityDistanceCm": 20000,
+    "bindings": [
+      {
+        "paramKey": "worldBar.width",
+        "source": "constant",
+        "constantValue": 110
+      },
+      {
+        "paramKey": "worldBar.height",
+        "source": "constant",
+        "constantValue": 14
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            110,
+            14,
+            1
+          ],
+          "materialParamKey": "worldBar.fillRatio"
+        },
+        "style": {
+          "color": [
+            0.12,
+            0.92,
+            0.28,
+            1
+          ]
+        }
+      }
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        2.15,
+        0
+      ]
+    }
+  },
+  {
+    "id": "lsw.unit_health_text",
+    "extends": "entity_world_text",
+    "visibility": {
+      "inline": "None"
+    },
+    "maxVisibilityDistanceCm": 20000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 22,
+          "valueParamKey": "worldText.value0",
+          "secondaryValueParamKey": "worldText.value1"
+        },
+        "style": {
+          "color": [
+            1,
+            0.98,
+            0.94,
+            1
+          ]
+        }
+      }
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        2.45,
+        0
+      ]
+    }
+  },
+  {
+    "id": "lsw.unit_chill_bar",
+    "visibility": {
+      "inline": "None"
+    },
+    "maxVisibilityDistanceCm": 20000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "lsw.chill.ratio",
+          "visibilityParamKey": "lsw.chill.visible",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            90,
+            10,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.35,
+            0.82,
+            1,
+            0.98
+          ]
+        }
+      },
+      {
+        "slot": "tag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "State.LSW.Chilled",
+          "targetParamKey": "lsw.chill.visible",
+          "invertLogic": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.chill.ratio",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "lsw.chill.visible",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        2.75,
+        0
+      ]
+    }
+  },
+  {
+    "id": "lsw.unit_chill_countdown",
+    "visibility": {
+      "inline": "None"
+    },
+    "maxVisibilityDistanceCm": 20000,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": false,
+        "worldText": {
+          "textToken": "hud.attribute.current",
+          "mode": "AttributeCurrent",
+          "fontSize": 20,
+          "valueParamKey": "lsw.chill.remainingSeconds"
+        },
+        "style": {
+          "color": [
+            0.55,
+            0.94,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "tag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "State.LSW.Chilled",
+          "targetParamKey": "lsw.chill.active",
+          "invertLogic": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.chill.remainingSeconds",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "lsw.chill.active",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        3.05,
+        0
+      ]
+    }
+  }
+]

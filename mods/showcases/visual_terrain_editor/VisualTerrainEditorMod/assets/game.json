@@ -1,7 +1,7 @@
 {
   "startupMapId": "visual_terrain_editor",
   "presentation": {
-    "performerInstanceCapacity": 4096,
+    "presenterInstanceCapacity": 4096,
     "gasPresentationEventCapacity": 65536
   },
   "windowResizable": true,

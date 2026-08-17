@@ -94,7 +94,7 @@ namespace Ludots.Tests.GAS.Production
             AssertWebUiRuntimeDeclared(engine);
             AssertPackagedWebApp(repoRoot);
             AssertShowcaseCameraLocked(engine);
-            AssertProfileProjectionPerformerConfig(repoRoot);
+            AssertProfileProjectionPresenterConfig(repoRoot);
             AssertOldComposePanelClosed(engine);
 
             var aggregationProfiles = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
@@ -297,7 +297,6 @@ namespace Ludots.Tests.GAS.Production
                 "mods",
                 "EntityCommandPanelMod",
                 "assets",
-                "Configs",
                 "UI",
                 "ability_aggregation_profiles.json");
             Assert.That(File.Exists(fragmentPath), Is.True, "EntityCommandPanelMod should provide the by-family profile fragment.");
@@ -423,9 +422,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(Directory.GetFiles(Path.Combine(appRoot, "assets"), "*.css").Length, Is.GreaterThan(0));
         }
 
-        private static void AssertProfileProjectionPerformerConfig(string repoRoot)
+        private static void AssertProfileProjectionPresenterConfig(string repoRoot)
         {
-            string performerPath = Path.Combine(
+            string presenterPath = Path.Combine(
                 repoRoot,
                 "mods",
                 "showcases",
@@ -433,11 +432,11 @@ namespace Ludots.Tests.GAS.Production
                 "EntityCommandPanelShowcaseMod",
                 "assets",
                 "Presentation",
-                "performers.json");
-            Assert.That(File.Exists(performerPath), Is.True,
-                "A2 visible UAT should package performer rules for world-space profile projection markers.");
+                "presenters.json");
+            Assert.That(File.Exists(presenterPath), Is.True,
+                "A2 visible UAT should package presenter rules for world-space profile projection markers.");
 
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerPath, Encoding.UTF8));
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(presenterPath, Encoding.UTF8));
             string[] markerIds =
             {
                 EntityCommandPanelShowcaseIds.TemplateProjectionMarkerDefId,
@@ -452,7 +451,7 @@ namespace Ludots.Tests.GAS.Production
                         entry.TryGetProperty("id", out JsonElement id) &&
                         string.Equals(id.GetString(), markerId, StringComparison.Ordinal)),
                     Is.True,
-                    $"performers.json should declare marker '{markerId}'.");
+                    $"presenters.json should declare marker '{markerId}'.");
             }
 
             foreach (string collectionKey in ProfileProjectionCollectionKeys)
@@ -465,7 +464,7 @@ namespace Ludots.Tests.GAS.Production
                             evt.TryGetProperty("key", out JsonElement key) &&
                             string.Equals(key.GetString(), collectionKey, StringComparison.Ordinal))),
                     Is.True,
-                    $"performers.json should bind world markers to collection '{collectionKey}'.");
+                    $"presenters.json should bind world markers to collection '{collectionKey}'.");
             }
         }
 

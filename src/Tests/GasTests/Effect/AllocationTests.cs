@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -264,6 +265,7 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId,
             [
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             ], GraphKind.Effect);
 
             EffectPhaseListenerBuffer listeners = default;
@@ -314,6 +316,148 @@ namespace Ludots.Tests.GAS
             api.EndEffectSideEffectTransaction(transaction);
             transaction.Rollback();
             That(allocated, Is.Zero);
+        }
+
+        [Test]
+        public void DurationEffectTick_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            const int attrId = 0;
+            var clock = new DiscreteClock();
+            var requests = new EffectRequestQueue();
+            var dirtyQueue = new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME);
+            var tagOps = new TagOps(dirtyQueue, new TagRuleRegistry());
+            var triggerQueue = new DeferredTriggerQueue();
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/AllocationTests.DurationEffectTick.json");
+
+            using var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock,
+                requests,
+                templates: templates,
+                tagOps: tagOps);
+            using var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
+            using var lifetime = new EffectLifetimeSystem(
+                world,
+                clock,
+                conditions,
+                snapshotCapacity: 4096,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                effectRequests: requests,
+                templates: templates,
+                tagOps: tagOps);
+            using var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
+            using var deferred = new DeferredTriggerCollectionSystem(world, triggerQueue, tagOps, dirtyQueue);
+
+            Entity source = world.Create();
+            Entity target = world.Create(
+                new AttributeBuffer(),
+                new DirtyFlags(),
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new TimedTagBuffer());
+            ref var attributes = ref world.Get<AttributeBuffer>(target);
+            attributes.SetBase(attrId, 100f);
+            attributes.SetCurrent(attrId, 100f);
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                source,
+                target,
+                durationTicks: 100_000,
+                lifetimeKind: EffectLifetimeKind.After,
+                periodTicks: 0,
+                clockId: GasClockId.Step);
+            ref var gameplayEffect = ref world.Get<GameplayEffect>(effect);
+            gameplayEffect.State = EffectState.Committed;
+            gameplayEffect.AggregatesModifiers = true;
+            GameplayEffectFactory.AddModifier(world, effect, attrId, ModifierOp.Add, 7f);
+            That(world.Get<ActiveEffectContainer>(target).Add(effect), Is.True);
+
+            const int timedTagId = 7;
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var timed = ref world.Get<TimedTagBuffer>(target);
+            tags.AddTag(timedTagId);
+            counts.AddCount(timedTagId, 1);
+            That(timed.TryAdd(timedTagId, expireAt: 1_000_000, GasClockId.Step), Is.True);
+
+            TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, 64);
+            That(world.IsAlive(effect), Is.True);
+            That(world.Get<AttributeBuffer>(target).GetBase(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(attrId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCap(attrId), Is.EqualTo(107f));
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocated = MeasureDurationTickAllocations(
+                clock,
+                application,
+                aggregator,
+                lifetime,
+                timedTags,
+                deferred,
+                triggerQueue,
+                10_000);
+
+            That(world.IsAlive(effect), Is.True);
+            That(allocated, Is.LessThanOrEqualTo(64),
+                $"Duration-effect tick loop allocated {allocated} bytes after warmup.");
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static long MeasureDurationTickAllocations(
+            DiscreteClock clock,
+            EffectApplicationSystem application,
+            AttributeAggregatorSystem aggregator,
+            EffectLifetimeSystem lifetime,
+            TimedTagExpirationSystem timedTags,
+            DeferredTriggerCollectionSystem deferred,
+            DeferredTriggerQueue triggerQueue,
+            int count)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            TickDurationSystems(clock, application, aggregator, lifetime, timedTags, deferred, triggerQueue, count);
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void TickDurationSystems(
+            DiscreteClock clock,
+            EffectApplicationSystem application,
+            AttributeAggregatorSystem aggregator,
+            EffectLifetimeSystem lifetime,
+            TimedTagExpirationSystem timedTags,
+            DeferredTriggerCollectionSystem deferred,
+            DeferredTriggerQueue triggerQueue,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                clock.Advance(ClockDomainId.Step, 1);
+                application.Update(0f);
+                aggregator.Update(0f);
+                lifetime.Update(0f);
+                timedTags.Update(0f);
+                deferred.Update(0f);
+                triggerQueue.Clear();
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

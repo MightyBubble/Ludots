@@ -815,7 +815,7 @@ namespace Ludots.Tests.Architecture
             string repoRoot = CreateTempRepoNavigationConfig();
             try
             {
-                string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+                string navigationDir = Path.Combine(repoRoot, "assets", "Navigation");
                 File.WriteAllText(Path.Combine(navigationDir, "alt_navmesh.json"),
                     """
                     {
@@ -837,7 +837,7 @@ namespace Ludots.Tests.Architecture
                       }
                     }
                     """);
-                string catalogPath = Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json");
+                string catalogPath = Path.Combine(repoRoot, "assets", "config_catalog.json");
                 string catalog = File.ReadAllText(catalogPath).TrimEnd();
                 catalog = catalog.Substring(0, catalog.Length - 1) +
                     "," + Environment.NewLine +
@@ -1225,7 +1225,7 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempNavConfig(string navmeshJson)
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bake-service-" + Guid.NewGuid().ToString("N"));
-            string configs = Path.Combine(tempRoot, "Configs");
+            string configs = tempRoot;
             Directory.CreateDirectory(Path.Combine(configs, "Navigation"));
             File.WriteAllText(Path.Combine(configs, "config_catalog.json"),
                 """
@@ -1240,10 +1240,10 @@ namespace Ludots.Tests.Architecture
         private static string CreateTempRepoNavigationConfig()
         {
             string repoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
-            string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+            string navigationDir = Path.Combine(repoRoot, "assets", "Navigation");
             Directory.CreateDirectory(navigationDir);
             Directory.CreateDirectory(Path.Combine(repoRoot, "mods"));
-            File.WriteAllText(Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json"),
+            File.WriteAllText(Path.Combine(repoRoot, "assets", "config_catalog.json"),
                 """
                 [
                   { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
@@ -1295,14 +1295,14 @@ namespace Ludots.Tests.Architecture
 
         private static void WriteNavigationAgentProfiles(string modRoot, string json)
         {
-            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            string dir = Path.Combine(modRoot, "assets", "Navigation");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "agent_profiles.json"), json);
         }
 
         private static void WriteNavigationNavmesh(string modRoot, string json)
         {
-            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            string dir = Path.Combine(modRoot, "assets", "Navigation");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "navmesh.json"), json);
         }

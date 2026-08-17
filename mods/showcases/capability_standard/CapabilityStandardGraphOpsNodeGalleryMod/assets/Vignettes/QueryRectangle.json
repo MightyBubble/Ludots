@@ -1,0 +1,13 @@
+{
+  "op": "QueryRectangle",
+  "driver": "spatial",
+  "title": "矩形里有谁",
+  "beat": "身前一块矩形框人。",
+  "detailTemplate": "身前矩形框到{count}人。",
+  "assertDetailContains": [
+    "矩形"
+  ],
+  "featuredNodeId": "rect",
+  "graphKind": "Query",
+  "field": "spatial"
+}

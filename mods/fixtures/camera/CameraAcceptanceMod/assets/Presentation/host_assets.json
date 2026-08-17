@@ -1,0 +1,11 @@
+[
+  {
+    "id": "camera.acceptance.cue.decal.material.raylib",
+    "assetKind": "Material",
+    "assetId": "camera.acceptance.cue.decal",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CameraAcceptanceMod:assets/Textures/cue_decal.png"
+    ]
+  }
+]

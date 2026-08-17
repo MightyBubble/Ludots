@@ -157,13 +157,12 @@ namespace Ludots.Tests.GAS.Production
                 var budget = new RootBudgetTable(64);
                 var ctx = new EffectContext { RootId = 123, Source = hero, Target = enemy1, TargetContext = default };
                 var tmpBuf = new Entity[64];
-                int dropped = 0;
                 int cand = TargetResolverFanOutHelper.ResolveTargets(world, in ctx, in eTpl.TargetQuery, engine.SpatialQueries, tmpBuf);
                 steps.Add(new StepResult("TargetResolver ResolveTargets returns candidates", cand >= 2, $"Count={cand}"));
                 TargetResolverFanOutHelper.CollectFanOutTargets(
                     world, in ctx, in eTpl.TargetQuery, in eTpl.TargetFilter, in eTpl.TargetDispatch,
-                    engine.SpatialQueries, budget, cmds, tmpBuf, ref dropped);
-                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count} Dropped={dropped}"));
+                    engine.SpatialQueries, budget, cmds, tmpBuf);
+                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count}"));
             }
 
             CastAbility(engine, hero, enemy1, slot: 2);

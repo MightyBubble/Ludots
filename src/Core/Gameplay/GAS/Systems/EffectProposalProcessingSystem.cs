@@ -1482,15 +1482,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
                 _phaseExecutor!.ExecutePhase(
                     World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
                 _phaseExecutor.ExecutePhase(
                     World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
                 _phaseExecutor.ExecutePhase(
                     World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
-                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.EffectivePresetTypeId,
                     tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
 
                 if (_builtinRuntime.HasAttributeDelta)
@@ -1505,7 +1505,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ApplyInstantModifiersAndPublish(in proposal);
                 }
 
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
                 if (useGasTransaction)
                 {
                     _instantPhaseTransaction.Commit();
@@ -1789,7 +1789,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
+                tpl.PresetTypeId,
                 proposal.TagId,
                 proposal.TemplateId,
                 in mergedConfig,
@@ -1823,14 +1823,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     targetPos,
                     EffectPhaseId.OnCalculate,
                     in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
+                    tpl.EffectivePresetTypeId,
                     proposal.TagId,
                     proposal.TemplateId,
                     in mergedConfig,
                     _builtinRuntime,
                     BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate),
                     proposal.RootId);
-                PublishBuiltinFanOutCommandsAndRecordDrops();
+                PublishBuiltinFanOutCommands();
             }
             finally
             {
@@ -1838,13 +1838,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private void PublishBuiltinFanOutCommandsAndRecordDrops()
+        private void PublishBuiltinFanOutCommands()
         {
-            if (_builtinRuntime.DroppedCount > 0 && _budget != null)
-            {
-                _budget.EffectProposalFanOutDropped += _builtinRuntime.DroppedCount;
-            }
-
             for (int i = 0; i < _instantFanOutCommands.Count; i++)
             {
                 FanOutCommand command = _instantFanOutCommands[i];

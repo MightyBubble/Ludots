@@ -9,7 +9,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
@@ -28,18 +28,63 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly PresentationMaterialRegistry? _materials;
+        private readonly RaylibMaterialHostBinder? _materialHostBinder;
         private readonly string? _diagnosticPath;
-        private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
 
         private bool _initialized;
+        private const float DefaultVegetationAlphaCutoff = 0.9f;
+        private const string BillboardTextureRequiredError = "RAYLIB.PRIMITIVE.ERR.BillboardTextureRequired";
+
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
+        private Mesh _vfxBillboardMesh;
+        private IRaylibReceiverMeshProjector? _receiverMeshProjector;
+        private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
+        private Shader _skinningShader;
+        private Shader _vegetationCutoutShader;
+        private Shader _decalProjectShader;
         private Material _material;
+        private Material _vfxMaterial;
+        private Material _decalMaterial;
+        private bool _vfxMaterialLoaded;
+        private bool _decalMaterialLoaded;
+        private bool _vegetationCutoutShaderReady;
+        private bool _decalProjectShaderReady;
+        private int _locDecalProjectColDiffuse;
+        private int _locDecalProjectTint;
+        private int _locDecalProjectWorldToDecal;
+        private int _locDecalProjectAlphaCutoff;
+        private int _locDecalProjectMinReceiverNDotUp;
+        private int _locDecalProjectReceiverDepthBias;
+        private const float DecalMinReceiverNDotUp = 0.05f;
+        private const float DecalReceiverDepthBiasMeters = 0.04f;
+        private const float DecalAlphaBlendCutoff = 0.02f;
+        private const float DecalCutoutAlphaCutoff = DefaultVegetationAlphaCutoff;
+        private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
+        private int _locRoughness;
+        private int _locMetallic;
+        private int _locHasRoughnessMap;
+        private int _locHasMetallicMap;
+        private int _locVegetationCutoutColDiffuse;
+        private int _locVegetationCutoutAlphaCutoff;
+        private int _locSkinningColDiffuse;
+        private int _locSkinningTint;
+        private int _locSkinningRoughness;
+        private int _locSkinningMetallic;
+        private int _locSkinningHasRoughnessMap;
+        private int _locSkinningHasMetallicMap;
+        private int _locBoneMatrices;
+        private RaylibFrameLightingLocations _instancingLightingLocs;
+        private RaylibFrameLightingLocations _skinningLightingLocs;
+        private RaylibFrameLighting? _frameLighting;
+        private Vector3 _frameViewPos;
+        private bool _hasFrameViewPos;
+        private bool _skinningShaderReady;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
@@ -48,6 +93,9 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
+        private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
+        private readonly RaylibVfxRenderer _vfxRenderer;
+        private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -85,8 +133,46 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalDecalVisualCount { get; private set; }
         public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
+        public int LastDrawnVfxCount => _vfxRenderer.LastDrawnVfxCount;
+        public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
+
+        public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos)
+        {
+            _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            _frameViewPos = viewPos;
+            _hasFrameViewPos = true;
+            if (_initialized)
+            {
+                lighting.Apply(_shader, in _instancingLightingLocs);
+                lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
+            }
+
+            if (_skinningShaderReady)
+            {
+                lighting.Apply(_skinningShader, in _skinningLightingLocs);
+                lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
+            }
+        }
+
+        public void BindReceiverMeshProjector(IRaylibReceiverMeshProjector projector)
+        {
+            _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
+        }
+
+        internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
+            IRaylibReceiverMeshProjector? projector,
+            int stableId)
+        {
+            if (projector == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires {nameof(BindReceiverMeshProjector)} before projected Decals can paint receiver meshes.");
+            }
+
+            return projector;
+        }
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
@@ -96,18 +182,23 @@ namespace Ludots.Client.Raylib.Rendering
             _mode = mode;
             _vfs = vfs;
             _materials = materials;
+            _materialHostBinder = vfs != null && materials != null
+                ? new RaylibMaterialHostBinder(vfs, materials)
+                : null;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
+            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
+            _vfxRenderer = new RaylibVfxRenderer(vfs);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
         public void Draw(
@@ -117,10 +208,15 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer? skinnedBatch,
             MeshAssetRegistry meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null)
+            IVisualHeightmap? visualHeightmap = null,
+            double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            _frameViewPos = camera.position;
+            _hasFrameViewPos = true;
+            _frameTimeSeconds = timeSeconds;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -143,44 +239,52 @@ namespace Ludots.Client.Raylib.Rendering
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
-            var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
-
-            var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null;
-            if (usePersistentStaticLanes)
+            _frameVisualHeightmap = visualHeightmap;
+            _vfxRenderer.BeginFrame();
+            try
             {
-                _ismBridge.SyncPersistentLanes(snapshot);
-                LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
-                LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
-                LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
-                LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
-                long bucketStart = Stopwatch.GetTimestamp();
-                DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
-                LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
-                if (skinnedBatch != null)
+                var span = draw.GetSpan();
+                bool usePersistentStaticLanes = snapshot != null;
+                if (usePersistentStaticLanes)
                 {
-                    DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
+                    _ismBridge.SyncPersistentLanes(snapshot);
+                    LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
+                    LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
+                    LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
+                    LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
+                    long bucketStart = Stopwatch.GetTimestamp();
+                    DrawPersistentStaticLanes(camera, meshes, scaleMul);
+                    LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
+                    if (skinnedBatch != null)
+                    {
+                        DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
+                    }
+
+                    long dynamicLaneStart = Stopwatch.GetTimestamp();
+                    DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null);
+                    LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+
+                    return;
                 }
 
-                long dynamicLaneStart = Stopwatch.GetTimestamp();
-                DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
-                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    DrawHybridInstanced(span, camera, meshes, scaleMul);
+                    return;
+                }
 
-                return;
+                long immediateDrawStart = Stopwatch.GetTimestamp();
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false);
+                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
             }
-
-            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            finally
             {
-                DrawHybridInstanced(span, camera, meshes, scaleMul, in finalizationContext);
-                return;
+                _vfxRenderer.EndFrame();
+                _frameVisualHeightmap = null;
             }
-
-            long immediateDrawStart = Stopwatch.GetTimestamp();
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
-            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
         }
 
-        private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
         {
             foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
@@ -194,15 +298,13 @@ namespace Ludots.Client.Raylib.Rendering
             MeshAssetRegistry meshes,
             float scaleMul,
             bool persistentStaticLanesActive,
-            bool skinnedBatchActive,
-            in PrefabFinalizationContext finalizationContext)
+            bool skinnedBatchActive)
         {
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: false))
                 {
-                    LastImmediateSkippedCount++;
                     continue;
                 }
 
@@ -229,7 +331,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul, item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    item.MaterialId);
             }
         }
 
@@ -238,17 +340,15 @@ namespace Ludots.Client.Raylib.Rendering
             Camera3D camera,
             MeshAssetRegistry meshes,
             float scaleMul,
-            bool skinnedBatchActive,
-            in PrefabFinalizationContext finalizationContext)
+            bool skinnedBatchActive)
         {
             EnsureInitialized();
 
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
-                    LastImmediateSkippedCount++;
                     continue;
                 }
 
@@ -277,7 +377,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    item.MaterialId);
             }
 
             FlushInstancedBatches();
@@ -295,14 +395,14 @@ namespace Ludots.Client.Raylib.Rendering
             return _ismBridge.ActiveBindings.ContainsKey(item.StableId);
         }
 
-        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
         {
             EnsureInitialized();
 
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (IsHostSurfaceLane(in item))
+                if (TryDrawTypedPresenterChild(in item, camera, meshes, scaleMul, instancedPrimitives: true))
                 {
                     continue;
                 }
@@ -320,65 +420,102 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    item.MaterialId);
             }
 
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private bool TryDrawTypedPresenterChild(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            bool instancedPrimitives)
         {
-            _prefabVisuals.Clear();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                meshAssetId,
-                stableId: 0,
-                position,
-                rotation,
-                scale,
-                color,
-                finalizationContext,
-                _prefabVisuals);
-
-            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
+            if (TryDrawDecalItem(in item, scaleMul))
             {
-                SubmitFinalizedVisual(in visual, camera);
+                return true;
             }
-        }
 
-        private static bool IsHostSurfaceLane(in PrimitiveDrawItem item)
-        {
-            return item.AssetKind == AssetKind.Surface || item.RenderPath.IsSurfaceLane();
-        }
-
-        private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
-        {
-            TrackVisualKind(visual.Kind);
-
-            switch (visual.Kind)
+            if (item.AssetKind == AssetKind.VFX)
             {
-                case PrefabVisualPartKind.Mesh:
-                    SubmitMeshVisual(in visual, camera);
-                    break;
-                case PrefabVisualPartKind.ProceduralMesh:
-                    DrawProceduralMesh(in visual);
-                    break;
-                case PrefabVisualPartKind.Decal:
-                    DrawDecalVisual(in visual);
-                    break;
-                case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
-                    break;
-                case PrefabVisualPartKind.Surface:
-                    DrawSurfaceVisual(in visual, camera);
-                    break;
-                default:
+                LastVfxVisualCount++;
+                TotalVfxVisualCount++;
+                _vfxRenderer.Draw(in item, meshes, camera, _frameTimeSeconds, scaleMul);
+                return true;
+            }
+
+            if (item.AssetKind == AssetKind.Surface)
+            {
+                if (item.MeshAssetId <= 0)
+                {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
+                        $"{nameof(RaylibPrimitiveRenderer)} Surface stableId={item.StableId} requires a mesh asset. Author a Presenter Surface child instead of skipping the draw.");
+                }
+
+                LastSurfaceVisualCount++;
+                TotalSurfaceVisualCount++;
+                DrawLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    item.MaterialId,
+                    instancedPrimitives: false,
+                    countAsMesh: false);
+                DrawWireBox(
+                    item.Position,
+                    item.Scale * scaleMul,
+                    WorldPlane2D.NormalizeOrIdentity(item.Rotation),
+                    MultiplyColor(item.Color, 1.18f, 1.08f, 0.86f, 0.96f));
+                return true;
             }
+
+            if (item.RenderPath.IsSurfaceLane())
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} renderPath Surface stableId={item.StableId} assetKind={item.AssetKind} is not drawable. Author AssetKind.Surface Presenter children.");
+            }
+
+            return false;
         }
 
-        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
+        private bool TryDrawDecalItem(in PrimitiveDrawItem item, float scaleMul)
+        {
+            if (item.AssetKind != AssetKind.Decal)
+            {
+                return false;
+            }
+
+            IRaylibReceiverMeshProjector projector = RequireBoundReceiverMeshProjector(
+                _receiverMeshProjector,
+                item.StableId);
+            Vector3 scaled = item.Scale * scaleMul;
+            ProjectedDecalVolume volume = ProjectedDecalVolume.FromVisualScale(scaled);
+            EnsureInitialized();
+            LastDecalVisualCount++;
+            TotalDecalVisualCount++;
+            DrawTexturedDecal(
+                item.Position,
+                item.Rotation,
+                volume,
+                item.Color,
+                item.MaterialId,
+                item.StableId,
+                projector);
+            return true;
+        }
+
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int materialId = 0)
+        {
+            DrawLeafAsset(meshAssetId, position, rotation, scale, color, camera, meshes, materialId, instancedPrimitives: true);
+        }
+
+        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId = 0)
         {
             uint key = PackRgba(color);
             var matrix = RaylibMatrix.FromSystemNumerics(
@@ -388,13 +525,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (kind == PrimitiveMeshKind.Cube)
             {
-                AddInstance(_cubeBatches, key, matrix);
+                AddInstance(_cubeBatches, key, materialId, matrix);
                 return;
             }
 
             if (kind == PrimitiveMeshKind.Sphere)
             {
-                AddInstance(_sphereBatches, key, matrix);
+                AddInstance(_sphereBatches, key, materialId, matrix);
                 return;
             }
 
@@ -431,7 +568,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
         {
             var span = skinnedBatch.GetSpan();
             PrepareGpuSkinnedInstanceBatches();
@@ -461,7 +598,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    item.MaterialId);
             }
 
             FlushGpuSkinnedInstanceBatches();
@@ -486,11 +623,15 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
-            if (!TryGetOrLoadModel(item.MeshAssetId, in descriptor, out CachedModel cached))
-            {
-                WarnMissingModelSkipped(item.MeshAssetId, item.StableId, "gpu-skinned instanced draw");
-                return true;
-            }
+            RaylibGpuSkinnedModelCache.Entry entry = _gpuSkinnedModelCache.GetOrLoad(item.MeshAssetId, in descriptor);
+            AnimatorPackedState animator = item.Animator;
+            RaylibSkinnedPlayback.ResolveFromAnimator(
+                in animator,
+                entry.Animations,
+                entry.AnimCount,
+                stateToClipMap: null,
+                out int clipIndex,
+                out int frameIndex);
 
             long start = Stopwatch.GetTimestamp();
             uint colorKey = PackRgba(item.Color);
@@ -498,8 +639,8 @@ namespace Ludots.Client.Raylib.Rendering
                 item.MeshAssetId,
                 item.MaterialId,
                 colorKey,
-                item.Animator.GetPrimaryStateIndex(),
-                item.Animator.GetSecondaryStateIndex());
+                clipIndex,
+                frameIndex);
             if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
             {
                 batch = new GpuSkinnedInstanceBatch(key);
@@ -508,7 +649,9 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (batch.Count == 0)
             {
-                batch.Model = cached.Model;
+                batch.Model = entry.Model;
+                batch.Animations = entry.Animations;
+                batch.AnimCount = entry.AnimCount;
                 _activeGpuSkinnedInstanceBatches.Add(batch);
             }
 
@@ -528,6 +671,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EnsureInitialized();
+            EnsureSkinningShaderInitialized();
             long drawStart = Stopwatch.GetTimestamp();
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
@@ -538,7 +682,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 LastGpuSkinnedInstances += batch.Count;
-                LastGpuSkinnedBatches += DrawModelInstanceBatch(batch.Model, batch, batch.Key.ColorKey);
+                LastGpuSkinnedBatches += DrawGpuSkinnedInstanceBatch(batch);
             }
 
             LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
@@ -590,65 +734,94 @@ namespace Ludots.Client.Raylib.Rendering
 
             return new AnimationOverlayRequest
             {
-                BaseClip = new AnimatorBuiltinClipState
-                {
-                    ClipId = AnimatorBuiltinClipId.LocomotionCycle,
-                    NormalizedTime01 = animator.GetNormalizedTime01(),
-                    Weight01 = 1f,
-                },
+                BaseClip = AnimationChannelState.Create(
+                    AnimationChannelRegistry.Register(AnimationChannelRegistry.Locomotion),
+                    animator.GetNormalizedTime01(),
+                    weight01: 1f),
             };
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int materialId = 0)
         {
-            _prefabVisuals.Clear();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                meshAssetId,
-                stableId: 0,
-                position,
-                rotation,
-                scale,
-                color,
-                finalizationContext,
-                _prefabVisuals);
-
-            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
-            {
-                DrawFinalizedVisual(in visual, camera);
-            }
+            DrawLeafAsset(meshAssetId, position, rotation, scale, color, camera, meshes, materialId, instancedPrimitives: false);
         }
 
-        private void DrawFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private void DrawLeafAsset(
+            int meshAssetId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 color,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            int materialId,
+            bool instancedPrimitives,
+            bool countAsMesh = true)
         {
-            TrackVisualKind(visual.Kind);
-
-            switch (visual.Kind)
+            if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
             {
-                case PrefabVisualPartKind.Mesh:
-                    DrawMeshVisual(in visual, camera);
-                    break;
-                case PrefabVisualPartKind.ProceduralMesh:
-                    DrawProceduralMesh(in visual);
-                    break;
-                case PrefabVisualPartKind.Decal:
-                    DrawDecalVisual(in visual);
-                    break;
-                case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
-                    break;
-                case PrefabVisualPartKind.Surface:
-                    DrawSurfaceVisual(in visual, camera);
-                    break;
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw unknown meshAssetId={meshAssetId}.");
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
+                    if (instancedPrimitives)
+                    {
+                        SubmitPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color, materialId);
+                    }
+                    else
+                    {
+                        DrawPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color);
+                    }
+
+                    return;
+                case MeshAssetType.Model:
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
+                    DrawModel(meshAssetId, descriptor, position, rotation, scale, color, materialId);
+                    return;
+                case MeshAssetType.Billboard:
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
+                    DrawBillboard(meshAssetId, descriptor, position, scale, color, camera, materialId);
+                    return;
+                case MeshAssetType.ProceduralMesh:
+                    if (countAsMesh)
+                    {
+                        CountMeshVisual();
+                    }
+
+                    DrawProceduralMesh(meshAssetId, in descriptor, position, rotation, scale, materialId);
+                    return;
                 default:
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite mesh type '{descriptor.Type}' for meshAssetId={meshAssetId}. Author Presenter children instead of Prefab.");
             }
         }
+
+        private void CountMeshVisual()
+        {
+            LastMeshVisualCount++;
+            TotalMeshVisualCount++;
+        }
+
 
         public string BuildVisualKindDiagnosticSummary()
         {
-            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
+            return $"typed-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnVfxCount},total={_vfxRenderer.TotalDrawnVfxCount})";
         }
 
         public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
@@ -675,169 +848,213 @@ namespace Ludots.Client.Raylib.Rendering
             return $"primitive-lane bucketCount={bucketCount} firstBucketItems={itemCount} mesh={mesh} meshAssetId={item.MeshAssetId} stable={item.StableId} renderPath={item.RenderPath} mobility={item.Mobility} visibility={item.Visibility} pos=({item.Position.X:F2},{item.Position.Y:F2},{item.Position.Z:F2}) scale=({item.Scale.X:F2},{item.Scale.Y:F2},{item.Scale.Z:F2}) color=({item.Color.X:F2},{item.Color.Y:F2},{item.Color.Z:F2},{item.Color.W:F2})";
         }
 
-        private void SubmitMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private void DrawTexturedDecal(
+            in Vector3 position,
+            in Quaternion rotation,
+            in ProjectedDecalVolume volume,
+            in Vector4 color,
+            int materialId,
+            int stableId,
+            IRaylibReceiverMeshProjector projector)
         {
-            switch (visual.MeshDescriptor.Type)
+            EnsureInitialized();
+            if (materialId <= 0)
             {
-                case MeshAssetType.Primitive:
-                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
-                    break;
-                case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
-                    break;
-                case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
-                    break;
-                case MeshAssetType.ProceduralMesh:
-                    DrawProceduralMesh(in visual);
-                    break;
-                default:
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires a positive materialId with host albedo.");
+            }
+
+            if (_materialHostBinder == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
+            }
+
+            EnsureDecalResources();
+            if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
+            }
+
+            if (!WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector is yaw-about-Y only; authored rotation is not a planar yaw.");
+            }
+
+            Vector3 projectorCenter = projector.FitYawedStampProjectorCenter(
+                position,
+                yaw,
+                volume.StampSizeMeters,
+                stableId);
+            if (!volume.TryBuildWorldToLocal(
+                    projectorCenter,
+                    yaw,
+                    out Matrix4x4 worldToDecal,
+                    out float minX,
+                    out float minY,
+                    out float minZ,
+                    out float maxX,
+                    out float maxY,
+                    out float maxZ))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector volume is not invertible.");
+            }
+
+            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.AlphaBlend);
+            if (blendMode == MaterialBlendMode.Opaque)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} must use AlphaBlend or Cutout, not Opaque.");
+            }
+
+            if (_decalMaterial.maps == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} material maps were not allocated by LoadMaterialDefault.");
+            }
+
+            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+            _decalMaterial.maps[albedoIndex].color = Color.WHITE;
+
+            EnsureDecalProjectShader();
+            float alphaCutoff = blendMode == MaterialBlendMode.Cutout
+                ? DecalCutoutAlphaCutoff
+                : DecalAlphaBlendCutoff;
+            float minReceiver = DecalMinReceiverNDotUp;
+            float receiverDepthBias = DecalReceiverDepthBiasMeters;
+            Vector4 colDiffuse = Vector4.One;
+            Vector4 tint = color;
+            RaylibMatrix worldToDecalRay = RaylibMatrix.FromSystemNumerics(worldToDecal);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectColDiffuse,
+                &colDiffuse,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectTint,
+                &tint,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValueMatrix(_decalProjectShader, _locDecalProjectWorldToDecal, worldToDecalRay);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectAlphaCutoff,
+                &alphaCutoff,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectMinReceiverNDotUp,
+                &minReceiver,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _decalProjectShader,
+                _locDecalProjectReceiverDepthBias,
+                &receiverDepthBias,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+
+            bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool depthMaskDisabled = blending;
+            if (depthMaskDisabled)
+            {
+                Rl.rlDisableDepthMask();
+            }
+
+            Shader previousShader = _decalMaterial.shader;
+            try
+            {
+                _decalMaterial.shader = _decalProjectShader;
+                int drawn = projector.DrawMeshesOverlappingAabbMeters(
+                    minX,
+                    minY,
+                    minZ,
+                    maxX,
+                    maxY,
+                    maxZ,
+                    _decalMaterial);
+                if (drawn <= 0)
+                {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not support mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
+                        $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector AABB " +
+                        $"({minX:F1},{minY:F1},{minZ:F1})-({maxX:F1},{maxY:F1},{maxZ:F1}) overlaps no receiver meshes.");
+                }
             }
-        }
-
-        private void DrawMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
-        {
-            switch (visual.MeshDescriptor.Type)
+            finally
             {
-                case MeshAssetType.Primitive:
-                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
-                    break;
-                case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
-                    break;
-                case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
-                    break;
-                case MeshAssetType.ProceduralMesh:
-                    DrawProceduralMesh(in visual);
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not support mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
+                _decalMaterial.shader = previousShader;
+
+                if (depthMaskDisabled)
+                {
+                    Rl.rlEnableDepthMask();
+                }
+
+                if (blending)
+                {
+                    Rl.EndBlendMode();
+                }
+
+                _materialHostBinder.DetachOwnedMaps(ref _decalMaterial);
             }
         }
 
-        private void DrawDecalVisual(in PrefabFinalizedVisual visual)
+        private void EnsureDecalResources()
         {
-            Vector2 size = ResolveDecalSize(in visual);
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            Vector4 materialAccent = BlendSemanticColor(visual.Color, visual.MaterialId, 0.45f);
-            Vector4 edgeColor = MultiplyColor(materialAccent, 1.18f, 1.18f, 0.92f, 0.92f);
-            Vector4 crossColor = MultiplyColor(materialAccent, 0.86f, 1.05f, 1.18f, 0.78f);
-            float lift = MathF.Max(0.01f, MathF.Max(MathF.Abs(visual.Scale.Y), 0.05f) * 0.04f);
-            Vector3 center = visual.Position + Vector3.Transform(Vector3.UnitY * lift, rotation);
-            float halfWidth = MathF.Max(0.05f, size.X * 0.5f);
-            float halfDepth = MathF.Max(0.05f, size.Y * 0.5f);
-
-            Span<Vector3> corners = stackalloc Vector3[4];
-            corners[0] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, -halfDepth));
-            corners[1] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, -halfDepth));
-            corners[2] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, halfDepth));
-            corners[3] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, halfDepth));
-
-            Color edge = ToRaylibColor(edgeColor);
-            Rl.DrawLine3D(corners[0], corners[1], edge);
-            Rl.DrawLine3D(corners[1], corners[2], edge);
-            Rl.DrawLine3D(corners[2], corners[3], edge);
-            Rl.DrawLine3D(corners[3], corners[0], edge);
-
-            Color cross = ToRaylibColor(crossColor);
-            Rl.DrawLine3D(corners[0], corners[2], cross);
-            Rl.DrawLine3D(corners[1], corners[3], cross);
-
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 markerTop = center + (up * MathF.Max(0.04f, MathF.Min(size.X, size.Y) * 0.08f));
-            Rl.DrawLine3D(center, markerTop, edge);
-        }
-
-        private void DrawVfxVisual(in PrefabFinalizedVisual visual)
-        {
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
-            float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
-                ? baseExtent * 1.15f
-                : baseExtent * 0.9f;
-            Vector4 pulseColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
-            Vector4 shellColor = LerpColor(pulseColor, new Vector4(1f, 1f, 1f, pulseColor.W), 0.35f);
-
-            DrawPrototypeSphere(visual.Position, radius * 0.28f, pulseColor);
-            DrawRotatedRing(visual.Position, rotation, radius, 12, MultiplyColor(shellColor, 1f, 1f, 1f, 0.72f));
-            DrawRotatedRing(visual.Position, rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f), radius * 0.82f, 10, MultiplyColor(shellColor, 0.92f, 1f, 1.1f, 0.64f));
-
-            Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rotation));
-            Color beamColor = ToRaylibColor(MultiplyColor(pulseColor, 1.1f, 1.08f, 1.18f, 0.88f));
-            Rl.DrawLine3D(visual.Position - (right * radius), visual.Position + (right * radius), beamColor);
-            Rl.DrawLine3D(visual.Position - (up * radius * 0.8f), visual.Position + (up * radius * 0.8f), beamColor);
-            Rl.DrawLine3D(visual.Position - (forward * radius * 0.9f), visual.Position + (forward * radius * 0.9f), beamColor);
-        }
-
-        private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
-        {
-            Vector4 surfaceColor = BlendSemanticColor(visual.Color, visual.MaterialId, 0.38f);
-            Vector4 overlayColor = MultiplyColor(surfaceColor, 1.18f, 1.08f, 0.86f, 0.96f);
-
-            switch (visual.MeshDescriptor.Type)
+            if (!_decalMaterialLoaded)
             {
-                case MeshAssetType.Primitive:
-                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
-                    break;
-                case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
-                    break;
-                case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera);
-                    break;
-                case MeshAssetType.ProceduralMesh:
-                    DrawProceduralMesh(in visual);
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not support surface mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
-            }
-
-            DrawWireBox(visual.Position, ResolveSurfaceOverlaySize(in visual), WorldPlane2D.NormalizeOrIdentity(visual.Rotation), overlayColor);
-
-            if (visual.TerrainFacing)
-            {
-                Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-                Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-                float normalLength = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Abs(visual.Scale.Z)) * 0.4f);
-                Rl.DrawLine3D(visual.Position, visual.Position + (up * normalLength), ToRaylibColor(MultiplyColor(overlayColor, 1f, 1f, 1f, 0.8f)));
+                _decalMaterial = Rl.LoadMaterialDefault();
+                _decalMaterialLoaded = true;
             }
         }
 
-        private void TrackVisualKind(PrefabVisualPartKind kind)
+        private void EnsureDecalProjectShader()
         {
-            switch (kind)
+            if (_decalProjectShaderReady)
             {
-                case PrefabVisualPartKind.Mesh:
-                    LastMeshVisualCount++;
-                    TotalMeshVisualCount++;
-                    break;
-                case PrefabVisualPartKind.Decal:
-                    LastDecalVisualCount++;
-                    TotalDecalVisualCount++;
-                    break;
-                case PrefabVisualPartKind.Vfx:
-                    LastVfxVisualCount++;
-                    TotalVfxVisualCount++;
-                    break;
-                case PrefabVisualPartKind.Surface:
-                    LastSurfaceVisualCount++;
-                    TotalSurfaceVisualCount++;
-                    break;
-                case PrefabVisualPartKind.ProceduralMesh:
-                    LastMeshVisualCount++;
-                    TotalMeshVisualCount++;
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unsupported finalized visual kind '{kind}'.");
+                return;
             }
+
+            string baseDir = AppContext.BaseDirectory;
+            _decalProjectShader = Rl.LoadShader(
+                Path.Combine(baseDir, "decal_project.vs"),
+                Path.Combine(baseDir, "decal_project.fs"));
+            if (_decalProjectShader.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} failed to load decal_project shader.");
+            }
+
+            _locDecalProjectColDiffuse = Rl.GetShaderLocation(_decalProjectShader, "colDiffuse");
+            _locDecalProjectTint = Rl.GetShaderLocation(_decalProjectShader, "tint");
+            _locDecalProjectWorldToDecal = Rl.GetShaderLocation(_decalProjectShader, "matWorldToDecal");
+            _locDecalProjectAlphaCutoff = Rl.GetShaderLocation(_decalProjectShader, "alphaCutoff");
+            _locDecalProjectMinReceiverNDotUp = Rl.GetShaderLocation(_decalProjectShader, "minReceiverNDotUp");
+            _locDecalProjectReceiverDepthBias = Rl.GetShaderLocation(_decalProjectShader, "receiverDepthBias");
+            int locMap = Rl.GetShaderLocation(_decalProjectShader, "texture0");
+            int locMvp = Rl.GetShaderLocation(_decalProjectShader, "mvp");
+            int locMatModel = Rl.GetShaderLocation(_decalProjectShader, "matModel");
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexPosition");
+            int locVertexNormal = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexNormal");
+            if (_locDecalProjectColDiffuse < 0 ||
+                _locDecalProjectTint < 0 ||
+                _locDecalProjectWorldToDecal < 0 ||
+                _locDecalProjectAlphaCutoff < 0 ||
+                _locDecalProjectMinReceiverNDotUp < 0 ||
+                _locDecalProjectReceiverDepthBias < 0 ||
+                locMap < 0 ||
+                locMvp < 0 ||
+                locMatModel < 0 ||
+                locVertexPosition < 0 ||
+                locVertexNormal < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} decal_project is missing required attribs/uniforms.");
+            }
+
+            _decalProjectShaderReady = true;
         }
+
 
         private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
@@ -896,10 +1113,10 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
             float treadBob = MathF.Sin(locomotionPhase * MathF.Tau) * unit * (0.03f + locomotionWeight * 0.08f);
             float turretYaw = baseYaw + aimYaw;
             float recoil = recoilPulse * unit * 0.35f;
@@ -950,13 +1167,13 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
-            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimationChannelRegistry.Locomotion);
             float lowerPhase = locomotionPhase * MathF.Tau;
             float stride = MathF.Sin(lowerPhase) * unit * (0.08f + locomotionWeight * 0.34f);
-            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * aimWeight;
-            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimationChannelRegistry.AimYaw);
+            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimationChannelRegistry.AimYaw) * aimWeight;
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimationChannelRegistry.Recoil);
             float chestLift = recoilPulse * unit * 0.08f;
 
             Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);
@@ -1026,29 +1243,35 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static float ResolveClipTime01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipTime01(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.NormalizedTime01 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.NormalizedTime01 : 0f;
         }
 
-        private static float ResolveClipWeight01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipWeight01(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.Weight01 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.Weight01 : 0f;
         }
 
-        private static float ResolveClipScalar0(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolveClipScalar0(in AnimationChannelState clip, string channelName)
         {
-            return clip.ClipId == expectedId ? clip.Scalar0 : 0f;
+            return MatchesChannel(clip, channelName) ? clip.Scalar0 : 0f;
         }
 
-        private static float ResolvePulse(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        private static float ResolvePulse(in AnimationChannelState clip, string channelName)
         {
-            if (clip.ClipId != expectedId || clip.Weight01 <= 0.001f)
+            if (!MatchesChannel(clip, channelName) || clip.Weight01 <= 0.001f)
             {
                 return 0f;
             }
 
             return MathF.Sin(clip.NormalizedTime01 * MathF.PI) * clip.Weight01;
+        }
+
+        private static bool MatchesChannel(in AnimationChannelState clip, string channelName)
+        {
+            int expectedId = AnimationChannelRegistry.Register(channelName);
+            return expectedId > 0 && clip.ChannelId == expectedId;
         }
 
         private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)
@@ -1107,7 +1330,7 @@ namespace Ludots.Client.Raylib.Rendering
                 from.W + (to.W - from.W) * t);
         }
 
-        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
+        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId)
         {
             if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
             {
@@ -1117,16 +1340,18 @@ namespace Ludots.Client.Raylib.Rendering
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
+            ApplyHostMapsToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
         }
 
-        private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
+        private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
             }
 
             float height = MathF.Max(scale.Y, 0.05f);
@@ -1134,60 +1359,144 @@ namespace Ludots.Client.Raylib.Rendering
             var billboardPosition = new Vector3(position.X, position.Y + height * 0.5f, position.Z);
             var source = new Rectangle(0f, 0f, cached.Texture.width, cached.Texture.height);
 
-            // Billboard art ships pre-colored, so preserve only caller alpha.
+            // Billboard art ships pre-colored; multiply once by frame lighting so night/dusk dims vegetation.
             byte alpha = Clamp01ToByte(color.W);
-            var tint = new Color(255, 255, 255, alpha);
+            Vector3 litRgb = ResolveBillboardLitTintRgb();
+            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
+            // DrawBillboardRec multiplies by tint; keep cutout colDiffuse at identity to avoid double-dim.
+            Color tint = new Color(
+                Clamp01ToByte(litRgb.X),
+                Clamp01ToByte(litRgb.Y),
+                Clamp01ToByte(litRgb.Z),
+                alpha);
+            bool doubleSided = IsMaterialDoubleSided(materialId);
             LogBillboardDrawDiagnostic(
                 meshAssetId,
-                $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
-            Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
-        }
+                $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} blend={blendMode} materialId={materialId} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
 
-        private void DrawProceduralMesh(in PrefabFinalizedVisual visual)
-        {
-            if (!TryGetOrBuildProceduralMesh(visual.MeshAssetId, visual.MeshDescriptor, out var cached))
+            if (doubleSided)
             {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw finalized procedural visual stableId={visual.StableId} because meshAssetId={visual.MeshAssetId} has no committed procedural payload.");
+                Rl.rlDisableBackfaceCulling();
             }
 
-            ValidateProceduralMaterialContract(in visual, cached.SubmeshCount);
+            bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool cutoutShader = false;
+            try
+            {
+                if (blendMode == MaterialBlendMode.Cutout)
+                {
+                    EnsureVegetationCutoutShader();
+                    float cutoff = DefaultVegetationAlphaCutoff;
+                    Vector4 colDiffuse = Vector4.One;
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutColDiffuse,
+                        &colDiffuse,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutAlphaCutoff,
+                        &cutoff,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+                    Rl.BeginShaderMode(_vegetationCutoutShader);
+                    cutoutShader = true;
+                }
+
+                Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+            }
+            finally
+            {
+                if (cutoutShader)
+                {
+                    Rl.EndShaderMode();
+                }
+
+                if (blending)
+                {
+                    Rl.EndBlendMode();
+                }
+
+                if (doubleSided)
+                {
+                    Rl.rlEnableBackfaceCulling();
+                }
+            }
+        }
+
+        private void DrawProceduralMesh(
+            int meshAssetId,
+            in MeshAssetDescriptor descriptor,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            int instanceMaterialOverrideId)
+        {
+            if (!TryGetOrBuildProceduralMesh(meshAssetId, descriptor, out var cached))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw procedural meshAssetId={meshAssetId} because it has no committed procedural payload.");
+            }
+
+            int[] materialIds = ResolveProceduralMaterialIds(meshAssetId, in descriptor, cached.SubmeshCount, instanceMaterialOverrideId);
             EnsureProceduralMeshMaterial();
 
             var transform = RaylibMatrix.FromSystemNumerics(
-                Matrix4x4.CreateScale(visual.Scale) *
-                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(visual.Rotation)) *
-                Matrix4x4.CreateTranslation(visual.Position));
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
 
             Rl.rlDisableBackfaceCulling();
             if (cached.SubmeshMeshes == null || cached.SubmeshMeshes.Length == 0)
             {
-                Rl.DrawMesh(cached.Mesh, _proceduralMeshMaterial, transform);
+                Material material = ResolveProceduralDrawMaterial(materialIds[0]);
+                Rl.DrawMesh(cached.Mesh, material, transform);
             }
             else
             {
                 for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
                 {
-                    Rl.DrawMesh(cached.SubmeshMeshes[i], _proceduralMeshMaterial, transform);
+                    Material material = ResolveProceduralDrawMaterial(materialIds[i]);
+                    Rl.DrawMesh(cached.SubmeshMeshes[i], material, transform);
                 }
             }
             Rl.rlEnableBackfaceCulling();
         }
 
-        private void ValidateProceduralMaterialContract(in PrefabFinalizedVisual visual, int cachedSubmeshCount)
+        private Material ResolveProceduralDrawMaterial(int materialAssetId)
         {
-            if (visual.MeshDescriptor.Type != MeshAssetType.ProceduralMesh || visual.MeshDescriptor.ProceduralMeshData == null)
+            Material material = _proceduralMeshMaterial;
+            ApplyHostMaterialMaps(ref material, materialAssetId, _proceduralMeshMaterial.shader);
+            return material;
+        }
+
+        private int[] ResolveProceduralMaterialIds(
+            int meshAssetId,
+            in MeshAssetDescriptor descriptor,
+            int cachedSubmeshCount,
+            int instanceMaterialOverrideId)
+        {
+            if (descriptor.Type != MeshAssetType.ProceduralMesh || descriptor.ProceduralMeshData == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} received procedural visual stableId={visual.StableId} without procedural mesh payload.");
+                    $"{nameof(RaylibPrimitiveRenderer)} received meshAssetId={meshAssetId} without procedural mesh payload.");
             }
 
-            PrefabMaterialBinding[]? bindings = visual.MaterialBindings;
-            ProceduralMeshAssetData procedural = visual.MeshDescriptor.ProceduralMeshData;
-            if (bindings == null || bindings.Length != procedural.SubmeshCount || cachedSubmeshCount != procedural.SubmeshCount)
+            ProceduralMeshAssetData procedural = descriptor.ProceduralMeshData;
+            if (procedural.SubmeshCount <= 0)
+            {
+                throw new InvalidOperationException($"Procedural mesh assetId={meshAssetId} must commit at least one submesh.");
+            }
+
+            if (cachedSubmeshCount != procedural.SubmeshCount)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} requires finalized procedural visual stableId={visual.StableId} to provide one material binding per committed submesh.");
+                    $"{nameof(RaylibPrimitiveRenderer)} requires one material per committed submesh for meshAssetId={meshAssetId}.");
+            }
+
+            if (instanceMaterialOverrideId > 0 && procedural.SubmeshCount > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Procedural mesh assetId={meshAssetId} uses {procedural.SubmeshCount} submeshes and cannot receive an instance material override.");
             }
 
             if (_materials == null)
@@ -1196,27 +1505,28 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} requires {nameof(PresentationMaterialRegistry)} to validate procedural mesh material bindings.");
             }
 
-            for (int i = 0; i < bindings.Length; i++)
+            var materialIds = new int[procedural.SubmeshCount];
+            for (int i = 0; i < procedural.SubmeshCount; i++)
             {
-                PrefabMaterialBinding binding = bindings[i];
-                if (binding.SubmeshIndex != i)
+                int materialId = instanceMaterialOverrideId > 0
+                    ? instanceMaterialOverrideId
+                    : procedural.Submeshes[i].MaterialAssetId;
+                if (!_materials.TryGet(materialId, out MaterialAssetDescriptor material))
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} requires procedural material bindings to stay aligned with submesh order (stableId={visual.StableId}, expectedSubmesh={i}, actualSubmesh={binding.SubmeshIndex}).");
+                        $"{nameof(RaylibPrimitiveRenderer)} received procedural meshAssetId={meshAssetId} with unknown materialId={materialId} for submesh {i}.");
                 }
 
-                if (!_materials.TryGet(binding.MaterialAssetId, out MaterialAssetDescriptor descriptor))
+                if (material.Domain != MaterialAssetDomain.Surface)
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} received procedural visual stableId={visual.StableId} with unknown materialId={binding.MaterialAssetId} for submesh {binding.SubmeshIndex}.");
+                        $"{nameof(RaylibPrimitiveRenderer)} only supports surface-domain procedural mesh materials (meshAssetId={meshAssetId}, materialId={materialId}, domain={material.Domain}).");
                 }
 
-                if (descriptor.Domain != MaterialAssetDomain.Surface)
-                {
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} only supports surface-domain procedural mesh materials (stableId={visual.StableId}, materialId={binding.MaterialAssetId}, domain={descriptor.Domain}).");
-                }
+                materialIds[i] = materialId;
             }
+
+            return materialIds;
         }
 
         private bool TryGetOrLoadModel(int meshAssetId, in MeshAssetDescriptor desc, out CachedModel cached)
@@ -1357,6 +1667,13 @@ namespace Ludots.Client.Raylib.Rendering
                 Directory.CreateDirectory(directory);
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] meshAssetId={meshAssetId} {message}{Environment.NewLine}");
+        }
+
+        private static string FormatSourceUris(string[]? sourceUris)
+        {
+            return sourceUris == null || sourceUris.Length == 0
+                ? "(none)"
+                : string.Join("|", sourceUris);
         }
 
         private void LogBillboardDrawDiagnostic(int meshAssetId, string message)
@@ -1577,56 +1894,125 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private static Vector2 ResolveDecalSize(in PrefabFinalizedVisual visual)
-        {
-            float width = MathF.Max(0.1f, MathF.Abs(visual.Size.X));
-            float depth = MathF.Max(0.1f, MathF.Abs(visual.Size.Y));
-            float scaleX = MathF.Max(0.1f, MathF.Abs(visual.Scale.X));
-            float scaleZ = MathF.Max(0.1f, MathF.Abs(visual.Scale.Z));
-            return new Vector2(width * scaleX, depth * scaleZ);
-        }
 
-        private static Vector3 ResolveSurfaceOverlaySize(in PrefabFinalizedVisual visual)
+        private MaterialBlendMode ResolveMaterialBlendMode(int materialId, MaterialBlendMode defaultWhenMissing)
         {
-            float x = MathF.Max(0.12f, MathF.Abs(visual.Scale.X));
-            float y = MathF.Max(0.04f, MathF.Abs(visual.Scale.Y));
-            float z = MathF.Max(0.12f, MathF.Abs(visual.Scale.Z));
-            if (visual.MeshDescriptor.Type == MeshAssetType.Billboard)
+            if (materialId <= 0)
             {
-                z = MathF.Max(z, 0.04f);
+                return defaultWhenMissing;
             }
 
-            return new Vector3(x, y, z);
+            if (_materials == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(PresentationMaterialRegistry)} was provided.");
+            }
+
+            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve blend mode for unknown materialId={materialId}.");
+            }
+
+            return MaterialBlendModeResolver.Resolve(descriptor.Flags);
         }
 
-        private static Vector4 BlendSemanticColor(Vector4 baseColor, int semanticId, float semanticWeight)
+        private bool IsMaterialDoubleSided(int materialId)
         {
-            Vector4 semanticColor = ResolveSemanticColor(semanticId, baseColor.W);
-            Vector4 tinted = LerpColor(baseColor, semanticColor, semanticWeight);
-            tinted.W = Math.Max(baseColor.W, semanticColor.W * 0.8f);
-            return tinted;
+            if (materialId <= 0 || _materials == null)
+            {
+                return false;
+            }
+
+            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve DoubleSided for unknown materialId={materialId}.");
+            }
+
+            return (descriptor.Flags & MaterialAssetFlags.DoubleSided) != 0;
         }
 
-        private static Vector4 ResolveSemanticColor(int semanticId, float alpha)
+        private static bool TryBeginAuthorBlendMode(MaterialBlendMode blendMode)
         {
-            uint seed = semanticId == 0
-                ? 0x9E3779B9u
-                : Hash((uint)semanticId);
-            float r = 0.28f + (((seed >> 0) & 0xFF) / 255f) * 0.62f;
-            float g = 0.28f + (((seed >> 8) & 0xFF) / 255f) * 0.62f;
-            float b = 0.28f + (((seed >> 16) & 0xFF) / 255f) * 0.62f;
-            return new Vector4(r, g, b, Math.Clamp(alpha, 0.35f, 1f));
+            switch (blendMode)
+            {
+                case MaterialBlendMode.Opaque:
+                case MaterialBlendMode.Cutout:
+                    return false;
+                case MaterialBlendMode.AlphaBlend:
+                    Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
+                    return true;
+                case MaterialBlendMode.Additive:
+                    Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+                    return true;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize material blend mode '{blendMode}'.");
+            }
         }
 
-        private static uint Hash(uint value)
+        private void EnsureVegetationCutoutShader()
         {
-            value ^= value >> 16;
-            value *= 0x7FEB352Du;
-            value ^= value >> 15;
-            value *= 0x846CA68Bu;
-            value ^= value >> 16;
-            return value;
+            if (_vegetationCutoutShaderReady)
+            {
+                return;
+            }
+
+            string baseDir = AppContext.BaseDirectory;
+            string vsPath = Path.Combine(baseDir, "vegetation_cutout.vs");
+            string fsPath = Path.Combine(baseDir, "vegetation_cutout.fs");
+            if (!File.Exists(vsPath))
+            {
+                throw new FileNotFoundException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout vertex shader missing under BaseDirectory '{baseDir}'. Expected '{vsPath}'.",
+                    vsPath);
+            }
+
+            if (!File.Exists(fsPath))
+            {
+                throw new FileNotFoundException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout fragment shader missing under BaseDirectory '{baseDir}'. Expected '{fsPath}'.",
+                    fsPath);
+            }
+
+            _vegetationCutoutShader = Rl.LoadShader(vsPath, fsPath);
+            if (_vegetationCutoutShader.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} failed to compile vegetation_cutout from '{vsPath}' + '{fsPath}' (shader.id == 0).");
+            }
+
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexTexCoord");
+            int locVertexColor = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexColor");
+            int locMvp = Rl.GetShaderLocation(_vegetationCutoutShader, "mvp");
+            int locMapDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "texture0");
+            _locVegetationCutoutColDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "colDiffuse");
+            _locVegetationCutoutAlphaCutoff = Rl.GetShaderLocation(_vegetationCutoutShader, "alphaCutoff");
+
+            if (locVertexPosition < 0 || locMvp < 0 || locMapDiffuse < 0 ||
+                _locVegetationCutoutColDiffuse < 0 || _locVegetationCutoutAlphaCutoff < 0)
+            {
+                Rl.UnloadShader(_vegetationCutoutShader);
+                _vegetationCutoutShader = default;
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation_cutout is missing required attribs/uniforms (vertexPosition/mvp/texture0/colDiffuse/alphaCutoff).");
+            }
+
+            if (_vegetationCutoutShader.locs != null)
+            {
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapDiffuse;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locVegetationCutoutColDiffuse;
+            }
+
+            _vegetationCutoutShaderReady = true;
         }
+
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
         {
@@ -1666,7 +2052,7 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
-                SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color);
+                SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color, item.MaterialId);
             }
 
             FlushInstancedBatches();
@@ -1709,13 +2095,14 @@ namespace Ludots.Client.Raylib.Rendering
                 PrimitiveDrawItem item = items[i];
                 if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} cannot draw unknown meshAssetId={item.MeshAssetId}.");
                 }
 
                 switch (descriptor.Type)
                 {
                     case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
-                        SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color);
+                        SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color, item.MaterialId);
                         break;
                     case MeshAssetType.Model:
                     case MeshAssetType.Billboard:
@@ -1728,8 +2115,11 @@ namespace Ludots.Client.Raylib.Rendering
                             item.Color,
                             default,
                             meshes,
-                            new PrefabFinalizationContext(null));
+                            item.MaterialId);
                         break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} refuses composite mesh type '{descriptor.Type}' for meshAssetId={item.MeshAssetId}. Author Presenter children instead of Prefab.");
                 }
             }
 
@@ -1777,7 +2167,7 @@ namespace Ludots.Client.Raylib.Rendering
                 _modelInstanceBatches[batchKey] = batch;
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, first.MaterialId);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
             return true;
@@ -1828,13 +2218,14 @@ namespace Ludots.Client.Raylib.Rendering
             return ((long)meshAssetId << 32) | colorKey;
         }
 
-        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey)
+        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId)
         {
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
                 return 0;
             }
 
+            EnsureFrameLightingAppliedForInstancing();
             int drawCalls = 0;
             long drawStart = Stopwatch.GetTimestamp();
             RestoreOpaqueModelState();
@@ -1843,7 +2234,8 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
+                    RequireMeshNormals(in mesh, "Instanced ISM");
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
                     {
                         continue;
                     }
@@ -1861,25 +2253,62 @@ namespace Ludots.Client.Raylib.Rendering
             return drawCalls;
         }
 
-        private int DrawModelInstanceBatch(Model model, GpuSkinnedInstanceBatch batch, uint colorKey)
+        private int DrawGpuSkinnedInstanceBatch(GpuSkinnedInstanceBatch batch)
         {
+            Model model = batch.Model;
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
                 return 0;
             }
 
+            if (batch.Animations == null || batch.AnimCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch meshAssetId={batch.Key.MeshAssetId} has no animations; silent static draw is forbidden.");
+            }
+
+            int clipIndex = batch.Key.ClipIndex;
+            int frameIndex = batch.Key.FrameIndex;
+            if ((uint)clipIndex >= (uint)batch.AnimCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch clipIndex={clipIndex} outside animCount={batch.AnimCount}.");
+            }
+
+            ModelAnimation anim = batch.Animations[clipIndex];
+            Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+
+            EnsureFrameLightingAppliedForSkinning();
             int drawCalls = 0;
+            uint colorKey = batch.Key.ColorKey;
+            int materialId = batch.Key.MaterialId;
             RestoreOpaqueModelState();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
+                    if (mesh.vertexCount <= 0)
                     {
                         continue;
                     }
-                    ApplyInstancedMaterialTint(ref material, colorKey);
+
+                    RequireMeshNormals(in mesh, "GpuSkinnedInstance");
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
+                    {
+                        continue;
+                    }
+
+                    material.shader = _skinningShader;
+                    ApplyHostMaterialMaps(ref material, materialId, _skinningShader);
+                    ApplyGpuSkinnedMaterialTint(ref material, colorKey);
+
+                    if (mesh.boneMatrices != null && mesh.boneCount > 0)
+                    {
+                        Rl.rlEnableShader(_skinningShader.id);
+                        Rl.rlSetUniformMatrices(_locBoneMatrices, mesh.boneMatrices, mesh.boneCount);
+                    }
+
                     for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                     {
                         int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -1899,7 +2328,7 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.rlEnableBackfaceCulling();
         }
 
-        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, out Material material)
+        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, int materialId, out Material material)
         {
             if (model.materialCount <= 0 || model.materials == null)
             {
@@ -1937,7 +2366,88 @@ namespace Ludots.Client.Raylib.Rendering
 
             material = model.materials[materialIndex];
             material.shader = _shader;
+            ApplyHostMaterialMaps(ref material, materialId, _shader);
             return true;
+        }
+
+        private void ApplyHostMaterialMaps(ref Material material, int materialId, Shader shader)
+        {
+            if (_materialHostBinder == null || materialId <= 0)
+            {
+                _materialHostBinder?.DetachOwnedMaps(ref material);
+                ApplyPbrUniforms(shader, materialId: 0, hostBound: false);
+                return;
+            }
+
+            bool hostBound = _materialHostBinder.TryApplyHostMaps(ref material, materialId);
+            if (!hostBound)
+            {
+                _materialHostBinder.DetachOwnedMaps(ref material);
+            }
+
+            ApplyPbrUniforms(shader, materialId, hostBound);
+        }
+
+        private void ApplyHostMapsToModel(ref Model model, int materialId)
+        {
+            if (_materialHostBinder == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < model.materialCount; i++)
+            {
+                ref Material material = ref model.materials[i];
+                ApplyHostMaterialMaps(ref material, materialId, material.shader.id != 0 ? material.shader : _shader);
+            }
+        }
+
+        private void ApplyPbrUniforms(Shader shader, int materialId, bool hostBound)
+        {
+            float roughness = RaylibMaterialHostBinder.DefaultRoughness;
+            float metallic = RaylibMaterialHostBinder.DefaultMetallic;
+            int hasRoughnessMap = 0;
+            int hasMetallicMap = 0;
+
+            if (hostBound &&
+                _materialHostBinder != null &&
+                _materialHostBinder.TryGetHostPbrParams(
+                    materialId,
+                    out roughness,
+                    out metallic,
+                    out bool hasRoughness,
+                    out bool hasMetallic,
+                    out _))
+            {
+                hasRoughnessMap = hasRoughness ? 1 : 0;
+                hasMetallicMap = hasMetallic ? 1 : 0;
+            }
+
+            bool isSkinning = _skinningShaderReady && shader.id == _skinningShader.id;
+            int locRoughness = isSkinning ? _locSkinningRoughness : _locRoughness;
+            int locMetallic = isSkinning ? _locSkinningMetallic : _locMetallic;
+            int locHasRoughness = isSkinning ? _locSkinningHasRoughnessMap : _locHasRoughnessMap;
+            int locHasMetallic = isSkinning ? _locSkinningHasMetallicMap : _locHasMetallicMap;
+
+            if (locRoughness >= 0)
+            {
+                Rl.SetShaderValue(shader, locRoughness, &roughness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            }
+
+            if (locMetallic >= 0)
+            {
+                Rl.SetShaderValue(shader, locMetallic, &metallic, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            }
+
+            if (locHasRoughness >= 0)
+            {
+                Rl.SetShaderValue(shader, locHasRoughness, &hasRoughnessMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            }
+
+            if (locHasMetallic >= 0)
+            {
+                Rl.SetShaderValue(shader, locHasMetallic, &hasMetallicMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            }
         }
 
         private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
@@ -1952,6 +2462,27 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        private void ApplyGpuSkinnedMaterialTint(ref Material material, uint colorKey)
+        {
+            if (_locSkinningTint >= 0)
+            {
+                float r = (colorKey & 0xFF) / 255f;
+                float g = ((colorKey >> 8) & 0xFF) / 255f;
+                float b = ((colorKey >> 16) & 0xFF) / 255f;
+                float a = ((colorKey >> 24) & 0xFF) / 255f;
+                var tint = new Vector4(r, g, b, a);
+                Rl.SetShaderValue(_skinningShader, _locSkinningTint, &tint, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
+
+            if (_locSkinningColDiffuse >= 0 && material.maps != null)
+            {
+                int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+                Color color = material.maps[albedoIndex].color;
+                Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
+                Rl.SetShaderValue(_skinningShader, _locSkinningColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
+        }
+
         private static int ResolveMaxModelInstancesPerDraw()
         {
             string? raw = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW");
@@ -1963,19 +2494,19 @@ namespace Ludots.Client.Raylib.Rendering
             return DefaultMaxModelInstancesPerDraw;
         }
 
-        private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)
+        private void AddInstance(List<Batch> batches, uint colorKey, int materialId, in RaylibMatrix matrix)
         {
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
-                if (b.ColorKey != colorKey) continue;
+                if (b.ColorKey != colorKey || b.MaterialId != materialId) continue;
 
                 b.Add(matrix);
                 batches[i] = b;
                 return;
             }
 
-            var nb = new Batch(colorKey);
+            var nb = new Batch(colorKey, materialId);
             nb.Add(matrix);
             batches.Add(nb);
         }
@@ -1994,6 +2525,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
         {
+            EnsureFrameLightingAppliedForInstancing();
+            RequireMeshNormals(in mesh, "Instanced primitive");
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
@@ -2001,6 +2534,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 SetTintUniform(b.ColorKey);
                 SetColDiffuseUniform(Vector4.One);
+                ApplyHostMaterialMaps(ref _material, b.MaterialId, _shader);
 
                 fixed (RaylibMatrix* p = b.Transforms)
                 {
@@ -2055,6 +2589,20 @@ namespace Ludots.Client.Raylib.Rendering
             }
             Rl.UploadMesh(ref _sphereMesh, false);
 
+            _vfxBillboardMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            if (_vfxBillboardMesh.colors == null)
+            {
+                int bytes = _vfxBillboardMesh.vertexCount * 4;
+                _vfxBillboardMesh.colors = (byte*)Rl.MemAlloc(bytes);
+                for (int i = 0; i < bytes; i++) _vfxBillboardMesh.colors[i] = 255;
+            }
+            Rl.UploadMesh(ref _vfxBillboardMesh, false);
+
+            RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
+            _vfxMaterial = Rl.LoadMaterialDefault();
+            _vfxMaterial.shader = defaultVfx.Shader;
+            _vfxMaterialLoaded = true;
+
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
             if (_shader.id == 0) throw new InvalidOperationException("Failed to load instancing shader (shader.id == 0).");
@@ -2064,16 +2612,24 @@ namespace Ludots.Client.Raylib.Rendering
 
             _locColDiffuse = Rl.GetShaderLocation(_shader, "colDiffuse");
             _locTint = Rl.GetShaderLocation(_shader, "tint");
+            _locRoughness = Rl.GetShaderLocation(_shader, "uRoughness");
+            _locMetallic = Rl.GetShaderLocation(_shader, "uMetallic");
+            _locHasRoughnessMap = Rl.GetShaderLocation(_shader, "uHasRoughnessMap");
+            _locHasMetallicMap = Rl.GetShaderLocation(_shader, "uHasMetallicMap");
             int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
+            int locMapMetalness = Rl.GetShaderLocation(_shader, "texture1");
+            int locMapRoughness = Rl.GetShaderLocation(_shader, "texture3");
             int locMvp = Rl.GetShaderLocation(_shader, "mvp");
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
+            int locVertexNormal = Rl.GetShaderLocationAttrib(_shader, "vertexNormal");
+            _instancingLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "instancing");
 
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
@@ -2086,9 +2642,9 @@ namespace Ludots.Client.Raylib.Rendering
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
@@ -2099,13 +2655,163 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
             if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
+            if (locVertexNormal < 0) throw new InvalidOperationException("Shader attrib 'vertexNormal' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
             if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
             if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
             if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
+            if (_locRoughness < 0) throw new InvalidOperationException("Shader uniform 'uRoughness' not found.");
+            if (_locMetallic < 0) throw new InvalidOperationException("Shader uniform 'uMetallic' not found.");
+            if (_locHasRoughnessMap < 0) throw new InvalidOperationException("Shader uniform 'uHasRoughnessMap' not found.");
+            if (_locHasMetallicMap < 0) throw new InvalidOperationException("Shader uniform 'uHasMetallicMap' not found.");
+            if (locMapMetalness < 0) throw new InvalidOperationException("Shader uniform 'texture1' not found.");
+            if (locMapRoughness < 0) throw new InvalidOperationException("Shader uniform 'texture3' not found.");
+
+            ApplyPbrUniforms(_shader, materialId: 0, hostBound: false);
 
             _initialized = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_shader, in _instancingLightingLocs);
+                if (_hasFrameViewPos)
+                {
+                    _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
+                }
+            }
+        }
+
+        private void EnsureSkinningShaderInitialized()
+        {
+            if (_skinningShaderReady)
+            {
+                return;
+            }
+
+            string baseDir = AppContext.BaseDirectory;
+            string vsPath = Path.Combine(baseDir, "skinning_instanced.vs");
+            string fsPath = Path.Combine(baseDir, "skinning_instanced.fs");
+            if (!File.Exists(vsPath) || !File.Exists(fsPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinnedInstance requires skinning_instanced.vs/.fs beside the binary (missing under '{baseDir}').");
+            }
+
+            _skinningShader = Rl.LoadShader(vsPath, fsPath);
+            if (_skinningShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load skinning_instanced shader (shader.id == 0).");
+            }
+
+            _locBoneMatrices = Rl.GetShaderLocation(_skinningShader, "boneMatrices");
+            _locSkinningTint = Rl.GetShaderLocation(_skinningShader, "tint");
+            _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
+            _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
+            _locSkinningMetallic = Rl.GetShaderLocation(_skinningShader, "uMetallic");
+            _locSkinningHasRoughnessMap = Rl.GetShaderLocation(_skinningShader, "uHasRoughnessMap");
+            _locSkinningHasMetallicMap = Rl.GetShaderLocation(_skinningShader, "uHasMetallicMap");
+            int locMapAlbedo = Rl.GetShaderLocation(_skinningShader, "texture0");
+            int locMapMetalness = Rl.GetShaderLocation(_skinningShader, "texture1");
+            int locMapRoughness = Rl.GetShaderLocation(_skinningShader, "texture3");
+            int locMvp = Rl.GetShaderLocation(_skinningShader, "mvp");
+            int locInstance = Rl.GetShaderLocationAttrib(_skinningShader, "instanceTransform");
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_skinningShader, "vertexTexCoord");
+            int locVertexNormal = Rl.GetShaderLocationAttrib(_skinningShader, "vertexNormal");
+            int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
+            int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
+            int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
+            _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
+
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locSkinningColDiffuse;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = _locBoneMatrices;
+
+            if (_locBoneMatrices < 0) throw new InvalidOperationException("Skinning shader uniform 'boneMatrices' not found.");
+            if (locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
+            if (locInstance < 0) throw new InvalidOperationException("Skinning shader attrib 'instanceTransform' not found.");
+            if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
+            if (locVertexNormal < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexNormal' not found.");
+            if (locBoneIds < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneIds' not found.");
+            if (locBoneWeights < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneWeights' not found.");
+            if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
+            if (_locSkinningTint < 0) throw new InvalidOperationException("Skinning shader uniform 'tint' not found.");
+            if (locMapAlbedo < 0) throw new InvalidOperationException("Skinning shader uniform 'texture0' not found.");
+            if (_locSkinningRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'uRoughness' not found.");
+            if (_locSkinningMetallic < 0) throw new InvalidOperationException("Skinning shader uniform 'uMetallic' not found.");
+            if (_locSkinningHasRoughnessMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasRoughnessMap' not found.");
+            if (_locSkinningHasMetallicMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasMetallicMap' not found.");
+            if (locMapMetalness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture1' not found.");
+            if (locMapRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture3' not found.");
+
+            ApplyPbrUniforms(_skinningShader, materialId: 0, hostBound: false);
+
+            _skinningShaderReady = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+                if (_hasFrameViewPos)
+                {
+                    _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+                }
+            }
+        }
+
+        private void EnsureFrameLightingAppliedForInstancing()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires {nameof(ApplyFrameLighting)} before draw.");
+            }
+
+            if (!_hasFrameViewPos)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires camera view position before draw.");
+            }
+
+            _frameLighting.Apply(_shader, in _instancingLightingLocs);
+            _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
+        }
+
+        private void EnsureFrameLightingAppliedForSkinning()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires {nameof(ApplyFrameLighting)} before draw.");
+            }
+
+            if (!_hasFrameViewPos)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires camera view position before draw.");
+            }
+
+            EnsureSkinningShaderInitialized();
+            _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+            _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+        }
+
+        private static void RequireMeshNormals(in Mesh mesh, string lane)
+        {
+            if (mesh.normals == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} {lane} lit path requires mesh normals (vertexCount={mesh.vertexCount}); silent flat shading is forbidden.");
+            }
         }
 
         private static uint PackRgba(in Vector4 c)
@@ -2119,14 +2825,39 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static Color ToRaylibColor(in Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
 
+        private Vector3 ResolveBillboardLitTintRgb()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} billboard draw requires {nameof(ApplyFrameLighting)} first.");
+            }
+
+            Vector4 ambient = _frameLighting.AmbientRgba;
+            float key = _frameLighting.LightIntensity * 0.65f;
+            // Midday lands near 1.0; raised night ambient must stay a faint multiply (not neon veg).
+            float exposure = Math.Clamp((ambient.W * 1.55f) + key, 0.04f, 1.2f);
+            const float albedoFloor = 0.10f;
+            return new Vector3(
+                Math.Clamp((albedoFloor + ambient.X * 0.72f) * exposure + (_frameLighting.LightColor.X * key * 0.22f), 0f, 1.4f),
+                Math.Clamp((albedoFloor + ambient.Y * 0.72f) * exposure + (_frameLighting.LightColor.Y * key * 0.22f), 0f, 1.4f),
+                Math.Clamp((albedoFloor + ambient.Z * 0.72f) * exposure + (_frameLighting.LightColor.Z * key * 0.22f), 0f, 1.4f));
+        }
+
         private static byte Clamp01ToByte(float v) => RaylibColorUtil.Clamp01ToByte(v);
 
         public void Dispose()
         {
             foreach (var kvp in _modelCache)
             {
-                if (kvp.Value.Loaded)
-                    Rl.UnloadModel(kvp.Value.Model);
+                if (!kvp.Value.Loaded)
+                {
+                    continue;
+                }
+
+                Model model = kvp.Value.Model;
+                _materialHostBinder?.DetachOwnedMaps(model);
+                Rl.UnloadModel(model);
             }
             _modelCache.Clear();
 
@@ -2146,17 +2877,55 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_proceduralMeshMaterialLoaded)
             {
+                _materialHostBinder?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
+
+            if (_vfxMaterialLoaded)
+            {
+                _vfxMaterial.shader = default;
+                Rl.UnloadMaterial(_vfxMaterial);
+                _vfxMaterialLoaded = false;
+            }
+
+            if (_decalMaterialLoaded)
+            {
+                _materialHostBinder?.DetachOwnedMaps(ref _decalMaterial);
+                _decalMaterial.shader = default;
+                Rl.UnloadMaterial(_decalMaterial);
+                _decalMaterialLoaded = false;
+            }
+
+            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
+            _gpuSkinnedModelCache.Dispose();
+            _vfxRenderer.Dispose();
+            _effectShaders.Dispose();
+            _materialHostBinder?.Dispose();
 
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
+            if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
             _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
+            if (_vegetationCutoutShaderReady)
+            {
+                Rl.UnloadShader(_vegetationCutoutShader);
+                _vegetationCutoutShaderReady = false;
+            }
+            if (_decalProjectShaderReady)
+            {
+                Rl.UnloadShader(_decalProjectShader);
+                _decalProjectShaderReady = false;
+            }
+            if (_skinningShaderReady)
+            {
+                Rl.UnloadShader(_skinningShader);
+                _skinningShaderReady = false;
+            }
             _initialized = false;
         }
 
@@ -2185,12 +2954,14 @@ namespace Ludots.Client.Raylib.Rendering
         private struct Batch
         {
             public readonly uint ColorKey;
+            public readonly int MaterialId;
             public RaylibMatrix[] Transforms;
             public int Count;
 
-            public Batch(uint colorKey, int initialCapacity = 256)
+            public Batch(uint colorKey, int materialId = 0, int initialCapacity = 256)
             {
                 ColorKey = colorKey;
+                MaterialId = materialId;
                 Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
                 Count = 0;
             }
@@ -2235,8 +3006,8 @@ namespace Ludots.Client.Raylib.Rendering
             int MeshAssetId,
             int MaterialId,
             uint ColorKey,
-            int PrimaryStateIndex,
-            int SecondaryStateIndex);
+            int ClipIndex,
+            int FrameIndex);
 
         private sealed class GpuSkinnedInstanceBatch
         {
@@ -2244,6 +3015,8 @@ namespace Ludots.Client.Raylib.Rendering
             public RaylibMatrix[] Transforms;
             public int Count;
             public Model Model;
+            public ModelAnimation* Animations;
+            public int AnimCount;
 
             public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
             {

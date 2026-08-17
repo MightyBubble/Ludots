@@ -171,7 +171,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(
@@ -274,7 +274,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(
@@ -613,24 +613,33 @@ namespace Ludots.Tests.GasTests
 
         private static int RegisterDeployConsumeSourceGraph(GraphProgramRegistry programs)
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Graph.Lifecycle.DeployConsumeSource",
                 Kind = "Effect",
                 Entry = "begin",
                 Nodes =
                 [
-                    new GraphNodeConfig { Id = "begin", Op = "BeginLifecycleTransaction", Next = "materialize" },
-                    new GraphNodeConfig { Id = "materialize", Op = "InvokeBuiltin", BuiltinHandler = "MaterializeTemplate", Next = "copyIdentity" },
-                    new GraphNodeConfig { Id = "copyIdentity", Op = "InvokeBuiltin", BuiltinHandler = "CopyIdentityComponents", Next = "copyAttrs" },
-                    new GraphNodeConfig { Id = "copyAttrs", Op = "InvokeBuiltin", BuiltinHandler = "CopyAttributeSlice", Next = "clearFx" },
-                    new GraphNodeConfig { Id = "clearFx", Op = "InvokeBuiltin", BuiltinHandler = "ClearActiveEffects", Next = "transferId" },
-                    new GraphNodeConfig { Id = "transferId", Op = "InvokeBuiltin", BuiltinHandler = "TransferStableId", Next = "consume" },
-                    new GraphNodeConfig { Id = "consume", Op = "InvokeBuiltin", BuiltinHandler = "ConsumeEntity" },
+                    new GraphControlFlowNode { Id = "begin", Op = "BeginLifecycleTransaction" },
+                    new GraphControlFlowNode { Id = "materialize", Op = "InvokeBuiltin", BuiltinHandler = "MaterializeTemplate" },
+                    new GraphControlFlowNode { Id = "copyIdentity", Op = "InvokeBuiltin", BuiltinHandler = "CopyIdentityComponents" },
+                    new GraphControlFlowNode { Id = "copyAttrs", Op = "InvokeBuiltin", BuiltinHandler = "CopyAttributeSlice" },
+                    new GraphControlFlowNode { Id = "clearFx", Op = "InvokeBuiltin", BuiltinHandler = "ClearActiveEffects" },
+                    new GraphControlFlowNode { Id = "transferId", Op = "InvokeBuiltin", BuiltinHandler = "TransferStableId" },
+                    new GraphControlFlowNode { Id = "consume", Op = "InvokeBuiltin", BuiltinHandler = "ConsumeEntity" },
+                ],
+                ControlEdges =
+                [
+                    new("begin", GraphControlFlowPorts.Next, "materialize"),
+                    new("materialize", GraphControlFlowPorts.Next, "copyIdentity"),
+                    new("copyIdentity", GraphControlFlowPorts.Next, "copyAttrs"),
+                    new("copyAttrs", GraphControlFlowPorts.Next, "clearFx"),
+                    new("clearFx", GraphControlFlowPorts.Next, "transferId"),
+                    new("transferId", GraphControlFlowPorts.Next, "consume"),
                 ],
             };
 
-            var (package, _, diagnostics) = GraphCompiler.CompileWithOutputs(cfg);
+            var (package, _, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
             if (package == null)
             {
                 throw new InvalidOperationException(diagnostics[0].Message);
@@ -645,7 +654,9 @@ namespace Ludots.Tests.GasTests
                 new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
-            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver);
+            var lifecycleBuiltinHandlers = new Ludots.Core.Gameplay.GAS.BuiltinHandlerRegistry();
+            Ludots.Core.Gameplay.GAS.BuiltinHandlers.RegisterAll(lifecycleBuiltinHandlers);
+            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver, builtinHandlers: lifecycleBuiltinHandlers);
             programs.Register(graphId, package.Value.Program, package.Value.Kind);
             return graphId;
         }
@@ -653,11 +664,11 @@ namespace Ludots.Tests.GasTests
         private static ConfigPipeline CreateEffectsPipeline(string effectsJson)
         {
             var root = Path.Combine(Path.GetTempPath(), $"LifecycleEffects_{Guid.NewGuid():N}");
-            var gasDir = Path.Combine(root, "Configs", "GAS");
+            var gasDir = Path.Combine(root, "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), effectsJson);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "config_catalog.json"),
+                Path.Combine(root, "config_catalog.json"),
                 @"[
   { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
 ]");
@@ -671,11 +682,11 @@ namespace Ludots.Tests.GasTests
         private static ConfigPipeline CreateTemplatesPipeline(string templatesJson)
         {
             var root = Path.Combine(Path.GetTempPath(), $"LifecycleTest_{Guid.NewGuid():N}");
-            var entityDir = Path.Combine(root, "Configs", "Entities");
+            var entityDir = Path.Combine(root, "Entities");
             Directory.CreateDirectory(entityDir);
             File.WriteAllText(Path.Combine(entityDir, "templates.json"), templatesJson);
             File.WriteAllText(
-                Path.Combine(root, "Configs", "config_catalog.json"),
+                Path.Combine(root, "config_catalog.json"),
                 @"[
   { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
 ]");

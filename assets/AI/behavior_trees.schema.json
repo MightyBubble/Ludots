@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ludots://ai/behavior_trees.schema.json",
+  "title": "Ludots behavior trees",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "root", "nodes"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "root": { "type": "string", "minLength": 1 },
+      "nodes": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "kind": { "enum": ["Sequence", "Selector", "Condition", "Action"] },
+            "children": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "leaf": { "enum": ["None", "AlwaysSuccess", "AlwaysFailure", "HoldRunning", "ScriptSlice"] },
+            "action": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

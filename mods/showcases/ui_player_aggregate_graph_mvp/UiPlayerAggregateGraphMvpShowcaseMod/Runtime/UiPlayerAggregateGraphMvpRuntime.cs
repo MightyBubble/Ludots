@@ -5,6 +5,8 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -165,9 +167,10 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
             throw new InvalidOperationException($"Shut-down building '{config.ShutDownBuildingName}' has no AttributeBuffer.");
         }
 
-        ref AttributeBuffer attributes = ref engine.World.Get<AttributeBuffer>(_shutDownBuilding);
-        attributes.SetBase(_oreAttributeId, 0f);
-        attributes.SetBase(_crystalAttributeId, 0f);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("UiPlayerAggregateGraphMvp requires TagOps.");
+        AttributeMutationOps.SetBase(engine.World, _shutDownBuilding, _oreAttributeId, 0f, tagOps);
+        AttributeMutationOps.SetBase(engine.World, _shutDownBuilding, _crystalAttributeId, 0f, tagOps);
         _buildingShutDown = true;
         _status = $"{config.ShutDownBuildingName} shut down; resource attributes set to 0.";
         ExecuteAggregateGraph(engine);

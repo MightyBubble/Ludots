@@ -8,8 +8,10 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -21,7 +23,51 @@ namespace Ludots.Tests.GAS
         private const string MapId = "spline_surface_uat";
 
         [Test]
-        public void SplineSurfaceUat_LoadMap_BakesAllPerformerSourcedSurfaceKinds()
+        public void SurfaceSourceLifecycle_RemovesDeadPendingRecordsAfterEnumeration()
+        {
+            World world = World.Create();
+            try
+            {
+                var runtime = new SurfaceSourceRuntimeRegistry();
+                runtime.Upsert(
+                    new SurfaceSourceRequest
+                    {
+                        StableId = 1001,
+                        ScopeId = 2001,
+                        PresenterDefinitionId = 3001,
+                        SurfaceKind = PresenterSurfaceKind.SplineRibbon,
+                    },
+                    new SurfacePayloadSnapshot(PresenterSurfaceKind.SplineRibbon, 1, default, default, default),
+                    frame: 1);
+                runtime.Upsert(
+                    new SurfaceSourceRequest
+                    {
+                        StableId = 1002,
+                        ScopeId = 2002,
+                        PresenterDefinitionId = 3002,
+                        SurfaceKind = PresenterSurfaceKind.SplineRibbon,
+                    },
+                    new SurfacePayloadSnapshot(PresenterSurfaceKind.SplineRibbon, 1, default, default, default),
+                    frame: 1);
+                runtime.MarkPendingRemoval(1001);
+
+                using var lifecycle = new SurfaceSourceLifecycleSystem(
+                    world,
+                    runtime,
+                    new PresenterCommandBuffer(8));
+
+                Assert.DoesNotThrow(() => lifecycle.Update(1f / 60f));
+                SurfaceSourceRecord[] records = runtime.Records.ToArray();
+                Assert.That(records.Select(record => record.SourceStableId), Is.EqualTo(new[] { 1002 }));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void SplineSurfaceUat_LoadMap_BakesAllPresenterSourcedSurfaceKinds()
         {
             using var engine = CreateEngine();
             engine.LoadMap(MapId);
@@ -32,23 +78,23 @@ namespace Ludots.Tests.GAS
 
             var records = runtime!.Records.ToArray();
             Assert.That(records.Length, Is.EqualTo(4));
-            Assert.That(records.Count(record => record.Request.SurfaceKind == PerformerSurfaceKind.SplineRibbon), Is.EqualTo(2));
-            Assert.That(records.Any(record => record.Request.SurfaceKind == PerformerSurfaceKind.ClosedArea), Is.True);
-            Assert.That(records.Any(record => record.Request.SurfaceKind == PerformerSurfaceKind.RawProceduralMesh), Is.True);
+            Assert.That(records.Count(record => record.Request.SurfaceKind == PresenterSurfaceKind.SplineRibbon), Is.EqualTo(2));
+            Assert.That(records.Any(record => record.Request.SurfaceKind == PresenterSurfaceKind.ClosedArea), Is.True);
+            Assert.That(records.Any(record => record.Request.SurfaceKind == PresenterSurfaceKind.RawProceduralMesh), Is.True);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
-            int bakedPerformerCount = 0;
-            var perfQuery = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in perfQuery, (Entity entity, ref PerformerState state) =>
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
+            int bakedPresenterCount = 0;
+            var perfQuery = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in perfQuery, (Entity entity, ref PresenterState state) =>
             {
                 if (state.DefId > 0)
                 {
-                    bakedPerformerCount++;
+                    bakedPresenterCount++;
                 }
             });
 
-            Assert.That(bakedPerformerCount, Is.GreaterThanOrEqualTo(4), "Spline surface UAT should bootstrap performer-backed surface sources instead of legacy visual runtime state.");
+            Assert.That(bakedPresenterCount, Is.GreaterThanOrEqualTo(4), "Spline surface UAT should bootstrap presenter-backed surface sources instead of legacy visual runtime state.");
         }
 
         [Test]
@@ -64,7 +110,7 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime, Is.Not.Null);
 
             SurfaceSourceRecord? roadRecord = runtime!.Records
-                .FirstOrDefault(record => record.Request.SurfaceKind == PerformerSurfaceKind.SplineRibbon && record.Request.ScopeId > 0);
+                .FirstOrDefault(record => record.Request.SurfaceKind == PresenterSurfaceKind.SplineRibbon && record.Request.ScopeId > 0);
             Assert.That(roadRecord, Is.Not.Null);
             Assert.That(roadRecord!.MeshAssetId, Is.GreaterThan(0));
 

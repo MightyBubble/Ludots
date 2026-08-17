@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using Arch.Core;
@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // ── Register graph programs ──
@@ -64,6 +64,7 @@ namespace Ludots.Tests.GAS
                 programs.Register(gpProposePre, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Validation);
 
                 // GP2: OnApply Pre — read Config(baseDamage, dmgMultiplier), compute actual damage,
@@ -77,6 +78,7 @@ namespace Ludots.Tests.GAS
                     // Write actual damage to target's BB
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyActualDamage, B = 2 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 // GP3: OnApply Main (preset) — read BB(actualDamage), negate it, apply to HP
@@ -89,6 +91,7 @@ namespace Ludots.Tests.GAS
                     // ModifyAttributeAdd(target, HP, -actualDamage)
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 // GP4: OnApply Post — read BB(actualDamage), accumulate into BB(accumDamage)
@@ -101,6 +104,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyAccumDamage, B = 2 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 // GP5: OnExpire Pre — read BB(accumDamage), compute 50% reflect, write BB(reflectValue)
@@ -113,6 +117,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyReflectValue, B = 2 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 // ── Register preset: None has Main graph for OnApply ──
@@ -229,7 +234,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Preset Main: write BB key=99 = 999 (should NOT run)
@@ -239,6 +244,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 999f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 99, B = 0 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 // User Pre: load config baseDamage, multiply by 2, apply as HP damage
@@ -251,6 +257,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -313,7 +320,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Shared graph: read config(baseDamage) * config(multiplier), negate, apply to HP
@@ -326,6 +333,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };

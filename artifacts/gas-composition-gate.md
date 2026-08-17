@@ -1,85 +1,54 @@
-﻿## GAS Composition Gate — Self Review
+# GAS Composition Gate — Self Review
 
-- **Task / Issue**: #886 全景收尾落地（#881 通用查表 + #877 删除 TagDisplay 专线 + 文档/showcase/审计）+ Bugbot 补线：ControlFlow 前门查表 emit
-- **Date**: 2026-08-11
-- **Agent / Author**: Cloud Agent (cursor/ui-panel-debt-land-28e6)
+- **Task / Issue**: Epic #990 family 9 — 黑板与配置 13 op 零字幕重设计（BlackboardNodeDriver / AttrNodeDriver C 档演后果）
+- **Date**: 2026-08-17
+- **Agent / Author**: pi (epic/990-zero-caption-gallery)
 
-### 1. Core judgment
+## 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A**（把已有 L0 `ResolveTableRow` / `TableRead*` 接到 Query/Linear ControlFlow 作者矩阵与 emit；不新开 op / 不复活 TagDisplay）
+新变体主要交付物是（A/B/C/D）: A — 已有 graph op 的连线/参数组合 + 驱动器可见化
 
-结论: **PASS**
+结论: PASS
 
-一句话理由: 查表收成唯一用户/Mod 表路径；TagDisplay 专线删除而非接入生产；ControlFlow 前门与 legacy GraphCompiler 共用同一 L0 ops + symbol patch，无平行 Presentation Graph。
+一句话理由: 本家族没有新增任何 graph 节点或 profile 开关；全部行为变化都是「图 JSON 里把已有 op 连成尾巴」（cfgF→neg→hit / src→readF→neg→hit / cfgFx→explicit→applyDyn / beginTx→materialize），driver 只做断言升级与可见化。
 
-### 2. Layer assignment
+## 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| ResolveTableRow / TableReadInt / TableReadFloat | 0 | GraphNodeOp + Pure handler（已有） |
-| GraphLookupTableRegistry / Loader | 0 只读索引 + 配置装载 | StringIntRegistry + ConfigPipeline |
-| Query/Linear ControlFlow 白名单 + emit | 2（作者面） | GraphControlFlowCompiler.*.cs + GraphControlFlowNode 字段 |
-| 删除 LookupTagDisplay* / SelectTagInMask / TagDisplayTableRegistry | L0/基建回撤 | GraphOps + Handler + Presentation.TagDisplay |
-| 作者表语义（rank/state_display…） | 3（内容） | Mod JSON |
+| LoadConfigFloat 真结算 | Layer 2 | 图尾 `cfgF→neg→explicit→hit`（NegFloat+ModifyAttributeAdd 组合） |
+| ReadBlackboardFloat 真结算 | Layer 2 | 图尾 `src→readF→neg→explicit→hit` |
+| LoadConfigEffectId 悬空输出修复 | Layer 2 | 图重写 `cfgFx→explicit→applyDyn`（ApplyEffectDynamic 端口照抄 ApplyEffectDynamic.json） |
+| BeginLifecycleTransaction 造身 | Layer 1+2 | 图加 `materialize`（InvokeBuiltin MaterializeTemplate，复用 Effect.GraphOps.Lifecycle 的 targetEntityTemplate） |
+| InvokeBuiltin 正式演员 | Layer 2 | LastMaterializedTarget 经 GraphOpsStageVisuals.BindMapEntity 绑正式演员 |
+| 记事板/配置册/情境信封/台账 可见化 | Layer 3 | BlackboardNodeDriver.DrawOverlay 用共享视觉原语 P1-P11 |
 
-### 3. Reuse list
+## 3. Reuse list
 
-- Handlers: `GasGraphOpHandlerTable` Pure 分类
-- Resolvers: `IGraphSymbolResolver` / `GraphProgramSymbolPatcher` / `GasGraphRuntimeApi`
-- Compiler pattern: `LoadAttribute` / `ConstInt` / `HasTag` 在 ControlFlow 的 Validate + Compile + `RequireSymbol`
-- Front door: `GraphProgramAuthoringFrontDoor` → `GraphControlFlowCompiler`
-- Config: `ConfigPipeline`、`PresentationTextCatalog`（TextToken id）
-- 无新 System / 无平行 VM / 无新 L0 op
+- Handlers: `InvokeBuiltin`(MaterializeTemplate / ClearActiveEffects)、`ApplyEffectDynamic`、`ModifyAttributeAdd`、`NegFloat`、`LoadExplicitTarget`、`LoadConfig*`、`Read/WriteBlackboard*`（全部已有 op）
+- Queues / Systems: `EffectRequestQueue`（ApplyEffectDynamic 真结算）、runtime `SettlePendingEffectRequests`
+- Resolvers / Registries: `ConfigKeyRegistry`、`EffectTemplateIdRegistry`、`EffectTemplateRegistry`、`BuiltinHandlerRegistry`、`GraphOpsNodeActorBinding`
+- Existing presets / graphs: `Effect.GraphOps.Config`（power=40/tier=2/chainEffect=Strike）、`Effect.GraphOps.Lifecycle`（targetEntityTemplate=GraphOps.Ally）、`Effect.GraphOps.Strike`（-18）、ApplyEffectDynamic.json 端口模式、MulFloat.json graphSettled 图尾模式
 
-### 4. New Layer 0 ops (if any)
+## 4. New Layer 0 ops (if any)
 
-N/A（本补线不新增 L0 op；复用 #881 已落地的 ResolveTableRow / TableRead*）
+N/A
 
-删除：`LookupTagDisplayToken`、`SelectTagInMask`（及作者糖）。
+## 5. Transaction boundary
 
-### 5. Transaction boundary
+BeginLifecycleTransaction 的真实回滚由 lifecycle 执行器承担；演出只画真实发生的三拍（Begin 执行拍 / 记账拍 / 关账拍），不为演出伪造失败事务。
 
-必须原子 rollback 的步骤: **无**（纯读查表；删除专线无 ECS 写事务）
+## 6. Config SSOT
 
-### 6. Config SSOT
+行为配置落在: effect template（Effect.GraphOps.Config / Effect.GraphOps.Lifecycle）+ graph 连线。未新增 JSON schema。
 
-行为配置落在: graph 连线 + Mod `GraphTables/lookup_tables.json`
-
-是否新增 JSON schema: **NO**（本补线）— 通用 lookup 表合同已由 #881 落地
-
-### 7. Red flag scan
+## 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（缺表/缺行/缺 lookupTable·lookupField fail-closed）
-- [x] **未**把 TagDisplay 接到 GameEngine 当完成
-- [x] **未**只接 legacy `GraphCompiler`；生产前门 ControlFlow 同步接线
+- [x] 未添加「说不清的」默认 fallback
 
-### 8. Next variant test
+## 8. Next variant test
 
-「下一个 Mod 变体」将修改: **graph 连线**（换表 id / 字段 / key 来源）
-
-若选了 Core enum → FAIL
-
-### SelectTagInMask 结论
-
-**删除**。现行实现绑 Display 表 mask，无法解耦；纯读 Effective tag→tagId 若另需，开独立子单，禁止绑 Display 表。
-
----
-
-## Appendix: #858 / #875 面板投影落地审计（#883）
-
-> 正本：`docs/audits/875-or-858-audit-handoff.md`
-
-| 项 | 结论 |
-|----|------|
-| 资源条 MVP + PanelProjectionReader + 编辑器样板 | **已做**（#875 / main） |
-| UIP-0 Template/Instance/Router 运行时 | **未做**（合同 ADR 文档见本落地 PR / #880） |
-| 通用查表 ResolveTableRow / TableRead* | **本落地 PR 实现**（#881） |
-| ControlFlow 前门查表白名单/emit | **本补线**（Query + Linear Pure） |
-| TagDisplay 专线 | **本落地 PR 删除**（#877）；废止 #876 |
-| showcase 配置卫生 | **本落地 PR**（#882）；ModEntry OnLoad 仍需 stream 预注册 Attribute（见手交接残留） |
-| 本附录审计结论 | **PASS**（落地切片）；UIP-0 运行时仍为后续债 |
-
-Epic 勾选建议与残留债指针：见 handoff 正文与全景 #886。
+「下一个 Mod 变体」将修改: graph 连线（换 config 值 / 换 effect 票即换伤数与效果）

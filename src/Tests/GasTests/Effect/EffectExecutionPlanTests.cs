@@ -199,6 +199,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(preGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyDisplacement },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, preGraphId), Is.True);
@@ -227,10 +228,12 @@ public sealed class EffectExecutionPlanTests
         programs.Register(preGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyDisplacement },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         programs.Register(postGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, preGraphId), Is.True);
@@ -275,6 +278,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(graphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, graphId), Is.True);
@@ -304,6 +308,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(listenerGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
@@ -345,6 +350,7 @@ public sealed class EffectExecutionPlanTests
                 Op = (ushort)GraphNodeOp.InvokeBuiltin,
                 Imm = (int)BuiltinHandlerId.ApplyDisplacement,
             },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
@@ -402,35 +408,19 @@ public sealed class EffectExecutionPlanTests
     }
 
     [Test]
-    public void Finalize_OnCalculateListenerGasWrite_FailsPurePhaseContract()
+    public void Registry_OnCalculateListenerGasWrite_FailsSharedGraphKindPolicy()
     {
-        const int templateId = 117;
         const int listenerGraphId = 217;
-        var templates = new EffectTemplateRegistry();
         var programs = new GraphProgramRegistry();
-        programs.Register(listenerGraphId, GasWriteProgram(), GraphKind.Effect);
-        EffectPhaseListenerBuffer listenerSetup = default;
-        Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
-            listenEffectId: 0,
-            EffectPhaseId.OnCalculate,
-            PhaseListenerScope.Target,
-            PhaseListenerActionFlags.ExecuteGraph,
-            listenerGraphId,
-            eventTagId: 0,
-            priority: 0), Is.True);
-        templates.Register(templateId, new EffectTemplateData
-        {
-            LifetimeKind = EffectLifetimeKind.After,
-            ListenerSetup = listenerSetup,
-        });
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            Finalize(templates, new PresetTypeRegistry(), programs))!;
+            programs.Register(listenerGraphId, GasWriteProgram(), GraphKind.Validation))!;
 
-        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
         Assert.That(error.Message, Does.Contain("WriteBlackboardFloat"));
-        Assert.That(error.Message, Does.Contain("pure phase"));
+        Assert.That(error.Message, Does.Contain("GraphProgramRegistry"));
+        Assert.That(error.Message, Does.Contain("graphId=217"));
+        Assert.That(error.Message, Does.Contain("kind='Validation'"));
     }
 
     [Test]
@@ -443,6 +433,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(listenerGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
@@ -508,36 +499,18 @@ public sealed class EffectExecutionPlanTests
     [Test]
     public void Finalize_ListenerGraphMissingOperationMetadata_ReportsInstructionContext()
     {
-        const int templateId = 124;
         const int listenerGraphId = 224;
         const ushort unknownOperation = ushort.MaxValue;
-        var templates = new EffectTemplateRegistry();
         var programs = new GraphProgramRegistry();
-        programs.Register(listenerGraphId,
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            programs.Register(listenerGraphId,
         [
             new GraphInstruction { Op = unknownOperation },
-        ], GraphKind.Effect);
-        EffectPhaseListenerBuffer listenerSetup = default;
-        Assert.That(listenerSetup.TryAddTemplate(
-            listenTagId: 0,
-            listenEffectId: 0,
-            EffectPhaseId.OnApply,
-            PhaseListenerScope.Target,
-            PhaseListenerActionFlags.ExecuteGraph,
-            listenerGraphId,
-            eventTagId: 0,
-            priority: 0), Is.True);
-        templates.Register(templateId, new EffectTemplateData
-        {
-            LifetimeKind = EffectLifetimeKind.After,
-            ListenerSetup = listenerSetup,
-        });
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+        ], GraphKind.Effect))!;
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            Finalize(templates, new PresetTypeRegistry(), programs))!;
-
-        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.MissingOperationMetadataError));
-        Assert.That(error.Message, Does.Contain("listenerIndex=0"));
+        Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.MissingOperationMetadataError));
+        Assert.That(error.Message, Does.Contain("GraphProgramRegistry"));
         Assert.That(error.Message, Does.Contain("graphId=224"));
         Assert.That(error.Message, Does.Contain("instructionIndex=0"));
         Assert.That(error.Message, Does.Contain(unknownOperation.ToString()));
@@ -575,6 +548,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(listenerGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, Imm = 7 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listenerSetup = default;
         Assert.That(listenerSetup.TryAddTemplate(
@@ -607,6 +581,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(graphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Validation);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Main, graphId), Is.True);
@@ -622,34 +597,27 @@ public sealed class EffectExecutionPlanTests
     }
 
     [Test]
-    public void Finalize_OnProposeInvokeBuiltinIsRejectedBySharedGraphKindPolicy()
+    public void Registry_OnProposeInvokeBuiltinIsRejectedBySharedGraphKindPolicy()
     {
-        const int templateId = 125;
         const int graphId = 225;
-        var templates = new EffectTemplateRegistry();
         var programs = new GraphProgramRegistry();
-        programs.Register(graphId,
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            programs.Register(graphId,
         [
             new GraphInstruction
             {
                 Op = (ushort)GraphNodeOp.InvokeBuiltin,
                 Imm = (int)BuiltinHandlerId.SpatialQuery,
             },
-        ], GraphKind.Validation);
-        EffectPhaseGraphBindings bindings = default;
-        Assert.That(bindings.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Main, graphId), Is.True);
-        templates.Register(templateId, new EffectTemplateData
-        {
-            LifetimeKind = EffectLifetimeKind.Instant,
-            PhaseGraphBindings = bindings,
-        });
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+        ], GraphKind.Validation))!;
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            Finalize(templates, new PresetTypeRegistry(), programs))!;
-
-        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
-        Assert.That(error.Message, Does.Contain("GraphKind 'Validation'"));
-        Assert.That(templates.AreExecutionPlansFinalized, Is.False);
+        Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+        Assert.That(error.Message, Does.Contain("InvokeBuiltin"));
+        Assert.That(error.Message, Does.Contain("GraphProgramRegistry"));
+        Assert.That(error.Message, Does.Contain("graphId=225"));
+        Assert.That(error.Message, Does.Contain("kind='Validation'"));
     }
 
     [Test]
@@ -662,6 +630,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(graphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigFloat, Dst = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseListenerBuffer listeners = default;
         Assert.That(listeners.TryAddTemplate(
@@ -763,6 +732,7 @@ public sealed class EffectExecutionPlanTests
         programs.Register(invalidGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ], GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, invalidGraphId), Is.True);
@@ -831,6 +801,7 @@ public sealed class EffectExecutionPlanTests
             new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
             new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
             new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, B = 0, Imm = 1 },
+            new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
         ];
     }
 

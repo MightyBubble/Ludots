@@ -12,6 +12,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
@@ -369,6 +370,16 @@ namespace CoreInputMod.Systems
                                                    graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
                 ? resolvedGraphPrograms
                 : null;
+            GasGraphOpHandlerTable? graphHandlers = _globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) &&
+                                                     graphHandlersObj is GasGraphOpHandlerTable resolvedGraphHandlers
+                ? resolvedGraphHandlers
+                : null;
+            if (graphPrograms != null && graphHandlers == null)
+            {
+                throw new InvalidOperationException(
+                    "Ability aim presentation graph support requires CoreServiceKeys.GasGraphOpHandlerTable.");
+            }
+
             GasGraphRuntimeApi? graphApi = null;
             if (graphPrograms != null)
             {
@@ -391,8 +402,10 @@ namespace CoreInputMod.Systems
                 events,
                 session,
                 graphPrograms,
-                graphApi);
+                graphApi,
+                graphHandlers);
             return true;
         }
+
     }
 }

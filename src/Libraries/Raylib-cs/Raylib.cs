@@ -296,15 +296,27 @@ namespace Raylib_cs
         public byte* colors;
         public ushort* indices;
 
-        // Animation vertex data
+        // Animation vertex data (raylib 5.5 layout)
         public float* animVertices;
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
+        public RaylibMatrix* boneMatrices;
+        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
         public uint* vboId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct ModelAnimation
+    {
+        public int boneCount;
+        public int frameCount;
+        public BoneInfo* bones;
+        public Transform** framePoses;
+        public fixed byte name[32];
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -541,6 +553,15 @@ namespace Raylib_cs
         public static extern void SetShaderValueMatrix(Shader shader, int locIndex, RaylibMatrix mat);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void SetShaderValueV(Shader shader, int locIndex, void* value, int uniformType, int count);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableShader(uint id);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void rlSetUniformMatrices(int locIndex, RaylibMatrix* matrices, int count);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawMesh(Mesh mesh, Material material, RaylibMatrix transform);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -576,7 +597,10 @@ namespace Raylib_cs
             SHADER_LOC_MAP_CUBEMAP,
             SHADER_LOC_MAP_IRRADIANCE,
             SHADER_LOC_MAP_PREFILTER,
-            SHADER_LOC_MAP_BRDF
+            SHADER_LOC_MAP_BRDF,
+            SHADER_LOC_VERTEX_BONEIDS,
+            SHADER_LOC_VERTEX_BONEWEIGHTS,
+            SHADER_LOC_BONE_MATRICES
         }
 
         public enum MaterialMapIndex
@@ -592,6 +616,16 @@ namespace Raylib_cs
             MATERIAL_MAP_IRRADIANCE,
             MATERIAL_MAP_PREFILTER,
             MATERIAL_MAP_BRDF
+        }
+
+        public enum TextureFilter
+        {
+            TEXTURE_FILTER_POINT = 0,
+            TEXTURE_FILTER_BILINEAR,
+            TEXTURE_FILTER_TRILINEAR,
+            TEXTURE_FILTER_ANISOTROPIC_4X,
+            TEXTURE_FILTER_ANISOTROPIC_8X,
+            TEXTURE_FILTER_ANISOTROPIC_16X
         }
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -619,6 +653,9 @@ namespace Raylib_cs
         public static extern unsafe void UpdateTextureRec(Texture2D texture, Rectangle rec, void* pixels);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetTextureFilter(Texture2D texture, TextureFilter filter);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -638,6 +675,12 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginShaderMode(Shader shader);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndShaderMode();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void BeginBlendMode(BlendMode mode);
@@ -684,9 +727,28 @@ namespace Raylib_cs
         public static extern void UnloadModel(Model model);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe ModelAnimation* LoadModelAnimations(string fileName, out int animCount);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void UnloadModelAnimations(ModelAnimation* animations, int animCount);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsModelAnimationValid(Model model, ModelAnimation anim);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UpdateModelAnimation(Model model, ModelAnimation anim, int frame);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UpdateModelAnimationBones(Model model, ModelAnimation anim, int frame);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawModel(Model model, Vector3 position, float scale, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetMaterialTexture(ref Material material, int mapType, Texture2D texture);
     }
 }

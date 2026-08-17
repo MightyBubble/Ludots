@@ -184,7 +184,7 @@ namespace DiagnosticsOverlayMod.Systems
             lines.Add("Priority: lower number loads first (LudotsCoreMod = -1000).");
             lines.Add("");
             lines.Add("VFS path format: ModId:Path/To/Resource");
-            lines.Add("  e.g. Core:Configs/game.json, MobaDemoMod:assets/GAS/effects.json");
+            lines.Add("  e.g. Core:game.json, MobaDemoMod:assets/GAS/effects.json");
 
             _modLines = lines.ToArray();
         }

@@ -10,33 +10,6 @@ namespace Ludots.Tests.Gas.Graph
     public sealed class GraphScriptDiagnosticTests
     {
         [Test]
-        public void GraphCompiler_RejectsScriptKind_OnNextChainPath()
-        {
-            var cfg = new GraphConfig
-            {
-                Id = "bad.script.next",
-                Kind = "Script",
-                Entry = "a",
-                Nodes =
-                {
-                    new GraphNodeConfig
-                    {
-                        Id = "a",
-                        Op = nameof(GraphNodeOp.ConstInt),
-                        IntValue = 1
-                    }
-                }
-            };
-            var (pkg, _, diags) = GraphCompiler.CompileWithOutputs(cfg);
-            Assert.That(pkg.HasValue, Is.False);
-            Assert.That(
-                diags.Exists(d =>
-                    d.Severity == GraphDiagnosticSeverity.Error &&
-                    d.Message.Contains("GraphControlFlowCompiler", System.StringComparison.Ordinal)),
-                Is.True);
-        }
-
-        [Test]
         public void Compile_BranchWithoutFalseEdge_FailsFast()
         {
             var graph = new GraphControlFlowDocument

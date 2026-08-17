@@ -51,7 +51,7 @@
     { "id": "nav2", "title": "AgentProfile", "tint": "steel", "x": 110, "y": 1122, "w": 320, "h": 56 },
     { "id": "nav3", "title": "LayerRegistry", "tint": "steel", "x": 110, "y": 1194, "w": 320, "h": 56 },
 
-    { "id": "pres1", "title": "PerformerDefinition", "tint": "stone", "x": 730, "y": 170, "w": 440, "h": 56 },
+    { "id": "pres1", "title": "PresenterDefinition", "tint": "stone", "x": 730, "y": 170, "w": 440, "h": 56 },
     { "id": "pres2", "title": "AnimationClip", "tint": "stone", "x": 730, "y": 242, "w": 440, "h": 56 },
     { "id": "pres3", "title": "MeshAsset", "tint": "stone", "x": 730, "y": 314, "w": 440, "h": 56 },
     { "id": "pres4", "title": "Material", "tint": "stone", "x": 730, "y": 386, "w": 440, "h": 56 },

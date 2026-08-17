@@ -1,0 +1,13 @@
+{
+  "op": "QueryFilterNotEntity",
+  "driver": "spatial",
+  "title": "圈人时排除自己",
+  "beat": "自己在圈里但不进名单。",
+  "detailTemplate": "排除自己，{self}，其余{count}人在名单里。",
+  "assertDetailContains": [
+    "排除自己"
+  ],
+  "featuredNodeId": "notSelf",
+  "graphKind": "Query",
+  "field": "spatial"
+}

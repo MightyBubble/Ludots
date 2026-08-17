@@ -53,8 +53,8 @@
   - 用于注册 stress abilities、AOE fireball、laser projectile、priest heal 及其表现绑定。
 * Pipeline: `EffectRequestQueue -> EffectProcessingLoopSystem -> ProjectileRuntimeSystem -> GasPresentationEventBuffer`
   - 数据从 ability exec 流向 effect / projectile / presentation，不新增平行战斗管线。
-* Pipeline: `PresentationCommandBuffer -> PerformerRuntimeSystem -> PrimitiveDrawBuffer / WorldHudBatchBuffer`
-  - 复用 cast cue、hit cue、combat text、ground overlay、projectile performer。
+* Pipeline: `PresentationCommandBuffer -> PresenterRuntimeSystem -> PrimitiveDrawBuffer / WorldHudBatchBuffer`
+  - 复用 cast cue、hit cue、combat text、ground overlay、projectile presenter。
 * Pipeline: `RuntimeEntitySpawnQueue`
   - 用于按目标人数维持压力单位，不直接绕过模板实例化。
 * Pipeline: `OrderQueue + CompositeOrderPlanner`
@@ -96,7 +96,7 @@
 
 * 新增 Warrior / Fire Mage / Laser Mage / Priest 的 team-specific templates。
 * 新增 Fireball AOE、Laser projectile、Priest Heal、Warrior Melee abilities / effects。
-* 新增 projectile cues 与 cast / hit / heal performers，全部走 performer / projectile binding。
+* 新增 projectile cues 与 cast / hit / heal presenters，全部走 presenter / projectile binding。
 
 ### 3.3 Tooling
 

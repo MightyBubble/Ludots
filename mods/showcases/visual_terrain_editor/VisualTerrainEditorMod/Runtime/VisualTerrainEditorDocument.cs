@@ -570,6 +570,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float meshStepX = 1f / (_asset.RenderColumnsPerChunk - 1);
         float meshStepY = 1f / (_asset.RenderRowsPerChunk - 1);
         WorldAabbCm chunkBounds = GetChunkBounds(state.ChunkX, state.ChunkY);
+        float chunkCenterXMeters = ((chunkBounds.Left + chunkBounds.Right) * 0.5f) * 0.01f;
+        float chunkCenterZMeters = ((chunkBounds.Top + chunkBounds.Bottom) * 0.5f) * 0.01f;
         int renderColumns = _asset.RenderColumnsPerChunk;
         int renderRows = _asset.RenderRowsPerChunk;
         int vertexCount = renderColumns * renderRows;
@@ -581,7 +583,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             for (int x = 0; x < renderColumns; x++)
             {
                 float u = x * meshStepX;
-                RenderVertexData vertex = BuildRenderVertex(chunkBounds, u, v);
+                RenderVertexData vertex = BuildRenderVertex(chunkBounds, chunkCenterXMeters, chunkCenterZMeters, u, v);
                 WriteProceduralVertex(state.ProceduralMesh, (y * renderColumns) + x, in vertex, u, v);
             }
         });
@@ -611,9 +613,9 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             new[] { new ProceduralSubmeshDescriptor(0, indexCount, state.MaterialAssetId) },
             new ProceduralMeshBounds(
                 new Vector3(
-                    ((chunkBounds.Left + chunkBounds.Right) * 0.5f) * 0.01f,
+                    0f,
                     ((state.MinHeightCm + state.MaxHeightCm) * 0.5f) * 0.01f,
-                    ((chunkBounds.Top + chunkBounds.Bottom) * 0.5f) * 0.01f),
+                    0f),
                 new Vector3(
                     chunkBounds.Width * 0.005f,
                     MathF.Max(0.5f, (state.MaxHeightCm - state.MinHeightCm) * 0.005f),
@@ -627,7 +629,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         return normal.Y < 0f ? -normal : normal;
     }
 
-    private RenderVertexData BuildRenderVertex(WorldAabbCm chunkBounds, float localU, float localV)
+    private RenderVertexData BuildRenderVertex(
+        WorldAabbCm chunkBounds,
+        float chunkCenterXMeters,
+        float chunkCenterZMeters,
+        float localU,
+        float localV)
     {
         float worldXMeters = Lerp(chunkBounds.Left, chunkBounds.Right, localU) * 0.01f;
         float worldZMeters = Lerp(chunkBounds.Top, chunkBounds.Bottom, localV) * 0.01f;
@@ -649,9 +656,9 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
 
         Vector3 position = new(
-            worldXMeters,
+            worldXMeters - chunkCenterXMeters,
             HeightToMeters(height, _asset.DefaultHeight01),
-            worldZMeters);
+            worldZMeters - chunkCenterZMeters);
         Vector3 color = ViewMode switch
         {
             TerrainViewMode.Base => ShadeSurface(baseHeight, normal, ridge, 0f),
@@ -1058,11 +1065,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         proceduralMesh.Normals[floatOffset + 2] = vertex.Normal.Z;
 
         int tangentOffset = vertexIndex * 4;
-        Vector3 tangent = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, vertex.Normal));
-        if (tangent.LengthSquared() <= 1e-6f)
-        {
-            tangent = Vector3.UnitX;
-        }
+        Vector3 tangent = ComputeRenderTangent(vertex.Normal);
 
         proceduralMesh.Tangents[tangentOffset + 0] = tangent.X;
         proceduralMesh.Tangents[tangentOffset + 1] = tangent.Y;
@@ -1083,6 +1086,36 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private static float HeightToMeters(float height, float defaultHeight01)
     {
         return (height - defaultHeight01) * HeightAmplitudeCm * 0.01f;
+    }
+
+    private static Vector3 ComputeRenderTangent(Vector3 normal)
+    {
+        if (!IsFiniteNonZero(normal))
+        {
+            throw new InvalidOperationException("Visual terrain editor render vertex requires a finite non-zero normal.");
+        }
+
+        Vector3 unitNormal = Vector3.Normalize(normal);
+        Vector3 tangent = Vector3.Cross(Vector3.UnitY, unitNormal);
+        if (!IsFiniteNonZero(tangent))
+        {
+            tangent = Vector3.Cross(Vector3.UnitZ, unitNormal);
+        }
+
+        if (!IsFiniteNonZero(tangent))
+        {
+            throw new InvalidOperationException("Visual terrain editor render vertex could not derive a finite non-zero tangent.");
+        }
+
+        return Vector3.Normalize(tangent);
+    }
+
+    private static bool IsFiniteNonZero(Vector3 value)
+    {
+        return float.IsFinite(value.X) &&
+            float.IsFinite(value.Y) &&
+            float.IsFinite(value.Z) &&
+            value.LengthSquared() > 1e-10f;
     }
 
     private int WorldToChunkX(int worldXCm)

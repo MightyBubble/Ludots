@@ -35,7 +35,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
             ApplyWorldPosition(world, entity, positionCm);
             RuntimeEntityMapOwnershipSupport.TryCopyMapEntityFromSource(world, source, entity);
-            services.PerformerBootstrap.TryBootstrap(entity, templateId);
+            services.PresenterBootstrap.TryBootstrap(entity, templateId);
             return entity;
         }
 

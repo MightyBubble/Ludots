@@ -1,0 +1,502 @@
+[
+  {
+    "id": "relationship.hero.peach_garden",
+    "paramDefaults": [
+      {
+        "paramKey": "core.hero.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.3,
+            2.3,
+            2.3
+          ]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": "core.hero.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "relationship_liu_bei"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "relationship.hero.peach_garden"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "relationship_liu_bei"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "relationship_guan_yu"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "relationship.hero.peach_garden"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "relationship_guan_yu"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "relationship_zhang_fei"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "relationship.hero.peach_garden"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "relationship_zhang_fei"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "relationship.enemy.turban",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.9,
+            1.9,
+            1.9
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "relationship_rebel_captain"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "relationship.enemy.turban"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "relationship_rebel_captain"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "relationship_rebel_spearman"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "relationship.enemy.turban"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "relationship_rebel_spearman"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "relationship.highlight.base",
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 2.4
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 1.9
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.06
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            2.4,
+            1.9,
+            0.06
+          ]
+        }
+      }
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
+  },
+  {
+    "id": "relationship.highlight.selected_hero",
+    "extends": "relationship.highlight.base",
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.16
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.94
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "style": {
+          "color": [
+            0.28,
+            0.82,
+            1,
+            0.94
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "relationship.highlight.enemy_focus",
+    "extends": "relationship.highlight.base",
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.4
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.25
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.14
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.55
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.35
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.96
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "style": {
+          "color": [
+            1,
+            0.55,
+            0.35,
+            0.96
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "relationship.highlight.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.selected_hero"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.selected_hero"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.selected_hero"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.selected_hero"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "relationship.highlight.selected_hero"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "relationship.highlight.selected_hero",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.enemy_focus"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.enemy_focus"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.enemy_focus"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "relationship.highlight.enemy_focus"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "relationship.highlight.enemy_focus"
+        },
+        "command": {
+          "kind": "DestroyScopedPresenter",
+          "definitionId": "relationship.highlight.enemy_focus",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
+]

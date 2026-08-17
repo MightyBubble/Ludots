@@ -34,5 +34,8 @@
         "WorldPositionCm": { "Value": { "X": 1680, "Y": 1040 } }
       }
     }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "ui-player-aggregate-faction-owner" }
   ]
 }

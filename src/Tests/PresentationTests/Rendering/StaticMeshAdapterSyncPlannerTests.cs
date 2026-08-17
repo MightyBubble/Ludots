@@ -1,7 +1,7 @@
 using System.Numerics;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
 
@@ -80,6 +80,26 @@ namespace Ludots.Tests.Presentation
             Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
             Assert.That(planner.Operations, Is.Empty);
             Assert.That(planner.TryGetBinding(505, out _), Is.False);
+        }
+
+        [Test]
+        public void Sync_IgnoresVfxAssetKind_EvenWhenRenderPathLooksStatic()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    606,
+                    VisualRenderPath.StaticMesh,
+                    meshAssetId: 16,
+                    materialId: 6,
+                    assetKind: AssetKind.VFX),
+            });
+
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.TryGetBinding(606, out _), Is.False);
         }
 
         [Test]

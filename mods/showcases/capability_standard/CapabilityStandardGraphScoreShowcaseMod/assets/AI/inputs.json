@@ -1,0 +1,7 @@
+[
+  {
+    "id": "Input.GraphScore.MissingHealth",
+    "Kind": "GraphScore",
+    "GraphKey": "Graph.GraphScore.MissingHealth"
+  }
+]

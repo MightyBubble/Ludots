@@ -1,0 +1,83 @@
+[
+  {
+    "id": "static_obstacle_physics_compound_blocker_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "static_obstacle_physics_compound_blocker"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "static_obstacle_physics_compound_blocker_visual",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "static_obstacle_physics_compound_blocker"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "static_obstacle_physics_compound_blocker_visual",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            2.6,
+            0.65,
+            1.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.33,
+            0.68,
+            0.78,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [
+            0.33,
+            0.68,
+            0.78,
+            1
+          ],
+          "sizePx": 2,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PresenterForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 2.5
+        }
+      }
+    ]
+  }
+]

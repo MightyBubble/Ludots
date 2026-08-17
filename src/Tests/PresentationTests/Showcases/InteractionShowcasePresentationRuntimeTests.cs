@@ -9,10 +9,12 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
+using Ludots.UI;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 using System.Numerics;
 
@@ -38,41 +40,55 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, "interaction_showcase_hub");
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterEntityRuntime)
+                ?? throw new InvalidOperationException("PresenterEntityRuntime missing.");
 
-            int performerVisuals = 0;
-            int skinnedCount = 0;
-            int staticCount = 0;
-            var performerQuery = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state) =>
+            int presenterVisuals = 0;
+            var presenterQuery = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in presenterQuery, (Entity entity, ref PresenterState state) =>
             {
                 if (state.AnchorKind != PresentationAnchorKind.Entity || !engine.World.IsAlive(state.OwnerEntity) || !engine.World.Has<MapEntity>(state.OwnerEntity))
                 {
                     return;
                 }
 
-                performerVisuals++;
+                presenterVisuals++;
             });
 
-            Assert.That(performerVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap performer instances for encounter actors.");
+            Assert.That(presenterVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap presenter instances for encounter actors.");
 
-            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.EqualTo(8), "All showcase entities should emit world primitives once the map is loaded.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
+                ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
+            var skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+                ?? throw new InvalidOperationException("PresentationSkinnedVisualBatchBuffer missing.");
+
+            Assert.That(primitives.Count, Is.EqualTo(4), "Static showcase actors should publish visible primitive draw items once the map is loaded.");
+            Assert.That(snapshot.Count, Is.EqualTo(4), "Primitive snapshot should expose the visible static presenter lane.");
+            Assert.That(skinnedBatch.Count, Is.EqualTo(4), "Skinned showcase actors should publish visible skinned batch items once the map is loaded.");
 
             int visibleSkinned = 0;
             int visibleStatic = 0;
             foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
             {
-                if (item.RenderPath == VisualRenderPath.SkinnedMesh)
-                {
-                    visibleSkinned++;
-                }
-                else if (item.RenderPath == VisualRenderPath.StaticMesh)
+                Assert.That(item.StableId, Is.GreaterThan(0));
+                Assert.That(item.TemplateId, Is.GreaterThan(0));
+                Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+                if (item.RenderPath == VisualRenderPath.StaticMesh)
                 {
                     visibleStatic++;
                 }
+            }
+
+            foreach (ref readonly SkinnedVisualBatchItem item in skinnedBatch.GetSpan())
+            {
+                Assert.That(item.StableId, Is.GreaterThan(0));
+                Assert.That(item.TemplateId, Is.GreaterThan(0));
+                Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
+                Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0));
+                Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+                visibleSkinned++;
             }
 
             Assert.That(visibleSkinned, Is.EqualTo(4));
@@ -92,6 +108,8 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
+            PresentationAcceptanceUiHostInstaller.Install(engine, 1600f, 900f);
+            HeadlessPresentationTestHost.Install(engine);
             engine.Start();
             return engine;
         }
@@ -120,6 +138,7 @@ namespace Ludots.Tests.Presentation
         {
             for (int i = 0; i < frames; i++)
             {
+                HeadlessPresentationTestHost.UpdateCamera(engine);
                 engine.Tick(1f / 60f);
             }
         }

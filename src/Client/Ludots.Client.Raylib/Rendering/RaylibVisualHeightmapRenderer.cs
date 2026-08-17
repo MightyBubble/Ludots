@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Modding;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
@@ -11,19 +15,47 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Client.Raylib.Rendering
 {
-    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable
+    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
+        public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
+        public const string BackendIdRaylib = "raylib";
+        public const int TerrainAlbedoLayerCount = 4;
+        internal const int DecalStampHeightSampleSegments = 6;
+        private const int OverviewTextureMinLongEdgePixels = 1024;
+        private const int OverviewTextureMaxLongEdgePixels = 3072;
+        private const int OverviewTextureScreenScale = 2;
+
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
+        private readonly IVirtualFileSystem? _vfs;
+        private readonly ConfigPipeline? _configs;
+        private readonly string _backendId;
+        private readonly List<TerrainAlbedoDescriptor> _albedoDescriptors = new();
 
         private Shader _terrainShader;
         private Material _terrainMaterial;
-        private int _locTerrainLightPos;
-        private int _locTerrainViewPos;
-        private int _locTerrainAmbient;
-        private int _locTerrainIntensity;
+        private RaylibFrameLightingLocations _terrainLightingLocs;
+        private RaylibFrameLighting? _frameLighting;
         private bool _initialized;
         private int _frameIndex;
+
+        private int _locUseTerrainAlbedo = -1;
+        private int _locTerrainTileScale = -1;
+        private int _locAntiTile = -1;
+        private int _locUseControlMap = -1;
+        private int _locControlBounds = -1;
+        private int _locControlMap = -1;
+        private TerrainAlbedoDescriptor? _activeAlbedo;
+        private string? _activeAlbedoMapId;
+        private IVisualHeightmap? _stampHeightSampleSource;
+        private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
+        private Texture2D _controlMapTexture;
+        private bool _ownsAlbedoTextures;
+        private bool _ownsControlMapTexture;
+        private bool _albedoEnabled;
+        private bool _controlMapEnabled;
+        private float _terrainTileScale = 0.25f;
+        private Vector4 _controlBoundsMeters;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -39,11 +71,195 @@ namespace Ludots.Client.Raylib.Rendering
 
         public float VisibleRadiusCm { get; set; } = 120_000f;
 
-        public Vector3 LightPosition { get; set; } = new(50f, 200f, 100f);
+        public bool TerrainAlbedoActive => _albedoEnabled;
 
-        public float Ambient { get; set; } = 0.45f;
+        private float? _absoluteColorSeaLevelCm;
+        private float _absoluteColorPeakSpanCm = 3600f;
 
-        public float LightIntensity { get; set; } = 0.55f;
+        /// <summary>
+        /// When set, terrain vertex colors use absolute elevation relative to this sea level (cm)
+        /// instead of per-chunk min/max remapping. Required for readable island biomes across chunks.
+        /// </summary>
+        public float? AbsoluteColorSeaLevelCm
+        {
+            get => _absoluteColorSeaLevelCm;
+            set
+            {
+                if (_absoluteColorSeaLevelCm == value)
+                {
+                    return;
+                }
+
+                _absoluteColorSeaLevelCm = value;
+                ClearChunkGpuCache();
+            }
+        }
+
+        /// <summary>Peak elevation span above sea level used when <see cref="AbsoluteColorSeaLevelCm"/> is set.</summary>
+        public float AbsoluteColorPeakSpanCm
+        {
+            get => _absoluteColorPeakSpanCm;
+            set
+            {
+                float clamped = MathF.Max(1f, value);
+                if (MathF.Abs(_absoluteColorPeakSpanCm - clamped) <= 0.01f)
+                {
+                    return;
+                }
+
+                _absoluteColorPeakSpanCm = clamped;
+                ClearChunkGpuCache();
+            }
+        }
+
+        public RaylibVisualHeightmapRenderer()
+            : this(vfs: null, configs: null)
+        {
+        }
+
+        public RaylibVisualHeightmapRenderer(
+            IVirtualFileSystem? vfs,
+            ConfigPipeline? configs,
+            string backendId = BackendIdRaylib)
+        {
+            _vfs = vfs;
+            _configs = configs;
+            if (string.IsNullOrWhiteSpace(backendId))
+            {
+                throw new ArgumentException("Terrain albedo backendId must not be empty.", nameof(backendId));
+            }
+
+            _backendId = backendId.Trim();
+        }
+
+        public void LoadAlbedoDescriptors(ConfigCatalog? catalog = null, ConfigConflictReport? report = null)
+        {
+            if (_vfs == null || _configs == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} albedo descriptors require VFS and ConfigPipeline.");
+            }
+
+            _albedoDescriptors.Clear();
+            ClearTerrainAlbedo();
+
+            ConfigCatalogEntry entry = ResolveAlbedoCatalogEntry(catalog);
+            IReadOnlyList<MergedConfigEntry> merged = report == null
+                ? _configs.MergeArrayByIdFromCatalog(in entry)
+                : _configs.MergeArrayByIdFromCatalog(in entry, report);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                if (merged[i].Node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException(
+                        $"{DefaultAlbedoRelativePath} entry '{merged[i].Id}' must merge to a JSON object.");
+                }
+
+                TerrainAlbedoDescriptor descriptor = ParseAlbedoDescriptor(obj, merged[i].Id);
+                if (!string.Equals(descriptor.BackendId, _backendId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!descriptor.Enabled)
+                {
+                    continue;
+                }
+
+                _albedoDescriptors.Add(descriptor);
+            }
+        }
+
+        public void EnsureAlbedoActiveForMap(string? mapId)
+        {
+            if (_albedoDescriptors.Count == 0)
+            {
+                return;
+            }
+
+            if (_activeAlbedo != null &&
+                string.Equals(_activeAlbedoMapId, mapId, StringComparison.Ordinal) &&
+                _albedoEnabled)
+            {
+                return;
+            }
+
+            TerrainAlbedoDescriptor? match = FindMatchingAlbedoDescriptor(mapId);
+            _activeAlbedoMapId = mapId;
+            if (match == null)
+            {
+                ClearTerrainAlbedo();
+                return;
+            }
+
+            if (_activeAlbedo != null &&
+                string.Equals(_activeAlbedo.Id, match.Id, StringComparison.Ordinal) &&
+                _albedoEnabled)
+            {
+                return;
+            }
+
+            ActivateAlbedoDescriptor(match);
+        }
+
+        public void BindTerrainAlbedo(
+            Texture2D sand,
+            Texture2D grass,
+            Texture2D dirt,
+            Texture2D rock,
+            float tileScale,
+            bool ownsTextures = false)
+        {
+            EnsureInitialized();
+            ValidateAlbedoTexture(sand, "sand");
+            ValidateAlbedoTexture(grass, "grass");
+            ValidateAlbedoTexture(dirt, "dirt");
+            ValidateAlbedoTexture(rock, "rock");
+            if (!float.IsFinite(tileScale) || tileScale <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(BindTerrainAlbedo)} tileScale must be a positive finite number.");
+            }
+
+            UnloadOwnedAlbedoTextures();
+            UnloadOwnedControlMapTexture();
+            _albedoTextures[0] = sand;
+            _albedoTextures[1] = grass;
+            _albedoTextures[2] = dirt;
+            _albedoTextures[3] = rock;
+            _ownsAlbedoTextures = ownsTextures;
+            _terrainTileScale = tileScale;
+            _albedoEnabled = true;
+            _controlMapEnabled = false;
+            _controlBoundsMeters = default;
+            ApplyAlbedoMaterialMaps();
+            ApplyAlbedoUniforms();
+        }
+
+        public void ClearTerrainAlbedo()
+        {
+            UnloadOwnedAlbedoTextures();
+            UnloadOwnedControlMapTexture();
+            _activeAlbedo = null;
+            _albedoEnabled = false;
+            _controlMapEnabled = false;
+            _controlBoundsMeters = default;
+            _terrainTileScale = 0.25f;
+            if (_initialized)
+            {
+                DetachAlbedoMaterialMaps();
+                ApplyAlbedoUniforms();
+            }
+        }
+
+        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        {
+            _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            if (_initialized)
+            {
+                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
+        }
 
         public void Render(IVisualHeightmapRenderSource source, in Camera3D camera)
         {
@@ -53,6 +269,16 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EnsureInitialized();
+            if (_controlMapEnabled)
+            {
+                WorldAabbCm bounds = source.Bounds;
+                _controlBoundsMeters = new Vector4(
+                    bounds.Left * 0.01f,
+                    bounds.Top * 0.01f,
+                    MathF.Max(bounds.Width * 0.01f, 1e-5f),
+                    MathF.Max(bounds.Height * 0.01f, 1e-5f));
+            }
+
             UpdateUniforms(camera);
 
             _frameIndex++;
@@ -92,6 +318,107 @@ namespace Ludots.Client.Raylib.Rendering
             EvictUnusedChunks(240);
         }
 
+        public int DrawMeshesOverlappingAabbMeters(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ,
+            Material material)
+        {
+            if (!float.IsFinite(minX) || !float.IsFinite(minY) || !float.IsFinite(minZ) ||
+                !float.IsFinite(maxX) || !float.IsFinite(maxY) || !float.IsFinite(maxZ))
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} requires finite AABB bounds.");
+            }
+
+            if (minX > maxX || minY > maxY || minZ > maxZ)
+            {
+                throw new ArgumentException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)}.{nameof(DrawMeshesOverlappingAabbMeters)} AABB min must be <= max.");
+            }
+
+            EnsureInitialized();
+            if (_chunks.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} has no cached terrain meshes for projected Decals. Render the visual heightmap before drawing Decals.");
+            }
+
+            int drawn = 0;
+            RaylibMatrix identity = RaylibMatrix.Identity;
+            foreach (ChunkGpu gpu in _chunks.Values)
+            {
+                if (gpu.MaxX < minX || gpu.MinX > maxX ||
+                    gpu.MaxY < minY || gpu.MinY > maxY ||
+                    gpu.MaxZ < minZ || gpu.MinZ > maxZ)
+                {
+                    continue;
+                }
+
+                Rl.DrawMesh(gpu.Mesh, material, identity);
+                drawn++;
+            }
+
+            return drawn;
+        }
+
+        public void BindStampHeightSampleSource(IVisualHeightmap heightmap)
+        {
+            _stampHeightSampleSource = heightmap ?? throw new ArgumentNullException(nameof(heightmap));
+        }
+
+        public Vector3 FitYawedStampProjectorCenter(
+            in Vector3 stampCenter,
+            float yawRad,
+            in Vector2 stampSizeMeters,
+            int stableId)
+        {
+            IVisualHeightmap heightmap = _stampHeightSampleSource
+                ?? throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} has no stamp height sample source. Call {nameof(BindStampHeightSampleSource)} before projecting Decals.");
+
+            if (!float.IsFinite(stampSizeMeters.X) || !float.IsFinite(stampSizeMeters.Y) ||
+                stampSizeMeters.X <= 0f || stampSizeMeters.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp size must be finite and positive, got {stampSizeMeters}.");
+            }
+
+            float cos = MathF.Cos(yawRad);
+            float sin = MathF.Sin(yawRad);
+            float minHeightM = float.PositiveInfinity;
+            float maxHeightM = float.NegativeInfinity;
+            int samples = DecalStampHeightSampleSegments;
+            for (int y = 0; y <= samples; y++)
+            {
+                float v = (y / (float)samples) - 0.5f;
+                float localZ = v * stampSizeMeters.Y;
+                for (int x = 0; x <= samples; x++)
+                {
+                    float u = (x / (float)samples) - 0.5f;
+                    float localX = u * stampSizeMeters.X;
+                    float worldX = stampCenter.X + (localX * cos) - (localZ * sin);
+                    float worldZ = stampCenter.Z + (localX * sin) + (localZ * cos);
+                    float worldXCm = worldX * WorldUnits.CmPerMeter;
+                    float worldYCm = worldZ * WorldUnits.CmPerMeter;
+                    if (!heightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibVisualHeightmapRenderer)} Decal stableId={stableId} stamp does not overlap sampleable receiver height at ({worldXCm:F1},{worldYCm:F1}).");
+                    }
+
+                    float heightM = WorldUnits.CmToM(heightCm);
+                    minHeightM = MathF.Min(minHeightM, heightM);
+                    maxHeightM = MathF.Max(maxHeightM, heightM);
+                }
+            }
+
+            return new Vector3(stampCenter.X, (minHeightM + maxHeightM) * 0.5f, stampCenter.Z);
+        }
+
         private void EnsureInitialized()
         {
             if (_initialized)
@@ -108,24 +435,384 @@ namespace Ludots.Client.Raylib.Rendering
 
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
-            _locTerrainLightPos = Rl.GetShaderLocation(_terrainShader, "uLightPos");
-            _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
-            _locTerrainAmbient = Rl.GetShaderLocation(_terrainShader, "uAmbient");
-            _locTerrainIntensity = Rl.GetShaderLocation(_terrainShader, "uLightIntensity");
+            _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "visual-heightmap terrain");
+
+            _locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
+            _locTerrainTileScale = Rl.GetShaderLocation(_terrainShader, "uTerrainTileScale");
+            _locAntiTile = Rl.GetShaderLocation(_terrainShader, "uAntiTile");
+            _locUseControlMap = Rl.GetShaderLocation(_terrainShader, "uUseControlMap");
+            _locControlBounds = Rl.GetShaderLocation(_terrainShader, "uControlBounds");
+            _locControlMap = Rl.GetShaderLocation(_terrainShader, "uControlMap");
+            int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
+            int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
+            int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
+            int locRock = Rl.GetShaderLocation(_terrainShader, "texture3");
+            if (_locUseTerrainAlbedo < 0 ||
+                _locTerrainTileScale < 0 ||
+                _locAntiTile < 0 ||
+                _locUseControlMap < 0 ||
+                _locControlBounds < 0 ||
+                _locControlMap < 0 ||
+                locSand < 0 ||
+                locGrass < 0 ||
+                locDirt < 0 ||
+                locRock < 0)
+            {
+                throw new InvalidOperationException(
+                    "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/texture0..texture3).");
+            }
+
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locSand;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locGrass;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = locDirt;
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locRock;
+            // DrawMesh binds MATERIAL_MAP_* slots; wire occlusion map slot to explicit uControlMap sampler.
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locControlMap;
+
             _initialized = true;
+            ApplyAlbedoUniforms();
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
         }
 
         private void UpdateUniforms(in Camera3D camera)
         {
-            Vector3 lightPos = LightPosition;
-            Vector3 viewPos = camera.position;
-            float ambient = Ambient;
-            float intensity = LightIntensity;
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
+            }
 
-            Rl.SetShaderValue(_terrainShader, _locTerrainLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(_terrainShader, _locTerrainIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
+            ApplyAlbedoUniforms();
+        }
+
+        private void ApplyAlbedoUniforms()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int useAlbedo = _albedoEnabled ? 1 : 0;
+            int antiTile = _albedoEnabled ? 1 : 0;
+            int useControlMap = _controlMapEnabled ? 1 : 0;
+            float tileScale = _terrainTileScale;
+            Vector4 controlBounds = _controlBoundsMeters;
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseTerrainAlbedo,
+                &useAlbedo,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locTerrainTileScale,
+                &tileScale,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locAntiTile,
+                &antiTile,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseControlMap,
+                &useControlMap,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locControlBounds,
+                &controlBounds,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        private void ApplyAlbedoMaterialMaps()
+        {
+            Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO, _albedoTextures[0]);
+            Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS, _albedoTextures[1]);
+            Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL, _albedoTextures[2]);
+            Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS, _albedoTextures[3]);
+            if (_controlMapEnabled && _controlMapTexture.id != 0)
+            {
+                Rl.SetMaterialTexture(
+                    ref _terrainMaterial,
+                    (int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION,
+                    _controlMapTexture);
+            }
+            else
+            {
+                _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
+            }
+        }
+
+        private void DetachAlbedoMaterialMaps()
+        {
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture = default;
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS].texture = default;
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = default;
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS].texture = default;
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
+        }
+
+        private void ActivateAlbedoDescriptor(TerrainAlbedoDescriptor descriptor)
+        {
+            if (_vfs == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot activate albedo without VFS.");
+            }
+
+            EnsureInitialized();
+            var loaded = new Texture2D[TerrainAlbedoLayerCount];
+            Texture2D controlMap = default;
+            try
+            {
+                for (int i = 0; i < TerrainAlbedoLayerCount; i++)
+                {
+                    loaded[i] = LoadTextureUriOrThrow(
+                        descriptor.LayerUris[i],
+                        descriptor.Id,
+                        $"layer[{i}]");
+                }
+
+                bool hasControlMap = !string.IsNullOrEmpty(descriptor.ControlMapUri);
+                if (hasControlMap)
+                {
+                    controlMap = LoadTextureUriOrThrow(
+                        descriptor.ControlMapUri!,
+                        descriptor.Id,
+                        "controlMapUri");
+                }
+
+                BindTerrainAlbedo(loaded[0], loaded[1], loaded[2], loaded[3], descriptor.TileScale, ownsTextures: true);
+                for (int i = 0; i < loaded.Length; i++)
+                {
+                    loaded[i] = default;
+                }
+
+                if (hasControlMap)
+                {
+                    _controlMapTexture = controlMap;
+                    _ownsControlMapTexture = true;
+                    _controlMapEnabled = true;
+                    controlMap = default;
+                    ApplyAlbedoMaterialMaps();
+                    ApplyAlbedoUniforms();
+                }
+
+                _activeAlbedo = descriptor;
+            }
+            catch
+            {
+                for (int i = 0; i < loaded.Length; i++)
+                {
+                    if (loaded[i].id != 0)
+                    {
+                        Rl.UnloadTexture(loaded[i]);
+                    }
+                }
+
+                if (controlMap.id != 0)
+                {
+                    Rl.UnloadTexture(controlMap);
+                }
+
+                throw;
+            }
+        }
+
+        private Texture2D LoadTextureUriOrThrow(string uri, string descriptorId, string fieldLabel)
+        {
+            if (!_vfs!.TryResolveFullPath(uri, out string fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' {fieldLabel}.");
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' {fieldLabel}).");
+            }
+
+            Texture2D texture = Rl.LoadTexture(fullPath);
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                if (texture.id != 0)
+                {
+                    Rl.UnloadTexture(texture);
+                }
+
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}' ({fieldLabel}).");
+            }
+
+            return texture;
+        }
+
+        private void UnloadOwnedAlbedoTextures()
+        {
+            if (_ownsAlbedoTextures)
+            {
+                for (int i = 0; i < _albedoTextures.Length; i++)
+                {
+                    if (_albedoTextures[i].id != 0)
+                    {
+                        Rl.UnloadTexture(_albedoTextures[i]);
+                    }
+
+                    _albedoTextures[i] = default;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < _albedoTextures.Length; i++)
+                {
+                    _albedoTextures[i] = default;
+                }
+            }
+
+            _ownsAlbedoTextures = false;
+        }
+
+        private void UnloadOwnedControlMapTexture()
+        {
+            if (_ownsControlMapTexture && _controlMapTexture.id != 0)
+            {
+                Rl.UnloadTexture(_controlMapTexture);
+            }
+
+            _controlMapTexture = default;
+            _ownsControlMapTexture = false;
+            _controlMapEnabled = false;
+        }
+
+        private static void ValidateAlbedoTexture(Texture2D texture, string layerName)
+        {
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(BindTerrainAlbedo)} requires a valid {layerName} Texture2D.");
+            }
+        }
+
+        private TerrainAlbedoDescriptor? FindMatchingAlbedoDescriptor(string? mapId)
+        {
+            for (int i = 0; i < _albedoDescriptors.Count; i++)
+            {
+                TerrainAlbedoDescriptor descriptor = _albedoDescriptors[i];
+                if (descriptor.MatchesMap(mapId))
+                {
+                    return descriptor;
+                }
+            }
+
+            return null;
+        }
+
+        private static ConfigCatalogEntry ResolveAlbedoCatalogEntry(ConfigCatalog? catalog)
+        {
+            if (catalog != null && catalog.TryGet(DefaultAlbedoRelativePath, out ConfigCatalogEntry found))
+            {
+                return found;
+            }
+
+            return new ConfigCatalogEntry(DefaultAlbedoRelativePath, ConfigMergePolicy.ArrayById, "id");
+        }
+
+        private static TerrainAlbedoDescriptor ParseAlbedoDescriptor(JsonObject obj, string fallbackId)
+        {
+            string id = RequireString(obj["id"], fallbackId, "id");
+            string backendId = RequireString(obj["backendId"], id, "backendId");
+            bool enabled = obj["enabled"]?.GetValue<bool>() ?? true;
+
+            float tileScale = ReadFloat(obj["tileScale"], 0.25f);
+            if (!float.IsFinite(tileScale) || tileScale <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{DefaultAlbedoRelativePath} entry '{id}' tileScale must be a positive finite number.");
+            }
+
+            if (obj["layerUris"] is not JsonArray layerArr || layerArr.Count != TerrainAlbedoLayerCount)
+            {
+                throw new InvalidOperationException(
+                    $"{DefaultAlbedoRelativePath} entry '{id}' must declare layerUris with exactly {TerrainAlbedoLayerCount} URIs (sand/grass/dirt/rock).");
+            }
+
+            var layerUris = new string[TerrainAlbedoLayerCount];
+            for (int i = 0; i < TerrainAlbedoLayerCount; i++)
+            {
+                string uri = layerArr[i]?.GetValue<string>()?.Trim() ?? string.Empty;
+                if (uri.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{DefaultAlbedoRelativePath} entry '{id}' layerUris[{i}] must be a non-empty string.");
+                }
+
+                layerUris[i] = uri;
+            }
+
+            var mapIds = new List<string>();
+            if (obj["mapIds"] is JsonArray mapArr)
+            {
+                for (int i = 0; i < mapArr.Count; i++)
+                {
+                    string mapId = mapArr[i]?.GetValue<string>()?.Trim() ?? string.Empty;
+                    if (mapId.Length == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"{DefaultAlbedoRelativePath} entry '{id}' mapIds[{i}] must be a non-empty string.");
+                    }
+
+                    mapIds.Add(mapId);
+                }
+            }
+
+            string? controlMapUri = null;
+            if (obj.ContainsKey("controlMapUri"))
+            {
+                string uri = obj["controlMapUri"]?.GetValue<string>()?.Trim() ?? string.Empty;
+                if (uri.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{DefaultAlbedoRelativePath} entry '{id}' controlMapUri must be a non-empty string when present.");
+                }
+
+                controlMapUri = uri;
+            }
+
+            return new TerrainAlbedoDescriptor(id, backendId, enabled, mapIds, tileScale, layerUris, controlMapUri);
+        }
+
+        private static string RequireString(JsonNode? node, string rowId, string fieldName)
+        {
+            string value = node?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"{DefaultAlbedoRelativePath} entry '{rowId}' must declare '{fieldName}'.");
+            }
+
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{DefaultAlbedoRelativePath} entry '{rowId}' field '{fieldName}' must not include leading or trailing whitespace.");
+            }
+
+            return value;
+        }
+
+        private static float ReadFloat(JsonNode? node, float fallback)
+        {
+            if (node == null)
+            {
+                return fallback;
+            }
+
+            return node.GetValue<float>();
         }
 
         private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)
@@ -136,7 +823,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (existing.Revision == chunk.Revision)
                 {
                     _chunks[key] = existing;
-                    return ref _chunks.GetValueRefOrNullRef(key);
+                    return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
                 }
 
                 existing.Dispose();
@@ -144,29 +831,35 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             long buildStart = Stopwatch.GetTimestamp();
+            ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
             ChunkGpu gpu = new()
             {
                 Mesh = CreateChunkMesh(in chunk),
                 Revision = chunk.Revision,
                 LastUsedFrame = _frameIndex,
+                MinX = chunk.Bounds.Left * 0.01f,
+                MaxX = chunk.Bounds.Right * 0.01f,
+                MinY = minHeightCm * 0.01f,
+                MaxY = maxHeightCm * 0.01f,
+                MinZ = chunk.Bounds.Top * 0.01f,
+                MaxZ = chunk.Bounds.Bottom * 0.01f,
             };
             BuiltChunkCountLastFrame++;
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
             _chunks[key] = gpu;
-            return ref _chunks.GetValueRefOrNullRef(key);
+            return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
-        private static Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
+        private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
         {
-            int columns = chunk.SampleColumns;
-            int rows = chunk.SampleRows;
+            ResolveChunkRenderSampling(
+                chunk.SampleColumns,
+                chunk.SampleRows,
+                out int columns,
+                out int rows,
+                out int sampleStride);
             int vertexCount = checked(columns * rows);
             int indexCount = checked((columns - 1) * (rows - 1) * 6);
-            if (vertexCount > ushort.MaxValue)
-            {
-                throw new InvalidOperationException(
-                    $"Raylib visual heightmap chunk ({chunk.ChunkX},{chunk.ChunkY}) has {vertexCount} vertices, exceeding the platform mesh index limit. Reduce samples per chunk.");
-            }
 
             Mesh mesh = new()
             {
@@ -185,15 +878,19 @@ namespace Ludots.Client.Raylib.Rendering
             float stepYCm = chunk.SampleStepYCm;
             ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
+            float? absoluteSeaCm = _absoluteColorSeaLevelCm;
+            float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             for (int y = 0; y < rows; y++)
             {
+                int sourceY = ResolveChunkSourceSampleIndex(y, chunk.SampleRows, sampleStride);
                 for (int x = 0; x < columns; x++)
                 {
+                    int sourceX = ResolveChunkSourceSampleIndex(x, chunk.SampleColumns, sampleStride);
                     int vertex = (y * columns) + x;
-                    float worldXCm = chunk.Bounds.Left + (x * stepXCm);
-                    float worldYCm = chunk.Bounds.Top + (y * stepYCm);
-                    chunk.TryReadHeightCm(x, y, out float heightCm);
-                    Vector3 normal = ComputeNormal(in chunk, x, y, stepXCm, stepYCm);
+                    float worldXCm = chunk.Bounds.Left + (sourceX * stepXCm);
+                    float worldYCm = chunk.Bounds.Top + (sourceY * stepYCm);
+                    chunk.TryReadHeightCm(sourceX, sourceY, out float heightCm);
+                    Vector3 normal = ComputeNormal(in chunk, sourceX, sourceY, stepXCm, stepYCm);
                     int f = vertex * 3;
                     mesh.vertices[f + 0] = worldXCm * 0.01f;
                     mesh.vertices[f + 1] = heightCm * 0.01f;
@@ -203,13 +900,27 @@ namespace Ludots.Client.Raylib.Rendering
                     mesh.normals[f + 2] = normal.Z;
 
                     int c = vertex * 4;
-                    float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
-                    ResolveTerrainColor(heightBand, slope, out byte red, out byte green, out byte blue);
+                    float heightBand;
+                    byte red;
+                    byte green;
+                    byte blue;
+                    if (absoluteSeaCm is float seaCm)
+                    {
+                        // Keep negative bands for submerged shelf/abyss tint (refraction reads depth).
+                        heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
+                        heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                        ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
-                    mesh.colors[c + 3] = 255;
+                    mesh.colors[c + 3] = ClampToByte(Math.Clamp(heightBand, 0f, 1f) * 255f);
                 }
             }
 
@@ -280,6 +991,49 @@ namespace Ludots.Client.Raylib.Rendering
             blue = ClampToByte(color.Z * shade);
         }
 
+        private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
+        {
+            // Bands are elevation / peak-span: negative = submerged depth, positive = land.
+            Vector3 deepSeabed = new(16f, 48f, 92f);
+            Vector3 shallowShelf = new(72f, 186f, 168f);
+            Vector3 wetSand = new(210f, 188f, 128f);
+            Vector3 sand = new(236f, 208f, 142f);
+            Vector3 grass = new(68f, 142f, 58f);
+            Vector3 dirt = new(148f, 108f, 64f);
+            Vector3 rock = new(132f, 118f, 102f);
+            Vector3 peak = new(188f, 182f, 172f);
+            Vector3 color;
+            if (heightBand <= 0f)
+            {
+                // ~0 at sea → wet sand/turquoise; ~-0.04 (~560cm with 14km span) → deep blue.
+                float depth = Math.Clamp((-heightBand) / 0.04f, 0f, 1f);
+                color = depth < 0.35f
+                    ? Vector3.Lerp(wetSand, shallowShelf, depth / 0.35f)
+                    : Vector3.Lerp(shallowShelf, deepSeabed, (depth - 0.35f) / 0.65f);
+            }
+            else if (heightBand < 0.045f)
+            {
+                color = Vector3.Lerp(sand, grass, heightBand / 0.045f);
+            }
+            else if (heightBand < 0.32f)
+            {
+                color = Vector3.Lerp(grass, dirt, (heightBand - 0.045f) / 0.275f);
+            }
+            else if (heightBand < 0.58f)
+            {
+                color = Vector3.Lerp(dirt, rock, (heightBand - 0.32f) / 0.26f);
+            }
+            else
+            {
+                color = Vector3.Lerp(rock, peak, Math.Clamp((heightBand - 0.58f) / 0.42f, 0f, 1f));
+            }
+
+            float shade = 1f - Math.Clamp(slope * 0.55f, 0f, 0.55f);
+            red = ClampToByte(color.X * shade);
+            green = ClampToByte(color.Y * shade);
+            blue = ClampToByte(color.Z * shade);
+        }
+
         private static Vector3 ComputeNormal(in VisualHeightmapRenderChunk chunk, int x, int y, float stepXCm, float stepYCm)
         {
             int left = Math.Max(0, x - 1);
@@ -297,6 +1051,16 @@ namespace Ludots.Client.Raylib.Rendering
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
+        }
+
+        private void ClearChunkGpuCache()
+        {
+            foreach (var kvp in _chunks)
+            {
+                kvp.Value.Dispose();
+            }
+
+            _chunks.Clear();
         }
 
         private void EvictUnusedChunks(int maxAgeFrames)
@@ -338,6 +1102,163 @@ namespace Ludots.Client.Raylib.Rendering
             return (byte)Math.Clamp((int)MathF.Round(value), 0, 255);
         }
 
+        internal static int ResolveChunkSampleStride(int sampleColumns, int sampleRows)
+        {
+            if (sampleColumns < 2) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
+            if (sampleRows < 2) throw new ArgumentOutOfRangeException(nameof(sampleRows));
+
+            int stride = 1;
+            while (checked(ResolveChunkSampleAxisPointCount(sampleColumns, stride) * ResolveChunkSampleAxisPointCount(sampleRows, stride)) > ushort.MaxValue)
+            {
+                stride++;
+            }
+
+            return stride;
+        }
+
+        internal static void ResolveChunkRenderSampling(
+            int sampleColumns,
+            int sampleRows,
+            out int renderColumns,
+            out int renderRows,
+            out int sampleStride)
+        {
+            sampleStride = ResolveChunkSampleStride(sampleColumns, sampleRows);
+            renderColumns = ResolveChunkSampleAxisPointCount(sampleColumns, sampleStride);
+            renderRows = ResolveChunkSampleAxisPointCount(sampleRows, sampleStride);
+            int renderVertexCount = checked(renderColumns * renderRows);
+            if (renderVertexCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib visual heightmap render sampling resolved {renderVertexCount} vertices, exceeding the platform mesh index limit.");
+            }
+        }
+
+        internal static int ResolveChunkSampleAxisPointCount(int sampleCount, int stride)
+        {
+            if (sampleCount < 2) throw new ArgumentOutOfRangeException(nameof(sampleCount));
+            if (stride <= 0) throw new ArgumentOutOfRangeException(nameof(stride));
+
+            return ((sampleCount - 2) / stride) + 2;
+        }
+
+        internal static int ResolveChunkSourceSampleIndex(int pointIndex, int sampleCount, int stride)
+        {
+            int pointCount = ResolveChunkSampleAxisPointCount(sampleCount, stride);
+            if ((uint)pointIndex >= (uint)pointCount) throw new ArgumentOutOfRangeException(nameof(pointIndex));
+
+            return pointIndex == pointCount - 1
+                ? sampleCount - 1
+                : pointIndex * stride;
+        }
+
+        internal static bool ShouldUseOverviewMesh(
+            IVisualHeightmapRenderSource source,
+            in Camera3D camera,
+            float aspect,
+            float detailVisibleRadiusCm,
+            float activationMultiplier)
+        {
+            if (source == null)
+            {
+                return false;
+            }
+
+            if (source.ChunkColumns <= 0 || source.ChunkRows <= 0)
+            {
+                return false;
+            }
+
+            float chunkWidthCm = source.Bounds.Width / (float)source.ChunkColumns;
+            float chunkHeightCm = source.Bounds.Height / (float)source.ChunkRows;
+            float detailRadiusCm = MathF.Max(
+                MathF.Max(1f, detailVisibleRadiusCm),
+                MathF.Max(chunkWidthCm, chunkHeightCm) * 1.25f);
+            float activationRadiusCm = detailRadiusCm * MathF.Max(1f, activationMultiplier);
+            return ComputeCameraFootprintRadiusCm(camera, aspect) > activationRadiusCm;
+        }
+
+        internal static float ComputeCameraFootprintRadiusCm(in Camera3D camera, float aspect)
+        {
+            float distanceMeters = Vector3.Distance(camera.position, camera.target);
+            if (!float.IsFinite(distanceMeters) || distanceMeters <= 0f)
+            {
+                return 0f;
+            }
+
+            float fovyRad = camera.fovy * (MathF.PI / 180f);
+            float clampedFovyRad = Math.Clamp(fovyRad, 0.001f, MathF.PI - 0.001f);
+            float halfHeightMeters = distanceMeters * MathF.Tan(clampedFovyRad * 0.5f);
+            float halfWidthMeters = halfHeightMeters * MathF.Max(0.001f, aspect);
+            float radiusMeters = MathF.Sqrt((halfWidthMeters * halfWidthMeters) + (halfHeightMeters * halfHeightMeters));
+            return radiusMeters * 100f;
+        }
+
+        internal static void ResolveOverviewTextureSize(
+            WorldAabbCm bounds,
+            int screenWidth,
+            int screenHeight,
+            out int textureWidth,
+            out int textureHeight)
+        {
+            int screenLongEdge = Math.Max(1, Math.Max(screenWidth, screenHeight));
+            int longEdge = Math.Clamp(
+                checked(screenLongEdge * OverviewTextureScreenScale),
+                OverviewTextureMinLongEdgePixels,
+                OverviewTextureMaxLongEdgePixels);
+            float aspect = MathF.Max(0.001f, bounds.Width / (float)Math.Max(1, bounds.Height));
+            if (aspect >= 1f)
+            {
+                textureWidth = longEdge;
+                textureHeight = Math.Clamp((int)MathF.Round(longEdge / aspect), 1, OverviewTextureMaxLongEdgePixels);
+                return;
+            }
+
+            textureHeight = longEdge;
+            textureWidth = Math.Clamp((int)MathF.Round(longEdge * aspect), 1, OverviewTextureMaxLongEdgePixels);
+        }
+
+        internal static int ResolveOverviewStepChunks(int chunkColumns, int chunkRows, int maxVertices)
+        {
+            if (chunkColumns <= 0) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
+            if (chunkRows <= 0) throw new ArgumentOutOfRangeException(nameof(chunkRows));
+
+            int vertexLimit = Math.Clamp(maxVertices, 4, ushort.MaxValue);
+            int step = 1;
+            while (checked(ResolveOverviewAxisPointCount(chunkColumns, step) * ResolveOverviewAxisPointCount(chunkRows, step)) > vertexLimit)
+            {
+                step++;
+            }
+
+            return step;
+        }
+
+        internal static int ResolveOverviewAxisPointCount(int chunkCount, int stepChunks)
+        {
+            if (chunkCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkCount));
+            if (stepChunks <= 0) throw new ArgumentOutOfRangeException(nameof(stepChunks));
+
+            return ((chunkCount + stepChunks - 1) / stepChunks) + 1;
+        }
+
+        internal static float ResolveEffectiveSeaLevelCm(VisualHeightmapRenderProfile renderProfile, float minHeightCm)
+        {
+            if (renderProfile == null)
+            {
+                throw new ArgumentNullException(nameof(renderProfile));
+            }
+
+            VisualHeightmapRenderProfile normalized = renderProfile.NormalizeAndValidate();
+            if (!float.IsFinite(minHeightCm))
+            {
+                throw new ArgumentOutOfRangeException(nameof(minHeightCm));
+            }
+
+            return normalized.WaterEnabled
+                ? normalized.SeaLevelCm
+                : minHeightCm - 1f;
+        }
+
         public void Dispose()
         {
             foreach (var kvp in _chunks)
@@ -346,6 +1267,8 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             _chunks.Clear();
+            ClearTerrainAlbedo();
+            _albedoDescriptors.Clear();
             if (!_initialized)
             {
                 return;
@@ -357,11 +1280,70 @@ namespace Ludots.Client.Raylib.Rendering
             _initialized = false;
         }
 
+        private sealed class TerrainAlbedoDescriptor
+        {
+            public TerrainAlbedoDescriptor(
+                string id,
+                string backendId,
+                bool enabled,
+                List<string> mapIds,
+                float tileScale,
+                string[] layerUris,
+                string? controlMapUri)
+            {
+                Id = id;
+                BackendId = backendId;
+                Enabled = enabled;
+                MapIds = mapIds;
+                TileScale = tileScale;
+                LayerUris = layerUris;
+                ControlMapUri = controlMapUri;
+            }
+
+            public string Id { get; }
+            public string BackendId { get; }
+            public bool Enabled { get; }
+            public IReadOnlyList<string> MapIds { get; }
+            public float TileScale { get; }
+            public IReadOnlyList<string> LayerUris { get; }
+            public string? ControlMapUri { get; }
+
+            public bool MatchesMap(string? mapId)
+            {
+                if (MapIds.Count == 0)
+                {
+                    return true;
+                }
+
+                if (string.IsNullOrWhiteSpace(mapId))
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < MapIds.Count; i++)
+                {
+                    if (string.Equals(MapIds[i], "*", StringComparison.Ordinal) ||
+                        string.Equals(MapIds[i], mapId, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         private struct ChunkGpu : IDisposable
         {
             public Mesh Mesh;
             public int Revision;
             public int LastUsedFrame;
+            public float MinX;
+            public float MinY;
+            public float MinZ;
+            public float MaxX;
+            public float MaxY;
+            public float MaxZ;
 
             public void Dispose()
             {

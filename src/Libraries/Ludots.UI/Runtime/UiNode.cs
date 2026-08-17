@@ -23,6 +23,8 @@ public sealed class UiNode
 
 	public UiNodeKind Kind { get; }
 
+	public UiPseudoElement PseudoElement { get; private set; }
+
 	public UiNode? Parent { get; private set; }
 
 	public string TagName { get; private set; }
@@ -47,6 +49,10 @@ public sealed class UiNode
 
 	public float ScrollOffsetY { get; private set; }
 
+	public float StickyOffsetX { get; private set; }
+
+	public float StickyOffsetY { get; private set; }
+
 	public float ScrollContentWidth { get; private set; }
 
 	public float ScrollContentHeight { get; private set; }
@@ -69,7 +75,7 @@ public sealed class UiNode
 
 	public bool CanScrollVertically => Style.Overflow == UiOverflow.Scroll && MaxScrollY > 0.01f;
 
-	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null)
+	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None)
 	{
 		if (!id.IsValid)
 		{
@@ -77,6 +83,7 @@ public sealed class UiNode
 		}
 		Id = id;
 		Kind = kind;
+		PseudoElement = pseudoElement;
 		LocalStyle = style ?? UiStyle.Default;
 		Style = LocalStyle;
 		RenderStyle = LocalStyle;
@@ -114,6 +121,7 @@ public sealed class UiNode
 		LocalStyle = template.LocalStyle;
 		TextContent = template.TextContent;
 		CanvasContent = template.CanvasContent;
+		PseudoElement = template.PseudoElement;
 		_classNames = template._classNames;
 		_actionHandles = template._actionHandles;
 		return changed;
@@ -218,12 +226,53 @@ public sealed class UiNode
 		}
 		ScrollOffsetX = num;
 		ScrollOffsetY = num2;
+		RecalculateStickyOffsetsForDescendants();
 		return true;
 	}
 
 	internal bool ScrollBy(float deltaX, float deltaY)
 	{
 		return SetScrollOffset(ScrollOffsetX + deltaX, ScrollOffsetY + deltaY);
+	}
+
+	internal void RecalculateStickyOffsetsForSubtree()
+	{
+		RecalculateStickyOffsets(null);
+	}
+
+	private void RecalculateStickyOffsetsForDescendants()
+	{
+		for (int i = 0; i < _children.Length; i++)
+		{
+			_children[i].RecalculateStickyOffsets(this);
+		}
+	}
+
+	private void RecalculateStickyOffsets(UiNode? scrollAncestor)
+	{
+		if (Style.PositionType == UiPositionType.Sticky
+			&& scrollAncestor != null
+			&& Style.Top.Unit == UiLengthUnit.Pixel)
+		{
+			float contentOriginY = scrollAncestor.LayoutRect.Y + scrollAncestor.Style.BorderWidth + scrollAncestor.Style.Padding.Top;
+			float naturalLocalY = LayoutRect.Y - contentOriginY;
+			float topInset = Style.Top.Value;
+			float desired = scrollAncestor.ScrollOffsetY - naturalLocalY + topInset;
+			float maxUnstick = Math.Max(0f, scrollAncestor.ScrollContentHeight - naturalLocalY - LayoutRect.Height);
+			StickyOffsetX = 0f;
+			StickyOffsetY = Math.Clamp(desired, 0f, maxUnstick);
+		}
+		else
+		{
+			StickyOffsetX = 0f;
+			StickyOffsetY = 0f;
+		}
+
+		UiNode? descendantScrollAncestor = Style.Overflow == UiOverflow.Scroll ? this : scrollAncestor;
+		for (int i = 0; i < _children.Length; i++)
+		{
+			_children[i].RecalculateStickyOffsets(descendantScrollAncestor);
+		}
 	}
 
 	internal void SetPseudoState(UiPseudoState state)
@@ -258,6 +307,7 @@ public sealed class UiNode
 	{
 		return string.Equals(TagName, other.TagName, StringComparison.Ordinal) &&
 			string.Equals(ElementId, other.ElementId, StringComparison.Ordinal) &&
+			PseudoElement == other.PseudoElement &&
 			object.Equals(LocalStyle, other.LocalStyle) &&
 			string.Equals(TextContent, other.TextContent, StringComparison.Ordinal) &&
 			object.ReferenceEquals(CanvasContent, other.CanvasContent) &&
@@ -424,6 +474,7 @@ public sealed class UiNode
 		QueueFloatTransition(uiTransitionSpec, "opacity", RenderStyle.Opacity, targetStyle.Opacity, ref renderStyle, list);
 		QueueFloatTransition(uiTransitionSpec, "filter", RenderStyle.FilterBlurRadius, targetStyle.FilterBlurRadius, ref renderStyle, list);
 		QueueFloatTransition(uiTransitionSpec, "backdrop-filter", RenderStyle.BackdropBlurRadius, targetStyle.BackdropBlurRadius, ref renderStyle, list);
+		QueueTransformTransition(uiTransitionSpec, RenderStyle.Transform ?? UiTransform.Identity, targetStyle.Transform ?? UiTransform.Identity, ref renderStyle, list);
 		_transitionChannels.Clear();
 		_transitionChannels.AddRange(list);
 	}
@@ -444,5 +495,19 @@ public sealed class UiNode
 			channels.Add(new UiTransitionChannelState(propertyName, entry.DurationSeconds, entry.DelaySeconds, entry.Easing, startValue, endValue));
 			renderStyle = UiTransitionMath.ApplyColor(renderStyle, propertyName, startValue);
 		}
+	}
+
+	private static void QueueTransformTransition(UiTransitionSpec transition, UiTransform startValue, UiTransform endValue, ref UiStyle renderStyle, ICollection<UiTransitionChannelState> channels)
+	{
+		if (startValue.Equals(endValue)
+			|| !UiTransitionMath.AreCompatible(startValue, endValue)
+			|| !transition.TryGet("transform", out UiTransitionEntry? entry)
+			|| entry == null
+			|| entry.DurationSeconds <= 0f)
+		{
+			return;
+		}
+		channels.Add(new UiTransitionChannelState("transform", entry.DurationSeconds, entry.DelaySeconds, entry.Easing, startValue, endValue));
+		renderStyle = UiTransitionMath.ApplyTransform(renderStyle, startValue);
 	}
 }

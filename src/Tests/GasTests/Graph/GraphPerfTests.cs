@@ -9,12 +9,15 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [Category("benchmark")]
     public class GraphPerfTests
     {
+        private static readonly GasGraphOpHandlerTable ZeroAllocHandlers = new();
         [Test]
         public void Benchmark_GraphExecutor_SmallProgram()
         {
@@ -44,12 +47,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 4, Imm = 123 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 1, Imm = 999 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 42 }
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 42 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
                 };
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, ZeroAllocHandlers);
                     effectRequests.Clear();
                     eventBus.Update();
                 }
@@ -64,7 +68,7 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < iterations; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, GraphKind.Effect, ZeroAllocHandlers);
                     effectRequests.Clear();
                     eventBus.Update();
                 }
@@ -75,11 +79,15 @@ namespace Ludots.Tests.GAS
                 double totalUs = sw.Elapsed.TotalMilliseconds * 1000.0;
                 double perExecUs = totalUs / iterations;
 
+                long allocatedBytes = alloc1 - alloc0;
                 Console.WriteLine("[GraphPerf] GraphExecutor small program:");
                 Console.WriteLine($"  Iterations: {iterations}");
                 Console.WriteLine($"  TotalMs: {sw.Elapsed.TotalMilliseconds:F2}");
                 Console.WriteLine($"  PerExecUs: {perExecUs:F4}");
-                Console.WriteLine($"  AllocBytes(CurrentThread): {alloc1 - alloc0}");
+                Console.WriteLine($"  AllocBytes(CurrentThread): {allocatedBytes}");
+
+                Assert.That(allocatedBytes, Is.LessThanOrEqualTo(64),
+                    $"GraphExecutor small program allocated {allocatedBytes} bytes; zero-alloc budget is 64.");
             }
             finally
             {

@@ -6,7 +6,7 @@
 - 可裁剪、可降频、仍有行为逻辑的预算实体
 - 少量高价值 authority entity 与大量 crowd 的分层避障
 - 可切换 board 语义的 AOI / LOD
-- performer 与 gameplay entity 的职责分离
+- presenter 与 gameplay entity 的职责分离
 
 ## 1 当前代码基线
 
@@ -101,7 +101,7 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - `CullState` 只负责视觉
 - `CullState.IsVisible` 是 camera viewport / spatial / loaded chunk gate 的可见性结果
 - `CullState.LOD` 只表示视觉质量层级，不得作为剔除真相；距离 LOD 阈值不能形成相机跟随的圆形 visibility mask
-- `CameraCullingSystem` 的距离阈值来自全局 `GameConfig.Presentation.CameraCulling`，即 `assets/Configs/game.json` 与所选 `<Mod>/assets/game.json` 经 `ConfigPipeline.MergeGameConfig()` 合并后的单例配置
+- `CameraCullingSystem` 的距离阈值来自全局 `GameConfig.Presentation.CameraCulling`，即 `assets/game.json` 与所选 `<Mod>/assets/game.json` 经 `ConfigPipeline.MergeGameConfig()` 合并后的单例配置
 - `SimulationLodState` 才是逻辑预算真相
 - 允许同一个 entity 视觉可见但仿真降频
 - 也允许同一个 entity 视觉不可见但仍保持后端真相更新
@@ -109,12 +109,12 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 ### 3.5 Core Minimap
 
 - Core minimap 属于 Presentation 基建，不属于业务 Mod
-- 正式逻辑信号源是 performer authoring 中显式声明的 `MinimapMarker` behavior
-- marker 位置唯一来自 performer world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
+- 正式逻辑信号源是 presenter authoring 中显式声明的 `MinimapMarker` behavior
+- marker 位置唯一来自 presenter world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
 - `Name`、`MapEntity`、`Team` 都不得作为 marker 存在性的推断入口
 - Visual heightmap、chunk streaming、camera culling、visual LOD 都不能 gate minimap 逻辑信号
 - `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
-- 256x256 大世界展示 authored performer marker；不做名称推断、战略热力图或缺信号 fallback
+- 256x256 大世界展示 authored presenter marker；不做名称推断、战略热力图或缺信号 fallback
 
 ## 4 仿真车道口径
 
@@ -171,6 +171,8 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - crowd SoA 位置只服务 `MassNavigation` 热路径
 - 同一个 entity 不能同时被 `FullPhysics2D` 与 `MassNavigation` 双写
 - `ForceInput2D` 和 MassNavigationFlow desired movement state 是派生输出，不是位置真相
+- 谁能被选中、谁能收指令只由模拟状态决定：位置用 `WorldPositionCm`，可选中性用 `CommandSourceSelectableTag`，玩法可见性用 `KnowledgeProjectionStore`。`CullState` 与 `VisualTransform` 不得参与选中或下单判定
+- InputCollection / AbilityActivation / EffectProcessing / AttributeCalculation 等模拟相系统不得读取 `VisualTransform` 或 `CullState`
 
 允许存在的重复数据只有两类：
 
@@ -180,6 +182,18 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 禁止存在的重复真相只有一类：
 
 - 没有明确 owner 的双向可写位置状态
+
+这些规则由 `ArchitectureGuardTests` 执行：模拟相选中/输入/GAS 系统不得读 `VisualTransform`/`CullState`；`CullState.IsVisible` 的运行时写入只属于 `CameraCullingSystem`。
+
+### 5.1 跨层组件所有权
+
+下列组件跨越模拟与表现，必须有唯一 write owner。partial-world 隔离不在本页范围。
+
+| 组件 | write owner | 读方 | 允许的非 owner 动作 |
+|------|-------------|------|---------------------|
+| `PresentationStableId` | 模拟侧分配器与 spawn/lifecycle（`PresentationStableIdAllocator`、`RuntimeEntitySpawnSystem`、`TemplateEntityBatchSpawner`、L0 lifecycle API） | 表现侧消费（performer / HUD / adapter） | 表现 bootstrap 只能在缺失时补挂已分配 id，不得另造第二套身份真相 |
+| `PresentationDestroyPending` | 模拟侧 lifecycle（spawn/projectile/L0 API 标记待销毁） | 表现侧消费并 finalize destroy；L0 可读以便 fail-closed 拒绝已 pending 的 lifecycle txn | 表现侧可 Remove 以完成销毁，不得把该标记当作玩法存活真相 |
+| `CullState` | `CameraCullingSystem` 写 `IsVisible` / 视觉 LOD | 仅表现侧（culling、performer visibility、HUD） | 模拟 spawn 可挂默认隐藏值；模拟相不得读取该组件做选中、下单或玩法可见性 |
 
 ## 6 AOI 服务语义
 
@@ -203,7 +217,7 @@ AOI 的正式服务语义如下：
 
 - 一次性把所有 crowd 逻辑收敛进同一条通用 Physics2D 主线
 - 为了追求统一而移除所有 SoA 热路径缓存
-- 把 performer 升格为逻辑 entity
+- 把 presenter 升格为逻辑 entity
 - 把视觉裁剪逻辑直接当作仿真裁剪真相
 
 ## 8 现有挂靠点

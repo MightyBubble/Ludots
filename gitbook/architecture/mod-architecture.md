@@ -42,3 +42,23 @@ Mod 不应绕过这些入口直接侵入 Core 内部状态。
 
 - 仓库深度版：`docs/architecture/mod_architecture.md`
 - 运行时单一事实：`docs/architecture/mod_runtime_single_source_of_truth.md`
+
+## 6 Runtime extension contract
+
+Code Mods may register runtime extension keys only through `IModContext.Extensions` during `IMod.OnLoad`.
+The engine freezes these registrations before `ConfigPipeline`, `ConfigCatalogLoader`, GAS graph compilation,
+and Performer definition compilation run. A Mod must not retain or receive `ModExtensionHub` or mutable runtime
+registries.
+
+Extension keys are owned by the loading Mod id. For example, `WeatherMod.StormTick` may only be registered while
+`WeatherMod` is loading. Other Mods may reference that key in config, but they cannot register under the
+`WeatherMod.` prefix.
+
+Authoring surfaces:
+
+- GAS C# phase handlers: `context.Extensions.Gas.RegisterBuiltinHandler`
+- GAS graph ops: `context.Extensions.Gas.RegisterGraphOp`
+- Performer commands: `context.Extensions.Presentation.RegisterPerformerCommand`
+- Performer behaviors: `context.Extensions.Presentation.RegisterPerformerBehavior`
+
+The full contract is [Mod Extensible Runtime](mod-extensible-runtime.md).

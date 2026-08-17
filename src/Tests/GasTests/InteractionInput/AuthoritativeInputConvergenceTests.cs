@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -147,7 +148,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity localPlayerIdentity = world.Create();
-            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
             int lookXAttribute = AttributeRegistry.Register(CameraBehaviorAttributes.LookX);
 
             var authoritativeInput = new FrozenInputActionReader();
@@ -179,7 +180,11 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayerIdentity,
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
-            var system = new InputActionAttributeBindingSystem(world, globals, registry);
+            var system = new InputActionAttributeBindingSystem(
+                world,
+                globals,
+                registry,
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -315,7 +320,7 @@ namespace Ludots.Tests.GAS
             var session = new GameSession();
             using var world = World.Create();
             var behaviorInput = new CameraBehaviorInputState();
-            Entity localPlayer = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity localPlayer = world.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
             var registry = new VirtualCameraRegistry();
             registry.Register(new VirtualCameraDefinition
             {
@@ -413,7 +418,11 @@ namespace Ludots.Tests.GAS
                 new[] { new AttributeBindingGroup(cameraSinkId, 0, 3) });
 
             var system = new InputRuntimeSystem(globals);
-            var actionBindingSystem = new InputActionAttributeBindingSystem(world, globals, actionBindings);
+            var actionBindingSystem = new InputActionAttributeBindingSystem(
+                world,
+                globals,
+                actionBindings,
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var attributeBindingSystem = new AttributeBindingSystem(world, sinks, attributeBindings);
 
             backend.MousePosition = Vector2.Zero;
