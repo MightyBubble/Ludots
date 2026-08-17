@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Ludots.Core.Presentation.AdapterSync;
+using Ludots.Raylib.Render;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -10,6 +10,7 @@ using NUnit.Framework;
 using PresenterBlacksmithShowcaseMod;
 using SkiaSharp;
 using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.Presentation
 {

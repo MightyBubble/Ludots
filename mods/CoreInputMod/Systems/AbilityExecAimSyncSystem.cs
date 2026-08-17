@@ -107,7 +107,7 @@ namespace CoreInputMod.Systems
                 : default;
             floats.Set(
                 OrderBlackboardKeys.Cast_Facing,
-                WorldPlane2D.NormalizeDegreesPositive(WorldPlane2D.RadToDegValue(facingRad)));
+                WorldPlane2D.NormalizeDegreesPositive(VisualMath.RadToDegValue(facingRad)));
             if (World.Has<BlackboardFloatBuffer>(entity))
             {
                 World.Set(entity, floats);

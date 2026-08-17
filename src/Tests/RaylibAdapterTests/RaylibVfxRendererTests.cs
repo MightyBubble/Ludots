@@ -8,6 +8,7 @@ using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
 using Raylib_cs;
 using Ludots.Platform.Abstractions;
+using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.RaylibAdapter;
 

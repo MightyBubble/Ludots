@@ -424,7 +424,7 @@ namespace Ludots.Tests.Presentation
                     return;
                 }
 
-                Assert.That(WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation.Value, out float expectedFacing), Is.True);
+                Assert.That(VisualMath.TryExtractFacingRadFromVisualYRotation(rotation.Value, out float expectedFacing), Is.True);
 
                 int markerStableId = PresenterBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, minimapMarkerSlot);
                 Assert.That(TryFindMarkerOrientation(markers, markerStableId, out float markerOrientation), Is.True);

@@ -391,7 +391,7 @@ namespace CoreInputMod.Systems
             }
 
             float widthMeters = WorldUnits.CmToM(isPrimary ? PrimaryLineWidthCm : SecondaryLineWidthCm);
-            float rotationDegrees = WorldPlane2D.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
+            float rotationDegrees = VisualMath.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
             PublishMovePathEvent(
                 PresentationEventKind.MovePathBegun,
                 _lineEventKeyId,
