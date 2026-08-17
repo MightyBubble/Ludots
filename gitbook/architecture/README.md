@@ -39,6 +39,7 @@
 - [Raylib Render Productization](raylib-render-productization.md)
 - [Quarks Particle Schema](quarks-particle-schema.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
+- [Map / ScenarioPlan / Ruleset / LaunchContext 边界合同](map-scenario-plan-ruleset-launch-context-contract.md)
 - [Transport Network SSOT](transport-network-ssot.md)
 - [Placement Validation SSOT](placement-validation-ssot.md)
 - [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
@@ -65,6 +66,7 @@
 
 ## 当前主线重点
 
+- Map / ScenarioPlan 分层的计划与边界合同 SSOT 是 GitHub issue #627；MSP-1 正本是 #628（本目录下的 [边界合同](map-scenario-plan-ruleset-launch-context-contract.md)）。不要在 `docs/adr/` 为 MSP 新增平行 ADR 文件；MSP-2+ 必须引用该合同的四层职责、ScenarioPlan 白名单、Metadata 退场与迁移原则，并继续引用既有 map-owned participant 与 map batch performer param 合同。
 - Entity Association Core 的计划与 ADR SSOT 是 GitHub issue #239；ADR 正本是 #244（AAC-1）。不要在 `docs/adr/` 为 AAC 新增平行 ADR 文件；AAC-2~AAC-12 必须引用 #244 的存储策略、ScopeKey、组合契约、红线与 2.5 UAT showcase capability mod 标准。需要玩家可见 showcase 的子单是 #245、#246、#247、#248、#249、#250、#251、#253；meta/卫生/护栏例外是 #244、#252、#254、#255。
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
 - Core 现已包含 `TimeFlow`、`EntityLocalClock`、`Items`、`Exchange`、`Quest`、`Narrative`、`Relationships` 等正式运行时能力
