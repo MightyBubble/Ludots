@@ -139,6 +139,7 @@ public sealed class LauncherService
         }
 
         var config = LoadRepoConfig();
+        var existing = config.Bindings.Find(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.RemoveAll(binding => string.Equals(binding.Name, name, StringComparison.OrdinalIgnoreCase));
         config.Bindings.Add(new LauncherBinding
         {
@@ -147,7 +148,8 @@ public sealed class LauncherService
             {
                 Type = targetType.Trim(),
                 Value = targetValue.Trim(),
-                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim()
+                ProjectPath = string.IsNullOrWhiteSpace(projectPath) ? null : projectPath.Trim(),
+                Args = existing?.Target.Args
             }
         });
         SaveRepoConfig(config);
