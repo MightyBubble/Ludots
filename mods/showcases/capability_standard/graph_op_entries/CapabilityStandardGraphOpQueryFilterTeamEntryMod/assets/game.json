@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_graph_op_QueryFilterTeam",
-  "windowTitle": "Ludots - 只留下敌对阵营",
+  "windowTitle": "Ludots - 圈出对面十个",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,
