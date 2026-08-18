@@ -106,6 +106,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             NavMeshPresentationStyle style = buffer.Style;
             bool fillPass = style.DrawFill;
+            if (fillPass || style.DrawEdges)
+            {
+                // Debug overlay contract: always visible on top of terrain regardless of
+                // baked-versus-render-surface height divergence; depth test stays off.
+                Rl.rlDisableDepthTest();
+            }
+
             if (fillPass)
             {
                 EnsureMaterial();
@@ -161,6 +168,11 @@ namespace Ludots.Client.Raylib.Rendering
                 {
                     DrawEdges(tiles[i], edgeColor, heightOffsetMeters);
                 }
+            }
+
+            if (fillPass || style.DrawEdges)
+            {
+                Rl.rlEnableDepthTest();
             }
         }
 
