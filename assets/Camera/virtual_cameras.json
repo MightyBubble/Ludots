@@ -165,5 +165,29 @@
     "followMode": "AlwaysFollow",
     "followTargetKind": "SolePossessedRep",
     "allowUserInput": true
+  },
+  {
+    "id": "NavDebug.OpenWorld",
+    "displayName": "NavMesh Debug Open World",
+    "priority": 0,
+    "rigKind": "Orbit",
+    "distanceCm": 65000,
+    "pitch": 50,
+    "fovYDeg": 60,
+    "yaw": 180,
+    "minDistanceCm": 20000,
+    "maxDistanceCm": 300000,
+    "minPitchDeg": 30,
+    "maxPitchDeg": 75,
+    "panMode": "KeyboardAndEdge",
+    "edgePanMarginPx": 10,
+    "edgePanSpeedCmPerSec": 8000,
+    "panCmPerSecond": 8000,
+    "enableGrabDrag": true,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 10000,
+    "followMode": "None",
+    "allowUserInput": true
   }
 ]

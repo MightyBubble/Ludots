@@ -15,6 +15,7 @@ namespace NavMeshDebugLaunchMod.Systems
     {
         private readonly GameEngine _engine;
         private PlayerInputHandler? _input;
+        private bool _startupEnableDone;
 
         public NavMeshDebugOverlaySystem(GameEngine engine)
         {
@@ -28,6 +29,18 @@ namespace NavMeshDebugLaunchMod.Systems
 
         public void Update(in float t)
         {
+            if (!_startupEnableDone)
+            {
+                if (_engine.TryGetService(CoreServiceKeys.NavMeshPresentationState, out NavMeshPresentationState? readyState) &&
+                    readyState != null &&
+                    _engine.TryGetService(CoreServiceKeys.LogicTerrain, out LogicTerrainField? readyTerrain) &&
+                    readyTerrain != null)
+                {
+                    _startupEnableDone = true;
+                    SetOverlay(readyState, enable: true, reason: "startup");
+                }
+            }
+
             ResolveInput();
             if (_input == null) return;
             if (!_input.PressedThisFrame(NavMeshDebugInputActions.ToggleOverlay)) return;
@@ -38,14 +51,18 @@ namespace NavMeshDebugLaunchMod.Systems
                     "NavMeshDebug overlay toggle requires NavMeshPresentationState; load a map with Feature.NavMesh:On.");
             }
 
-            bool enable = !state.Enabled;
+            SetOverlay(state, enable: !state.Enabled, reason: "toggle");
+        }
+
+        private void SetOverlay(NavMeshPresentationState state, bool enable, string reason)
+        {
             if (enable)
             {
                 WarmResidentTiles(state.Layer, state.Profile);
             }
 
             state.SetEnabled(enable);
-            Console.WriteLine($"[NavMeshDebugOverlay] {(enable ? "enabled" : "disabled")} layer={state.Layer} profile={state.Profile}");
+            Console.WriteLine($"[NavMeshDebugOverlay] {(enable ? "enabled" : "disabled")} layer={state.Layer} profile={state.Profile} reason={reason}");
 
             if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var debugObj) &&
                 debugObj is RenderDebugState renderDebugState)

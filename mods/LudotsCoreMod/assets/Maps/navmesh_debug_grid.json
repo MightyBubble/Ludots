@@ -22,12 +22,12 @@
   "Entities": [],
   "TriggerTypes": [],
   "DefaultCamera": {
-    "VirtualCameraId": "Rts",
-    "TargetXCm": 12800,
-    "TargetYCm": 12800,
+    "VirtualCameraId": "NavDebug.OpenWorld",
+    "TargetXCm": 51200,
+    "TargetYCm": 51200,
     "Yaw": 180,
     "Pitch": 50,
-    "DistanceCm": 30000,
+    "DistanceCm": 65000,
     "FovYDeg": 60
   },
   "visualHeightmap": {
