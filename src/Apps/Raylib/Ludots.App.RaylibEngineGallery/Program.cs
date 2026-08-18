@@ -235,7 +235,7 @@ namespace Ludots.App.RaylibEngineGallery
 
         private static void DrawMenu(List<SceneDescriptor> scenes, int selected)
         {
-            GalleryFont.Draw("Ludots Engine Gallery — raylib 引擎渲染能力 18 项", 24, 20, 28, GalleryColors.RayWhite);
+            GalleryFont.Draw($"Ludots Engine Gallery — raylib 引擎渲染能力 {scenes.Count} 项", 24, 20, 28, GalleryColors.RayWhite);
             GalleryFont.Draw("数字/字母选择场景，Enter 启动，ESC 退出；场景内 ESC 返回菜单，R 复位相机", 24, 56, 18, new Color(160, 160, 175, 255));
 
             int y = 96;
