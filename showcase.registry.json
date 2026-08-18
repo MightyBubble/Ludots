@@ -5774,7 +5774,7 @@
       "preset": null,
       "docsPath": null,
       "readmePath": null,
-      "acceptanceTest": null,
+      "acceptanceTest": "CityRallySpawnTargetAcceptanceTests",
       "artifactDir": null,
       "screenshot": null,
       "status": "active",
