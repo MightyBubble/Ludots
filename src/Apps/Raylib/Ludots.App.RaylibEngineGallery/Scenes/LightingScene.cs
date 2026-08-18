@@ -8,13 +8,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// <summary>
     /// 光照全效演示：粗糙度 × 金属度梯度球阵（GGX 单灯解析 BRDF）、昼夜环绕太阳、
     /// split-sum 天空 IBL（预滤波环境立方图随相位重烘）映照金属带、shadow map 深度阴影接收。
+    /// 天空太阳圆盘、GGX 主光、阴影投射共用同一 SunDirectionToward——看到的光斑即灯光即阴影源。
+    /// 相位弧线限定白昼区间（0.38–0.66，仰角 47°→90°→32°），保证阴影始终可辨。
     /// </summary>
     public sealed class LightingScene : IEngineScene
     {
         private const int RoughnessSteps = 7;
         private const int MetallicLanes = 3;
+        private const float DayPhaseBase = 0.38f;
+        private const float DayPhaseSpan = 0.28f;
 
-        private readonly GalleryLitProps _litProps = new(dayPhase01: 0.35f);
+        private readonly GalleryLitProps _litProps = new(dayPhase01: DayPhaseBase);
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _podium;
         private Mesh _shadowMesh;
@@ -37,11 +42,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             GalleryCamera.EnforceDistance(ref camera, 26f);
             camera.target.Y = 1.6f;
 
-            float dayPhase = 0.45f + (float)(totalTimeSeconds * 0.015 % 0.5);
+            float dayPhase = DayPhaseBase + (float)(totalTimeSeconds * 0.012 % DayPhaseSpan);
             _litProps.DayPhase01 = dayPhase;
 
             _litProps.Lighting.SetDayPhase(dayPhase);
-            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, new Vector3(0f, 1.2f, 0f), 16f);
+            Vector3 sun = _litProps.Lighting.SunDirectionToward;
+            _shadowMap.BeginFrame(sun, new Vector3(0f, 1.2f, 0f), 16f);
             for (int m = 0; m < MetallicLanes; m++)
             {
                 for (int r = 0; r < RoughnessSteps; r++)
@@ -58,8 +64,27 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _shadowMap.EndFrame();
             _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.05f);
 
+            var skyConfig = RaylibRenderEnvironmentConfig.CreateDefault() with
+            {
+                Skybox = new RaylibSkyboxConfig(
+                    Enabled: true,
+                    SizeMeters: 1200f,
+                    ZenithColor: new Vector3(0.10f, 0.30f, 0.62f),
+                    HorizonColor: new Vector3(0.84f, 0.72f, 0.58f),
+                    GroundHazeColor: new Vector3(0.46f, 0.42f, 0.38f),
+                    ClearColor: new Color(120, 150, 180, 255),
+                    DeepClearColor: new Color(6, 10, 16, 255)),
+                Lighting = RaylibLightingConfig.CreateDefault() with
+                {
+                    SunDirection = sun,
+                    SunColor = new Vector3(1f, 0.93f, 0.78f),
+                },
+            };
+
             Rl.ClearBackground(new Color(12, 14, 20, 255));
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, (float)totalTimeSeconds, skyConfig);
+
             Rl.DrawGrid(40, 3f);
 
             _litProps.DrawMesh(
@@ -68,7 +93,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 new Vector4(0.62f, 0.63f, 0.68f, 1f),
                 roughness: 0.9f);
 
-            Vector3 sun = _litProps.Lighting.SunDirectionToward;
             for (int m = 0; m < MetallicLanes; m++)
             {
                 float metallic = m / (float)(MetallicLanes - 1);
@@ -83,14 +107,15 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                         ? new Vector4(0.92f, 0.74f, 0.38f, 1f)
                         : new Vector4(0.62f, 0.66f, 0.72f, 1f);
                     _litProps.DrawSphere(center, 1.25f, tint, roughness, metallic);
-
                 }
             }
 
             Rl.EndMode3D();
 
-            float elevation = sun.Y;
-            GalleryFont.Draw($"day phase {dayPhase:0.00}  sun Y {elevation:0.00}  rows roughness→  lanes metal↑", 12, 28, 20, GalleryColors.RayWhite);
+            float elevationDeg = MathF.Asin(Math.Clamp(sun.Y, -1f, 1f)) * (180f / MathF.PI);
+            GalleryFont.Draw(
+                $"day phase {dayPhase:0.00}  sun elev {elevationDeg:0}°  阴影随太阳弧线扫过基座  rows roughness→  lanes metal↑",
+                12, 28, 20, GalleryColors.RayWhite);
         }
 
         public void Dispose()
@@ -103,6 +128,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             Rl.UnloadMesh(_podium);
             _shadowMap?.Dispose();
             Rl.UnloadMesh(_shadowMesh);
+            _skybox.Dispose();
             _litProps.Dispose();
             _disposed = true;
         }
