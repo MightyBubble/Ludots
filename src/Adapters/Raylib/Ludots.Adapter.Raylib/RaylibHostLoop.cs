@@ -436,16 +436,6 @@ namespace Ludots.Adapter.Raylib
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
-                        if (Rl.IsKeyPressed(KeyboardKey.KEY_N) &&
-                            engine.TryGetService(
-                                CoreServiceKeys.NavMeshPresentationState,
-                                out Ludots.Core.Presentation.Navigation.NavMeshPresentationState? navMeshToggleState) &&
-                            navMeshToggleState != null)
-                        {
-                            bool navMeshOverlayEnabled = !navMeshToggleState.Enabled;
-                            navMeshToggleState.SetEnabled(navMeshOverlayEnabled);
-                            renderDebug.DrawNavMesh = navMeshOverlayEnabled;
-                        }
 
                         bool drawNavMeshOverlay = renderDebug.DrawNavMesh &&
                             navMeshPresentationBuffer.TileCount > 0 &&
