@@ -24,11 +24,11 @@
   "TriggerTypes": [],
   "DefaultCamera": {
     "VirtualCameraId": "NavDebug.OpenWorld",
-    "TargetXCm": 51200,
-    "TargetYCm": 51200,
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
     "Yaw": 180,
     "Pitch": 50,
-    "DistanceCm": 65000,
+    "DistanceCm": 40000,
     "FovYDeg": 60
   }
 }

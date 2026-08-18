@@ -8,9 +8,9 @@
   "Stage": 9,
   "ErrorCode": 0,
   "Message": "",
-  "WalkableTriangleCount": 9624,
-  "VertexCount": 435,
-  "TriangleCount": 417,
-  "PortalCount": 3,
+  "WalkableTriangleCount": 8524,
+  "VertexCount": 48,
+  "TriangleCount": 42,
+  "PortalCount": 4,
   "DebugLog": null
 }
