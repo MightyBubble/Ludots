@@ -17,10 +17,18 @@ namespace Ludots.App.RaylibEngineGallery
             string? screenshotPath = ParseOption(args, "--screenshot");
             string? jsonPath = ParseOption(args, "--json");
             int frames = ParseFrames(args);
+            string? menuAuto = ParseOption(args, "--menu-auto");
+            string? interactiveShot = ParseOption(args, "--interactive-shot");
 
             if (sceneId == null && screenshotPath != null)
             {
                 Console.Error.WriteLine("--screenshot requires --scene <id>.");
+                return 2;
+            }
+
+            if (menuAuto != null && !SceneCatalog.TryCreate(menuAuto, out _))
+            {
+                Console.Error.WriteLine($"Unknown --menu-auto scene '{menuAuto}'.");
                 return 2;
             }
 
@@ -35,7 +43,7 @@ namespace Ludots.App.RaylibEngineGallery
                 return 2;
             }
 
-            return RunMenu();
+            return RunMenu(menuAuto, interactiveShot);
         }
 
         private static int RunScene(IEngineScene scene, string? screenshotPath, string? jsonPath, int frames)
@@ -117,7 +125,7 @@ namespace Ludots.App.RaylibEngineGallery
             return exitCode;
         }
 
-        private static int RunMenu()
+        private static int RunMenu(string? menuAuto, string? interactiveShot)
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
@@ -126,9 +134,17 @@ namespace Ludots.App.RaylibEngineGallery
             var scenes = SceneCatalog.Descriptors;
             int selected = 0;
             int hotkey = 0;
+            int menuFrames = 0;
 
             while (!Rl.WindowShouldClose())
             {
+                if (menuAuto != null && menuFrames++ >= 30)
+                {
+                    var autoScene = SceneCatalog.Create(menuAuto);
+                    Rl.CloseWindow();
+                    return RunSceneInteractive(autoScene, interactiveShot);
+                }
+
                 for (int i = 0; i < Math.Min(scenes.Count, 36); i++)
                 {
                     KeyboardKey key = HotkeyFor(i);
@@ -142,7 +158,7 @@ namespace Ludots.App.RaylibEngineGallery
                 {
                     var scene = SceneCatalog.Create(scenes[selected].Id);
                     Rl.CloseWindow();
-                    return RunSceneInteractive(scene);
+                    return RunSceneInteractive(scene, null);
                 }
 
                 Rl.BeginDrawing();
@@ -156,7 +172,7 @@ namespace Ludots.App.RaylibEngineGallery
             return 0;
         }
 
-        private static int RunSceneInteractive(IEngineScene scene)
+        private static int RunSceneInteractive(IEngineScene scene, string? interactiveShot)
         {
             GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Title}");
@@ -166,6 +182,7 @@ namespace Ludots.App.RaylibEngineGallery
 
             Camera3D cam = camera.Camera;
             double total = 0.0;
+            int frameIndex = 0;
             while (!Rl.WindowShouldClose())
             {
                 float dt = Rl.GetFrameTime();
@@ -177,21 +194,43 @@ namespace Ludots.App.RaylibEngineGallery
                 Rl.ClearBackground(GalleryColors.Black);
                 scene.Draw(dt, total, ref cam);
 
-                int y = 8;
                 GalleryFont.Draw($"[ESC] menu   [R] reset camera", 8, WindowHeight - 26, 18, GalleryColors.RayWhite);
                 GalleryFont.Draw($"{scene.Title} — {scene.Summary}", 8, WindowHeight - 48, 18, new Color(220, 220, 230, 255));
                 GalleryFont.Flush();
+
+                if (interactiveShot != null && frameIndex == 120)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(interactiveShot))!);
+                    Rl.rlDrawRenderBatchActive();
+                    Rl.TakeScreenshot(Path.GetFileName(interactiveShot));
+                    string full = Path.GetFullPath(interactiveShot);
+                    string working = Path.Combine(Environment.CurrentDirectory, Path.GetFileName(interactiveShot));
+                    if (!string.Equals(working, full, StringComparison.OrdinalIgnoreCase) && File.Exists(working))
+                    {
+                        File.Copy(working, full, overwrite: true);
+                        File.Delete(working);
+                    }
+
+                    Rl.EndDrawing();
+                    break;
+                }
+
                 Rl.EndDrawing();
+                frameIndex++;
             }
 
             scene.Dispose();
             Rl.CloseWindow();
 
-            GalleryFont.Reset();
-            Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
-            Rl.SetTargetFPS(60);
-            int back = RunMenu();
-            return back;
+            if (interactiveShot == null)
+            {
+                GalleryFont.Reset();
+                Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
+                Rl.SetTargetFPS(60);
+                return RunMenu(null, null);
+            }
+
+            return 0;
         }
 
         private static void DrawMenu(List<SceneDescriptor> scenes, int selected)
