@@ -2253,6 +2253,60 @@ namespace Ludots.Tests.Architecture.Governance
             string AcceptanceTestName,
             bool PurePhysics);
 
+        [Test]
+        public void PanelActivationWriteToken_SingleHolder()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] allowed =
+            {
+                Path.Combine(repoRoot, "src", "Core", "UI", "PanelActivation", "UiPanelActivationStore.cs"),
+                Path.Combine(repoRoot, "src", "Core", "UI", "PanelActivation", "PanelOrchestrationRuntime.cs"),
+                Path.Combine(repoRoot, "src", "Tests", "GasTests", "UI", "PanelOrchestrationTests.cs"),
+                Path.Combine(repoRoot, "src", "Tests", "ArchitectureTests", "Governance", "ArchitectureGuardTests.cs"),
+            };
+            var offenders = new List<string>();
+            foreach (string file in EnumeratePanelActivationScanFiles(repoRoot))
+            {
+                if (allowed.Contains(file, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (File.ReadAllText(file).Contains("PanelActivationWriteToken", StringComparison.Ordinal))
+                {
+                    offenders.Add(file);
+                }
+            }
+
+            Assert.That(
+                offenders,
+                Is.Empty,
+                "PanelActivationWriteToken may only be held by the orchestration runtime (constitution contract five); panels, surfaces, and mods must not touch activation writes.");
+        }
+
+        private static IEnumerable<string> EnumeratePanelActivationScanFiles(string repoRoot)
+        {
+            foreach (string root in new[] { Path.Combine(repoRoot, "src"), Path.Combine(repoRoot, "mods") })
+            {
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    string normalized = file.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                    if (normalized.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") ||
+                        normalized.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+                    {
+                        continue;
+                    }
+
+                    yield return file;
+                }
+            }
+        }
+
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
