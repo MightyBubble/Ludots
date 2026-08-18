@@ -6951,6 +6951,60 @@
       "video": "artifacts/evidence/capability_standard_graph_op_ShowPanel/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_CreatePanel",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCreatePanelEntryMod",
+      "projectPath": "CapabilityStandardGraphOpCreatePanelEntryMod.csproj",
+      "title": "面板落地",
+      "summary": "关卡蓝图一句话，属性卡从模板里长了出来。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "CreatePanel"
+      ],
+      "binding": "capability_standard_graph_op_CreatePanel",
+      "preset": "capability_standard_graph_op_CreatePanel_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/CreatePanel.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_CreatePanel",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_CreatePanel/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_CreatePanel/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_DestroyPanel",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
+      "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj",
+      "title": "面板退场",
+      "summary": "节点一句话，面板实例连同它的绑定一起收走。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "DestroyPanel"
+      ],
+      "binding": "capability_standard_graph_op_DestroyPanel",
+      "preset": "capability_standard_graph_op_DestroyPanel_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/DestroyPanel.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_DestroyPanel",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_DestroyPanel/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_DestroyPanel/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

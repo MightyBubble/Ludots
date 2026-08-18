@@ -134,6 +134,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IEntityCommandPanelToolbarProvider> EntityCommandPanelToolbarProvider = new("EntityCommandPanelToolbarProvider");
         public static readonly ServiceKey<object> UiTextMeasurer = new("UiTextMeasurer");
         public static readonly ServiceKey<object> UiImageSizeProvider = new("UiImageSizeProvider");
+        public static readonly ServiceKey<Ludots.Core.UI.PanelHosting.PanelHost> PanelHost = new("PanelHost");
 
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");

@@ -80,6 +80,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
+
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
+        void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");

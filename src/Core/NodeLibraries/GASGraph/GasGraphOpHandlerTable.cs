@@ -286,7 +286,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.TableReadInt or
                 GraphNodeOp.TableReadFloat or
                 GraphNodeOp.ShowPanel or
-                GraphNodeOp.HidePanel
+                GraphNodeOp.HidePanel or
+                GraphNodeOp.CreatePanel or
+                GraphNodeOp.DestroyPanel
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -781,6 +783,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
             Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
             Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
+            Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
+            Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
         }
 
@@ -968,6 +972,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleHidePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.Api.HidePanel(ins.Imm);
+        }
+
+        private static void HandleCreatePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.CreatePanel(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAnchor(ins.Imm),
+                scope);
+        }
+
+        private static void HandleDestroyPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
+            s.Api.DestroyPanel(ins.Imm, scope);
         }
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
