@@ -15,8 +15,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private const int MetallicLanes = 3;
 
         private readonly GalleryLitProps _litProps = new(dayPhase01: 0.35f);
-        private RaylibPlanarShadows _shadows = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _podium;
+        private Mesh _shadowMesh;
         private bool _disposed;
 
         public string Id => "lighting";
@@ -26,7 +27,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Load()
         {
             _litProps.Load();
-            _shadows = new RaylibPlanarShadows(alpha: 96) { GroundY = 0.26f };
+            _shadowMap = new RaylibDirectionalShadowMap();
+            _shadowMesh = Rl.GenMeshSphere(0.5f, 24, 16);
             _podium = Rl.GenMeshCube(RoughnessSteps * 3.4f, 0.24f, MetallicLanes * 3.4f);
         }
 
@@ -37,7 +39,24 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             float dayPhase = (float)(totalTimeSeconds * 0.02 % 1.0);
             _litProps.DayPhase01 = dayPhase;
-            _litProps.BeginFrame(camera.position);
+
+            _litProps.Lighting.SetDayPhase(dayPhase);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, new Vector3(0f, 1.2f, 0f), 16f);
+            for (int m = 0; m < MetallicLanes; m++)
+            {
+                for (int r = 0; r < RoughnessSteps; r++)
+                {
+                    Vector3 center = new(
+                        -((RoughnessSteps - 1) * 1.7f) + (r * 3.4f),
+                        0.85f,
+                        -((MetallicLanes - 1) * 1.7f) + (m * 3.4f));
+                    Matrix4x4 rowMajor = Matrix4x4.CreateScale(2.5f) * Matrix4x4.CreateTranslation(center);
+                    _shadowMap.DrawMeshShadow(_shadowMesh, RaylibMatrix.FromSystemNumerics(rowMajor));
+                }
+            }
+
+            _shadowMap.EndFrame();
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.05f);
 
             Rl.ClearBackground(new Color(12, 14, 20, 255));
             Rl.BeginMode3D(camera);
@@ -65,10 +84,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                         : new Vector4(0.62f, 0.66f, 0.72f, 1f);
                     _litProps.DrawSphere(center, 1.25f, tint, roughness, metallic);
 
-                    if ((r % 2) == 0 && (m % 2) == 0)
-                    {
-                        _shadows.DrawSphereShadow(center, 1.25f, sun);
-                    }
                 }
             }
 
@@ -86,7 +101,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             Rl.UnloadMesh(_podium);
-            _shadows?.Dispose();
+            _shadowMap?.Dispose();
+            Rl.UnloadMesh(_shadowMesh);
             _litProps.Dispose();
             _disposed = true;
         }

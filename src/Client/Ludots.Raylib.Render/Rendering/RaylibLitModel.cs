@@ -13,6 +13,8 @@ namespace Ludots.Raylib.Render
     /// </summary>
     public sealed unsafe class RaylibLitModel : IDisposable
     {
+        private static readonly int ShadowSamplerSlot = (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL;
+
         private readonly Shader _shader;
         private Material _material;
         private readonly RaylibFrameLightingLocations _lightingLocations;
@@ -21,6 +23,10 @@ namespace Ludots.Raylib.Render
         private readonly int _locMetallic;
         private readonly int _locSkyZenith;
         private readonly int _locSkyGround;
+        private readonly int _locShadowMap;
+        private readonly int _locLightSpaceMatrix;
+        private readonly int _locShadowEnabled;
+        private readonly int _locShadowTexelWorld;
         private RaylibFrameLighting? _lighting;
         private bool _disposed;
 
@@ -41,6 +47,11 @@ namespace Ludots.Raylib.Render
             _locMetallic = RequireLocation("uMetallic");
             _locSkyZenith = RequireLocation("uSkyZenith");
             _locSkyGround = RequireLocation("uSkyGround");
+            _locShadowMap = RequireLocation("uShadowMap");
+            _locLightSpaceMatrix = RequireLocation("uLightSpaceMatrix");
+            _locShadowEnabled = RequireLocation("uShadowEnabled");
+            _locShadowTexelWorld = RequireLocation("uShadowTexelWorld");
+            _shader.locs[ShadowSamplerSlot] = _locShadowMap;
 
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
@@ -49,7 +60,7 @@ namespace Ludots.Raylib.Render
         public Shader Shader => _shader;
 
         /// <summary>帧级状态：光照总线 + 相机视点 + 阴影源（null 关闭阴影接收）。</summary>
-        public void BeginFrame(RaylibFrameLighting lighting, Vector3 viewPos)
+        public void BeginFrame(RaylibFrameLighting lighting, Vector3 viewPos, RaylibDirectionalShadowMap? shadow = null, float shadowTexelWorld = 0.04f)
         {
             ThrowIfDisposed();
             _lighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
@@ -61,6 +72,21 @@ namespace Ludots.Raylib.Render
             Vector3 ground = lighting.SkyGroundColor;
             Rl.SetShaderValue(_shader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+
+            float shadowEnabled = shadow != null ? 1f : 0f;
+            Rl.SetShaderValue(_shader, _locShadowEnabled, &shadowEnabled, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locShadowTexelWorld, &shadowTexelWorld, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            if (shadow != null)
+            {
+                Rl.SetMaterialTexture(ref _material, ShadowSamplerSlot, shadow.DepthTexture);
+                Rl.SetShaderValueMatrix(_shader, _locLightSpaceMatrix, shadow.LightViewProjection);
+            }
+        }
+
+        /// <summary>挂到模型材质接收阴影（DrawModelEx 路径每帧调用）。</summary>
+        public void BindShadowToMaterial(ref Material material, RaylibDirectionalShadowMap shadow)
+        {
+            Rl.SetMaterialTexture(ref material, ShadowSamplerSlot, shadow.DepthTexture);
         }
 
         public void DrawMesh(Mesh mesh, RaylibMatrix transform, Vector4 tint, float roughness = 0.85f, float metallic = 0f)

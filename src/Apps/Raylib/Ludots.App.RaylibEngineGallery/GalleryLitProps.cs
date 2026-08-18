@@ -42,11 +42,11 @@ namespace Ludots.App.RaylibEngineGallery
             _loaded = true;
         }
 
-        public void BeginFrame(Vector3 viewPos)
+        public void BeginFrame(Vector3 viewPos, Ludots.Raylib.Render.RaylibDirectionalShadowMap? shadow = null, float shadowTexelWorld = 0.04f)
         {
             EnsureLoaded();
             _lighting.SetDayPhase(DayPhase01);
-            _lit.BeginFrame(_lighting, viewPos);
+            _lit.BeginFrame(_lighting, viewPos, shadow, shadowTexelWorld);
         }
 
         public void DrawMesh(Mesh mesh, RaylibMatrix transform, Vector4 tint, float roughness = 0.8f, float metallic = 0f)
