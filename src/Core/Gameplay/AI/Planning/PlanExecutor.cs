@@ -29,6 +29,12 @@ namespace Ludots.Core.Gameplay.AI.Planning
                     $"AI plan attempted to submit unregistered order type id {spec.OrderTypeId}.");
             }
 
+            if (spec.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"AI plan attempted to submit order type id {spec.OrderTypeId} without a positive player id.");
+            }
+
             var order = new Order
             {
                 OrderTypeId = spec.OrderTypeId,
@@ -71,5 +77,4 @@ namespace Ludots.Core.Gameplay.AI.Planning
         }
     }
 }
-
 

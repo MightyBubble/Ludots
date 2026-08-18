@@ -272,7 +272,7 @@ public sealed class EntityInfoPanelServiceTests
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
-        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
         var service = new EntityInfoPanelService();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
@@ -339,7 +339,7 @@ public sealed class EntityInfoPanelServiceTests
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
-        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
         var service = new EntityInfoPanelService();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(

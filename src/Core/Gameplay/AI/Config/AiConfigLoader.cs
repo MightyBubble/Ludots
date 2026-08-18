@@ -772,7 +772,20 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.SubmitMode", $"Unsupported submit mode value {submitMode}.");
                 }
 
-                int playerId = TryReadInt(obj, "PlayerId", out int authoredPlayerId) ? authoredPlayerId : 0;
+                int playerId = 0;
+                if (parsedKind == UtilityAiTaskKind.SubmitOrder)
+                {
+                    if (!TryReadInt(obj, "PlayerId", out playerId))
+                    {
+                        throw Fail($"{path}.PlayerId", "SubmitOrder task must declare PlayerId.");
+                    }
+
+                    if (playerId <= 0)
+                    {
+                        throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
+                    }
+                }
+
                 int intArg0 = TryReadInt(obj, "IntArg0", out int authoredIntArg0) ? authoredIntArg0 : -1;
                 int intArg1 = TryReadInt(obj, "IntArg1", out int authoredIntArg1) ? authoredIntArg1 : 0;
                 ids.Add(id, tasks.Count);
@@ -1379,7 +1392,16 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail($"{path}.SubmitMode", $"Unsupported submit mode value {submitModeByte}.");
             }
 
-            int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
+            if (!TryReadInt(orderObj, "PlayerId", out int playerId))
+            {
+                throw Fail($"{path}.PlayerId", "Order must declare PlayerId.");
+            }
+
+            if (playerId <= 0)
+            {
+                throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
+            }
+
             int abilityId = ResolveAbilityId(orderObj, path);
             return new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId, abilityId);
         }

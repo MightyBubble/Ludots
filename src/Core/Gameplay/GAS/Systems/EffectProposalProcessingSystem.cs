@@ -631,7 +631,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
                         }
 
-                        int playerId = 0;
                         var src = _window[0].Source;
                         OrderRequest orderRequest = default;
                         if (_orderRequests != null)
@@ -642,9 +641,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
                             }
 
-                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
+                            if (!World.IsAlive(src) || !World.Has<PlayerOwner>(src))
                             {
-                                playerId = World.Get<PlayerOwner>(src).PlayerId;
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a live source with PlayerOwner: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                            }
+
+                            int playerId = World.Get<PlayerOwner>(src).PlayerId;
+                            if (playerId <= 0)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Response-chain order request requires a positive PlayerOwner.PlayerId: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, playerId={playerId}.");
                             }
 
                             orderRequest = new OrderRequest

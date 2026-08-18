@@ -902,7 +902,7 @@ namespace Ludots.Tests.Presentation
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
             int parentDefId = definitions.Register("behavior.attachment.hud.parent", new PresenterDefinition
             {
