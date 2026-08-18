@@ -45,6 +45,28 @@ namespace Ludots.Core.Navigation.NavMesh
             }
         }
 
+        public int CopyLoadedTiles(NavTile[] scratch)
+        {
+            if (scratch == null) throw new ArgumentNullException(nameof(scratch));
+
+            lock (_gate)
+            {
+                if (_loaded.Count > scratch.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"CopyLoadedTiles scratch capacity ({scratch.Length}) is below the resident tile count ({_loaded.Count}).");
+                }
+
+                int index = 0;
+                foreach (KeyValuePair<NavTileId, NavTile> pair in _loaded)
+                {
+                    scratch[index++] = pair.Value;
+                }
+
+                return index;
+            }
+        }
+
         public bool TryRunStableRead<T>(Func<T> read, out T result, int maxAttempts = 2)
         {
             if (read == null) throw new ArgumentNullException(nameof(read));

@@ -1072,6 +1072,9 @@ namespace Ludots.Core.Engine
                 presentationConfig.GlobalFieldVisualDirtyRectCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
+            var navMeshPresentationState = new Ludots.Core.Presentation.Navigation.NavMeshPresentationState();
+            var navMeshPresentationBuffer = new Ludots.Core.Presentation.Navigation.NavMeshPresentationBuffer(
+                presentationConfig.NavMeshTileCapacity);
             var splineRibbonBuffer = new SplineRibbonBuffer(presentationConfig.SplineRibbonCapacity);
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
@@ -1638,6 +1641,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
             SetService(CoreServiceKeys.PresentationRequestBuffer, presentationRequestBuffer);
             SetService(CoreServiceKeys.GlobalFieldVisualBuffer, globalFieldVisualBuffer);
+            SetService(CoreServiceKeys.NavMeshPresentationState, navMeshPresentationState);
+            SetService(CoreServiceKeys.NavMeshPresentationBuffer, navMeshPresentationBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
@@ -1887,6 +1892,10 @@ namespace Ludots.Core.Engine
 
             RegisterPresentationSystem(new ProjectilePresentationBootstrapSystem(World, presentationStableIds));
             RegisterPresentationSystem(new PresentationStableIdBootstrapSystem(World, presentationStableIds));
+            RegisterPresentationSystem(new Ludots.Core.Presentation.Navigation.NavMeshPresentationSystem(
+                this,
+                navMeshPresentationState,
+                navMeshPresentationBuffer));
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
