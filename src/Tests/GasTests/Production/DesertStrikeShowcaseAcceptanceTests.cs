@@ -149,6 +149,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(hudRuntime.ActivationStore.IsVisible(DesertStrikeHudPanelRuntime.PanelType), Is.True, "HUD panel should be shown on map load");
 
             Tick(engine, 10);
+            Assert.That(state.ShopPanelVisible, Is.True, "shop command deck should be mounted on desert_strike maps");
 
             var outputs = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
             Entity seatRep = Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine);

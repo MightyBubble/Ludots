@@ -24,7 +24,7 @@
 | 运行时生成 | `RuntimeEntitySpawnQueue`（Kind=Template + WorldPositionCm + TeamIdOverride + PlayerOwnerIdOverride + receipt 通道），由 `RuntimeEntitySpawnSystem`（EffectProcessing）执行 |
 | 属性变更 | `AttributeMutationOps.SetCurrent`（扣费/收入/改血） |
 | 标签 | `TagOps.HasTag(TagSense.Effective)` / `RemoveTag`；技能 loader 自动注册引用的 tag（无需 tag_rules.json） |
-| UI | `ScreenOverlayBuffer`（HUD 面板）；`EntityCommandPanelMod` + RtsDemoMod 的指令面板（基地技能槽 = 购买按钮） |
+| UI | 信息 HUD：`PanelTemplate`（schema v1）+ `PanelActivationApi`/`UiPanelActivationStore` + `PanelProjectionReader` + `UiSurfaceHost` ReactivePage 表面（正典面板线，SSOT `gitbook/architecture/ui-panel-template-instance-router.md`）；商店：`IEntityCommandPanelService` 单张 CommandDeck（`gas.ability-slots`，地图 tag `suppress_rts_demo_panels` 关闭 RtsDemo 演示面板） |
 | 表现 | RtsDemoMod `rts_actor_ring` presenter（EntitySpawned key="*" 全实体通用）——零 presenter 工作 |
 | 验收 | `RtsTrainingShowcaseAcceptanceTests` 骨架（NUnit + `RepoModPaths.ResolveExplicit` + `InitializeWithConfigPipeline` + `LoadMap` + `Tick/TickUntil`） |
 
@@ -35,7 +35,7 @@
 | `DesertStrikeUnit` / `DesertStrikeBase` | 空标记组件（经 `ComponentRegistry.Register` 模板注入），界定自动交战/死亡/胜负范围 |
 | 8 个 GAS 能力 | 4 个攻击能力（按单位类型不同 GCD/伤害效果）+ 4 个购买能力（TagSignal） |
 | 8 个 GAS 效果 | 4 个伤害效果（InstantDamage）+ 4 个购买 tag 无需效果（TagSignal 直接写在能力 exec）——实为 4 个 |
-| 7 个 Mod 系统 | Wave（波次）/ AutoBattle（索敌+推进）/ Purchase（购买扣费入队）/ Income（收入）/ Death（死亡与胜负）/ AiPlayer（AI 购买）/ Hud |
+| 9 个 Mod 系统 | Wave（波次）/ AutoBattle（索敌+推进）/ Purchase（购买扣费入队）/ Income（收入）/ Death（死亡与胜负）/ AiPlayer（AI 购买）/ Hud（面板表面适配）/ ShopPanel（商店指令面板）——另有 `DesertStrikeHudPanelRuntime` 面板运行时 |
 | `DesertStrikeConfig` | `assets/Configs/desert_strike_config.json`（波次/收入/单位价格/AI 权重），VFS 直读（MobaConfig 同款） |
 | 验收测试 | `src/Tests/GasTests/Production/DesertStrikeShowcaseAcceptanceTests.cs` |
 

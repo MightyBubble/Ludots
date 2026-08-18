@@ -202,6 +202,11 @@ namespace RtsDemoMod.Runtime
 
             for (int i = 0; i < tags.Count; i++)
             {
+                if (string.Equals(tags[i], "suppress_rts_demo_panels", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
                 if (string.Equals(tags[i], "rts", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(tags[i], "rts_showcase", StringComparison.OrdinalIgnoreCase))
                 {

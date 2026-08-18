@@ -29,5 +29,6 @@ namespace DesertStrikeShowcaseMod.Runtime
         public int UnitsSpawned;
         public int UnitsDestroyed;
         public int PurchaseDeniedCount;
+        public bool ShopPanelVisible;
     }
 }

@@ -1,6 +1,6 @@
 {
   "Id": "desert_strike",
-  "Tags": ["rts_showcase", "desert_strike"],
+  "Tags": ["rts_showcase", "desert_strike", "suppress_rts_demo_panels"],
   "DefaultCamera": {
     "VirtualCameraId": "Rts",
     "TargetXCm": 0,

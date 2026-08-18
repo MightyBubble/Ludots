@@ -64,6 +64,7 @@ namespace DesertStrikeShowcaseMod.Triggers
             engine.RegisterSystem(new DesertStrikeDeathSystem(engine, state), SystemGroup.PostMovement);
             engine.RegisterSystem(new DesertStrikeAiPlayerSystem(engine, state, config), SystemGroup.PostMovement);
             engine.RegisterPresentationSystem(new DesertStrikeHudSystem(engine, hudPanelRuntime));
+            engine.RegisterPresentationSystem(new DesertStrikeShopPanelSystem(engine, state));
             _ctx.Log("[DesertStrikeShowcaseMod] Desert Strike systems registered");
             return Task.CompletedTask;
         }
