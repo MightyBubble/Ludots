@@ -286,8 +286,17 @@ namespace Ludots.Tests.GAS.Production
                 "无角色能力的实体右键仍应 moveTo 兜底。");
         }
 
+        private static void SetGroundCommandTargetFacts(InputOrderMappingSystem system)
+        {
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping mapping, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+                return true;
+            });
+        }
+
         [Test]
-        public void CommandRightClick_RoutesToSetSpawnTargetOrder()
+        public void EngineLoadedIntentProfile_RoutesLeaveActorsToSpawnTarget()
         {
             var frameTimesMs = new List<double>();
             using var engine = CreateEngine();
@@ -296,143 +305,22 @@ namespace Ludots.Tests.GAS.Production
             World world = engine.World;
             Entity peasant = FindEntity(world, "平民 A");
 
-            // 用引擎的服务构造一个带注入输入的 mapping，模拟 Command（右键）触发。
-            var input = new FrozenInputActionReader();
-            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry)
+                as CommandIntentProfileRegistry
+                ?? throw new InvalidOperationException("CommandIntentProfileRegistry missing.");
+            int profileId = intents.ProfileIdRegistry.GetId("intent.command.default");
+            Assert.That(profileId, Is.GreaterThan(0), "intent.command.default 应已注册。");
 
-            var mappings = new List<InputOrderMapping>();
+            var groundFacts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            bool routed = intents.TryRoute(profileId, peasant, peasant, in groundFacts, out CommandIntentRoute route);
+            Assert.That(routed, Is.True, "平民（有 Leave 能力）右键地板应命中规则。");
             var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry) as OrderTypeRegistry
                 ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
-            var setSpawnId = orderTypes.GetId("setCityRallySpawnTarget");
-            var moveToId = orderTypes.GetId("moveTo");
-
-            var config = new InputOrderMappingConfig
-            {
-                InteractionMode = Ludots.Core.Input.Orders.InteractionModeType.AimCast,
-                Mappings = new List<InputOrderMapping>
-                {
-                    new()
-                    {
-                        ActionId = "Command",
-                        ActorCollectionKey = "collection.command.source",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "setCityRallySpawnTarget",
-                        ArgsTemplate = new OrderArgsTemplate(),
-                        RequireTarget = true,
-                        TargetType = OrderTargetType.Position,
-                        IsSkillMapping = false,
-                        ActorOrderRouting = new ActorOrderRoutingSettings
-                        {
-                            Candidates = new List<ActorOrderRoutingCandidate>
-                            {
-                                new()
-                                {
-                                    OrderTypeKey = "setCityRallySpawnTarget",
-                                    Priority = 10,
-                                    Match = new ActorOrderRoutingMatch
-                                    {
-                                        AbilitySlotIndex = 1,
-                                        AbilityIdKeySuffix = ".Leave"
-                                    }
-                                },
-                                new()
-                                {
-                                    OrderTypeKey = "moveTo",
-                                    Priority = 0,
-                                    Match = new ActorOrderRoutingMatch()
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            var system = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity: 64);
-            system.CommandActionId = "Command";
-            system.SetSolePossessedActor(peasant, 1);
-            system.SetOrderTypeKeyResolver(key => orderTypes.GetId(key));
-            system.SetGroundPositionProvider((out Vector3 groundPos) =>
-            {
-                groundPos = new Vector3(4000f, 0f, 3000f);
-                return true;
-            });
-            system.SetActorProvider((out Entity actor) =>
-            {
-                actor = peasant;
-                return true;
-            });
-            var orders = new List<Order>();
-            system.SetOrderSubmitHandler((in Order order) =>
-            {
-                orders.Add(order);
-                return OrderSubmitResult.Queued;
-            });
-            int nextOrderId = 1;
-            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
-            system.SetCollectionPrimaryEntityProvider((string key, out Entity entity) =>
-            {
-                entity = peasant;
-                return true;
-            });
-            system.SetCollectionEntityListProvider((string key, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
-            {
-                list.Add(peasant);
-                rejection = OrderSubmitResult.Activated;
-                return true;
-            });
-            SetGroundCommandTargetFacts(system);
-
-            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack) as InteractionContextStack
-                ?? throw new InvalidOperationException("InteractionContextStack missing.");
-            var schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime) as ControlSchemeRuntime
-                ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
-            var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry) as CommandIntentProfileRegistry
-                ?? throw new InvalidOperationException("CommandIntentProfileRegistry missing.");
-            var dispatch = engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry) as CastDispatchProfileRegistry
-                ?? throw new InvalidOperationException("CastDispatchProfileRegistry missing.");
-            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore) as EntityCollectionStore
-                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-
-            // 真实游戏：collection owner 是 player rep（selectEntity 建在其下），sole actor 是选中的平民。
-            Entity playerRep = Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var descriptor = EntityCollectionDescriptor.Create(
-                EntityCollectionKeys.CommandSource,
-                EntityCollectionSourceKind.Explicit,
-                EntityCollectionRoleKind.CommandSource);
-            collections.Replace(playerRep, in descriptor, new[] { peasant }, playerRep);
-
-            system.SetCommandIntentRouting(
-                world,
-                stack,
-                schemes,
-                intents,
-                dispatch,
-                collections,
-                (out Entity owner) =>
-                {
-                    owner = playerRep;
-                    return true;
-                });
-
-            int activeIntent = schemes.ActiveDefaultCommandIntentId;
-            TestContext.WriteLine($"ActiveDefaultCommandIntentId={activeIntent}");
-            system.Update(0f);
-            TestContext.WriteLine($"Activation={system.LastActivationResult.State} rej={system.LastActivationResult.Rejection}");
-
-            Assert.That(orders.Count, Is.GreaterThan(0),
-                "Command（右键）应提交至少一个 order。");
-            Assert.That(orders[0].OrderTypeId, Is.EqualTo(setSpawnId),
-                $"右键应路由到 setCityRallySpawnTarget（实际 {orders[0].OrderTypeId}，期望 {setSpawnId}）。");
-        }
-
-        private static void SetGroundCommandTargetFacts(InputOrderMappingSystem system)
-        {
-            system.SetCommandIntentTargetFactsProvider((InputOrderMapping mapping, out CommandIntentTargetFacts facts) =>
-            {
-                facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
-                return true;
-            });
+            int setSpawnId = orderTypes.GetId("setCityRallySpawnTarget");
+            Assert.That(route.OrderTypeId, Is.EqualTo(setSpawnId),
+                $"平民右键应路由到 setCityRallySpawnTarget({setSpawnId})，实际 {route.OrderTypeId}。");
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.ByAbilityTag),
+                "路由应携带 Leave 能力标签定位槽位。");
         }
 
         private static bool HasTag(GameEngine engine, Entity entity, string tagName)
