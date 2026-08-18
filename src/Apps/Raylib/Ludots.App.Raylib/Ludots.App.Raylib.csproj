@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />
+    <!-- Build-order only: keeps the agent bridge mod binary fresh for LUDOTS_AGENT_BRIDGE=1 injection -->
+    <ProjectReference Include="..\..\..\..\mods\AgentBridgeMod\AgentBridgeMod.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">

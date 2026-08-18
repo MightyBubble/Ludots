@@ -6,12 +6,17 @@ namespace Ludots.AgentBridge
     {
         public const string EnableEnvVar = "LUDOTS_AGENT_BRIDGE";
         public const string PortEnvVar = "LUDOTS_AGENT_BRIDGE_PORT";
+        public const string LabelEnvVar = "LUDOTS_AGENT_BRIDGE_LABEL";
+        public const string HostEnvVar = "LUDOTS_AGENT_BRIDGE_HOST";
         public const int DefaultPort = 47921;
         public const int MaxPortProbes = 16;
 
         public bool Enabled { get; set; } = true;
         public int RequestedPort { get; set; } = DefaultPort;
         public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+        /// <summary>Human/agent-facing instance name from LUDOTS_AGENT_BRIDGE_LABEL (e.g. "editor", "headless-sim-3").</summary>
+        public string? Label { get; set; }
 
         public static AgentBridgeConfig FromEnvironment()
         {
@@ -36,6 +41,12 @@ namespace Ludots.AgentBridge
                 }
 
                 config.RequestedPort = parsed;
+            }
+
+            string? label = Environment.GetEnvironmentVariable(LabelEnvVar);
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                config.Label = label.Trim();
             }
 
             return config;

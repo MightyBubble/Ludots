@@ -39,6 +39,12 @@ namespace Ludots.AgentBridge
         /// <summary>Artifacts root for tool-produced files (shots/recordings). Set by the host mod.</summary>
         public string ArtifactsRoot { get; set; } = Path.Combine("artifacts", "agent-bridge");
 
+        /// <summary>Instance identity surfaced by ludots.session.info; set by the host mod before server start.</summary>
+        public string HostKind { get; set; } = "unknown";
+        public string? Label { get; set; }
+        public string[] Capabilities { get; set; } = Array.Empty<string>();
+        public int BoundPort { get; set; }
+
         /// <summary>Frame-synchronous drivers (e.g. recording) tick here, right after the pump.</summary>
         public event Action? FrameTick;
 

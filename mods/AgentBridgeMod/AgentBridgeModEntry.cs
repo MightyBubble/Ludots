@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Ludots.AgentBridge;
 using Ludots.AgentBridge.Tools;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace AgentBridgeMod
 {
@@ -37,8 +41,8 @@ namespace AgentBridgeMod
                 string discoveryDir = AgentBridgeConfig.ResolveDiscoveryDirectory(AppContext.BaseDirectory);
                 var runtime = new AgentBridgeRuntime(engine, tools) { ArtifactsRoot = discoveryDir };
                 runtime.FrameTick += recording.Tick;
-
                 tools.Register(new SessionInfoTool(runtime));
+                tools.Register(new InstancesListTool(runtime));
                 tools.Register(new TimeGetTool(time));
                 tools.Register(new TimeControlTool(time));
                 tools.Register(new EntitiesQueryTool());
@@ -58,9 +62,43 @@ namespace AgentBridgeMod
 
                 engine.SetService(ToolRegistryKey, tools);
 
-                var server = new AgentBridgeHttpServer(runtime, config, discoveryDir);
+                var capabilities = new List<string>();
+                string host = Environment.GetEnvironmentVariable(AgentBridgeConfig.HostEnvVar) ?? string.Empty;
+                if (engine.TryGetService(CoreServiceKeys.HostFrameCapture, out IHostFrameCapture? frameCapture))
+                {
+                    capabilities.Add("frameCapture");
+                    if (string.IsNullOrWhiteSpace(host))
+                    {
+                        // e.g. "Ludots.Adapter.Raylib.Services" → "raylib"
+                        string ns = frameCapture.GetType().Namespace ?? string.Empty;
+                        var segments = ns.Split('.');
+                        host = segments.Length >= 3 ? segments[2].ToLowerInvariant() : "unknown";
+                    }
+                }
+
+                if (engine.TryGetService(CoreServiceKeys.SyntheticInput, out _)) capabilities.Add("syntheticInput");
+                if (string.IsNullOrWhiteSpace(host)) host = "unknown";
+
+                runtime.HostKind = host;
+                runtime.Label = config.Label;
+                runtime.Capabilities = capabilities.ToArray();
+
+                string? mapId = engine.CurrentMapSession?.MapId.Value;
+                string[] mods = engine.ModLoader.LoadedModIds.ToArray();
+
+                var server = new AgentBridgeHttpServer(runtime, config, discoveryDir, host, runtime.Capabilities, mods, mapId);
                 server.Start();
+                runtime.BoundPort = server.Port;
                 _server = server;
+
+                // MapId is unknown at GameStart activation; patch the session file on the first frame.
+                bool identityRefreshed = false;
+                runtime.FrameTick += () =>
+                {
+                    if (identityRefreshed) return;
+                    identityRefreshed = true;
+                    server.UpdateMapId(engine.CurrentMapSession?.MapId.Value);
+                };
 
                 context.Log($"[AgentBridgeMod] Agent bridge active: http://127.0.0.1:{server.Port}/ ({tools.Tools.Count} tools)");
                 return new AgentBridgeSystem(runtime);

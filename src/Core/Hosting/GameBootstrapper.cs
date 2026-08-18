@@ -241,6 +241,8 @@ namespace Ludots.Core.Hosting
                 orderedMods.Add(new ResolvedModLoadEntry(mod.Id, resolved));
             }
 
+            LaunchModInjection.Apply(orderedMods, graphPath);
+
             BrowserRuntimeConfig? browserRuntime = ResolveBrowserRuntimeConfig(bootstrapConfig, graphConfig);
             var modLoadPlan = new ResolvedModLoadPlan(
                 orderedMods,

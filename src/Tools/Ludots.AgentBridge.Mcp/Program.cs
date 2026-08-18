@@ -8,12 +8,17 @@ using System.Text.Json.Nodes;
 // forwards to the in-process bridge HTTP endpoint. Zero external dependencies.
 //
 // Bridge address resolution order:
-//   1. argv[0] (e.g. http://127.0.0.1:47921)
+//   1. positional URL argument (e.g. http://127.0.0.1:47921)
 //   2. LUDOTS_AGENT_BRIDGE_URL
-//   3. discovery file from LUDOTS_AGENT_BRIDGE_DISCOVERY (path to session.json)
+//   3. --instance <selector> against the instance registry:
+//        label:<name> | host:<kind> | map:<mapId> | pid:<n> | latest
+//      registry dir from --registry <dir> or LUDOTS_AGENT_BRIDGE_REGISTRY,
+//      else auto-located by walking up from CWD looking for global.json.
+//      Only alive instances (probed via /health) are eligible; ambiguity is
+//      an explicit error listing the candidates.
 //   4. http://127.0.0.1:47921 (AgentBridgeConfig.DefaultPort)
 
-string baseUrl = ResolveBaseUrl(args);
+string baseUrl = await ResolveBaseUrlAsync(args);
 using var http = new HttpClient { BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/") };
 http.Timeout = TimeSpan.FromSeconds(30);
 
@@ -176,29 +181,131 @@ static void Log(string message)
     Console.Error.Flush();
 }
 
-static string ResolveBaseUrl(string[] argv)
+static async Task<string> ResolveBaseUrlAsync(string[] argv)
 {
-    if (argv.Length > 0 && !string.IsNullOrWhiteSpace(argv[0])) return argv[0];
+    string? selector = null;
+    string? registryDir = null;
+    for (int i = 0; i < argv.Length; i++)
+    {
+        if (argv[i] == "--instance" && i + 1 < argv.Length) selector = argv[++i];
+        else if (argv[i] == "--registry" && i + 1 < argv.Length) registryDir = argv[++i];
+        else if (!argv[i].StartsWith("--", StringComparison.Ordinal)) return argv[i];
+    }
 
     string? env = Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_URL");
     if (!string.IsNullOrWhiteSpace(env)) return env;
 
-    string? discovery = Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_DISCOVERY");
-    if (!string.IsNullOrWhiteSpace(discovery) && File.Exists(discovery))
+    registryDir ??= Environment.GetEnvironmentVariable("LUDOTS_AGENT_BRIDGE_REGISTRY") ?? LocateRegistryFromCwd();
+
+    if (registryDir != null && Directory.Exists(registryDir))
     {
-        try
+        var alive = await ProbeAliveAsync(registryDir);
+        if (alive.Count > 0)
         {
-            var session = JsonNode.Parse(File.ReadAllText(discovery)) as JsonObject;
-            if (session?["port"] is JsonValue port && port.TryGetValue(out int p))
+            var selected = ApplySelector(alive, selector);
+            if (selected.Count == 1)
             {
-                return $"http://127.0.0.1:{p}";
+                return $"http://127.0.0.1:{selected[0].Port}";
+            }
+
+            if (selected.Count == 0)
+            {
+                Fail(2, $"no alive bridge instance matches selector '{selector ?? "<any>"}' in {registryDir} ({alive.Count} alive instance(s))");
+            }
+            else
+            {
+                Fail(3, $"selector '{selector ?? "<any>"}' is ambiguous; {selected.Count} alive instances match:\n" +
+                    string.Join("\n", selected.Select(Describe)) +
+                    "\nRe-run with --instance label:<name> | host:<kind> | map:<mapId> | pid:<n>");
             }
         }
-        catch
+
+        if (selector != null)
         {
-            // fall through to default
+            Fail(2, $"no alive bridge instances in {registryDir} (selector '{selector}')");
         }
+    }
+    else if (selector != null)
+    {
+        Fail(2, "no instance registry found; pass --registry <sessions dir> or set LUDOTS_AGENT_BRIDGE_REGISTRY");
     }
 
     return "http://127.0.0.1:47921";
+
+    static void Fail(int exitCode, string message)
+    {
+        Console.Error.WriteLine($"[ludots-mcp] {message}");
+        Environment.Exit(exitCode);
+    }
+
+    static string Describe(InstanceEntry e) =>
+        $"  pid={e.Pid} port={e.Port} host={e.Host} label={e.Label ?? "-"} map={e.MapId ?? "-"} started={e.StartedAtUtc:O}";
 }
+
+static List<InstanceEntry> ApplySelector(List<InstanceEntry> alive, string? selector)
+{
+    if (string.IsNullOrWhiteSpace(selector)) return alive;
+    int split = selector.IndexOf(':');
+    string kind = split < 0 ? selector : selector[..split];
+    string value = split < 0 ? string.Empty : selector[(split + 1)..];
+
+    return kind switch
+    {
+        "latest" => new List<InstanceEntry> { alive[^1] },
+        "pid" when int.TryParse(value, out int pid) => alive.Where(e => e.Pid == pid).ToList(),
+        "label" => alive.Where(e => string.Equals(e.Label, value, StringComparison.Ordinal)).ToList(),
+        "host" => alive.Where(e => string.Equals(e.Host, value, StringComparison.OrdinalIgnoreCase)).ToList(),
+        "map" => alive.Where(e => string.Equals(e.MapId, value, StringComparison.Ordinal)).ToList(),
+        _ => new List<InstanceEntry>(),
+    };
+}
+
+static async Task<List<InstanceEntry>> ProbeAliveAsync(string registryDir)
+{
+    using var probe = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1500) };
+    var tasks = Directory.EnumerateFiles(registryDir, "*.json").Select(async file =>
+    {
+        InstanceEntry? entry = null;
+        try
+        {
+            var o = JsonNode.Parse(await File.ReadAllTextAsync(file)) as JsonObject;
+            if (o == null) return (InstanceEntry?)null;
+            entry = new InstanceEntry(
+                o["pid"]!.GetValue<int>(),
+                o["port"]!.GetValue<int>(),
+                o["host"]?.GetValue<string>() ?? "unknown",
+                o["label"]?.GetValue<string>(),
+                o["mapId"]?.GetValue<string>(),
+                o["startedAtUtc"]?.GetValue<DateTime>() ?? DateTime.MinValue);
+
+            // Liveness = the port answers /health AND reports the same pid.
+            var health = await probe.GetFromJsonAsync<JsonObject>($"http://127.0.0.1:{entry.Port}/health");
+            return health?["pid"]?.GetValue<int>() == entry.Pid ? entry : null;
+        }
+        catch
+        {
+            return (InstanceEntry?)null;
+        }
+    }).ToArray();
+
+    return (await Task.WhenAll(tasks)).Where(e => e != null).Select(e => e!).OrderBy(e => e.StartedAtUtc).ToList();
+}
+
+static string? LocateRegistryFromCwd()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        if (File.Exists(Path.Combine(dir.FullName, "global.json")))
+        {
+            return Path.Combine(dir.FullName, "artifacts", "agent-bridge", "sessions");
+        }
+
+        dir = dir.Parent;
+    }
+
+    return null;
+}
+
+
+sealed record InstanceEntry(int Pid, int Port, string Host, string? Label, string? MapId, DateTime StartedAtUtc);

@@ -20,13 +20,29 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 
 ## 启用
 
-启动配置的 Mod 集合加入 `AgentBridgeMod` 即启用（参考 `src/Apps/Raylib/Ludots.App.Raylib/raylib.agent-demo.launch.graph.json`）。
+两种方式：
+
+1. **一键注入（推荐，不改图）**：设 `LUDOTS_AGENT_BRIDGE=1` 启动任意 Ludots 进程，`GameBootstrapper` 在校验完 authored graph 后自动把 `AgentBridgeMod` 注入 mods 列表（图里已含则跳过）。`LUDOTS_EXTRA_MODS=a,b` 可同法注入任意 mod（解析 `<repoRoot>/mods/<id>`，找不到显式报错）。
+2. **图内声明**：启动配置的 Mod 集合加入 `AgentBridgeMod`（参考 `src/Apps/Raylib/Ludots.App.Raylib/raylib.agent-demo.launch.graph.json`）。
 
 | 配置 | 说明 |
 |------|------|
-| `LUDOTS_AGENT_BRIDGE=0` | 强制关闭（即使 Mod 已加载） |
+| `LUDOTS_AGENT_BRIDGE=1/true/on` | 一键注入 `AgentBridgeMod`（`=0` 强制关闭，即使图里已声明） |
 | `LUDOTS_AGENT_BRIDGE_PORT=<port>` | 覆盖端口（默认 47921，占用时自动 +1 重试最多 16 次） |
-| 发现文件 | `artifacts/agent-bridge/` 目录下的 `session.json`（`{ port, pid, tools }`），进程退出时删除 |
+| `LUDOTS_AGENT_BRIDGE_LABEL=<label>` | 实例标签，写入注册表供选择器路由 |
+| `LUDOTS_AGENT_BRIDGE_HOST=<host>` | 覆盖宿主类型推断（raylib/unity/...） |
+| 实例注册表 | `artifacts/agent-bridge/sessions/<pid>.json`：`{pid, port, host, label, capabilities, mods, mapId, startedAtUtc, processPath}`；启动时清扫死 pid 文件，进程退出时删除自身 |
+
+## 多实例定位
+
+多个 Ludots 实例并存（未来可能 raylib 与 unity 宿主同时跑）时，MCP 适配器用 `--instance <selector>` 选定目标：
+
+```
+--instance label:demo | host:unity | map:<mapId> | pid:<n> | latest
+--registry <dir>     # 注册表目录，缺省：LUDOTS_AGENT_BRIDGE_REGISTRY > 从 CWD 向上找 global.json 定位仓库
+```
+
+选择器命中多个活实例时**显式报歧义**并列出候选；零命中显式报错。活探测 = GET `/health` 比对 pid。游戏内也可直接调 `ludots.instances.list` 看全量实例。
 
 安全边界：仅绑定 `127.0.0.1`，无鉴权——与 `dotnet-dump` 同信任模型，属调试接口。
 
@@ -36,11 +52,11 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 - `GET /tools` → 自描述工具目录（name / description / inputSchema）
 - `POST /rpc` → JSON-RPC 2.0：`{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
 
-## 内置工具（17）
+## 内置工具（18）
 
 | 域 | 工具 | 能力 |
 |----|------|------|
-| 会话 | `ludots.session.info` | tick / 地图 / Mod 清单 / 相机 / 分辨率 |
+| 会话 | `ludots.session.info` · `ludots.instances.list` | tick / 地图 / Mod 清单 / 相机 / 分辨率 / 实例身份块；注册表全实例枚举 + 活探测 |
 | 时间 | `ludots.time.get` · `ludots.time.control` | pause（换绑 TurnBasedPacemaker）/ step N（响应带 `targetTick`）/ resume |
 | 实体 | `ludots.entities.query` | 世界坐标→屏幕投影 rect、**屏幕占比**、可见性；`offset/limit/nameFilter/onScreenOnly` |
 | UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
@@ -63,8 +79,8 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 ## MCP 接入
 
 ```bash
-# stdio 适配器（零依赖）；桥地址解析顺序：argv > LUDOTS_AGENT_BRIDGE_URL > 发现文件 > 默认端口
-dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll http://127.0.0.1:47921
+# stdio 适配器（零依赖）；桥地址解析顺序：argv > LUDOTS_AGENT_BRIDGE_URL > 实例注册表（见上文选择器）> 默认端口
+dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBridge.Mcp.dll --instance label:demo
 ```
 
 在 MCP 客户端配置中把上述命令注册为 stdio server 即可，`tools/list` 与 HTTP 目录一致。
@@ -75,4 +91,4 @@ dotnet exec src/Tools/Ludots.AgentBridge.Mcp/bin/Release/net8.0/Ludots.AgentBrid
 
 ## 已验证的验收闭环
 
-pi coding agent + deepseek-v4-flash（无多模态）仅凭 `GET /tools` 自描述完成：列工具 → 会话快照 → 镜头内实体 → UI 树 → 单实体 GAS → pause/step 3/resume → stop 订单闭环；并自发用 `ui.click` 操作沙盒工具栏把镜头转回实体群。详见 RFC §8。
+pi coding agent + deepseek-v4-flash（无多模态）仅凭 `GET /tools` 自描述完成：列工具 → 会话快照 → 镜头内实体 → UI 树 → 单实体 GAS → pause/step 3/resume → stop 订单闭环；并自发用 `ui.click` 操作沙盒工具栏把镜头转回实体群。详见 RFC §8。18 工具逐一实证见 [Agent 调试桥 UAT](../acceptance/agent-debug-bridge-uat.md)。

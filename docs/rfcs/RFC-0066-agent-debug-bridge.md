@@ -38,7 +38,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
              AgentToolRegistry ──► IAgentTool 实现 (读 World / UiScene / GAS / Input)
                   │
                   ▼
-             发现文件 artifacts/agent-bridge/session.json (port/pid/version/tools)
+             实例注册表 artifacts/agent-bridge/sessions/<pid>.json (port/pid/host/label/capabilities/mods/mapId)
 ```
 
 关键约束：
@@ -87,7 +87,8 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 | 工具 | 说明 |
 |------|------|
-| `ludots.session.info` | 引擎状态：tick、已加载 Mod、地图、相机、分辨率、bridge 版本 |
+| `ludots.session.info` | 引擎状态：tick、已加载 Mod、地图、相机、分辨率、bridge 版本、实例身份块（pid/port/host/label/capabilities） |
+| `ludots.instances.list` | 枚举实例注册表内全部实例并做 `/health` 活探测（多实例定位的游戏内出口） |
 | `ludots.time.get` / `ludots.time.control` | 查询时间状态；`pause` / `resume` / `step {steps}`（基于 Pacemaker 换绑） |
 | `ludots.entities.query` | 镜头内实体：`entityId`、`name`、世界坐标、屏幕坐标、屏幕包围盒、屏幕占比、可见性；支持 `offset/limit/nameFilter/onScreenOnly`，超限带 dropped 诊断（DataPlane 风格） |
 | `ludots.ui.tree` | 统一 UI 树：节点 id/tag/elementId/class/text/布局矩形/屏幕占比/pseudo-state/滚动状态/是否 browser canvas；`maxDepth/maxNodes/rootElementId` 分页 |
@@ -120,11 +121,19 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 
 ## 6 启用方式
 
-`game.*.json` 的 `ModPaths` 加入 `mods/AgentBridgeMod` 即启用。配置经环境变量/桥接配置节：
+两种启用路径（`LaunchModInjection`，`GameBootstrapper.ResolveGraphPlan` 在 authored graph 校验之后应用）：
 
-- `LUDOTS_AGENT_BRIDGE=0` 强制关闭（即使 Mod 已加载）
-- `LUDOTS_AGENT_BRIDGE_PORT=<port>` 覆盖端口（默认 47921；占用时自动 +1 重试最多 16 次并写入发现文件）
-- 发现文件：`artifacts/agent-bridge/session.json`（`{ port, pid, version, startedAtUtc, tools }`），进程退出时删除
+1. **一键注入**：`LUDOTS_AGENT_BRIDGE=1/true/on` 启动任意 Ludots 进程即自动把 `AgentBridgeMod` 注入 mods 列表（图里已含则跳过）；`LUDOTS_EXTRA_MODS=a,b` 可同法注入任意 mod（解析 `<repoRoot>/mods/<id>`，找不到显式报错）。
+2. **图内声明**：`game.*.json` 的 `ModPaths` 加入 `mods/AgentBridgeMod`。
+
+配置经环境变量/桥接配置节：
+
+- `LUDOTS_AGENT_BRIDGE=0` 强制关闭（即使 Mod 已加载/已注入）
+- `LUDOTS_AGENT_BRIDGE_PORT=<port>` 覆盖端口（默认 47921；占用时自动 +1 重试最多 16 次并写入注册表）
+- `LUDOTS_AGENT_BRIDGE_LABEL=<label>` 实例标签；`LUDOTS_AGENT_BRIDGE_HOST=<host>` 覆盖宿主类型推断
+- 实例注册表：`artifacts/agent-bridge/sessions/<pid>.json`（`{pid, port, version, host, label, capabilities, mods, mapId, startedAtUtc, processPath}`）；启动时清扫死 pid 文件，进程退出时删除自身
+
+**多实例定位**：MCP 适配器 `--instance label:X|host:X|map:X|pid:N|latest` + `--registry <dir>`（缺省：`LUDOTS_AGENT_BRIDGE_REGISTRY` > 从 CWD 向上找 global.json 定位仓库）。活探测 = GET `/health` 比对 pid；歧义显式报错并列候选，零命中显式报错。未来 raylib / unity 宿主并存时按 `host:` 或 `label:` 区分。
 
 安全边界：仅绑定 `127.0.0.1`；这是调试接口，不做鉴权——与 `dotnet-dump` / JVM debugging agent 同级别信任模型。
 
@@ -146,3 +155,9 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 - 截图目验为真实帧缓冲（UI + 3D 场景）；录屏 20/20 帧 + manifest 落盘；`input.raw` 点击工具栏按钮实测驱动相机跟随。
 - pi + deepseek-v4-flash 验收通过：自主完成全部 6 步 + bonus（stop 订单闭环），并在镜头停留在场外时**自发用 `ui.click` 点击工具栏"Follow selection"按钮把镜头转回实体群**——这正是结构化 UI 树 + 操控工具替代 computer-use 的目标行为。
 - pi 反馈并已修复：`time.control step` 响应增加 `targetTick`（步进在后续帧执行）；`ui.click` elementId 未命中时错误信息指向 `ui.tree`/`ui.query` 发现路径。
+
+### 验收结果（2026-08-18，v3 健壮性切片）
+
+- **一键启动对照实验**：无 env 时桥不激活；`LUDOTS_AGENT_BRIDGE=1` 时 mods 列表自动出现 `AgentBridgeMod`，桥监听自动端口。
+- **双实例并存**：label=`injected`（47921）与 label=`demo`（47922）同时运行，注册表两文件身份正确；`--instance label:demo` 精确路由，`--instance host:raylib` 显式报歧义列候选，杀死实例后选择器报"no alive match"。
+- **18 工具逐一实证**：证据 JSON 存 `artifacts/agent-bridge/showcase/`，逐项结论见 `gitbook/acceptance/agent-debug-bridge-uat.md`；pause→step 3→tick 精确 +3→resume；`orders.issue` 在暂停下抓到 admission `Queued`，恢复后指令进入实体 OrderBuffer `active` 态且目标坐标正确；截图目验 `ui.click` 点 RTS 按钮后相机切换生效。

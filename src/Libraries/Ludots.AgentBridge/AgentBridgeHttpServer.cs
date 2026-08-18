@@ -26,19 +26,42 @@ namespace Ludots.AgentBridge
         private readonly AgentBridgeRuntime _runtime;
         private readonly AgentBridgeConfig _config;
         private readonly string _discoveryDirectory;
+        private readonly string _host;
+        private readonly string[] _capabilities;
+        private readonly string[] _mods;
+        private string? _mapId;
         private HttpListener? _listener;
         private Thread? _thread;
         private volatile bool _stopping;
         private string? _discoveryFile;
 
-        public AgentBridgeHttpServer(AgentBridgeRuntime runtime, AgentBridgeConfig config, string discoveryDirectory)
+        public AgentBridgeHttpServer(
+            AgentBridgeRuntime runtime,
+            AgentBridgeConfig config,
+            string discoveryDirectory,
+            string host,
+            string[] capabilities,
+            string[] mods,
+            string? mapId)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _discoveryDirectory = discoveryDirectory ?? throw new ArgumentNullException(nameof(discoveryDirectory));
+            _host = string.IsNullOrWhiteSpace(host) ? "unknown" : host;
+            _capabilities = capabilities ?? Array.Empty<string>();
+            _mods = mods ?? Array.Empty<string>();
+            _mapId = mapId;
         }
 
         public int Port { get; private set; }
+
+        /// <summary>Map becomes known after GameStart; refresh the session file once.</summary>
+        public void UpdateMapId(string? mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId) || mapId == _mapId || _discoveryFile == null) return;
+            _mapId = mapId;
+            WriteDiscoveryFile();
+        }
 
         public void Start()
         {
@@ -245,18 +268,25 @@ namespace Ludots.AgentBridge
 
         private void WriteDiscoveryFile()
         {
-            Directory.CreateDirectory(_discoveryDirectory);
-            _discoveryFile = Path.Combine(_discoveryDirectory, "session.json");
-            var payload = new JsonObject
+            int swept = AgentBridgeInstanceRegistry.SweepDead(_discoveryDirectory);
+            var identity = new AgentBridgeInstanceIdentity
             {
-                ["pid"] = Environment.ProcessId,
-                ["port"] = Port,
-                ["version"] = 1,
-                ["startedAtUtc"] = DateTime.UtcNow.ToString("O"),
-                ["processPath"] = Environment.ProcessPath,
-                ["tools"] = _runtime.Tools.DescribeAll(),
+                Pid = Environment.ProcessId,
+                Port = Port,
+                Host = _host,
+                Label = _config.Label,
+                Capabilities = _capabilities,
+                Mods = _mods,
+                MapId = _mapId,
+                StartedAtUtc = DateTime.UtcNow,
+                ProcessPath = Environment.ProcessPath,
             };
-            File.WriteAllText(_discoveryFile, payload.ToJsonString(SerializerOptions));
+            AgentBridgeInstanceRegistry.Write(_discoveryDirectory, identity);
+            _discoveryFile = AgentBridgeInstanceRegistry.SessionFilePath(_discoveryDirectory, identity.Pid);
+            if (swept > 0)
+            {
+                Log.Info(in LogChannels.Engine, $"[AgentBridge] swept {swept} dead session file(s)");
+            }
         }
 
         private static void WriteJson(HttpListenerResponse response, int status, JsonObject payload)
