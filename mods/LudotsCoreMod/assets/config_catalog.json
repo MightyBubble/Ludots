@@ -1,0 +1,4 @@
+[
+  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById" }
+]

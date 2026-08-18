@@ -2773,7 +2773,13 @@ namespace Ludots.Core.Engine
                     {
                         int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
                         int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
-                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                        LogicTerrainField? projected = TryProjectVisualHeightmapToGrid(
+                            session,
+                            widthCells,
+                            heightCells,
+                            boardConfig.GridCellSizeCm,
+                            board.Name);
+                        gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
@@ -2786,7 +2792,9 @@ namespace Ludots.Core.Engine
 
                         Diagnostics.Log.Info(
                             in LogChannels.Engine,
-                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
+                            projected != null
+                                ? $"Projected VisualHeightmap to grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'"
+                                : $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
@@ -2803,6 +2811,42 @@ namespace Ludots.Core.Engine
                 }
             }
             return null;
+        }
+
+        private LogicTerrainField? TryProjectVisualHeightmapToGrid(
+            MapSession session,
+            int widthCells,
+            int heightCells,
+            int cellSizeCm,
+            string boardName)
+        {
+            Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
+            if (heightmap == null)
+            {
+                return null;
+            }
+
+            float widthCm = checked(widthCells * cellSizeCm);
+            float heightCm = checked(heightCells * cellSizeCm);
+            bool covers =
+                heightmap.TrySampleHeightCm(0f, 0f, out _) &&
+                heightmap.TrySampleHeightCm(widthCm, 0f, out _) &&
+                heightmap.TrySampleHeightCm(0f, heightCm, out _) &&
+                heightmap.TrySampleHeightCm(widthCm, heightCm, out _);
+            if (!covers)
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"VisualHeightmap does not cover board '{boardName}' extent {widthCm}x{heightCm}cm; keeping flat grid terrain.");
+                return null;
+            }
+
+            return Ludots.Core.Navigation.Terrain.VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                heightmap,
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions.Default);
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)

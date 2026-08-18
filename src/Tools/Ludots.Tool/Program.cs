@@ -248,6 +248,43 @@ namespace Ludots.Tool
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
 
+            var bakeVhtmNavCommand = new Command("bake-vhtm", "Bake NavTiles from a VisualHeightmap .vhtm via logic-terrain projection");
+            bakeVhtmNavCommand.AddOption(mapIdOption);
+            bakeVhtmNavCommand.AddOption(navModIdOption);
+            bakeVhtmNavCommand.AddOption(reactInOption);
+            bakeVhtmNavCommand.AddOption(reactDirtyOption);
+            bakeVhtmNavCommand.AddOption(reactIncludeNeighborsOption);
+            bakeVhtmNavCommand.AddOption(navOutDirOption);
+            bakeVhtmNavCommand.AddOption(navHeightScaleOption);
+            bakeVhtmNavCommand.AddOption(navMinUpDotOption);
+            bakeVhtmNavCommand.AddOption(navCliffThresholdOption);
+            bakeVhtmNavCommand.AddOption(navArtifactOption);
+            bakeVhtmNavCommand.AddOption(navParallelOption);
+            bakeVhtmNavCommand.AddOption(navMaxDegreeOption);
+            bakeVhtmNavCommand.AddOption(navTileVersionOption);
+            bakeVhtmNavCommand.AddOption(navLargeBakeOption);
+            bakeVhtmNavCommand.AddOption(navEstimateHashOption);
+            bakeVhtmNavCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
+                var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
+                var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
+                var outDir = ctx.ParseResult.GetValueForOption(navOutDirOption);
+                var heightScale = ctx.ParseResult.GetValueForOption(navHeightScaleOption);
+                var minUpDot = ctx.ParseResult.GetValueForOption(navMinUpDotOption);
+                var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
+                var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
+                var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
+                var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
+                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
+                var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
+                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
+            });
+            navCommand.AddCommand(bakeVhtmNavCommand);
+
             var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from React editor map_data.bin");
             estimateRecastReactNavCommand.AddOption(mapIdOption);
             estimateRecastReactNavCommand.AddOption(navModIdOption);
@@ -610,6 +647,192 @@ namespace {modId}
             }
 
             return BakeTiles(map, targets, cfg, tilesDir, artifactsDir, writeArtifact, parallel, maxDegree, tileVersion, logPrefix: "BakeNavReact", outDirRoot: root);
+        }
+
+        static int BakeNavFromVhtm(
+            string mapId,
+            string? modId,
+            string inputVhtmPath,
+            string? dirtyChunksPath,
+            bool includeNeighbors,
+            string? outDir,
+            float heightScale,
+            float minUpDot,
+            int cliffThreshold,
+            bool writeArtifact,
+            bool parallel,
+            int maxDegree,
+            int tileVersion,
+            bool largeBakeApproved,
+            string? acceptedEstimateHash)
+        {
+            try
+            {
+                NavBakeContext context = BuildVhtmNavBakeContext(
+                    mapId,
+                    modId,
+                    inputVhtmPath,
+                    dirtyChunksPath,
+                    includeNeighbors,
+                    outDir,
+                    heightScale,
+                    minUpDot,
+                    cliffThreshold,
+                    parallel,
+                    maxDegree,
+                    tileVersion,
+                    out string repoRoot,
+                    out LogicTerrainField terrain);
+
+                Console.WriteLine($"BakeNavVhtm: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.Obstacles.Count}");
+                NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+                Console.WriteLine($"BakeNavVhtm estimate: status={estimate.BudgetStatusText} hash={estimate.EstimateHash} terrainHash={estimate.TerrainContentHash} targets={estimate.TargetTileCount} operations={estimate.BakeOperationCount} workUnits={estimate.BudgetWorkUnitCount} seconds={estimate.EstimatedSecondsLow:F1}-{estimate.EstimatedSecondsHigh:F1}");
+                NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
+
+                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                if (result.FailureCount > 0)
+                {
+                    PrintNavBakeFailures(result, "BakeNavVhtm");
+                    Console.WriteLine("BakeNavVhtm failed; no NavTile artifacts were written.");
+                    return 1;
+                }
+
+                WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavVhtm");
+                Console.WriteLine($"BakeNavVhtm done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
+                return result.FailureCount == 0 ? 0 : 1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static NavBakeContext BuildVhtmNavBakeContext(
+            string mapId,
+            string? modId,
+            string inputVhtmPath,
+            string? dirtyChunksPath,
+            bool includeNeighbors,
+            string? outDir,
+            float heightScale,
+            float minUpDot,
+            int cliffThreshold,
+            bool parallel,
+            int maxDegree,
+            int tileVersion,
+            out string repoRoot,
+            out LogicTerrainField terrain)
+        {
+            terrain = null!;
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new InvalidOperationException("mapId is required.");
+            }
+
+            if (!File.Exists(inputVhtmPath))
+            {
+                throw new InvalidOperationException($"Input not found: {inputVhtmPath}");
+            }
+
+            repoRoot = string.IsNullOrWhiteSpace(outDir) ? FindAssetsRoot() : Path.GetFullPath(outDir);
+            if (!Directory.Exists(Path.Combine(repoRoot, "assets")))
+            {
+                throw new InvalidOperationException($"Invalid repo root (missing assets/): {repoRoot}");
+            }
+
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig);
+            if (boardConfig == null)
+            {
+                throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+            }
+
+            NavMeshBakeConfigContext bakeConfigContext;
+            try
+            {
+                bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}", ex);
+            }
+
+            NavObstacleSet obstacles;
+            try
+            {
+                obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}", ex);
+            }
+
+            Ludots.Core.Presentation.Terrain.VisualHeightmapAsset asset;
+            using (var vhtmStream = File.OpenRead(inputVhtmPath))
+            {
+                asset = Ludots.Core.Presentation.Terrain.VisualHeightmapBinary.Read(vhtmStream);
+            }
+
+            var heightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapRuntime(asset);
+            int cellSizeCm = boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+            int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+            float widthCm = checked(widthCells * cellSizeCm);
+            float heightCm = checked(heightCells * cellSizeCm);
+            if (!heightmap.TrySampleHeightCm(0f, 0f, out _) ||
+                !heightmap.TrySampleHeightCm(widthCm, 0f, out _) ||
+                !heightmap.TrySampleHeightCm(0f, heightCm, out _) ||
+                !heightmap.TrySampleHeightCm(widthCm, heightCm, out _))
+            {
+                throw new InvalidOperationException(
+                    $"VisualHeightmap '{inputVhtmPath}' does not cover the board extent {widthCm}x{heightCm}cm required for projection.");
+            }
+
+            terrain = Ludots.Core.Navigation.Terrain.VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                heightmap,
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions.Default);
+
+            IReadOnlyList<NavBakeTileCoord> targets;
+            if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
+            {
+                if (!File.Exists(dirtyChunksPath))
+                {
+                    throw new InvalidOperationException($"Dirty chunks file not found: {dirtyChunksPath}");
+                }
+
+                var json = File.ReadAllText(dirtyChunksPath);
+                targets = NavBakeTileSelection.Resolve(terrain, json, includeNeighbors, dirtyOnly: true);
+            }
+            else
+            {
+                targets = NavBakeTileSelection.AllTiles(terrain);
+            }
+
+            NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+            return new NavBakeContext
+            {
+                MapId = mapId,
+                ModId = modId ?? string.Empty,
+                SourceUri = ToCoreSourceUri(repoRoot, inputVhtmPath),
+                Terrain = terrain,
+                Obstacles = obstacles,
+                Config = bakeConfig,
+                AgentProfiles = bakeConfigContext.AgentProfiles,
+                Targets = targets,
+                BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
+                TileVersion = (uint)tileVersion,
+                Mode = bakeConfig.ParsedMode,
+                Algorithm = bakeConfig.ParsedAlgorithm,
+                Execution = new NavBakeExecutionOptions
+                {
+                    Parallel = parallel,
+                    MaxDegreeOfParallelism = Math.Max(1, maxDegree)
+                }
+            };
         }
 
         static int BakeNavFromReactRecast(

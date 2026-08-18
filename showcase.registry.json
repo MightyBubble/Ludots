@@ -5533,6 +5533,24 @@
       ]
     },
     {
+      "id": "navmesh_debug_vhtm_showcase",
+      "path": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod",
+      "title": "NavMesh 调试·vhtm 源",
+      "summary": "VisualHeightmap 源的 4x4 烤制图（16 tile）：运行期把 .vhtm 起伏投影为 LogicTerrain，KEY_N 看 overlay 贴合渲染地形。",
+      "tier": "T4",
+      "category": "fixture",
+      "binding": "navmesh_debug_vhtm_launch",
+      "preset": "navmesh_debug_vhtm_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "status": "experimental",
+      "tags": [
+        "navmesh",
+        "debug",
+        "vhtm",
+        "navigation"
+      ]
+    },
+    {
       "id": "ownership_cascade",
       "path": "mods/showcases/ownership_cascade/OwnershipCascadeShowcaseMod",
       "projectPath": "OwnershipCascadeShowcaseMod.csproj",

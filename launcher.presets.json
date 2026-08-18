@@ -1980,6 +1980,16 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "navmesh_debug_vhtm_raylib",
+      "name": "NavMesh Debug Vhtm Raylib",
+      "selectors": [
+        "$navmesh_debug_vhtm_launch",
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

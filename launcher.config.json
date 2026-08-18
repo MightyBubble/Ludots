@@ -1466,6 +1466,13 @@
         "type": "path",
         "value": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod"
       }
+    },
+    {
+      "name": "navmesh_debug_vhtm_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod"
+      }
     }
   ],
   "adapters": {
