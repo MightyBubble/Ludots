@@ -104,7 +104,7 @@ namespace DesertStrikeShowcaseMod.Triggers
                 return false;
             }
 
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.World.IsAlive(owner))
             {
                 return false;
