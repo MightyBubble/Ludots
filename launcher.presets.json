@@ -1960,6 +1960,15 @@
         "--json",
         "artifacts/acceptance/engine_raylib_primitives/stats.json"
       ]
+    },
+    {
+      "id": "navmesh_debug_raylib",
+      "name": "NavMesh Debug Raylib",
+      "selectors": [
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

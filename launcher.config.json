@@ -1445,6 +1445,13 @@
         "type": "project",
         "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj"
       }
+    },
+    {
+      "name": "navmesh_debug",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
+      }
     }
   ],
   "adapters": {
