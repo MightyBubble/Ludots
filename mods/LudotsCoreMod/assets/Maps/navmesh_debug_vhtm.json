@@ -1,7 +1,11 @@
 {
   "Id": "navmesh_debug_vhtm",
-  "Tags": ["showcase", "navmesh", "vhtm", "Feature.NavMesh:On"],
-  "VisualHeightmapAsset": "assets/terrain/navmesh_debug_vhtm.vhtm",
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "vhtm",
+    "Feature.NavMesh:On"
+  ],
   "Boards": [
     {
       "Name": "default",
@@ -24,5 +28,12 @@
     "Pitch": 50,
     "DistanceCm": 30000,
     "FovYDeg": 60
+  },
+  "visualHeightmap": {
+    "asset": "assets/terrain/navmesh_debug_vhtm.vhtm",
+    "renderProfile": {
+      "absoluteColorPeakSpanCm": 1500,
+      "colorContrast": 2.5
+    }
   }
 }

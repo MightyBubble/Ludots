@@ -30,5 +30,11 @@
     "DistanceCm": 30000,
     "FovYDeg": 60
   },
-  "VisualHeightmapAsset": "assets/terrain/navmesh_debug_grid.vhtm"
+  "visualHeightmap": {
+    "asset": "assets/terrain/navmesh_debug_grid.vhtm",
+    "renderProfile": {
+      "absoluteColorPeakSpanCm": 1500,
+      "colorContrast": 2.5
+    }
+  }
 }
