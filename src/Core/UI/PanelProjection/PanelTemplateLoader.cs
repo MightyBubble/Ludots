@@ -12,7 +12,7 @@ namespace Ludots.Core.UI.PanelProjection
     public static class PanelTemplateLoader
     {
         private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "variables", "binds", "events", "intents" };
-        private static readonly HashSet<string> VariableFields = new(StringComparer.Ordinal) { "name", "kind", "source" };
+        private static readonly HashSet<string> VariableFields = new(StringComparer.Ordinal) { "name", "kind", "source", "realtime" };
         private static readonly HashSet<string> SourceFields = new(StringComparer.Ordinal) { "sourceKind", "attributeId", "graphOutputKey", "lookupTable", "lookupField", "keyAttribute" };
         private static readonly HashSet<string> BindFields = new(StringComparer.Ordinal) { "control", "variable" };
 
@@ -37,6 +37,14 @@ namespace Ludots.Core.UI.PanelProjection
             {
                 throw new InvalidOperationException("Panel template root must be a JSON object.");
             }
+
+            return Load(rootObject);
+        }
+
+        /// <summary>Loads one template from an already-parsed object (config-catalog merge path).</summary>
+        public static PanelTemplate Load(JsonObject rootObject)
+        {
+            ArgumentNullException.ThrowIfNull(rootObject);
 
             RejectUnknownFields(rootObject, RootFields, "panel template root");
 
@@ -194,6 +202,14 @@ namespace Ludots.Core.UI.PanelProjection
                     $"Panel template '{templateId}' variable '{name}' has unknown sourceKind '{sourceKindText}'.");
             }
 
+            bool realtime = false;
+            if (variableObject["realtime"] is JsonNode realtimeNode &&
+                (realtimeNode is not JsonValue realtimeValue || !realtimeValue.TryGetValue(out realtime)))
+            {
+                throw new InvalidOperationException(
+                    $"Panel template '{templateId}' variable '{name}' field 'realtime' must be a boolean.");
+            }
+
             return new PanelTemplateVariable(
                 name,
                 kind,
@@ -202,7 +218,8 @@ namespace Ludots.Core.UI.PanelProjection
                 graphOutputKey: OptionalString(sourceObject, "graphOutputKey"),
                 lookupTable: OptionalString(sourceObject, "lookupTable"),
                 lookupField: OptionalString(sourceObject, "lookupField"),
-                keyAttribute: OptionalString(sourceObject, "keyAttribute"));
+                keyAttribute: OptionalString(sourceObject, "keyAttribute"),
+                realtime: realtime);
         }
 
         private static string RequireString(JsonObject obj, string field, string context)

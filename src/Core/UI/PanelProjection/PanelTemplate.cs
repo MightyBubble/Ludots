@@ -125,7 +125,8 @@ namespace Ludots.Core.UI.PanelProjection
             string? graphOutputKey = null,
             string? lookupTable = null,
             string? lookupField = null,
-            string? keyAttribute = null)
+            string? keyAttribute = null,
+            bool realtime = false)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -135,6 +136,7 @@ namespace Ludots.Core.UI.PanelProjection
             Name = name.Trim();
             Kind = kind;
             SourceKind = sourceKind;
+            Realtime = realtime;
 
             // Reuse the binding contract's own fail-closed field rules.
             Binding = new PanelVariableBinding(Name, sourceKind, attributeId, graphOutputKey, lookupTable, lookupField, keyAttribute, kind);
@@ -153,6 +155,9 @@ namespace Ludots.Core.UI.PanelProjection
         public string? LookupTable { get; }
         public string? LookupField { get; }
         public string? KeyAttribute { get; }
+
+        /// <summary>Opt-in: only realtime variables are touched by the host's realtime refresh pass.</summary>
+        public bool Realtime { get; }
 
         internal PanelVariableBinding Binding { get; }
 

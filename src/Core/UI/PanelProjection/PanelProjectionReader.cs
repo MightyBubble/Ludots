@@ -34,6 +34,11 @@ namespace Ludots.Core.UI.PanelProjection
             return Resolve(owner, in binding).FloatValue;
         }
 
+        public bool IsOwnerLive(Entity owner)
+        {
+            return owner != Entity.Null && _world.IsAlive(owner);
+        }
+
         public PanelProjectionValue Resolve(Entity owner, in PanelVariableBinding binding)
         {
             if (owner == Entity.Null || !_world.IsAlive(owner))

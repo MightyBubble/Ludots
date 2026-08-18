@@ -1978,6 +1978,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CreatePanel_raylib",
+      "name": "Graph Op CreatePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CreatePanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DestroyPanel_raylib",
+      "name": "Graph Op DestroyPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

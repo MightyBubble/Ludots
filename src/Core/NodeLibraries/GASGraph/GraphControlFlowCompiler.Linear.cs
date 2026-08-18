@@ -246,6 +246,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.CreatePanel:
+                    RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.PanelAnchor, "panelAnchor", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.DestroyPanel:
+                    RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.QueryCone:
                 case GraphNodeOp.QueryRectangle:
                 case GraphNodeOp.QueryLine:
@@ -730,6 +739,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ShowPanel:
                 case GraphNodeOp.HidePanel:
                     instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CreatePanel:
+                    instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = EncodeByteSymbol(node.PanelAnchor, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.DestroyPanel:
+                    instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
                     break;
 
                 case GraphNodeOp.QueryCone:

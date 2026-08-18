@@ -1461,6 +1461,22 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpShowPanelEntryMod",
         "projectPath": "CapabilityStandardGraphOpShowPanelEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_CreatePanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpCreatePanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpCreatePanelEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_DestroyPanel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
+        "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

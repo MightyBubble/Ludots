@@ -1,0 +1,16 @@
+[
+  {
+    "id": "showcase.panel.test",
+    "variables": [
+      {
+        "name": "health",
+        "kind": "Float",
+        "realtime": true,
+        "source": {
+          "sourceKind": "SingleAttribute",
+          "attributeId": "Health"
+        }
+      }
+    ]
+  }
+]

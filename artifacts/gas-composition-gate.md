@@ -1,54 +1,56 @@
 # GAS Composition Gate — Self Review
 
-- **Task / Issue**: Epic #990 family 9 — 黑板与配置 13 op 零字幕重设计（BlackboardNodeDriver / AttrNodeDriver C 档演后果）
-- **Date**: 2026-08-17
-- **Agent / Author**: pi (epic/990-zero-caption-gallery)
+- **Task / Issue**: PANEL-1 收口（#1010）——面板实例化图 op + 实时/手动刷新（用户裁定 2026-08-18）
+- **Date**: 2026-08-18
+- **Agent / Author**: Kimi（接续 GLM 会话）
 
-## 1. Core judgment
+### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: A — 已有 graph op 的连线/参数组合 + 驱动器可见化
+新变体主要交付物是（A/B/C/D）: **A** —— 新增 graph 节点（`CreatePanel`/`DestroyPanel`）+ 既有 `PanelTemplate` JSON 的增量字段（`realtime`），无新 profile DSL、无平行管线。
 
 结论: PASS
 
-一句话理由: 本家族没有新增任何 graph 节点或 profile 开关；全部行为变化都是「图 JSON 里把已有 op 连成尾巴」（cfgF→neg→hit / src→readF→neg→hit / cfgFx→explicit→applyDyn / beginTx→materialize），driver 只做断言升级与可见化。
+一句话理由: 实例化走"图 op → IGraphRuntimeApi → PanelHost"与"代码 → PanelHost"同一条终端 API；刷新是 PanelHost 上对既有 PanelProjectionReader 的按需调用，二者均为 op/参数级增量。
 
-## 2. Layer assignment
+### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| LoadConfigFloat 真结算 | Layer 2 | 图尾 `cfgF→neg→explicit→hit`（NegFloat+ModifyAttributeAdd 组合） |
-| ReadBlackboardFloat 真结算 | Layer 2 | 图尾 `src→readF→neg→explicit→hit` |
-| LoadConfigEffectId 悬空输出修复 | Layer 2 | 图重写 `cfgFx→explicit→applyDyn`（ApplyEffectDynamic 端口照抄 ApplyEffectDynamic.json） |
-| BeginLifecycleTransaction 造身 | Layer 1+2 | 图加 `materialize`（InvokeBuiltin MaterializeTemplate，复用 Effect.GraphOps.Lifecycle 的 targetEntityTemplate） |
-| InvokeBuiltin 正式演员 | Layer 2 | LastMaterializedTarget 经 GraphOpsStageVisuals.BindMapEntity 绑正式演员 |
-| 记事板/配置册/情境信封/台账 可见化 | Layer 3 | BlackboardNodeDriver.DrawOverlay 用共享视觉原语 P1-P11 |
+| CreatePanel / DestroyPanel | Layer 0 op | GraphNodeOp 441/442 + GasGraphOpHandlerTable |
+| 面板实例生命周期与刷新 | Layer 0 服务 | `PanelHost`（Core/UI/PanelHosting） |
+| 蓝图作者用法 | Layer 2 | 关卡蓝图/Script 图 JSON 里调节点 |
 
-## 3. Reuse list
+### 3. Reuse list
 
-- Handlers: `InvokeBuiltin`(MaterializeTemplate / ClearActiveEffects)、`ApplyEffectDynamic`、`ModifyAttributeAdd`、`NegFloat`、`LoadExplicitTarget`、`LoadConfig*`、`Read/WriteBlackboard*`（全部已有 op）
-- Queues / Systems: `EffectRequestQueue`（ApplyEffectDynamic 真结算）、runtime `SettlePendingEffectRequests`
-- Resolvers / Registries: `ConfigKeyRegistry`、`EffectTemplateIdRegistry`、`EffectTemplateRegistry`、`BuiltinHandlerRegistry`、`GraphOpsNodeActorBinding`
-- Existing presets / graphs: `Effect.GraphOps.Config`（power=40/tier=2/chainEffect=Strike）、`Effect.GraphOps.Lifecycle`（targetEntityTemplate=GraphOps.Ally）、`Effect.GraphOps.Strike`（-18）、ApplyEffectDynamic.json 端口模式、MulFloat.json graphSettled 图尾模式
+- Handlers: `GasGraphOpHandlerTable`（注册/元数据模式同 ShowPanel/HidePanel）
+- Queues / Systems: 无新增队列；刷新由宿主系统调 `PanelHost.RefreshRealtime()`
+- Resolvers / Registries: `ConfigKeyRegistry`（模板 id/锚点符号）、`GraphProgramSymbolPatcher`、`GraphOpDescriptorTable`、`PanelTemplateLoader`、`PanelProjectionReader`、`GraphLookupTableRegistry`、`ConfigPipeline`（模板目录加载同 GraphLookupTableLoader）
+- Existing presets / graphs: 画廊 vignette/graph/wiki/coverage 四件套模式（同 ShowPanel）
 
-## 4. New Layer 0 ops (if any)
+### 4. New Layer 0 ops (if any)
 
-N/A
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| CreatePanel | 按模板 id + 锚点 + scope 实例化一个面板 | ShowPanel/HidePanel 只写显隐标记，不携带模板/锚点/scope，无法表达实例化 |
+| DestroyPanel | 销毁匹配模板（+可选 scope）的面板实例 | 同上，生命周期语义不能由显隐标记组合 |
 
-## 5. Transaction boundary
+### 5. Transaction boundary
 
-BeginLifecycleTransaction 的真实回滚由 lifecycle 执行器承担；演出只画真实发生的三拍（Begin 执行拍 / 记账拍 / 关账拍），不为演出伪造失败事务。
+必须原子 rollback 的步骤: 无跨步骤事务——Instantiate 单步完成（模板缺失/绑定失败当场抛出，不产生半实例）。
 
-## 6. Config SSOT
+### 6. Config SSOT
 
-行为配置落在: effect template（Effect.GraphOps.Config / Effect.GraphOps.Lifecycle）+ graph 连线。未新增 JSON schema。
+行为配置落在: `Panels/panel_templates.json`（ConfigPipeline ArrayById，同 GraphTables 模式）+ 图 JSON 节点参数（panelType/panelAnchor）
 
-## 7. Red flag scan
+是否新增 JSON schema: NO —— 复用既有 `PanelTemplate` schema，仅新增可选字段 `realtime`（布尔，默认 false）
+
+### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback
+- [x] 未添加「说不清的」默认 fallback（未知模板/锚点/坏绑定全部点名抛出）
 
-## 8. Next variant test
+### 8. Next variant test
 
-「下一个 Mod 变体」将修改: graph 连线（换 config 值 / 换 effect 票即换伤数与效果）
+「下一个 Mod 变体」将修改: **graph 连线**（在新图里调 CreatePanel 节点）或 **effect 步骤**——不改 Core enum。

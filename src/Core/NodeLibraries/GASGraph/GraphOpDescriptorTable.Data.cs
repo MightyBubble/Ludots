@@ -138,6 +138,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.TableReadInt, LinearQueryScript, GraphValueType.Int, portA, queryOut: GraphValueType.Int, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ShowPanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.HidePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.CreatePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
+            Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.TableReadFloat, LinearQueryScript, GraphValueType.Float, portA, queryOut: GraphValueType.Float, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadContextSource, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTarget, LinearAll, GraphValueType.Entity);
