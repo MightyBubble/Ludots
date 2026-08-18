@@ -47,6 +47,12 @@ namespace Ludots.Tests.GAS.Production
 
             World world = engine.World;
             Entity city = FindEntity(world, "城池");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CanAcquireCity(world, engine, city),
+                maxFrames: 10,
+                "Knowledge 投影后城池应可被点击选中（LiveVisible）。");
             BlackboardStoredTargetKeys spawnTargetKeys = ResolveSpawnTargetKeys(engine);
             Vector3 rallyPoint = BuildRallyPoint(world, city, offsetX: 3200f, offsetZ: 4800f);
 
@@ -154,6 +160,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(secondOrder.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(secondOrder.Args.Spatial.WorldCm.X, Is.EqualTo(rallyPoint.X).Within(1f));
             Assert.That(secondOrder.Args.Spatial.WorldCm.Z, Is.EqualTo(rallyPoint.Z).Within(1f));
+        }
+
+        private static bool CanAcquireCity(World world, GameEngine engine, Entity city)
+        {
+            if (!Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity viewer) ||
+                !world.IsAlive(viewer))
+            {
+                return false;
+            }
+
+            return Ludots.Core.Input.CommandSources.CommandSourceEligibility.CanAcquire(
+                world,
+                engine.GlobalContext,
+                viewer,
+                city,
+                Ludots.Core.Gameplay.Teams.RelationshipFilter.All);
         }
 
         private static int RequireOrderTypeId(GameEngine engine, string key)
