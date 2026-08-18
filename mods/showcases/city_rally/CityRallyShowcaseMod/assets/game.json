@@ -1,0 +1,18 @@
+{
+  "startupMapId": "city_rally",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "Rts_Gameplay"
+  ],
+  "constants": {
+    "intValues": {
+      "rtsRelationEntityCapacity": 16384
+    }
+  },
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

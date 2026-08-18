@@ -1,0 +1,15 @@
+{
+  "name": "CityRallyShowcaseMod",
+  "version": "1.0.0",
+  "description": "城池集结点 showcase：城池训练兵士，右键设置集结点，新训兵士自动前往集结点。全面复用 RtsDemoMod 的 setSpawnTarget 集结点管线。",
+  "main": "bin/net8.0/CityRallyShowcaseMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "city", "rally"]
+}

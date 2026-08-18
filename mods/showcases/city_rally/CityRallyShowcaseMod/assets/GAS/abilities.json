@@ -1,0 +1,43 @@
+[
+  {
+    "id": "Ability.Rts.CityRally.TrainSoldier",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.CityRally.CostTrainSoldier"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.CityRally.TrainSoldier",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 60
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "训练兵士",
+      "iconGlyph": "SLD",
+      "accentColor": "#2563EB",
+      "hintText": "城池训练一名兵士，训练完成后自动前往集结点。"
+    }
+  }
+]

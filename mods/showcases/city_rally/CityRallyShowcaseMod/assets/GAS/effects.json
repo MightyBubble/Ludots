@@ -1,0 +1,35 @@
+[
+  {
+    "id": "Effect.Rts.CityRally.CostTrainSoldier",
+    "tags": [
+      "Effect.Rts.CityRally.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.CityRally.TrainSoldier",
+    "tags": [
+      "Effect.Rts.CityRally.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_city_soldier",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 260,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+      "copySourcePlayerOwner": true
+    }
+  }
+]
