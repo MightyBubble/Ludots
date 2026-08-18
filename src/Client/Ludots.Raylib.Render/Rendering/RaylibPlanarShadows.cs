@@ -16,6 +16,8 @@ namespace Ludots.Raylib.Render
         private readonly Color _tint;
         private readonly Shader _defaultShader;
         private Material _meshMaterial;
+        private Mesh _sphereMesh;
+        private bool _meshesLoaded;
         private bool _disposed;
 
         public RaylibPlanarShadows(byte alpha = 110)
@@ -24,6 +26,7 @@ namespace Ludots.Raylib.Render
             _defaultShader = Rl.LoadShader(null!, null!);
             _meshMaterial = Rl.LoadMaterialDefault();
             _meshMaterial.shader = _defaultShader;
+            _meshMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].color = _tint;
             if (_defaultShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to acquire raylib default shader for planar shadows.");
@@ -43,6 +46,14 @@ namespace Ludots.Raylib.Render
             Rl.DrawMesh(mesh, _meshMaterial, shadowMatrix);
             Rl.EndBlendMode();
             Rl.rlEnableDepthMask();
+        }
+
+        public void DrawSphereShadow(Vector3 center, float radius, Vector3 lightDirectionToward)
+        {
+            ThrowIfDisposed();
+            EnsureMeshes();
+            Matrix4x4 rowMajor = Matrix4x4.CreateScale(radius * 2f) * Matrix4x4.CreateTranslation(center);
+            DrawMeshShadow(_sphereMesh, RaylibMatrix.FromSystemNumerics(rowMajor), lightDirectionToward);
         }
 
         public void DrawModelShadow(Model model, Vector3 position, float rotationAngleY, Vector3 scale, Vector3 lightDirectionToward)
@@ -69,11 +80,27 @@ namespace Ludots.Raylib.Render
             }
         }
 
+        private void EnsureMeshes()
+        {
+            if (_meshesLoaded)
+            {
+                return;
+            }
+
+            _sphereMesh = Rl.GenMeshSphere(0.5f, 24, 16);
+            _meshesLoaded = true;
+        }
+
         public void Dispose()
         {
             if (_disposed)
             {
                 return;
+            }
+
+            if (_meshesLoaded)
+            {
+                Rl.UnloadMesh(_sphereMesh);
             }
 
             _meshMaterial.shader = default;

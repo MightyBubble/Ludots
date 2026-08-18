@@ -49,6 +49,12 @@ namespace Ludots.App.RaylibEngineGallery
             _lit.BeginFrame(_lighting, viewPos);
         }
 
+        public void DrawMesh(Mesh mesh, RaylibMatrix transform, Vector4 tint, float roughness = 0.8f, float metallic = 0f)
+        {
+            EnsureLoaded();
+            _lit.DrawMesh(mesh, transform, tint, roughness, metallic);
+        }
+
         public void DrawCube(Vector3 center, Vector3 size, Vector4 tint, float roughness = 0.8f, float metallic = 0f, float rotationYRad = 0f)
         {
             EnsureLoaded();

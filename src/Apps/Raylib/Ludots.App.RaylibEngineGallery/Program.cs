@@ -75,14 +75,14 @@ namespace Ludots.App.RaylibEngineGallery
                 scene.Draw(dt, total, ref cam);
                 frameMs.Add((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
+                GalleryFont.Flush();
                 if (screenshotPath != null && drawn == frames - 1)
                 {
-                    // raylib 5.5 TakeScreenshot 读取的是当前帧缓冲，2D 文字尚在延迟批处理里，必须先冲刷。
+                    // raylib 5.5 TakeScreenshot 读取当前帧缓冲，须先冲刷 Skia 文字与 rl 渲染批次。
                     Rl.rlDrawRenderBatchActive();
                     Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
                 }
 
-                GalleryFont.Flush();
                 Rl.EndDrawing();
                 drawn++;
             }
