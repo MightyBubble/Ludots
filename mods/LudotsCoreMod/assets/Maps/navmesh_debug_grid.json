@@ -14,7 +14,7 @@
       "HeightInMacroTiles": 4,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
-      "LoadedChunkCapacity": 16,
+      "LoadedChunkCapacity": 256,
       "DataFile": "navmesh_debug_openworld.bin",
       "NavigationEnabled": true
     }
