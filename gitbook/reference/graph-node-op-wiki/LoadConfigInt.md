@@ -25,56 +25,22 @@
 {"id": "cfgI", "op": "LoadConfigInt", "configKey": "showcase.config.tier"}
 ```
 
+## 这场是怎么搭出来的
 
-## 1. 概述
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/LoadConfigInt.json`，共 1 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
+**LoadConfigInt**（本篇）
 
-- 家族：黑板与配置
-- 启动绑定：`capability_standard_graph_op_LoadConfigInt`
-- 作者记号：`LoadConfigInt`（给写图的人对照，不出现在玩家字幕里）
-
-## 2. 结构
-
-| 角色 | 路径 |
-|------|------|
-| 玩家录像 | `artifacts/evidence/capability_standard_graph_op_LoadConfigInt/play.mp4` |
-| 画廊海报 | `artifacts/evidence/capability_standard_graph_op_LoadConfigInt/poster.png` |
-| 剧本 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/LoadConfigInt.json` |
-| 作者图 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/LoadConfigInt.json` |
-
-## 3. 详情
-
-字幕模板（占位符由短剧填上）：
+图跑完，字幕报出结果：
 
 > 册上品阶 {result}，徽章已点亮。
 
-## 4. 场景
+## 边界与更多用法
 
-1. 从画廊或启动器打开 `capability_standard_graph_op_LoadConfigInt`。
-2. 舞台上能看见人和头顶血条（或这场短剧写明的可见反馈）。
-3. 短剧演算时，字幕只讲这一件事。
-4. 录像里不应夹带其它节点的完整剧情。
-
-## 5. 边界
-
-- 玩家入口是这一场，不是家族聚合场。
-- 字幕禁止堆 opcode / True / False / 耗时数字。
-- 缺 `play.mp4` 或 `poster.png` 时，站点与生成器必须失败关闭，不得用空片顶替。
-
-## 6. UAT
-
-```gherkin
-Feature: 翻开技能册认品阶
-
-  Scenario: 新玩家看懂这场短剧
-    Given 玩家打开 capability_standard_graph_op_LoadConfigInt
-    And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_LoadConfigInt/play.mp4
-    When 短剧演完
-    Then 字幕讲的是「册上品阶两颗星，头顶徽章照着点亮。」这类人话
-    And 画面反馈和字幕说的是同一件事
-```
-
+- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script 图不可用（编译期白名单拒绝）。
+- 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
+- imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
+- 同类用法：跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。
 ## 怎么进
 
 ```text

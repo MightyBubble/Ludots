@@ -25,56 +25,20 @@
 {"id": "nearest", "op": "AggMinByDistance"}
 ```
 
+## 这场是怎么搭出来的
 
-## 1. 概述
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/AggMinByDistance.json`，共 6 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
+ConstInt → ConstInt → QueryCone → LoadCaster → QueryFilterNotEntity → **AggMinByDistance**（本篇）
 
-- 家族：空间圈人
-- 启动绑定：`capability_standard_graph_op_AggMinByDistance`
-- 作者记号：`AggMinByDistance`（给写图的人对照，不出现在玩家字幕里）
-
-## 2. 结构
-
-| 角色 | 路径 |
-|------|------|
-| 玩家录像 | `artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4` |
-| 画廊海报 | `artifacts/evidence/capability_standard_graph_op_AggMinByDistance/poster.png` |
-| 剧本 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/AggMinByDistance.json` |
-| 作者图 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/AggMinByDistance.json` |
-
-## 3. 详情
-
-字幕模板（占位符由短剧填上）：
+图跑完，字幕报出结果：
 
 > 最近的是{name}。
 
-## 4. 场景
+## 边界与更多用法
 
-1. 从画廊或启动器打开 `capability_standard_graph_op_AggMinByDistance`。
-2. 舞台上能看见人和头顶血条（或这场短剧写明的可见反馈）。
-3. 短剧演算时，字幕只讲这一件事。
-4. 录像里不应夹带其它节点的完整剧情。
-
-## 5. 边界
-
-- 玩家入口是这一场，不是家族聚合场。
-- 字幕禁止堆 opcode / True / False / 耗时数字。
-- 缺 `play.mp4` 或 `poster.png` 时，站点与生成器必须失败关闭，不得用空片顶替。
-
-## 6. UAT
-
-```gherkin
-Feature: 扇形里谁离我最近
-
-  Scenario: 新玩家看懂这场短剧
-    Given 玩家打开 capability_standard_graph_op_AggMinByDistance
-    And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_AggMinByDistance/play.mp4
-    When 短剧演完
-    Then 字幕讲的是「每人拉一条线，最短的那条留下。」这类人话
-    And 画面反馈和字幕说的是同一件事
-```
-
+- 图种边界：六种图全都能用，不必为它挑图种。
+- 同类用法：范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。
 ## 怎么进
 
 ```text

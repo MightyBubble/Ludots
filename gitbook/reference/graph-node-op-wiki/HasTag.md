@@ -23,62 +23,29 @@
 
 ```json
 {"id": "hasEnemy", "op": "HasTag", "tag": "State.Sandbox.Marked"}
-```接线（值边把上一步的结果送进本节点端口）：
+```
+
+接线（值边把上一步的结果送进本节点端口）：
 
 ```json
 {"from": "scout", "fromPort": "value", "to": "hasEnemy", "toPort": "source"}
 ```
 
+## 这场是怎么搭出来的
 
-## 1. 概述
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/HasTag.json`，共 2 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
+LoadExplicitTarget → **HasTag**（本篇）
 
-- 家族：组合短剧
-- 启动绑定：`capability_standard_graph_op_HasTag`
-- 作者记号：`HasTag`（给写图的人对照，不出现在玩家字幕里）
-
-## 2. 结构
-
-| 角色 | 路径 |
-|------|------|
-| 玩家录像 | `artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4` |
-| 画廊海报 | `artifacts/evidence/capability_standard_graph_op_HasTag/poster.png` |
-| 剧本 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/HasTag.json` |
-| 作者图 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/HasTag.json` |
-
-## 3. 详情
-
-字幕模板（占位符由短剧填上）：
+图跑完，字幕报出结果：
 
 > 带标记的查为「{result}」，没标记的查为「无」。
 
-## 4. 场景
+## 边界与更多用法
 
-1. 从画廊或启动器打开 `capability_standard_graph_op_HasTag`。
-2. 舞台上能看见人和头顶血条（或这场短剧写明的可见反馈）。
-3. 短剧演算时，字幕只讲这一件事。
-4. 录像里不应夹带其它节点的完整剧情。
-
-## 5. 边界
-
-- 玩家入口是这一场，不是家族聚合场。
-- 字幕禁止堆 opcode / True / False / 耗时数字。
-- 缺 `play.mp4` 或 `poster.png` 时，站点与生成器必须失败关闭，不得用空片顶替。
-
-## 6. UAT
-
-```gherkin
-Feature: 查一查身上有没有那枚标记
-
-  Scenario: 新玩家看懂这场短剧
-    Given 玩家打开 capability_standard_graph_op_HasTag
-    And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_HasTag/play.mp4
-    When 短剧演完
-    Then 字幕讲的是「带标记的侦察兵亮绿圈，没标记的那个查完没反应。」这类人话
-    And 画面反馈和字幕说的是同一件事
-```
-
+- 图种边界：六种图全都能用，不必为它挑图种。
+- imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
+- 同类用法：多节点串成完整小玩法的组合示范，可整段抄走改。
 ## 怎么进
 
 ```text

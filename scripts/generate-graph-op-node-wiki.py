@@ -209,20 +209,19 @@ def parse_descriptor_table(path: Path) -> dict[str, dict]:
     return descs
 
 
-def extract_usage(graph_path: Path, op: str) -> tuple[str, list[str]]:
-    """从画廊作者图提取该 op 的真实节点条目与接进它的值边（写法示例 SSOT）。"""
+def find_op_doc(graph_path: Path, op: str) -> dict:
+    """定位作者图中含该 op 的图条目（写法示例与节点序列共用）。"""
     docs = load(graph_path)
-    node = None
     for doc in docs:
         for n in doc.get("nodes", []):
             if n.get("op") == op:
-                node = (doc, n)
-                break
-        if node:
-            break
-    if not node:
-        raise SystemExit(f"作者图 {graph_path} 中找不到 {op} 节点")
-    doc, n = node
+                return doc
+    raise SystemExit(f"作者图 {graph_path} 中找不到 {op} 节点")
+
+
+def extract_usage(doc: dict, op: str) -> tuple[str, list[str]]:
+    """提取该 op 的真实节点条目与接进它的值边（写法示例 SSOT）。"""
+    n = next(n for n in doc.get("nodes", []) if n.get("op") == op)
     entry = json.dumps(n, ensure_ascii=False)
     wires = [
         json.dumps(e, ensure_ascii=False)
@@ -232,8 +231,85 @@ def extract_usage(graph_path: Path, op: str) -> tuple[str, list[str]]:
     return entry, wires[:2]
 
 
-def author_section(repo: Path, op: str, driver: str, desc: dict, graph_path: Path) -> str:
-    usage, wires = extract_usage(graph_path, op)
+ALL_KINDS = ["Effect", "Score", "Validation", "Derived", "Query", "Script"]
+
+
+def node_sequence(doc: dict, op: str) -> list[tuple[str, bool]]:
+    """按控制流从 entry 走出节点执行序（主角 op 标记 True）。"""
+    by_id = {n["id"]: n for n in doc.get("nodes", [])}
+    next_of: dict[str, str] = {}
+    for e in doc.get("controlEdges", []):
+        if e.get("fromPort", "next") == "next":
+            next_of.setdefault(e["from"], e["to"])
+    order: list[tuple[str, bool]] = []
+    cur = doc.get("entry")
+    seen: set[str] = set()
+    while cur and cur in by_id and cur not in seen:
+        seen.add(cur)
+        order.append((by_id[cur]["op"], by_id[cur]["op"] == op))
+        cur = next_of.get(cur)
+    for nid, n in by_id.items():
+        if nid not in seen:
+            order.append((n["op"], n["op"] == op))
+    return order
+
+
+FAMILY_USE_CASES = {
+    "event": "受击联动（挨打触发计数或外观变化）、事件决定施放哪张效果牌、与观看者相关的表现逻辑。",
+    "linear": "伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。",
+    "attr": "按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。",
+    "spatial": "范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。",
+    "query": "战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。",
+    "rel": "好感与敌友判定、关系数值的聚合与排序、信任旗/失和旗这类关系玩法。",
+    "blackboard": "跨节点跨图传值、决策记忆（记住要盯的人）、按名册配置出招。",
+    "script": "跨帧等待（读条、喝药回满）、子图复用、循环收口。",
+    "sandbox": "多节点串成完整小玩法的组合示范，可整段抄走改。",
+}
+
+
+def scene_section(op: str, doc: dict, detail: str, graph_path: Path) -> str:
+    seq = node_sequence(doc, op)
+    chain = " → ".join(
+        (f"**{o}**（本篇）" if star else o) for o, star in seq
+    )
+    return f"""## 这场是怎么搭出来的
+
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/{op}.json`，共 {len(seq)} 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
+
+{chain}
+
+图跑完，字幕报出结果：
+
+> {detail}
+"""
+
+
+def boundary_section(op: str, driver: str, desc: dict) -> str:
+    present = [k for k in ALL_KINDS if k in desc["kinds"]]
+    missing = [k for k in ALL_KINDS if k not in present]
+    lines = []
+    if missing:
+        lines.append(
+            "图种边界：可用于 " + " / ".join(present) + "；" + " / ".join(missing) + " 图不可用（编译期白名单拒绝）。"
+        )
+    else:
+        lines.append("图种边界：六种图全都能用，不必为它挑图种。")
+    if not desc["ports"] or desc["ports"] == []:
+        lines.append("不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。")
+    if desc["imm"] == "imm 填符号名（编译期解析）":
+        lines.append("imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。")
+    if desc["dst"] == "dst 填派发预设目的位":
+        lines.append("dst 写派发预设位，取值来自 `assets/GAS/target_dispatch_presets.json`。")
+    lines.append("同类用法：{use}".format(use=FAMILY_USE_CASES.get(driver, "见手册分册的场景节。")))
+    body = "\n".join(f"- {l}" for l in lines)
+    return f"""## 边界与更多用法
+
+{body}
+"""
+
+
+def author_section(repo: Path, op: str, driver: str, desc: dict, doc: dict) -> str:
+    usage, wires = extract_usage(doc, op)
     handbook_file, handbook_label = HANDBOOK_BY_DRIVER.get(driver, (None, None))
     if not handbook_file:
         raise SystemExit(f"家族 {driver} 未配手册分册映射（op={op}）")
@@ -266,7 +342,7 @@ def author_section(repo: Path, op: str, driver: str, desc: dict, graph_path: Pat
 
 ```json
 {usage}
-```{wire_block.strip()}
+```{wire_block}
 """
 
 
@@ -308,18 +384,13 @@ def require_media(repo: Path, op: str) -> None:
         )
 
 
-def write_op_page(path: Path, vignette: dict, author_md: str) -> None:
-    op = vignette["op"]
+def write_op_page(path: Path, vignette: dict, sections: list[str]) -> None:
     title = vignette["title"]
     beat = vignette["beat"]
-    detail = vignette.get("detailTemplate", beat)
-    driver = vignette.get("driver", "sandbox")
-    family = DRIVER_LABELS.get(driver, driver)
-    sid = PREFIX + op
+    op = vignette["op"]
     media = evidence_dir(op)
+    sid = PREFIX + op
     launch = f"scripts/run-mod-launcher.cmd cli launch ${sid} --adapter raylib"
-    graph = f"{GALLERY_REL}/assets/GAS/graphs/{op}.json"
-    vignette_path = f"{GALLERY_REL}/assets/Vignettes/{op}.json"
 
     body = f"""# {title}
 
@@ -329,57 +400,7 @@ def write_op_page(path: Path, vignette: dict, author_md: str) -> None:
 你的浏览器打不开这段录像。请从仓库打开 `{media}/play.mp4`。
 </video>
 
-{author_md}
-
-## 1. 概述
-
-这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
-
-- 家族：{family}
-- 启动绑定：`{sid}`
-- 作者记号：`{op}`（给写图的人对照，不出现在玩家字幕里）
-
-## 2. 结构
-
-| 角色 | 路径 |
-|------|------|
-| 玩家录像 | `{media}/play.mp4` |
-| 画廊海报 | `{media}/poster.png` |
-| 剧本 | `{vignette_path}` |
-| 作者图 | `{graph}` |
-
-## 3. 详情
-
-字幕模板（占位符由短剧填上）：
-
-> {detail}
-
-## 4. 场景
-
-1. 从画廊或启动器打开 `{sid}`。
-2. 舞台上能看见人和头顶血条（或这场短剧写明的可见反馈）。
-3. 短剧演算时，字幕只讲这一件事。
-4. 录像里不应夹带其它节点的完整剧情。
-
-## 5. 边界
-
-- 玩家入口是这一场，不是家族聚合场。
-- 字幕禁止堆 opcode / True / False / 耗时数字。
-- 缺 `play.mp4` 或 `poster.png` 时，站点与生成器必须失败关闭，不得用空片顶替。
-
-## 6. UAT
-
-```gherkin
-Feature: {title}
-
-  Scenario: 新玩家看懂这场短剧
-    Given 玩家打开 {sid}
-    And 页面或本地能播 {media}/play.mp4
-    When 短剧演完
-    Then 字幕讲的是「{beat}」这类人话
-    And 画面反馈和字幕说的是同一件事
-```
-
+""" + (chr(10) * 2).join(sections) + f"""
 ## 怎么进
 
 ```text
@@ -451,10 +472,16 @@ def main() -> int:
         vignette = vignettes[op]
         if not args.allow_missing_media:
             require_media(repo, op)
+        driver = vignette.get("driver", "sandbox")
         graph_path = repo / GALLERY_REL / "assets" / "gas" / "graphs" / f"{op}.json"
-        author_md = author_section(repo, op, vignette.get("driver", "sandbox"), descs[op], graph_path)
-        write_op_page(wiki_dir / f"{op}.md", vignette, author_md)
-        by_driver[vignette.get("driver", "sandbox")].append(vignette)
+        doc = find_op_doc(graph_path, op)
+        sections = [
+            author_section(repo, op, driver, descs[op], doc).rstrip("\n"),
+            scene_section(op, doc, vignette.get("detailTemplate", vignette["beat"]), graph_path).rstrip("\n"),
+            boundary_section(op, driver, descs[op]).rstrip("\n"),
+        ]
+        write_op_page(wiki_dir / f"{op}.md", vignette, sections)
+        by_driver[driver].append(vignette)
 
     # Drop stale pages for removed ops.
     keep = {f"{op}.md" for op in ops} | {"README.md"}

@@ -23,63 +23,29 @@
 
 ```json
 {"id": "controls", "op": "ControlDomainControls"}
-```接线（值边把上一步的结果送进本节点端口）：
+```
+
+接线（值边把上一步的结果送进本节点端口）：
 
 ```json
 {"from": "captain", "fromPort": "value", "to": "controls", "toPort": "a"}
 {"from": "member", "fromPort": "value", "to": "controls", "toPort": "b"}
 ```
 
+## 这场是怎么搭出来的
 
-## 1. 概述
+上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ControlDomainControls.json`，共 3 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：
 
-这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
+LoadCaster → LoadExplicitTarget → **ControlDomainControls**（本篇）
 
-- 家族：事件与吸附
-- 启动绑定：`capability_standard_graph_op_ControlDomainControls`
-- 作者记号：`ControlDomainControls`（给写图的人对照，不出现在玩家字幕里）
-
-## 2. 结构
-
-| 角色 | 路径 |
-|------|------|
-| 玩家录像 | `artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4` |
-| 画廊海报 | `artifacts/evidence/capability_standard_graph_op_ControlDomainControls/poster.png` |
-| 剧本 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/ControlDomainControls.json` |
-| 作者图 | `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ControlDomainControls.json` |
-
-## 3. 详情
-
-字幕模板（占位符由短剧填上）：
+图跑完，字幕报出结果：
 
 > 队长对队员{result}；队员对队长{resultFoe}。
 
-## 4. 场景
+## 边界与更多用法
 
-1. 从画廊或启动器打开 `capability_standard_graph_op_ControlDomainControls`。
-2. 舞台上能看见人和头顶血条（或这场短剧写明的可见反馈）。
-3. 短剧演算时，字幕只讲这一件事。
-4. 录像里不应夹带其它节点的完整剧情。
-
-## 5. 边界
-
-- 玩家入口是这一场，不是家族聚合场。
-- 字幕禁止堆 opcode / True / False / 耗时数字。
-- 缺 `play.mp4` 或 `poster.png` 时，站点与生成器必须失败关闭，不得用空片顶替。
-
-## 6. UAT
-
-```gherkin
-Feature: 同一个兵，不是谁都指挥得动
-
-  Scenario: 新玩家看懂这场短剧
-    Given 玩家打开 capability_standard_graph_op_ControlDomainControls
-    And 页面或本地能播 artifacts/evidence/capability_standard_graph_op_ControlDomainControls/play.mp4
-    When 短剧演完
-    Then 字幕讲的是「队长指挥队员是实线；反过来队员指挥队长，线断在半路。」这类人话
-    And 画面反馈和字幕说的是同一件事
-```
-
+- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script 图不可用（编译期白名单拒绝）。
+- 同类用法：受击联动（挨打触发计数或外观变化）、事件决定施放哪张效果牌、与观看者相关的表现逻辑。
 ## 怎么进
 
 ```text
