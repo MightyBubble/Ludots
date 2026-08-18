@@ -45,6 +45,7 @@ namespace NavMeshDebugLaunchMod.Systems
             }
 
             state.SetEnabled(enable);
+            Console.WriteLine($"[NavMeshDebugOverlay] {(enable ? "enabled" : "disabled")} layer={state.Layer} profile={state.Profile}");
 
             if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var debugObj) &&
                 debugObj is RenderDebugState renderDebugState)
@@ -71,13 +72,17 @@ namespace NavMeshDebugLaunchMod.Systems
                     $"NavMeshDebug overlay warm-up found no NavTileStore for layer={layer}, profile={profile}.");
             }
 
+            int loaded = 0;
             for (int cy = 0; cy < terrain.HeightChunks; cy++)
             {
                 for (int cx = 0; cx < terrain.WidthChunks; cx++)
                 {
                     store.GetOrLoad(new NavTileId(cx, cy, layer));
+                    loaded++;
                 }
             }
+
+            Console.WriteLine($"[NavMeshDebugOverlay] warm-up touched {loaded} tiles; resident={store.SnapshotLoadedTiles().Length}");
         }
 
         private void ResolveInput()
