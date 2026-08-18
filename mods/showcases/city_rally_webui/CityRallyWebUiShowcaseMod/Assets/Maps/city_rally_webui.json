@@ -138,5 +138,6 @@
       "LoadedChunkCapacity": 256,
       "NavigationEnabled": false
     }
-  ]
+  ],
+  "VisualHeightmapAsset": "assets/terrain/city_rally_webui_flat.vhtm"
 }

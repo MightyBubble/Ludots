@@ -94,8 +94,21 @@ function App() {
     });
   }, [command, snapshot.selection.entityKey]);
 
+  const handleWorldRightClick = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    // 世界区域右键：发给引擎（绕过引擎鼠标输入链路）。
+    command('rightClick', {
+      screenX: event.clientX,
+      screenY: event.clientY
+    });
+  }, [command]);
+
   return (
-    <main className={`app flavor-${snapshot.flavor}`}>
+    <main
+      className={`app flavor-${snapshot.flavor}`}
+      onContextMenu={handleWorldRightClick}
+    >
       <div className="hud-layer">
         <TopHud
           snapshot={snapshot}

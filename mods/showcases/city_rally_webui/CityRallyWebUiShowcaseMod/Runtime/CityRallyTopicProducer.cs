@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Config;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
@@ -15,6 +16,9 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Spatial;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
@@ -64,6 +68,7 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             "activateAbilitySlot" => ActivateAbilitySlot(request),
             "switchParticipantView" => SwitchParticipantView(request),
             "cancelPlanting" => CancelPlanting(request),
+            "rightClick" => RightClick(request),
             _ => WebUiCommandResult.Fail("unknown_command", $"Unsupported city rally command '{request.Name}'.")
         };
     }
@@ -400,9 +405,13 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
         string? key = keyElement.GetString();
         if (string.IsNullOrWhiteSpace(key) || !TryResolveEntityKey(key, out Entity target))
         {
+            Log.Info(in LogChannels.Engine,
+                $"[CityRallyWebUi] selectEntity failed: key='{key}' resolved={!string.IsNullOrWhiteSpace(key)}");
             return WebUiCommandResult.Fail("entity_not_found", $"Entity '{key}' is not alive.");
         }
 
+        Log.Info(in LogChannels.Engine,
+            $"[CityRallyWebUi] selectEntity target={target.Id}:{target.Version}");
         EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
         Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
         if (collections == null || !_engine.World.IsAlive(owner))
@@ -549,6 +558,67 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             OrderSubmitResult.RejectedValidation => "Ability activation failed validation before submission.",
             _ => "The shared GAS command-panel source rejected this ability activation.",
         };
+    }
+
+    private WebUiCommandResult RightClick(WebUiCommandRequest request)
+    {
+        if (!request.Payload.TryGetProperty("screenX", out JsonElement sx) ||
+            !request.Payload.TryGetProperty("screenY", out JsonElement sy) ||
+            sx.ValueKind != JsonValueKind.Number ||
+            sy.ValueKind != JsonValueKind.Number)
+        {
+            return WebUiCommandResult.Fail("invalid_payload", "rightClick requires payload.screenX/screenY.");
+        }
+
+        // 屏幕坐标 → 世界坐标（Web UI 右键：绕过引擎鼠标输入链路）。
+        if (!AuthoritativeGroundPointerHelper.TryResolveFromScreen(
+                _engine.GlobalContext,
+                new System.Numerics.Vector2(sx.GetSingle(), sy.GetSingle()),
+                out var worldCm))
+        {
+            return WebUiCommandResult.Fail("ground_resolve_failed", "rightClick could not resolve a ground point.");
+        }
+
+        Entity target = TryGetCommandSourcePrimary(out Entity primary) ? primary : Entity.Null;
+        if (target == Entity.Null || !_engine.World.IsAlive(target))
+        {
+            return WebUiCommandResult.Fail("no_selection", "rightClick requires a selected entity.");
+        }
+
+        var orderQueue = _engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+            ?? throw new InvalidOperationException("OrderQueue service is missing.");
+        int setSpawnId = RequireOrderTypeId("setCityRallySpawnTarget");
+        bool enqueued = orderQueue.TryEnqueue(new Order
+        {
+            OrderTypeId = setSpawnId,
+            PlayerId = ResolvePlayerId(target),
+            Actor = target,
+            Args = new OrderArgs
+            {
+                Spatial = new OrderSpatial
+                {
+                    Kind = OrderSpatialKind.WorldCm,
+                    Mode = OrderCollectionMode.Single,
+                    WorldCm = new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y),
+                },
+            },
+            SubmitMode = OrderSubmitMode.Immediate,
+        });
+        return enqueued
+            ? WebUiCommandResult.Ok()
+            : WebUiCommandResult.Fail("order_rejected", "rightClick order was rejected.");
+    }
+
+    private int RequireOrderTypeId(string key)
+    {
+        var orderTypes = _engine.GetService(CoreServiceKeys.OrderTypeRegistry) as OrderTypeRegistry
+            ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
+        return orderTypes.GetId(key);
+    }
+
+    private int ResolvePlayerId(Entity entity)
+    {
+        return _engine.World.TryGet(entity, out PlayerOwner owner) ? owner.PlayerId : 1;
     }
 
     private WebUiCommandResult CancelPlanting(WebUiCommandRequest request)

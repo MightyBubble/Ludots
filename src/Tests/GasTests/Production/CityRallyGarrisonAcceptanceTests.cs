@@ -323,6 +323,30 @@ namespace Ludots.Tests.GAS.Production
                 "路由应携带 Leave 能力标签定位槽位。");
         }
 
+        [Test]
+        public void InputConfig_DefinesCommandRightClickBinding()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            var loader = new InputConfigPipelineLoader(engine.ConfigPipeline);
+            var config = loader.Load();
+
+            InputActionDef? command = config.Actions.FirstOrDefault(a =>
+                string.Equals(a.Id, "Command", StringComparison.Ordinal));
+            Assert.That(command, Is.Not.Null, "InputConfig 应定义 Command action。");
+
+            InputContextDef? defaultCtx = config.Contexts.FirstOrDefault(c =>
+                string.Equals(c.Id, "Default_Gameplay", StringComparison.Ordinal));
+            Assert.That(defaultCtx, Is.Not.Null, "InputConfig 应包含 Default_Gameplay context。");
+            Assert.That(defaultCtx.Bindings.Any(b =>
+                string.Equals(b.ActionId, "Command", StringComparison.Ordinal) &&
+                string.Equals(b.Path, "<Mouse>/RightButton", StringComparison.Ordinal)),
+                Is.True,
+                "Default_Gameplay 应有 Command→<Mouse>/RightButton 绑定。");
+        }
+
         private static bool HasTag(GameEngine engine, Entity entity, string tagName)
         {
             var world = engine.World;
