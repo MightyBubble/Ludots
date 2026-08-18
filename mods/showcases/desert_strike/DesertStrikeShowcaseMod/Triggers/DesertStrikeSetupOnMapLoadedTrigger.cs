@@ -64,6 +64,12 @@ namespace DesertStrikeShowcaseMod.Triggers
             state.PlayerTeam = RequireTeam(world, state.PlayerBase);
             state.AiTeam = RequireTeam(world, state.AiBase);
 
+            if (engine.GlobalContext.TryGetValue(InstallDesertStrikeOnGameStartTrigger.HudPanelRuntimeKey, out var hudObj) &&
+                hudObj is DesertStrikeHudPanelRuntime hudRuntime)
+            {
+                hudRuntime.BindScope(Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine));
+            }
+
             if (!TrySelectCommandSource(engine, state.PlayerBase))
             {
                 _ctx.Log("[DesertStrikeShowcaseMod] Player base command source not selected; the base may be clickable directly.");

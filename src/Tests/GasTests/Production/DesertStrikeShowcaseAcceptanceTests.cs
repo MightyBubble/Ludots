@@ -11,9 +11,8 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Scripting;
-using Ludots.UI;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 using DesertStrikeShowcaseMod.Runtime;
 using DesertStrikeShowcaseMod.Triggers;
@@ -137,6 +136,27 @@ namespace Ludots.Tests.GAS.Production
             WriteArtifacts(engine, state, "base_destruction");
         }
 
+        [Test]
+        public void DesertStrike_HudPanel_ActivatesAndProjectsValues()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine);
+            DesertStrikeState state = GetState(engine);
+
+            var hudRuntime = engine.GlobalContext[InstallDesertStrikeOnGameStartTrigger.HudPanelRuntimeKey] as DesertStrikeHudPanelRuntime
+                ?? throw new InvalidOperationException("DesertStrike HUD panel runtime missing from GlobalContext.");
+
+            Assert.That(hudRuntime.ActivationStore.IsVisible(DesertStrikeHudPanelRuntime.PanelType), Is.True, "HUD panel should be shown on map load");
+
+            Tick(engine, 10);
+
+            var outputs = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
+            Entity seatRep = Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            Assert.That(outputs.TryGet(seatRep, "desert_strike.hud.minerals", out _), Is.True, "HUD values should project through GraphOutputValueStore");
+            Assert.That(outputs.TryGet(seatRep, "desert_strike.hud.winner", out _), Is.True);
+            WriteArtifacts(engine, state, "hud_panel");
+        }
+
         private static GameEngine CreateEngine()
         {
             string repoRoot = FindRepoRoot();
@@ -145,18 +165,9 @@ namespace Ludots.Tests.GAS.Production
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
-            InstallDummyInput(engine);
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
-            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+            AcceptanceUiHostInstaller.Install(engine);
             engine.Start();
             return engine;
-        }
-
-        private static void InstallDummyInput(GameEngine engine)
-        {
         }
 
         private static void LoadMap(GameEngine engine)

@@ -1,0 +1,25 @@
+{
+  "id": "panel.desert_strike.hud",
+  "variables": [
+    { "name": "minerals", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.minerals" } },
+    { "name": "waveSeconds", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.waveSeconds" } },
+    { "name": "waveNumber", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.waveNumber" } },
+    { "name": "playerQueue", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.playerQueue" } },
+    { "name": "aiMinerals", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.aiMinerals" } },
+    { "name": "aiQueue", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.aiQueue" } },
+    { "name": "playerBaseHp", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.playerBaseHp" } },
+    { "name": "aiBaseHp", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.aiBaseHp" } },
+    { "name": "winner", "kind": "Float", "source": { "sourceKind": "GraphOutput", "graphOutputKey": "desert_strike.hud.winner" } }
+  ],
+  "binds": [
+    { "control": "lbl.minerals", "variable": "minerals" },
+    { "control": "lbl.waveSeconds", "variable": "waveSeconds" },
+    { "control": "lbl.waveNumber", "variable": "waveNumber" },
+    { "control": "lbl.playerQueue", "variable": "playerQueue" },
+    { "control": "lbl.aiMinerals", "variable": "aiMinerals" },
+    { "control": "lbl.aiQueue", "variable": "aiQueue" },
+    { "control": "lbl.playerBaseHp", "variable": "playerBaseHp" },
+    { "control": "lbl.aiBaseHp", "variable": "aiBaseHp" },
+    { "control": "lbl.winner", "variable": "winner" }
+  ]
+}

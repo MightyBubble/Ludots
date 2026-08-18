@@ -18,6 +18,7 @@ namespace DesertStrikeShowcaseMod.Triggers
         private const string InstalledKey = "DesertStrikeShowcaseMod.Installed";
         public const string StateKey = "DesertStrikeShowcaseMod.State";
         public const string ConfigKey = "DesertStrikeShowcaseMod.Config";
+        public const string HudPanelRuntimeKey = "DesertStrikeShowcaseMod.HudPanelRuntime";
 
         private readonly IModContext _ctx;
 
@@ -52,6 +53,9 @@ namespace DesertStrikeShowcaseMod.Triggers
 
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
+            var hudPanelRuntime = new DesertStrikeHudPanelRuntime(engine, state, config, _ctx);
+            engine.GlobalContext[HudPanelRuntimeKey] = hudPanelRuntime;
+
             // SystemCapability("desert-strike.showcase-systems")
             engine.RegisterSystem(new DesertStrikeWaveSystem(engine, state, config), SystemGroup.PostMovement);
             engine.RegisterSystem(new DesertStrikeAutoBattleSystem(engine, state), SystemGroup.PostMovement);
@@ -59,7 +63,7 @@ namespace DesertStrikeShowcaseMod.Triggers
             engine.RegisterSystem(new DesertStrikePurchaseSystem(engine, state, config), SystemGroup.EffectProcessing);
             engine.RegisterSystem(new DesertStrikeDeathSystem(engine, state), SystemGroup.PostMovement);
             engine.RegisterSystem(new DesertStrikeAiPlayerSystem(engine, state, config), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new DesertStrikeHudSystem(engine, state, config));
+            engine.RegisterPresentationSystem(new DesertStrikeHudSystem(engine, hudPanelRuntime));
             _ctx.Log("[DesertStrikeShowcaseMod] Desert Strike systems registered");
             return Task.CompletedTask;
         }
