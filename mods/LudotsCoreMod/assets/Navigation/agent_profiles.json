@@ -1,0 +1,12 @@
+[
+  {
+    "id": "debug",
+    "radiusCm": 30,
+    "heightCm": 180,
+    "clearanceCm": 30,
+    "draftCm": 0,
+    "beamCm": 60,
+    "mass": 80,
+    "layer": 0
+  }
+]
