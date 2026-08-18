@@ -65,7 +65,7 @@
             "priority": 10,
             "targetType": "HoveredEntityOrPosition",
             "match": {
-              "abilitySlotIndex": 2,
+              "abilitySlotIndex": 1,
               "abilityIdKeySuffix": ".Leave"
             }
           },

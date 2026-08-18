@@ -51,7 +51,10 @@
       "iconGlyph": "IN",
       "accentColor": "#F59E0B",
       "hintText": "右键己方城池进驻；英雄就任太守。"
-    }
+    },
+    "catalogTags": [
+      "Ability.CityRally.Enter"
+    ]
   },
   {
     "id": "Ability.CityRally.LeaveCity",
@@ -69,7 +72,10 @@
       "iconGlyph": "OUT",
       "accentColor": "#EF4444",
       "hintText": "离开城池，前往右键指定的位置。"
-    }
+    },
+    "catalogTags": [
+      "Ability.CityRally.Leave"
+    ]
   },
   {
     "id": "Ability.CityRally.PlantFlag",
@@ -92,6 +98,9 @@
       "iconGlyph": "FLG",
       "accentColor": "#F59E0B",
       "hintText": "就任太守后可用：右键地板插旗读条，完成后出城前往旗帜。"
-    }
+    },
+    "catalogTags": [
+      "Ability.CityRally.Plant"
+    ]
   }
 ]

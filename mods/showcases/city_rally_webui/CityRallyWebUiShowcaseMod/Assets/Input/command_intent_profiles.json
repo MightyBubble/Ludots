@@ -1,0 +1,31 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": { "kind": "independent" },
+      "rules": [
+        {
+          "priority": 30,
+          "actor": { "hasAbilityWithTag": "Ability.CityRally.Leave" },
+          "route": { "orderTypeKey": "setCityRallySpawnTarget", "slot": "byAbilityTag:Ability.CityRally.Leave" }
+        },
+        {
+          "priority": 25,
+          "actor": { "hasAbilityWithTag": "Ability.CityRally.Enter" },
+          "target": { "hasEntity": true },
+          "route": { "orderTypeKey": "setCityRallySpawnTarget", "slot": "byAbilityTag:Ability.CityRally.Enter" }
+        },
+        {
+          "priority": 20,
+          "target": { "hasEntity": true },
+          "route": { "orderTypeKey": "moveTo" }
+        },
+        {
+          "priority": 10,
+          "target": { "hasEntity": false },
+          "route": { "orderTypeKey": "moveTo" }
+        }
+      ]
+    }
+  ]
+}

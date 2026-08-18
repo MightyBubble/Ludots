@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -196,6 +197,45 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(CountEntitiesByName(world, "旗帜"), Is.GreaterThanOrEqualTo(1),
                 "立旗完成后应生成旗子实体。");
+        }
+
+        [Test]
+        public void CustomCommandIntent_RoutesRoleActorsToSpawnTarget()
+        {
+            string repoRoot = FindRepoRoot();
+            string profilePath = Path.Combine(
+                repoRoot,
+                "mods", "showcases", "city_rally_webui", "CityRallyWebUiShowcaseMod",
+                "Assets", "Input", "command_intent_profiles.json");
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var config = System.Text.Json.JsonSerializer.Deserialize<Ludots.Core.Input.Interaction.CommandIntentProfilesConfig>(
+                    File.ReadAllText(profilePath), options)
+                ?? throw new InvalidOperationException("City rally command intent profile config failed to parse.");
+
+            Ludots.Core.Input.Interaction.CommandIntentProfileDefinition profile = config.Profiles.Single(p =>
+                string.Equals(p.Id, "intent.command.default", StringComparison.Ordinal));
+
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    string.Equals(rule.Actor?.HasAbilityWithTag, "Ability.CityRally.Leave", StringComparison.Ordinal) &&
+                    string.Equals(rule.Route?.OrderTypeKey, "setCityRallySpawnTarget", StringComparison.Ordinal)),
+                Is.True,
+                "带 Leave 能力的平民/太守右键应路由到 setCityRallySpawnTarget。");
+
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    string.Equals(rule.Actor?.HasAbilityWithTag, "Ability.CityRally.Enter", StringComparison.Ordinal) &&
+                    rule.Target?.HasEntity == true &&
+                    string.Equals(rule.Route?.OrderTypeKey, "setCityRallySpawnTarget", StringComparison.Ordinal)),
+                Is.True,
+                "带 Enter 能力的单位右键己方城池应路由到 setCityRallySpawnTarget。");
+
+            Assert.That(
+                profile.Rules.Any(rule =>
+                    rule.Actor?.HasAbilityWithTag == null &&
+                    string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+                Is.True,
+                "无角色能力的实体右键仍应 moveTo 兜底。");
         }
 
         private static bool HasTag(GameEngine engine, Entity entity, string tagName)
