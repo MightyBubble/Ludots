@@ -8,6 +8,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// <summary>天空盒：RaylibSkyboxRenderer 渐变天空，太阳方位随时间绕行。</summary>
     public sealed class SkyboxScene : IEngineScene
     {
+        private readonly GalleryLitProps _litProps = new();
         private RaylibSkyboxRenderer _skybox = new();
         private RaylibRenderEnvironmentConfig _config = RaylibRenderEnvironmentConfig.CreateDefault();
         private bool _disposed;
@@ -18,6 +19,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             _config = RaylibRenderEnvironmentConfig.CreateDefault() with
             {
                 Skybox = new RaylibSkyboxConfig(
@@ -45,6 +47,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 Lighting = _config.Lighting with { SunDirection = sunDirection },
             };
 
+            _litProps.BeginFrame(camera.position);
             Rl.BeginMode3D(camera);
             _skybox.Draw(camera, totalTimeSeconds, config);
 
@@ -53,8 +56,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             {
                 float angle = i * MathF.Tau / 7f;
                 var position = new Vector3(MathF.Cos(angle) * 26f, 2.2f, MathF.Sin(angle) * 26f);
-                Rl.DrawCube(position, 4f, 4.4f, 4f, new Color(52, 58, 74, 255));
-                Rl.DrawCube(position + new Vector3(0f, 5.6f, 0f), 2.2f, 2.2f, 2.2f, new Color(150, 140, 120, 255));
+                _litProps.DrawCube(position, new Vector3(4f, 4.4f, 4f), new Vector4(0.20f, 0.23f, 0.29f, 1f), roughness: 0.85f);
+                _litProps.DrawCube(
+                    position + new Vector3(0f, 5.6f, 0f),
+                    new Vector3(2.2f),
+                    new Vector4(0.59f, 0.55f, 0.47f, 1f),
+                    roughness: 0.6f);
             }
 
             Rl.EndMode3D();
@@ -68,6 +75,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _skybox?.Dispose();
+            _litProps.Dispose();
             _skybox = null!;
             _disposed = true;
         }

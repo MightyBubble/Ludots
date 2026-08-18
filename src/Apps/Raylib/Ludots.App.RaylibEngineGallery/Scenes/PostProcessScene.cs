@@ -8,6 +8,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// <summary>后处理调色：RaylibPostProcessRenderer 世界帧 RT，曝光/对比/饱和/暗角随时间正弦调制。</summary>
     public sealed class PostProcessScene : IEngineScene
     {
+        private readonly GalleryLitProps _litProps = new();
         private RaylibPostProcessRenderer _postProcess = new();
         private RaylibPostProcessConfig _baseConfig = RaylibPostProcessConfig.CreateDefault();
         private bool _disposed;
@@ -18,6 +19,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             _baseConfig = RaylibPostProcessConfig.CreateDefault();
         }
 
@@ -36,6 +38,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             };
 
             _postProcess.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), new Color(16, 20, 30, 255), config);
+            _litProps.BeginFrame(camera.position);
 
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(24, 3f);
@@ -46,11 +49,17 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 byte r = (byte)(90 + (i * 20));
                 byte g = (byte)(140 - (i * 12));
                 byte b = (byte)(200 - (i * 18));
-                Rl.DrawCube(position, 2.6f, 2.6f + (i * 0.2f), 2.6f, new Color(r, g, b, 255));
-                Rl.DrawSphere(position + new Vector3(0f, 3.2f, 0f), 0.8f, new Color(240, 210, 120, 255));
+                _litProps.DrawCube(
+                    position,
+                    new Vector3(2.6f, 2.6f + (i * 0.2f), 2.6f),
+                    new Vector4(r / 255f, g / 255f, b / 255f, 1f));
+                _litProps.DrawSphere(
+                    position + new Vector3(0f, 3.2f, 0f),
+                    0.8f,
+                    new Vector4(0.94f, 0.82f, 0.47f, 1f));
             }
 
-            Rl.DrawCube(new Vector3(0f, 0.4f, 0f), 5f, 0.8f, 5f, new Color(70, 76, 92, 255));
+            _litProps.DrawCube(new Vector3(0f, 0.4f, 0f), new Vector3(5f, 0.8f, 5f), new Vector4(0.27f, 0.30f, 0.36f, 1f));
             Rl.EndMode3D();
 
             _postProcess.EndWorldFrame(totalTimeSeconds, config);
@@ -70,6 +79,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _postProcess?.Dispose();
+            _litProps.Dispose();
             _postProcess = null!;
             _disposed = true;
         }

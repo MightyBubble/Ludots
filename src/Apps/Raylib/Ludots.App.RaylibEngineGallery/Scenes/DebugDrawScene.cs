@@ -11,6 +11,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     {
         private readonly DebugDrawCommandBuffer _commands = new();
         private readonly RaylibDebugDrawRenderer _renderer = new() { CircleSegments = 40, PlaneY = 0.02f };
+        private readonly GalleryLitProps _litProps = new();
 
         public string Id => "debug_draw";
         public string Title => "调试绘制";
@@ -18,6 +19,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -26,11 +28,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             float t = (float)totalTimeSeconds;
 
             Rl.ClearBackground(new Color(12, 14, 20, 255));
+            _litProps.BeginFrame(camera.position);
             Rl.BeginMode3D(camera);
 
             Rl.DrawGrid(30, 3f);
-            Rl.DrawCube(new Vector3(-9f, 1.1f, 4f), 2.6f, 2.2f, 2.6f, new Color(66, 92, 128, 255));
-            Rl.DrawCube(new Vector3(10f, 1.1f, -5f), 2.6f, 2.2f, 2.6f, new Color(128, 84, 66, 255));
+            _litProps.DrawCube(new Vector3(-9f, 1.1f, 4f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.26f, 0.36f, 0.50f, 1f));
+            _litProps.DrawCube(new Vector3(10f, 1.1f, -5f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.50f, 0.33f, 0.26f, 1f));
 
             _commands.Clear();
             FillGridLines();
@@ -173,6 +176,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Dispose()
         {
+            _litProps.Dispose();
         }
     }
 }

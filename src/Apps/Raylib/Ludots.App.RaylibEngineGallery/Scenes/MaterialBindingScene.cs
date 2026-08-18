@@ -18,6 +18,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly (int MaterialId, string Label, Color Panel)[] _slots;
         private readonly Material[] _boundMaterials = new Material[3];
         private readonly MaterialBlendMode[] _blendModes = new MaterialBlendMode[3];
+        private readonly GalleryLitProps _litProps = new();
 
         private RaylibMaterialHostBinder _binder = null!;
         private Mesh _cube;
@@ -39,6 +40,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             GalleryTextureFactory.WritePng("mat_checker.png", 128, 128, (x, y) =>
             {
                 bool lightCell = ((x / 16) + (y / 16)) % 2 == 0;
@@ -100,6 +102,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             float spin = (float)totalTimeSeconds * 0.5f;
 
             Rl.ClearBackground(new Color(16, 18, 26, 255));
+            _litProps.BeginFrame(camera.position);
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(20, 3f);
 
@@ -107,7 +110,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             {
                 DrawBoundCube(i, new Vector3((i - 1) * 7.5f, 3.4f, 0f), spin, Color.WHITE);
                 DrawBoundCube(i, new Vector3((i - 1) * 7.5f, 0.9f, -6.5f), -spin * 0.7f, new Color(150, 190, 255, 255));
-                Rl.DrawCube(new Vector3((i - 1) * 7.5f, 0.1f, 0f), 4.6f, 0.2f, 4.6f, _slots[i].Panel);
+                Color panel = _slots[i].Panel;
+                _litProps.DrawCube(
+                    new Vector3((i - 1) * 7.5f, 0.1f, 0f),
+                    new Vector3(4.6f, 0.2f, 4.6f),
+                    new Vector4(panel.r / 255f, panel.g / 255f, panel.b / 255f, 1f));
             }
 
             Rl.EndMode3D();
@@ -169,6 +176,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _binder?.Dispose();
+            _litProps.Dispose();
             _binder = null!;
             _disposed = true;
         }

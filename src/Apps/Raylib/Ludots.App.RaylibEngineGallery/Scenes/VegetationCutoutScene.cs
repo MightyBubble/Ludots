@@ -18,6 +18,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryMaterialAssets _materials = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
         private readonly (Vector3 Position, float Scale, int StableId)[] _tufts = BuildTufts();
+        private readonly GalleryLitProps _litProps = new();
 
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
@@ -29,6 +30,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             GalleryTextureFactory.WritePng("grass_billboard.png", 96, 128, (x, y) =>
             {
                 float v = y / 127f;
@@ -102,9 +104,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _lighting.SetDayPhase(0.5f);
 
             Rl.ClearBackground(new Color(120, 158, 190, 255));
+            _litProps.BeginFrame(camera.position);
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(30, 3f);
-            Rl.DrawCube(new Vector3(0f, -0.1f, 0f), 90f, 0.2f, 90f, new Color(64, 84, 52, 255));
+            _litProps.DrawCube(new Vector3(0f, -0.1f, 0f), new Vector3(90f, 0.2f, 90f), new Vector4(0.25f, 0.33f, 0.20f, 1f), roughness: 0.95f);
 
             _primitives.ApplyFrameLighting(_lighting, camera.position);
             _snapshot.BeginFrame();
@@ -160,6 +163,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _litProps.Dispose();
             _disposed = true;
         }
     }

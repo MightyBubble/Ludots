@@ -11,6 +11,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     {
         private readonly Queue<float> _frameMs = new();
         private readonly float[] _cubePhases = new float[8];
+        private readonly GalleryLitProps _litProps = new();
 
         private RaylibSkiaRenderer _skia = null!;
         private SkiaRasterLayer _panelLayer = new();
@@ -23,6 +24,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             _skia = new RaylibSkiaRenderer(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _panelLayer.Resize(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _typeface = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Normal) ?? SKTypeface.Default;
@@ -38,6 +40,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             TrackFrameMs(deltaSeconds);
 
             Rl.ClearBackground(new Color(10, 12, 20, 255));
+            _litProps.BeginFrame(camera.position);
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(24, 3f);
             float t = (float)totalTimeSeconds;
@@ -47,10 +50,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 float bob = MathF.Sin((t * 1.6f) + _cubePhases[i]);
                 var position = new Vector3(MathF.Cos(angle) * 12f, 1.8f + (bob * 1.1f), MathF.Sin(angle) * 12f);
                 byte channel = (byte)(110 + (i * 18));
-                Rl.DrawCube(position, 2.4f, 2.4f, 2.4f, new Color(channel, (byte)(240 - channel), 190, 255));
+                _litProps.DrawCube(
+                    position,
+                    new Vector3(2.4f),
+                    new Vector4(channel / 255f, (240 - channel) / 255f, 190 / 255f, 1f),
+                    roughness: 0.6f);
             }
 
-            Rl.DrawSphere(Vector3.Zero, 2.6f, new Color(235, 190, 90, 255));
+            _litProps.DrawSphere(Vector3.Zero, 2.6f, new Vector4(0.92f, 0.75f, 0.35f, 1f));
             Rl.EndMode3D();
 
             DrawHud(deltaSeconds, t);
@@ -126,6 +133,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _panelLayer?.Dispose();
             _skia?.Dispose();
             _typeface?.Dispose();
+            _litProps.Dispose();
             _skia = null!;
             _disposed = true;
         }
