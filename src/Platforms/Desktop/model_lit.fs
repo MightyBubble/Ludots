@@ -109,7 +109,7 @@ float SampleShadow(vec3 worldPos, vec3 N)
         for (int x = -1; x <= 1; x++)
         {
             float stored = UnpackDepth(texture(uShadowMap, shadowUv + vec2(x, y) * texel));
-            lit += receiverDepth <= stored + 0.0015 ? 1.0 : 0.0;
+            lit += receiverDepth <= stored + 0.004 ? 1.0 : 0.0;
         }
     }
 

@@ -37,7 +37,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             GalleryCamera.EnforceDistance(ref camera, 26f);
             camera.target.Y = 1.6f;
 
-            float dayPhase = (float)(totalTimeSeconds * 0.02 % 1.0);
+            float dayPhase = 0.45f + (float)(totalTimeSeconds * 0.015 % 0.5);
             _litProps.DayPhase01 = dayPhase;
 
             _litProps.Lighting.SetDayPhase(dayPhase);
@@ -65,7 +65,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _litProps.DrawMesh(
                 _podium,
                 RaylibMatrix.FromScaleTranslation(0f, 0.13f, 0f, 1f, 1f, 1f),
-                new Vector4(0.24f, 0.26f, 0.32f, 1f),
+                new Vector4(0.62f, 0.63f, 0.68f, 1f),
                 roughness: 0.9f);
 
             Vector3 sun = _litProps.Lighting.SunDirectionToward;

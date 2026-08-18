@@ -14,8 +14,8 @@ namespace Ludots.Raylib.Render
     /// </summary>
     public sealed unsafe class RaylibLitModel : IDisposable
     {
-        // 着色器采样器槽用 SHADER_LOC 索引（raylib DrawMesh 读 locs[15+mapSlot]，材质槽 2 ≠ 着色器槽 17）
-        private static readonly int ShadowSamplerSlot = (int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL;
+        private static readonly int ShadowMapSlot = (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL;
+        private static readonly int ShadowLocIndex = (int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL;
 
         private readonly Shader _shader;
         private Material _material;
@@ -56,7 +56,7 @@ namespace Ludots.Raylib.Render
             _locLightSpaceMatrix = RequireLocation("uLightSpaceMatrix");
             _locShadowEnabled = RequireLocation("uShadowEnabled");
             _locShadowTexelWorld = RequireLocation("uShadowTexelWorld");
-            _shader.locs[ShadowSamplerSlot] = _locShadowMap;
+            _shader.locs[ShadowLocIndex] = _locShadowMap;
 
             // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
             // DrawMesh 对该槽以 GL_TEXTURE_CUBE_MAP 绑定并回填 uniform=槽位号），LUT 走 BRDF 槽。
@@ -98,7 +98,7 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_shader, _locShadowTexelWorld, &shadowTexelWorld, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             if (shadow != null)
             {
-                Rl.SetMaterialTexture(ref _material, ShadowSamplerSlot, shadow.DepthTexture);
+                Rl.SetMaterialTexture(ref _material, ShadowMapSlot, shadow.DepthTexture);
                 Rl.SetShaderValueMatrix(_shader, _locLightSpaceMatrix, shadow.LightViewProjection);
             }
         }
@@ -106,7 +106,7 @@ namespace Ludots.Raylib.Render
         /// <summary>挂到模型材质接收阴影（DrawModelEx 路径每帧调用）。</summary>
         public void BindShadowToMaterial(ref Material material, RaylibDirectionalShadowMap shadow)
         {
-            Rl.SetMaterialTexture(ref material, ShadowSamplerSlot, shadow.DepthTexture);
+            Rl.SetMaterialTexture(ref material, ShadowMapSlot, shadow.DepthTexture);
         }
 
         /// <summary>把 IBL 采样纹理挂到模型材质（DrawModelEx 路径每帧调用；重烘后纹理 id 会变）。</summary>
