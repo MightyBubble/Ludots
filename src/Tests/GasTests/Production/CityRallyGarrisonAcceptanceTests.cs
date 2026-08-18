@@ -13,6 +13,10 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Orders;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -280,6 +284,155 @@ namespace Ludots.Tests.GAS.Production
                     string.Equals(rule.Route?.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
                 Is.True,
                 "无角色能力的实体右键仍应 moveTo 兜底。");
+        }
+
+        [Test]
+        public void CommandRightClick_RoutesToSetSpawnTargetOrder()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            World world = engine.World;
+            Entity peasant = FindEntity(world, "平民 A");
+
+            // 用引擎的服务构造一个带注入输入的 mapping，模拟 Command（右键）触发。
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+
+            var mappings = new List<InputOrderMapping>();
+            var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry) as OrderTypeRegistry
+                ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
+            var setSpawnId = orderTypes.GetId("setCityRallySpawnTarget");
+            var moveToId = orderTypes.GetId("moveTo");
+
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = Ludots.Core.Input.Orders.InteractionModeType.AimCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        ActorCollectionKey = "collection.command.source",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "setCityRallySpawnTarget",
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "setCityRallySpawnTarget",
+                                    Priority = 10,
+                                    Match = new ActorOrderRoutingMatch
+                                    {
+                                        AbilitySlotIndex = 1,
+                                        AbilityIdKeySuffix = ".Leave"
+                                    }
+                                },
+                                new()
+                                {
+                                    OrderTypeKey = "moveTo",
+                                    Priority = 0,
+                                    Match = new ActorOrderRoutingMatch()
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            var system = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity: 64);
+            system.CommandActionId = "Command";
+            system.SetSolePossessedActor(peasant, 1);
+            system.SetOrderTypeKeyResolver(key => orderTypes.GetId(key));
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(4000f, 0f, 3000f);
+                return true;
+            });
+            system.SetActorProvider((out Entity actor) =>
+            {
+                actor = peasant;
+                return true;
+            });
+            var orders = new List<Order>();
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+            int nextOrderId = 1;
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            system.SetCollectionPrimaryEntityProvider((string key, out Entity entity) =>
+            {
+                entity = peasant;
+                return true;
+            });
+            system.SetCollectionEntityListProvider((string key, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
+            {
+                list.Add(peasant);
+                rejection = OrderSubmitResult.Activated;
+                return true;
+            });
+            SetGroundCommandTargetFacts(system);
+
+            var stack = engine.GetService(CoreServiceKeys.InteractionContextStack) as InteractionContextStack
+                ?? throw new InvalidOperationException("InteractionContextStack missing.");
+            var schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime) as ControlSchemeRuntime
+                ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
+            var intents = engine.GetService(CoreServiceKeys.CommandIntentProfileRegistry) as CommandIntentProfileRegistry
+                ?? throw new InvalidOperationException("CommandIntentProfileRegistry missing.");
+            var dispatch = engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry) as CastDispatchProfileRegistry
+                ?? throw new InvalidOperationException("CastDispatchProfileRegistry missing.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore) as EntityCollectionStore
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+
+            // 真实游戏：collection owner 是 player rep（selectEntity 建在其下），sole actor 是选中的平民。
+            Entity playerRep = Ludots.Core.Client.ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(playerRep, in descriptor, new[] { peasant }, playerRep);
+
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = playerRep;
+                    return true;
+                });
+
+            int activeIntent = schemes.ActiveDefaultCommandIntentId;
+            TestContext.WriteLine($"ActiveDefaultCommandIntentId={activeIntent}");
+            system.Update(0f);
+            TestContext.WriteLine($"Activation={system.LastActivationResult.State} rej={system.LastActivationResult.Rejection}");
+
+            Assert.That(orders.Count, Is.GreaterThan(0),
+                "Command（右键）应提交至少一个 order。");
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(setSpawnId),
+                $"右键应路由到 setCityRallySpawnTarget（实际 {orders[0].OrderTypeId}，期望 {setSpawnId}）。");
+        }
+
+        private static void SetGroundCommandTargetFacts(InputOrderMappingSystem system)
+        {
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping mapping, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+                return true;
+            });
         }
 
         private static bool HasTag(GameEngine engine, Entity entity, string tagName)
