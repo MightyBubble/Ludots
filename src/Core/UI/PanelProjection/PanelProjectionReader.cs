@@ -14,16 +14,19 @@ namespace Ludots.Core.UI.PanelProjection
     {
         private readonly World _world;
         private readonly GraphOutputValueStore? _graphOutputs;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GraphLookupTableRegistry? _lookupTables;
         private readonly Func<string, int> _resolveAttributeId;
 
         public PanelProjectionReader(
             World world,
             GraphOutputValueStore? graphOutputs = null,
-            Func<string, int>? resolveAttributeId = null)
+            Func<string, int>? resolveAttributeId = null,
+            Ludots.Core.NodeLibraries.GASGraph.Host.GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _graphOutputs = graphOutputs;
             _resolveAttributeId = resolveAttributeId ?? AttributeRegistry.GetId;
+            _lookupTables = lookupTables;
         }
 
         public float ResolveFloat(Entity owner, in PanelVariableBinding binding)
@@ -45,6 +48,8 @@ namespace Ludots.Core.UI.PanelProjection
                     => ResolveAttribute(owner, in binding),
                 PanelBindingSourceKind.AggregateProjection or PanelBindingSourceKind.GraphOutput
                     => ResolveGraphOutput(owner, in binding),
+                PanelBindingSourceKind.TableLookup
+                    => ResolveTableLookup(owner, in binding),
                 _ => throw new InvalidOperationException(
                     $"Panel binding '{binding.VariableId}' has unsupported sourceKind '{binding.SourceKind}'."),
             };
@@ -77,6 +82,43 @@ namespace Ludots.Core.UI.PanelProjection
 
             float value = buffer.GetCurrent(id);
             uint revision = (uint)BitConverter.SingleToInt32Bits(value);
+            return new PanelProjectionValue(binding.VariableId, binding.SourceKind, value, revision);
+        }
+
+        private PanelProjectionValue ResolveTableLookup(Entity owner, in PanelVariableBinding binding)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' requires GraphLookupTableRegistry for table '{binding.LookupTable}'.");
+            }
+
+            string keyAttribute = binding.KeyAttribute
+                ?? throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' is missing keyAttribute.");
+            int keyAttributeId = _resolveAttributeId(keyAttribute);
+            if (keyAttributeId == AttributeRegistry.InvalidId || keyAttributeId < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' references unknown key attribute '{keyAttribute}'.");
+            }
+
+            if (!_world.TryGet(owner, out AttributeBuffer buffer) || !buffer.HasAttribute(keyAttributeId))
+            {
+                throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' key attribute '{keyAttribute}' is not defined on owner #{owner.Id}.");
+            }
+
+            int key = (int)buffer.GetCurrent(keyAttributeId);
+            string tableId = binding.LookupTable!;
+            string fieldId = binding.LookupField!;
+            int resolvedTable = _lookupTables.GetTableId(tableId);
+            int row = _lookupTables.ResolveRow(resolvedTable, key);
+            int resolvedField = _lookupTables.GetFieldId(tableId, fieldId);
+            float value = binding.ValueKind == PanelTemplateVariableKind.Int
+                ? _lookupTables.ReadInt(row, resolvedField)
+                : _lookupTables.ReadFloat(row, resolvedField);
+            uint revision = (uint)key ^ (uint)BitConverter.SingleToInt32Bits(value);
             return new PanelProjectionValue(binding.VariableId, binding.SourceKind, value, revision);
         }
 

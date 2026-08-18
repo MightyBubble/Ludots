@@ -10,7 +10,12 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public sealed class PanelTemplate
     {
-        public PanelTemplate(string id, IReadOnlyList<PanelTemplateVariable> variables, IReadOnlyList<PanelTemplateBind>? binds = null)
+        public PanelTemplate(
+            string id,
+            IReadOnlyList<PanelTemplateVariable> variables,
+            IReadOnlyList<PanelTemplateBind>? binds = null,
+            IReadOnlyList<PanelTemplateEvent>? events = null,
+            IReadOnlyList<PanelIntentMapEntry>? intents = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -52,14 +57,49 @@ namespace Ludots.Core.UI.PanelProjection
                 }
             }
 
+            List<PanelTemplateEvent> safeEvents = new List<PanelTemplateEvent>(events ?? Array.Empty<PanelTemplateEvent>());
+            var eventIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (PanelTemplateEvent declaration in safeEvents)
+            {
+                if (declaration == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null event entry.", nameof(events));
+                }
+
+                if (!eventIds.Add(declaration.EventId))
+                {
+                    throw new ArgumentException($"Panel template '{id}' declares duplicate event '{declaration.EventId}'.", nameof(events));
+                }
+            }
+
+            List<PanelIntentMapEntry> safeIntents = new List<PanelIntentMapEntry>(intents ?? Array.Empty<PanelIntentMapEntry>());
+            foreach (PanelIntentMapEntry entry in safeIntents)
+            {
+                if (entry == null)
+                {
+                    throw new ArgumentException($"Panel template '{id}' has a null intent entry.", nameof(intents));
+                }
+
+                if (!eventIds.Contains(entry.EventId))
+                {
+                    throw new ArgumentException(
+                        $"Panel template '{id}' intent '{entry.Intent}' references undeclared event '{entry.EventId}'.",
+                        nameof(intents));
+                }
+            }
+
             Id = id.Trim();
             Variables = variables;
             Binds = safeBinds;
+            Events = safeEvents;
+            Intents = safeIntents;
         }
 
         public string Id { get; }
         public IReadOnlyList<PanelTemplateVariable> Variables { get; }
         public IReadOnlyList<PanelTemplateBind> Binds { get; }
+        public IReadOnlyList<PanelTemplateEvent> Events { get; }
+        public IReadOnlyList<PanelIntentMapEntry> Intents { get; }
 
         public PanelVariableBinding ResolveBinding(string variableName)
         {
@@ -82,7 +122,10 @@ namespace Ludots.Core.UI.PanelProjection
             PanelTemplateVariableKind kind,
             PanelBindingSourceKind sourceKind,
             string? attributeId = null,
-            string? graphOutputKey = null)
+            string? graphOutputKey = null,
+            string? lookupTable = null,
+            string? lookupField = null,
+            string? keyAttribute = null)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -94,9 +137,12 @@ namespace Ludots.Core.UI.PanelProjection
             SourceKind = sourceKind;
 
             // Reuse the binding contract's own fail-closed field rules.
-            Binding = new PanelVariableBinding(Name, sourceKind, attributeId, graphOutputKey);
+            Binding = new PanelVariableBinding(Name, sourceKind, attributeId, graphOutputKey, lookupTable, lookupField, keyAttribute, kind);
             AttributeId = Binding.AttributeId;
             GraphOutputKey = Binding.GraphOutputKey;
+            LookupTable = Binding.LookupTable;
+            LookupField = Binding.LookupField;
+            KeyAttribute = Binding.KeyAttribute;
         }
 
         public string Name { get; }
@@ -104,6 +150,9 @@ namespace Ludots.Core.UI.PanelProjection
         public PanelBindingSourceKind SourceKind { get; }
         public string? AttributeId { get; }
         public string? GraphOutputKey { get; }
+        public string? LookupTable { get; }
+        public string? LookupField { get; }
+        public string? KeyAttribute { get; }
 
         internal PanelVariableBinding Binding { get; }
 

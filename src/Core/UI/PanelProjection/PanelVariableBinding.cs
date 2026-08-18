@@ -11,7 +11,11 @@ namespace Ludots.Core.UI.PanelProjection
             string variableId,
             PanelBindingSourceKind sourceKind,
             string? attributeId,
-            string? graphOutputKey)
+            string? graphOutputKey,
+            string? lookupTable = null,
+            string? lookupField = null,
+            string? keyAttribute = null,
+            PanelTemplateVariableKind valueKind = PanelTemplateVariableKind.Float)
         {
             if (string.IsNullOrWhiteSpace(variableId))
             {
@@ -20,6 +24,7 @@ namespace Ludots.Core.UI.PanelProjection
 
             VariableId = variableId.Trim();
             SourceKind = sourceKind;
+            ValueKind = valueKind;
 
             switch (sourceKind)
             {
@@ -63,6 +68,33 @@ namespace Ludots.Core.UI.PanelProjection
                     AttributeId = null;
                     break;
 
+                case PanelBindingSourceKind.TableLookup:
+                    if (string.IsNullOrWhiteSpace(lookupTable) ||
+                        string.IsNullOrWhiteSpace(lookupField) ||
+                        string.IsNullOrWhiteSpace(keyAttribute))
+                    {
+                        throw new ArgumentException(
+                            $"Binding '{VariableId}' with sourceKind '{sourceKind}' requires lookupTable, lookupField and keyAttribute.",
+                            nameof(lookupTable));
+                    }
+
+                    foreach ((string field, string? value) in new[] { (nameof(attributeId), attributeId), (nameof(graphOutputKey), graphOutputKey) })
+                    {
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            throw new ArgumentException(
+                                $"Binding '{VariableId}' with sourceKind '{sourceKind}' must not declare {field}.",
+                                field);
+                        }
+                    }
+
+                    LookupTable = lookupTable.Trim();
+                    LookupField = lookupField.Trim();
+                    KeyAttribute = keyAttribute.Trim();
+                    AttributeId = null;
+                    GraphOutputKey = null;
+                    break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(sourceKind), sourceKind, "Unknown panel binding source kind.");
             }
@@ -72,5 +104,9 @@ namespace Ludots.Core.UI.PanelProjection
         public PanelBindingSourceKind SourceKind { get; }
         public string? AttributeId { get; }
         public string? GraphOutputKey { get; }
+        public string? LookupTable { get; }
+        public string? LookupField { get; }
+        public string? KeyAttribute { get; }
+        public PanelTemplateVariableKind ValueKind { get; }
     }
 }
