@@ -200,6 +200,50 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
+        public void Peasant_MoveToOrder_ActuallyMoves()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            World world = engine.World;
+            Entity peasant = FindEntity(world, "平民 A");
+            Vector2 start = ReadWorldPosition(world, peasant);
+
+            Vector3 target = new(3000f, 0f, 2500f);
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+                ?? throw new InvalidOperationException("OrderQueue service is missing.");
+            bool enqueued = orderQueue.TryEnqueue(new Order
+            {
+                OrderTypeId = RequireOrderTypeId(engine, "moveTo"),
+                PlayerId = 1,
+                Actor = peasant,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = target,
+                    },
+                },
+                SubmitMode = OrderSubmitMode.Immediate,
+            });
+            Assert.That(enqueued, Is.True, "moveTo order should enqueue.");
+
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => Vector2.Distance(ReadWorldPosition(world, peasant), start) > 50f,
+                maxFrames: 120,
+                "平民收到 moveTo 后应开始移动（位置变化 > 50cm）。");
+
+            Vector2 after = ReadWorldPosition(world, peasant);
+            Assert.That(Vector2.Distance(after, start), Is.GreaterThan(50f),
+                $"平民应从 {start} 开始移动，实际仍在 {after}。");
+        }
+
+        [Test]
         public void CustomCommandIntent_RoutesRoleActorsToSpawnTarget()
         {
             string repoRoot = FindRepoRoot();
@@ -366,6 +410,12 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Assert.Fail(because);
+        }
+
+        private static Vector2 ReadWorldPosition(World world, Entity entity)
+        {
+            ref readonly var position = ref world.Get<WorldPositionCm>(entity);
+            return new Vector2(position.Value.X.ToFloat(), position.Value.Y.ToFloat());
         }
 
         private static Entity FindEntity(World world, string entityName)
