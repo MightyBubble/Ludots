@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 using Raylib_cs;
@@ -7,42 +8,69 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>
-    /// 大量动画实例合批：4096 个图元士兵走环形行军——CPU 侧每帧重写变换
-    /// （行军相位起伏/朝向切线/环带颜色分层），GPU 侧经 RaylibPrimitiveRenderer
-    /// Instanced 车道按颜色 bucket 合批绘制。
-    /// 注意边界：Model 资产在该车道退化为逐实例立即绘制（不算合批），
-    /// 真骨骼逐实例蒙皮见 gpu_skinning 场景；GPU 骨骼实例化车道待 native ≥ 5.5。
+    /// 真 GPU 蒙皮人群：4096 具 mannequin 环形行军——CPU 侧每帧只重算环位/朝向并打包
+    /// AnimatorPackedState（locomotion 相位），骨骼蒙皮走 RaylibPrimitiveRenderer 的
+    /// GpuSkinnedInstance 车道：bucket 按 (meshAsset, 环带色, clip, frame) 分桶，
+    /// 每 bucket 一次 UpdateModelAnimationBones + skinning_instanced 实例化绘制，
+    /// 不存在 CPU 变换假蒙皮回退。
+    /// 相位离散化取舍：行走 clip 62 帧（raylib ~60fps 采样），取 16 个相位桶——行军队列里
+    /// 比 16 桶更细的相位差肉眼不可辨；环带色量化为 7 档（相邻两环同档，分层渐变保留），
+    /// 7 色 ×16 相位 = 112 逻辑桶，mannequin 6 网格 → 672 次 DrawMeshInstanced，
+    /// 桶数每 +1 就多 6 次 uniform 上传/draw 与一次骨骼姿态计算，是本车道主要帧耗来源。
     /// </summary>
-    public sealed class CrowdAnimScene : IEngineScene
+    public sealed unsafe class CrowdAnimScene : IEngineScene
     {
         private const int TargetInstances = 4096;
         private const int RingCount = 14;
-        private const int SoldierAssetId = 9001;
-
-        private static readonly Vector3 SoldierScale = new(1.0f, 2.2f, 0.7f);
+        private const int ColorBandCount = 7;
+        private const int MannequinAssetId = 9001;
+        private const int GroundAssetId = 9002;
+        private const int DesiredPhaseBuckets = 16;
+        private const float MannequinUniformScale = 1.2f;
+        private const float GoldenRatioFract = 0.61803398875f;
+        private const string WalkClipNeedle = "Walking";
+        private const string WalkClipReject = "retarget";
 
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
+        private readonly GallerySkinnedBatch _skinnedBatch = new();
+        private readonly Vector4[] _ringParams = new Vector4[TargetInstances];
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
-        private readonly Vector3[] _ringParams = new Vector3[TargetInstances];
+        private int _walkClipIndex = -1;
+        private int _walkClipFrameCount;
+        private int _phaseBucketCount;
         private bool _disposed;
 
         public string Id => "crowd_anim";
         public string Title => "大量动画实例合批";
-        public string Summary => "4k 图元士兵环形行军——Instanced 合批 × CPU 变换动画";
+        public string Summary => "4k mannequin 环形行军——GpuSkinnedInstance 真 GPU 蒙皮合批";
 
         public void Load()
         {
             _meshes.Register(
-                "gallery.soldier",
-                MeshAssetDescriptor.Primitive(SoldierAssetId, PrimitiveMeshKind.Cube));
+                "gallery.crowd.mannequin",
+                MeshAssetDescriptor.Model(MannequinAssetId, "Models/mannequin_large_walk.glb"));
+            _meshes.Register(
+                "gallery.crowd.ground",
+                MeshAssetDescriptor.Primitive(GroundAssetId, PrimitiveMeshKind.Cube));
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.58f);
             _primitives = new RaylibPrimitiveRenderer(
                 RaylibPrimitiveRenderMode.Instanced,
-                vfs: null,
+                vfs: GalleryAssetPaths.Instance,
                 materials: null,
                 channelRegistrar: GalleryAnimationChannels.Register);
+
+            // 只探测 clip 元数据（名字/帧数）供相位分桶；绘制模型由渲染器内置
+            // RaylibGpuSkinnedModelCache 独立装载，避免场景侧重复驻留 GPU 网格。
+            if (!GalleryAssetPaths.Instance.TryResolveFullPath("Models/mannequin_large_walk.glb", out string modelPath) ||
+                !File.Exists(modelPath))
+            {
+                throw new InvalidOperationException("crowd_anim cannot resolve Models/mannequin_large_walk.glb for clip probing.");
+            }
+
+            (_walkClipIndex, _walkClipFrameCount) = ProbeWalkClip(modelPath);
+            _phaseBucketCount = Math.Min(DesiredPhaseBuckets, _walkClipFrameCount);
 
             var random = new Random(20260818);
             for (int i = 0; i < TargetInstances; i++)
@@ -51,16 +79,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 float radius = 8f + (ring * 2.2f);
                 float baseAngle = (i / (float)RingCount) * MathF.Tau + (random.NextSingle() * 0.24f);
                 float speed = 0.16f - (ring * 0.006f);
-                _ringParams[i] = new Vector3(baseAngle, radius, speed);
+                float baseWalkPhase = (i * GoldenRatioFract) % 1f;
+                _ringParams[i] = new Vector4(baseAngle, radius, speed, baseWalkPhase);
             }
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
-            camera.target.Y = 3f;
-            camera.position = camera.target + new Vector3(0.55f, 0.62f, 0.55f);
-            GalleryCamera.EnforceDistance(ref camera, 60f);
+            camera.target.Y = 2.2f;
+            camera.position = camera.target + new Vector3(0.62f, 0.46f, 0.62f);
+            GalleryCamera.EnforceDistance(ref camera, 46f);
             float t = (float)totalTimeSeconds;
+            // raylib 以 ~60fps 采样 glTF clip（62 帧 / 1.042s），按帧数反推原始节奏播放。
+            float walkCyclesPerSecond = _walkClipFrameCount / 60f;
 
             _lighting.SetDayPhase(0.5f);
 
@@ -70,36 +101,60 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _primitives.ApplyFrameLighting(_lighting, camera.position);
 
             _snapshot.BeginFrame();
+            _skinnedBatch.BeginFrame();
+            _snapshot.Add(GalleryItems.Mesh(
+                GroundAssetId,
+                900000,
+                new Vector3(0f, -0.17f, 0f),
+                new Vector3(86f, 0.3f, 86f),
+                new Vector4(0.42f, 0.44f, 0.52f, 1f)));
             for (int i = 0; i < TargetInstances; i++)
             {
-                Vector3 p = _ringParams[i];
+                Vector4 p = _ringParams[i];
                 float angle = p.X + (t * p.Z);
                 int ring = i % RingCount;
-                float phase = (angle / MathF.Tau) + (i * 0.113f);
-                float bob = MathF.Abs(MathF.Sin(phase * MathF.Tau * 2f)) * 0.34f;
-                float sway = MathF.Sin(phase * MathF.Tau * 2f) * 0.09f;
-                Vector3 position = new(
-                    MathF.Cos(angle) * p.Y,
-                    (SoldierScale.Y * 0.5f) + bob,
-                    MathF.Sin(angle) * p.Y);
-                Quaternion facing = Quaternion.CreateFromYawPitchRoll(-angle - (MathF.PI * 0.5f) + sway, 0f, 0f);
-                float depth = ring / (float)RingCount;
-                Vector4 tint = new(0.95f - (depth * 0.25f), 0.92f - (depth * 0.15f), 1.0f - (depth * 0.35f), 1f);
-                _snapshot.Add(GalleryItems.Mesh(
-                    SoldierAssetId,
-                    10000 + i,
-                    position,
-                    SoldierScale,
-                    tint,
-                    rotation: facing));
+                int phaseBucket = (int)(((p.W + (t * walkCyclesPerSecond)) % 1f) * _phaseBucketCount);
+                if (phaseBucket >= _phaseBucketCount)
+                {
+                    phaseBucket = 0;
+                }
+
+                var animator = AnimatorPackedState.Create(controllerId: 1);
+                animator.SetPrimaryStateIndex(_walkClipIndex);
+                animator.SetNormalizedTime01((phaseBucket + 0.5f) / _phaseBucketCount);
+                animator.SetFlags(AnimatorPackedStateFlags.Active | AnimatorPackedStateFlags.Looping);
+
+                int colorBand = ring * ColorBandCount / RingCount;
+                float depth = colorBand / (float)(ColorBandCount - 1);
+                _skinnedBatch.Add(new SkinnedVisualBatchItem
+                {
+                    MeshAssetId = MannequinAssetId,
+                    StableId = 10000 + i,
+                    Position = new Vector3(MathF.Cos(angle) * p.Y, 0f, MathF.Sin(angle) * p.Y),
+                    Rotation = Quaternion.CreateFromYawPitchRoll(-angle, 0f, 0f),
+                    Scale = new Vector3(MannequinUniformScale),
+                    Color = new Vector4(0.95f - (depth * 0.25f), 0.92f - (depth * 0.15f), 1.0f - (depth * 0.35f), 1f),
+                    RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                    AssetKind = AssetKind.SkinnedMesh,
+                    Visibility = VisualVisibility.Visible,
+                    Animator = animator,
+                });
             }
 
-            _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
+            // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
+            // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
+            _primitives.Draw(
+                _snapshot,
+                camera,
+                snapshot: _snapshot,
+                skinnedBatch: _skinnedBatch,
+                _meshes,
+                timeSeconds: totalTimeSeconds);
 
             Rl.EndMode3D();
 
             GalleryFont.Draw(
-                $"crowd {TargetInstances} instanced  rings {RingCount}  visuals {_primitives.LastMeshVisualCount}  batches {_primitives.LastInstancedBatches}",
+                $"crowd {_primitives.LastGpuSkinnedInstances} gpu-skinned  rings {RingCount}/{ColorBandCount}bands  phase {_phaseBucketCount}/{_walkClipFrameCount}f  draws {_primitives.LastGpuSkinnedBatches}  gpu {_primitives.LastGpuSkinnedMeshDrawMs:F2}ms  mat {_primitives.LastGpuSkinnedMatrixBuildMs:F2}ms",
                 12,
                 28,
                 20,
@@ -115,6 +170,56 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             _primitives?.Dispose();
             _disposed = true;
+        }
+
+        private static (int ClipIndex, int FrameCount) ProbeWalkClip(string modelPath)
+        {
+            ModelAnimation* animations = Rl.LoadModelAnimations(modelPath, out int animCount);
+            try
+            {
+                if (animations == null || animCount <= 0)
+                {
+                    throw new InvalidOperationException($"crowd_anim model '{modelPath}' has animCount={animCount}; GpuSkinnedInstance forbids silent static fallback.");
+                }
+
+                for (int i = 0; i < animCount; i++)
+                {
+                    string name = ReadAnimationName(animations[i]);
+                    if (!name.Contains(WalkClipNeedle, StringComparison.Ordinal) ||
+                        name.Contains(WalkClipReject, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    int frameCount = animations[i].frameCount;
+                    if (frameCount <= 0)
+                    {
+                        throw new InvalidOperationException($"crowd_anim walk clip '{name}' has frameCount={frameCount}.");
+                    }
+
+                    return (i, frameCount);
+                }
+
+                throw new InvalidOperationException($"crowd_anim found no walk clip (name contains '{WalkClipNeedle}' without '{WalkClipReject}') in '{modelPath}'.");
+            }
+            finally
+            {
+                Rl.UnloadModelAnimations(animations, animCount);
+            }
+        }
+
+        private static string ReadAnimationName(in ModelAnimation animation)
+        {
+            fixed (byte* name = animation.name)
+            {
+                int len = 0;
+                while (len < 32 && name[len] != 0)
+                {
+                    len++;
+                }
+
+                return len == 0 ? string.Empty : Encoding.UTF8.GetString(name, len);
+            }
         }
     }
 }

@@ -8,9 +8,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>
     /// GPU 骨骼蒙皮：RaylibGpuSkinnedModelCache fail-loud 装载 mannequin GLB（骨骼/动画校验），
-    /// RaylibSkinnedPlayback 逐实例解算 clip/帧相位并上传骨骼姿态后绘制。
-    /// 当前捆绑的 Windows raylib.dll 缺 UpdateModelAnimationBones 导出，RaylibPrimitiveRenderer 的
-    /// GpuSkinnedInstance 合批通道在该二进制上不可用，故本场景经缓存模型逐实例上传姿态绘制。
+    /// RaylibSkinnedPlayback 逐实例解算 clip/帧相位并上传骨骼姿态后绘制——演示逐实例非合批蒙皮路径；
+    /// 大规模合批蒙皮（UpdateModelAnimationBones 每 bucket 一次 + DrawMeshInstanced）见 crowd_anim 场景。
     /// </summary>
     public sealed unsafe class GpuSkinningScene : IEngineScene
     {
@@ -24,7 +23,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibGpuSkinnedModelCache _modelCache = null!;
         private RaylibFrameLighting _lighting = null!;
         private RaylibLitModel _lit = null!;
-        private RaylibPlanarShadows _shadows = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _groundMesh;
         private RaylibGpuSkinnedModelCache.Entry _entry;
         private bool _disposed;
@@ -61,10 +60,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             _modelCache = new RaylibGpuSkinnedModelCache(GalleryAssetPaths.Instance);
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Model(MeshAssetId, "Models/mannequin_large_walk.glb");
-            _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.62f);
+            _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.35f);
             _lit = new RaylibLitModel();
-            _shadows = new RaylibPlanarShadows();
-            _shadows.GroundY = 0.21f;
+            _shadowMap = new RaylibDirectionalShadowMap();
             _groundMesh = Rl.GenMeshCube(48f, 0.3f, 48f);
             _entry = _modelCache.GetOrLoad(MeshAssetId, in descriptor);
             _lit.AttachToModel(_entry.Model);
@@ -80,8 +78,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             GalleryCamera.EnforceDistance(ref camera, 24f);
             camera.target.Y = 2.2f;
 
-            _lighting.SetDayPhase(0.62f);
-            _lit.BeginFrame(_lighting, camera.position);
+            _lighting.SetDayPhase(0.35f);
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1.2f, 0f), RingRadius + 6f);
+            _shadowMap.DrawMeshShadow(_groundMesh, RaylibMatrix.FromScaleTranslation(0f, 0.05f, 0f, 1f, 1f, 1f));
+            for (int i = 0; i < InstanceCount; i++)
+            {
+                float angle = (i * MathF.Tau / InstanceCount) + ((float)totalTimeSeconds * 0.1f);
+                Vector3 position = new(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius);
+                _shadowMap.DrawModelShadow(_entry.Model, position, (angle + (MathF.PI * 0.5f)) * (180f / MathF.PI), new Vector3(1.15f));
+            }
+
+            _shadowMap.EndFrame();
+            _lit.BeginFrame(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.05f);
 
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(24, 2f);
@@ -96,6 +104,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 Vector3 position = new(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius);
                 byte lift = (byte)(190 + (55 * MathF.Sin(i)));
                 _lit.ApplyDrawUniforms(new Vector4(0.92f, lift / 255f, 1f, 1f), roughness: 0.55f, metallic: 0.1f);
+                ref Material modelMaterial = ref _entry.Model.materials[0];
+                _lit.BindShadowToMaterial(ref modelMaterial, _shadowMap);
                 Rl.DrawModelEx(
                     _entry.Model,
                     position,
@@ -111,18 +121,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 new Vector4(0.32f, 0.34f, 0.42f, 1f),
                 roughness: 0.9f,
                 metallic: 0f);
-            for (int i = 0; i < InstanceCount; i++)
-            {
-                float angle = (i * MathF.Tau / InstanceCount) + ((float)totalTimeSeconds * 0.1f);
-                Vector3 position = new(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius);
-                _shadows.DrawModelShadow(
-                    _entry.Model,
-                    position,
-                    (angle + (MathF.PI * 0.5f)) * (180f / MathF.PI),
-                    new Vector3(1.15f),
-                    _lighting.SunDirectionToward);
-            }
-
             Rl.EndMode3D();
             GalleryFont.Draw($"skinned instances {InstanceCount}  clip frames {animation.frameCount}", 12, 28, 20, GalleryColors.RayWhite);
         }

@@ -6903,7 +6903,7 @@
       "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
       "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
       "title": "引擎能力·光照全效",
-      "summary": "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空 IBL + 平面阴影——零 Core 依赖独立场景",
+      "summary": "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影——零 Core 依赖独立场景",
       "tier": "T1",
       "category": "engine",
       "tags": [
@@ -6924,7 +6924,7 @@
       "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
       "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
       "title": "引擎能力·大量动画实例合批",
-      "summary": "4k 图元士兵环形行军——Instanced 合批 × CPU 变换动画——零 Core 依赖独立场景",
+      "summary": "4k mannequin 真骨骼 GPU 蒙皮实例化合批——零 Core 依赖独立场景",
       "tier": "T1",
       "category": "engine",
       "tags": [

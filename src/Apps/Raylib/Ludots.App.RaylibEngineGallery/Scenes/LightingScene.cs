@@ -7,7 +7,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 {
     /// <summary>
     /// 光照全效演示：粗糙度 × 金属度梯度球阵（GGX 单灯解析 BRDF）、昼夜环绕太阳、
-    /// 天空半球 IBL 随相位流转、平面投影阴影接收。
+    /// 天空半球 IBL 随相位流转、shadow map 深度阴影接收。
     /// </summary>
     public sealed class LightingScene : IEngineScene
     {
@@ -22,7 +22,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public string Id => "lighting";
         public string Title => "光照全效";
-        public string Summary => "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空 IBL + 平面阴影";
+        public string Summary => "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影";
 
         public void Load()
         {

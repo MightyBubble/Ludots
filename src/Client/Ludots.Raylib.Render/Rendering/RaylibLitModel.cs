@@ -9,7 +9,7 @@ namespace Ludots.Raylib.Render
     /// <summary>
     /// 单物体带光照绘制通道：model_lit 着色器（Cook-Torrance GGX + 解析式天空半球 IBL）。
     /// 补齐"不走合批管线就没有明暗"的底座缺口；光照 uniform 词汇与 instancing 管线一致。
-    /// 阴影由 RaylibPlanarShadows 平面投影承担（方向光 → 地面）。
+    /// 阴影由 RaylibDirectionalShadowMap 深度 shadow map 承担（native 5.5）。
     /// </summary>
     public sealed unsafe class RaylibLitModel : IDisposable
     {

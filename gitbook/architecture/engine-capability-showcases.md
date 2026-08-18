@@ -34,8 +34,8 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 16 | skia_overlay | Skia GPU 2D 覆盖层 | RaylibSkiaRenderer + SkiaRasterLayer |
 | 17 | debug_draw | 调试绘制 | RaylibDebugDrawRenderer + DebugDrawCommandBuffer |
 | 18 | primitives | 图元/群体渲染与群体动画 | RaylibPrimitiveRenderer |
-| 19 | lighting | 光照全效（GGX 梯度/IBL/阴影） | RaylibLitModel + RaylibPlanarShadows |
-| 20 | crowd_anim | 大量动画实例合批 | RaylibPrimitiveRenderer Instanced × 4k CPU 变换动画 |
+| 19 | lighting | 光照全效（GGX 梯度/深度阴影） | RaylibLitModel + RaylibDirectionalShadowMap |
+| 20 | crowd_anim | 大量动画实例合批 | skinning_instanced 真骨骼 GPU 蒙皮 × 4k 实例 |
 
 ## 标准化合同
 

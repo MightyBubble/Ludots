@@ -56,7 +56,7 @@ shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
 - 越界（非 [0,1] / 非数字）装载期 fail-loud。
 - 合批管线与单物体通道同一合同（`MaterialAssetDescriptor.Roughness/Metalness`）。
 
-## 解析式天空 IBL
+## 解析式天空环境近似（非完整 IBL，见跟进 issue）
 
 `RaylibFrameLighting` 从昼夜 ramp（`ambient_day_ramp.json`）派生 `SkyZenithColor` / `SkyGroundColor`；`model_lit` 按法线朝向混合作环境漫反射、Fresnel 加权作环境镜面近似。无立方图 / LUT 依赖；昼夜联动免费获得。自定义光照时直接构造 `RaylibFrameLighting` 后调 `SetDayPhase` 即可。
 
@@ -64,7 +64,7 @@ shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
 
 | 限制 | 现象 | 绕法（本栈已采用） |
 |---|---|---|
-| 矩阵 uniform 通道不可用（`SetShaderValueMatrix` / MAT4） | uniform 保持零矩阵 | 模型/投影矩阵一律走 `DrawModelEx`/`DrawMesh` 的 transform 原生通道 |
+| （5.5 已修复）矩阵 uniform、骨骼导出、Mesh 布局 | — | native 已升级官方 5.5；历史绕法见 git 历史 |
 | GLTF 模型 mesh 按值封送布局错位 | `DrawMesh(model.meshes[i], …)` AV 崩溃 | 模型路径一律 `DrawModelEx`（内部指针布局一致） |
 | `SHADER_UNIFORM_VEC4` 通道不稳 | vec4 uniform 不生效 | 着色器矩阵列用 vec3 语义（`model_lit` 不依赖 vec4 uniform） |
 

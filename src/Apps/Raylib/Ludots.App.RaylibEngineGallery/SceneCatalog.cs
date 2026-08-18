@@ -40,8 +40,8 @@ namespace Ludots.App.RaylibEngineGallery
             new("skia_overlay", "Skia 2D 覆盖层", "RaylibSkiaRenderer + SkiaRasterLayer HUD 合成", static () => new Scenes.SkiaOverlayScene()),
             new("debug_draw", "调试绘制", "RaylibDebugDrawRenderer + DebugDrawCommandBuffer", static () => new Scenes.DebugDrawScene()),
             new("primitives", "图元群体渲染", "RaylibPrimitiveRenderer 纯数据图元阵 + 原型动效", static () => new Scenes.PrimitivesScene()),
-            new("lighting", "光照全效", "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空 IBL + 平面阴影", static () => new Scenes.LightingScene()),
-            new("crowd_anim", "大量动画实例合批", "4k 图元士兵环形行军——Instanced 合批 × CPU 变换动画", static () => new Scenes.CrowdAnimScene()),
+            new("lighting", "光照全效", "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影", static () => new Scenes.LightingScene()),
+            new("crowd_anim", "大量动画实例合批", "4k mannequin 环形行军——GpuSkinnedInstance 真 GPU 蒙皮合批", static () => new Scenes.CrowdAnimScene()),
         };
 
         public static IReadOnlyList<string> Ids { get; } = Entries.Select(e => e.Id).ToArray();
