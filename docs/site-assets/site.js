@@ -28,6 +28,7 @@
   var NAV_ITEMS = [
     { href: "index.html", label: "门户", page: "home" },
     { href: "index.html#docs", label: "文档", page: "home", hash: "#docs" },
+    { href: "graph-op-wiki.html", label: "Graph 节点画廊", page: "graphop" },
     { href: "gallery.html", label: "Showcase 画廊", page: "gallery" },
     { href: "tests.html", label: "测试与验收", page: "tests" },
     { href: "diagrams.html", label: "架构图库", page: "diagrams" }

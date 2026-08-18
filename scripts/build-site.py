@@ -12,6 +12,7 @@ Ludots GitHub Pages 门户站点组装脚本（纯标准库，无第三方依赖
 输出：
   _site/                    完整静态站点（含 .nojekyll），供 Pages 流水线原样发布
   _site/site-assets/docs-nav.js       由 gitbook/SUMMARY.md 解析生成的文档目录树
+  _site/site-assets/graph-op-nav.js   由 graph-node-op-wiki/README.md 解析的节点画廊目录
   _site/site-assets/gallery-data.js   由 showcase.registry.json 注入的画廊数据
   _site/site-assets/evidence-data.js  由 artifacts/acceptance/ 实扫生成的证据索引
 
@@ -182,6 +183,58 @@ def parse_prd_catalog(readme_path: Path) -> dict:
             "PRD 分篇目录与磁盘文件不一致（站点导航会 404），先修 README 或补文件：%s"
             % "、".join(missing[:12])
         )
+    return nav
+
+
+# ---------------------------------------------------------------------------
+# 1c. graph-node-op-wiki/README.md 家族目录 -> graph-op-nav.js
+# ---------------------------------------------------------------------------
+
+GRAPH_OP_WIKI_DIR = GITBOOK_DIR / "reference" / "graph-node-op-wiki"
+WIKI_FAMILY_HEADING = re.compile(r"^## (.+?)\s*$")
+WIKI_OP_ITEM = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<file>[^)]+?\.md)\)\s*(?:—|-)\s*(?P<desc>.*)$")
+
+
+def parse_graph_op_wiki(readme_path: Path) -> dict:
+    """解析节点 Wiki 总目录为家族树（站点 Graph 节点画廊页数据源）。"""
+    nav: dict = {"families": [], "total": 0}
+    if not readme_path.exists():
+        warn("graph-node-op-wiki/README.md 不存在 -> 节点画廊目录为空")
+        return nav
+
+    current_family = None
+    seen_files: set[str] = set()
+    for raw in readme_path.read_text(encoding="utf-8").splitlines():
+        fam = WIKI_FAMILY_HEADING.match(raw)
+        if fam:
+            current_family = {"title": fam.group(1), "ops": []}
+            nav["families"].append(current_family)
+            continue
+        item = WIKI_OP_ITEM.match(raw)
+        if not item or current_family is None:
+            continue
+        current_family["ops"].append({
+            "file": item.group("file").strip(),
+            "title": item.group("title").strip(),
+            "desc": item.group("desc").strip(),
+        })
+        seen_files.add(item.group("file").strip())
+        nav["total"] += 1
+
+    if nav["total"] == 0:
+        warn("graph-node-op-wiki/README.md 未解析到任何 op 条目 -> 检查家族列表格式")
+
+    missing = [f for f in sorted(seen_files) if not (readme_path.parent / f).is_file()]
+    if missing:
+        raise SystemExit(
+            "Graph 节点 Wiki 目录链接了不存在的页面（站点会 404）：%s" % "、".join(missing[:12])
+        )
+    orphans = sorted(
+        p.name for p in readme_path.parent.glob("*.md")
+        if p.name != "README.md" and p.name not in seen_files
+    )
+    if orphans:
+        warn("graph-node-op-wiki 存在未被 README 收录的孤儿页面：%s" % "、".join(orphans[:12]))
     return nav
 
 
@@ -419,6 +472,13 @@ def build(out_dir: Path) -> int:
         "todo": todo_docs,
     }
 
+    print("-- 解析 graph-node-op-wiki/README.md 家族目录 -> graph-op-nav.js")
+    graph_op_nav = {
+        "generatedAt": now,
+        "source": "gitbook/reference/graph-node-op-wiki/README.md",
+        **parse_graph_op_wiki(GRAPH_OP_WIKI_DIR / "README.md"),
+    }
+
     print("-- 读取 showcase.registry.json → gallery-data.js")
     showcases, schema_version = load_registry(REGISTRY_JSON)
     gallery_data = {
@@ -458,6 +518,7 @@ def build(out_dir: Path) -> int:
     # --- 生成数据 JS（覆盖/补充 site-assets） ---
     write_js(out_dir / "site-assets" / "docs-nav.js", "DOCS_NAV", docs_nav)
     write_js(out_dir / "site-assets" / "prd-nav.js", "PRD_NAV", prd_nav)
+    write_js(out_dir / "site-assets" / "graph-op-nav.js", "GRAPH_OP_NAV", graph_op_nav)
     write_js(out_dir / "site-assets" / "gallery-data.js", "GALLERY_DATA", gallery_data)
     write_js(out_dir / "site-assets" / "evidence-data.js", "EVIDENCE_DATA", evidence_data)
 
@@ -467,9 +528,10 @@ def build(out_dir: Path) -> int:
     # --- 结构自验 ---
     print("-- 结构自验")
     required = [
-        "index.html", "gallery.html", "tests.html", "diagrams.html",
+        "index.html", "gallery.html", "tests.html", "diagrams.html", "graph-op-wiki.html",
         "site-assets/site.css", "site-assets/site.js",
-        "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/gallery-data.js", "site-assets/evidence-data.js",
+        "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
+        "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
     ]
     missing = [r for r in required if not (out_dir / r).exists()]
@@ -498,6 +560,7 @@ def build(out_dir: Path) -> int:
     print(f"  GraphOp 媒体文件    : {n_graph_media}")
     print(f"  文档目录树 md 条目  : {md_count}")
     print('  PRD 手册篇目        : {}/{} 已写（{} 卷）'.format(prd_nav['written'], prd_nav['total'], len(prd_nav['volumes'])))
+    print('  Graph 节点 Wiki op  : {}（{} 家族）'.format(graph_op_nav['total'], len(graph_op_nav['families'])))
     print(f"  注册 showcase       : {len(showcases)}")
     print(f"  验收证据条目        : {len(evidence)}（目录 {sum(1 for e in evidence if e['kind'] == 'dir')} + 散装报告 {sum(1 for e in evidence if e['kind'] == 'report')}）")
     print(f"  diagrams SVG        : {svg_count}")
