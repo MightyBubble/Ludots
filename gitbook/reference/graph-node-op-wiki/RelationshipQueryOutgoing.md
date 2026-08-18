@@ -6,6 +6,30 @@
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_RelationshipQueryOutgoing/play.mp4`。
 </video>
 
+## 作者写法
+
+第一次来的 mod 作者看这里：这颗节点在 `assets/GAS/graphs.json`（或 `GAS/graphs/` 分片）里怎么写。签名取自引擎描述表，用例摘自画廊作者图，两处都是单一事实源。
+
+| 项 | 值 |
+|----|----|
+| 可用图种 | 仅 Query |
+| 返回 | 无（副作用节点） |
+| 输入端口（值边 toPort） | `source`（来源实体） |
+| 特殊写法 | dst 填符号名（编译期解析） |
+
+手册分册（全量字段与语义）：[关系与好感 · gr-op-08](../mod-editor-prd/config/gr-op-08-relationship.md)
+
+真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/RelationshipQueryOutgoing.json`）：
+
+```json
+{"id": "out", "op": "RelationshipQueryOutgoing", "relationshipType": "SocialBond"}
+```接线（值边把上一步的结果送进本节点端口）：
+
+```json
+{"from": "source", "fromPort": "value", "to": "out", "toPort": "source"}
+```
+
+
 ## 1. 概述
 
 这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。

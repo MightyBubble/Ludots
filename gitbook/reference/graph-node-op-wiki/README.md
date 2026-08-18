@@ -1,10 +1,12 @@
 # Graph 节点画廊 Wiki
 
-每个可执行图节点一场能看懂的短剧。下面按玩法家族分组；点进去能看录像、字幕合同和启动命令。
+每个可执行图节点两页视角合一：一场给玩家看的短剧（录像 + 人话字幕），加一节给 mod 作者的写法（签名表 + 真实用例 + 手册分册链接）。下面按玩法家族分组。
 
-生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 生成，勿手改正文）。
+生成器：`scripts/generate-graph-op-node-wiki.py`（从 vignette 与引擎描述表生成，勿手改正文）。
 
 ## 事件与吸附
+
+> 作者语义与全量字段见手册分册 [事件与情境 · gr-op-01](../mod-editor-prd/config/gr-op-01-context.md)。
 
 - [一路问到说了算的人](ControlDomainResolve.md) — 从小兵往上问，问到插旗的队长为止。
 - [从飞来的那一发里读出小数](LoadEventPayloadFloat.md) — 信号落地后，2.5 从事件里飞进信件板。
@@ -23,6 +25,8 @@
 - [贴到花名册里最近的人](SnapToNearestInCollection.md) — X 标记离开原地，压到花名册里够得着的最近那人身上。
 
 ## 关系与好感
+
+> 作者语义与全量字段见手册分册 [关系与好感 · gr-op-08](../mod-editor-prd/config/gr-op-08-relationship.md)。
 
 - [互相都认的朋友](RelationshipQueryMutual.md) — 两头都有箭头的链才亮。
 - [只看挂了信任旗的](RelationshipFilterFlag.md) — 链上插着信任旗的才留下。
@@ -44,6 +48,8 @@
 
 ## 名单筛选与汇总
 
+> 作者语义与全量字段见手册分册 [名单筛选与汇总 · gr-op-07](../mod-editor-prd/config/gr-op-07-entityset.md)。
+
 - [全场平均血量](AggAverageAttribute.md) — 十三个人的血条凑上台面，台面亮出平均数。
 - [全场最低血量](AggMinAttribute.md) — 台面翻出最低一格，亮出的数短得像那条空血条。
 - [全场最高血量](AggMaxAttribute.md) — 台面翻出最高一格，亮出的数顶着满格血条。
@@ -60,6 +66,8 @@
 - [照着名册点名](QueryFromCollection.md) — 名册板六格点亮，点名线拉向场上六人。
 
 ## 属性与效果
+
+> 作者语义与全量字段见手册分册 [属性与效果 · gr-op-04](../mod-editor-prd/config/gr-op-04-attributes.md)。
 
 - [先对脸：打的是不是自己](CompareEqEntity.md) — 残影演示点名自己→同一个人，收手；点名木桩→不是同一人，一刀扣 18。
 - [先开生命台账再动土](BeginLifecycleTransaction.md) — 账本一开，造身记上一笔；账一关，新身体已站在场上。
@@ -81,6 +89,8 @@
 
 ## 空间圈人
 
+> 作者语义与全量字段见手册分册 [空间圈人 · gr-op-06](../mod-editor-prd/config/gr-op-06-spatial.md)。
+
 - [两格以内的六角范围](QueryHexRange.md) — 范围内格子描黄框，第三格描灰框，人也不亮。
 - [只取半径 2 的六角环](QueryHexRing.md) — 描边那一圈上的人亮，里圈和更外圈都不亮。
 - [只留敌对关系的人](QueryFilterRelationship.md) — 扇内先亮一片，敌对关系的留下。
@@ -95,6 +105,8 @@
 - [这条窄线穿过谁](QueryLine.md) — 带内的人亮，贴着带边差几厘米的也不亮。
 
 ## 算术与比较
+
+> 作者语义与全量字段见手册分册 [算术与比较 · gr-op-02](../mod-editor-prd/config/gr-op-02-math.md)。
 
 - [一刀摊给两根木桩](DivFloat.md) — 40 的伤害段从中间切开，两根木桩各接一半。
 - [两刀里挑大的一刀](MaxFloat.md) — 两块刀伤 12 和 28 摆上台面，挑中的是更长的那块，打出去按它的长度掉血。
@@ -115,6 +127,8 @@
 
 ## 组合短剧
 
+> 作者语义与全量字段见手册分册 [图文档写法 · gr-02](../mod-editor-prd/config/gr-02-document.md)。
+
 - [先翻出一张效果牌，再照着打](ApplyEffectDynamic.md) — 施法者从抽屉翻出一张牌，木桩照着牌掉了一截血。
 - [名单取前三个](QueryLimit.md) — 圈里五个人各有一个编号，亮着的是编号最靠前的三个。
 - [圈里每人挨一记](FanOutApplyEffect.md) — 黄圈内五个人同时掉一截血，圈外两个没事。
@@ -129,6 +143,8 @@
 
 ## 脚本控制流
 
+> 作者语义与全量字段见手册分册 [脚本控制流 · gr-op-14](../mod-editor-prd/config/gr-op-14-control-flow.md)。
+
 - [出门办事，办完回家](Call.md) — 人走到驿站歇一脚，脚一落地就回原点，家这格空着时留个虚影。
 - [办完差事，交回原点](Return.md) — 差事办完这一步，人从驿站那格退回原点，虚影收回真人。
 - [叫另一张图来帮忙算](InvokeScript.md) — 主卷轴上叫一声外援，旁边那张小卷轴亮起来，算完把 7 送回来。
@@ -139,6 +155,8 @@
 - [续一杯，歇一口气](Yield.md) — 每续一杯就停一拍：人影顿一下，杯里水涨一格，三格满就完。
 
 ## 黑板与配置
+
+> 作者语义与全量字段见手册分册 [黑板与配置 · gr-op-05](../mod-editor-prd/config/gr-op-05-blackboard.md)。
 
 - [从情境信封找出额外那个人](LoadContextTargetContext.md) — 信封第三格写着这一击还要照顾谁。
 - [从情境信封认出出手人](LoadContextSource.md) — 拆开这一击的信封，出手人那格画的正是金块自己。

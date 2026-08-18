@@ -188,15 +188,24 @@
     });
   }
 
-  /* ============ 链接重写：同目录 .md 互链进页内路由，其余不动 ============ */
+  /* ============ 链接重写：同目录 .md 互链进页内路由，跨目录走门户文档区 ============ */
   function rewriteLinks(container) {
     container.querySelectorAll("a[href]").forEach(function (a) {
       var href = a.getAttribute("href");
       if (!href || /^(https?:|mailto:|#)/i.test(href)) return;
-      if (/\.md$/i.test(href)) {
-        var stem = href.replace(/\.md$/i, "").replace(/^.*\//, "");
+      if (!/\.md$/i.test(href)) return;
+      var decoded = decodeURIComponent(href);
+      if (decoded.indexOf("..") < 0) {
+        var stem = decoded.replace(/\.md$/i, "");
         a.setAttribute("href", stem.toLowerCase() === "readme" ? "#readme" : "#op/" + stem);
+        return;
       }
+      var base = "reference/graph-node-op-wiki".split("/");
+      decoded.replace(/\.md$/i, "").split("/").forEach(function (seg) {
+        if (seg === "" || seg === ".") return;
+        if (seg === "..") base.pop(); else base.push(seg);
+      });
+      a.setAttribute("href", LudotsSite.SITE_BASE + "index.html#docs/" + base.join("/"));
     });
   }
 

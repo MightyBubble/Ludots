@@ -6,6 +6,30 @@
 你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadBlackboardFloat/play.mp4`。
 </video>
 
+## 作者写法
+
+第一次来的 mod 作者看这里：这颗节点在 `assets/GAS/graphs.json`（或 `GAS/graphs/` 分片）里怎么写。签名取自引擎描述表，用例摘自画廊作者图，两处都是单一事实源。
+
+| 项 | 值 |
+|----|----|
+| 可用图种 | Effect / Score / Validation / Derived / Script |
+| 返回 | Float → 小数寄存器 |
+| 输入端口（值边 toPort） | `source`（来源实体） |
+| 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
+
+手册分册（全量字段与语义）：[黑板与配置 · gr-op-05](../mod-editor-prd/config/gr-op-05-blackboard.md)
+
+真实用例（摘自 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/ReadBlackboardFloat.json`）：
+
+```json
+{"id": "readF", "op": "ReadBlackboardFloat", "blackboardKey": "showcase.bb.power"}
+```接线（值边把上一步的结果送进本节点端口）：
+
+```json
+{"from": "src", "fromPort": "value", "to": "readF", "toPort": "source"}
+```
+
+
 ## 1. 概述
 
 这场短剧只讲一个图节点会在玩家眼里变成什么。标题用人话，不拿技术名当主角。
