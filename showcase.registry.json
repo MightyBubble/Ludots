@@ -6897,6 +6897,60 @@
       "artifactDir": "artifacts/acceptance/engine_raylib_primitives",
       "screenshot": "artifacts/acceptance/engine_raylib_primitives/screen.png",
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "capability_standard_graph_op_HidePanel",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
+      "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj",
+      "title": "收起情报面板",
+      "summary": "点掉选中，属性卡跟着隐去。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "HidePanel"
+      ],
+      "binding": "capability_standard_graph_op_HidePanel",
+      "preset": "capability_standard_graph_op_HidePanel_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/HidePanel.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_HidePanel",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_HidePanel/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_HidePanel/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_ShowPanel",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpShowPanelEntryMod",
+      "projectPath": "CapabilityStandardGraphOpShowPanelEntryMod.csproj",
+      "title": "亮出情报面板",
+      "summary": "选中单位的一瞬间，属性卡跟着亮起来。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ShowPanel"
+      ],
+      "binding": "capability_standard_graph_op_ShowPanel",
+      "preset": "capability_standard_graph_op_ShowPanel_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/ShowPanel.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ShowPanel",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_ShowPanel/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_ShowPanel/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

@@ -70,6 +70,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
         }
+
+        void ShowPanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        void HidePanel(int panelTypeId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");

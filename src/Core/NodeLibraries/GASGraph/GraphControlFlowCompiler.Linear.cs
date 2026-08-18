@@ -241,6 +241,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.ConfigKey, "configKey", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ShowPanel:
+                case GraphNodeOp.HidePanel:
+                    RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.QueryCone:
                 case GraphNodeOp.QueryRectangle:
                 case GraphNodeOp.QueryLine:
@@ -720,6 +725,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadConfigInt:
                 case GraphNodeOp.LoadConfigEffectId:
                     instruction.Imm = RequireSymbol(node.ConfigKey, "configKey", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ShowPanel:
+                case GraphNodeOp.HidePanel:
+                    instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.QueryCone:

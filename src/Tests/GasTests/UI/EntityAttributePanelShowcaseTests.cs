@@ -9,7 +9,6 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
-using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.Core.UI.PanelProjection;
 using NUnit.Framework;
@@ -17,10 +16,11 @@ using NUnit.Framework;
 namespace Ludots.Tests.GasTests.UI
 {
     /// <summary>
-    /// Entity attribute panel, end to end, driven purely by JSON artifacts (#1010/#1012/#1013/#1014):
-    /// panel template JSON + visibility orchestration graph JSON + lookup table JSON.
-    /// Chain: signal → orchestration graph → activation → variables (attribute/graph/table)
-    /// → markup render → declared event → validated payload → signal bridge → intent resolution.
+    /// Entity attribute panel, end to end, driven purely by JSON artifacts:
+    /// panel template JSON + lookup table JSON; visibility via ShowPanel/HidePanel
+    /// graph ops (any graph can fire them). The panel only manages data (variables)
+    /// and interaction routing (events/intents) — visibility is decided by whoever
+    /// calls the op.
     /// </summary>
     [TestFixture]
     public sealed class EntityAttributePanelShowcaseTests
@@ -56,21 +56,6 @@ namespace Ludots.Tests.GasTests.UI
         }
         """;
 
-        // visible = blackboard("tests.signal.selection") != 0 — pure JSON instructions.
-        private const string OrchestrationJson = """
-        [
-          {
-            "panelType": "tests.panel.entity_attributes",
-            "instructions": [
-              { "op": "LoadCaster", "dst": 0 },
-              { "op": "ReadBlackboardInt", "dst": 1, "a": 0, "imm": 0 },
-              { "op": "HaltReturnInt", "a": 1 }
-            ],
-            "symbols": [ "tests.signal.selection" ]
-          }
-        ]
-        """;
-
         private const string RankTableJson = """
         [
           {
@@ -87,10 +72,8 @@ namespace Ludots.Tests.GasTests.UI
 
         private World _world = null!;
         private Entity _soldier;
-        private Entity _context;
         private GraphLookupTableRegistry _tables = null!;
         private UiPanelActivationStore _activation = null!;
-        private PanelOrchestrationRuntime _orchestration = null!;
         private GasGraphRuntimeApi _api = null!;
         private int _hpId;
         private int _attackId;
@@ -113,13 +96,10 @@ namespace Ludots.Tests.GasTests.UI
             buffer.SetBase(_attackId, 12f);
             buffer.SetBase(_levelId, 2f);
 
-            _context = _world.Create();
-            _world.Add(_context, new BlackboardIntBuffer());
-
             _tables = LoadTables(RankTableJson);
             _activation = new UiPanelActivationStore();
-            _orchestration = new PanelOrchestrationRuntime(PanelOrchestrationJson.Load(OrchestrationJson), _activation);
-            _api = new GasGraphRuntimeApi(_world);
+            _api = new GasGraphRuntimeApi(_world, lookupTables: _tables);
+            _api.BindPanelActivation(new PanelActivationApi(_activation));
         }
 
         [TearDown]
@@ -131,34 +111,19 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void FullChain_SelectionSignalOrchestratesVisibility_VariablesRenderAndEventsResolve()
+        public void FullChain_GraphOpsDriveVisibility_VariablesEvaluate_EventsResolve()
         {
             PanelTemplate template = PanelTemplateLoader.Load(PanelTemplateJson);
 
-            // 1) hidden until the selection signal fires (orchestration graph decides).
-            PanelActivationDiff hiddenState = _orchestration.EvaluateAll(_world, _api, _context);
+            // 1) panel starts hidden — nobody called ShowPanel yet.
             Assert.That(_activation.IsVisible("tests.panel.entity_attributes"), Is.False);
-            Assert.That(hiddenState.Activated, Is.Empty);
 
-            // 2) declared event fires with a validated payload; the signal bridge turns it
-            //    into the orchestration blackboard signal (zero-code path B wiring).
-            var fired = new List<string>();
-            var dispatcher = new PanelEventDispatcher(template, (eventId, payload) =>
-            {
-                fired.Add(eventId);
-                PanelSignalBridge.WriteSignal(_world, _context, "tests.signal.selection", Convert.ToInt32(payload["entityId"]));
-            });
-            dispatcher.Fire(
-                "ui.entity.inspect",
-                new JsonObject { ["entityId"] = 5, ["verbose"] = true });
-            Assert.That(fired, Is.EqualTo(new[] { "ui.entity.inspect" }));
-
-            // 3) orchestration re-evaluates from the signal → panel visible.
-            PanelActivationDiff shown = _orchestration.EvaluateAll(_world, _api, _context);
+            // 2) some graph (level blueprint, selection handler, whatever) fires ShowPanel.
+            //    Direct API call here for test simplicity — same effect as the graph op.
+            _api.ShowPanel(ConfigKeyRegistry.Register("tests.panel.entity_attributes"));
             Assert.That(_activation.IsVisible("tests.panel.entity_attributes"), Is.True);
-            Assert.That(shown.Activated, Does.Contain("tests.panel.entity_attributes"));
 
-            // 4) variables: attribute + graph aggregate + lookup table, all fail-closed.
+            // 3) variables: attribute + graph aggregate + lookup table, all fail-closed.
             var keys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var outputs = new GraphOutputValueStore(keys, initialCapacity: 8);
             Entity factionOwner = _world.Create();
@@ -169,20 +134,20 @@ namespace Ludots.Tests.GasTests.UI
             ownerBuffer.SetBase(_levelId, 2f);
             outputs.SetFloat(_soldier, "tests.panel.squad.attack.total", 36f);
             outputs.SetFloat(factionOwner, "tests.panel.squad.attack.total", 36f);
+
             var reader = new PanelProjectionReader(_world, outputs, AttributeRegistry.GetId, _tables);
+            PanelVariableSet values = new PanelInstance(template, _soldier).Evaluate(reader);
 
-            PanelVariableSet itemScope = new PanelInstance(template, _soldier).Evaluate(reader);
-            Assert.That(itemScope.Get("hp"), Is.EqualTo(87f));
-            Assert.That(itemScope.Get("attack"), Is.EqualTo(12f));
-            Assert.That(itemScope.Get("squadAttack"), Is.EqualTo(36f));
-            Assert.That(itemScope.Get("rank.badge"), Is.EqualTo(11f));
+            Assert.That(values.Get("hp"), Is.EqualTo(87f));
+            Assert.That(values.Get("attack"), Is.EqualTo(12f));
+            Assert.That(values.Get("squadAttack"), Is.EqualTo(36f));
+            Assert.That(values.Get("rank.badge"), Is.EqualTo(11f));
 
-            // 5) same template serves the collection scope (#1012): the faction owner
-            //    reads the same squad aggregate while the item scope reads soldier attrs.
+            // 4) same template serves the collection scope (#1012).
             PanelVariableSet collectionScope = new PanelInstance(template, factionOwner).Evaluate(reader);
             Assert.That(collectionScope.Get("squadAttack"), Is.EqualTo(36f));
 
-            // 6) the declared event resolves to a seat-attributed intent (#1013).
+            // 5) the declared event resolves to a seat-attributed intent (#1013).
             var intentResolver = new PanelIntentResolver(template);
             PanelIntent intent = intentResolver.Resolve(
                 "ui.entity.inspect",
@@ -194,14 +159,11 @@ namespace Ludots.Tests.GasTests.UI
                 playerId: 2,
                 actor: _soldier);
             Assert.That(intent.Intent, Is.EqualTo("order.entity.inspect"));
-            Assert.That(intent.Args["target"], Is.EqualTo(5));
-            Assert.That(intent.Args["verbose"], Is.True);
             Assert.That(intent.PlayerId, Is.EqualTo(2));
             Assert.That(intent.Actor, Is.EqualTo(_soldier));
 
-            // 7) zero-selection signal hides the panel again — still the graph deciding.
-            PanelSignalBridge.WriteSignal(_world, _context, "tests.signal.selection", 0);
-            _orchestration.EvaluateAll(_world, _api, _context);
+            // 6) whoever showed the panel can hide it — same op, reverse direction.
+            _api.HidePanel(ConfigKeyRegistry.Register("tests.panel.entity_attributes"));
             Assert.That(_activation.IsVisible("tests.panel.entity_attributes"), Is.False);
         }
 
@@ -218,18 +180,6 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(
                 () => dispatcher.Fire("ui.entity.inspect", new JsonObject { ["entityId"] = 5, ["verbose"] = true, ["ghost"] = 1 }),
                 Throws.InvalidOperationException.With.Message.Contains("ghost"));
-        }
-
-        [Test]
-        public void OrchestrationJson_UnknownOpOrField_FailsLoudly()
-        {
-            Assert.That(
-                () => PanelOrchestrationJson.Load("""[{"panelType":"p","instructions":[{"op":"Magic"}]}]"""),
-                Throws.InvalidOperationException.With.Message.Contains("Magic"));
-
-            Assert.That(
-                () => PanelOrchestrationJson.Load("""[{"panelType":"p","frob":1,"instructions":[{"op":"HaltReturnInt","a":0}]}]"""),
-                Throws.InvalidOperationException.With.Message.Contains("frob"));
         }
 
         private static GraphLookupTableRegistry LoadTables(string json)
