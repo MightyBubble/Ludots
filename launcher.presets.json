@@ -1965,6 +1965,17 @@
       "id": "navmesh_debug_raylib",
       "name": "NavMesh Debug Raylib",
       "selectors": [
+        "$navmesh_debug_hex_launch",
+        "$navmesh_debug"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "navmesh_debug_grid_raylib",
+      "name": "NavMesh Debug Grid Raylib",
+      "selectors": [
+        "$navmesh_debug_grid_launch",
         "$navmesh_debug"
       ],
       "adapterId": "raylib",

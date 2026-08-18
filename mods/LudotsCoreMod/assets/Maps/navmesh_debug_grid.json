@@ -1,0 +1,28 @@
+{
+  "Id": "navmesh_debug_grid",
+  "Tags": ["showcase", "navmesh", "grid", "Feature.NavMesh:On"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 4,
+      "HeightInMacroTiles": 4,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 16,
+      "DataFile": "navmesh_debug_openworld.bin",
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 30000,
+    "FovYDeg": 60
+  }
+}

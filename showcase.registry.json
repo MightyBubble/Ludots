@@ -5479,14 +5479,50 @@
       ]
     },
     {
+      "id": "navmesh_debug_grid_showcase",
+      "path": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod",
+      "title": "NavMesh 调试·grid 源",
+      "summary": "grid DataFile（React map_data.bin）源的 4x4 开放世界烤制图：运行期经 Core ReactGridTerrainBinary 直读。",
+      "tier": "T4",
+      "category": "fixture",
+      "binding": "navmesh_debug_grid_launch",
+      "preset": "navmesh_debug_grid_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "status": "experimental",
+      "tags": [
+        "navmesh",
+        "debug",
+        "grid",
+        "navigation"
+      ]
+    },
+    {
+      "id": "navmesh_debug_hex_showcase",
+      "path": "mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod",
+      "title": "NavMesh 调试·hex 源",
+      "summary": "hex VertexMap 源的 4x4 开放世界烤制图（16 tile）：KEY_N 看权威 overlay。",
+      "tier": "T4",
+      "category": "fixture",
+      "binding": "navmesh_debug_hex_launch",
+      "preset": "navmesh_debug_raylib",
+      "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
+      "status": "experimental",
+      "tags": [
+        "navmesh",
+        "debug",
+        "hex",
+        "navigation"
+      ]
+    },
+    {
       "id": "navmesh_debug_showcase",
       "path": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod",
       "title": "NavMesh 运行时调试视图",
-      "summary": "4x4 开放世界烤制地图（16 tile）：KEY_N 切换权威 navmesh overlay，验证跨块 portal、障碍挖洞与 area 着色。",
+      "summary": "NavMesh 运行时调试能力件（输入 action + overlay 激活）；地图由 hex/grid/vhtm 各自的 launch overlay 选择。",
       "tier": "T4",
       "category": "fixture",
       "binding": "navmesh_debug",
-      "preset": "navmesh_debug_raylib",
+      "preset": null,
       "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
       "status": "experimental",
       "tags": [

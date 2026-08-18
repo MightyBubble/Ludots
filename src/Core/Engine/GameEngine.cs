@@ -2737,6 +2737,23 @@ namespace Ludots.Core.Engine
                     string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
+                        string spatialType = (boardConfig?.SpatialType ?? "Grid").Trim();
+                        if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var gridTerrain = LoadGridTerrainFromFile(dataFile, boardConfig);
+                            if (gridTerrain != null)
+                            {
+                                terrainBoard.LogicTerrain = gridTerrain;
+                                LogicTerrain = gridTerrain;
+                                SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                                Diagnostics.Log.Info(
+                                    in LogChannels.Engine,
+                                    $"Loaded grid LogicTerrainField {gridTerrain.WidthChunks}x{gridTerrain.HeightChunks} for board '{board.Name}'");
+                            }
+
+                            continue;
+                        }
+
                         var vtxMap = LoadVertexMapFromFile(dataFile);
                         if (vtxMap != null)
                         {
@@ -2786,6 +2803,65 @@ namespace Ludots.Core.Engine
                 }
             }
             return null;
+        }
+
+        private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
+        {
+            if (string.IsNullOrWhiteSpace(dataFile)) return null;
+
+            if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
+
+            string rel = dataFile.Replace('\\', '/');
+            var candidates = new List<string>(6) { rel };
+            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/{rel}");
+            }
+            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/Data/Maps/{rel}");
+            }
+
+            Stream TryOpen(string uri)
+            {
+                try { return VFS.GetStream(uri); }
+                catch { return null; }
+            }
+
+            Stream stream = null;
+            for (int i = 0; i < candidates.Count && stream == null; i++)
+            {
+                stream = TryOpen($"Core:{candidates[i]}");
+            }
+
+            if (stream == null)
+            {
+                foreach (var modId in ModLoader.LoadedModIds)
+                {
+                    for (int i = 0; i < candidates.Count && stream == null; i++)
+                    {
+                        stream = TryOpen($"{modId}:{candidates[i]}");
+                    }
+                    if (stream != null) break;
+                }
+            }
+
+            if (stream == null) return null;
+
+            int cellSizeCm = boardConfig?.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm;
+            try
+            {
+                return Ludots.Core.Navigation.Terrain.ReactGridTerrainBinary.Read(dataFile, stream, cellSizeCm);
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load grid terrain '{dataFile}': {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                stream.Dispose();
+            }
         }
 
         private VertexMap LoadVertexMapFromFile(string dataFile)

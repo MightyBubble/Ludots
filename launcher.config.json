@@ -1452,6 +1452,20 @@
         "type": "path",
         "value": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
       }
+    },
+    {
+      "name": "navmesh_debug_hex_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod"
+      }
+    },
+    {
+      "name": "navmesh_debug_grid_launch",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod"
+      }
     }
   ],
   "adapters": {
