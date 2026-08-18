@@ -170,6 +170,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TableReadInt = 437,
         /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
         TableReadFloat = 438,
+
+        // ── Panel visibility control (#1014, contract five) ──
+        /// <summary>Request the named panel type to become visible. Imm = panel type symbol.</summary>
+        ShowPanel = 439,
+        /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
+        HidePanel = 440,
     }
 
     public static class GraphNodeOpParser

@@ -103,6 +103,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private LoadedGraphRuntime? _loadedGraphRuntime;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -200,6 +201,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return typed;
         }
 
+        public Ludots.Core.UI.PanelActivation.PanelActivationApi? PanelActivationApi => _panelActivationApi;
+
+        public void BindPanelActivation(Ludots.Core.UI.PanelActivation.PanelActivationApi api)
+        {
+            _panelActivationApi = api ?? throw new ArgumentNullException(nameof(api));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -258,6 +266,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tables = _lookupTables
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
             return tables.ReadFloat(rowHandle, fieldId);
+        }
+
+        public void ShowPanel(int panelTypeId)
+        {
+            PanelActivationApi?.ShowPanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void HidePanel(int panelTypeId)
+        {
+            PanelActivationApi?.HidePanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        private string ResolvePanelTypeName(int panelTypeId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
+            return name ?? throw new InvalidOperationException(
+                $"ShowPanel/HidePanel references unregistered panel type id {panelTypeId}.");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)
