@@ -1,0 +1,8 @@
+{
+  "name": "BrokenBuildMod",
+  "version": "1.0.0",
+  "description": "Demo mod with intentional build failure",
+  "main": "bin/BrokenBuildMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

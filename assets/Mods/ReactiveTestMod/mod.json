@@ -1,0 +1,8 @@
+{
+  "name": "ReactiveTestMod",
+  "version": "1.0.0",
+  "description": "Reactive Test Mod",
+  "main": "bin/Release/net8.0/ReactiveTestMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

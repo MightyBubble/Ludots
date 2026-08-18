@@ -1,6 +1,0 @@
-[
-  { "id": "debug", "radiusCm": 30, "heightCm": 180, "clearanceCm": 30, "draftCm": 0, "beamCm": 60, "mass": 80, "layer": 0 },
-  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 30, "draftCm": 0, "beamCm": 60, "mass": 80, "layer": 0 },
-  { "id": "Medium", "radiusCm": 60, "heightCm": 200, "clearanceCm": 60, "draftCm": 0, "beamCm": 120, "mass": 300, "layer": 0 },
-  { "id": "Large", "radiusCm": 120, "heightCm": 240, "clearanceCm": 120, "draftCm": 0, "beamCm": 240, "mass": 2000, "layer": 0 }
-]

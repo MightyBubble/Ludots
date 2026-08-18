@@ -1,0 +1,8 @@
+{
+  "name": "ExampleMod",
+  "version": "1.0.0",
+  "description": "A simple example mod to verify the modding system.",
+  "main": "bin/Release/net8.0/ExampleMod.dll",
+  "priority": 100,
+  "dependencies": {}
+}

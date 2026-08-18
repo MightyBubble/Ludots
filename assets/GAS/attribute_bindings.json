@@ -1,0 +1,155 @@
+[
+  {
+    "id": "Bind.Physics.ForceInput2D.X",
+    "attribute": "Physics.ForceRequestX",
+    "sink": "Physics.ForceInput2D",
+    "channel": 0,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.Physics.ForceInput2D.Y",
+    "attribute": "Physics.ForceRequestY",
+    "sink": "Physics.ForceInput2D",
+    "channel": 1,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.MoveX",
+    "attribute": "Camera.Behavior.MoveX",
+    "sink": "Camera.BehaviorInput",
+    "channel": 0,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.MoveY",
+    "attribute": "Camera.Behavior.MoveY",
+    "sink": "Camera.BehaviorInput",
+    "channel": 1,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.PointerX",
+    "attribute": "Camera.Behavior.PointerX",
+    "sink": "Camera.BehaviorInput",
+    "channel": 2,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.PointerY",
+    "attribute": "Camera.Behavior.PointerY",
+    "sink": "Camera.BehaviorInput",
+    "channel": 3,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.PointerActive",
+    "attribute": "Camera.Behavior.PointerActive",
+    "sink": "Camera.BehaviorInput",
+    "channel": 14,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.PointerDeltaX",
+    "attribute": "Camera.Behavior.PointerDeltaX",
+    "sink": "Camera.BehaviorInput",
+    "channel": 4,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.PointerDeltaY",
+    "attribute": "Camera.Behavior.PointerDeltaY",
+    "sink": "Camera.BehaviorInput",
+    "channel": 5,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.LookX",
+    "attribute": "Camera.Behavior.LookX",
+    "sink": "Camera.BehaviorInput",
+    "channel": 6,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.LookY",
+    "attribute": "Camera.Behavior.LookY",
+    "sink": "Camera.BehaviorInput",
+    "channel": 7,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.Zoom",
+    "attribute": "Camera.Behavior.Zoom",
+    "sink": "Camera.BehaviorInput",
+    "channel": 8,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.RotateHold",
+    "attribute": "Camera.Behavior.RotateHold",
+    "sink": "Camera.BehaviorInput",
+    "channel": 9,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.RotateLeft",
+    "attribute": "Camera.Behavior.RotateLeft",
+    "sink": "Camera.BehaviorInput",
+    "channel": 10,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.RotateRight",
+    "attribute": "Camera.Behavior.RotateRight",
+    "sink": "Camera.BehaviorInput",
+    "channel": 11,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.GrabDragHold",
+    "attribute": "Camera.Behavior.GrabDragHold",
+    "sink": "Camera.BehaviorInput",
+    "channel": 12,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.CameraBehavior.FollowHold",
+    "attribute": "Camera.Behavior.FollowHold",
+    "sink": "Camera.BehaviorInput",
+    "channel": 13,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  }
+]

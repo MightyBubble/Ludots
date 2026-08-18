@@ -1,0 +1,10 @@
+{
+  "name": "CycleAMod",
+  "version": "1.0.0",
+  "description": "Demo cycle A",
+  "main": "bin/Release/net8.0/CycleAMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CycleBMod": "*"
+  }
+}

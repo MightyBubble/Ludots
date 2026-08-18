@@ -1,0 +1,8 @@
+{
+  "name": "UiTestMod",
+  "version": "1.0.0",
+  "description": "A new Ludots mod.",
+  "main": "bin/Release/net8.0/UiTestMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}
