@@ -86,9 +86,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
-            camera.target.Y = 2.2f;
+            camera.target.Y = 1.4f;
             camera.position = camera.target + new Vector3(0.62f, 0.46f, 0.62f);
-            GalleryCamera.EnforceDistance(ref camera, 46f);
+            GalleryCamera.EnforceDistance(ref camera, 26f);
             float t = (float)totalTimeSeconds;
             // raylib 以 ~60fps 采样 glTF clip（62 帧 / 1.042s），按帧数反推原始节奏播放。
             float walkCyclesPerSecond = _walkClipFrameCount / 60f;
