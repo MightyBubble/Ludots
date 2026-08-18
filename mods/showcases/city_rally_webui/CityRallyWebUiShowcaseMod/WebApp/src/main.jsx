@@ -34,6 +34,7 @@ const EMPTY_STATE = {
   resources: [],
   factions: [],
   entities: [],
+  garrison: [],
   selection: {
     entityKey: '',
     name: 'No entity selected',
@@ -108,10 +109,13 @@ function App() {
         />
         <RightHud
           selection={snapshot.selection}
+          garrison={snapshot.garrison ?? []}
           productionQueue={snapshot.productionQueue}
           statuses={snapshot.commands.statuses}
           diplomacy={snapshot.diplomacy}
           techTree={snapshot.techTree}
+          onSelect={command}
+          onCancelPlanting={command}
         />
         <BottomHud
           commands={snapshot.commands}
@@ -370,14 +374,73 @@ function EntityRoster({ entities, selectedKey, onSelect }) {
   );
 }
 
-function RightHud({ selection, productionQueue, statuses, diplomacy, techTree }) {
+function RightHud({ selection, garrison, productionQueue, statuses, diplomacy, techTree, onSelect, onCancelPlanting }) {
   const showStrategic = techTree.nodes.length > 0 || diplomacy.rows.length > 0;
   return (
     <aside className="right-hud">
       <SelectionPanel selection={selection} />
+      <GarrisonPanel
+        garrison={garrison}
+        selectedKey={selection.entityKey}
+        onSelect={onSelect}
+        onCancelPlanting={onCancelPlanting}
+      />
       <ProductionPanel queue={productionQueue} statuses={statuses} />
       {showStrategic ? <StrategicReadout techTree={techTree} diplomacy={diplomacy} /> : null}
     </aside>
+  );
+}
+
+function GarrisonPanel({ garrison, selectedKey, onSelect, onCancelPlanting }) {
+  const handleSelect = useCallback((event, entityKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onSelect('selectEntity', { entityKey });
+  }, [onSelect]);
+
+  const handleCancel = useCallback((event, entityKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onCancelPlanting('cancelPlanting', { entityKey });
+  }, [onCancelPlanting]);
+
+  return (
+    <section className="hud-panel compact-panel">
+      <PanelTitle title="驻军" meta={`${garrison.length}`} />
+      {garrison.length === 0 ? <p className="empty">城内暂无驻军。</p> : null}
+      <div className="garrison-list">
+        {garrison.map((member) => (
+          <div
+            className={member.entityKey === selectedKey ? 'garrison-row selected' : 'garrison-row'}
+            key={member.entityKey}
+          >
+            <button
+              type="button"
+              className="garrison-name"
+              onClick={(event) => handleSelect(event, member.entityKey)}
+            >
+              <span>{member.name}</span>
+              <small>{member.isGovernor ? '太守' : '平民'}</small>
+            </button>
+            {member.isPlanting ? (
+              <div className="garrison-planting">
+                <div className="queue-progress" aria-hidden="true">
+                  <i style={{ transform: `scaleX(${progressRatio(member.progressPermille)})` }} />
+                </div>
+                <button
+                  type="button"
+                  className="cancel-planting"
+                  title="取消立旗"
+                  onClick={(event) => handleCancel(event, member.entityKey)}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -698,6 +761,7 @@ function mergeSnapshot(previous, payload) {
     factions: payload.factions ?? previous.factions,
     entities: payload.entities ?? payload.entityPatches ?? previous.entities,
     selection: payload.selection ?? previous.selection,
+    garrison: payload.garrison ?? previous.garrison,
     commands: payload.commands ?? previous.commands,
     buildables: payload.buildables ?? previous.buildables,
     productionQueue: payload.productionQueue ?? previous.productionQueue,

@@ -6,7 +6,9 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -61,6 +63,7 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             "selectEntity" => SelectEntity(request),
             "activateAbilitySlot" => ActivateAbilitySlot(request),
             "switchParticipantView" => SwitchParticipantView(request),
+            "cancelPlanting" => CancelPlanting(request),
             _ => WebUiCommandResult.Fail("unknown_command", $"Unsupported city rally command '{request.Name}'.")
         };
     }
@@ -101,6 +104,7 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             factions,
             entities,
             BuildSelection(primary, selected),
+            BuildGarrison(primary),
             commands,
             buildables,
             production,
@@ -188,6 +192,58 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
                 entities.Count(entity => entity.TeamId == teamId),
                 teamId == ResolveActiveTeamId() ? "Friendly" : "Neutral"))
             .ToArray();
+    }
+
+    private CityRallyGarrisonView[] BuildGarrison(Entity primary)
+    {
+        if (primary == Entity.Null || !_engine.World.IsAlive(primary) ||
+            !_engine.World.Has<ChildrenBuffer>(primary))
+        {
+            return Array.Empty<CityRallyGarrisonView>();
+        }
+
+        ref var children = ref _engine.World.Get<ChildrenBuffer>(primary);
+        var result = new List<CityRallyGarrisonView>(Math.Max(0, children.Count));
+        for (int i = 0; i < children.Count; i++)
+        {
+            Entity child = children.Get(i);
+            if (!_engine.World.IsAlive(child) || !_engine.World.TryGet(child, out Name childName))
+            {
+                continue;
+            }
+
+            string childKey = EntityKey(child);
+            bool isGovernor = HasRoleTag(child, "Role.CityRally.Governor");
+            bool isPlanting = HasRoleTag(child, "Status.CityRally.Planting");
+            int progress = ResolvePlantingProgress(child);
+            result.Add(new CityRallyGarrisonView(childKey, childName.Value, isGovernor, isPlanting, progress));
+        }
+
+        return result.ToArray();
+    }
+
+    private bool HasRoleTag(Entity entity, string tagName)
+    {
+        if (!_engine.World.Has<GameplayTagContainer>(entity))
+        {
+            return false;
+        }
+
+        int tagId = TagRegistry.GetId(tagName);
+        if (tagId <= 0)
+        {
+            return false;
+        }
+
+        ref var tags = ref _engine.World.Get<GameplayTagContainer>(entity);
+        var tagOps = _engine.GetService(CoreServiceKeys.TagOps) as TagOps;
+        return tagOps != null && tagOps.HasTag(ref tags, tagId, TagSense.Effective);
+    }
+
+    private int ResolvePlantingProgress(Entity entity)
+    {
+        // 插旗进度由前端读 AbilityExecInstance 状态；此处保留占位（后续从能力引导时长换算）。
+        return 0;
     }
 
     private CityRallySelectionView BuildSelection(Entity primary, Entity[] selected)
@@ -365,7 +421,56 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             "City rally command source",
             "Selected through the browser data plane.");
         collections.Replace(owner, descriptor, next, owner);
+        FocusCameraOnEntity(target);
         return WebUiCommandResult.Ok();
+    }
+
+    private void FocusCameraOnEntity(Entity target)
+    {
+        if (!_engine.World.IsAlive(target) ||
+            !_engine.World.TryGet(target, out WorldPositionCm worldPosition))
+        {
+            return;
+        }
+
+        MapConfig? mapConfig = _engine.CurrentMapSession?.MapConfig;
+        if (mapConfig == null)
+        {
+            return;
+        }
+
+        CameraConfig? cam = mapConfig.DefaultCamera;
+        string virtualCameraId = string.IsNullOrWhiteSpace(cam?.VirtualCameraId)
+            ? "Default"
+            : cam.VirtualCameraId;
+
+        _engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+        {
+            Id = virtualCameraId,
+            BlendDurationSeconds = 0f,
+            SnapToFollowTargetWhenAvailable = true,
+            ResetRuntimeState = true
+        };
+
+        _engine.GlobalContext[CoreServiceKeys.CameraPoseRequest.Name] = new CameraPoseRequest
+        {
+            VirtualCameraId = virtualCameraId,
+            TargetCm = worldPosition.Value.ToVector2(),
+            Yaw = cam?.Yaw,
+            Pitch = cam?.Pitch,
+            DistanceCm = ResolveFocusDistance(cam?.DistanceCm),
+            FovYDeg = cam?.FovYDeg
+        };
+    }
+
+    private static float? ResolveFocusDistance(float? distanceCm)
+    {
+        if (!distanceCm.HasValue || distanceCm.Value <= 0f)
+        {
+            return distanceCm;
+        }
+
+        return MathF.Max(7000f, distanceCm.Value * 0.72f);
     }
 
     private WebUiCommandResult ActivateAbilitySlot(WebUiCommandRequest request)
@@ -444,6 +549,34 @@ internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
             OrderSubmitResult.RejectedValidation => "Ability activation failed validation before submission.",
             _ => "The shared GAS command-panel source rejected this ability activation.",
         };
+    }
+
+    private WebUiCommandResult CancelPlanting(WebUiCommandRequest request)
+    {
+        if (!request.Payload.TryGetProperty("entityKey", out JsonElement keyElement) ||
+            keyElement.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(keyElement.GetString()) ||
+            !TryResolveEntityKey(keyElement.GetString() ?? string.Empty, out Entity target))
+        {
+            return WebUiCommandResult.Fail("entity_not_found", "cancelPlanting requires a live entityKey.");
+        }
+
+        if (!_engine.World.Has<GameplayTagContainer>(target))
+        {
+            return WebUiCommandResult.Ok();
+        }
+
+        int plantingTagId = TagRegistry.GetId("Status.CityRally.Planting");
+        if (plantingTagId > 0)
+        {
+            var tagOps = _engine.GetService(CoreServiceKeys.TagOps) as TagOps;
+            if (tagOps != null)
+            {
+                tagOps.RemoveTag(_engine.World, target, plantingTagId);
+            }
+        }
+
+        return WebUiCommandResult.Ok();
     }
 
     private WebUiCommandResult SwitchParticipantView(WebUiCommandRequest request)
@@ -700,6 +833,7 @@ internal sealed record CityRallySnapshot(
     CityRallyFactionView[] Factions,
     CityRallyEntityView[] Entities,
     CityRallySelectionView Selection,
+    CityRallyGarrisonView[] Garrison,
     CityRallyCommandPanelView Commands,
     CityRallyBuildableView[] Buildables,
     CityRallyQueueItemView[] ProductionQueue,
@@ -745,6 +879,13 @@ internal sealed record CityRallySelectionView(
     CityRallySelectedEntityView[] Members);
 
 internal sealed record CityRallySelectedEntityView(string EntityKey, string Name, int TeamId);
+
+internal sealed record CityRallyGarrisonView(
+    string EntityKey,
+    string Name,
+    bool IsGovernor,
+    bool IsPlanting,
+    int ProgressPermille);
 
 internal sealed record CityRallyCommandPanelView(
     string TargetEntityKey,

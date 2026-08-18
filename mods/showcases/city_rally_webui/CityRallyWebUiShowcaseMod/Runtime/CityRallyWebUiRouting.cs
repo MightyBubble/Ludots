@@ -40,6 +40,7 @@ internal sealed class CityRallyPermissionValidator : IWebUiCommandPermissionVali
         "selectEntity",
         "activateAbilitySlot",
         "switchParticipantView",
+        "cancelPlanting",
     };
 
     public bool CanUse(WebUiCommandRequest request, out string error)

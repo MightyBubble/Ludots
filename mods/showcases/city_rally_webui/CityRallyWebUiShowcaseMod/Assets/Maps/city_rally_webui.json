@@ -9,8 +9,8 @@
     "TargetXCm": 0,
     "TargetYCm": 0,
     "Yaw": 180,
-    "Pitch": 55,
-    "DistanceCm": 14000,
+    "Pitch": 45,
+    "DistanceCm": 6000,
     "FovYDeg": 60
   },
   "Entities": [
@@ -18,36 +18,72 @@
       "Template": "rts_city",
       "InstanceId": "city_rally_webui_city",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-        "Name": { "Value": "城池" },
-        "PlayerOwner": { "PlayerId": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "Name": {
+          "Value": "城池"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
       "Template": "rts_peasant",
       "InstanceId": "city_rally_webui_peasant_a",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -2200, "Y": -1800 } },
-        "Name": { "Value": "平民 A" },
-        "PlayerOwner": { "PlayerId": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": -2200,
+            "Y": -1800
+          }
+        },
+        "Name": {
+          "Value": "平民 A"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
       "Template": "rts_peasant",
       "InstanceId": "city_rally_webui_peasant_b",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 2100, "Y": -1900 } },
-        "Name": { "Value": "平民 B" },
-        "PlayerOwner": { "PlayerId": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2100,
+            "Y": -1900
+          }
+        },
+        "Name": {
+          "Value": "平民 B"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     },
     {
       "Template": "rts_governor_candidate",
       "InstanceId": "city_rally_webui_governor",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 0, "Y": -2600 } },
-        "Name": { "Value": "英雄" },
-        "PlayerOwner": { "PlayerId": 1 }
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": -2600
+          }
+        },
+        "Name": {
+          "Value": "英雄"
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        }
       }
     }
   ],
@@ -90,5 +126,17 @@
         "Symmetric": false
       }
     ]
-  }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 64,
+      "HeightInMacroTiles": 64,
+      "GridCellSizeCm": 400,
+      "ChunkSizeCells": 32,
+      "LoadedChunkCapacity": 256,
+      "NavigationEnabled": false
+    }
+  ]
 }
