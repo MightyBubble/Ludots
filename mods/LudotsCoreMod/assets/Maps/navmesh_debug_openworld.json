@@ -1,17 +1,23 @@
 {
   "Id": "navmesh_debug_openworld",
-  "Tags": ["showcase", "navmesh", "openworld", "Feature.NavMesh:On"],
+  "Tags": [
+    "showcase",
+    "navmesh",
+    "openworld",
+    "Feature.NavMesh:On"
+  ],
   "Boards": [
     {
       "Name": "default",
-      "SpatialType": "Grid",
+      "SpatialType": "HexGrid",
       "WidthInMacroTiles": 4,
       "HeightInMacroTiles": 4,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
-      "DataFile": "navmesh_debug_openworld.bin",
-      "NavigationEnabled": true
+      "DataFile": "navmesh_debug_openworld.vertexmap.bin",
+      "NavigationEnabled": true,
+      "HexEdgeLengthCm": 100
     }
   ],
   "Entities": [],

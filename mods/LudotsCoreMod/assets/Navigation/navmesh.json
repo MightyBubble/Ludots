@@ -2,7 +2,7 @@
   "mode": "offline",
   "algorithm": "recast",
   "profiles": [
-    { "id": "debug", "maxClimbCm": 40, "maxSlopeDeg": 45 }
+    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
   ],
   "layers": [
     { "id": "ground", "layer": 0 }
