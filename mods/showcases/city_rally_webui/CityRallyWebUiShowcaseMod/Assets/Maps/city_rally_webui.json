@@ -24,20 +24,29 @@
       }
     },
     {
-      "Template": "rts_city_soldier",
-      "InstanceId": "city_rally_webui_soldier_a",
+      "Template": "rts_peasant",
+      "InstanceId": "city_rally_webui_peasant_a",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": -1200, "Y": -800 } },
-        "Name": { "Value": "兵士 A" },
+        "WorldPositionCm": { "Value": { "X": -2200, "Y": -1800 } },
+        "Name": { "Value": "平民 A" },
         "PlayerOwner": { "PlayerId": 1 }
       }
     },
     {
-      "Template": "rts_city_soldier",
-      "InstanceId": "city_rally_webui_soldier_b",
+      "Template": "rts_peasant",
+      "InstanceId": "city_rally_webui_peasant_b",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 900, "Y": -1400 } },
-        "Name": { "Value": "兵士 B" },
+        "WorldPositionCm": { "Value": { "X": 2100, "Y": -1900 } },
+        "Name": { "Value": "平民 B" },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    },
+    {
+      "Template": "rts_governor_candidate",
+      "InstanceId": "city_rally_webui_governor",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": -2600 } },
+        "Name": { "Value": "英雄" },
         "PlayerOwner": { "PlayerId": 1 }
       }
     }

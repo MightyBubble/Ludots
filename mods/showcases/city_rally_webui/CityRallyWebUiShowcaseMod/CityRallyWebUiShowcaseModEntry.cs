@@ -121,6 +121,9 @@ public sealed class CityRallyWebUiShowcaseModEntry : IMod
         engine.RegisterSystem(
             new CityRallyLocalOrderSourceSystem(engine.World, engine.GlobalContext, orderQueue, modContext),
             SystemGroup.InputCollection);
+        engine.RegisterSystem(
+            new CityRallyGarrisonSystem(engine, orderQueue),
+            SystemGroup.EffectProcessing);
         engine.RegisterSystem(new CityRallyKnowledgeProjectionSystem(engine), SystemGroup.InputCollection);
         engine.RegisterPresentationSystem(new CityRallySelectionFeedbackPresentationSystem(engine));
     }

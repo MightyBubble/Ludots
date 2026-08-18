@@ -1,6 +1,6 @@
 [
   {
-    "id": "Ability.Rts.CityRally.Hold",
+    "id": "Ability.CityRally.Hold",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -18,43 +18,80 @@
     }
   },
   {
-    "id": "Ability.Rts.CityRally.TrainSoldier",
+    "id": "Ability.CityRally.GarrisonOpen",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
         {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 60,
-          "tag": "Status.CityRally.Training"
-        },
-        {
-          "kind": "EffectSignal",
-          "tick": 0,
-          "template": "Effect.CityRally.CostTrainSoldier"
-        },
-        {
-          "kind": "EffectSignal",
-          "tick": 60,
-          "template": "Effect.CityRally.TrainSoldier",
-          "dispatchTarget": "Source"
-        },
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "驻军",
+      "iconGlyph": "G",
+      "accentColor": "#22C55E",
+      "hintText": "城池驻军入口；平民与太守驻扎于此。"
+    }
+  },
+  {
+    "id": "Ability.CityRally.EnterGarrison",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
         {
           "kind": "End",
-          "tick": 60
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "进驻",
+      "iconGlyph": "IN",
+      "accentColor": "#F59E0B",
+      "hintText": "右键己方城池进驻；英雄就任太守。"
+    }
+  },
+  {
+    "id": "Ability.CityRally.LeaveCity",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "出城",
+      "iconGlyph": "OUT",
+      "accentColor": "#EF4444",
+      "hintText": "离开城池，前往右键指定的位置。"
+    }
+  },
+  {
+    "id": "Ability.CityRally.PlantFlag",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
         }
       ]
     },
     "blockTags": {
-      "blockedAny": [
-        "Status.CityRally.Training"
+      "requiredAll": [
+        "Role.CityRally.Governor"
       ]
     },
     "presentation": {
-      "displayName": "训练兵士",
-      "iconGlyph": "SLD",
-      "accentColor": "#2563EB",
-      "hintText": "城池训练一名兵士，训练完成后自动前往集结点。"
+      "displayName": "立旗",
+      "iconGlyph": "FLG",
+      "accentColor": "#F59E0B",
+      "hintText": "就任太守后可用：右键地板插旗读条，完成后出城前往旗帜。"
     }
   }
 ]

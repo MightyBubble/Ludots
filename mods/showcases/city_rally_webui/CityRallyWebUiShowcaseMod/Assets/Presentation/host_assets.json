@@ -1,0 +1,20 @@
+[
+  {
+    "id": "city_rally.city.raylib",
+    "assetKind": "Mesh",
+    "assetId": "city_rally.city",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CityRallyWebUiShowcaseMod:Assets/Models/building_blacksmith_blue.gltf"
+    ]
+  },
+  {
+    "id": "city_rally.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "city_rally.soldier",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CityRallyWebUiShowcaseMod:Assets/Models/Knight.glb"
+    ]
+  }
+]

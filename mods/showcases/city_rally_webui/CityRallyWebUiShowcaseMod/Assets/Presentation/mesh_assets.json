@@ -1,0 +1,4 @@
+[
+  { "id": "city_rally.city", "type": "Model" },
+  { "id": "city_rally.soldier", "type": "Model" }
+]

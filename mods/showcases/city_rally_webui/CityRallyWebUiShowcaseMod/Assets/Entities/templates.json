@@ -2,20 +2,36 @@
   {
     "id": "rts_city",
     "components": {
-      "Name": { "Value": "城池" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "城池"
+      },
+      "Team": {
+        "Id": 1
+      },
       "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
       "AttributeBuffer": {
-        "base": { "Health": 2000, "Credits": 5000 },
-        "current": { "Health": 2000, "Credits": 5000 }
+        "base": {
+          "Health": 2000
+        },
+        "current": {
+          "Health": 2000
+        }
       },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.CityRally.Hold",
-          "Ability.Rts.CityRally.Hold",
-          "Ability.Rts.CityRally.TrainSoldier"
+          "Ability.CityRally.GarrisonOpen",
+          "Ability.CityRally.Hold",
+          "Ability.CityRally.Hold",
+          "Ability.CityRally.Hold"
         ]
       },
       "GameplayTagContainer": {},
@@ -28,21 +44,117 @@
     }
   },
   {
-    "id": "rts_city_soldier",
+    "id": "rts_peasant",
     "components": {
-      "Name": { "Value": "兵士" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "平民"
+      },
+      "Team": {
+        "Id": 1
+      },
       "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
       "AttributeBuffer": {
-        "base": { "Health": 420, "MoveSpeed": 600 },
-        "current": { "Health": 420 }
+        "base": {
+          "Health": 120,
+          "MoveSpeed": 500
+        },
+        "current": {
+          "Health": 120
+        }
       },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.CityRally.Hold"
+          "Ability.CityRally.EnterGarrison",
+          "Ability.CityRally.LeaveCity",
+          "Ability.CityRally.Hold",
+          "Ability.CityRally.Hold"
         ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_governor_candidate",
+    "components": {
+      "Name": {
+        "Value": "英雄"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 420
+        },
+        "current": {
+          "Health": 300
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.CityRally.EnterGarrison",
+          "Ability.CityRally.LeaveCity",
+          "Ability.CityRally.PlantFlag",
+          "Ability.CityRally.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_flag",
+    "components": {
+      "Name": {
+        "Value": "旗帜"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60
+        },
+        "current": {
+          "Health": 60
+        }
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
