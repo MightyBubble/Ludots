@@ -26,11 +26,11 @@ namespace Ludots.Core.Presentation.Assets
             Register(DefaultSurfaceKey, MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
         }
 
-        public int Register(string key, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags)
+        public int Register(string key, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags, float roughness = MaterialAssetDescriptor.DefaultRoughness, float metalness = MaterialAssetDescriptor.DefaultMetalness)
         {
             int id = _ids.Register(key);
             EnsureCapacity(id);
-            _data[id] = new MaterialAssetDescriptor(id, domain, sourceUris, flags);
+            _data[id] = new MaterialAssetDescriptor(id, domain, sourceUris, flags, roughness, metalness);
             _has[id] = true;
             return id;
         }

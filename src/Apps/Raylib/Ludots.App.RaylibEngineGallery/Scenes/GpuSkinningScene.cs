@@ -22,6 +22,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GallerySkinnedPlayback[] _playbacks = new GallerySkinnedPlayback[InstanceCount];
 
         private RaylibGpuSkinnedModelCache _modelCache = null!;
+        private RaylibFrameLighting _lighting = null!;
+        private RaylibLitModel _lit = null!;
+        private RaylibPlanarShadows _shadows = null!;
+        private Mesh _groundMesh;
         private RaylibGpuSkinnedModelCache.Entry _entry;
         private bool _disposed;
 
@@ -57,7 +61,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             _modelCache = new RaylibGpuSkinnedModelCache(GalleryAssetPaths.Instance);
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Model(MeshAssetId, "Models/mannequin_large_walk.glb");
+            _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.62f);
+            _lit = new RaylibLitModel();
+            _shadows = new RaylibPlanarShadows();
+            _shadows.GroundY = 0.21f;
+            _groundMesh = Rl.GenMeshCube(48f, 0.3f, 48f);
             _entry = _modelCache.GetOrLoad(MeshAssetId, in descriptor);
+            _lit.AttachToModel(_entry.Model);
             for (int i = 0; i < InstanceCount; i++)
             {
                 _playbacks[i] = new GallerySkinnedPlayback();
@@ -70,9 +80,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             GalleryCamera.EnforceDistance(ref camera, 24f);
             camera.target.Y = 2.2f;
 
+            _lighting.SetDayPhase(0.62f);
+            _lit.BeginFrame(_lighting, camera.position);
+
             Rl.BeginMode3D(camera);
             Rl.DrawGrid(24, 2f);
-            Rl.DrawCube(new Vector3(0f, 0.15f, 0f), 24f, 0.3f, 24f, new Color(46, 50, 62, 255));
 
             ModelAnimation animation = _entry.Animations[0];
             for (int i = 0; i < InstanceCount; i++)
@@ -81,14 +93,34 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 float phase = ((float)totalTimeSeconds * 0.55f + (i / (float)InstanceCount)) % 1f;
                 int frame = _playbacks[i].ResolveFrame(phase);
                 Rl.UpdateModelAnimation(_entry.Model, animation, frame);
+                Vector3 position = new(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius);
                 byte lift = (byte)(190 + (55 * MathF.Sin(i)));
+                _lit.ApplyDrawUniforms(new Vector4(0.92f, lift / 255f, 1f, 1f), roughness: 0.55f, metallic: 0.1f);
                 Rl.DrawModelEx(
                     _entry.Model,
-                    new Vector3(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius),
+                    position,
                     Vector3.UnitY,
                     (angle + (MathF.PI * 0.5f)) * (180f / MathF.PI),
                     new Vector3(1.15f),
                     new Color(235, lift, 255, 255));
+            }
+
+            _lit.DrawMesh(
+                _groundMesh,
+                RaylibMatrix.FromScaleTranslation(0f, 0.05f, 0f, 1f, 1f, 1f),
+                new Vector4(0.32f, 0.34f, 0.42f, 1f),
+                roughness: 0.9f,
+                metallic: 0f);
+            for (int i = 0; i < InstanceCount; i++)
+            {
+                float angle = (i * MathF.Tau / InstanceCount) + ((float)totalTimeSeconds * 0.1f);
+                Vector3 position = new(MathF.Cos(angle) * RingRadius, 0f, MathF.Sin(angle) * RingRadius);
+                _shadows.DrawModelShadow(
+                    _entry.Model,
+                    position,
+                    (angle + (MathF.PI * 0.5f)) * (180f / MathF.PI),
+                    new Vector3(1.15f),
+                    _lighting.SunDirectionToward);
             }
 
             Rl.EndMode3D();

@@ -48,7 +48,7 @@ namespace Ludots.Platform.Abstractions
 
     public readonly struct MaterialAssetDescriptor
     {
-        public MaterialAssetDescriptor(int id, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags)
+        public MaterialAssetDescriptor(int id, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags, float roughness = DefaultRoughness, float metalness = DefaultMetalness)
         {
             if (id <= 0)
             {
@@ -60,11 +60,26 @@ namespace Ludots.Platform.Abstractions
                 throw new ArgumentNullException(nameof(sourceUris));
             }
 
+            if (roughness < 0f || roughness > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(roughness), roughness, "Roughness must be within [0, 1].");
+            }
+
+            if (metalness < 0f || metalness > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(metalness), metalness, "Metalness must be within [0, 1].");
+            }
+
             Id = id;
             Domain = domain;
             SourceUris = sourceUris;
             Flags = flags;
+            Roughness = roughness;
+            Metalness = metalness;
         }
+
+        public const float DefaultRoughness = 0.85f;
+        public const float DefaultMetalness = 0f;
 
         public int Id { get; }
 
@@ -73,5 +88,9 @@ namespace Ludots.Platform.Abstractions
         public string[] SourceUris { get; }
 
         public MaterialAssetFlags Flags { get; }
+
+        public float Roughness { get; }
+
+        public float Metalness { get; }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
@@ -38,8 +39,33 @@ namespace Ludots.Core.Presentation.Config
                 MaterialAssetDomain domain = ParseDomain(node["domain"], key);
                 MaterialAssetFlags flags = ParseFlags(node["flags"], key);
                 MaterialBlendModeResolver.Resolve(flags);
-                _materials.Register(key, domain, Array.Empty<string>(), flags);
+                float roughness = ParseUnitScalar(node["roughness"], key, "roughness", MaterialAssetDescriptor.DefaultRoughness);
+                float metalness = ParseUnitScalar(node["metalness"], key, "metalness", MaterialAssetDescriptor.DefaultMetalness);
+                _materials.Register(key, domain, Array.Empty<string>(), flags, roughness, metalness);
             }
+        }
+
+        private static float ParseUnitScalar(JsonNode? node, string key, string field, float fallback)
+        {
+            if (node == null)
+            {
+                return fallback;
+            }
+
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation material asset '{key}' field '{field}' must be a number within [0, 1].");
+            }
+
+            float parsed = (float)node.GetValue<double>();
+            if (parsed < 0f || parsed > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation material asset '{key}' field '{field}' must be within [0, 1].");
+            }
+
+            return parsed;
         }
 
         private static MaterialAssetDomain ParseDomain(JsonNode? node, string key)
