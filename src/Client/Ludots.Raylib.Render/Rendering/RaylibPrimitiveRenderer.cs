@@ -85,6 +85,10 @@ namespace Ludots.Raylib.Render
         private Vector3 _frameViewPos;
         private bool _hasFrameViewPos;
         private bool _skinningShaderReady;
+        private RaylibSkyIbl? _skyIbl;
+        private int _locSkyZenith;
+        private int _locSkyGround;
+        private int _locEnvSpecular;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
@@ -147,6 +151,7 @@ namespace Ludots.Raylib.Render
             {
                 lighting.Apply(_shader, in _instancingLightingLocs);
                 lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
+                ApplySkyIbl(lighting);
             }
 
             if (_skinningShaderReady)
@@ -154,6 +159,26 @@ namespace Ludots.Raylib.Render
                 lighting.Apply(_skinningShader, in _skinningLightingLocs);
                 lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
             }
+        }
+
+        /// <summary>split-sum IBL：烘焙/重烘环境立方图 + LUT，喂 uniform 并挂到合批材质槽位。</summary>
+        private void ApplySkyIbl(RaylibFrameLighting lighting)
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            _skyIbl ??= new RaylibSkyIbl();
+            _skyIbl.Ensure(lighting);
+            Vector3 zenith = lighting.SkyZenithColor;
+            Vector3 ground = lighting.SkyGroundColor;
+            float envSpecular = 1f;
+            Rl.SetShaderValue(_shader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_shader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_shader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
         }
 
         public void BindReceiverMeshProjector(IRaylibReceiverMeshProjector projector)
@@ -2362,6 +2387,13 @@ namespace Ludots.Raylib.Render
 
             material = model.materials[materialIndex];
             material.shader = _shader;
+            if (_skyIbl != null)
+            {
+                // maps 为材质共享指针：写入即持久挂载；重烘后 id 变化由每帧重挂覆盖。
+                Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
+                Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
+            }
+
             ApplyHostMaterialMaps(ref material, materialId, _shader);
             return true;
         }
@@ -2612,6 +2644,9 @@ namespace Ludots.Raylib.Render
             _locMetallic = Rl.GetShaderLocation(_shader, "uMetallic");
             _locHasRoughnessMap = Rl.GetShaderLocation(_shader, "uHasRoughnessMap");
             _locHasMetallicMap = Rl.GetShaderLocation(_shader, "uHasMetallicMap");
+            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_shader, "uSkyZenith", "instancing");
+            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_shader, "uSkyGround", "instancing");
+            _locEnvSpecular = RaylibShaderBindingGuard.RequireUniform(_shader, "uEnvSpecular", "instancing");
             int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
             int locMapMetalness = Rl.GetShaderLocation(_shader, "texture1");
             int locMapRoughness = Rl.GetShaderLocation(_shader, "texture3");
@@ -2644,10 +2679,14 @@ namespace Ludots.Raylib.Render
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] = -1;
+            // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
+            // DrawMeshInstanced 对该槽以 GL_TEXTURE_CUBE_MAP 绑定并回填 uniform=槽位号），LUT 走 BRDF 槽。
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] =
+                RaylibShaderBindingGuard.RequireUniform(_shader, "uPrefilteredEnv", "instancing");
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_IRRADIANCE] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_PREFILTER] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] =
+                RaylibShaderBindingGuard.RequireUniform(_shader, "uBrdfLut", "instancing");
 
             if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
             if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
@@ -2780,6 +2819,7 @@ namespace Ludots.Raylib.Render
 
             _frameLighting.Apply(_shader, in _instancingLightingLocs);
             _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
+            ApplySkyIbl(_frameLighting);
         }
 
         private void EnsureFrameLightingAppliedForSkinning()
@@ -2898,6 +2938,8 @@ namespace Ludots.Raylib.Render
             _vfxRenderer.Dispose();
             _effectShaders.Dispose();
             _materialHostBinder?.Dispose();
+            _skyIbl?.Dispose();
+            _skyIbl = null;
 
             if (!_initialized) return;
 
@@ -2905,6 +2947,9 @@ namespace Ludots.Raylib.Render
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
             _material.shader = default;
+            // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
             if (_vegetationCutoutShaderReady)

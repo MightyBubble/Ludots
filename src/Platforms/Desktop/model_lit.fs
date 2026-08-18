@@ -19,6 +19,9 @@ uniform float uRoughness;
 uniform float uMetallic;
 uniform vec3 uSkyZenith;
 uniform vec3 uSkyGround;
+uniform samplerCube uPrefilteredEnv;
+uniform sampler2D uBrdfLut;
+uniform float uEnvSpecular;
 uniform sampler2D uShadowMap;
 uniform mat4 uLightSpaceMatrix;
 uniform float uShadowEnabled;
@@ -133,13 +136,15 @@ void main()
     vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
     vec3 specular = (D * G * F) / max(4.0 * max(dot(N, V), 0.0) * NdotL, 1e-5);
 
-    // 解析式天空 IBL：半球环境色（天顶/地面）按法线朝向混合作环境漫反射，
-    // 同色经 Fresnel 加权作环境镜面近似——从昼夜 ramp 派生，无立方图/LUT 依赖。
+    // split-sum IBL：环境漫反射保持半球近似（天顶/地面按法线混合）；环境镜面改用
+    // 预滤波环境立方图（CPU 烘焙 GGX mip 链，roughness→lod=6 级）× BRDF LUT（GGX 数值
+    // 积分的 scale/bias 第二项），昼夜相位变化触发 CPU 重烘。
     float hemisphere = N.y * 0.5 + 0.5;
     vec3 skyIrradiance = mix(uSkyGround, uSkyZenith, hemisphere);
-    vec3 kSAmbient = F0 + (vec3(1.0) - F0) * pow(clamp(1.0 - max(dot(N, V), 0.0), 0.0, 1.0), 5.0);
     vec3 ambientDiffuse = skyIrradiance * albedo * (1.0 - metallic);
-    vec3 ambientSpecular = skyIrradiance * kSAmbient * (1.0 - roughness) * 0.5;
+    vec3 prefilteredEnv = textureLod(uPrefilteredEnv, reflect(-V, N), roughness * 6.0).rgb;
+    vec2 brdf = texture(uBrdfLut, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3 ambientSpecular = prefilteredEnv * (F0 * brdf.x + vec3(brdf.y)) * uEnvSpecular;
     vec3 ambient = ambientDiffuse + ambientSpecular + uAmbient.rgb * uAmbient.a * albedo;
 
     vec3 kS = F;

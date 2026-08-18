@@ -7,7 +7,7 @@
 | 合批管线 | 静态网格群 / 蒙皮人群（大量实例） | `PrimitiveDrawItem` → `RaylibPrimitiveRenderer`（`instancing` / `skinning_instanced` 着色器） |
 | 单物体通道 | 道具、少量模型、验收场景陪衬 | `RaylibLitModel`（`model_lit` 着色器） |
 
-两车道都是 **Cook-Torrance GGX 单灯 metallic-roughness** + 光照总线 `RaylibFrameLighting`（光向/环境/光色/强度/雾/视点）。
+两车道都是 **Cook-Torrance GGX 单灯 metallic-roughness + split-sum 天空 IBL** + 光照总线 `RaylibFrameLighting`（光向/环境/光色/强度/雾/视点）。
 
 ## 单物体带光照：RaylibLitModel
 
@@ -15,7 +15,7 @@
 var lit = new RaylibLitModel();            // LoadShader(model_lit)，uniform 合同 fail-loud
 var lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.55f);
 
-// 每帧一次：光照总线 + 天空半球 IBL 色
+// 每帧一次：光照总线 + 天空 IBL 色（含 split-sum 环境烘焙/节流重烘）
 lit.BeginFrame(lighting, camera.position);
 
 // 路径 A：共享 mesh 直接画（道具）
@@ -56,9 +56,16 @@ shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
 - 越界（非 [0,1] / 非数字）装载期 fail-loud。
 - 合批管线与单物体通道同一合同（`MaterialAssetDescriptor.Roughness/Metalness`）。
 
-## 解析式天空环境近似（非完整 IBL，见跟进 issue）
+## split-sum 天空 IBL（预滤波环境立方图 + BRDF LUT）
 
-`RaylibFrameLighting` 从昼夜 ramp（`ambient_day_ramp.json`）派生 `SkyZenithColor` / `SkyGroundColor`；`model_lit` 按法线朝向混合作环境漫反射、Fresnel 加权作环境镜面近似。无立方图 / LUT 依赖；昼夜联动免费获得。自定义光照时直接构造 `RaylibFrameLighting` 后调 `SetDayPhase` 即可。
+`RaylibSkyIbl`（Ludots.Raylib.Render）承担环境烘焙，两车道（`model_lit` / `instancing`）的 ambientSpecular 统一升级为真 split-sum：
+
+- **环境立方图**：CPU 按解析天空函数（昼夜 ramp 派生的天顶/地平线/地面色 + 太阳光晕，与 `skybox.fs` 同形）逐像素写 6×64² RGBA，mip 链每级按 `roughness = mip / 6` 做 GGX 重要性采样预滤波（mip0 为镜面直采）；经 native 5.5 的 `rlLoadTextureCubemap` 上传（vendored 绑定缺该入口，`RaylibSkyIblInterop` 本地声明，数据布局逐 mip 6 face 连续）。
+- **BRDF LUT**：512² RGBA（R=specular scale、G=bias），C# 数值积分 GGX/NdotV（Hammersley 256 采样），`GenImageColor`→`LoadTextureFromImage` 装载。
+- **着色器**：`ambientSpecular = textureLod(uPrefilteredEnv, reflect(-V,N), roughness*6) × (F0*brdf.r + brdf.g) × uEnvSpecular`；环境漫反射保持半球近似（zenith/ground 按法线混合）。
+- **接线**：cubemap 走 `MATERIAL_MAP_CUBEMAP` 槽位、LUT 走 `MATERIAL_MAP_BRDF` 槽位（native 5.5 `DrawMesh`/`DrawMeshInstanced` 对 CUBEMAP 槽以 `GL_TEXTURE_CUBE_MAP` 绑定并回填 uniform=槽位号）；`RaylibLitModel` 构造期预烘 LUT、`BeginFrame` 烘/重烘环境图并挂材质槽；`RaylibPrimitiveRenderer` 在 `ApplyFrameLighting` 与实例化绘制前同样驱动；DrawModelEx 路径用 `BindIblToMaterial` 挂槽（见 GpuSkinningScene）。
+
+**CPU 烘焙取舍**：零额外 GL pass；BRDF LUT 与光照无关（构造期一次性，Debug 约 250ms；两车道各持一份），环境图随昼夜相位重烘（步进 >0.02 才重烘，单次约 20ms）——重烘即换纹理对象（id 变化），材质槽每帧重挂覆盖。GPU 端无逐帧成本（对比基线 avg +0.5ms 内，为采样与绑槽开销）。`uEnvSpecular` 为强度闸（默认 1.0）。
 
 ## native raylib 5.0 已知限制（绕法已内建）
 
@@ -72,4 +79,4 @@ shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
 
 ## 宿主接入（表现 showcase 侧）
 
-宿主 `RaylibHostLoop` 已对地形/高度图/图元合批喂光照；单物体通道供 showcase/编辑器道具使用——构造 `RaylibLitModel` 后在 Presenter 资产绑定的模型上 `AttachToModel`，HUD/道具即携带 GGX 明暗与天空 IBL。
+宿主 `RaylibHostLoop` 已对地形/高度图/图元合批喂光照；单物体通道供 showcase/编辑器道具使用——构造 `RaylibLitModel` 后在 Presenter 资产绑定的模型上 `AttachToModel`（DrawModelEx 路径再每帧 `BindIblToMaterial` 挂 IBL 槽），HUD/道具即携带 GGX 明暗与天空 IBL。

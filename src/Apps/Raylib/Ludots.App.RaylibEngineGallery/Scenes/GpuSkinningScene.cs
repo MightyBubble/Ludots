@@ -106,6 +106,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 _lit.ApplyDrawUniforms(new Vector4(0.92f, lift / 255f, 1f, 1f), roughness: 0.55f, metallic: 0.1f);
                 ref Material modelMaterial = ref _entry.Model.materials[0];
                 _lit.BindShadowToMaterial(ref modelMaterial, _shadowMap);
+                _lit.BindIblToMaterial(ref modelMaterial);
                 Rl.DrawModelEx(
                     _entry.Model,
                     position,

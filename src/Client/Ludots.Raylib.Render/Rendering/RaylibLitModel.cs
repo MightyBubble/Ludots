@@ -7,13 +7,15 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Raylib.Render
 {
     /// <summary>
-    /// 单物体带光照绘制通道：model_lit 着色器（Cook-Torrance GGX + 解析式天空半球 IBL）。
-    /// 补齐"不走合批管线就没有明暗"的底座缺口；光照 uniform 词汇与 instancing 管线一致。
+    /// 单物体带光照绘制通道：model_lit 着色器（Cook-Torrance GGX + split-sum 天空 IBL——
+    /// RaylibSkyIbl CPU 烘焙预滤波环境立方图与 BRDF LUT）。补齐"不走合批管线就没有明暗"
+    /// 的底座缺口；光照 uniform 词汇与 instancing 管线一致。
     /// 阴影由 RaylibDirectionalShadowMap 深度 shadow map 承担（native 5.5）。
     /// </summary>
     public sealed unsafe class RaylibLitModel : IDisposable
     {
-        private static readonly int ShadowSamplerSlot = (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL;
+        // 着色器采样器槽用 SHADER_LOC 索引（raylib DrawMesh 读 locs[15+mapSlot]，材质槽 2 ≠ 着色器槽 17）
+        private static readonly int ShadowSamplerSlot = (int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL;
 
         private readonly Shader _shader;
         private Material _material;
@@ -23,10 +25,12 @@ namespace Ludots.Raylib.Render
         private readonly int _locMetallic;
         private readonly int _locSkyZenith;
         private readonly int _locSkyGround;
+        private readonly int _locEnvSpecular;
         private readonly int _locShadowMap;
         private readonly int _locLightSpaceMatrix;
         private readonly int _locShadowEnabled;
         private readonly int _locShadowTexelWorld;
+        private RaylibSkyIbl? _skyIbl;
         private RaylibFrameLighting? _lighting;
         private bool _disposed;
 
@@ -47,14 +51,24 @@ namespace Ludots.Raylib.Render
             _locMetallic = RequireLocation("uMetallic");
             _locSkyZenith = RequireLocation("uSkyZenith");
             _locSkyGround = RequireLocation("uSkyGround");
+            _locEnvSpecular = RequireLocation("uEnvSpecular");
             _locShadowMap = RequireLocation("uShadowMap");
             _locLightSpaceMatrix = RequireLocation("uLightSpaceMatrix");
             _locShadowEnabled = RequireLocation("uShadowEnabled");
             _locShadowTexelWorld = RequireLocation("uShadowTexelWorld");
             _shader.locs[ShadowSamplerSlot] = _locShadowMap;
 
+            // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
+            // DrawMesh 对该槽以 GL_TEXTURE_CUBE_MAP 绑定并回填 uniform=槽位号），LUT 走 BRDF 槽。
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] = RequireLocation("uPrefilteredEnv");
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = RequireLocation("uBrdfLut");
+
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
+
+            // 构造期已持 GL 上下文（LoadShader），把与光照无关的 BRDF LUT 烘焙移出首帧 Draw。
+            _skyIbl = new RaylibSkyIbl();
+            _skyIbl.PrewarmLut();
         }
 
         public Shader Shader => _shader;
@@ -73,6 +87,12 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_shader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
 
+            _skyIbl.Ensure(lighting);
+            float envSpecular = 1f;
+            Rl.SetShaderValue(_shader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
+            Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
+
             float shadowEnabled = shadow != null ? 1f : 0f;
             Rl.SetShaderValue(_shader, _locShadowEnabled, &shadowEnabled, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_shader, _locShadowTexelWorld, &shadowTexelWorld, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
@@ -87,6 +107,20 @@ namespace Ludots.Raylib.Render
         public void BindShadowToMaterial(ref Material material, RaylibDirectionalShadowMap shadow)
         {
             Rl.SetMaterialTexture(ref material, ShadowSamplerSlot, shadow.DepthTexture);
+        }
+
+        /// <summary>把 IBL 采样纹理挂到模型材质（DrawModelEx 路径每帧调用；重烘后纹理 id 会变）。</summary>
+        public void BindIblToMaterial(ref Material material)
+        {
+            ThrowIfDisposed();
+            if (_skyIbl == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibLitModel)} requires {nameof(BeginFrame)} before binding IBL maps.");
+            }
+
+            Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
+            Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
         }
 
         public void DrawMesh(Mesh mesh, RaylibMatrix transform, Vector4 tint, float roughness = 0.85f, float metallic = 0f)
@@ -144,7 +178,12 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
+            _skyIbl?.Dispose();
+            _skyIbl = null;
             _material.shader = default;
+            // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
+            _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
             _disposed = true;
