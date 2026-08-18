@@ -1,0 +1,11 @@
+[
+  {
+    "id": "Effect.Fireball.Damage",
+    "tags": ["Effect.Fireball"],
+    "presetType": "Immediate",
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -15 },
+      { "attribute": "Mana", "op": "Add", "value": -10 }
+    ]
+  }
+]

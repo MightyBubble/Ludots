@@ -1,0 +1,12 @@
+{
+  "id": "FireballSharedMod",
+  "name": "Fireball Shared Infrastructure",
+  "version": "1.0.0",
+  "description": "Shared fireball arena: hero + target, fireball ability, panel template with realtime HP/MP/ATK",
+  "mainAssembly": "FireballSharedMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

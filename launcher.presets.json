@@ -1996,6 +1996,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_markup_raylib",
+      "name": "Panel Markup Skin Raylib",
+      "selectors": [
+        "$panel_skin_markup"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_compose_raylib",
+      "name": "Panel Compose Skin Raylib",
+      "selectors": [
+        "$panel_skin_compose"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_reactive_raylib",
+      "name": "Panel Reactive Skin Raylib",
+      "selectors": [
+        "$panel_skin_reactive"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_skin_web_raylib",
+      "name": "Panel Web Skin Raylib",
+      "selectors": [
+        "$panel_skin_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

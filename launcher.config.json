@@ -1477,6 +1477,38 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
         "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
       }
+    },
+    {
+      "name": "panel_skin_markup",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
+        "projectPath": "PanelSkinMarkupMod.csproj"
+      }
+    },
+    {
+      "name": "panel_skin_compose",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_compose/PanelSkinComposeMod",
+        "projectPath": "PanelSkinComposeMod.csproj"
+      }
+    },
+    {
+      "name": "panel_skin_reactive",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_reactive/PanelSkinReactiveMod",
+        "projectPath": "PanelSkinReactiveMod.csproj"
+      }
+    },
+    {
+      "name": "panel_skin_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_web/PanelSkinWebMod",
+        "projectPath": "PanelSkinWebMod.csproj"
+      }
     }
   ],
   "adapters": {

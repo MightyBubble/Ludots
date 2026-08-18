@@ -1,0 +1,16 @@
+{
+  "Id": "fireball_arena",
+  "Tags": ["showcase", "fireball"],
+  "Entities": [
+    { "InstanceId": "fireball-hero", "Template": "fireball_hero" },
+    { "InstanceId": "fireball-target", "Template": "fireball_target" }
+  ],
+  "DefaultCamera": { "TargetXCm": 100, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 800, "FovYDeg": 50 },
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "fireball-hero" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "fireball-hero" },
+    { "TeamId": 2, "RepresentativeInstanceId": "fireball-target" }
+  ]
+}
