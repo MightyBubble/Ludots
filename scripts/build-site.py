@@ -528,7 +528,8 @@ def build(out_dir: Path) -> int:
     # --- 结构自验 ---
     print("-- 结构自验")
     required = [
-        "index.html", "gallery.html", "tests.html", "diagrams.html", "graph-op-wiki.html",
+        "index.html", "gallery.html", "tests.html", "diagrams.html",
+        "graph-op-wiki.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
         "site-assets/gallery-data.js", "site-assets/evidence-data.js",

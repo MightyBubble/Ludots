@@ -4,7 +4,7 @@
 
 条目模型：`编号 | 严重度 | 问题（第一性）| 现状证据 | 方案建议 | 状态`。
 
-现状：10 文件 113 条（backlog 24 · graph 20 · attribute 15 · effect 11 · domains 10 · ai 10 · ability 9 · order-input 9 · runtime 5），高严重度 25 条。
+现状：10 文件 115 条（backlog 24 · graph 20 · attribute 15 · effect 11 · domains 10 · ai 10 · ability 9 · order-input 9 · runtime 7），高严重度 25 条。
 
 跨域主题（立项视角，方法：写作期逐 loader 通读 + 双模型事实抽查 + 补盲域专项审计）：
 
