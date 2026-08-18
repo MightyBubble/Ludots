@@ -73,6 +73,17 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void State_DefaultStyle_IsVisibleWithoutConfigure()
+        {
+            var state = new NavMeshPresentationState();
+
+            Assert.That(state.Style.DrawFill, Is.True, "default style must draw fill");
+            Assert.That(state.Style.DrawEdges, Is.True, "default style must draw edges");
+            Assert.That(state.Style.FillColor.Alpha, Is.GreaterThan(0f));
+            Assert.That(state.Style.EdgeColor.Alpha, Is.GreaterThan(0f));
+        }
+
+        [Test]
         public void Buffer_CapacityExhaustion_HardFailsAndNamesCapacityOwner()
         {
             var buffer = new NavMeshPresentationBuffer(tileCapacity: 1);

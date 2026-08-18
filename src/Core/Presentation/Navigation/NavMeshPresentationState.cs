@@ -105,7 +105,14 @@ namespace Ludots.Core.Presentation.Navigation
         private bool _enabled;
         private int _layer;
         private int _profile;
-        private NavMeshPresentationStyle _style;
+        // Default style mirrors the proven runtime-showcase values: a debug overlay that is
+        // enabled but never Configure()d must still render visibly, not silently draw nothing.
+        private NavMeshPresentationStyle _style = new(
+            new NavMeshPresentationColor(0.16f, 0.75f, 1.0f, 0.35f),
+            new NavMeshPresentationColor(0.08f, 0.35f, 0.63f, 0.92f),
+            heightOffsetMeters: 0.05f,
+            drawFill: true,
+            drawEdges: true);
         private uint _revision;
 
         public bool Enabled => _enabled;
