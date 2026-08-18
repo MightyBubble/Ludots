@@ -5763,6 +5763,29 @@
       ]
     },
     {
+      "id": "city_rally_webui",
+      "path": "mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod",
+      "projectPath": "CityRallyWebUiShowcaseMod.csproj",
+      "title": "城池集结点纯 Web UI",
+      "summary": "城池集结点纯 Web UI showcase：自包含浏览器 HUD（实体/命令卡/生产队列）+ setCityRallySpawnTarget 集结点管线；不依赖 RtsDemoMod，无 Skia 指令面板。",
+      "tier": "T2",
+      "category": "genre",
+      "binding": null,
+      "preset": null,
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "CityRallyWebUiSpawnTargetAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "rts",
+        "city",
+        "rally",
+        "browser"
+      ]
+    },
+    {
       "id": "rts_starcraft_like",
       "path": "mods/showcases/rts_starcraft_like/RtsStarCraftLikeShowcaseMod",
       "projectPath": "RtsStarCraftLikeShowcaseMod.csproj",

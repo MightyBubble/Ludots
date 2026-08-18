@@ -1,0 +1,88 @@
+{
+  "interactionMode": "AimCast",
+  "mappings": [
+    {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillW",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 1 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillE",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 2 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillR",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 3 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
+      "trigger": "PressedThisFrame",
+      "argsTemplate": {},
+      "requireTarget": true,
+      "targetType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier",
+      "actorOrderRouting": {
+        "candidates": [
+          {
+            "orderTypeKey": "setCityRallySpawnTarget",
+            "priority": 10,
+            "targetType": "HoveredEntityOrPosition",
+            "match": {
+              "abilitySlotIndex": 2,
+              "abilityIdKeySuffix": ".Train"
+            }
+          },
+          {
+            "orderTypeKey": "moveTo",
+            "priority": 0,
+            "match": {}
+          }
+        ]
+      }
+    },
+    {
+      "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "stop",
+      "argsTemplate": {},
+      "requireTarget": false,
+      "targetType": "None",
+      "isSkillMapping": false,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": true,
+    "persistPath": "user://CityRallyWebUiShowcaseMod/input_preferences.json"
+  }
+}

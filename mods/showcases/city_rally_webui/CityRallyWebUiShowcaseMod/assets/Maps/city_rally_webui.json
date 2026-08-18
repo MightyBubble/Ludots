@@ -1,0 +1,85 @@
+{
+  "Id": "city_rally_webui",
+  "Tags": [
+    "rts",
+    "city_rally"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 14000,
+    "FovYDeg": 60
+  },
+  "Entities": [
+    {
+      "Template": "rts_city",
+      "InstanceId": "city_rally_webui_city",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+        "Name": { "Value": "城池" },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    },
+    {
+      "Template": "rts_city_soldier",
+      "InstanceId": "city_rally_webui_soldier_a",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": -800 } },
+        "Name": { "Value": "兵士 A" },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    },
+    {
+      "Template": "rts_city_soldier",
+      "InstanceId": "city_rally_webui_soldier_b",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 900, "Y": -1400 } },
+        "Name": { "Value": "兵士 B" },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "city_rally_webui_city"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "city_rally_webui_city"
+    }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "CityRallyWebUi.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      }
+    ],
+    "Players": [
+      {
+        "PlayerA": 1,
+        "PlayerB": 1,
+        "TypeId": "CityRallyWebUi.Participant",
+        "Symmetric": true
+      }
+    ],
+    "PlayerTeams": [
+      {
+        "PlayerId": 1,
+        "TeamId": 1,
+        "TypeId": "CityRallyWebUi.Participant",
+        "Symmetric": false
+      }
+    ]
+  }
+}

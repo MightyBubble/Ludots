@@ -1,0 +1,38 @@
+{
+  "orderBlackboardKeys": {
+    "CityRally.SpawnTarget.Kind": true,
+    "CityRally.SpawnTarget.Position": true,
+    "CityRally.SpawnTarget.Entity": true,
+    "CityRally.SpawnTarget.HexQ": true,
+    "CityRally.SpawnTarget.HexR": true
+  },
+  "orderTypes": {
+    "setCityRallySpawnTarget": {
+      "orderTypeId": 110,
+      "label": "Set City Rally Point",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 40,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": true,
+      "persistentStoredTarget": {
+        "targetKindKey": "CityRally.SpawnTarget.Kind",
+        "targetPositionKey": "CityRally.SpawnTarget.Position",
+        "targetEntityKey": "CityRally.SpawnTarget.Entity",
+        "hexQKey": "CityRally.SpawnTarget.HexQ",
+        "hexRKey": "CityRally.SpawnTarget.HexR"
+      }
+    }
+  },
+  "orderRules": {}
+}

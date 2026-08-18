@@ -1,0 +1,14 @@
+{
+  "name": "CityRallyWebUiShowcaseMod",
+  "version": "1.0.0",
+  "description": "城池集结点纯 Web UI showcase：依赖 BrowserRtsProductionShowcaseMod 共享浏览器壳（数据平面/前端/输入映射），自包含 setSpawnTarget 集结点管线；无 Skia 指令面板。",
+  "main": "bin/net8.0/CityRallyWebUiShowcaseMod.dll",
+  "priority": 220,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "city", "rally", "browser-ui"]
+}
