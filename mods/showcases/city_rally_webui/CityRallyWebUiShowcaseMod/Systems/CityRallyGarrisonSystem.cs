@@ -42,6 +42,7 @@ namespace CityRallyWebUiShowcaseMod.Systems
         private int _governorTagId;
         private int _plantingTagId;
         private int _setSpawnTargetOrderTypeId;
+        private int _castAbilityOrderTypeId;
         private int _moveToOrderTypeId;
         private int _spawnTargetKindKey;
         private int _spawnTargetPositionKey;
@@ -89,6 +90,7 @@ namespace CityRallyWebUiShowcaseMod.Systems
             var orderTypes = _engine.GetService(CoreServiceKeys.OrderTypeRegistry) as OrderTypeRegistry
                 ?? throw new InvalidOperationException("CityRallyGarrisonSystem requires OrderTypeRegistry.");
             _setSpawnTargetOrderTypeId = orderTypes.GetId("setCityRallySpawnTarget");
+            _castAbilityOrderTypeId = orderTypes.GetId("castAbility");
             _moveToOrderTypeId = orderTypes.GetId("moveTo");
 
             var orderType = orderTypes.Get(_setSpawnTargetOrderTypeId);
@@ -111,9 +113,22 @@ namespace CityRallyWebUiShowcaseMod.Systems
                     return;
                 }
 
-                ref var ints = ref _world.Get<BlackboardIntBuffer>(entity);
-                if (ints.TryGet(_spawnTargetKindKey, out int kindValue) &&
-                    kindValue != (int)BlackboardStoredTargetKind.None)
+                bool hasStoredTarget = false;
+                if (_world.Has<OrderBuffer>(entity))
+                {
+                    ref var orders = ref _world.Get<OrderBuffer>(entity);
+                    hasStoredTarget = orders.HasActive &&
+                                      orders.ActiveOrder.Order.OrderTypeId == _castAbilityOrderTypeId;
+                }
+
+                if (!hasStoredTarget)
+                {
+                    ref var ints = ref _world.Get<BlackboardIntBuffer>(entity);
+                    hasStoredTarget = ints.TryGet(_spawnTargetKindKey, out int kindValue) &&
+                                      kindValue != (int)BlackboardStoredTargetKind.None;
+                }
+
+                if (hasStoredTarget)
                 {
                     commandActors.Add(entity);
                 }
@@ -127,28 +142,50 @@ namespace CityRallyWebUiShowcaseMod.Systems
                     continue;
                 }
 
-                var keys = new BlackboardStoredTargetKeys(
-                    _spawnTargetKindKey,
-                    _spawnTargetPositionKey,
-                    _spawnTargetEntityKey,
-                    _spawnTargetHexQKey,
-                    _spawnTargetHexRKey);
-                if (!BlackboardStoredTargetOps.TryRead(_world, actor, in keys, out BlackboardStoredTargetSnapshot stored) ||
-                    !stored.HasTarget)
+                if (_world.Has<OrderBuffer>(actor) &&
+                    _world.Get<OrderBuffer>(actor).HasActive &&
+                    _world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderTypeId == _castAbilityOrderTypeId)
                 {
-                    continue;
+                    // 命令卡路径：读 castAbility 的目标（实体或位置）。
+                    ref readonly Order castOrder = ref _world.Get<OrderBuffer>(actor).ActiveOrder.Order;
+                    if (castOrder.Target != Entity.Null && _world.IsAlive(castOrder.Target))
+                    {
+                        HandleEnterCity(actor, castOrder.Target);
+                    }
+                    else
+                    {
+                        Vector3 targetCm = new(
+                            castOrder.Args.Spatial.WorldCm.X,
+                            0f,
+                            castOrder.Args.Spatial.WorldCm.Z);
+                        HandleLeaveOrPlantFlag(actor, targetCm);
+                    }
                 }
+                else
+                {
+                    var keys = new BlackboardStoredTargetKeys(
+                        _spawnTargetKindKey,
+                        _spawnTargetPositionKey,
+                        _spawnTargetEntityKey,
+                        _spawnTargetHexQKey,
+                        _spawnTargetHexRKey);
+                    if (!BlackboardStoredTargetOps.TryRead(_world, actor, in keys, out BlackboardStoredTargetSnapshot stored) ||
+                        !stored.HasTarget)
+                    {
+                        continue;
+                    }
 
-                if (stored.Kind == BlackboardStoredTargetKind.Entity && stored.TargetEntity != Entity.Null)
-                {
-                    HandleEnterCity(actor, stored.TargetEntity);
-                }
-                else if (stored.Kind == BlackboardStoredTargetKind.Point)
-                {
-                    HandleLeaveOrPlantFlag(actor, stored.WorldPositionCm);
-                }
+                    if (stored.Kind == BlackboardStoredTargetKind.Entity && stored.TargetEntity != Entity.Null)
+                    {
+                        HandleEnterCity(actor, stored.TargetEntity);
+                    }
+                    else if (stored.Kind == BlackboardStoredTargetKind.Point)
+                    {
+                        HandleLeaveOrPlantFlag(actor, stored.WorldPositionCm);
+                    }
 
-                BlackboardStoredTargetOps.Clear(_world, actor, in keys);
+                    BlackboardStoredTargetOps.Clear(_world, actor, in keys);
+                }
             }
         }
 
