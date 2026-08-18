@@ -1,0 +1,219 @@
+
+已成功生成�?
+    0 个警�?
+    0 个错�?
+
+已用时间 00:00:03.22
+
+有可用的工作负载更新。有关详细信息，请运�?`dotnet workload list`�?
+adapter=raylib
+pid=82948
+bootstrap=C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\launcher.runtime.json
+rootMods=CityRallyWebUiShowcaseMod
+orderedMods=LudotsCoreMod, CoreInputMod, EntityCommandPanelMod, CityRallyWebUiShowcaseMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=city_rally_webui @ mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod/assets/game.json -> city_rally_webui
+  startupInputContexts=[Default_Gameplay] @ mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> [Default_Gameplay]
+    * mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod/assets/game.json -> [Default_Gameplay]
+  browserRuntime={"enabled":true,"required":true,"provider":"cef"} @ mods/showcases/city_rally_webui/CityRallyWebUiShowcaseMod/assets/game.json
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=7af39ed4efdbbc366dccf984c400cf1bdaf9eea7a3d5cd3b12112618ef83d978, schema=1, mods=4
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CoreInputMod (P:0)
+[INF][ModLoader] - EntityCommandPanelMod (P:130)
+[INF][ModLoader] - CityRallyWebUiShowcaseMod (P:220)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at C:\001_AI\LudotsProd\.worktrees\city-rally-webui\mods\LudotsCoreMod\bin\net8.0\LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Loading DLL for CoreInputMod at C:\001_AI\LudotsProd\.worktrees\city-rally-webui\mods\CoreInputMod\bin\net8.0\CoreInputMod.dll
+[INF][ModLoader] Scanning 33 types in assembly...
+[INF][ModLoader] Instantiated entry for CoreInputMod. Calling OnLoad...
+[INF][Mod.CoreInputMod] [CoreInputMod] Loaded - generic command-source and GAS input
+[INF][ModLoader] CoreInputMod OnLoad completed.
+[INF][ModLoader] Loaded CoreInputMod
+[INF][ModLoader] Loading DLL for EntityCommandPanelMod at C:\001_AI\LudotsProd\.worktrees\city-rally-webui\mods\EntityCommandPanelMod\bin\net8.0\EntityCommandPanelMod.dll
+[INF][ModLoader] Scanning 27 types in assembly...
+[INF][ModLoader] Instantiated entry for EntityCommandPanelMod. Calling OnLoad...
+[INF][Mod.EntityCommandPanelMod] [EntityCommandPanelMod] Loaded
+[INF][ModLoader] EntityCommandPanelMod OnLoad completed.
+[INF][ModLoader] Loaded EntityCommandPanelMod
+[INF][ModLoader] Loading DLL for CityRallyWebUiShowcaseMod at C:\001_AI\LudotsProd\.worktrees\city-rally-webui\mods\showcases\city_rally_webui\CityRallyWebUiShowcaseMod\bin\net8.0\CityRallyWebUiShowcaseMod.dll
+[INF][ModLoader] Scanning 36 types in assembly...
+[INF][ModLoader] Instantiated entry for CityRallyWebUiShowcaseMod. Calling OnLoad...
+[INF][Mod.CityRallyWebUiShowcaseMod] [CityRallyWebUiShowcaseMod] Loaded.
+[INF][ModLoader] CityRallyWebUiShowcaseMod OnLoad completed.
+[INF][ModLoader] Loaded CityRallyWebUiShowcaseMod
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=city_rally_webui, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/Entities/templates.json
+[INF][Config] Loaded 6 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/GAS/effects.json
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/GAS/abilities.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: EntityCommandPanelMod:assets/UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Quests/quests.json
+[INF][Config] Merged fragment from: Core:Narrative/variables.json
+[INF][Config] Merged fragment from: Core:Narrative/dialogues.json
+[INF][Config] Merged fragment from: Core:Narrative/cinematics.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: CoreInputMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.0
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 1920 x 1080
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 296
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   ATI Technologies Inc.
+INFO:     > Renderer: AMD Radeon(TM) 8060S Graphics
+INFO:     > Version:  3.3.0 Core Profile Context 25.30.33.05.260603
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] No viewmodes.json found, skipping.
+[INF][Mod.CoreInputMod] [CoreInputMod] CommandSourceAcquisition, GasInputResponse, SkillBar, CommandSourceDragOverlay, AbilityAimPresentation, CommandActorMovePathPresentation, TabTarget, ViewMode registered
+[INF][Mod.EntityCommandPanelMod] [EntityCommandPanelMod] Installed GAS entity command panel runtime.
+[INF][Engine] Loading Map: city_rally_webui
+[INF][Map] Loading Map: city_rally_webui
+[INF][Config] Merged fragment from: CityRallyWebUiShowcaseMod:assets/Maps/city_rally_webui.json
+[INF][Map] Map 'city_rally_webui' loaded.
+[INF][Map] Map 'city_rally_webui' pushed to focus (stack depth=1).
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Engine] Pathing bootstrap skipped for map 'city_rally_webui': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=180 pitch=55 dist=14000cm fov=60
+[INF][Engine] Firing MapLoaded event for city_rally_webui...
+[WRN][Presentation] Terrain height sync requested VisualHeightmap, but none is registered; undeclared static pending may resolve flat while declared heightmap pending stays unresolved.
+INFO: TEXTURE: [ID 4] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\postprocess.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Fragment shader compiled successfully
+INFO: SHADER: [ID 5] Program shader loaded successfully
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 2] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 3] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 4] Trying to re-load an already loaded mesh
+INFO: FILEIO: [C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\vfx_unlit_tint.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\vfx_unlit_tint.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\instancing.vs] Text file loaded successfully
+INFO: FILEIO: [C:\001_AI\LudotsProd\.worktrees\city-rally-webui\src\Apps\Raylib\Ludots.App.Raylib\bin\Release\net8.0\instancing.fs] Text file loaded successfully
+INFO: SHADER: [ID 4] Vertex shader compiled successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+INFO: TEXTURE: [ID 5] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)

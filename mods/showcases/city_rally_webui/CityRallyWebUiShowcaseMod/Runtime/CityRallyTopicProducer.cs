@@ -23,7 +23,7 @@ namespace CityRallyWebUiShowcaseMod.Runtime;
 
 internal sealed class CityRallyTopicProducer : IWebUiTopicProducer
 {
-    public const string TopicName = "ludots.showcase.cityRally.world";
+    public const string TopicName = "ludots.showcase.rtsProduction.world";
     private const string GasAbilitySlotsSourceId = "gas.ability-slots";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

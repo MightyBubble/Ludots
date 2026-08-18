@@ -108,7 +108,7 @@ public sealed class CityRallyWebUiShowcaseModEntry : IMod
             _lease,
             UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(browserContent)));
 
-        await _surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
+        await _surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Root)).ConfigureAwait(false);
     }
 
     private void InstallCoreSystems(GameEngine engine)
