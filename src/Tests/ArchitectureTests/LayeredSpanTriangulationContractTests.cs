@@ -999,6 +999,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(cornerKeys.Contains((originX + tileCm, originZ)), Is.True);
             Assert.That(cornerKeys.Contains((originX + tileCm, originZ + tileCm)), Is.True);
             Assert.That(cornerKeys.Contains((originX, originZ + tileCm)), Is.True);
+            AssertLocallyDelaunay(triangulation);
             Assert.That(
                 sw.ElapsedMilliseconds,
                 Is.LessThan(15_000),
@@ -1187,6 +1188,7 @@ namespace Ludots.Tests.Architecture
                 PointInAnyTriangle(triangulation, originX + cell / 2, originZ + cell / 2, strictInterior: false),
                 Is.True,
                 "Walkable corner of tile (0,0) must remain covered.");
+            AssertLocallyDelaunay(triangulation);
             TestContext.WriteLine(
                 $"Open-world tile(0,0)+hole: rings={contours.RingCount}; holeVerts={hCount}; " +
                 $"tris={triangulation.TriangleCount}; verts={triangulation.VertexCount}; " +

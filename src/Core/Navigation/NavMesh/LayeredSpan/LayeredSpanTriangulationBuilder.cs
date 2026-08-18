@@ -1781,7 +1781,7 @@ namespace Ludots.Core.Navigation.NavMesh.LayeredSpan
                     for (int e = 0; e < 3; e++)
                     {
                         int v0 = EdgeVertex(t0, e, triA, triB, triC);
-                        int v1 = EdgeVertex(t0, e + 1, triA, triB, triC);
+                        int v1 = EdgeVertex(t0, (e + 1) % 3, triA, triB, triC);
                         if (IsConstrainedPolyEdge(v0, v1, markA, markB, markCount))
                         {
                             continue;
