@@ -1,7 +1,8 @@
 {
   "name": "NavMeshDebugLaunchMod",
   "version": "1.0.0",
-  "description": "Launch overlay that boots the baked 4x4 open-world navmesh debug map (navmesh_debug_openworld) for the runtime KEY_N overlay acceptance. Codeless: map, terrain, bake config, and tiles live in LudotsCoreMod assets.",
+  "description": "Launch overlay that boots the baked 4x4 open-world navmesh debug map (navmesh_debug_openworld) for the runtime navmesh overlay acceptance. Declares the NavMeshDebug_ToggleOverlay input action (N), owns the showcase navmesh profile override, and warms resident tiles on enable. Map, terrain, and tiles live in LudotsCoreMod assets.",
+  "main": "bin/net8.0/NavMeshDebugLaunchMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

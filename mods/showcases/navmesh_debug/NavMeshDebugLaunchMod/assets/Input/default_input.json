@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "NavMeshDebug_ToggleOverlay", "name": "NavMeshDebug_ToggleOverlay", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "NavMeshDebug_Overlay",
+      "name": "NavMesh Debug Overlay",
+      "priority": 120,
+      "bindings": [
+        { "actionId": "NavMeshDebug_ToggleOverlay", "path": "<Keyboard>/n" }
+      ]
+    }
+  ]
+}
