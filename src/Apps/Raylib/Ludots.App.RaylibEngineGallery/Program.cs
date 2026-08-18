@@ -51,6 +51,7 @@ namespace Ludots.App.RaylibEngineGallery
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(screenshotPath!))!);
             }
 
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Id}");
             Rl.SetTargetFPS(60);
 
@@ -118,6 +119,7 @@ namespace Ludots.App.RaylibEngineGallery
 
         private static int RunMenu()
         {
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
             Rl.SetTargetFPS(60);
 
@@ -156,6 +158,7 @@ namespace Ludots.App.RaylibEngineGallery
 
         private static int RunSceneInteractive(IEngineScene scene)
         {
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, $"Ludots Engine Gallery — {scene.Title}");
             Rl.SetTargetFPS(60);
             var camera = new EngineOrbitCamera();
@@ -184,6 +187,7 @@ namespace Ludots.App.RaylibEngineGallery
             scene.Dispose();
             Rl.CloseWindow();
 
+            GalleryFont.Reset();
             Rl.InitWindow(WindowWidth, WindowHeight, "Ludots Engine Gallery");
             Rl.SetTargetFPS(60);
             int back = RunMenu();
