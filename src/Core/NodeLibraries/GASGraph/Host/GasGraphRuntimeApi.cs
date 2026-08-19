@@ -278,22 +278,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ShowPanel(int panelTypeId)
         {
-            PanelActivationApi?.ShowPanel(ResolvePanelTypeName(panelTypeId));
+            RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
         }
 
         public void HidePanel(int panelTypeId)
         {
-            PanelActivationApi?.HidePanel(ResolvePanelTypeName(panelTypeId));
+            RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
         }
 
         public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
-            _panelHost?.Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
+            RequirePanelHost().Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
         }
 
         public void DestroyPanel(int templateKeyId, Entity scope)
         {
-            _panelHost?.DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+            RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
         }
 
         private string ResolvePanelTypeName(int panelTypeId)
@@ -301,6 +301,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
             return name ?? throw new InvalidOperationException(
                 $"Panel op references unregistered config key id {panelTypeId}.");
+        }
+
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi RequirePanelActivationApi()
+        {
+            return _panelActivationApi ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        private Ludots.Core.UI.PanelHosting.PanelHost RequirePanelHost()
+        {
+            return _panelHost ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)

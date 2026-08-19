@@ -1,0 +1,14 @@
+{
+  "actions": [
+    { "id": "SkillQ", "name": "Gameplay_SkillQ", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "priority": 0,
+      "bindings": [
+        { "actionId": "SkillQ", "path": "<Keyboard>/q" }
+      ]
+    }
+  ]
+}

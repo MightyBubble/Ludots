@@ -1,0 +1,8 @@
+[
+  {
+    "name": "fireball.panel.openStatus",
+    "graph": "Graph.Fireball.Panel.OpenStatus",
+    "kind": "Script",
+    "host": "Level"
+  }
+]

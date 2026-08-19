@@ -4,7 +4,8 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Fireball.Damage" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Fireball.ManaCost", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Fireball.Projectile", "dispatchTarget": "Target" },
         { "kind": "End", "tick": 0 }
       ]
     }

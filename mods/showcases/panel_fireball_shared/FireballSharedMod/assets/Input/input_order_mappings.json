@@ -1,0 +1,21 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireTarget": true,
+      "targetType": "Entity",
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 1000,
+      "isSkillMapping": true,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": false,
+    "persistPath": ""
+  }
+}
