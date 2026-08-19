@@ -12,7 +12,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Score = 1 << 2,
         Validation = 1 << 3,
         Derived = 1 << 4,
-        Script = 1 << 5
+        Script = 1 << 5,
+        MapTrigger = 1 << 6
     }
 
     public enum GraphOperandRole : byte
@@ -118,6 +119,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphKind.Validation => GraphKindMask.Validation,
                 GraphKind.Derived => GraphKindMask.Derived,
                 GraphKind.Script => GraphKindMask.Script,
+                GraphKind.MapTrigger => GraphKindMask.MapTrigger,
                 _ => GraphKindMask.None
             };
 

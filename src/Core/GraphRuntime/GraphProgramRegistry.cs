@@ -8,21 +8,32 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphProgramRegistration
     {
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind)
-            : this(program, kind, Array.Empty<string>())
+            : this(program, kind, Array.Empty<string>(), Array.Empty<MapTriggerGraphEntry>())
         {
         }
 
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind, string[]? symbols)
+            : this(program, kind, symbols, Array.Empty<MapTriggerGraphEntry>())
+        {
+        }
+
+        public GraphProgramRegistration(
+            GraphInstruction[] program,
+            GraphKind kind,
+            string[]? symbols,
+            MapTriggerGraphEntry[]? mapTriggerEntries)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
+            MapTriggerEntries = mapTriggerEntries ?? Array.Empty<MapTriggerGraphEntry>();
             ContainsYield = ProgramContainsYield(Program);
         }
 
         public GraphInstruction[] Program { get; }
         public GraphKind Kind { get; }
         public string[] Symbols { get; }
+        public IReadOnlyList<MapTriggerGraphEntry> MapTriggerEntries { get; }
         public bool ContainsYield { get; }
 
         private static bool ProgramContainsYield(GraphInstruction[] program)
@@ -61,6 +72,15 @@ namespace Ludots.Core.GraphRuntime
             => Register(graphId, program, kind, sourceMap, Array.Empty<string>());
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
+            => Register(graphId, program, kind, sourceMap, symbols, Array.Empty<MapTriggerGraphEntry>());
+
+        public void Register(
+            int graphId,
+            GraphInstruction[] program,
+            GraphKind kind,
+            GraphInstructionSourceMap sourceMap,
+            string[]? symbols,
+            MapTriggerGraphEntry[]? mapTriggerEntries)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -69,7 +89,9 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
             }
 
-            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind, symbols)))
+            MapTriggerGraphEntry[] entries = NormalizeMapTriggerEntries(graphId, kind, mapTriggerEntries, program);
+
+            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind, symbols, entries)))
             {
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} is already registered; duplicate registration is not allowed.");
@@ -104,6 +126,15 @@ namespace Ludots.Core.GraphRuntime
             => ReplaceProgram(graphId, program, kind, sourceMap, Array.Empty<string>());
 
         public void ReplaceProgram(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
+            => ReplaceProgram(graphId, program, kind, sourceMap, symbols, Array.Empty<MapTriggerGraphEntry>());
+
+        public void ReplaceProgram(
+            int graphId,
+            GraphInstruction[] program,
+            GraphKind kind,
+            GraphInstructionSourceMap sourceMap,
+            string[]? symbols,
+            MapTriggerGraphEntry[]? mapTriggerEntries)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -124,9 +155,11 @@ namespace Ludots.Core.GraphRuntime
                     $"Graph program id {graphId} kind is '{existing.Kind}'; cannot replace with '{kind}' (identity change requires EngineRestart).");
             }
 
+            MapTriggerGraphEntry[] entries = NormalizeMapTriggerEntries(graphId, kind, mapTriggerEntries, program);
+
             GraphProgramRegistration previous = existing;
             bool hadPreviousSourceMap = _sourceMaps.TryGetValue(graphId, out GraphInstructionSourceMap previousSourceMap);
-            _programs[graphId] = new GraphProgramRegistration(program, kind, symbols);
+            _programs[graphId] = new GraphProgramRegistration(program, kind, symbols, entries);
             if (sourceMap.HasSources)
             {
                 _sourceMaps[graphId] = sourceMap;
@@ -158,6 +191,62 @@ namespace Ludots.Core.GraphRuntime
             }
 
             _version++;
+        }
+
+        private static MapTriggerGraphEntry[] NormalizeMapTriggerEntries(
+            int graphId,
+            GraphKind kind,
+            MapTriggerGraphEntry[]? entries,
+            GraphInstruction[] program)
+        {
+            if (kind == GraphKind.MapTrigger)
+            {
+                if (entries == null || entries.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph program id {graphId} kind MapTrigger requires a non-empty MapTrigger entry table.");
+                }
+
+                var seenLabels = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < entries.Length; i++)
+                {
+                    string label = entries[i].Label ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(label))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} MapTrigger entry [{i}] requires a non-empty label.");
+                    }
+
+                    if (!seenLabels.Add(label.Trim()))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} has duplicate MapTrigger entry label '{label}'.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(entries[i].EventName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} MapTrigger entry '{label}' requires a non-empty event name.");
+                    }
+
+                    int startPc = entries[i].StartPc;
+                    if (startPc < 0 || startPc >= program.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} MapTrigger entry '{label}' StartPc {startPc} is outside the program (length {program.Length}).");
+                    }
+                }
+
+                return entries;
+            }
+
+            if (entries != null && entries.Length > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} kind '{kind}' must not carry MapTrigger entries; the entry table is MapTrigger-only.");
+            }
+
+            return Array.Empty<MapTriggerGraphEntry>();
         }
 
         private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)

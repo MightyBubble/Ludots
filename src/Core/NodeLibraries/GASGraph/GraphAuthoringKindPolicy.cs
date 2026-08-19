@@ -14,7 +14,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 or GraphKind.Effect
                 or GraphKind.Score
                 or GraphKind.Validation
-                or GraphKind.Derived;
+                or GraphKind.Derived
+                or GraphKind.MapTrigger;
 
         public static bool IsLinearAuthoringKind(GraphKind kind)
             => kind is GraphKind.Effect
@@ -23,6 +24,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 or GraphKind.Derived;
 
         public static string DescribeSupportedKinds()
-            => "Script, Query, Effect, Score, Validation, Derived";
+            => "Script, Query, Effect, Score, Validation, Derived, MapTrigger";
     }
 }

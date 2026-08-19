@@ -49,6 +49,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -88,6 +89,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -167,6 +169,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -280,6 +283,7 @@
     {
       "op": "Call",
       "authorableKinds": [
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Call",
@@ -386,6 +390,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -408,6 +413,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -452,6 +458,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -475,6 +482,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -540,6 +548,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -560,6 +569,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -681,6 +691,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -705,6 +716,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -728,6 +740,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -765,6 +778,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -809,6 +823,7 @@
     {
       "op": "Jump",
       "authorableKinds": [
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Jump",
@@ -829,6 +844,7 @@
       "op": "JumpIfFalse",
       "authorableKinds": [
         "Effect",
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_JumpIfFalse",
@@ -872,6 +888,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -894,6 +911,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -1083,6 +1101,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -1104,6 +1123,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -1250,6 +1270,7 @@
     {
       "op": "MoveInt",
       "authorableKinds": [
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_MoveInt",
@@ -1592,6 +1613,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -1638,6 +1660,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -1703,6 +1726,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -1749,6 +1773,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -1770,6 +1795,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -1792,6 +1818,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"
@@ -2233,6 +2260,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -2252,6 +2280,7 @@
     {
       "op": "Return",
       "authorableKinds": [
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Return",
@@ -2311,6 +2340,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -2394,6 +2424,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -2415,6 +2446,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Query",
         "Score",
         "Script",
@@ -2436,6 +2468,7 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "MapTrigger",
         "Score",
         "Script",
         "Validation"

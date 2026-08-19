@@ -14,10 +14,20 @@ namespace Ludots.Core.GraphRuntime
         public string Id { get; set; } = string.Empty;
         public string Kind { get; set; } = string.Empty;
         public string Entry { get; set; } = string.Empty;
+        /// <summary>MapTrigger-only dispatch table; replaces <see cref="Entry"/> for that kind and must be empty for every other kind.</summary>
+        public List<GraphMapTriggerEntryConfig> Entries { get; set; } = new();
         public List<GraphControlFlowNode> Nodes { get; set; } = new();
         public List<GraphControlFlowEdge> ControlEdges { get; set; } = new();
         public List<GraphControlFlowValueEdge> ValueEdges { get; set; } = new();
         public List<GraphOutputConfig> Outputs { get; set; } = new();
+    }
+
+    public sealed class GraphMapTriggerEntryConfig
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Event { get; set; } = string.Empty;
+        public string Start { get; set; } = string.Empty;
+        public bool Once { get; set; }
     }
 
     public sealed class GraphControlFlowNode
