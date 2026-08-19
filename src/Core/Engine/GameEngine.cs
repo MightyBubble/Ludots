@@ -28,6 +28,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Spawning.Systems;
 using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.MapTriggers;
 using Schedulers; // Added for JobScheduler
 using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
@@ -2203,7 +2204,7 @@ namespace Ludots.Core.Engine
 
                 // Instantiate map triggers + apply decorators
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
-                var triggers = InstantiateMapTriggers(definition, mapConfig);
+                var triggers = InstantiateMapTriggers(definition, mapConfig, session);
                 ApplyTriggerDecorators(triggers);
                 if (triggers.Count > 0)
                 {
@@ -2383,7 +2384,7 @@ namespace Ludots.Core.Engine
 
             // Instantiate, decorate, and register inner map triggers
             var definition = ((MapManager)MapManager).GetDefinition(inner);
-            var triggers = InstantiateMapTriggers(definition, mapConfig);
+            var triggers = InstantiateMapTriggers(definition, mapConfig, session);
             ApplyTriggerDecorators(triggers);
             if (triggers.Count > 0)
             {
@@ -2846,7 +2847,7 @@ namespace Ludots.Core.Engine
             }
         }
 
-        private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig)
+        private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig, MapSession session)
         {
             var triggers = new List<Trigger>();
 
@@ -2891,6 +2892,9 @@ namespace Ludots.Core.Engine
                     }
                 }
             }
+
+            // From JSON MapConfig.MapTriggerGraphs (graph mounts resolved against the entity index)
+            triggers.AddRange(MapTriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry)));
 
             return triggers;
         }

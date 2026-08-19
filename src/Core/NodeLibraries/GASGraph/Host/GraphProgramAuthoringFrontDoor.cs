@@ -12,6 +12,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     /// </summary>
     public static class GraphProgramAuthoringFrontDoor
     {
+        private static readonly string[] RequiredMapTriggerEntryFields = { "label", "event", "start" };
+
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
             CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
         {
@@ -30,6 +32,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             GraphKind kind = RequireKind(obj, graphId);
             RequireControlFlowAuthoringShape(obj, graphId, kind);
+            RequireMapTriggerEntryShape(obj, graphId, kind);
 
             GraphControlFlowDocument? doc;
             try
@@ -122,6 +125,82 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// MapTrigger replaces the single entry start node with a top-level entries table;
+        /// both fields are kind-exclusive and validated before strict deserialize for actionable errors.
+        /// </summary>
+        public static void RequireMapTriggerEntryShape(JsonObject obj, string graphId, GraphKind kind)
+        {
+            if (kind != GraphKind.MapTrigger)
+            {
+                if (obj.ContainsKey("entries"))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{graphId}' kind '{kind}' must not declare top-level 'entries'; the entry table is MapTrigger-only.");
+                }
+
+                return;
+            }
+
+            if (obj.ContainsKey("entry"))
+            {
+                throw new InvalidOperationException(
+                    $"MapTrigger graph '{graphId}' must not declare top-level 'entry'; author the 'entries' table instead.");
+            }
+
+            if (obj["entries"] is not JsonArray entries || entries.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"MapTrigger graph '{graphId}' requires a non-empty top-level 'entries' array.");
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i] is not JsonObject entry)
+                {
+                    throw new InvalidOperationException(
+                        $"MapTrigger graph '{graphId}' entries[{i}] must be an object.");
+                }
+
+                foreach (KeyValuePair<string, JsonNode?> field in entry)
+                {
+                    switch (field.Key)
+                    {
+                        case "label":
+                        case "event":
+                        case "start":
+                            if (field.Value is not JsonValue value || !value.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"MapTrigger graph '{graphId}' entries[{i}] field '{field.Key}' must be a string.");
+                            }
+
+                            break;
+                        case "once":
+                            if (field.Value is not JsonValue onceValue || !onceValue.TryGetValue<bool>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"MapTrigger graph '{graphId}' entries[{i}] field 'once' must be a boolean.");
+                            }
+
+                            break;
+                        default:
+                            throw new InvalidOperationException(
+                                $"MapTrigger graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once.");
+                    }
+                }
+
+                foreach (string required in RequiredMapTriggerEntryFields)
+                {
+                    if (!entry.ContainsKey(required))
+                    {
+                        throw new InvalidOperationException(
+                            $"MapTrigger graph '{graphId}' entries[{i}] is missing required field '{required}'.");
+                    }
+                }
+            }
         }
     }
 }

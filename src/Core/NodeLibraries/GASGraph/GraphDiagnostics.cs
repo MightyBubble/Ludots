@@ -29,6 +29,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string EmptyGraph = "GASG0019";
         public const string MissingNodeId = "GASG0020";
         public const string RegisterAliasConflict = "GASG0021";
+        public const string ForbiddenEntryTable = "GASG0022";
+        public const string DuplicateEntryLabel = "GASG0023";
     }
 }
 

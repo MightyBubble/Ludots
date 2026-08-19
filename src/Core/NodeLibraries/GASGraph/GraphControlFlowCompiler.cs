@@ -187,7 +187,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var ops = new AuthoredOp[nodes.Count];
             ParseOps(nodes, ops, graphKind, graphId, diagnostics);
 
-            if (!string.IsNullOrWhiteSpace(document.Entry) &&
+            List<GraphMapTriggerEntryConfig> mapTriggerEntries = ValidateMapTriggerEntries(
+                document, nodeIndices, graphKind, graphId, diagnostics);
+
+            if (graphKind != GraphKind.MapTrigger &&
+                !string.IsNullOrWhiteSpace(document.Entry) &&
                 !nodeIndices.ContainsKey(document.Entry))
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
@@ -206,7 +210,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AllocateOpScratches(nodes, ops, boolScratches, registers, graphId, diagnostics);
             AllocateDroppedOutputs(nodes, ops, outputRegisters, droppedRegisters, registers, graphId, diagnostics);
             ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-            DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
+            DetectUnreachable(EntryRoots(document, graphKind, mapTriggerEntries), nodes, document.ControlEdges, graphId, diagnostics);
 
             var sugarScratches = new SugarScratch[nodes.Count];
             AllocateSugarScratches(nodes, ops, sugarScratches, registers, graphId, diagnostics);
@@ -230,7 +234,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             // Prefix jump to entry so entry need not be first authored node.
-            int entryBody = layouts[nodeIndices[document.Entry]].BodyIndex + 1; // +1 for prefix jump slot
+            // MapTrigger graphs dispatch through per-entry PCs; the prefix targets the first entry's start node.
+            string primaryEntryNodeId = graphKind == GraphKind.MapTrigger ? mapTriggerEntries[0].Start : document.Entry;
+            int entryBody = layouts[nodeIndices[primaryEntryNodeId]].BodyIndex + 1; // +1 for prefix jump slot
             for (int i = 0; i < layouts.Length; i++)
             {
                 layouts[i] = new NodeLayout(layouts[i].BodyIndex + 1, layouts[i].InstructionCount);
@@ -243,7 +249,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 Op = (ushort)GraphNodeOp.Jump,
                 Imm = entryBody - 1 // relative: after fetch pc=1, 1+Imm = entryBody
             };
-            sources[0] = new GraphInstructionSource(graphId, document.Entry, nameof(GraphNodeOp.Jump), GraphControlFlowPorts.Enter);
+            sources[0] = new GraphInstructionSource(graphId, primaryEntryNodeId, nameof(GraphNodeOp.Jump), GraphControlFlowPorts.Enter);
+
+            MapTriggerGraphEntry[] compiledEntries = CompileMapTriggerEntryTable(
+                mapTriggerEntries, nodeIndices, layouts, graphKind);
 
             var definedInts = new bool[GraphVmLimits.MaxIntRegisters];
             var definedBools = new bool[GraphVmLimits.MaxBoolRegisters];
@@ -297,13 +306,59 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             var sourceMap = new GraphInstructionSourceMap(graphId, sources);
-            var package = new GraphProgramPackage(graphId, symbols.ToArray(), program, graphKind);
+            var package = new GraphProgramPackage(graphId, symbols.ToArray(), program, graphKind, compiledEntries);
             return new GraphControlFlowCompileResult(
                 program,
                 sourceMap,
                 diagnostics,
                 package,
                 outputSchema);
+        }
+
+        private static MapTriggerGraphEntry[] CompileMapTriggerEntryTable(
+            List<GraphMapTriggerEntryConfig> validatedEntries,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphKind graphKind)
+        {
+            if (graphKind != GraphKind.MapTrigger)
+            {
+                return Array.Empty<MapTriggerGraphEntry>();
+            }
+
+            var compiled = new MapTriggerGraphEntry[validatedEntries.Count];
+            for (int i = 0; i < validatedEntries.Count; i++)
+            {
+                GraphMapTriggerEntryConfig entry = validatedEntries[i];
+                compiled[i] = new MapTriggerGraphEntry(
+                    entry.Label,
+                    entry.Event,
+                    layouts[nodeIndices[entry.Start]].BodyIndex,
+                    entry.Once);
+            }
+
+            return compiled;
+        }
+
+        private static string[] EntryRoots(
+            GraphControlFlowDocument document,
+            GraphKind graphKind,
+            List<GraphMapTriggerEntryConfig> validatedEntries)
+        {
+            if (graphKind != GraphKind.MapTrigger)
+            {
+                return string.IsNullOrWhiteSpace(document.Entry)
+                    ? Array.Empty<string>()
+                    : new[] { document.Entry };
+            }
+
+            var roots = new string[validatedEntries.Count];
+            for (int i = 0; i < validatedEntries.Count; i++)
+            {
+                roots[i] = validatedEntries[i].Start;
+            }
+
+            return roots;
         }
 
         private static GraphKind ParseControlFlowKind(
@@ -339,10 +394,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"{GraphKindLabel(graphKind)} document requires a non-empty id."));
             }
 
-            if (string.IsNullOrWhiteSpace(document.Entry))
+            if (graphKind == GraphKind.MapTrigger)
             {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
-                    $"{GraphKindLabel(graphKind)} document requires an entry node id."));
+                if (!string.IsNullOrWhiteSpace(document.Entry))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.ForbiddenEntryTable,
+                        $"MapTrigger graph '{graphId}' must not declare a single 'entry' start node; author the 'entries' table instead.",
+                        document.Entry));
+                }
+
+                if (document.Entries == null || document.Entries.Count == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"MapTrigger graph '{graphId}' requires a non-empty 'entries' table."));
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(document.Entry))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"{GraphKindLabel(graphKind)} document requires an entry node id."));
+                }
+
+                if (document.Entries != null && document.Entries.Count > 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.ForbiddenEntryTable,
+                        $"Graph '{graphId}' kind '{graphKind}' must not declare 'entries'; the entry table is MapTrigger-only."));
+                }
             }
 
             if (document.Nodes == null || document.Nodes.Count == 0)
@@ -350,6 +429,74 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.EmptyGraph,
                     $"{GraphKindLabel(graphKind)} document requires at least one node."));
             }
+        }
+
+        private static List<GraphMapTriggerEntryConfig> ValidateMapTriggerEntries(
+            GraphControlFlowDocument document,
+            Dictionary<string, int> nodeIndices,
+            GraphKind graphKind,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (graphKind != GraphKind.MapTrigger)
+            {
+                return new List<GraphMapTriggerEntryConfig>();
+            }
+
+            List<GraphMapTriggerEntryConfig> authored = document.Entries ?? new List<GraphMapTriggerEntryConfig>();
+            var validated = new List<GraphMapTriggerEntryConfig>(authored.Count);
+            var seenLabels = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < authored.Count; i++)
+            {
+                if (authored[i] == null)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"MapTrigger graph '{graphId}' entries[{i}] is null."));
+                    continue;
+                }
+
+                string label = (authored[i].Label ?? string.Empty).Trim();
+                string shown = label.Length > 0 ? label : $"entries[{i}]";
+                if (label.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"MapTrigger graph '{graphId}' entries[{i}] requires a non-empty 'label'."));
+                }
+                else if (!seenLabels.Add(label))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.DuplicateEntryLabel,
+                        $"MapTrigger graph '{graphId}' has duplicate entry label '{label}'.", label));
+                }
+
+                string eventName = (authored[i].Event ?? string.Empty).Trim();
+                if (eventName.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' requires a non-empty 'event' string."));
+                }
+
+                string start = (authored[i].Start ?? string.Empty).Trim();
+                if (start.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' requires a 'start' node id."));
+                }
+                else if (!nodeIndices.ContainsKey(start))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' start node '{start}' does not exist.", start));
+                }
+
+                validated.Add(new GraphMapTriggerEntryConfig
+                {
+                    Label = label,
+                    Event = eventName,
+                    Start = start,
+                    Once = authored[i].Once
+                });
+            }
+
+            return validated;
         }
 
         private static Dictionary<string, int> BuildNodeIndex(
@@ -392,7 +539,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     if (!IsBranchBoolAuthorable(graphKind))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"{BranchBoolOp} is Script/Effect compile-time sugar only.", node.Id));
+                            $"{BranchBoolOp} is Script/Effect/MapTrigger compile-time sugar only.", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -403,10 +550,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, SwitchIntOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.MapTrigger))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"{SwitchIntOp} is Script compile-time sugar only.", node.Id));
+                            $"{SwitchIntOp} is Script/MapTrigger compile-time sugar only.", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -417,10 +564,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.MapTrigger))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"While is Script-only author sugar (kind='{graphKind}').", node.Id));
+                            $"While is Script/MapTrigger-only author sugar (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -431,10 +578,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (string.Equals(node.Op, UntilOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (graphKind is not (GraphKind.Script or GraphKind.MapTrigger))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"Until is Script-only author sugar (kind='{graphKind}').", node.Id));
+                            $"Until is Script/MapTrigger-only author sugar (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -446,6 +593,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 // Wait is author alias for Yield — Script CF only; never a second waiter opcode.
                 if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
                 {
+                    if (graphKind == GraphKind.MapTrigger)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Wait is rejected in MapTrigger graph '{graphId}' node '{node.Id}': the map mount host cannot resume yielded slices.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
                     if (graphKind != GraphKind.Script)
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
@@ -458,7 +613,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                if (!GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp) ||
+                bool parsedNodeOp = GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp);
+                if (parsedNodeOp &&
+                    nodeOp == GraphNodeOp.Yield &&
+                    graphKind == GraphKind.MapTrigger)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"Yield is rejected in MapTrigger graph '{graphId}' node '{node.Id}': the map mount host cannot resume yielded slices.", node.Id));
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (!parsedNodeOp ||
                     !IsControlFlowAuthorable(graphKind, nodeOp))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
@@ -472,7 +638,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static bool IsBranchBoolAuthorable(GraphKind graphKind)
-            => graphKind is GraphKind.Script or GraphKind.Effect;
+            => graphKind is GraphKind.Script or GraphKind.Effect or GraphKind.MapTrigger;
 
         private static bool IsControlFlowAuthorable(GraphKind graphKind, GraphNodeOp op)
         {
@@ -649,10 +815,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 or GraphNodeOp.InvokeScript;
 
         private static bool UsesLinearDescriptorEmit(GraphKind graphKind, AuthoredOp op)
-            => graphKind == GraphKind.Script &&
+            => graphKind is GraphKind.Script or GraphKind.MapTrigger &&
                op.Kind == AuthoredOpKind.GraphNodeOp &&
                !IsScriptNativeDialectOp(op.NodeOp) &&
-               GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op.NodeOp);
+               GraphOpDescriptorTable.IsAuthorable(graphKind, op.NodeOp);
 
         private static bool NeedsDroppedOutput(GraphNodeOp op)
             => IsSpatialCapacityQuery(op) || IsRelationshipCapacityQuery(op);
@@ -995,17 +1161,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static void DetectUnreachable(
-            string entry,
+            string[] entryRoots,
             List<GraphControlFlowNode> nodes,
             List<GraphControlFlowEdge>? controlEdges,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
-            if (string.IsNullOrWhiteSpace(entry))
-            {
-                return;
-            }
-
             var adjacency = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             List<GraphControlFlowEdge> edges = controlEdges ?? new List<GraphControlFlowEdge>();
             for (int i = 0; i < edges.Count; i++)
@@ -1027,12 +1188,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var reachable = new HashSet<string>(StringComparer.Ordinal);
             var stack = new Stack<string>();
-            if (!reachable.Add(entry))
+            for (int i = 0; i < entryRoots.Length; i++)
             {
-                return;
+                if (string.IsNullOrWhiteSpace(entryRoots[i]))
+                {
+                    continue;
+                }
+
+                if (reachable.Add(entryRoots[i]))
+                {
+                    stack.Push(entryRoots[i]);
+                }
             }
 
-            stack.Push(entry);
             while (stack.Count > 0)
             {
                 string current = stack.Pop();

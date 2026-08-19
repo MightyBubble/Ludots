@@ -50,6 +50,12 @@ namespace Ludots.Core.Config
         public List<string> TriggerTypes { get; set; } = new List<string>();
 
         /// <summary>
+        /// MapTriggerGraph mounts declared by this map. Raw authoring nodes;
+        /// strict parsing happens at mount time (Ludots.Core.Gameplay.MapTriggers).
+        /// </summary>
+        public JsonNode MapTriggerGraphs { get; set; }
+
+        /// <summary>
         /// Default camera state when this map is loaded.
         /// If null, the engine uses CameraState defaults.
         /// Editor reads/writes this to ensure camera consistency across tools.

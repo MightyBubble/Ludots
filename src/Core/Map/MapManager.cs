@@ -301,6 +301,22 @@ namespace Ludots.Core.Map
                 }
             }
 
+            // Merge MapTriggerGraphs (append mount objects)
+            if (source.MapTriggerGraphs != null)
+            {
+                if (target.MapTriggerGraphs is JsonArray targetArray && source.MapTriggerGraphs is JsonArray sourceArray)
+                {
+                    for (int i = 0; i < sourceArray.Count; i++)
+                    {
+                        targetArray.Add(sourceArray[i]?.DeepClone());
+                    }
+                }
+                else
+                {
+                    target.MapTriggerGraphs = source.MapTriggerGraphs.DeepClone();
+                }
+            }
+
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
         }

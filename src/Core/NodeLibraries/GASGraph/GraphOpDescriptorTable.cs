@@ -73,7 +73,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return true;
             }
 
-            if (kind == GraphKind.Script)
+            if (kind is GraphKind.Script or GraphKind.MapTrigger)
             {
                 return metadata.Kind == EffectOperationKind.Pure;
             }
@@ -92,9 +92,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static string[] ProjectCoverageAuthorableKinds(GraphNodeOp op)
         {
             GraphOpDescriptor descriptor = Get(op);
-            var names = new List<string>(6);
+            var names = new List<string>(7);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Derived);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Effect);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.MapTrigger);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Query);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Score);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Script);

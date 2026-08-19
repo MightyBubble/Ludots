@@ -37,6 +37,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | Kind | 用途 | Yield |
 |------|------|-------|
 | Script | 可复用流程函数 | 允许 |
+| MapTrigger | 地图触发器图：事件入口表（entries[]）、地图挂载（MapConfig.MapTriggerGraphs）、入口起 PC 分发（#1030 MVP） | **MVP 禁**（作者面拒 Yield/Wait；时间线随节拍切片开放） |
 | Effect | 技能阶段 | **禁止** |
 | Score | 效用打分 | 禁止 |
 | Validation / Query / Derived | 既有专项 | 禁止 |
