@@ -5,7 +5,7 @@ namespace Ludots.Core.GraphRuntime
     /// <summary>
     /// Authored graph execution contract. Parsed from authored graph kind and enforced
     /// at compile/load and at execution entrypoints that require a specific kind.
-    /// L1 flow dialects today: Effect, Query, Score, Validation, Derived, Script, MapTrigger.
+    /// L1 flow dialects today: Effect, Query, Score, Validation, Derived, Script, TriggerGraph.
     /// L2 behavior schedulers (BehaviorTree / Fsm) are not GraphKind
     /// values yet — they own separate topology IR and invoke L1 graphs at leaves.
     /// </summary>
@@ -19,8 +19,8 @@ namespace Ludots.Core.GraphRuntime
         Derived = 5,
         /// <summary>Reusable flow script: Call/Return/Yield and InvokeScript callee.</summary>
         Script = 6,
-        /// <summary>Map mount trigger graph: event-keyed entry table dispatches into one program; Yield is forbidden.</summary>
-        MapTrigger = 7
+        /// <summary>Mounted trigger graph: event-keyed entry table dispatches into one program; mount domains are map and entity.</summary>
+        TriggerGraph = 7
     }
 
     public static class GraphKindParser
@@ -51,8 +51,14 @@ namespace Ludots.Core.GraphRuntime
             if (!TryParse(value, out GraphKind kind))
             {
                 string shown = string.IsNullOrWhiteSpace(value) ? "<missing>" : value.Trim();
+                if (string.Equals(shown, "MapTrigger", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{graphId}' uses retired kind 'MapTrigger'; the dialect was renamed to 'TriggerGraph'. Re-author the kind field.");
+                }
+
                 throw new InvalidOperationException(
-                    $"Graph '{graphId}' has unsupported or missing kind '{shown}'. Supported kinds: Effect, Query, Score, Validation, Derived, Script, MapTrigger.");
+                    $"Graph '{graphId}' has unsupported or missing kind '{shown}'. Supported kinds: Effect, Query, Score, Validation, Derived, Script, TriggerGraph.");
             }
 
             return kind;

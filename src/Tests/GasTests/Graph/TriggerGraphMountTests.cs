@@ -20,10 +20,10 @@ namespace Ludots.Tests.Gas.Graph
 {
     [TestFixture]
     [NonParallelizable]
-    public sealed class MapTriggerGraphMountTests
+    public sealed class TriggerGraphMountTests
     {
         private const string MapId = "map_trigger_mount_probe";
-        private const string GraphName = "Graph.MapTrigger.Probe";
+        private const string GraphName = "Graph.TriggerGraph.Probe";
         private const string TemplateId = "map_trigger_mount_entity";
         private const string ScopeInstanceId = "mount-hero";
 
@@ -42,7 +42,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMount.ParseList(new JsonArray(node), MapId);
+                TriggerGraphMount.ParseList(new JsonArray(node), MapId);
             }
             catch (InvalidOperationException ex)
             {
@@ -62,7 +62,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMount.ParseList(new JsonArray(node), MapId);
+                TriggerGraphMount.ParseList(new JsonArray(node), MapId);
             }
             catch (InvalidOperationException ex)
             {
@@ -81,7 +81,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMount.ParseList(new JsonArray(node), MapId);
+                TriggerGraphMount.ParseList(new JsonArray(node), MapId);
             }
             catch (InvalidOperationException ex)
             {
@@ -101,7 +101,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMount.ParseList(new JsonArray(node), MapId);
+                TriggerGraphMount.ParseList(new JsonArray(node), MapId);
             }
             catch (InvalidOperationException ex)
             {
@@ -119,7 +119,7 @@ namespace Ludots.Tests.Gas.Graph
             JsonNode node = JsonNode.Parse("""{ "graph": " Graph.Probe " }""")!;
 
             Assert.That(
-                () => MapTriggerGraphMount.ParseList(new JsonArray(node), MapId),
+                () => TriggerGraphMount.ParseList(new JsonArray(node), MapId),
                 Throws.InvalidOperationException);
         }
 
@@ -129,14 +129,14 @@ namespace Ludots.Tests.Gas.Graph
             JsonNode node = JsonNode.Parse("""{ "graph": "Graph.Probe" }""")!;
 
             Assert.That(
-                () => MapTriggerGraphMount.ParseList(node, MapId),
+                () => TriggerGraphMount.ParseList(node, MapId),
                 Throws.InvalidOperationException);
         }
 
         [Test]
         public void ParseList_MinimalMountsWithoutScope_Accepted()
         {
-            List<MapTriggerGraphMount> mounts = MapTriggerGraphMount.ParseList(
+            List<TriggerGraphMount> mounts = TriggerGraphMount.ParseList(
                 JsonNode.Parse($$"""[ { "graph": "{{GraphName}}" } ]"""),
                 MapId);
 
@@ -148,7 +148,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void ParseList_MissingNode_YieldsNoMounts()
         {
-            List<MapTriggerGraphMount> mounts = MapTriggerGraphMount.ParseList(null, MapId);
+            List<TriggerGraphMount> mounts = TriggerGraphMount.ParseList(null, MapId);
 
             Assert.That(mounts.Count, Is.EqualTo(0));
         }
@@ -163,7 +163,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMounting.BuildTriggers(session, new GraphProgramRegistry());
+                TriggerGraphMounting.BuildTriggers(session, new GraphProgramRegistry(), entityMounts: null);
             }
             catch (InvalidOperationException ex)
             {
@@ -176,7 +176,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void BuildTriggers_NonMapTriggerKind_Throws()
+        public void BuildTriggers_NonTriggerGraphKind_Throws()
         {
             using var world = World.Create();
             MapSession session = CreateSession(world, $$"""[ { "graph": "{{GraphName}}" } ]""");
@@ -186,7 +186,7 @@ namespace Ludots.Tests.Gas.Graph
             string? message = null;
             try
             {
-                MapTriggerGraphMounting.BuildTriggers(session, programs);
+                TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
             }
             catch (InvalidOperationException ex)
             {
@@ -206,12 +206,12 @@ namespace Ludots.Tests.Gas.Graph
             MapSession session = CreateSession(world,
                 $$"""[ { "graph": "{{GraphName}}", "scopeInstanceId": "ghost-hero" } ]""");
             var programs = new GraphProgramRegistry();
-            RegisterProgram(programs, GraphName, GraphKind.MapTrigger, HaltProgram(), entries: ProbeEntries());
+            RegisterProgram(programs, GraphName, GraphKind.TriggerGraph, HaltProgram(), entries: ProbeEntries());
 
             string? message = null;
             try
             {
-                MapTriggerGraphMounting.BuildTriggers(session, programs);
+                TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
             }
             catch (InvalidOperationException ex)
             {
@@ -235,20 +235,20 @@ namespace Ludots.Tests.Gas.Graph
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 3, Imm = 4242 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
             };
-            RegisterProgram(programs, GraphName, GraphKind.MapTrigger, program, entries: new[]
+            RegisterProgram(programs, GraphName, GraphKind.TriggerGraph, program, entries: new[]
             {
-                new MapTriggerGraphEntry("open", GameEvents.MapLoaded.Value, 0, once: true),
-                new MapTriggerGraphEntry("close", GameEvents.MapUnloaded.Value, 0, once: false),
+                new TriggerGraphEntry("open", GameEvents.MapLoaded.Value, 0, once: true),
+                new TriggerGraphEntry("close", GameEvents.MapUnloaded.Value, 0, once: false),
             });
 
-            List<Trigger> triggers = MapTriggerGraphMounting.BuildTriggers(session, programs);
-            List<MapTriggerGraphMountTrigger> mounts = triggers.OfType<MapTriggerGraphMountTrigger>().ToList();
-            List<MapTriggerGraphResumeTrigger> resumes = triggers.OfType<MapTriggerGraphResumeTrigger>().ToList();
+            List<Trigger> triggers = TriggerGraphMounting.BuildTriggers(session, programs, entityMounts: null);
+            List<TriggerGraphMountTrigger> mounts = triggers.OfType<TriggerGraphMountTrigger>().ToList();
+            List<TriggerGraphResumeTrigger> resumes = triggers.OfType<TriggerGraphResumeTrigger>().ToList();
 
             Assert.That(mounts.Count, Is.EqualTo(2));
-            Assert.That(mounts[0].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:open"));
+            Assert.That(mounts[0].Name, Is.EqualTo($"TriggerGraph:{GraphName}:open"));
             Assert.That(mounts[0].EventKey, Is.EqualTo(GameEvents.MapLoaded));
-            Assert.That(mounts[1].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:close"));
+            Assert.That(mounts[1].Name, Is.EqualTo($"TriggerGraph:{GraphName}:close"));
             Assert.That(mounts[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
             Assert.That(resumes.Count, Is.EqualTo(2), "Each entry gets a think-wave resume companion.");
             Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.ThinkWaveElapsed));
@@ -257,19 +257,19 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void ExecuteAsync_HaltsWithReturnIntFromEntryStartPc_AndOnceSkipsSecondRun()
         {
-            using var fixture = MapTriggerEngineFixture.Create(includeMapMount: false);
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
             using GameEngine engine = fixture.CreateEngine();
             GraphInstruction[] program =
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 4242 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 2 },
             };
-            int graphId = fixture.RegisterMapTriggerGraph(engine, program, new[]
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
             {
-                new MapTriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 1, once: true),
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 1, once: true),
             });
-            var trigger = new MapTriggerGraphMountTrigger(graphId, GraphName,
-                new MapTriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 1, once: true),
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 1, once: true),
                 Entity.Null);
 
             ScriptContext context = engine.CreateContext();
@@ -286,19 +286,19 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void ExecuteAsync_WithoutOnce_RerunsOnEveryFire()
         {
-            using var fixture = MapTriggerEngineFixture.Create(includeMapMount: false);
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
             using GameEngine engine = fixture.CreateEngine();
             GraphInstruction[] program =
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 3, Imm = 4242 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
             };
-            int graphId = fixture.RegisterMapTriggerGraph(engine, program, new[]
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
             {
-                new MapTriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
             });
-            var trigger = new MapTriggerGraphMountTrigger(graphId, GraphName,
-                new MapTriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
                 Entity.Null);
 
             ScriptContext context = engine.CreateContext();
@@ -311,23 +311,56 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void ExecuteAsync_SeedsTagIdIntoIntRegisterTwo_WhenPresent()
+        {
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
+            using GameEngine engine = fixture.CreateEngine();
+            GraphInstruction[] program =
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.MoveInt, Dst = 5, A = 2 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 5 },
+            };
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
+            {
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+            });
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+                Entity.Null);
+
+            ScriptContext withTag = engine.CreateContext();
+            withTag.Set("MapTrigger.TagId", 4242);
+            trigger.ExecuteAsync(withTag);
+
+            Assert.That(trigger.LastSliceResult.Halted, Is.True);
+            Assert.That(trigger.LastSliceResult.ReturnInt, Is.EqualTo(4242),
+                "I[2] must be seeded from the MapTrigger.TagId payload when present.");
+
+            ScriptContext withoutTag = engine.CreateContext();
+            trigger.ExecuteAsync(withoutTag);
+
+            Assert.That(trigger.LastSliceResult.ReturnInt, Is.EqualTo(0),
+                "An absent TagId payload must leave I[2] unseeded.");
+        }
+
+        [Test]
         public void ExecuteAsync_NonHaltingLoop_SuspendsThenFailsAtPerRunInstructionCap()
         {
-            using var fixture = MapTriggerEngineFixture.Create(includeMapMount: false);
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: false);
             using GameEngine engine = fixture.CreateEngine();
             GraphInstruction[] program =
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.Jump, Imm = -1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
-            int graphId = fixture.RegisterMapTriggerGraph(engine, program, new[]
+            int graphId = fixture.RegisterTriggerGraph(engine, program, new[]
             {
-                new MapTriggerGraphEntry("spin", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("spin", GameEvents.MapLoaded.Value, startPc: 0, once: false),
             });
-            var trigger = new MapTriggerGraphMountTrigger(graphId, GraphName,
-                new MapTriggerGraphEntry("spin", GameEvents.MapLoaded.Value, startPc: 0, once: false),
+            var trigger = new TriggerGraphMountTrigger(graphId, GraphName,
+                new TriggerGraphEntry("spin", GameEvents.MapLoaded.Value, startPc: 0, once: false),
                 Entity.Null);
-            var resume = new MapTriggerGraphResumeTrigger(trigger);
+            var resume = new TriggerGraphResumeTrigger(trigger);
             ScriptContext context = engine.CreateContext();
 
             trigger.ExecuteAsync(context);
@@ -355,39 +388,39 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void LoadMap_WithMapTriggerGraphs_RegistersMountsAndFiresMapLoadedEntry()
+        public void LoadMap_WithTriggerGraphs_RegistersMountsAndFiresMapLoadedEntry()
         {
-            using var fixture = MapTriggerEngineFixture.Create(includeMapMount: true);
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true);
             using GameEngine engine = fixture.CreateEngine();
             GraphInstruction[] program =
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 3, Imm = 4242 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 3 },
             };
-            fixture.RegisterMapTriggerGraph(engine, program, new[]
+            fixture.RegisterTriggerGraph(engine, program, new[]
             {
-                new MapTriggerGraphEntry("open", GameEvents.MapLoaded.Value, startPc: 0, once: true),
+                new TriggerGraphEntry("open", GameEvents.MapLoaded.Value, startPc: 0, once: true),
             });
 
             engine.LoadMap(MapId);
 
-            MapTriggerGraphMountTrigger? mount = FindMountTrigger(engine);
-            Assert.That(mount, Is.Not.Null, "LoadMap must instantiate MapTriggerGraph mount triggers.");
-            Assert.That(mount!.Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:open"));
+            TriggerGraphMountTrigger? mount = FindMountTrigger(engine);
+            Assert.That(mount, Is.Not.Null, "LoadMap must instantiate TriggerGraph mount triggers.");
+            Assert.That(mount!.Name, Is.EqualTo($"TriggerGraph:{GraphName}:open"));
             Assert.That(mount.EventKey, Is.EqualTo(GameEvents.MapLoaded));
             Assert.That(mount.LastSliceResult.Halted, Is.True, "The MapLoaded entry must run during map load.");
             Assert.That(mount.LastSliceResult.ReturnInt, Is.EqualTo(4242));
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-            Assert.That(engine.TriggerManager.Get<MapTriggerGraphMountTrigger>(), Is.SameAs(mount));
+            Assert.That(engine.TriggerManager.Get<TriggerGraphMountTrigger>(), Is.SameAs(mount));
 
             engine.UnloadMap(MapId);
-            Assert.That(engine.TriggerManager.Get<MapTriggerGraphMountTrigger>(), Is.Null, "Map unload must unregister mount triggers.");
+            Assert.That(engine.TriggerManager.Get<TriggerGraphMountTrigger>(), Is.Null, "Map unload must unregister mount triggers.");
         }
 
         [Test]
         public void LoadMap_WithUnknownMountedGraph_Throws()
         {
-            using var fixture = MapTriggerEngineFixture.Create(includeMapMount: true, graphName: "Graph.Missing");
+            using var fixture = TriggerGraphEngineFixture.Create(includeMapMount: true, graphName: "Graph.Missing");
             using GameEngine engine = fixture.CreateEngine();
 
             string? message = null;
@@ -405,12 +438,12 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(message, Does.Contain("Graph.Missing"));
         }
 
-        private static MapTriggerGraphMountTrigger? FindMountTrigger(GameEngine engine)
+        private static TriggerGraphMountTrigger? FindMountTrigger(GameEngine engine)
         {
             IReadOnlyList<Trigger> triggers = engine.CurrentMapSession?.Triggers ?? Array.Empty<Trigger>();
             for (int i = 0; i < triggers.Count; i++)
             {
-                if (triggers[i] is MapTriggerGraphMountTrigger mount)
+                if (triggers[i] is TriggerGraphMountTrigger mount)
                 {
                     return mount;
                 }
@@ -422,7 +455,7 @@ namespace Ludots.Tests.Gas.Graph
         private static MapSession CreateSession(World world, string mountsJson)
         {
             var config = new MapConfig { Id = MapId };
-            config.MapTriggerGraphs = JsonNode.Parse(mountsJson);
+            config.TriggerGraphs = JsonNode.Parse(mountsJson);
             var session = new MapSession(new MapId(MapId), config);
             var index = new MapLoadEntityIndex();
             index.Register(MapId, ScopeInstanceId, world.Create());
@@ -436,35 +469,35 @@ namespace Ludots.Tests.Gas.Graph
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
-        private static MapTriggerGraphEntry[] ProbeEntries()
-            => new[] { new MapTriggerGraphEntry("probe", GameEvents.MapLoaded.Value, 0, once: false) };
+        private static TriggerGraphEntry[] ProbeEntries()
+            => new[] { new TriggerGraphEntry("probe", GameEvents.MapLoaded.Value, 0, once: false) };
 
         private static void RegisterProgram(
             GraphProgramRegistry programs,
             string name,
             GraphKind kind,
             GraphInstruction[] program,
-            MapTriggerGraphEntry[]? entries)
+            TriggerGraphEntry[]? entries)
         {
             int id = GraphIdRegistry.Register(name);
             programs.Register(id, program, kind, GraphInstructionSourceMap.Empty, null, entries);
         }
 
-        private sealed class MapTriggerEngineFixture : IDisposable
+        private sealed class TriggerGraphEngineFixture : IDisposable
         {
-            private const string ModId = "MapTriggerMountFixtureMod";
+            private const string ModId = "TriggerGraphMountFixtureMod";
 
-            private MapTriggerEngineFixture(string root)
+            private TriggerGraphEngineFixture(string root)
             {
                 Root = root;
             }
 
             public string Root { get; }
 
-            public static MapTriggerEngineFixture Create(bool includeMapMount, string? graphName = null)
+            public static TriggerGraphEngineFixture Create(bool includeMapMount, string? graphName = null)
             {
                 string effectiveGraphName = graphName ?? GraphName;
-                string root = Path.Combine(Path.GetTempPath(), "Ludots_MapTriggerGraphMountTests", Guid.NewGuid().ToString("N"));
+                string root = Path.Combine(Path.GetTempPath(), "Ludots_TriggerGraphMountTests", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Entities"));
                 Directory.CreateDirectory(Path.Combine(root, ModId, "assets", "Maps"));
 
@@ -474,7 +507,7 @@ namespace Ludots.Tests.Gas.Graph
                     {
                       "name": "{{ModId}}",
                       "version": "1.0.0",
-                      "description": "Asset-only MapTriggerGraph mount fixture",
+                      "description": "Asset-only TriggerGraph mount fixture",
                       "priority": 0,
                       "dependencies": {}
                     }
@@ -562,7 +595,7 @@ namespace Ludots.Tests.Gas.Graph
                         "Entities": [
                           { "InstanceId": "{{ScopeInstanceId}}", "Template": "{{TemplateId}}" }
                         ],
-                        "MapTriggerGraphs": [ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]
+                        "TriggerGraphs": [ { "graph": "{{effectiveGraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]
                       }
                       """
                     : $$"""
@@ -575,7 +608,7 @@ namespace Ludots.Tests.Gas.Graph
                       }
                       """;
                 File.WriteAllText(Path.Combine(root, ModId, "assets", "Maps", $"{MapId}.json"), mapJson);
-                return new MapTriggerEngineFixture(root);
+                return new TriggerGraphEngineFixture(root);
             }
 
             public GameEngine CreateEngine()
@@ -592,10 +625,10 @@ namespace Ludots.Tests.Gas.Graph
                 return engine;
             }
 
-            public int RegisterMapTriggerGraph(
+            public int RegisterTriggerGraph(
                 GameEngine engine,
                 GraphInstruction[] program,
-                MapTriggerGraphEntry[] entries)
+                TriggerGraphEntry[] entries)
             {
                 RegistryMapping[] mappings = GraphIdRegistry.SnapshotMappings();
                 GraphIdRegistry.Clear();
@@ -607,7 +640,7 @@ namespace Ludots.Tests.Gas.Graph
 
                 int graphId = GraphIdRegistry.Register(GraphName);
                 engine.GetService(CoreServiceKeys.GraphProgramRegistry)
-                    .Register(graphId, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, null, entries);
+                    .Register(graphId, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, null, entries);
                 return graphId;
             }
 

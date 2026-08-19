@@ -13,7 +13,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Validation = 1 << 3,
         Derived = 1 << 4,
         Script = 1 << 5,
-        MapTrigger = 1 << 6
+        TriggerGraph = 1 << 6
     }
 
     public enum GraphOperandRole : byte
@@ -80,7 +80,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphOperandRole DstRole { get; }
         public GraphOperandRole FlagsRole { get; }
         public GraphOperandRole ImmRole { get; }
-        /// <summary>True for host-slice control-flow ops (Yield): only Script and host-resumed MapTrigger may contain them.</summary>
+        /// <summary>True for host-slice control-flow ops (Yield): only Script and host-resumed TriggerGraph may contain them.</summary>
         public bool ScriptSliceOnly { get; }
         public bool DerivedAttributeWrite { get; }
         public bool RequiresListenerOwnerContext { get; }
@@ -120,7 +120,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphKind.Validation => GraphKindMask.Validation,
                 GraphKind.Derived => GraphKindMask.Derived,
                 GraphKind.Script => GraphKindMask.Script,
-                GraphKind.MapTrigger => GraphKindMask.MapTrigger,
+                GraphKind.TriggerGraph => GraphKindMask.TriggerGraph,
                 _ => GraphKindMask.None
             };
 

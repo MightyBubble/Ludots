@@ -9,7 +9,7 @@
   "Regions": [
     { "id": "raid_circle", "shape": "circle", "x": 0, "y": 0, "radiusCm": 250 }
   ],
-  "MapTriggerGraphs": [
+  "TriggerGraphs": [
     { "graph": "Graph.NightRaid.Flow", "scopeInstanceId": "night_raid_hero" }
   ],
   "Entities": [

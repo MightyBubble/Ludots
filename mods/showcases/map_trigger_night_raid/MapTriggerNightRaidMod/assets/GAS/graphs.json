@@ -1,7 +1,7 @@
 [
   {
     "id": "Graph.NightRaid.Flow",
-    "kind": "MapTrigger",
+    "kind": "TriggerGraph",
     "entries": [
       {
         "label": "on_raid_circle",

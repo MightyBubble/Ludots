@@ -1,35 +1,35 @@
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Compiled MapTrigger dispatch row. EventName is a plain EventKey string compared
+    /// Compiled TriggerGraph dispatch row. EventName is a plain EventKey string compared
     /// case-insensitively at dispatch time; StartPc is an absolute program counter.
     /// </summary>
-    public readonly struct MapTriggerGraphEntry
+    public readonly struct TriggerGraphEntry
     {
         public const string RefireIgnore = "ignore";
         public const string RefireRestart = "restart";
 
-        public MapTriggerGraphEntry(string label, string eventName, int startPc, bool once)
+        public TriggerGraphEntry(string label, string eventName, int startPc, bool once)
             : this(label, eventName, startPc, once, default, RefireIgnore)
         {
         }
 
-        public MapTriggerGraphEntry(
+        public TriggerGraphEntry(
             string label,
             string eventName,
             int startPc,
             bool once,
-            MapTriggerEntryFilters filters)
+            TriggerGraphEntryFilters filters)
             : this(label, eventName, startPc, once, filters, RefireIgnore)
         {
         }
 
-        public MapTriggerGraphEntry(
+        public TriggerGraphEntry(
             string label,
             string eventName,
             int startPc,
             bool once,
-            MapTriggerEntryFilters filters,
+            TriggerGraphEntryFilters filters,
             string refire)
         {
             Label = label;
@@ -44,7 +44,7 @@ namespace Ludots.Core.GraphRuntime
         public string EventName { get; }
         public int StartPc { get; }
         public bool Once { get; }
-        public MapTriggerEntryFilters Filters { get; }
+        public TriggerGraphEntryFilters Filters { get; }
 
         /// <summary>Normalized refire policy: "ignore" (default) or "restart".</summary>
         public string Refire { get; }

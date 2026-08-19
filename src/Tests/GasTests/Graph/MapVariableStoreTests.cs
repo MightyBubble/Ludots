@@ -303,10 +303,10 @@ namespace Ludots.Tests.Gas.Graph
                 Throws.InvalidOperationException.With.Message.Contains("priority"));
         }
 
-        // ── Graph ops end-to-end through the MapTrigger front door ──
+        // ── Graph ops end-to-end through the TriggerGraph front door ──
 
         [Test]
-        public void MapTriggerGraph_ReadAddWrite_RunsFromEntryPc_AndFiresPhaseChangedWithPayload()
+        public void TriggerGraph_ReadAddWrite_RunsFromEntryPc_AndFiresPhaseChangedWithPayload()
         {
             using var fixture = MapVarEngineFixture.Create(includeMount: true);
             using GameEngine engine = fixture.CreateEngine();
@@ -323,7 +323,7 @@ namespace Ludots.Tests.Gas.Graph
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
 
-            int graphId = RegisterMapTriggerGraph(engine, package);
+            int graphId = RegisterTriggerGraph(engine, package);
             engine.LoadMap(MapIdValue);
 
             MapVariableStore store = engine.CurrentMapSession!.Variables!;
@@ -347,7 +347,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTriggerGraph_OpsResolveScopeFromEntryCasterEntity()
+        public void TriggerGraph_OpsResolveScopeFromEntryCasterEntity()
         {
             using var fixture = MapVarEngineFixture.Create(includeMount: true);
             using GameEngine engine = fixture.CreateEngine();
@@ -363,7 +363,7 @@ namespace Ludots.Tests.Gas.Graph
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, resolver);
-            RegisterMapTriggerGraph(engine, package);
+            RegisterTriggerGraph(engine, package);
 
             engine.LoadMap(MapIdValue);
 
@@ -372,9 +372,9 @@ namespace Ludots.Tests.Gas.Graph
 
         /// <summary>
         /// The engine freezes GraphIdRegistry during init, so re-register the engine's own
-        /// mappings and then claim this fixture's graph name (mirrors MapTriggerGraphMountTests).
+        /// mappings and then claim this fixture's graph name (mirrors TriggerGraphMountTests).
         /// </summary>
-        private static int RegisterMapTriggerGraph(GameEngine engine, GraphProgramPackage package)
+        private static int RegisterTriggerGraph(GameEngine engine, GraphProgramPackage package)
         {
             RegistryMapping[] mappings = GraphIdRegistry.SnapshotMappings();
             GraphIdRegistry.Clear();
@@ -386,16 +386,16 @@ namespace Ludots.Tests.Gas.Graph
 
             int graphId = GraphIdRegistry.Register(GraphName);
             engine.GetService(CoreServiceKeys.GraphProgramRegistry)
-                .Register(graphId, package.Program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, package.Symbols, package.MapTriggerEntries);
+                .Register(graphId, package.Program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, package.Symbols, package.TriggerGraphEntries);
             return graphId;
         }
 
         [Test]
-        public void MapTrigger_WaitAuthoring_NowCompilesAndRegisters()
+        public void TriggerGraph_WaitAuthoring_NowCompilesAndRegisters()
         {
             string json = $$"""
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" }
                   ],
@@ -419,7 +419,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(
                 compiled.Program.Any(i => i.Op == (ushort)GraphNodeOp.Yield),
                 Is.True,
-                "Wait must lower to Yield for MapTrigger");
+                "Wait must lower to Yield for TriggerGraph");
 
             GraphProgramPackage package = compiled.Package!.Value;
             var registry = new GraphProgramRegistry();
@@ -427,12 +427,12 @@ namespace Ludots.Tests.Gas.Graph
                 () => registry.Register(
                     907,
                     package.Program,
-                    GraphKind.MapTrigger,
+                    GraphKind.TriggerGraph,
                     GraphInstructionSourceMap.Empty,
                     Array.Empty<string>(),
-                    package.MapTriggerEntries),
+                    package.TriggerGraphEntries),
                 Throws.Nothing,
-                "registration policy must accept Yield in MapTrigger programs now");
+                "registration policy must accept Yield in TriggerGraph programs now");
         }
 
         private static string FormatDiagnostics(GraphControlFlowCompileResult compiled)
@@ -447,7 +447,7 @@ namespace Ludots.Tests.Gas.Graph
 
         private static string MapVarGraphJson => $$"""
             {
-              "kind": "MapTrigger",
+              "kind": "TriggerGraph",
               "entries": [
                 { "label": "on_map_loaded", "event": "MapLoaded", "start": "readKills", "once": true }
               ],
@@ -602,7 +602,7 @@ namespace Ludots.Tests.Gas.Graph
                     ]
                     """;
                 string mountJson = includeMount
-                    ? $$""", "MapTriggerGraphs": [ { "graph": "{{GraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]"""
+                    ? $$""", "TriggerGraphs": [ { "graph": "{{GraphName}}", "scopeInstanceId": "{{ScopeInstanceId}}" } ]"""
                     : string.Empty;
                 string mapJson = $$"""
                     {

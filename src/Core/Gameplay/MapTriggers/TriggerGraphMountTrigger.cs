@@ -9,40 +9,65 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
-    public enum MapTriggerGraphRefirePolicy
+    public enum TriggerGraphRefirePolicy
     {
         Ignore = 0,
         Restart = 1,
     }
 
     /// <summary>
-    /// One mounted MapTriggerGraph entry. Entry dispatch executes one slice
-    /// (MapTriggerGraphLimits.SliceBudgetSteps); a Yield or slice-budget
+    /// One mounted TriggerGraph entry. Entry dispatch executes one slice
+    /// (TriggerGraphLimits.SliceBudgetSteps); a Yield or slice-budget
     /// suspension parks the run inside this instance (cursor, registers, call
     /// stack) and the map's think wave ("ThinkWaveElapsed") resumes it one
     /// slice per wave until Halt. Resume wiring: a companion
-    /// MapTriggerGraphResumeTrigger is registered per entry unless the entry's
+    /// TriggerGraphResumeTrigger is registered per entry unless the entry's
     /// EventName IS the resume event, in which case the entry's own dispatch
     /// resumes the suspended run on that tick (a wave tick on a suspended
     /// entry always resumes, never refires). A run's cumulative steps are
     /// capped by GraphVmLimits.MaxInstructionsPerExecution; a run that keeps
-    /// suspending past the cap fails closed. First slice of a run seeds
-    /// registers from the dispatch ScriptContext (cleared on restart,
-    /// preserved across resumes): E[0] payload "MapTrigger.SourceEntity"
-    /// (also the run's caster; absent falls back to the mount scope), I[0]
-    /// "MapTrigger.SourceTeamId", I[1] "MapTrigger.Count", F[0]
-    /// "MapTrigger.VarValueFloat". Refire while suspended: Ignore (default)
-    /// drops the event and counts it in DroppedCount; Restart resets the run
-    /// and re-executes from StartPc. Once entries allow one halted run per
-    /// map lifetime.
+    /// suspending past the cap fails closed. Refire while suspended: Ignore
+    /// (default) drops the event and counts it in DroppedCount; Restart resets
+    /// the run and re-executes from StartPc. Once entries allow one halted run
+    /// per map lifetime.
+    ///
+    /// Register seeding (first slice of a run; cleared on restart, preserved
+    /// across resumes) — payload key strings are owned by
+    /// MapTriggerEventPayloadKeys ("MapTrigger.*" keys survive the dialect
+    /// rename; they are the event payload contract, not the dialect name):
+    ///   E[0] = "MapTrigger.SourceEntity"   (Entity;  also the run's caster,
+    ///                                       absent falls back to the mount scope)
+    ///   E[1] = "MapTrigger.TargetEntity"   (Entity;  seeded only when present)
+    ///   I[0] = "MapTrigger.SourceTeamId"   (int;     default 0 when absent)
+    ///   I[1] = "MapTrigger.Count"          (int;     default 0 when absent)
+    ///   I[2] = "MapTrigger.TagId"          (int;     seeded only when present)
+    ///   F[0] = "MapTrigger.VarValueFloat"  (float;   default 0 when absent)
+    ///   F[1] = "MapTrigger.Magnitude"      (float;   seeded only when present)
+    ///
+    /// Mount domains: map mounts behave exactly as above for every event. For
+    /// entity mounts (scope = the mounted entity itself; caster = explicit
+    /// target = E[0] convention = self), the lifecycle events are dispatched by
+    /// the entity mount pipeline instead of the TriggerManager bus: an
+    /// "EntitySpawned" entry executes immediately at mount creation (same tick
+    /// as the spawn; map-domain observers of EntitySpawned keep think-wave
+    /// granularity), and an "EntityDied" entry executes on the destroy tick for
+    /// that entity's own mounts. Entity mounts may declare entries on any other
+    /// event key; those dispatch through the map's bus registration normally. A
+    /// dead entity's mounts are inert (CheckConditions false) and lazily swept
+    /// at think waves by the mount pipeline.
     /// </summary>
-    public sealed class MapTriggerGraphMountTrigger : Trigger
+    public sealed class TriggerGraphMountTrigger : Trigger
     {
+        private const string TargetEntityPayloadKey = "MapTrigger.TargetEntity";
+        private const string TagIdPayloadKey = "MapTrigger.TagId";
+        private const string MagnitudePayloadKey = "MapTrigger.Magnitude";
+
         private readonly int _graphId;
         private readonly string _graphName;
-        private readonly MapTriggerGraphEntry _entry;
+        private readonly TriggerGraphEntry _entry;
         private readonly Entity _scope;
-        private readonly MapTriggerGraphRefirePolicy _refirePolicy;
+        private readonly TriggerGraphMountDomain _domain;
+        private readonly TriggerGraphRefirePolicy _refirePolicy;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
         private readonly byte[] _vmBoolRegisters = new byte[GraphVmLimits.MaxBoolRegisters];
@@ -54,13 +79,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private Entity _runCaster;
         private bool _runActive;
         private bool _ranToHaltOnce;
+        private bool _lifecycleDispatch;
 
-        public MapTriggerGraphMountTrigger(
+        public TriggerGraphMountTrigger(
             int graphId,
             string graphName,
-            MapTriggerGraphEntry entry,
+            TriggerGraphEntry entry,
             Entity scope,
-            MapTriggerGraphRefirePolicy refirePolicy = MapTriggerGraphRefirePolicy.Ignore)
+            TriggerGraphRefirePolicy refirePolicy = TriggerGraphRefirePolicy.Ignore,
+            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map)
         {
             if (graphId <= 0)
             {
@@ -75,19 +102,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (entry.EventName == null || string.IsNullOrWhiteSpace(entry.EventName))
             {
                 throw new ArgumentException(
-                    $"MapTriggerGraph '{graphName}' entry '{entry.Label}' requires a non-empty event name.",
+                    $"TriggerGraph '{graphName}' entry '{entry.Label}' requires a non-empty event name.",
                     nameof(entry));
             }
 
-            if (!Enum.IsDefined(typeof(MapTriggerGraphRefirePolicy), refirePolicy))
+            if (!Enum.IsDefined(typeof(TriggerGraphRefirePolicy), refirePolicy))
             {
                 throw new ArgumentOutOfRangeException(nameof(refirePolicy));
+            }
+
+            if (!Enum.IsDefined(typeof(TriggerGraphMountDomain), domain))
+            {
+                throw new ArgumentOutOfRangeException(nameof(domain));
             }
 
             _graphId = graphId;
             _graphName = graphName;
             _entry = entry;
             _scope = scope;
+            _domain = domain;
             _refirePolicy = refirePolicy;
             _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.ThinkWaveElapsed;
             _runCaster = scope;
@@ -95,7 +128,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
             Priority = 0;
         }
 
-        public override string Name => $"MapTriggerGraph:{_graphName}:{_entry.Label}";
+        public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
+
+        public TriggerGraphMountDomain Domain => _domain;
 
         public GraphSliceResult LastSliceResult { get; private set; }
 
@@ -105,6 +140,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public int DroppedCount { get; private set; }
 
+        private bool IsSelfLifecycleEvent => EventKey == GameEvents.EntitySpawned || EventKey == GameEvents.EntityDied;
+
         public override bool CheckConditions(ScriptContext context)
         {
             if (_entry.Once && _ranToHaltOnce)
@@ -112,7 +149,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
-            if (!MapTriggerEntryFiltersEvaluator.Matches(context, _entry.Filters))
+            if (_domain == TriggerGraphMountDomain.Entity && !_lifecycleDispatch && IsSelfLifecycleEvent)
+            {
+                // Entity-domain lifecycle entries never ride the think-wave bus
+                // broadcasts; the mount pipeline dispatches them at spawn/destroy ticks.
+                return false;
+            }
+
+            if (!IsScopeDispatchable(context))
+            {
+                return false;
+            }
+
+            if (!TriggerGraphEntryFiltersEvaluator.Matches(context, _entry.Filters))
             {
                 return false;
             }
@@ -135,7 +184,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     return Task.CompletedTask;
                 }
 
-                if (_refirePolicy == MapTriggerGraphRefirePolicy.Ignore)
+                if (_refirePolicy == TriggerGraphRefirePolicy.Ignore)
                 {
                     DroppedCount++;
                     return Task.CompletedTask;
@@ -146,6 +195,25 @@ namespace Ludots.Core.Gameplay.MapTriggers
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Mount-pipeline dispatch for entity-domain lifecycle events. The lifecycle
+        /// marker relaxes exactly two guards: the think-wave exclusion of entity-domain
+        /// EntitySpawned/EntityDied entries and the dead-scope inertness check (the
+        /// destroy-tick dispatch happens while the scope entity is being destroyed).
+        /// </summary>
+        internal Task ExecuteLifecycleDispatch(ScriptContext context)
+        {
+            _lifecycleDispatch = true;
+            try
+            {
+                return ExecuteAsync(context);
+            }
+            finally
+            {
+                _lifecycleDispatch = false;
+            }
+        }
+
         internal void ResumeFromSuspension(ScriptContext context)
         {
             if (!_runActive)
@@ -154,6 +222,27 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             RunSlice(context);
+        }
+
+        internal bool IsScopeDispatchable(ScriptContext context)
+        {
+            if (_lifecycleDispatch)
+            {
+                return true;
+            }
+
+            if (_domain != TriggerGraphMountDomain.Entity)
+            {
+                return true;
+            }
+
+            if (_scope == Entity.Null || _scope == default)
+            {
+                return false;
+            }
+
+            GameEngine engine = context.Get(CoreServiceKeys.Engine);
+            return engine != null && engine.World.IsAlive(_scope);
         }
 
         private void StartRun(ScriptContext context)
@@ -167,11 +256,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         private void RunSlice(ScriptContext context)
         {
-            MapTriggerGraphTriggerDependencies dependencies = ResolveDependencies(context);
+            TriggerGraphTriggerDependencies dependencies = ResolveDependencies(context);
             GraphInstruction[] program = dependencies.Programs.RequireProgramArray(
                 _graphId,
-                GraphKind.MapTrigger,
-                "地图触发器挂载");
+                GraphKind.TriggerGraph,
+                "触发器图挂载");
 
             GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
                 dependencies.Engine.World,
@@ -188,7 +277,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 _vmTargetRegisters,
                 _vmCallStack,
                 ref _cursor,
-                MapTriggerGraphLimits.SliceBudgetSteps);
+                TriggerGraphLimits.SliceBudgetSteps);
             LastSliceResult = result;
 
             if (result.Halted)
@@ -202,21 +291,21 @@ namespace Ludots.Core.Gameplay.MapTriggers
             if (_cursor.Steps >= GraphVmLimits.MaxInstructionsPerExecution)
             {
                 throw new InvalidOperationException(
-                    $"MapTriggerGraph '{_graphName}' entry '{_entry.Label}' exceeded the per-run instruction cap "
+                    $"TriggerGraph '{_graphName}' entry '{_entry.Label}' exceeded the per-run instruction cap "
                     + $"{nameof(GraphVmLimits.MaxInstructionsPerExecution)} ({GraphVmLimits.MaxInstructionsPerExecution} steps across resumes) without halting.");
             }
         }
 
-        private static MapTriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)
+        private static TriggerGraphTriggerDependencies ResolveDependencies(ScriptContext context)
         {
             GameEngine engine = context.Get(CoreServiceKeys.Engine)
-                ?? throw new InvalidOperationException($"{nameof(MapTriggerGraphMountTrigger)} requires GameEngine.");
+                ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GameEngine.");
             GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
-                ?? throw new InvalidOperationException($"{nameof(MapTriggerGraphMountTrigger)} requires GraphProgramRegistry.");
+                ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GraphProgramRegistry.");
             GasGraphRuntimeApi graphApi = engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
-                ?? throw new InvalidOperationException($"{nameof(MapTriggerGraphMountTrigger)} requires GasGraphRuntimeApi.");
+                ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GasGraphRuntimeApi.");
 
-            return new MapTriggerGraphTriggerDependencies(engine, programs, graphApi);
+            return new TriggerGraphTriggerDependencies(engine, programs, graphApi);
         }
 
         private Entity ResolveRunCaster(ScriptContext context)
@@ -233,6 +322,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _vmIntRegisters[0] = context.Get<int>(MapTriggerEventPayloadKeys.SourceTeamId);
             _vmIntRegisters[1] = context.Get<int>(MapTriggerEventPayloadKeys.Count);
             _vmFloatRegisters[0] = context.Get<float>(MapTriggerEventPayloadKeys.VarValueFloat);
+            if (context.Contains(TargetEntityPayloadKey))
+            {
+                _vmEntityRegisters[1] = context.Get<Entity>(TargetEntityPayloadKey);
+            }
+
+            if (context.Contains(TagIdPayloadKey))
+            {
+                _vmIntRegisters[2] = context.Get<int>(TagIdPayloadKey);
+            }
+
+            if (context.Contains(MagnitudePayloadKey))
+            {
+                _vmFloatRegisters[1] = context.Get<float>(MagnitudePayloadKey);
+            }
         }
 
         private void ResetExecutionState()
@@ -246,7 +349,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _runCaster = _scope;
         }
 
-        private readonly record struct MapTriggerGraphTriggerDependencies(
+        private readonly record struct TriggerGraphTriggerDependencies(
             GameEngine Engine,
             GraphProgramRegistry Programs,
             GasGraphRuntimeApi GraphApi);
@@ -256,13 +359,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// Think-wave resume companion for one mounted entry. Dispatches only while
     /// its owner has a suspended run; a wave with nothing suspended evaluates
     /// CheckConditions false and never re-enters the graph, so a suspended run
-    /// is resumed exactly once per wave by exactly one trigger.
+    /// is resumed exactly once per wave by exactly one trigger. Entity-domain
+    /// owners whose scope entity died stay parked forever (the dead mount is
+    /// swept by the entity mount pipeline instead).
     /// </summary>
-    public sealed class MapTriggerGraphResumeTrigger : Trigger
+    public sealed class TriggerGraphResumeTrigger : Trigger
     {
-        private readonly MapTriggerGraphMountTrigger _owner;
+        private readonly TriggerGraphMountTrigger _owner;
 
-        public MapTriggerGraphResumeTrigger(MapTriggerGraphMountTrigger owner)
+        public TriggerGraphResumeTrigger(TriggerGraphMountTrigger owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             EventKey = GameEvents.ThinkWaveElapsed;
@@ -271,7 +376,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override string Name => $"{_owner.Name}:Resume";
 
-        public override bool CheckConditions(ScriptContext context) => _owner.IsSuspended;
+        public override bool CheckConditions(ScriptContext context)
+            => _owner.IsSuspended && _owner.IsScopeDispatchable(context);
 
         public override Task ExecuteAsync(ScriptContext context)
         {

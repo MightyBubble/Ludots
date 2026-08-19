@@ -208,7 +208,7 @@ API:
 *   高频节奏需求不要造逐帧事件；地图节奏走 ThinkWave 时钟域（见第 10 节），`GameEvents.Tick` 已删除。
 *   Mod 必须使用 `OnEvent()`、`SystemFactoryRegistry` 或 `TriggerDecorators` 注册扩展——不要直接调用 `TriggerManager.RegisterTrigger()`。
 
-## 10 MapTrigger 事件词汇表（ThinkWave 时钟域）
+## 10 TriggerGraph 事件词汇表（ThinkWave 时钟域）
 
 `ThinkWaveClockSystem`（注册于 `SystemGroup.DeferredTriggerCollection`）为每张 Active 的地图按固定步长累计 tick；每张地图可在 MapConfig 里声明 `"ThinkWaveIntervalTicks"`（整数 ≥1，缺省 30）。Suspended 的地图不推进、不触发。每个 wave 依次触发以下 Map-scoped 事件（payload key 见 `MapTriggerEventPayloadKeys`）：
 
@@ -224,4 +224,4 @@ Spawn/death 观察来自 World 结构事件（`ComponentAdded<MapEntity>` / `Ent
 
 ### 10.1 入口过滤（entries[].filters）
 
-MapTrigger 图的 entry 可声明可选 `filters` 块（`region`/`tag`/`team`/`threshold`/`direction` 全部可选，未知字段在作者面拒绝；`threshold` 与 `direction`（`cross_above`|`cross_below`）必须成对声明，`direction` 拼写由编译器与 GraphProgramRegistry 双重校验）。分发时由 `MapTriggerEntryFiltersEvaluator.Matches` 评估：任一声明的过滤项在 payload 缺失或不相等时不匹配（fail closed，不抛错）。`tag` 目前没有任何事件携带 tag payload，声明即永不匹配——待 tag 型事件落地后放开。
+TriggerGraph 图的 entry 可声明可选 `filters` 块（`region`/`tag`/`team`/`threshold`/`direction` 全部可选，未知字段在作者面拒绝；`threshold` 与 `direction`（`cross_above`|`cross_below`）必须成对声明，`direction` 拼写由编译器与 GraphProgramRegistry 双重校验）。分发时由 `TriggerGraphEntryFiltersEvaluator.Matches` 评估：任一声明的过滤项在 payload 缺失或不相等时不匹配（fail closed，不抛错）。`tag` 目前没有任何事件携带 tag payload，声明即永不匹配——待 tag 型事件落地后放开。

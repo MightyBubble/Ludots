@@ -51,10 +51,10 @@ namespace Ludots.Core.Config
         public List<string> TriggerTypes { get; set; } = new List<string>();
 
         /// <summary>
-        /// MapTriggerGraph mounts declared by this map. Raw authoring nodes;
+        /// TriggerGraph mounts declared by this map. Raw authoring nodes;
         /// strict parsing happens at mount time (Ludots.Core.Gameplay.MapTriggers).
         /// </summary>
-        public JsonNode MapTriggerGraphs { get; set; }
+        public JsonNode TriggerGraphs { get; set; }
 
         /// <summary>
         /// Fixed ticks per think wave for this map (integer &gt;= 1).

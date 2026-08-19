@@ -278,7 +278,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             out Violation violation)
         {
             ArgumentNullException.ThrowIfNull(handlers);
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.MapTrigger))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script or GraphKind.TriggerGraph))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph operation policy requires an explicit supported kind.");
             }

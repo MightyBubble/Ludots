@@ -1,7 +1,7 @@
 {
   "Id": "fireball_arena",
   "Tags": ["showcase", "fireball"],
-  "MapTriggerGraphs": [
+  "TriggerGraphs": [
     { "graph": "Graph.Fireball.Panel.OpenStatus", "scopeInstanceId": "fireball-hero" }
   ],
   "Entities": [

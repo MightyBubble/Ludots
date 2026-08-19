@@ -65,7 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOpDescriptor descriptor = Get(op);
             if (descriptor.ScriptSliceOnly)
             {
-                return kind is GraphKind.Script or GraphKind.MapTrigger;
+                return kind is GraphKind.Script or GraphKind.TriggerGraph;
             }
 
             if (kind == GraphKind.Effect)
@@ -73,7 +73,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return true;
             }
 
-            if (kind is GraphKind.Script or GraphKind.MapTrigger)
+            if (kind is GraphKind.Script or GraphKind.TriggerGraph)
             {
                 return metadata.Kind == EffectOperationKind.Pure;
             }
@@ -95,7 +95,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var names = new List<string>(7);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Derived);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Effect);
-            AppendKind(names, descriptor.AuthorableKinds, GraphKind.MapTrigger);
+            AppendKind(names, descriptor.AuthorableKinds, GraphKind.TriggerGraph);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Query);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Score);
             AppendKind(names, descriptor.AuthorableKinds, GraphKind.Script);

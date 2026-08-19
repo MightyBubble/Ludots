@@ -70,7 +70,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphKind.Score:
                     file.ProtectHostAbi(GraphValueType.Float, 0);
                     break;
-                case GraphKind.Script or GraphKind.MapTrigger:
+                case GraphKind.Script or GraphKind.TriggerGraph:
                     file.ProtectHostAbi(GraphValueType.Int, 0);
                     break;
             }

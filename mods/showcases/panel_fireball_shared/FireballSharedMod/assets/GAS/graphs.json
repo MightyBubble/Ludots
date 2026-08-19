@@ -1,7 +1,7 @@
 [
   {
     "id": "Graph.Fireball.Panel.OpenStatus",
-    "kind": "MapTrigger",
+    "kind": "TriggerGraph",
     "entries": [
       {
         "label": "on_map_loaded",
