@@ -15,9 +15,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private const GraphKindMask QueryOnly = GraphKindMask.Query;
 
-        private const GraphKindMask ScriptOnlyMask = GraphKindMask.Script;
-
-        // MapTrigger mirrors the Script authorable set except Yield (ScriptOnlyMask stays Script-only).
+        // MapTrigger mirrors the Script authorable set, including Yield (host resumption is the host's contract).
         private const GraphKindMask ScriptAndMapTrigger = GraphKindMask.Script | GraphKindMask.MapTrigger;
 
         private const GraphKindMask LinearAndQuery = LinearAll | GraphKindMask.Query;
@@ -143,6 +141,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.HidePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.CreatePanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadMapVarInt, ScriptAndMapTrigger, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptAndMapTrigger, GraphValueType.Float, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndMapTrigger, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.WriteMapVarFloat, ScriptAndMapTrigger, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.TableReadFloat, LinearQueryScript, GraphValueType.Float, portA, queryOut: GraphValueType.Float, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadContextSource, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTarget, LinearAll, GraphValueType.Entity);
@@ -200,7 +202,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.KnowledgeHasProjection, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.Call, ScriptAndMapTrigger, scriptPorts: noPorts, imm: GraphOperandRole.Immediate);
             Add(rows, GraphNodeOp.Return, ScriptAndMapTrigger, scriptPorts: noPorts);
-            Add(rows, GraphNodeOp.Yield, ScriptOnlyMask, scriptPorts: noPorts, scriptOnly: true);
+            Add(rows, GraphNodeOp.Yield, ScriptAndMapTrigger, scriptPorts: noPorts, scriptSliceOnly: true);
             Add(rows, GraphNodeOp.HaltReturnInt, LinearQueryScript, linearPorts: portValue, queryPorts: portValue, scriptPorts: portValue, scriptOut: GraphValueType.Void);
             Add(rows, GraphNodeOp.InvokeScript, LinearQueryScript, GraphValueType.Int, queryOut: GraphValueType.Int, scriptOut: GraphValueType.Int, flags: GraphOperandRole.FuncLibNameFlags, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.MoveInt, ScriptAndMapTrigger, GraphValueType.Int, scriptPorts: portValue, scriptOut: GraphValueType.Int);
@@ -247,7 +249,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOperandRole dst = GraphOperandRole.None,
             GraphOperandRole flags = GraphOperandRole.None,
             GraphOperandRole imm = GraphOperandRole.None,
-            bool scriptOnly = false,
+            bool scriptSliceOnly = false,
             bool derivedWrite = false,
             bool listenerOwner = false)
         {
@@ -268,7 +270,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 dst,
                 flags,
                 imm,
-                scriptOnly,
+                scriptSliceOnly,
                 derivedWrite,
                 listenerOwner));
         }

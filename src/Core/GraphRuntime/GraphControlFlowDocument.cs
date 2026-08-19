@@ -28,6 +28,25 @@ namespace Ludots.Core.GraphRuntime
         public string Event { get; set; } = string.Empty;
         public string Start { get; set; } = string.Empty;
         public bool Once { get; set; }
+        public string? Refire { get; set; }
+        public GraphMapTriggerEntryFiltersConfig? Filters { get; set; }
+        /// <summary>Compiled filter struct produced by entry validation; default when no filters are authored.</summary>
+        public MapTriggerEntryFilters ParsedFilters { get; set; }
+        /// <summary>Normalized refire policy ("ignore"/"restart"); default "ignore".</summary>
+        public string NormalizedRefire { get; set; } = MapTriggerGraphEntry.RefireIgnore;
+    }
+
+    /// <summary>
+    /// Authoring shape of a MapTrigger entry filters block; direction is authored as
+    /// "cross_above" / "cross_below" and compiled to the typed enum.
+    /// </summary>
+    public sealed class GraphMapTriggerEntryFiltersConfig
+    {
+        public string? Region { get; set; }
+        public string? Tag { get; set; }
+        public int? Team { get; set; }
+        public float? Threshold { get; set; }
+        public string? Direction { get; set; }
     }
 
     public sealed class GraphControlFlowNode
@@ -56,6 +75,8 @@ namespace Ludots.Core.GraphRuntime
         public string? PanelType { get; set; }
         /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
         public string? PanelAnchor { get; set; }
+        /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
+        public string? Var { get; set; }
         public string? RelationshipType { get; set; }
         public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }

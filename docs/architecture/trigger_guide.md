@@ -205,5 +205,23 @@ API:
 
 *   事件键与上下文 key 一律使用 `EventKey`、`GameEvents`、`ContextKeys`，不要在业务代码里散落字符串。
 *   Trigger 按 Priority 升序执行，优先级设计要避免隐式依赖。
-*   谨慎使用 `GameEvents.Tick`：它是高频事件，容易导致性能问题，优先用系统或时钟域解决。
+*   高频节奏需求不要造逐帧事件；地图节奏走 ThinkWave 时钟域（见第 10 节），`GameEvents.Tick` 已删除。
 *   Mod 必须使用 `OnEvent()`、`SystemFactoryRegistry` 或 `TriggerDecorators` 注册扩展——不要直接调用 `TriggerManager.RegisterTrigger()`。
+
+## 10 MapTrigger 事件词汇表（ThinkWave 时钟域）
+
+`ThinkWaveClockSystem`（注册于 `SystemGroup.DeferredTriggerCollection`）为每张 Active 的地图按固定步长累计 tick；每张地图可在 MapConfig 里声明 `"ThinkWaveIntervalTicks"`（整数 ≥1，缺省 30）。Suspended 的地图不推进、不触发。每个 wave 依次触发以下 Map-scoped 事件（payload key 见 `MapTriggerEventPayloadKeys`）：
+
+| 事件 | 触发时机 | Payload |
+|------|----------|---------|
+| `EntitySpawned` | wave 内加入地图的实体 | `SourceEntity`、`SourceTeamId` |
+| `EntityDied` | wave 内被销毁的实体（flush 时实体可能已回收，Team 在销毁时读取） | `SourceEntity`、`SourceTeamId` |
+| `EntityAliveCountChanged` | 某队伍存活数（带 `AttributeBuffer`）与上一 wave 不同 | `SourceTeamId`、`Count`、`Delta` |
+| `ThinkWaveElapsed` | wave 收尾（供消费方读取本 wave 汇总） | `WaveIndex` |
+| `RegionEntered` / `RegionExited` | 区域系统（进入/离开 region） | `SourceEntity`、`RegionId` |
+
+Spawn/death 观察来自 World 结构事件（`ComponentAdded<MapEntity>` / `EntityDestroyed`），覆盖全部正式 spawn 路径；每地图队列上限 1024，溢出计入可读的丢弃计数（`ThinkWaveClockSystem.GetDroppedLifecycleEvents` / `TotalDroppedLifecycleEvents`）。
+
+### 10.1 入口过滤（entries[].filters）
+
+MapTrigger 图的 entry 可声明可选 `filters` 块（`region`/`tag`/`team`/`threshold`/`direction` 全部可选，未知字段在作者面拒绝；`threshold` 与 `direction`（`cross_above`|`cross_below`）必须成对声明，`direction` 拼写由编译器与 GraphProgramRegistry 双重校验）。分发时由 `MapTriggerEntryFiltersEvaluator.Matches` 评估：任一声明的过滤项在 payload 缺失或不相等时不匹配（fail closed，不抛错）。`tag` 目前没有任何事件携带 tag payload，声明即永不匹配——待 tag 型事件落地后放开。

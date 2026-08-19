@@ -186,9 +186,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             }
 
                             break;
+                        case "refire":
+                            if (field.Value is not JsonValue refireValue || !refireValue.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"MapTrigger graph '{graphId}' entries[{i}] field 'refire' must be a string.");
+                            }
+
+                            break;
+                        case "filters":
+                            RequireMapTriggerEntryFiltersShape(obj, graphId, i, field.Value);
+                            break;
                         default:
                             throw new InvalidOperationException(
-                                $"MapTrigger graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once.");
+                                $"MapTrigger graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, filters.");
                     }
                 }
 
@@ -199,6 +210,51 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         throw new InvalidOperationException(
                             $"MapTrigger graph '{graphId}' entries[{i}] is missing required field '{required}'.");
                     }
+                }
+            }
+        }
+
+        private static void RequireMapTriggerEntryFiltersShape(JsonObject obj, string graphId, int entryIndex, JsonNode? filtersNode)
+        {
+            if (filtersNode is not JsonObject filters)
+            {
+                throw new InvalidOperationException(
+                    $"MapTrigger graph '{graphId}' entries[{entryIndex}] field 'filters' must be an object.");
+            }
+
+            foreach (KeyValuePair<string, JsonNode?> field in filters)
+            {
+                switch (field.Key)
+                {
+                    case "region":
+                    case "tag":
+                    case "direction":
+                        if (field.Value is not JsonValue textValue || !textValue.TryGetValue<string>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field '{field.Key}' must be a string.");
+                        }
+
+                        break;
+                    case "team":
+                        if (field.Value is not JsonValue teamValue || !teamValue.TryGetValue<int>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field 'team' must be an integer.");
+                        }
+
+                        break;
+                    case "threshold":
+                        if (field.Value is not JsonValue thresholdValue || !thresholdValue.TryGetValue<float>(out _))
+                        {
+                            throw new InvalidOperationException(
+                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field 'threshold' must be a number.");
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction.");
                 }
             }
         }

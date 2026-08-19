@@ -58,7 +58,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// <summary>
     /// Compiles L1 ControlFlow documents (all GraphKinds) into <see cref="GraphInstruction"/> using GraphNodeOp.
     /// BranchBool / SwitchInt / While / Until are compile-time sugar only (not GraphNodeOp values).
-    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script only).
+    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script and MapTrigger).
     /// </summary>
     public static partial class GraphControlFlowCompiler
     {
@@ -334,7 +334,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     entry.Label,
                     entry.Event,
                     layouts[nodeIndices[entry.Start]].BodyIndex,
-                    entry.Once);
+                    entry.Once,
+                    entry.ParsedFilters,
+                    entry.NormalizedRefire);
             }
 
             return compiled;
@@ -492,11 +494,96 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     Label = label,
                     Event = eventName,
                     Start = start,
-                    Once = authored[i].Once
+                    Once = authored[i].Once,
+                    NormalizedRefire = NormalizeEntryRefire(authored[i].Refire, graphId, shown, diagnostics),
+                    ParsedFilters = ParseEntryFilters(authored[i].Filters, graphId, shown, diagnostics)
                 });
             }
 
             return validated;
+        }
+
+        private static string NormalizeEntryRefire(
+            string? authored,
+            string graphId,
+            string shown,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(authored))
+            {
+                return MapTriggerGraphEntry.RefireIgnore;
+            }
+
+            string trimmed = authored.Trim();
+            if (trimmed != MapTriggerGraphEntry.RefireIgnore && trimmed != MapTriggerGraphEntry.RefireRestart)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryRefire,
+                    $"MapTrigger graph '{graphId}' entry '{shown}' field 'refire' must be \"ignore\" or \"restart\".", authored));
+                return MapTriggerGraphEntry.RefireIgnore;
+            }
+
+            return trimmed;
+        }
+
+        private static MapTriggerEntryFilters ParseEntryFilters(
+            GraphMapTriggerEntryFiltersConfig? filters,
+            string graphId,
+            string shown,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (filters == null)
+            {
+                return default;
+            }
+
+            string? region = null;
+            if (filters.Region != null)
+            {
+                region = filters.Region.Trim();
+                if (region.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' filters field 'region' requires a non-empty string.", filters.Region));
+                }
+            }
+
+            string? tag = null;
+            if (filters.Tag != null)
+            {
+                tag = filters.Tag.Trim();
+                if (tag.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' filters field 'tag' requires a non-empty string.", filters.Tag));
+                }
+            }
+
+            MapTriggerEntryFilterDirection? direction = null;
+            if (filters.Direction != null)
+            {
+                string directionText = filters.Direction.Trim();
+                if (string.Equals(directionText, "cross_above", StringComparison.Ordinal))
+                {
+                    direction = MapTriggerEntryFilterDirection.CrossAbove;
+                }
+                else if (string.Equals(directionText, "cross_below", StringComparison.Ordinal))
+                {
+                    direction = MapTriggerEntryFilterDirection.CrossBelow;
+                }
+                else
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"MapTrigger graph '{graphId}' entry '{shown}' filters field 'direction' must be 'cross_above' or 'cross_below' (got '{directionText}').", filters.Direction));
+                }
+            }
+
+            if (filters.Threshold.HasValue != direction.HasValue)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                    $"MapTrigger graph '{graphId}' entry '{shown}' filters fields 'threshold' and 'direction' must be declared together."));
+            }
+
+            return new MapTriggerEntryFilters(region, tag, filters.Team, filters.Threshold, direction);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(
@@ -590,21 +677,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
-                // Wait is author alias for Yield — Script CF only; never a second waiter opcode.
+                // Wait is author alias for Yield — Script/MapTrigger CF only; never a second waiter opcode.
                 if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
                 {
-                    if (graphKind == GraphKind.MapTrigger)
+                    if (graphKind is not (GraphKind.Script or GraphKind.MapTrigger))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"Wait is rejected in MapTrigger graph '{graphId}' node '{node.Id}': the map mount host cannot resume yielded slices.", node.Id));
-                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
-                        continue;
-                    }
-
-                    if (graphKind != GraphKind.Script)
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"Wait is Script-only author alias for Yield (kind='{graphKind}').", node.Id));
+                            $"Wait is Script/MapTrigger-only author alias for Yield (kind='{graphKind}').", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -614,16 +693,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 bool parsedNodeOp = GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp);
-                if (parsedNodeOp &&
-                    nodeOp == GraphNodeOp.Yield &&
-                    graphKind == GraphKind.MapTrigger)
-                {
-                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                        $"Yield is rejected in MapTrigger graph '{graphId}' node '{node.Id}': the map mount host cannot resume yielded slices.", node.Id));
-                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
-                    continue;
-                }
-
                 if (!parsedNodeOp ||
                     !IsControlFlowAuthorable(graphKind, nodeOp))
                 {

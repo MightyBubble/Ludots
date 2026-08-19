@@ -16,6 +16,16 @@ public sealed class GraphOpsNodeVignette
     public GraphOpsNodeLink[] Links { get; set; } = Array.Empty<GraphOpsNodeLink>();
     public string ConfigEffectId { get; set; } = "";
     public GraphOpsNodeLinearOptions? Linear { get; set; }
+    /// <summary>Map variable declarations copied verbatim into the generated gallery map JSON (map-var ops).</summary>
+    public GraphOpsNodeVignetteVariable[] Variables { get; set; } = Array.Empty<GraphOpsNodeVignetteVariable>();
+}
+
+public sealed class GraphOpsNodeVignetteVariable
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "int";
+    public double Initial { get; set; }
+    public bool Phase { get; set; }
 }
 
 public sealed class GraphOpsNodeActor

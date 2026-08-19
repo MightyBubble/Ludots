@@ -51,7 +51,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphOperandRole dstRole,
             GraphOperandRole flagsRole,
             GraphOperandRole immRole,
-            bool scriptOnly,
+            bool scriptSliceOnly,
             bool derivedAttributeWrite,
             bool requiresListenerOwnerContext)
         {
@@ -65,7 +65,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             DstRole = dstRole;
             FlagsRole = flagsRole;
             ImmRole = immRole;
-            ScriptOnly = scriptOnly;
+            ScriptSliceOnly = scriptSliceOnly;
             DerivedAttributeWrite = derivedAttributeWrite;
             RequiresListenerOwnerContext = requiresListenerOwnerContext;
         }
@@ -80,7 +80,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GraphOperandRole DstRole { get; }
         public GraphOperandRole FlagsRole { get; }
         public GraphOperandRole ImmRole { get; }
-        public bool ScriptOnly { get; }
+        /// <summary>True for host-slice control-flow ops (Yield): only Script and host-resumed MapTrigger may contain them.</summary>
+        public bool ScriptSliceOnly { get; }
         public bool DerivedAttributeWrite { get; }
         public bool RequiresListenerOwnerContext { get; }
 

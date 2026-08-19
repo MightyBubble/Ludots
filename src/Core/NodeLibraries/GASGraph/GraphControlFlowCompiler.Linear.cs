@@ -255,6 +255,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.ReadMapVarInt:
+                case GraphNodeOp.ReadMapVarFloat:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    RequireNonEmpty(node.Var, "var", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.WriteMapVarInt:
+                case GraphNodeOp.WriteMapVarFloat:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    RequireValueInput(
+                        node,
+                        GraphControlFlowPorts.Value,
+                        op.NodeOp == GraphNodeOp.WriteMapVarInt ? GraphValueType.Int : GraphValueType.Float,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        graphId,
+                        diagnostics);
+                    RequireNonEmpty(node.Var, "var", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.QueryCone:
                 case GraphNodeOp.QueryRectangle:
                 case GraphNodeOp.QueryLine:
@@ -754,6 +783,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.DestroyPanel:
                     instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.ReadMapVarInt:
+                case GraphNodeOp.ReadMapVarFloat:
+                    instruction.Imm = RequireSymbol(node.Var, "var", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    break;
+
+                case GraphNodeOp.WriteMapVarInt:
+                case GraphNodeOp.WriteMapVarFloat:
+                    instruction.Imm = RequireSymbol(node.Var, "var", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value,
+                        op.NodeOp == GraphNodeOp.WriteMapVarInt ? GraphValueType.Int : GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
                         ? ResolveValueInput(
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
