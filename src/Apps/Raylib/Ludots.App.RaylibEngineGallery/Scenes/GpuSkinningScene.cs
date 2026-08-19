@@ -19,6 +19,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GallerySkinnedPlayback[] _playbacks = new GallerySkinnedPlayback[InstanceCount];
+        private readonly RaylibSkyboxRenderer _skybox = new();
 
         private RaylibGpuSkinnedModelCache _modelCache = null!;
         private RaylibFrameLighting _lighting = null!;
@@ -91,7 +92,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _shadowMap.EndFrame();
             _lit.BeginFrame(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.05f);
 
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 900f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             Rl.DrawGrid(24, 2f);
 
             ModelAnimation animation = _entry.Animations[0];
@@ -119,7 +123,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _lit.DrawMesh(
                 _groundMesh,
                 RaylibMatrix.FromScaleTranslation(0f, 0.05f, 0f, 1f, 1f, 1f),
-                new Vector4(0.32f, 0.34f, 0.42f, 1f),
+                GalleryColors.ShadowReceiverGray,
                 roughness: 0.9f,
                 metallic: 0f);
             Rl.EndMode3D();
@@ -134,7 +138,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _modelCache?.Dispose();
+            _lit?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
+            Rl.UnloadMesh(_groundMesh);
             _modelCache = null!;
+            _lit = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

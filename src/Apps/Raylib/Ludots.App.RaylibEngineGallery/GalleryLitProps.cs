@@ -58,20 +58,29 @@ namespace Ludots.App.RaylibEngineGallery
         public void DrawCube(Vector3 center, Vector3 size, Vector4 tint, float roughness = 0.8f, float metallic = 0f, float rotationYRad = 0f)
         {
             EnsureLoaded();
-            Matrix4x4 rowMajor =
-                Matrix4x4.CreateRotationY(rotationYRad) *
-                Matrix4x4.CreateScale(size) *
-                Matrix4x4.CreateTranslation(center);
-            _lit.DrawMesh(_cube, RaylibMatrix.FromSystemNumerics(rowMajor), tint, roughness, metallic);
+            _lit.DrawMesh(_cube, BuildCubeTransform(center, size, rotationYRad), tint, roughness, metallic);
         }
 
         public void DrawSphere(Vector3 center, float radius, Vector4 tint, float roughness = 0.5f, float metallic = 0f)
         {
             EnsureLoaded();
-            Matrix4x4 rowMajor =
-                Matrix4x4.CreateScale(radius * 2f) *
-                Matrix4x4.CreateTranslation(center);
-            _lit.DrawMesh(_sphere, RaylibMatrix.FromSystemNumerics(rowMajor), tint, roughness, metallic);
+            _lit.DrawMesh(_sphere, BuildSphereTransform(center, radius), tint, roughness, metallic);
+        }
+
+        public void DrawCubeShadow(RaylibDirectionalShadowMap shadow, Vector3 center, Vector3 size, float rotationYRad = 0f)
+        {
+            EnsureLoaded();
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            shadow.DrawMeshShadow(_cube, BuildCubeTransform(center, size, rotationYRad));
+        }
+
+        public void DrawSphereShadow(RaylibDirectionalShadowMap shadow, Vector3 center, float radius)
+        {
+            EnsureLoaded();
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            shadow.DrawMeshShadow(_sphere, BuildSphereTransform(center, radius));
         }
 
         public void Dispose()
@@ -93,6 +102,23 @@ namespace Ludots.App.RaylibEngineGallery
             {
                 throw new InvalidOperationException($"{nameof(GalleryLitProps)} requires {nameof(Load)} first.");
             }
+        }
+
+        private static RaylibMatrix BuildCubeTransform(Vector3 center, Vector3 size, float rotationYRad)
+        {
+            Matrix4x4 rowMajor =
+                Matrix4x4.CreateRotationY(rotationYRad) *
+                Matrix4x4.CreateScale(size) *
+                Matrix4x4.CreateTranslation(center);
+            return RaylibMatrix.FromSystemNumerics(rowMajor);
+        }
+
+        private static RaylibMatrix BuildSphereTransform(Vector3 center, float radius)
+        {
+            Matrix4x4 rowMajor =
+                Matrix4x4.CreateScale(radius * 2f) *
+                Matrix4x4.CreateTranslation(center);
+            return RaylibMatrix.FromSystemNumerics(rowMajor);
         }
     }
 }

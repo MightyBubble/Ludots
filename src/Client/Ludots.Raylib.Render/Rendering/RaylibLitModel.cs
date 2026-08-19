@@ -14,8 +14,8 @@ namespace Ludots.Raylib.Render
     /// </summary>
     public sealed unsafe class RaylibLitModel : IDisposable
     {
-        private static readonly int ShadowMapSlot = (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL;
-        private static readonly int ShadowLocIndex = (int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL;
+        private static readonly int ShadowMapSlot = (int)RaylibShadowSampling.MaterialSlot;
+        private static readonly int ShadowLocIndex = (int)RaylibShadowSampling.ShaderTextureSlot;
 
         private readonly Shader _shader;
         private Material _material;
@@ -56,6 +56,21 @@ namespace Ludots.Raylib.Render
             _locLightSpaceMatrix = RequireLocation("uLightSpaceMatrix");
             _locShadowEnabled = RequireLocation("uShadowEnabled");
             _locShadowTexelWorld = RequireLocation("uShadowTexelWorld");
+            int locMvp = RaylibShaderBindingGuard.RequireUniform(_shader, "mvp", "model_lit");
+            int locMatModel = RaylibShaderBindingGuard.RequireUniform(_shader, "matModel", "model_lit");
+            int locVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_shader, "vertexPosition", "model_lit");
+            int locVertexTexCoord = RaylibShaderBindingGuard.RequireAttribute(_shader, "vertexTexCoord", "model_lit");
+            int locVertexNormal = RaylibShaderBindingGuard.RequireAttribute(_shader, "vertexNormal", "model_lit");
+            int locMapAlbedo = RaylibShaderBindingGuard.RequireUniform(_shader, "texture0", "model_lit");
+            int locColDiffuse = RaylibShaderBindingGuard.RequireUniform(_shader, "colDiffuse", "model_lit");
+
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locMatModel;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = locColDiffuse;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
             _shader.locs[ShadowLocIndex] = _locShadowMap;
 
             // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
@@ -87,7 +102,7 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_shader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
 
-            _skyIbl.Ensure(lighting);
+            _skyIbl!.Ensure(lighting);
             float envSpecular = 1f;
             Rl.SetShaderValue(_shader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
@@ -184,6 +199,7 @@ namespace Ludots.Raylib.Render
             // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
+            _material.maps[ShadowMapSlot].texture = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
             _disposed = true;

@@ -66,5 +66,32 @@ namespace Ludots.Raylib.Render
             _benchmarkBridge.CompleteBenchmarkDraw(drawMs, visibleCount);
             return buildStats.Active;
         }
+
+        public bool DrawShadow(Camera3D baseCamera, RaylibDirectionalShadowMap shadow)
+        {
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            RaylibBenchmarkScene scene = _benchmarkBridge.GetBenchmarkScene();
+            if (!scene.Enabled)
+            {
+                return false;
+            }
+
+            RaylibBenchmarkStats buildStats = _benchmarkBridge.BuildBenchmarkBuckets();
+            Camera3D camera = baseCamera;
+            camera.position = scene.Camera.Position;
+            camera.target = scene.Camera.Target;
+            if (scene.Camera.FovY > 0.01f)
+            {
+                camera.fovy = scene.Camera.FovY;
+            }
+
+            foreach (RaylibIsmRenderBridge.Bucket bucket in _benchmarkBridge.ActiveBuckets)
+            {
+                _primitiveRenderer.DrawInstancedBucketShadow(bucket, _meshes, shadow);
+            }
+
+            return buildStats.Active;
+        }
     }
 }

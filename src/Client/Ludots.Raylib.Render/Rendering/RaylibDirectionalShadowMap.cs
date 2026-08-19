@@ -8,7 +8,7 @@ namespace Ludots.Raylib.Render
     /// <summary>
     /// 方向光 shadow map：深度打包进颜色 RT（RGBA 256 进位），接收端经 uLightSpaceMatrix
     /// （MAT4 uniform，native ≥5.5）投影 + 3x3 PCF。深度 pass 与接收端共用同一份手工
-    /// lookAt/ortho 矩阵保证 NDC 深度严格一致；RT 纹理 Y 翻转在采样端取 1-y。
+    /// lookAt/ortho 矩阵保证 NDC 深度严格一致；RT 由 shader 直接采样，不做屏幕绘制路径的 Y 翻转。
     /// </summary>
     public sealed unsafe class RaylibDirectionalShadowMap : IDisposable
     {
@@ -16,7 +16,12 @@ namespace Ludots.Raylib.Render
 
         private readonly RenderTexture2D _rt;
         private readonly Shader _depthShader;
+        private readonly Shader _depthInstancedShader;
+        private readonly Shader _depthSkinningInstancedShader;
         private Material _depthMaterial;
+        private Material _depthInstancedMaterial;
+        private Material _depthSkinningInstancedMaterial;
+        private readonly int _locDepthSkinningBoneMatrices;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
         private bool _frameActive;
@@ -26,23 +31,44 @@ namespace Ludots.Raylib.Render
         {
             _rt = Rl.LoadRenderTexture(MapSize, MapSize);
             string baseDir = AppContext.BaseDirectory;
-            _depthShader = Rl.LoadShader(
-                System.IO.Path.Combine(baseDir, "shadow_depth.vs"),
-                System.IO.Path.Combine(baseDir, "shadow_depth.fs"));
+            string fsPath = System.IO.Path.Combine(baseDir, "shadow_depth.fs");
+            _depthShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);
             if (_depthShader.id == 0)
             {
                 throw new InvalidOperationException("Failed to load shadow_depth shader (shader.id == 0).");
             }
 
+            _depthInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_instanced.vs"), fsPath);
+            if (_depthInstancedShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load shadow_depth_instanced shader (shader.id == 0).");
+            }
+
+            _depthSkinningInstancedShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth_skinning_instanced.vs"), fsPath);
+            if (_depthSkinningInstancedShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load shadow_depth_skinning_instanced shader (shader.id == 0).");
+            }
+
+            ConfigureDepthShader(_depthShader, "shadow_depth");
+            ConfigureInstancedDepthShader(_depthInstancedShader, "shadow_depth_instanced");
+            _locDepthSkinningBoneMatrices = ConfigureSkinningInstancedDepthShader(
+                _depthSkinningInstancedShader,
+                "shadow_depth_skinning_instanced");
+
             _depthMaterial = Rl.LoadMaterialDefault();
             _depthMaterial.shader = _depthShader;
+            _depthInstancedMaterial = Rl.LoadMaterialDefault();
+            _depthInstancedMaterial.shader = _depthInstancedShader;
+            _depthSkinningInstancedMaterial = Rl.LoadMaterialDefault();
+            _depthSkinningInstancedMaterial.shader = _depthSkinningInstancedShader;
         }
 
         public Texture2D DepthTexture => _rt.texture;
 
         public bool HasFrame { get; private set; }
 
-        public RaylibMatrix LightViewProjection => Multiply(_lightProjection, _lightView);
+        public RaylibMatrix LightViewProjection => Multiply(_lightView, _lightProjection);
 
         public void BeginFrame(Vector3 lightDirectionToward, Vector3 sceneCenter, float sceneRadius)
         {
@@ -66,7 +92,7 @@ namespace Ludots.Raylib.Render
                 ? Vector3.UnitX
                 : Vector3.UnitY;
             float eyeDistance = MathF.Max(sceneRadius * 1.8f, 8f);
-            Vector3 eye = sceneCenter - (forward * eyeDistance);
+            Vector3 eye = sceneCenter + (forward * eyeDistance);
 
             _lightView = BuildLookAt(eye, sceneCenter, upHint);
 
@@ -95,8 +121,53 @@ namespace Ludots.Raylib.Render
             Rl.DrawMesh(mesh, _depthMaterial, transform);
         }
 
+        public void DrawMeshInstancedShadow(Mesh mesh, RaylibMatrix* transforms, int count)
+        {
+            EnsureFrameActive();
+            if (transforms == null)
+            {
+                throw new ArgumentNullException(nameof(transforms));
+            }
+
+            if (count <= 0)
+            {
+                return;
+            }
+
+            Rl.DrawMeshInstanced(mesh, _depthInstancedMaterial, transforms, count);
+        }
+
+        public void DrawSkinnedMeshInstancedShadow(Mesh mesh, RaylibMatrix* transforms, int count)
+        {
+            EnsureFrameActive();
+            if (transforms == null)
+            {
+                throw new ArgumentNullException(nameof(transforms));
+            }
+
+            if (count <= 0)
+            {
+                return;
+            }
+
+            if (mesh.boneMatrices == null || mesh.boneCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(DrawSkinnedMeshInstancedShadow)} requires mesh boneMatrices before drawing skinned depth.");
+            }
+
+            Rl.rlEnableShader(_depthSkinningInstancedShader.id);
+            Rl.rlSetUniformMatrices(_locDepthSkinningBoneMatrices, mesh.boneMatrices, mesh.boneCount);
+            Rl.DrawMeshInstanced(mesh, _depthSkinningInstancedMaterial, transforms, count);
+        }
+
         /// <summary>模型深度：换装深度材质经 DrawModelEx 原生路径绘制后还原。</summary>
         public void DrawModelShadow(Model model, Vector3 position, float rotationAngleY, Vector3 scale)
+        {
+            DrawModelShadow(model, position, Vector3.UnitY, rotationAngleY, scale);
+        }
+
+        public void DrawModelShadow(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngleDegrees, Vector3 scale)
         {
             EnsureFrameActive();
             Span<Shader> original = stackalloc Shader[model.materialCount];
@@ -106,7 +177,7 @@ namespace Ludots.Raylib.Render
                 model.materials[i].shader = _depthShader;
             }
 
-            Rl.DrawModelEx(model, position, Vector3.UnitY, rotationAngleY, scale, new Color(255, 255, 255, 255));
+            Rl.DrawModelEx(model, position, rotationAxis, rotationAngleDegrees, scale, new Color(255, 255, 255, 255));
 
             for (int i = 0; i < model.materialCount; i++)
             {
@@ -138,8 +209,14 @@ namespace Ludots.Raylib.Render
 
             EndFrame();
             _depthMaterial.shader = default;
+            _depthInstancedMaterial.shader = default;
+            _depthSkinningInstancedMaterial.shader = default;
             Rl.UnloadMaterial(_depthMaterial);
+            Rl.UnloadMaterial(_depthInstancedMaterial);
+            Rl.UnloadMaterial(_depthSkinningInstancedMaterial);
             Rl.UnloadShader(_depthShader);
+            Rl.UnloadShader(_depthInstancedShader);
+            Rl.UnloadShader(_depthSkinningInstancedShader);
             Rl.UnloadRenderTexture(_rt);
             _disposed = true;
         }
@@ -155,7 +232,69 @@ namespace Ludots.Raylib.Render
         private static void MultMatrix(ref RaylibMatrix matrix)
         {
             RaylibMatrix local = matrix;
-            Rl.rlMultMatrixf((float*)&local);
+            float* values = stackalloc float[16]
+            {
+                local.m0, local.m1, local.m2, local.m3,
+                local.m4, local.m5, local.m6, local.m7,
+                local.m8, local.m9, local.m10, local.m11,
+                local.m12, local.m13, local.m14, local.m15
+            };
+            Rl.rlMultMatrixf(values);
+        }
+
+        private static void ConfigureDepthShader(Shader shader, string name)
+        {
+            int locVertexPosition = Rl.GetShaderLocationAttrib(shader, "vertexPosition");
+            int locMvp = Rl.GetShaderLocation(shader, "mvp");
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            if (locVertexPosition < 0)
+            {
+                throw new InvalidOperationException($"{name} shader attrib 'vertexPosition' not found.");
+            }
+
+            if (locMvp < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'mvp' not found.");
+            }
+        }
+
+        private static void ConfigureInstancedDepthShader(Shader shader, string name)
+        {
+            ConfigureDepthShader(shader, name);
+            int locInstance = Rl.GetShaderLocationAttrib(shader, "instanceTransform");
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
+            if (locInstance < 0)
+            {
+                throw new InvalidOperationException($"{name} shader attrib 'instanceTransform' not found.");
+            }
+        }
+
+        private static int ConfigureSkinningInstancedDepthShader(Shader shader, string name)
+        {
+            ConfigureInstancedDepthShader(shader, name);
+            int locBoneIds = Rl.GetShaderLocationAttrib(shader, "vertexBoneIds");
+            int locBoneWeights = Rl.GetShaderLocationAttrib(shader, "vertexBoneWeights");
+            int locBoneMatrices = Rl.GetShaderLocation(shader, "boneMatrices");
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = locBoneMatrices;
+            if (locBoneIds < 0)
+            {
+                throw new InvalidOperationException($"{name} shader attrib 'vertexBoneIds' not found.");
+            }
+
+            if (locBoneWeights < 0)
+            {
+                throw new InvalidOperationException($"{name} shader attrib 'vertexBoneWeights' not found.");
+            }
+
+            if (locBoneMatrices < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'boneMatrices' not found.");
+            }
+
+            return locBoneMatrices;
         }
 
         private static RaylibMatrix BuildLookAt(Vector3 eye, Vector3 target, Vector3 up)
@@ -192,22 +331,22 @@ namespace Ludots.Raylib.Render
         {
             return new RaylibMatrix
             {
-                m0 = (a.m0 * b.m0) + (a.m4 * b.m1) + (a.m8 * b.m2) + (a.m12 * b.m3),
-                m1 = (a.m1 * b.m0) + (a.m5 * b.m1) + (a.m9 * b.m2) + (a.m13 * b.m3),
-                m2 = (a.m2 * b.m0) + (a.m6 * b.m1) + (a.m10 * b.m2) + (a.m14 * b.m3),
-                m3 = (a.m3 * b.m0) + (a.m7 * b.m1) + (a.m11 * b.m2) + (a.m15 * b.m3),
-                m4 = (a.m0 * b.m4) + (a.m4 * b.m5) + (a.m8 * b.m6) + (a.m12 * b.m7),
-                m5 = (a.m1 * b.m4) + (a.m5 * b.m5) + (a.m9 * b.m6) + (a.m13 * b.m7),
-                m6 = (a.m2 * b.m4) + (a.m6 * b.m5) + (a.m10 * b.m6) + (a.m14 * b.m7),
-                m7 = (a.m3 * b.m4) + (a.m7 * b.m5) + (a.m11 * b.m6) + (a.m15 * b.m7),
-                m8 = (a.m0 * b.m8) + (a.m4 * b.m9) + (a.m8 * b.m10) + (a.m12 * b.m11),
-                m9 = (a.m1 * b.m8) + (a.m5 * b.m9) + (a.m9 * b.m10) + (a.m13 * b.m11),
-                m10 = (a.m2 * b.m8) + (a.m6 * b.m9) + (a.m10 * b.m10) + (a.m14 * b.m11),
-                m11 = (a.m3 * b.m8) + (a.m7 * b.m9) + (a.m11 * b.m10) + (a.m15 * b.m11),
-                m12 = (a.m0 * b.m12) + (a.m4 * b.m13) + (a.m8 * b.m14) + (a.m12 * b.m15),
-                m13 = (a.m1 * b.m12) + (a.m5 * b.m13) + (a.m9 * b.m14) + (a.m13 * b.m15),
-                m14 = (a.m2 * b.m12) + (a.m6 * b.m13) + (a.m10 * b.m14) + (a.m14 * b.m15),
-                m15 = (a.m3 * b.m12) + (a.m7 * b.m13) + (a.m11 * b.m14) + (a.m15 * b.m15),
+                m0 = (a.m0 * b.m0) + (a.m1 * b.m4) + (a.m2 * b.m8) + (a.m3 * b.m12),
+                m1 = (a.m0 * b.m1) + (a.m1 * b.m5) + (a.m2 * b.m9) + (a.m3 * b.m13),
+                m2 = (a.m0 * b.m2) + (a.m1 * b.m6) + (a.m2 * b.m10) + (a.m3 * b.m14),
+                m3 = (a.m0 * b.m3) + (a.m1 * b.m7) + (a.m2 * b.m11) + (a.m3 * b.m15),
+                m4 = (a.m4 * b.m0) + (a.m5 * b.m4) + (a.m6 * b.m8) + (a.m7 * b.m12),
+                m5 = (a.m4 * b.m1) + (a.m5 * b.m5) + (a.m6 * b.m9) + (a.m7 * b.m13),
+                m6 = (a.m4 * b.m2) + (a.m5 * b.m6) + (a.m6 * b.m10) + (a.m7 * b.m14),
+                m7 = (a.m4 * b.m3) + (a.m5 * b.m7) + (a.m6 * b.m11) + (a.m7 * b.m15),
+                m8 = (a.m8 * b.m0) + (a.m9 * b.m4) + (a.m10 * b.m8) + (a.m11 * b.m12),
+                m9 = (a.m8 * b.m1) + (a.m9 * b.m5) + (a.m10 * b.m9) + (a.m11 * b.m13),
+                m10 = (a.m8 * b.m2) + (a.m9 * b.m6) + (a.m10 * b.m10) + (a.m11 * b.m14),
+                m11 = (a.m8 * b.m3) + (a.m9 * b.m7) + (a.m10 * b.m11) + (a.m11 * b.m15),
+                m12 = (a.m12 * b.m0) + (a.m13 * b.m4) + (a.m14 * b.m8) + (a.m15 * b.m12),
+                m13 = (a.m12 * b.m1) + (a.m13 * b.m5) + (a.m14 * b.m9) + (a.m15 * b.m13),
+                m14 = (a.m12 * b.m2) + (a.m13 * b.m6) + (a.m14 * b.m10) + (a.m15 * b.m14),
+                m15 = (a.m12 * b.m3) + (a.m13 * b.m7) + (a.m14 * b.m11) + (a.m15 * b.m15),
             };
         }
     }

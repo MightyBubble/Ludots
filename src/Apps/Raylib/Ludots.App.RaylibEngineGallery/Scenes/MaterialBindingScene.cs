@@ -19,8 +19,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly Material[] _boundMaterials = new Material[3];
         private readonly MaterialBlendMode[] _blendModes = new MaterialBlendMode[3];
         private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
 
         private RaylibMaterialHostBinder _binder = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _cube;
         private bool _disposed;
 
@@ -41,6 +43,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Load()
         {
             _litProps.Load();
+            _shadowMap = new RaylibDirectionalShadowMap();
             GalleryTextureFactory.WritePng("mat_checker.png", 128, 128, (x, y) =>
             {
                 bool lightCell = ((x / 16) + (y / 16)) % 2 == 0;
@@ -88,6 +91,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     throw new InvalidOperationException($"Gallery material '{_slots[i].Label}' has no host albedo binding.");
                 }
 
+                material.shader = _litProps.Lit.Shader;
                 _boundMaterials[i] = material;
                 _blendModes[i] = MaterialBlendModeResolver.Resolve(
                     _materials.TryGet(_slots[i].MaterialId, out MaterialAssetDescriptor descriptor)
@@ -100,10 +104,22 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         {
             GalleryCamera.EnforceDistance(ref camera, 26f);
             float spin = (float)totalTimeSeconds * 0.5f;
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
 
-            Rl.ClearBackground(new Color(16, 18, 26, 255));
-            _litProps.BeginFrame(camera.position);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, new Vector3(0f, 1.6f, -2.5f), 16f);
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                DrawBoundCubeShadow(new Vector3((i - 1) * 7.5f, 3.4f, 0f), spin);
+                DrawBoundCubeShadow(new Vector3((i - 1) * 7.5f, 0.9f, -6.5f), -spin * 0.7f);
+            }
+
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1200f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.05f);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             Rl.DrawGrid(20, 3f);
 
             for (int i = 0; i < _slots.Length; i++)
@@ -130,7 +146,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         private unsafe void DrawBoundCube(int slotIndex, Vector3 position, float yawRad, Color tint)
         {
-            Material material = _boundMaterials[slotIndex];
+            ref Material material = ref _boundMaterials[slotIndex];
             if (material.maps != null)
             {
                 material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].color = tint;
@@ -139,6 +155,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, yawRad) *
                 Matrix4x4.CreateTranslation(position));
+            _litProps.Lit.ApplyDrawUniforms(ToVector4(tint), roughness: 0.65f, metallic: slotIndex == 2 ? 0.25f : 0f);
+            _litProps.Lit.BindShadowToMaterial(ref material, _shadowMap);
+            _litProps.Lit.BindIblToMaterial(ref material);
 
             if (_blendModes[slotIndex] == MaterialBlendMode.AlphaBlend)
             {
@@ -149,6 +168,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             Rl.DrawMesh(_cube, material, transform);
+        }
+
+        private void DrawBoundCubeShadow(Vector3 position, float yawRad)
+        {
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, yawRad) *
+                Matrix4x4.CreateTranslation(position));
+            _shadowMap.DrawMeshShadow(_cube, transform);
+        }
+
+        private static Vector4 ToVector4(Color color)
+        {
+            return new Vector4(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
         }
 
         public void Dispose()
@@ -171,11 +203,16 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 }
 
                 _binder?.DetachOwnedMaps(ref _boundMaterials[i]);
+                _boundMaterials[i].maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_EMISSION].texture = default;
+                _boundMaterials[i].maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
+                _boundMaterials[i].maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
                 _boundMaterials[i].shader = default;
                 Rl.UnloadMaterial(_boundMaterials[i]);
             }
 
             _binder?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _litProps.Dispose();
             _binder = null!;
             _disposed = true;

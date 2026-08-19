@@ -84,16 +84,23 @@ namespace Ludots.Raylib.Render
         private RaylibFrameLighting? _frameLighting;
         private Vector3 _frameViewPos;
         private bool _hasFrameViewPos;
+        private RaylibDirectionalShadowMap? _frameShadow;
+        private float _frameShadowTexelWorld = 0.04f;
         private bool _skinningShaderReady;
         private RaylibSkyIbl? _skyIbl;
+        private RaylibLitModel? _immediateLit;
         private int _locSkyZenith;
         private int _locSkyGround;
         private int _locEnvSpecular;
+        private RaylibShadowSamplingLocations _instancingShadowLocs;
+        private RaylibShadowSamplingLocations _skinningShadowLocs;
+        private Mesh _billboardShadowMesh;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
+        private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _shadowInstanceBatches = new();
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
@@ -142,22 +149,35 @@ namespace Ludots.Raylib.Render
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
-        public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos)
+        public void ApplyFrameLighting(
+            RaylibFrameLighting lighting,
+            Vector3 viewPos,
+            RaylibDirectionalShadowMap? shadow = null,
+            float shadowTexelWorld = 0.04f)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
             _frameViewPos = viewPos;
             _hasFrameViewPos = true;
+            _frameShadow = shadow;
+            _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
                 lighting.Apply(_shader, in _instancingLightingLocs);
                 lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
                 ApplySkyIbl(lighting);
+                ApplyFrameShadow(_shader, in _instancingShadowLocs);
             }
 
             if (_skinningShaderReady)
             {
                 lighting.Apply(_skinningShader, in _skinningLightingLocs);
                 lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
+                ApplyFrameShadow(_skinningShader, in _skinningShadowLocs);
+            }
+
+            if (_immediateLit != null)
+            {
+                _immediateLit.BeginFrame(lighting, viewPos, shadow, shadowTexelWorld);
             }
         }
 
@@ -179,6 +199,16 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_shader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
+        }
+
+        private void ApplyFrameShadow(Shader shader, in RaylibShadowSamplingLocations locations)
+        {
+            locations.ApplyUniforms(shader, _frameShadow, _frameShadowTexelWorld);
+        }
+
+        private void BindFrameShadow(ref Material material)
+        {
+            RaylibShadowSampling.BindTexture(ref material, _frameShadow);
         }
 
         public void BindReceiverMeshProjector(IRaylibReceiverMeshProjector projector)
@@ -309,6 +339,78 @@ namespace Ludots.Raylib.Render
                 _vfxRenderer.EndFrame();
                 _frameVisualHeightmap = null;
             }
+        }
+
+        public void DrawShadow(
+            IPrimitiveDrawSnapshot draw,
+            RaylibDirectionalShadowMap shadow,
+            IRenderMeshAssets meshes,
+            Camera3D camera,
+            float scaleMul = 1f)
+        {
+            if (draw == null) throw new ArgumentNullException(nameof(draw));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            EnsureInitialized();
+            var span = draw.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible ||
+                    item.AssetKind == AssetKind.VFX ||
+                    item.AssetKind == AssetKind.Decal)
+                {
+                    continue;
+                }
+
+                DrawShadowLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    camera,
+                    meshes,
+                    shadow);
+            }
+        }
+
+        public void DrawShadow(
+            ISkinnedVisualBatchSnapshot skinnedBatch,
+            RaylibDirectionalShadowMap shadow,
+            IRenderMeshAssets meshes,
+            float scaleMul = 1f)
+        {
+            if (skinnedBatch == null) throw new ArgumentNullException(nameof(skinnedBatch));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            var span = skinnedBatch.GetSpan();
+            PrepareGpuSkinnedInstanceBatches();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (TrySubmitGpuSkinnedInstance(item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                DrawShadowLeafAsset(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    default,
+                    meshes,
+                    shadow);
+            }
+
+            FlushGpuSkinnedInstanceShadowBatches(shadow);
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
@@ -715,6 +817,68 @@ namespace Ludots.Raylib.Render
             LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
         }
 
+        private void FlushGpuSkinnedInstanceShadowBatches(RaylibDirectionalShadowMap shadow)
+        {
+            if (_activeGpuSkinnedInstanceBatches.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                if (batch.Count == 0)
+                {
+                    continue;
+                }
+
+                DrawGpuSkinnedInstanceBatchShadow(batch, shadow);
+            }
+        }
+
+        private void DrawGpuSkinnedInstanceBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+        {
+            Model model = batch.Model;
+            if (model.meshCount <= 0 || batch.Count <= 0)
+            {
+                return;
+            }
+
+            if (batch.Animations == null || batch.AnimCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned shadow batch meshAssetId={batch.Key.MeshAssetId} has no animations; silent static shadow is forbidden.");
+            }
+
+            int clipIndex = batch.Key.ClipIndex;
+            int frameIndex = batch.Key.FrameIndex;
+            if ((uint)clipIndex >= (uint)batch.AnimCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned shadow batch clipIndex={clipIndex} outside animCount={batch.AnimCount}.");
+            }
+
+            ModelAnimation anim = batch.Animations[clipIndex];
+            Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+                {
+                    Mesh mesh = model.meshes[meshIndex];
+                    if (mesh.vertexCount <= 0)
+                    {
+                        continue;
+                    }
+
+                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                    {
+                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                        shadow.DrawSkinnedMeshInstancedShadow(mesh, transforms + offset, chunkCount);
+                    }
+                }
+            }
+        }
+
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
@@ -836,6 +1000,41 @@ namespace Ludots.Raylib.Render
                 default:
                     throw new InvalidOperationException(
                         $"{nameof(RaylibPrimitiveRenderer)} refuses composite mesh type '{descriptor.Type}' for meshAssetId={meshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
+        private void DrawShadowLeafAsset(
+            int meshAssetId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Camera3D camera,
+            IRenderMeshAssets meshes,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow unknown meshAssetId={meshAssetId}.");
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    DrawPrimitiveShadow(descriptor.PrimitiveKind, position, rotation, scale, shadow);
+                    return;
+                case MeshAssetType.Model:
+                    DrawModelShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
+                    return;
+                case MeshAssetType.Billboard:
+                    DrawBillboardShadow(meshAssetId, in descriptor, position, scale, camera, shadow);
+                    return;
+                case MeshAssetType.ProceduralMesh:
+                    DrawProceduralMeshShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite shadow mesh type '{descriptor.Type}' for meshAssetId={meshAssetId}. Author Presenter children instead of Prefab.");
             }
         }
 
@@ -1090,15 +1289,37 @@ namespace Ludots.Raylib.Render
                 Matrix4x4.CreateScale(scale) *
                 Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
-            Color rayColor = ToRaylibColor(color);
+            EnsureImmediateLitFrame();
 
             if (kind == PrimitiveMeshKind.Cube)
             {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Cube, rayColor);
+                _immediateLit!.DrawMesh(_cubeMesh, transform, color);
             }
             else if (kind == PrimitiveMeshKind.Sphere)
             {
-                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Sphere, rayColor);
+                _immediateLit!.DrawMesh(_sphereMesh, transform, color);
+            }
+        }
+
+        private void DrawPrimitiveShadow(
+            PrimitiveMeshKind kind,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+
+            if (kind == PrimitiveMeshKind.Cube)
+            {
+                shadow.DrawMeshShadow(_cubeMesh, transform);
+            }
+            else if (kind == PrimitiveMeshKind.Sphere)
+            {
+                shadow.DrawMeshShadow(_sphereMesh, transform);
             }
         }
 
@@ -1373,6 +1594,24 @@ namespace Ludots.Raylib.Render
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
         }
 
+        private void DrawModelShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor desc,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!TryGetOrLoadModel(meshAssetId, desc, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(meshAssetId, stableId: 0, "model shadow draw");
+                return;
+            }
+
+            ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            shadow.DrawModelShadow(cached.Model, position, axis, angleDegrees, scale);
+        }
+
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
@@ -1450,6 +1689,38 @@ namespace Ludots.Raylib.Render
             }
         }
 
+        private void DrawBillboardShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor desc,
+            Vector3 position,
+            Vector3 scale,
+            Camera3D camera,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
+            {
+                throw new InvalidOperationException(
+                    $"{BillboardTextureRequiredError}: meshAssetId={meshAssetId}, sourceUris={FormatSourceUris(desc.SourceUris)}.");
+            }
+
+            float height = MathF.Max(scale.Y, 0.05f);
+            float width = height * cached.AspectRatio;
+            Vector3 center = new(position.X, position.Y + height * 0.5f, position.Z);
+            Vector3 toCamera = camera.position - center;
+            toCamera.Y = 0f;
+            if (toCamera.LengthSquared() <= 0.0001f)
+            {
+                toCamera = Vector3.UnitZ;
+            }
+
+            float yaw = MathF.Atan2(toCamera.X, toCamera.Z);
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(width, height, 1f) *
+                Matrix4x4.CreateRotationY(yaw) *
+                Matrix4x4.CreateTranslation(center));
+            shadow.DrawMeshShadow(_billboardShadowMesh, transform);
+        }
+
         private void DrawProceduralMesh(
             int meshAssetId,
             in MeshAssetDescriptor descriptor,
@@ -1489,10 +1760,42 @@ namespace Ludots.Raylib.Render
             Rl.rlEnableBackfaceCulling();
         }
 
+        private void DrawProceduralMeshShadow(
+            int meshAssetId,
+            in MeshAssetDescriptor descriptor,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            RaylibDirectionalShadowMap shadow)
+        {
+            if (!TryGetOrBuildProceduralMesh(meshAssetId, descriptor, out CachedProceduralMesh cached))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow procedural meshAssetId={meshAssetId} because it has no committed procedural payload.");
+            }
+
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(VisualMath.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+
+            if (cached.SubmeshMeshes == null || cached.SubmeshMeshes.Length == 0)
+            {
+                shadow.DrawMeshShadow(cached.Mesh, transform);
+                return;
+            }
+
+            for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
+            {
+                shadow.DrawMeshShadow(cached.SubmeshMeshes[i], transform);
+            }
+        }
+
         private Material ResolveProceduralDrawMaterial(int materialAssetId)
         {
             Material material = _proceduralMeshMaterial;
             ApplyHostMaterialMaps(ref material, materialAssetId, _proceduralMeshMaterial.shader);
+            BindFrameShadow(ref material);
             return material;
         }
 
@@ -2151,6 +2454,61 @@ namespace Ludots.Raylib.Render
             FlushInstancedBatches();
         }
 
+        public void DrawInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            IRenderMeshAssets meshes,
+            RaylibDirectionalShadowMap shadow,
+            float scaleMul = 1f)
+        {
+            if (bucket == null) throw new ArgumentNullException(nameof(bucket));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+            if (shadow == null) throw new ArgumentNullException(nameof(shadow));
+
+            EnsureInitialized();
+
+            List<PrimitiveDrawItem> items = bucket.Items;
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            PrimitiveDrawItem first = items[0];
+            if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot shadow unknown meshAssetId={first.MeshAssetId}.");
+            }
+
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                    DrawPrimitiveInstancedBucketShadow(bucket, items, descriptor.PrimitiveKind, scaleMul, shadow);
+                    return;
+                case MeshAssetType.Model:
+                    DrawModelInstancedBucketShadow(bucket, items, meshes, scaleMul, shadow);
+                    return;
+                case MeshAssetType.Billboard:
+                case MeshAssetType.ProceduralMesh:
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        PrimitiveDrawItem item = items[i];
+                        DrawShadowLeafAsset(
+                            item.MeshAssetId,
+                            item.Position,
+                            item.Rotation,
+                            item.Scale * scaleMul,
+                            default,
+                            meshes,
+                            shadow);
+                    }
+
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} refuses composite shadow mesh type '{descriptor.Type}' for meshAssetId={first.MeshAssetId}. Author Presenter children instead of Prefab.");
+            }
+        }
+
         private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, IRenderMeshAssets meshes, float scaleMul)
         {
             PrimitiveDrawItem first = items[0];
@@ -2196,6 +2554,88 @@ namespace Ludots.Raylib.Render
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
             return true;
+        }
+
+        private void DrawPrimitiveInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            PrimitiveMeshKind primitiveKind,
+            float scaleMul,
+            RaylibDirectionalShadowMap shadow)
+        {
+            Mesh mesh = primitiveKind == PrimitiveMeshKind.Cube ? _cubeMesh : _sphereMesh;
+            ModelInstanceBatch batch = BuildInstancedShadowBatch(bucket, items, scaleMul);
+            DrawMeshInstancedShadow(mesh, batch, shadow);
+        }
+
+        private void DrawModelInstancedBucketShadow(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            IRenderMeshAssets meshes,
+            float scaleMul,
+            RaylibDirectionalShadowMap shadow)
+        {
+            PrimitiveDrawItem first = items[0];
+            if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} shadow bucket meshAssetId={first.MeshAssetId} is not a model.");
+            }
+
+            if (!TryGetOrLoadModel(first.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                WarnMissingModelSkipped(first.MeshAssetId, first.StableId, "instanced static mesh shadow bucket");
+                return;
+            }
+
+            ModelInstanceBatch batch = BuildInstancedShadowBatch(bucket, items, scaleMul);
+            for (int meshIndex = 0; meshIndex < cached.Model.meshCount; meshIndex++)
+            {
+                Mesh mesh = cached.Model.meshes[meshIndex];
+                DrawMeshInstancedShadow(mesh, batch, shadow);
+            }
+        }
+
+        private ModelInstanceBatch BuildInstancedShadowBatch(
+            RaylibIsmRenderBridge.Bucket bucket,
+            List<PrimitiveDrawItem> items,
+            float scaleMul)
+        {
+            const uint shadowColorKey = 0;
+            bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            if (!_shadowInstanceBatches.TryGetValue(bucket, out ModelInstanceBatch batch) ||
+                batch.ColorKey != shadowColorKey)
+            {
+                batch = new ModelInstanceBatch(shadowColorKey);
+            }
+
+            if (!canCacheStaticMatrices ||
+                batch.Revision != bucket.Revision ||
+                batch.Count != items.Count)
+            {
+                RebuildModelInstanceBatch(ref batch, items, scaleMul, bucket.Revision);
+                _shadowInstanceBatches[bucket] = batch;
+            }
+
+            return batch;
+        }
+
+        private void DrawMeshInstancedShadow(Mesh mesh, ModelInstanceBatch batch, RaylibDirectionalShadowMap shadow)
+        {
+            if (mesh.vertexCount <= 0 || batch.Count <= 0)
+            {
+                return;
+            }
+
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                {
+                    int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
+                    shadow.DrawMeshInstancedShadow(mesh, transforms + offset, chunkCount);
+                }
+            }
         }
 
         private ModelInstanceBatch GetStaticModelInstanceBatch(RaylibIsmRenderBridge.Bucket bucket, uint colorKey)
@@ -2326,6 +2766,7 @@ namespace Ludots.Raylib.Render
 
                     material.shader = _skinningShader;
                     ApplyHostMaterialMaps(ref material, materialId, _skinningShader);
+                    BindFrameShadow(ref material);
                     ApplyGpuSkinnedMaterialTint(ref material, colorKey);
 
                     if (mesh.boneMatrices != null && mesh.boneCount > 0)
@@ -2395,6 +2836,7 @@ namespace Ludots.Raylib.Render
             }
 
             ApplyHostMaterialMaps(ref material, materialId, _shader);
+            BindFrameShadow(ref material);
             return true;
         }
 
@@ -2563,6 +3005,7 @@ namespace Ludots.Raylib.Render
                 SetTintUniform(b.ColorKey);
                 SetColDiffuseUniform(Vector4.One);
                 ApplyHostMaterialMaps(ref _material, b.MaterialId, _shader);
+                BindFrameShadow(ref _material);
 
                 fixed (RaylibMatrix* p = b.Transforms)
                 {
@@ -2626,6 +3069,8 @@ namespace Ludots.Raylib.Render
             }
             Rl.UploadMesh(ref _vfxBillboardMesh, false);
 
+            _billboardShadowMesh = CreateBillboardShadowMesh();
+
             RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
             _vfxMaterial = Rl.LoadMaterialDefault();
             _vfxMaterial.shader = defaultVfx.Shader;
@@ -2656,6 +3101,10 @@ namespace Ludots.Raylib.Render
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
             int locVertexNormal = Rl.GetShaderLocationAttrib(_shader, "vertexNormal");
             _instancingLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "instancing");
+            _instancingShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
+                _shader,
+                "instancing",
+                RaylibShadowSampling.ShaderTextureSlot);
 
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
@@ -2677,7 +3126,7 @@ namespace Ludots.Raylib.Render
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = _instancingShadowLocs.ShadowMap;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
             // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
             // DrawMeshInstanced 对该槽以 GL_TEXTURE_CUBE_MAP 绑定并回填 uniform=槽位号），LUT 走 BRDF 槽。
@@ -2706,6 +3155,7 @@ namespace Ludots.Raylib.Render
             ApplyPbrUniforms(_shader, materialId: 0, hostBound: false);
 
             _initialized = true;
+            ApplyFrameShadow(_shader, in _instancingShadowLocs);
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_shader, in _instancingLightingLocs);
@@ -2714,6 +3164,29 @@ namespace Ludots.Raylib.Render
                     _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
                 }
             }
+        }
+
+        private static Mesh CreateBillboardShadowMesh()
+        {
+            float[] vertices =
+            {
+                -0.5f, -0.5f, 0f,
+                 0.5f, -0.5f, 0f,
+                 0.5f,  0.5f, 0f,
+                -0.5f, -0.5f, 0f,
+                 0.5f,  0.5f, 0f,
+                -0.5f,  0.5f, 0f,
+            };
+
+            Mesh mesh = new()
+            {
+                vertexCount = 6,
+                triangleCount = 2,
+            };
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertices.Length);
+            vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
         }
 
         private void EnsureSkinningShaderInitialized()
@@ -2757,6 +3230,10 @@ namespace Ludots.Raylib.Render
             int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
             int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
             _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
+            _skinningShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
+                _skinningShader,
+                "skinning_instanced",
+                RaylibShadowSampling.ShaderTextureSlot);
 
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
@@ -2771,6 +3248,7 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = _skinningShadowLocs.ShadowMap;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = _locBoneMatrices;
 
             if (_locBoneMatrices < 0) throw new InvalidOperationException("Skinning shader uniform 'boneMatrices' not found.");
@@ -2793,6 +3271,7 @@ namespace Ludots.Raylib.Render
             ApplyPbrUniforms(_skinningShader, materialId: 0, hostBound: false);
 
             _skinningShaderReady = true;
+            ApplyFrameShadow(_skinningShader, in _skinningShadowLocs);
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
@@ -2820,6 +3299,7 @@ namespace Ludots.Raylib.Render
             _frameLighting.Apply(_shader, in _instancingLightingLocs);
             _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
             ApplySkyIbl(_frameLighting);
+            ApplyFrameShadow(_shader, in _instancingShadowLocs);
         }
 
         private void EnsureFrameLightingAppliedForSkinning()
@@ -2839,6 +3319,25 @@ namespace Ludots.Raylib.Render
             EnsureSkinningShaderInitialized();
             _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
             _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+            ApplyFrameShadow(_skinningShader, in _skinningShadowLocs);
+        }
+
+        private void EnsureImmediateLitFrame()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit immediate primitives require {nameof(ApplyFrameLighting)} before draw.");
+            }
+
+            if (!_hasFrameViewPos)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit immediate primitives require camera view position before draw.");
+            }
+
+            _immediateLit ??= new RaylibLitModel();
+            _immediateLit.BeginFrame(_frameLighting, _frameViewPos, _frameShadow, _frameShadowTexelWorld);
         }
 
         private static void RequireMeshNormals(in Mesh mesh, string lane)
@@ -2914,6 +3413,7 @@ namespace Ludots.Raylib.Render
             if (_proceduralMeshMaterialLoaded)
             {
                 _materialHostBinder?.DetachOwnedMaps(ref _proceduralMeshMaterial);
+                RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
@@ -2940,16 +3440,20 @@ namespace Ludots.Raylib.Render
             _materialHostBinder?.Dispose();
             _skyIbl?.Dispose();
             _skyIbl = null;
+            _immediateLit?.Dispose();
+            _immediateLit = null;
 
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
+            if (_billboardShadowMesh.vertexCount > 0) Rl.UnloadMesh(_billboardShadowMesh);
             _material.shader = default;
             // UnloadMaterial 会删除材质槽上的全部纹理；IBL 纹理归 RaylibSkyIbl 所有，先清槽防双删。
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP].texture = default;
             _material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF].texture = default;
+            RaylibShadowSampling.ClearTexture(ref _material);
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
             if (_vegetationCutoutShaderReady)

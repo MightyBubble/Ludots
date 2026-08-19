@@ -81,7 +81,7 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
 
 float UnpackDepth(vec4 packed)
 {
-    return dot(packed, vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0));
+    return dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
 }
 
 float SampleShadow(vec3 worldPos, vec3 N)
@@ -102,7 +102,7 @@ float SampleShadow(vec3 worldPos, vec3 N)
 
     float receiverDepth = proj.z;
     float texel = 1.0 / 2048.0;
-    vec2 shadowUv = vec2(proj.x, 1.0 - proj.y);
+    vec2 shadowUv = proj.xy;
     float lit = 0.0;
     for (int y = -1; y <= 1; y++)
     {

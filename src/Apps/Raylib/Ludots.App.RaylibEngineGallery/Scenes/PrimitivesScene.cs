@@ -16,7 +16,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
 
         private RaylibPrimitiveRenderer _primitives = null!;
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "primitives";
@@ -28,6 +30,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _meshes.Register("gallery.cube", MeshAssetDescriptor.Primitive(101, PrimitiveMeshKind.Cube));
             _meshes.Register("gallery.sphere", MeshAssetDescriptor.Primitive(102, PrimitiveMeshKind.Sphere));
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.55f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _primitives = new RaylibPrimitiveRenderer(
                 RaylibPrimitiveRenderMode.Immediate,
                 vfs: null,
@@ -41,21 +44,36 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             float t = (float)totalTimeSeconds;
 
             _lighting.SetDayPhase(0.55f);
-
-            Rl.ClearBackground(new Color(13, 15, 22, 255));
-            Rl.BeginMode3D(camera);
-            Rl.DrawGrid(36, 3f);
-
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
             _snapshot.BeginFrame();
-
+            AppendGround();
             AppendColorField(t);
             AppendPrototypeSquad(t);
 
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 2f, -4f), 42f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1200f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            Rl.DrawGrid(36, 3f);
+
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
             GalleryFont.Draw($"primitive visuals {_primitives.LastMeshVisualCount}", 12, 28, 20, GalleryColors.RayWhite);
+        }
+
+        private void AppendGround()
+        {
+            _snapshot.Add(GalleryItems.Mesh(
+                101,
+                999000,
+                new Vector3(0f, -0.10f, -4f),
+                new Vector3(72f, 0.20f, 58f),
+                GalleryColors.ShadowReceiverGray));
         }
 
         private void AppendColorField(float t)
@@ -148,6 +166,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _disposed = true;
         }
     }

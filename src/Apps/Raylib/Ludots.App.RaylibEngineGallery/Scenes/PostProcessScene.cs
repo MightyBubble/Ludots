@@ -9,8 +9,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     public sealed class PostProcessScene : IEngineScene
     {
         private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibPostProcessRenderer _postProcess = new();
         private RaylibPostProcessConfig _baseConfig = RaylibPostProcessConfig.CreateDefault();
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "postprocess";
@@ -21,6 +23,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         {
             _litProps.Load();
             _baseConfig = RaylibPostProcessConfig.CreateDefault();
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -37,11 +40,32 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 VignetteStrength = 0.05f + (0.38f * (0.5f + (0.5f * MathF.Sin(t * 1.1f + 0.6f)))),
             };
 
-            _postProcess.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), new Color(16, 20, 30, 255), config);
-            _litProps.BeginFrame(camera.position);
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 30f);
+            DrawScenePropShadows(t);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1000f);
+            _postProcess.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), skyConfig.Skybox.ClearColor, config);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.06f);
 
             Rl.BeginMode3D(camera);
-            Rl.DrawGrid(24, 3f);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            DrawSceneProps(t);
+            Rl.EndMode3D();
+
+            _postProcess.EndWorldFrame(totalTimeSeconds, config);
+            GalleryFont.Draw(
+                $"exposure {config.Exposure:0.00}  contrast {config.Contrast:0.00}  saturation {config.Saturation:0.00}  vignette {config.VignetteStrength:0.00}",
+                12,
+                28,
+                20,
+                GalleryColors.RayWhite);
+        }
+
+        private void DrawSceneProps(float t)
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(42f, 0.16f, 42f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
             for (int i = 0; i < 8; i++)
             {
                 float angle = (i * MathF.Tau / 8f) + (t * 0.3f);
@@ -60,15 +84,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _litProps.DrawCube(new Vector3(0f, 0.4f, 0f), new Vector3(5f, 0.8f, 5f), new Vector4(0.27f, 0.30f, 0.36f, 1f));
-            Rl.EndMode3D();
+        }
 
-            _postProcess.EndWorldFrame(totalTimeSeconds, config);
-            GalleryFont.Draw(
-                $"exposure {config.Exposure:0.00}  contrast {config.Contrast:0.00}  saturation {config.Saturation:0.00}  vignette {config.VignetteStrength:0.00}",
-                12,
-                28,
-                20,
-                GalleryColors.RayWhite);
+        private void DrawScenePropShadows(float t)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = (i * MathF.Tau / 8f) + (t * 0.3f);
+                var position = new Vector3(MathF.Cos(angle) * 12f, 1.6f + (i * 0.22f), MathF.Sin(angle) * 12f);
+                _litProps.DrawCubeShadow(_shadowMap, position, new Vector3(2.6f, 2.6f + (i * 0.2f), 2.6f));
+                _litProps.DrawSphereShadow(_shadowMap, position + new Vector3(0f, 3.2f, 0f), 0.8f);
+            }
+
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(0f, 0.4f, 0f), new Vector3(5f, 0.8f, 5f));
         }
 
         public void Dispose()
@@ -79,8 +107,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _postProcess?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _litProps.Dispose();
             _postProcess = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

@@ -12,8 +12,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly Queue<float> _frameMs = new();
         private readonly float[] _cubePhases = new float[8];
         private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
 
         private RaylibSkiaRenderer _skia = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private SkiaRasterLayer _panelLayer = new();
         private SKTypeface? _typeface;
         private bool _disposed;
@@ -25,6 +27,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Load()
         {
             _litProps.Load();
+            _shadowMap = new RaylibDirectionalShadowMap();
             _skia = new RaylibSkiaRenderer(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _panelLayer.Resize(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _typeface = SKTypeface.FromFamilyName("Consolas", SKFontStyle.Normal) ?? SKTypeface.Default;
@@ -38,12 +41,28 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         {
             GalleryCamera.EnforceDistance(ref camera, 36f);
             TrackFrameMs(deltaSeconds);
-
-            Rl.ClearBackground(new Color(10, 12, 20, 255));
-            _litProps.BeginFrame(camera.position);
-            Rl.BeginMode3D(camera);
-            Rl.DrawGrid(24, 3f);
             float t = (float)totalTimeSeconds;
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
+
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 30f);
+            DrawScenePropShadows(t);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1000f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.06f);
+            Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            DrawSceneProps(t);
+            Rl.EndMode3D();
+
+            DrawHud(deltaSeconds, t);
+            _skia.RenderToScreen();
+        }
+
+        private void DrawSceneProps(float t)
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(42f, 0.16f, 42f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
             for (int i = 0; i < _cubePhases.Length; i++)
             {
                 float angle = (i * MathF.Tau / _cubePhases.Length) + (t * 0.4f);
@@ -58,10 +77,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _litProps.DrawSphere(Vector3.Zero, 2.6f, new Vector4(0.92f, 0.75f, 0.35f, 1f));
-            Rl.EndMode3D();
+        }
 
-            DrawHud(deltaSeconds, t);
-            _skia.RenderToScreen();
+        private void DrawScenePropShadows(float t)
+        {
+            for (int i = 0; i < _cubePhases.Length; i++)
+            {
+                float angle = (i * MathF.Tau / _cubePhases.Length) + (t * 0.4f);
+                float bob = MathF.Sin((t * 1.6f) + _cubePhases[i]);
+                var position = new Vector3(MathF.Cos(angle) * 12f, 1.8f + (bob * 1.1f), MathF.Sin(angle) * 12f);
+                _litProps.DrawCubeShadow(_shadowMap, position, new Vector3(2.4f));
+            }
+
+            _litProps.DrawSphereShadow(_shadowMap, Vector3.Zero, 2.6f);
         }
 
         private void TrackFrameMs(float deltaSeconds)
@@ -133,8 +161,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _panelLayer?.Dispose();
             _skia?.Dispose();
             _typeface?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _litProps.Dispose();
             _skia = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

@@ -9,14 +9,17 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     /// 光照全效演示：粗糙度 × 金属度梯度球阵（GGX 单灯解析 BRDF）、昼夜环绕太阳、
     /// split-sum 天空 IBL（预滤波环境立方图随相位重烘）映照金属带、shadow map 深度阴影接收。
     /// 天空太阳圆盘、GGX 主光、阴影投射共用同一 SunDirectionToward——看到的光斑即灯光即阴影源。
-    /// 相位弧线限定白昼区间（0.38–0.66，仰角 47°→90°→32°），保证阴影始终可辨。
+    /// 相位弧线限定在相机侧方的白昼区间（0.58–0.68），保证首帧即可看清落地阴影。
     /// </summary>
     public sealed class LightingScene : IEngineScene
     {
         private const int RoughnessSteps = 7;
         private const int MetallicLanes = 3;
-        private const float DayPhaseBase = 0.38f;
-        private const float DayPhaseSpan = 0.28f;
+        private const float SphereRadius = 1.25f;
+        private const float PodiumTopY = 0.25f;
+        private const float SphereCenterY = PodiumTopY + SphereRadius;
+        private const float DayPhaseBase = 0.58f;
+        private const float DayPhaseSpan = 0.10f;
 
         private readonly GalleryLitProps _litProps = new(dayPhase01: DayPhaseBase);
         private readonly RaylibSkyboxRenderer _skybox = new();
@@ -54,7 +57,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 {
                     Vector3 center = new(
                         -((RoughnessSteps - 1) * 1.7f) + (r * 3.4f),
-                        0.85f,
+                        SphereCenterY,
                         -((MetallicLanes - 1) * 1.7f) + (m * 3.4f));
                     Matrix4x4 rowMajor = Matrix4x4.CreateScale(2.5f) * Matrix4x4.CreateTranslation(center);
                     _shadowMap.DrawMeshShadow(_shadowMesh, RaylibMatrix.FromSystemNumerics(rowMajor));
@@ -101,12 +104,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     float roughness = (r + 0.5f) / RoughnessSteps;
                     Vector3 center = new(
                         -((RoughnessSteps - 1) * 1.7f) + (r * 3.4f),
-                        0.85f,
+                        SphereCenterY,
                         -((MetallicLanes - 1) * 1.7f) + (m * 3.4f));
                     Vector4 tint = metallic > 0.5f
                         ? new Vector4(0.92f, 0.74f, 0.38f, 1f)
                         : new Vector4(0.62f, 0.66f, 0.72f, 1f);
-                    _litProps.DrawSphere(center, 1.25f, tint, roughness, metallic);
+                    _litProps.DrawSphere(center, SphereRadius, tint, roughness, metallic);
                 }
             }
 

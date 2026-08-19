@@ -58,7 +58,7 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
-            _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            _cubeMesh = Rl.GenMeshSphere(0.5f, 64, 32);
 
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "skybox.vs"), Path.Combine(baseDir, "skybox.fs"));

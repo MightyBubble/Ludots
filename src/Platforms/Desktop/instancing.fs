@@ -26,6 +26,10 @@ uniform vec3 uSkyGround;
 uniform samplerCube uPrefilteredEnv;
 uniform sampler2D uBrdfLut;
 uniform float uEnvSpecular;
+uniform sampler2D uShadowMap;
+uniform mat4 uLightSpaceMatrix;
+uniform float uShadowEnabled;
+uniform float uShadowTexelWorld;
 
 const float PI = 3.14159265359;
 const float MIN_ROUGHNESS = 0.04;
@@ -79,6 +83,43 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+float UnpackDepth(vec4 packed)
+{
+    return dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
+}
+
+float SampleShadow(vec3 worldPos, vec3 N)
+{
+    if (uShadowEnabled < 0.5)
+    {
+        return 1.0;
+    }
+
+    vec3 offsetPos = worldPos + N * uShadowTexelWorld;
+    vec4 lightSpace = uLightSpaceMatrix * vec4(offsetPos, 1.0);
+    vec3 proj = lightSpace.xyz / max(lightSpace.w, 1e-6);
+    proj = proj * 0.5 + 0.5;
+    if (proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0 || proj.z > 1.0)
+    {
+        return 1.0;
+    }
+
+    float receiverDepth = proj.z;
+    float texel = 1.0 / 2048.0;
+    vec2 shadowUv = proj.xy;
+    float lit = 0.0;
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float stored = UnpackDepth(texture(uShadowMap, shadowUv + vec2(x, y) * texel));
+            lit += receiverDepth <= stored + 0.004 ? 1.0 : 0.0;
+        }
+    }
+
+    return lit / 9.0;
+}
+
 void main()
 {
     vec4 albedoSample = texture(texture0, fragTexCoord) * colDiffuse * tint;
@@ -125,9 +166,11 @@ void main()
     vec3 kS = F;
     vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
     vec3 radiance = uLightColor * uLightIntensity;
-    vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL;
+    float shadow = SampleShadow(fragPos, N);
+    vec3 lit = ambient + (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 
     float fogAmount = DistanceFogAmount(length(fragPos - uViewPos));
     vec3 fogged = mix(lit, uFogColor, fogAmount);
+
     finalColor = vec4(clamp(fogged, 0.0, 1.0), albedoSample.a);
 }

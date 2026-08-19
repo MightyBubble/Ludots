@@ -12,6 +12,7 @@ namespace Ludots.App.RaylibEngineGallery
     {
         public static readonly Color Black = new(0, 0, 0, 255);
         public static readonly Color RayWhite = new(245, 245, 245, 255);
+        public static readonly Vector4 ShadowReceiverGray = new(0.62f, 0.64f, 0.66f, 1f);
     }
 
     /// <summary>窗口标志位的 vendored 命名形态：绑定只暴露 SetConfigFlags(uint)。</summary>

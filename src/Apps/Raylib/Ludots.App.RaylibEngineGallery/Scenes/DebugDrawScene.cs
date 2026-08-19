@@ -12,6 +12,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly DebugDrawCommandBuffer _commands = new();
         private readonly RaylibDebugDrawRenderer _renderer = new() { CircleSegments = 40, PlaneY = 0.02f };
         private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
+        private RaylibDirectionalShadowMap _shadowMap = null!;
 
         public string Id => "debug_draw";
         public string Title => "调试绘制";
@@ -20,20 +22,26 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         public void Load()
         {
             _litProps.Load();
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
             GalleryCamera.EnforceDistance(ref camera, 52f);
             float t = (float)totalTimeSeconds;
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
 
-            Rl.ClearBackground(new Color(12, 14, 20, 255));
-            _litProps.BeginFrame(camera.position);
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 38f);
+            DrawPropShadows();
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1200f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             Rl.BeginMode3D(camera);
 
-            Rl.DrawGrid(30, 3f);
-            _litProps.DrawCube(new Vector3(-9f, 1.1f, 4f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.26f, 0.36f, 0.50f, 1f));
-            _litProps.DrawCube(new Vector3(10f, 1.1f, -5f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.50f, 0.33f, 0.26f, 1f));
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            DrawProps();
 
             _commands.Clear();
             FillGridLines();
@@ -48,6 +56,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 28,
                 20,
                 GalleryColors.RayWhite);
+        }
+
+        private void DrawProps()
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(66f, 0.16f, 66f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
+            _litProps.DrawCube(new Vector3(-9f, 1.1f, 4f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.26f, 0.36f, 0.50f, 1f));
+            _litProps.DrawCube(new Vector3(10f, 1.1f, -5f), new Vector3(2.6f, 2.2f, 2.6f), new Vector4(0.50f, 0.33f, 0.26f, 1f));
+        }
+
+        private void DrawPropShadows()
+        {
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(-9f, 1.1f, 4f), new Vector3(2.6f, 2.2f, 2.6f));
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(10f, 1.1f, -5f), new Vector3(2.6f, 2.2f, 2.6f));
         }
 
         private void FillGridLines()
@@ -176,6 +197,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Dispose()
         {
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _litProps.Dispose();
         }
     }

@@ -27,6 +27,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private const int GroundAssetId = 9002;
         private const int DesiredPhaseBuckets = 16;
         private const float MannequinUniformScale = 1.2f;
+        private const float ShowcaseDayPhase01 = 0.38f;
         private const float GoldenRatioFract = 0.61803398875f;
         private const string WalkClipNeedle = "Walking";
         private const string WalkClipReject = "retarget";
@@ -34,9 +35,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryMeshAssets _meshes = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
         private readonly GallerySkinnedBatch _skinnedBatch = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private readonly Vector4[] _ringParams = new Vector4[TargetInstances];
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private int _walkClipIndex = -1;
         private int _walkClipFrameCount;
         private int _phaseBucketCount;
@@ -54,12 +57,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _meshes.Register(
                 "gallery.crowd.ground",
                 MeshAssetDescriptor.Primitive(GroundAssetId, PrimitiveMeshKind.Cube));
-            _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.58f);
+            _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: ShowcaseDayPhase01);
             _primitives = new RaylibPrimitiveRenderer(
                 RaylibPrimitiveRenderMode.Instanced,
                 vfs: GalleryAssetPaths.Instance,
                 materials: null,
                 channelRegistrar: GalleryAnimationChannels.Register);
+            _shadowMap = new RaylibDirectionalShadowMap();
 
             // 只探测 clip 元数据（名字/帧数）供相位分桶；绘制模型由渲染器内置
             // RaylibGpuSkinnedModelCache 独立装载，避免场景侧重复驻留 GPU 网格。
@@ -88,17 +92,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         {
             camera.target.Y = 1.4f;
             camera.position = camera.target + new Vector3(0.62f, 0.46f, 0.62f);
-            GalleryCamera.EnforceDistance(ref camera, 26f);
+            GalleryCamera.EnforceDistance(ref camera, 32f);
             float t = (float)totalTimeSeconds;
             // raylib 以 ~60fps 采样 glTF clip（62 帧 / 1.042s），按帧数反推原始节奏播放。
             float walkCyclesPerSecond = _walkClipFrameCount / 60f;
 
-            _lighting.SetDayPhase(0.5f);
-
-            Rl.ClearBackground(new Color(12, 14, 20, 255));
-            Rl.BeginMode3D(camera);
-            Rl.DrawGrid(60, 6f);
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
+            _lighting.SetDayPhase(ShowcaseDayPhase01);
 
             _snapshot.BeginFrame();
             _skinnedBatch.BeginFrame();
@@ -107,7 +106,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 900000,
                 new Vector3(0f, -0.17f, 0f),
                 new Vector3(86f, 0.3f, 86f),
-                new Vector4(0.42f, 0.44f, 0.52f, 1f)));
+                new Vector4(0.74f, 0.75f, 0.66f, 1f)));
             for (int i = 0; i < TargetInstances; i++)
             {
                 Vector4 p = _ringParams[i];
@@ -133,13 +132,24 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     Position = new Vector3(MathF.Cos(angle) * p.Y, 0f, MathF.Sin(angle) * p.Y),
                     Rotation = Quaternion.CreateFromYawPitchRoll(-angle, 0f, 0f),
                     Scale = new Vector3(MannequinUniformScale),
-                    Color = new Vector4(0.95f - (depth * 0.25f), 0.92f - (depth * 0.15f), 1.0f - (depth * 0.35f), 1f),
+                    Color = new Vector4(1.0f - (depth * 0.06f), 0.98f - (depth * 0.04f), 0.96f - (depth * 0.08f), 1f),
                     RenderPath = VisualRenderPath.GpuSkinnedInstance,
                     AssetKind = AssetKind.SkinnedMesh,
                     Visibility = VisualVisibility.Visible,
                     Animator = animator,
                 });
             }
+
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 1f, 0f), 52f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _primitives.DrawShadow(_skinnedBatch, _shadowMap, _meshes);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1400f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.12f);
 
             // snapshot 形参保持非空以进入 persistent-lanes 调用形态（RaylibFrameRenderer 同款），
             // 其中蒙皮批次先于动态 lane 绘制；图元快照仅承载地面盘，人群全部走蒙皮车道。
@@ -169,6 +179,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
+            _shadowMap = null!;
             _disposed = true;
         }
 
