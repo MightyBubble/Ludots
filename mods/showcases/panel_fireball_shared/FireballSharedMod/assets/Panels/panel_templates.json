@@ -7,7 +7,11 @@
       { "name": "mana", "kind": "Float", "realtime": true,
         "source": { "sourceKind": "SingleAttribute", "attributeId": "Mana" } },
       { "name": "attack", "kind": "Float", "realtime": true,
-        "source": { "sourceKind": "SingleAttribute", "attributeId": "Attack" } }
+        "source": { "sourceKind": "SingleAttribute", "attributeId": "Attack" } },
+      { "name": "healthBase", "kind": "Float",
+        "source": { "sourceKind": "AttributeBase", "attributeId": "Health" } },
+      { "name": "manaBase", "kind": "Float",
+        "source": { "sourceKind": "AttributeBase", "attributeId": "Mana" } }
     ],
     "binds": [
       { "control": "lbl.health", "variable": "health" },

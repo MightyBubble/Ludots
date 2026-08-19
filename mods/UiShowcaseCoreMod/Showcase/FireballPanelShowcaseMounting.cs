@@ -89,6 +89,8 @@ public static class FireballPanelShowcaseMounting
         float hp = values.Get("health");
         float mp = values.Get("mana");
         float atk = values.Get("attack");
+        float hpBase = values.Get("healthBase");
+        float mpBase = values.Get("manaBase");
         var accent = new UiColor(accentR, accentG, accentB);
         var dim = new UiColor(136, 136, 136);
 
@@ -101,8 +103,8 @@ public static class FireballPanelShowcaseMounting
             .Gap(4)
             .Children(
                 new UiElementBuilder(UiNodeKind.Text).Text("FIREBALL STATUS").FontSize(16).Bold().Color(new UiColor(255, 102, 0)),
-                new UiElementBuilder(UiNodeKind.Text).Text($"HP  {hp:F0} / 100").FontSize(14).Color(new UiColor(255, 68, 68)),
-                new UiElementBuilder(UiNodeKind.Text).Text($"MP  {mp:F0} / 80").FontSize(14).Color(new UiColor(68, 136, 255)),
+                new UiElementBuilder(UiNodeKind.Text).Text($"HP  {hp:F0} / {hpBase:F0}").FontSize(14).Color(new UiColor(255, 68, 68)),
+                new UiElementBuilder(UiNodeKind.Text).Text($"MP  {mp:F0} / {mpBase:F0}").FontSize(14).Color(new UiColor(68, 136, 255)),
                 new UiElementBuilder(UiNodeKind.Text).Text($"ATK {atk:F0}").FontSize(14).Color(new UiColor(255, 170, 0)),
                 new UiElementBuilder(UiNodeKind.Text).Text($"[{skinLabel}] Press Q").FontSize(11).Color(dim));
     }
