@@ -21,7 +21,7 @@ namespace Ludots.Tests.Gas.Production;
 /// <summary>
 /// Night raid flagship acceptance: the whole level flow (raid start on region entry,
 /// wave advance on alive-count clear with a two-wave wait, phase flip on boss death,
-/// victory panel on PhaseChanged) is authored as map JSON + one MapTriggerGraph.
+/// victory panel on PhaseChanged) is authored as map JSON + one TriggerGraph.
 /// The showcase assembly contributes zero level-flow code, so this test drives the
 /// world directly (hero position, test-side kills) and asserts on engine truth only.
 /// </summary>
@@ -108,7 +108,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             Assert.That(phaseProbe.Observed, Is.True, "Writing the phase variable must fire the PhaseChanged map event.");
             Assert.That(phaseProbe.LastPhase, Is.EqualTo(2));
             Assert.That(world.IsAlive(gate), Is.True,
-                "No despawn verb is authorable in MapTrigger graphs; the gate stays and the phase var + victory panel are the gate-open truth.");
+                "No despawn verb is authorable in TriggerGraph graphs; the gate stays and the phase var + victory panel are the gate-open truth.");
         });
 
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)

@@ -4,7 +4,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     /// <summary>
     /// ControlFlow authoring sugar SSOT. Kind gates live in <see cref="GraphControlFlowCompiler"/>
-    /// (Wait/While/SwitchInt/Until are Script/MapTrigger; BranchBool also allows Effect).
+    /// (Wait/While/SwitchInt/Until are Script/TriggerGraph; BranchBool also allows Effect).
     /// These names are compile-time sugar (not <see cref="GraphNodeOp"/> values);
     /// they lower in <see cref="GraphControlFlowCompiler"/> to Jump / Yield / compares.
     /// </summary>

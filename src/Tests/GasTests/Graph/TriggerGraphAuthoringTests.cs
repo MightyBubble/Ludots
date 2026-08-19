@@ -14,15 +14,15 @@ namespace Ludots.Tests.Gas.Graph
     [TestFixture]
     [NonParallelizable]
     [Category("ci-gate")]
-    public sealed class MapTriggerGraphAuthoringTests
+    public sealed class TriggerGraphAuthoringTests
     {
         [Test]
-        public void MapTrigger_TwoEntries_CompileRegisterAndDispatchFromEntryPcs()
+        public void TriggerGraph_TwoEntries_CompileRegisterAndDispatchFromEntryPcs()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" },
                     { "label": "on_status_open", "event": "PanelOpenStatus", "start": "b1", "once": true }
@@ -47,7 +47,7 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
             GraphProgramPackage package = compiled.Package!.Value;
-            MapTriggerGraphEntry[] entries = package.MapTriggerEntries;
+            TriggerGraphEntry[] entries = package.TriggerGraphEntries;
             Assert.That(entries.Length, Is.EqualTo(2));
             Assert.That(entries[0].Label, Is.EqualTo("on_map_loaded"));
             Assert.That(entries[0].EventName, Is.EqualTo("MapLoaded"));
@@ -62,9 +62,9 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(package.Program[entries[1].StartPc].Imm, Is.EqualTo(22));
 
             var registry = new GraphProgramRegistry();
-            registry.Register(901, package.Program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, package.Symbols, entries);
+            registry.Register(901, package.Program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, package.Symbols, entries);
             Assert.That(registry.TryGetRegistration(901, out GraphProgramRegistration registration), Is.True);
-            Assert.That(registration.MapTriggerEntries.Count, Is.EqualTo(2));
+            Assert.That(registration.TriggerGraphEntries.Count, Is.EqualTo(2));
 
             Assert.That(ExecuteFromPc(registry, package.Program, entries[0].StartPc), Is.EqualTo(11), "first entry dispatch must halt with its own chain value");
             Assert.That(ExecuteFromPc(registry, package.Program, entries[1].StartPc), Is.EqualTo(22), "second entry dispatch must halt with its own chain value");
@@ -72,12 +72,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_BranchBoolAndInvokeScript_AreAuthorable()
+        public void TriggerGraph_BranchBoolAndInvokeScript_AreAuthorable()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "left" }
                   ],
@@ -110,16 +110,16 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
             Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.JumpIfFalse));
             Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.InvokeScript));
-            Assert.That(compiled.Package!.Value.MapTriggerEntries.Length, Is.EqualTo(1));
+            Assert.That(compiled.Package!.Value.TriggerGraphEntries.Length, Is.EqualTo(1));
         }
 
         [Test]
-        public void MapTrigger_UnknownEventString_IsAllowedAsPlainString()
+        public void TriggerGraph_UnknownEventString_IsAllowedAsPlainString()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_custom", "event": "Totally.Unknown.Event", "start": "a1" }
                   ],
@@ -138,16 +138,16 @@ namespace Ludots.Tests.Gas.Graph
                 "tests.maptrigger.unknown-event");
 
             Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
-            Assert.That(compiled.Package!.Value.MapTriggerEntries[0].EventName, Is.EqualTo("Totally.Unknown.Event"));
+            Assert.That(compiled.Package!.Value.TriggerGraphEntries[0].EventName, Is.EqualTo("Totally.Unknown.Event"));
         }
 
         [Test]
-        public void MapTrigger_MissingEntries_Throws()
+        public void TriggerGraph_MissingEntries_Throws()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "nodes": [
                     { "id": "a1", "op": "ConstInt", "intValue": 1 },
                     { "id": "aHalt", "op": "HaltReturnInt" }
@@ -165,12 +165,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_EmptyEntriesArray_Throws()
+        public void TriggerGraph_EmptyEntriesArray_Throws()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [],
                   "nodes": [
                     { "id": "a1", "op": "ConstInt", "intValue": 1 },
@@ -189,12 +189,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_TopLevelEntryField_Rejected()
+        public void TriggerGraph_TopLevelEntryField_Rejected()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entry": "a1",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" }
@@ -239,16 +239,16 @@ namespace Ludots.Tests.Gas.Graph
                 }
                 """,
                 "tests.script.with-entries"),
-                Throws.Exception.With.Message.Contains("tests.script.with-entries").And.Message.Contains("MapTrigger-only"));
+                Throws.Exception.With.Message.Contains("tests.script.with-entries").And.Message.Contains("TriggerGraph-only"));
         }
 
         [Test]
-        public void MapTrigger_UnknownEntryField_Rejected()
+        public void TriggerGraph_UnknownEntryField_Rejected()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1", "priority": 1 }
                   ],
@@ -271,12 +271,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_MissingRequiredEntryField_Rejected()
+        public void TriggerGraph_MissingRequiredEntryField_Rejected()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "start": "a1" }
                   ],
@@ -299,12 +299,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_OnceMustBeBoolean_Rejected()
+        public void TriggerGraph_OnceMustBeBoolean_Rejected()
         {
             Assert.That(() => CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1", "once": "yes" }
                   ],
@@ -325,12 +325,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_RefireRestart_AcceptedAndCarried()
+        public void TriggerGraph_RefireRestart_AcceptedAndCarried()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_pulse", "event": "ManualPulse", "start": "a1", "refire": "restart" }
                   ],
@@ -348,16 +348,16 @@ namespace Ludots.Tests.Gas.Graph
                 """,
                 "tests.maptrigger.refire-restart");
 
-            Assert.That(compiled.Package!.Value.MapTriggerEntries[0].Refire, Is.EqualTo("restart"));
+            Assert.That(compiled.Package!.Value.TriggerGraphEntries[0].Refire, Is.EqualTo("restart"));
         }
 
         [Test]
-        public void MapTrigger_RefireUnknownValue_Rejected()
+        public void TriggerGraph_RefireUnknownValue_Rejected()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_pulse", "event": "ManualPulse", "start": "a1", "refire": "queue" }
                   ],
@@ -380,12 +380,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_EmptyLabel_FailsClosed()
+        public void TriggerGraph_EmptyLabel_FailsClosed()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "   ", "event": "MapLoaded", "start": "a1" }
                   ],
@@ -411,12 +411,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_DuplicateLabels_FailsClosed()
+        public void TriggerGraph_DuplicateLabels_FailsClosed()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" },
                     { "label": "on_map_loaded", "event": "PanelOpenStatus", "start": "b1" }
@@ -446,12 +446,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_WhitespaceEvent_FailsClosed()
+        public void TriggerGraph_WhitespaceEvent_FailsClosed()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "   ", "start": "a1" }
                   ],
@@ -476,12 +476,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_StartReferencingMissingNode_FailsClosed()
+        public void TriggerGraph_StartReferencingMissingNode_FailsClosed()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "doesNotExist" }
                   ],
@@ -506,12 +506,12 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_WaitNode_NowLowersToYield()
+        public void TriggerGraph_WaitNode_NowLowersToYield()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" }
                   ],
@@ -535,16 +535,16 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(
                 compiled.Program.Any(i => i.Op == (ushort)GraphNodeOp.Yield),
                 Is.True,
-                "Wait must lower to Yield now that the MapTrigger host resumes yielded slices");
+                "Wait must lower to Yield now that the TriggerGraph host resumes yielded slices");
         }
 
         [Test]
-        public void MapTrigger_YieldNode_NowAccepted()
+        public void TriggerGraph_YieldNode_NowAccepted()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" }
                   ],
@@ -568,144 +568,144 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(
                 compiled.Program.Any(i => i.Op == (ushort)GraphNodeOp.Yield),
                 Is.True,
-                "Yield is authorable for MapTrigger now that the host resumes yielded slices");
+                "Yield is authorable for TriggerGraph now that the host resumes yielded slices");
         }
 
         [Test]
-        public void Register_MapTriggerKind_WithEmptyEntryTable_Throws()
+        public void Register_TriggerGraphKind_WithEmptyEntryTable_Throws()
         {
-            GraphControlFlowCompileResult compiled = CompileSmallMapTriggerGraph();
+            GraphControlFlowCompileResult compiled = CompileSmallTriggerGraph();
             GraphInstruction[] program = compiled.Package!.Value.Program;
 
             var registry = new GraphProgramRegistry();
-            Assert.That(() => registry.Register(902, program, GraphKind.MapTrigger),
-                Throws.Exception.With.Message.Contains("MapTrigger").And.Message.Contains("entry table"));
+            Assert.That(() => registry.Register(902, program, GraphKind.TriggerGraph),
+                Throws.Exception.With.Message.Contains("TriggerGraph").And.Message.Contains("entry table"));
         }
 
         [Test]
-        public void Register_NonMapTriggerKind_WithEntryTable_Throws()
+        public void Register_NonTriggerGraphKind_WithEntryTable_Throws()
         {
-            GraphControlFlowCompileResult compiled = CompileSmallMapTriggerGraph();
+            GraphControlFlowCompileResult compiled = CompileSmallTriggerGraph();
             GraphInstruction[] program = compiled.Package!.Value.Program;
-            MapTriggerGraphEntry[] entries = compiled.Package.Value.MapTriggerEntries;
+            TriggerGraphEntry[] entries = compiled.Package.Value.TriggerGraphEntries;
 
             var registry = new GraphProgramRegistry();
             Assert.That(
                 () => registry.Register(903, program, GraphKind.Script, GraphInstructionSourceMap.Empty, Array.Empty<string>(), entries),
-                Throws.Exception.With.Message.Contains("MapTrigger-only"));
+                Throws.Exception.With.Message.Contains("TriggerGraph-only"));
         }
 
         [Test]
-        public void Register_MapTrigger_StartPcOutOfBounds_Throws()
+        public void Register_TriggerGraph_StartPcOutOfBounds_Throws()
         {
-            GraphControlFlowCompileResult compiled = CompileSmallMapTriggerGraph();
+            GraphControlFlowCompileResult compiled = CompileSmallTriggerGraph();
             GraphInstruction[] program = compiled.Package!.Value.Program;
-            var outOfBounds = new[] { new MapTriggerGraphEntry("on_map_loaded", "MapLoaded", program.Length, once: false) };
+            var outOfBounds = new[] { new TriggerGraphEntry("on_map_loaded", "MapLoaded", program.Length, once: false) };
 
             var registry = new GraphProgramRegistry();
             Assert.That(
-                () => registry.Register(904, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, Array.Empty<string>(), outOfBounds),
+                () => registry.Register(904, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, Array.Empty<string>(), outOfBounds),
                 Throws.Exception.With.Message.Contains("StartPc"));
         }
 
         [Test]
-        public void Register_MapTrigger_DuplicateLabels_Throws()
+        public void Register_TriggerGraph_DuplicateLabels_Throws()
         {
-            GraphControlFlowCompileResult compiled = CompileSmallMapTriggerGraph();
+            GraphControlFlowCompileResult compiled = CompileSmallTriggerGraph();
             GraphInstruction[] program = compiled.Package!.Value.Program;
-            MapTriggerGraphEntry entry = compiled.Package.Value.MapTriggerEntries[0];
+            TriggerGraphEntry entry = compiled.Package.Value.TriggerGraphEntries[0];
             var duplicated = new[] { entry, entry };
 
             var registry = new GraphProgramRegistry();
             Assert.That(
-                () => registry.Register(905, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, Array.Empty<string>(), duplicated),
+                () => registry.Register(905, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, Array.Empty<string>(), duplicated),
                 Throws.Exception.With.Message.Contains("duplicate").And.Message.Contains(entry.Label));
         }
 
         [Test]
-        public void ReplaceProgram_MapTrigger_KeepsAndValidatesEntries()
+        public void ReplaceProgram_TriggerGraph_KeepsAndValidatesEntries()
         {
-            GraphControlFlowCompileResult compiled = CompileSmallMapTriggerGraph();
+            GraphControlFlowCompileResult compiled = CompileSmallTriggerGraph();
             GraphInstruction[] program = compiled.Package!.Value.Program;
-            MapTriggerGraphEntry[] entries = compiled.Package.Value.MapTriggerEntries;
+            TriggerGraphEntry[] entries = compiled.Package.Value.TriggerGraphEntries;
 
             var registry = new GraphProgramRegistry();
-            registry.Register(906, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, Array.Empty<string>(), entries);
+            registry.Register(906, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, Array.Empty<string>(), entries);
 
             Assert.That(
-                () => registry.ReplaceProgram(906, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty),
+                () => registry.ReplaceProgram(906, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty),
                 Throws.Exception.With.Message.Contains("entry table"),
-                "hot replace without an entry table must fail closed for MapTrigger");
+                "hot replace without an entry table must fail closed for TriggerGraph");
             Assert.That(registry.TryGetRegistration(906, out GraphProgramRegistration afterFailedReplace), Is.True);
-            Assert.That(afterFailedReplace.MapTriggerEntries.Count, Is.EqualTo(entries.Length), "failed replace must roll back to the original entry table");
+            Assert.That(afterFailedReplace.TriggerGraphEntries.Count, Is.EqualTo(entries.Length), "failed replace must roll back to the original entry table");
 
             var replaced = new[]
             {
-                new MapTriggerGraphEntry("on_panel_open", "PanelOpenStatus", entries[0].StartPc, once: true)
+                new TriggerGraphEntry("on_panel_open", "PanelOpenStatus", entries[0].StartPc, once: true)
             };
-            registry.ReplaceProgram(906, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, Array.Empty<string>(), replaced);
+            registry.ReplaceProgram(906, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, Array.Empty<string>(), replaced);
             Assert.That(registry.TryGetRegistration(906, out GraphProgramRegistration afterReplace), Is.True);
-            Assert.That(afterReplace.MapTriggerEntries.Count, Is.EqualTo(1));
-            Assert.That(afterReplace.MapTriggerEntries[0].Label, Is.EqualTo("on_panel_open"));
-            Assert.That(afterReplace.MapTriggerEntries[0].Once, Is.True);
+            Assert.That(afterReplace.TriggerGraphEntries.Count, Is.EqualTo(1));
+            Assert.That(afterReplace.TriggerGraphEntries[0].Label, Is.EqualTo("on_panel_open"));
+            Assert.That(afterReplace.TriggerGraphEntries[0].Once, Is.True);
 
             var duplicateLabels = new[]
             {
-                new MapTriggerGraphEntry("dup", "MapLoaded", entries[0].StartPc, once: false),
-                new MapTriggerGraphEntry("dup", "PanelOpenStatus", entries[0].StartPc, once: false)
+                new TriggerGraphEntry("dup", "MapLoaded", entries[0].StartPc, once: false),
+                new TriggerGraphEntry("dup", "PanelOpenStatus", entries[0].StartPc, once: false)
             };
             Assert.That(
-                () => registry.ReplaceProgram(906, program, GraphKind.MapTrigger, GraphInstructionSourceMap.Empty, Array.Empty<string>(), duplicateLabels),
+                () => registry.ReplaceProgram(906, program, GraphKind.TriggerGraph, GraphInstructionSourceMap.Empty, Array.Empty<string>(), duplicateLabels),
                 Throws.Exception.With.Message.Contains("duplicate"));
             Assert.That(registry.TryGetRegistration(906, out GraphProgramRegistration afterDuplicateReplace), Is.True);
-            Assert.That(afterDuplicateReplace.MapTriggerEntries[0].Label, Is.EqualTo("on_panel_open"), "invalid replace must roll back");
+            Assert.That(afterDuplicateReplace.TriggerGraphEntries[0].Label, Is.EqualTo("on_panel_open"), "invalid replace must roll back");
         }
 
         [Test]
-        public void DescriptorProjections_MapTriggerMirrorsScriptIncludingYield()
+        public void DescriptorProjections_TriggerGraphMirrorsScriptIncludingYield()
         {
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.Yield), Is.True,
-                "Yield is authorable for MapTrigger now that the host resumes yielded slices");
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.Yield), Is.True,
+                "Yield is authorable for TriggerGraph now that the host resumes yielded slices");
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.Yield), Is.True);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.Jump), Is.True);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ConstInt), Is.True);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.InvokeScript), Is.True);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.MoveInt), Is.True);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ReadMapVarInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.Jump), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ConstInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.InvokeScript), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.MoveInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ReadMapVarInt), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.ReadMapVarInt), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Effect, GraphNodeOp.ReadMapVarInt), Is.False);
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ApplyEffectTemplate), Is.False,
-                "effect-transactional ops stay out of the MapTrigger dialect");
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.TriggerGraph, GraphNodeOp.ApplyEffectTemplate), Is.False,
+                "effect-transactional ops stay out of the TriggerGraph dialect");
 
-            foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.MapTrigger))
+            foreach (GraphNodeOp op in GraphOpDescriptorTable.EnumerateAuthorable(GraphKind.TriggerGraph))
             {
                 bool scriptHas = GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, op);
-                Assert.That(scriptHas, Is.True, $"MapTrigger authorable op {op} must come from the Script set");
+                Assert.That(scriptHas, Is.True, $"TriggerGraph authorable op {op} must come from the Script set");
             }
 
             Assert.That(
                 GraphOpDescriptorTable.ProjectCoverageAuthorableKinds(GraphNodeOp.Yield),
-                Is.EqualTo(new[] { "MapTrigger", "Script" }));
+                Is.EqualTo(new[] { "TriggerGraph", "Script" }));
         }
 
         [Test]
-        public void GraphKindParser_AcceptsMapTriggerExactly()
+        public void GraphKindParser_AcceptsTriggerGraphExactly()
         {
-            Assert.That(GraphKindParser.TryParse("MapTrigger", out GraphKind kind), Is.True);
-            Assert.That(kind, Is.EqualTo(GraphKind.MapTrigger));
+            Assert.That(GraphKindParser.TryParse("TriggerGraph", out GraphKind kind), Is.True);
+            Assert.That(kind, Is.EqualTo(GraphKind.TriggerGraph));
             Assert.That(GraphKindParser.TryParse("maptrigger", out _), Is.False);
 
             Assert.That(
                 () => GraphKindParser.ParseRequired("NotAKind", "tests.parse"),
-                Throws.Exception.With.Message.Contains("MapTrigger"));
+                Throws.Exception.With.Message.Contains("TriggerGraph"));
         }
 
-        private static GraphControlFlowCompileResult CompileSmallMapTriggerGraph()
+        private static GraphControlFlowCompileResult CompileSmallTriggerGraph()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "on_map_loaded", "event": "MapLoaded", "start": "a1" }
                   ],

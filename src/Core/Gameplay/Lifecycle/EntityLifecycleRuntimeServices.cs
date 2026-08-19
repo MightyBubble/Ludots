@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Presenters;
@@ -29,7 +30,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
             TagOps tagOps,
             PresenterEntityRuntime? presenterRuntime = null,
             PresenterDefinitionRegistry? presenterDefinitions = null,
-            ComponentAuthoringContext? authoringContext = null)
+            ComponentAuthoringContext? authoringContext = null,
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
@@ -46,10 +48,14 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 presenterRuntime,
                 presenterDefinitions,
                 presenterDefinitions?.BootstrapRegistry);
+            EntityTriggerGraphMounts = entityTriggerGraphMounts;
         }
 
         public World World => _world;
         public TagOps TagOps => _tagOps;
+
+        /// <summary>Entity-domain TriggerGraph mount pipeline; templates declaring graphs mount at materialization.</summary>
+        public EntityTriggerGraphMounts? EntityTriggerGraphMounts { get; }
 
         internal EntityBuilder Builder => _builder;
         internal EntityTemplateKeyRegistry TemplateKeys => _templateKeys;

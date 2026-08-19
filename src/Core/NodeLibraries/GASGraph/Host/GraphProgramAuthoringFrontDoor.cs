@@ -12,7 +12,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     /// </summary>
     public static class GraphProgramAuthoringFrontDoor
     {
-        private static readonly string[] RequiredMapTriggerEntryFields = { "label", "event", "start" };
+        private static readonly string[] RequiredTriggerGraphEntryFields = { "label", "event", "start" };
 
         public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics)
             CompileJsonObject(JsonObject obj, string graphId, JsonSerializerOptions options)
@@ -32,7 +32,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             GraphKind kind = RequireKind(obj, graphId);
             RequireControlFlowAuthoringShape(obj, graphId, kind);
-            RequireMapTriggerEntryShape(obj, graphId, kind);
+            RequireTriggerGraphEntryShape(obj, graphId, kind);
 
             GraphControlFlowDocument? doc;
             try
@@ -128,17 +128,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
-        /// MapTrigger replaces the single entry start node with a top-level entries table;
+        /// TriggerGraph replaces the single entry start node with a top-level entries table;
         /// both fields are kind-exclusive and validated before strict deserialize for actionable errors.
         /// </summary>
-        public static void RequireMapTriggerEntryShape(JsonObject obj, string graphId, GraphKind kind)
+        public static void RequireTriggerGraphEntryShape(JsonObject obj, string graphId, GraphKind kind)
         {
-            if (kind != GraphKind.MapTrigger)
+            if (kind != GraphKind.TriggerGraph)
             {
                 if (obj.ContainsKey("entries"))
                 {
                     throw new InvalidOperationException(
-                        $"Graph '{graphId}' kind '{kind}' must not declare top-level 'entries'; the entry table is MapTrigger-only.");
+                        $"Graph '{graphId}' kind '{kind}' must not declare top-level 'entries'; the entry table is TriggerGraph-only.");
                 }
 
                 return;
@@ -147,13 +147,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (obj.ContainsKey("entry"))
             {
                 throw new InvalidOperationException(
-                    $"MapTrigger graph '{graphId}' must not declare top-level 'entry'; author the 'entries' table instead.");
+                    $"TriggerGraph graph '{graphId}' must not declare top-level 'entry'; author the 'entries' table instead.");
             }
 
             if (obj["entries"] is not JsonArray entries || entries.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"MapTrigger graph '{graphId}' requires a non-empty top-level 'entries' array.");
+                    $"TriggerGraph graph '{graphId}' requires a non-empty top-level 'entries' array.");
             }
 
             for (int i = 0; i < entries.Count; i++)
@@ -161,7 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 if (entries[i] is not JsonObject entry)
                 {
                     throw new InvalidOperationException(
-                        $"MapTrigger graph '{graphId}' entries[{i}] must be an object.");
+                        $"TriggerGraph graph '{graphId}' entries[{i}] must be an object.");
                 }
 
                 foreach (KeyValuePair<string, JsonNode?> field in entry)
@@ -174,7 +174,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             if (field.Value is not JsonValue value || !value.TryGetValue<string>(out _))
                             {
                                 throw new InvalidOperationException(
-                                    $"MapTrigger graph '{graphId}' entries[{i}] field '{field.Key}' must be a string.");
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field '{field.Key}' must be a string.");
                             }
 
                             break;
@@ -182,7 +182,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             if (field.Value is not JsonValue onceValue || !onceValue.TryGetValue<bool>(out _))
                             {
                                 throw new InvalidOperationException(
-                                    $"MapTrigger graph '{graphId}' entries[{i}] field 'once' must be a boolean.");
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'once' must be a boolean.");
                             }
 
                             break;
@@ -190,36 +190,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             if (field.Value is not JsonValue refireValue || !refireValue.TryGetValue<string>(out _))
                             {
                                 throw new InvalidOperationException(
-                                    $"MapTrigger graph '{graphId}' entries[{i}] field 'refire' must be a string.");
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'refire' must be a string.");
                             }
 
                             break;
                         case "filters":
-                            RequireMapTriggerEntryFiltersShape(obj, graphId, i, field.Value);
+                            RequireTriggerGraphEntryFiltersShape(obj, graphId, i, field.Value);
                             break;
                         default:
                             throw new InvalidOperationException(
-                                $"MapTrigger graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, filters.");
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, start, once, refire, filters.");
                     }
                 }
 
-                foreach (string required in RequiredMapTriggerEntryFields)
+                foreach (string required in RequiredTriggerGraphEntryFields)
                 {
                     if (!entry.ContainsKey(required))
                     {
                         throw new InvalidOperationException(
-                            $"MapTrigger graph '{graphId}' entries[{i}] is missing required field '{required}'.");
+                            $"TriggerGraph graph '{graphId}' entries[{i}] is missing required field '{required}'.");
                     }
                 }
             }
         }
 
-        private static void RequireMapTriggerEntryFiltersShape(JsonObject obj, string graphId, int entryIndex, JsonNode? filtersNode)
+        private static void RequireTriggerGraphEntryFiltersShape(JsonObject obj, string graphId, int entryIndex, JsonNode? filtersNode)
         {
             if (filtersNode is not JsonObject filters)
             {
                 throw new InvalidOperationException(
-                    $"MapTrigger graph '{graphId}' entries[{entryIndex}] field 'filters' must be an object.");
+                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] field 'filters' must be an object.");
             }
 
             foreach (KeyValuePair<string, JsonNode?> field in filters)
@@ -232,7 +232,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if (field.Value is not JsonValue textValue || !textValue.TryGetValue<string>(out _))
                         {
                             throw new InvalidOperationException(
-                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field '{field.Key}' must be a string.");
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field '{field.Key}' must be a string.");
                         }
 
                         break;
@@ -240,7 +240,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if (field.Value is not JsonValue teamValue || !teamValue.TryGetValue<int>(out _))
                         {
                             throw new InvalidOperationException(
-                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field 'team' must be an integer.");
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'team' must be an integer.");
                         }
 
                         break;
@@ -248,13 +248,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         if (field.Value is not JsonValue thresholdValue || !thresholdValue.TryGetValue<float>(out _))
                         {
                             throw new InvalidOperationException(
-                                $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters field 'threshold' must be a number.");
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'threshold' must be a number.");
                         }
 
                         break;
                     default:
                         throw new InvalidOperationException(
-                            $"MapTrigger graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction.");
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction.");
                 }
             }
         }

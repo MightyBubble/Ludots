@@ -43,7 +43,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void GameEvents_MapTriggerEventKeys_UseExactStrings()
+        public void GameEvents_TriggerGraphEventKeys_UseExactStrings()
         {
             Assert.That(GameEvents.ThinkWaveElapsed.Value, Is.EqualTo("ThinkWaveElapsed"));
             Assert.That(GameEvents.EntitySpawned.Value, Is.EqualTo("EntitySpawned"));
@@ -64,8 +64,8 @@ namespace Ludots.Tests.Gas.Graph
         public void Filters_Empty_MatchesEverything()
         {
             var context = new ScriptContext();
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, default), Is.True);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, new MapTriggerEntryFilters(null, null, null, null, null)), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, default), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, new TriggerGraphEntryFilters(null, null, null, null, null)), Is.True);
         }
 
         [Test]
@@ -73,21 +73,21 @@ namespace Ludots.Tests.Gas.Graph
         {
             var context = new ScriptContext();
             context.Set(MapTriggerEventPayloadKeys.RegionId, "spawn_zone");
-            var filters = new MapTriggerEntryFilters("spawn_zone", null, null, null, null);
+            var filters = new TriggerGraphEntryFilters("spawn_zone", null, null, null, null);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.True);
 
-            var miss = new MapTriggerEntryFilters("boss_zone", null, null, null, null);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in miss), Is.False);
+            var miss = new TriggerGraphEntryFilters("boss_zone", null, null, null, null);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in miss), Is.False);
         }
 
         [Test]
         public void Filters_Region_MissingPayload_FailsClosed()
         {
             var context = new ScriptContext();
-            var filters = new MapTriggerEntryFilters("spawn_zone", null, null, null, null);
+            var filters = new TriggerGraphEntryFilters("spawn_zone", null, null, null, null);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.False);
         }
 
         [Test]
@@ -95,35 +95,35 @@ namespace Ludots.Tests.Gas.Graph
         {
             var context = new ScriptContext();
             context.Set(MapTriggerEventPayloadKeys.SourceTeamId, 7);
-            var filters = new MapTriggerEntryFilters(null, null, 7, null, null);
+            var filters = new TriggerGraphEntryFilters(null, null, 7, null, null);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.True);
 
-            var miss = new MapTriggerEntryFilters(null, null, 8, null, null);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in miss), Is.False);
+            var miss = new TriggerGraphEntryFilters(null, null, 8, null, null);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in miss), Is.False);
 
-            var missingPayload = new MapTriggerEntryFilters(null, null, 7, null, null);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(new ScriptContext(), in missingPayload), Is.False);
+            var missingPayload = new TriggerGraphEntryFilters(null, null, 7, null, null);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(new ScriptContext(), in missingPayload), Is.False);
         }
 
         [Test]
         public void Filters_ThresholdDirection_CompareCountPayload()
         {
-            var above = new MapTriggerEntryFilters(null, null, null, 5f, MapTriggerEntryFilterDirection.CrossAbove);
-            var below = new MapTriggerEntryFilters(null, null, null, 5f, MapTriggerEntryFilterDirection.CrossBelow);
+            var above = new TriggerGraphEntryFilters(null, null, null, 5f, TriggerGraphEntryFilterDirection.CrossAbove);
+            var below = new TriggerGraphEntryFilters(null, null, null, 5f, TriggerGraphEntryFilterDirection.CrossBelow);
 
             var context = new ScriptContext();
             context.Set(MapTriggerEventPayloadKeys.Count, 5);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in above), Is.True);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in below), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in above), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in below), Is.True);
 
             context.Set(MapTriggerEventPayloadKeys.Count, 6);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in above), Is.True);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in below), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in above), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in below), Is.False);
 
             context.Set(MapTriggerEventPayloadKeys.Count, 4);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in above), Is.False);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in below), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in above), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in below), Is.True);
         }
 
         [Test]
@@ -131,9 +131,9 @@ namespace Ludots.Tests.Gas.Graph
         {
             var context = new ScriptContext();
             context.Set(MapTriggerEventPayloadKeys.SourceTeamId, 1);
-            var filters = new MapTriggerEntryFilters(null, null, null, 5f, MapTriggerEntryFilterDirection.CrossAbove);
+            var filters = new TriggerGraphEntryFilters(null, null, null, 5f, TriggerGraphEntryFilterDirection.CrossAbove);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.False);
         }
 
         [Test]
@@ -141,10 +141,10 @@ namespace Ludots.Tests.Gas.Graph
         {
             var context = new ScriptContext();
             context.Set(MapTriggerEventPayloadKeys.RegionId, "anywhere");
-            var filters = new MapTriggerEntryFilters(null, "elite", null, null, null);
+            var filters = new TriggerGraphEntryFilters(null, "elite", null, null, null);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.False);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(new ScriptContext(), in filters), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.False);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(new ScriptContext(), in filters), Is.False);
         }
 
         [Test]
@@ -154,12 +154,12 @@ namespace Ludots.Tests.Gas.Graph
             context.Set(MapTriggerEventPayloadKeys.RegionId, "spawn_zone");
             context.Set(MapTriggerEventPayloadKeys.SourceTeamId, 3);
             context.Set(MapTriggerEventPayloadKeys.Count, 10);
-            var filters = new MapTriggerEntryFilters("spawn_zone", null, 3, 8f, MapTriggerEntryFilterDirection.CrossAbove);
+            var filters = new TriggerGraphEntryFilters("spawn_zone", null, 3, 8f, TriggerGraphEntryFilterDirection.CrossAbove);
 
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in filters), Is.True);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in filters), Is.True);
 
-            var wrongTeam = new MapTriggerEntryFilters("spawn_zone", null, 4, 8f, MapTriggerEntryFilterDirection.CrossAbove);
-            Assert.That(MapTriggerEntryFiltersEvaluator.Matches(context, in wrongTeam), Is.False);
+            var wrongTeam = new TriggerGraphEntryFilters("spawn_zone", null, 4, 8f, TriggerGraphEntryFilterDirection.CrossAbove);
+            Assert.That(TriggerGraphEntryFiltersEvaluator.Matches(context, in wrongTeam), Is.False);
         }
 
         [Test]
@@ -169,7 +169,7 @@ namespace Ludots.Tests.Gas.Graph
                 CompileFrontDoor(
                     """
                     {
-                      "kind": "MapTrigger",
+                      "kind": "TriggerGraph",
                       "entries": [
                         { "label": "a", "event": "MapLoaded", "start": "a1", "filters": { "zone": "north" } }
                       ],
@@ -192,7 +192,7 @@ namespace Ludots.Tests.Gas.Graph
                 CompileFrontDoor(
                     """
                     {
-                      "kind": "MapTrigger",
+                      "kind": "TriggerGraph",
                       "entries": [
                         { "label": "a", "event": "MapLoaded", "start": "a1", "filters": { "region": 5 } }
                       ],
@@ -214,7 +214,7 @@ namespace Ludots.Tests.Gas.Graph
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "a", "event": "EntityAliveCountChanged", "start": "a1",
                       "filters": { "threshold": 5, "direction": "ascending" } }
@@ -241,7 +241,7 @@ namespace Ludots.Tests.Gas.Graph
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "a", "event": "EntityAliveCountChanged", "start": "a1",
                       "filters": { "threshold": 5 } }
@@ -268,7 +268,7 @@ namespace Ludots.Tests.Gas.Graph
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
                 {
-                  "kind": "MapTrigger",
+                  "kind": "TriggerGraph",
                   "entries": [
                     { "label": "a", "event": "RegionEntered", "start": "a1",
                       "filters": { "region": "spawn_zone", "team": 3, "threshold": 2, "direction": "cross_above" } }
@@ -283,12 +283,12 @@ namespace Ludots.Tests.Gas.Graph
                 "tests.maptrigger.filters-valid");
 
             Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
-            MapTriggerGraphEntry entry = compiled.Package!.Value.MapTriggerEntries.Single();
+            TriggerGraphEntry entry = compiled.Package!.Value.TriggerGraphEntries.Single();
             Assert.That(entry.Filters.Region, Is.EqualTo("spawn_zone"));
             Assert.That(entry.Filters.Tag, Is.Null);
             Assert.That(entry.Filters.Team, Is.EqualTo(3));
             Assert.That(entry.Filters.Threshold, Is.EqualTo(2f));
-            Assert.That(entry.Filters.Direction, Is.EqualTo(MapTriggerEntryFilterDirection.CrossAbove));
+            Assert.That(entry.Filters.Direction, Is.EqualTo(TriggerGraphEntryFilterDirection.CrossAbove));
         }
 
         [Test]
@@ -296,18 +296,18 @@ namespace Ludots.Tests.Gas.Graph
         {
             GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
-            var entry = new MapTriggerGraphEntry(
+            var entry = new TriggerGraphEntry(
                 "probe",
                 GameEvents.EntityAliveCountChanged.Value,
                 0,
                 once: false,
-                new MapTriggerEntryFilters(null, null, null, 5f, null));
+                new TriggerGraphEntryFilters(null, null, null, 5f, null));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 programs.Register(
                     GraphIdRegistry.Register("tests.maptrigger.registry-mismatch"),
                     new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 } },
-                    GraphKind.MapTrigger,
+                    GraphKind.TriggerGraph,
                     GraphInstructionSourceMap.Empty,
                     null,
                     new[] { entry }));
@@ -320,18 +320,18 @@ namespace Ludots.Tests.Gas.Graph
         {
             GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
-            var entry = new MapTriggerGraphEntry(
+            var entry = new TriggerGraphEntry(
                 "probe",
                 GameEvents.EntityAliveCountChanged.Value,
                 0,
                 once: false,
-                new MapTriggerEntryFilters(null, null, null, null, MapTriggerEntryFilterDirection.CrossBelow));
+                new TriggerGraphEntryFilters(null, null, null, null, TriggerGraphEntryFilterDirection.CrossBelow));
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 programs.Register(
                     GraphIdRegistry.Register("tests.maptrigger.registry-direction"),
                     new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 } },
-                    GraphKind.MapTrigger,
+                    GraphKind.TriggerGraph,
                     GraphInstructionSourceMap.Empty,
                     null,
                     new[] { entry }));

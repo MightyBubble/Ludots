@@ -113,6 +113,7 @@ namespace Ludots.Core.Map
                     {
                         var jsonStr = fragments[fi].ToJsonString();
                         RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
+                        RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
                         ValidateThinkWaveIntervalTicks(fragments[fi], jsonPath);
                         _ = MapVariableDeclarations.Parse(
                             fragments[fi] is JsonObject fragmentRoot &&
@@ -309,10 +310,10 @@ namespace Ludots.Core.Map
                 }
             }
 
-            // Merge MapTriggerGraphs (append mount objects)
-            if (source.MapTriggerGraphs != null)
+            // Merge TriggerGraphs (append mount objects)
+            if (source.TriggerGraphs != null)
             {
-                if (target.MapTriggerGraphs is JsonArray targetArray && source.MapTriggerGraphs is JsonArray sourceArray)
+                if (target.TriggerGraphs is JsonArray targetArray && source.TriggerGraphs is JsonArray sourceArray)
                 {
                     for (int i = 0; i < sourceArray.Count; i++)
                     {
@@ -321,7 +322,7 @@ namespace Ludots.Core.Map
                 }
                 else
                 {
-                    target.MapTriggerGraphs = source.MapTriggerGraphs.DeepClone();
+                    target.TriggerGraphs = source.TriggerGraphs.DeepClone();
                 }
             }
 
@@ -366,6 +367,23 @@ namespace Ludots.Core.Map
                     {
                         target.Variables.Add(sourceVariable);
                     }
+                }
+            }
+        }
+
+        private static void RejectLegacyTriggerGraphMountKey(JsonNode fragment, string jsonPath)
+        {
+            if (fragment is not JsonObject root)
+            {
+                return;
+            }
+
+            foreach (var kvp in root)
+            {
+                if (string.Equals(kvp.Key, "MapTriggerGraphs", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Map config '{jsonPath}' uses legacy key '{kvp.Key}'. The mount field was renamed with the dialect (MapTrigger → TriggerGraph); use 'TriggerGraphs' instead.");
                 }
             }
         }

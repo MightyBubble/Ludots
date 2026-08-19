@@ -1,19 +1,19 @@
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Optional filters authored on a MapTrigger entry. All fields are optional;
+    /// Optional filters authored on a TriggerGraph entry. All fields are optional;
     /// a dispatched event matches only when every declared filter matches its payload.
-    /// Payload matching lives in Core (MapTriggerEntryFiltersEvaluator) because it reads
+    /// Payload matching lives in Core (TriggerGraphEntryFiltersEvaluator) because it reads
     /// ScriptContext payloads.
     /// </summary>
-    public readonly struct MapTriggerEntryFilters
+    public readonly struct TriggerGraphEntryFilters
     {
-        public MapTriggerEntryFilters(
+        public TriggerGraphEntryFilters(
             string? region,
             string? tag,
             int? team,
             float? threshold,
-            MapTriggerEntryFilterDirection? direction)
+            TriggerGraphEntryFilterDirection? direction)
         {
             Region = region;
             Tag = tag;
@@ -26,7 +26,7 @@ namespace Ludots.Core.GraphRuntime
         public string? Tag { get; }
         public int? Team { get; }
         public float? Threshold { get; }
-        public MapTriggerEntryFilterDirection? Direction { get; }
+        public TriggerGraphEntryFilterDirection? Direction { get; }
 
         public bool IsEmpty =>
             Region == null &&
@@ -40,7 +40,7 @@ namespace Ludots.Core.GraphRuntime
     /// Threshold comparison semantics for the threshold/direction filter pair,
     /// evaluated against the Count payload of count-type events.
     /// </summary>
-    public enum MapTriggerEntryFilterDirection
+    public enum TriggerGraphEntryFilterDirection
     {
         CrossAbove = 1,
         CrossBelow = 2,

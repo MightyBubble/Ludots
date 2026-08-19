@@ -17,5 +17,11 @@ namespace Ludots.Core.Scripting
         public const string VarValueInt = "MapTrigger.VarValueInt";        // int
         public const string Phase = "MapTrigger.Phase";                    // int
         public const string WaveIndex = "MapTrigger.WaveIndex";            // int
+        public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity
+        public const string TagId = "MapTrigger.TagId";                    // int
+        public const string Magnitude = "MapTrigger.Magnitude";            // float
+        public const string AbilityId = "MapTrigger.AbilityId";            // int
+        public const string EffectId = "MapTrigger.EffectId";              // int
+        public const string Moment = "MapTrigger.Moment";                  // string
     }
 }

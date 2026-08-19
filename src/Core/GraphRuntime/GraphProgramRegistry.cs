@@ -8,12 +8,12 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphProgramRegistration
     {
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind)
-            : this(program, kind, Array.Empty<string>(), Array.Empty<MapTriggerGraphEntry>())
+            : this(program, kind, Array.Empty<string>(), Array.Empty<TriggerGraphEntry>())
         {
         }
 
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind, string[]? symbols)
-            : this(program, kind, symbols, Array.Empty<MapTriggerGraphEntry>())
+            : this(program, kind, symbols, Array.Empty<TriggerGraphEntry>())
         {
         }
 
@@ -21,19 +21,19 @@ namespace Ludots.Core.GraphRuntime
             GraphInstruction[] program,
             GraphKind kind,
             string[]? symbols,
-            MapTriggerGraphEntry[]? mapTriggerEntries)
+            TriggerGraphEntry[]? triggerGraphEntries)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
             Kind = kind;
             Symbols = symbols ?? Array.Empty<string>();
-            MapTriggerEntries = mapTriggerEntries ?? Array.Empty<MapTriggerGraphEntry>();
+            TriggerGraphEntries = triggerGraphEntries ?? Array.Empty<TriggerGraphEntry>();
             ContainsYield = ProgramContainsYield(Program);
         }
 
         public GraphInstruction[] Program { get; }
         public GraphKind Kind { get; }
         public string[] Symbols { get; }
-        public IReadOnlyList<MapTriggerGraphEntry> MapTriggerEntries { get; }
+        public IReadOnlyList<TriggerGraphEntry> TriggerGraphEntries { get; }
         public bool ContainsYield { get; }
 
         private static bool ProgramContainsYield(GraphInstruction[] program)
@@ -72,7 +72,7 @@ namespace Ludots.Core.GraphRuntime
             => Register(graphId, program, kind, sourceMap, Array.Empty<string>());
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
-            => Register(graphId, program, kind, sourceMap, symbols, Array.Empty<MapTriggerGraphEntry>());
+            => Register(graphId, program, kind, sourceMap, symbols, Array.Empty<TriggerGraphEntry>());
 
         public void Register(
             int graphId,
@@ -80,7 +80,7 @@ namespace Ludots.Core.GraphRuntime
             GraphKind kind,
             GraphInstructionSourceMap sourceMap,
             string[]? symbols,
-            MapTriggerGraphEntry[]? mapTriggerEntries)
+            TriggerGraphEntry[]? triggerGraphEntries)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -89,7 +89,7 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
             }
 
-            MapTriggerGraphEntry[] entries = NormalizeMapTriggerEntries(graphId, kind, mapTriggerEntries, program);
+            TriggerGraphEntry[] entries = NormalizeTriggerGraphEntries(graphId, kind, triggerGraphEntries, program);
 
             if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind, symbols, entries)))
             {
@@ -126,7 +126,7 @@ namespace Ludots.Core.GraphRuntime
             => ReplaceProgram(graphId, program, kind, sourceMap, Array.Empty<string>());
 
         public void ReplaceProgram(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
-            => ReplaceProgram(graphId, program, kind, sourceMap, symbols, Array.Empty<MapTriggerGraphEntry>());
+            => ReplaceProgram(graphId, program, kind, sourceMap, symbols, Array.Empty<TriggerGraphEntry>());
 
         public void ReplaceProgram(
             int graphId,
@@ -134,7 +134,7 @@ namespace Ludots.Core.GraphRuntime
             GraphKind kind,
             GraphInstructionSourceMap sourceMap,
             string[]? symbols,
-            MapTriggerGraphEntry[]? mapTriggerEntries)
+            TriggerGraphEntry[]? triggerGraphEntries)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -155,7 +155,7 @@ namespace Ludots.Core.GraphRuntime
                     $"Graph program id {graphId} kind is '{existing.Kind}'; cannot replace with '{kind}' (identity change requires EngineRestart).");
             }
 
-            MapTriggerGraphEntry[] entries = NormalizeMapTriggerEntries(graphId, kind, mapTriggerEntries, program);
+            TriggerGraphEntry[] entries = NormalizeTriggerGraphEntries(graphId, kind, triggerGraphEntries, program);
 
             GraphProgramRegistration previous = existing;
             bool hadPreviousSourceMap = _sourceMaps.TryGetValue(graphId, out GraphInstructionSourceMap previousSourceMap);
@@ -193,18 +193,18 @@ namespace Ludots.Core.GraphRuntime
             _version++;
         }
 
-        private static MapTriggerGraphEntry[] NormalizeMapTriggerEntries(
+        private static TriggerGraphEntry[] NormalizeTriggerGraphEntries(
             int graphId,
             GraphKind kind,
-            MapTriggerGraphEntry[]? entries,
+            TriggerGraphEntry[]? entries,
             GraphInstruction[] program)
         {
-            if (kind == GraphKind.MapTrigger)
+            if (kind == GraphKind.TriggerGraph)
             {
                 if (entries == null || entries.Length == 0)
                 {
                     throw new InvalidOperationException(
-                        $"Graph program id {graphId} kind MapTrigger requires a non-empty MapTrigger entry table.");
+                        $"Graph program id {graphId} kind TriggerGraph requires a non-empty TriggerGraph entry table.");
                 }
 
                 var seenLabels = new HashSet<string>(StringComparer.Ordinal);
@@ -214,35 +214,35 @@ namespace Ludots.Core.GraphRuntime
                     if (string.IsNullOrWhiteSpace(label))
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} MapTrigger entry [{i}] requires a non-empty label.");
+                            $"Graph program id {graphId} TriggerGraph entry [{i}] requires a non-empty label.");
                     }
 
                     if (!seenLabels.Add(label.Trim()))
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} has duplicate MapTrigger entry label '{label}'.");
+                            $"Graph program id {graphId} has duplicate TriggerGraph entry label '{label}'.");
                     }
 
                     if (string.IsNullOrWhiteSpace(entries[i].EventName))
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} MapTrigger entry '{label}' requires a non-empty event name.");
+                            $"Graph program id {graphId} TriggerGraph entry '{label}' requires a non-empty event name.");
                     }
 
                     int startPc = entries[i].StartPc;
                     if (startPc < 0 || startPc >= program.Length)
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} MapTrigger entry '{label}' StartPc {startPc} is outside the program (length {program.Length}).");
+                            $"Graph program id {graphId} TriggerGraph entry '{label}' StartPc {startPc} is outside the program (length {program.Length}).");
                     }
 
-                    ValidateMapTriggerEntryFilters(graphId, label, entries[i].Filters);
+                    ValidateTriggerGraphEntryFilters(graphId, label, entries[i].Filters);
 
-                    string refire = entries[i].Refire ?? MapTriggerGraphEntry.RefireIgnore;
-                    if (refire != MapTriggerGraphEntry.RefireIgnore && refire != MapTriggerGraphEntry.RefireRestart)
+                    string refire = entries[i].Refire ?? TriggerGraphEntry.RefireIgnore;
+                    if (refire != TriggerGraphEntry.RefireIgnore && refire != TriggerGraphEntry.RefireRestart)
                     {
                         throw new InvalidOperationException(
-                            $"Graph program id {graphId} MapTrigger entry '{label}' refire '{refire}' must be \"ignore\" or \"restart\".");
+                            $"Graph program id {graphId} TriggerGraph entry '{label}' refire '{refire}' must be \"ignore\" or \"restart\".");
                     }
                 }
 
@@ -252,31 +252,31 @@ namespace Ludots.Core.GraphRuntime
             if (entries != null && entries.Length > 0)
             {
                 throw new InvalidOperationException(
-                    $"Graph program id {graphId} kind '{kind}' must not carry MapTrigger entries; the entry table is MapTrigger-only.");
+                    $"Graph program id {graphId} kind '{kind}' must not carry TriggerGraph entries; the entry table is TriggerGraph-only.");
             }
 
-            return Array.Empty<MapTriggerGraphEntry>();
+            return Array.Empty<TriggerGraphEntry>();
         }
 
-        private static void ValidateMapTriggerEntryFilters(int graphId, string label, MapTriggerEntryFilters filters)
+        private static void ValidateTriggerGraphEntryFilters(int graphId, string label, TriggerGraphEntryFilters filters)
         {
             if ((filters.Region != null && filters.Region.Trim().Length == 0) ||
                 (filters.Tag != null && filters.Tag.Trim().Length == 0))
             {
                 throw new InvalidOperationException(
-                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'region'/'tag' require non-empty strings.");
+                    $"Graph program id {graphId} TriggerGraph entry '{label}' filters 'region'/'tag' require non-empty strings.");
             }
 
             if (filters.Threshold.HasValue != filters.Direction.HasValue)
             {
                 throw new InvalidOperationException(
-                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'threshold' and 'direction' must be declared together.");
+                    $"Graph program id {graphId} TriggerGraph entry '{label}' filters 'threshold' and 'direction' must be declared together.");
             }
 
-            if (filters.Direction.HasValue && !Enum.IsDefined(typeof(MapTriggerEntryFilterDirection), filters.Direction.Value))
+            if (filters.Direction.HasValue && !Enum.IsDefined(typeof(TriggerGraphEntryFilterDirection), filters.Direction.Value))
             {
                 throw new InvalidOperationException(
-                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'direction' value '{filters.Direction.Value}' is not a defined direction.");
+                    $"Graph program id {graphId} TriggerGraph entry '{label}' filters 'direction' value '{filters.Direction.Value}' is not a defined direction.");
             }
         }
 

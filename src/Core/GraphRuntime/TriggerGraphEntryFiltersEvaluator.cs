@@ -4,15 +4,15 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Entry-side filter evaluation for mounted MapTrigger graphs. A declared filter that
+    /// Entry-side filter evaluation for mounted TriggerGraph graphs. A declared filter that
     /// is missing from the event payload never matches (fail closed, no throw — the entry
     /// simply does not fire for that event).
     /// Tag filtering fails closed while declared: no current map trigger event carries a
     /// tag payload, so a declared tag filter can never match until tag-bearing events exist.
     /// </summary>
-    public static class MapTriggerEntryFiltersEvaluator
+    public static class TriggerGraphEntryFiltersEvaluator
     {
-        public static bool Matches(ScriptContext context, in MapTriggerEntryFilters filters)
+        public static bool Matches(ScriptContext context, in TriggerGraphEntryFilters filters)
         {
             if (filters.IsEmpty)
             {
@@ -61,8 +61,8 @@ namespace Ludots.Core.GraphRuntime
 
                 return filters.Direction.Value switch
                 {
-                    MapTriggerEntryFilterDirection.CrossAbove => count >= filters.Threshold.Value,
-                    MapTriggerEntryFilterDirection.CrossBelow => count <= filters.Threshold.Value,
+                    TriggerGraphEntryFilterDirection.CrossAbove => count >= filters.Threshold.Value,
+                    TriggerGraphEntryFilterDirection.CrossBelow => count <= filters.Threshold.Value,
                     _ => false,
                 };
             }
