@@ -1,12 +1,11 @@
 {
-  "id": "PanelSkinComposeMod",
-  "name": "Panel Skin: Compose",
+  "name": "PanelSkinComposeMod",
   "version": "1.0.0",
   "description": "Compose-flavored panel skin: PanelHost realtime variables rendered via UI surface",
-  "mainAssembly": "PanelSkinComposeMod.dll",
   "priority": 0,
   "dependencies": {
     "FireballSharedMod": "^1.0.0",
     "UiShowcaseCoreMod": "^1.0.0"
-  }
+  },
+  "main": "bin/net8.0/PanelSkinComposeMod.dll"
 }

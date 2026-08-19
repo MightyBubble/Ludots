@@ -1,12 +1,11 @@
 {
-  "id": "PanelSkinReactiveMod",
-  "name": "Panel Skin: Reactive",
+  "name": "PanelSkinReactiveMod",
   "version": "1.0.0",
   "description": "Reactive-flavored panel skin: PanelHost realtime variables rendered via UI surface",
-  "mainAssembly": "PanelSkinReactiveMod.dll",
   "priority": 0,
   "dependencies": {
     "FireballSharedMod": "^1.0.0",
     "UiShowcaseCoreMod": "^1.0.0"
-  }
+  },
+  "main": "bin/net8.0/PanelSkinReactiveMod.dll"
 }

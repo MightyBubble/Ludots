@@ -1,12 +1,11 @@
 {
-  "id": "PanelSkinWebMod",
-  "name": "Panel Skin: Web UI",
+  "name": "PanelSkinWebMod",
   "version": "1.0.0",
   "description": "Web UI-flavored panel skin: PanelHost realtime variables rendered via UI surface",
-  "mainAssembly": "PanelSkinWebMod.dll",
   "priority": 0,
   "dependencies": {
     "FireballSharedMod": "^1.0.0",
     "UiShowcaseCoreMod": "^1.0.0"
-  }
+  },
+  "main": "bin/net8.0/PanelSkinWebMod.dll"
 }

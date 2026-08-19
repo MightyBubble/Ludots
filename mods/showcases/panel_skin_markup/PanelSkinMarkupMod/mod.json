@@ -1,12 +1,11 @@
 {
-  "id": "PanelSkinMarkupMod",
-  "name": "Panel Skin: Markup",
+  "name": "PanelSkinMarkupMod",
   "version": "1.0.0",
   "description": "Markup-skin panel: HTML/CSS rendered from PanelHost realtime variables",
-  "mainAssembly": "PanelSkinMarkupMod.dll",
   "priority": 0,
   "dependencies": {
     "FireballSharedMod": "^1.0.0",
     "UiShowcaseCoreMod": "^1.0.0"
-  }
+  },
+  "main": "bin/net8.0/PanelSkinMarkupMod.dll"
 }
