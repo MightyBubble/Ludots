@@ -20,11 +20,6 @@
     "IdField": "id"
   },
   {
-    "Path": "GAS/action_lib.json",
-    "Policy": "ArrayById",
-    "IdField": "name"
-  },
-  {
     "Path": "Input/input_order_mappings.json",
     "Policy": "DeepObject"
   },

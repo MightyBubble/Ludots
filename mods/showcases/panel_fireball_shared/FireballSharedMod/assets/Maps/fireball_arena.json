@@ -1,14 +1,8 @@
 {
   "Id": "fireball_arena",
   "Tags": ["showcase", "fireball"],
-  "Metadata": {
-    "fireballPanel": {
-      "openAction": "fireball.panel.openStatus",
-      "scopeInstanceId": "fireball-hero"
-    }
-  },
-  "TriggerTypes": [
-    "FireballSharedMod.FireballOpenStatusPanelTrigger"
+  "MapTriggerGraphs": [
+    { "graph": "Graph.Fireball.Panel.OpenStatus", "scopeInstanceId": "fireball-hero" }
   ],
   "Entities": [
     { "InstanceId": "fireball-hero", "Template": "fireball_hero" },

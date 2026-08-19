@@ -1,8 +1,15 @@
 [
   {
     "id": "Graph.Fireball.Panel.OpenStatus",
-    "kind": "Script",
-    "entry": "scope",
+    "kind": "MapTrigger",
+    "entries": [
+      {
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "scope",
+        "once": true
+      }
+    ],
     "nodes": [
       {
         "id": "scope",
