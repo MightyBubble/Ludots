@@ -232,13 +232,13 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void 含Yield的关卡动作在加载期失败关闭()
+        public void 含Yield的MapTrigger动作在加载期失败关闭()
         {
             GraphIdRegistry.Clear();
             string root = string.Empty;
             try
             {
-                const string graphName = "Graph.Level.YieldPhase";
+                const string graphName = "Graph.MapTrigger.YieldPhase";
                 int graphId = GraphIdRegistry.Register(graphName);
                 var programs = new GraphProgramRegistry();
                 programs.Register(
@@ -254,7 +254,7 @@ namespace Ludots.Tests.Gas.Graph
                     "GAS/action_lib.json",
                     """
                     [
-                      { "name": "level.phaseAdvance", "graph": "Graph.Level.YieldPhase", "kind": "Script", "host": "Level" }
+                      { "name": "maptrigger.phaseAdvance", "graph": "Graph.MapTrigger.YieldPhase", "kind": "Script", "host": "MapTrigger" }
                     ]
                     """);
                 root = tempRoot;

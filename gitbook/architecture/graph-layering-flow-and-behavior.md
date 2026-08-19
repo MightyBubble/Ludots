@@ -6,14 +6,14 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 1. **L0 发动机**：一套指令、一套登记表、一套 handler 执行器（含一次跑完 / 按拍切片）
 2. **L1 流程图方言**：`Script`、`Effect`、`Score`、`Query`、`Validation`、`Derived`
-3. **L2 行为调度**：行为树、**分层状态机（HFSM）**、关卡触发——自己管粗结构，叶子调用 L1 图（学 Animator 的转移索引/校验思路，但不复用表现层类型）
+3. **L2 行为调度**：行为树、**分层状态机（HFSM）**、地图触发器图（MapTriggerGraph，地图级反应式关卡方言，替代已退役的 LevelDirector）——自己管粗结构，叶子/事件入口调用 L1 图（学 Animator 的转移索引/校验思路，但不复用表现层类型）
 
 本页是分层合同的文档 SSOT；实现以 `GraphKind`、`GasGraphOpHandlerTable`、`GraphKindOperationPolicy` 为准。
 
 ## 2. 结构
 
 ```text
-L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
+L2 BehaviorTree / HFSM / MapTriggerGraph ← 粗节点拓扑（Core runtime 已落地）
         │ ActionLib：GAS/action_lib.json → GraphActionCatalog（叶子/切片宿主解析）
         │ 只引用 ActionLib / GraphProgramRegistry GraphId（禁止旁路 Dictionary/内嵌 Compile）
 L1 全 Kind 作者 SSOT ← GraphControlFlowDocument（controlEdges + valueEdges）
@@ -37,7 +37,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | Kind | 用途 | Yield |
 |------|------|-------|
 | Script | 可复用流程函数 | 允许 |
-| MapTrigger | 地图触发器图：事件入口表（entries[]）、地图挂载（MapConfig.MapTriggerGraphs）、入口起 PC 分发（#1030 MVP） | **MVP 禁**（作者面拒 Yield/Wait；时间线随节拍切片开放） |
+| MapTrigger | 地图触发器图：事件入口表（entries[] + filters）、地图挂载（MapConfig.MapTriggerGraphs）、入口起 PC 分发、地图变量与面板算子 | 允许（宿主在思考波上逐拍续跑；旗舰样例见「夜袭三波」展厅） |
 | Effect | 技能阶段 | **禁止** |
 | Score | 效用打分 | 禁止 |
 | Validation / Query / Derived | 既有专项 | 禁止 |
@@ -80,7 +80,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 - **加载顺序**：graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载（详见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)）。
 - **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
 - **L2 数据作者面**：`AI/behavior_trees.json` + `AI/hfsm.json` → `GraphBehaviorDefinitionLoader`；叶子与生命周期绑定只写 ActionLib 名，禁止用 Core 工厂参数代替数据作者面。
-- **HFSM Yield**：禁止。OnTick 是 think-wave 节拍；含 Yield 的 `Hfsm` / `Level` 条目在 ActionLib 加载期失败关闭。
+- **HFSM Yield**：禁止。OnTick 是 think-wave 节拍；含 Yield 的 `Hfsm` 条目在 ActionLib 加载期失败关闭。
 - **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
@@ -89,7 +89,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 - 技能复用一段通用「结算脚本」→ Effect/`InvokeScript` → Script
 - 角色 AI 行为树叶子「巡逻一步」→ BT scheduler → Script（可 Yield 跨拍）
-- 关卡触发「进圈开门」→ LevelTrigger → Script
+- 关卡流「进圈开袭、清场过波、Boss 阵亡翻阶段」→ MapTriggerGraph（MapConfig.MapTriggerGraphs 挂载，思考波续跑）
 
 ## 5. 边界
 

@@ -4,11 +4,11 @@
 
 ## 1. 现状快照
 
-- JSON 字段现状：name / graph / kind（必须 Script）/ host（必填，四值 BehaviorTree、Hfsm、Level、Script）。
+- JSON 字段现状：name / graph / kind（必须 Script）/ host（必填，四值 BehaviorTree、Hfsm、Script、MapTrigger）。
 - 撞名现状：动作名不得与 FuncLib 重复，双向检查。
-- 政策现状：仅 BehaviorTree 与 Script 允许挂起；Hfsm/Level 动作装载时经 GraphYieldPurityValidator 做可达 Yield 校验，违规报路径。
+- 政策现状：仅 BehaviorTree 与 Script 允许挂起；Hfsm/MapTrigger 动作装载时经 GraphYieldPurityValidator 做可达 Yield 校验，违规报路径。
 - 装载位置现状：FuncLib 装载与调用终检之后（GameEngine 装载链）。
-- 资产现状：action_lib 11 条——5 BehaviorTree / 4 Hfsm / 1 Level / 1 Script。
+- 资产现状：action_lib 10 条——5 BehaviorTree / 4 Hfsm / 1 Script。
 
 ## 2. 代码锚点
 

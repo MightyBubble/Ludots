@@ -1996,6 +1996,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadMapVarFloat_raylib",
+      "name": "Graph Op ReadMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ReadMapVarInt_raylib",
+      "name": "Graph Op ReadMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ReadMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteMapVarFloat_raylib",
+      "name": "Graph Op WriteMapVarFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WriteMapVarInt_raylib",
+      "name": "Graph Op WriteMapVarInt Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WriteMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1477,6 +1477,38 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
         "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
+      }
     }
   ],
   "adapters": {
