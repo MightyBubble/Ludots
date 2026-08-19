@@ -1,11 +1,13 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Platform.Abstractions;
@@ -288,7 +290,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ShowPanel or
                 GraphNodeOp.HidePanel or
                 GraphNodeOp.CreatePanel or
-                GraphNodeOp.DestroyPanel
+                GraphNodeOp.DestroyPanel or
+                GraphNodeOp.ReadMapVarInt or
+                GraphNodeOp.ReadMapVarFloat or
+                GraphNodeOp.WriteMapVarInt or
+                GraphNodeOp.WriteMapVarFloat
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -786,6 +792,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
+            Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
+            Register(GraphNodeOp.ReadMapVarFloat, HandleReadMapVarFloat, "ReadMapVarFloat graph opcode.");
+            Register(GraphNodeOp.WriteMapVarInt, HandleWriteMapVarInt, "WriteMapVarInt graph opcode.");
+            Register(GraphNodeOp.WriteMapVarFloat, HandleWriteMapVarFloat, "WriteMapVarFloat graph opcode.");
         }
 
         // ── Value Ops ──
@@ -987,6 +997,57 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity scope = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
             s.Api.DestroyPanel(ins.Imm, scope);
+        }
+
+        // ── Map-scoped variables ──
+
+        private static void HandleReadMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = map variable (Imm=varName keyId); map resolved from E[A] (0xFF → caster).
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.I[ins.Dst] = s.Api.ReadMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarInt)));
+        }
+
+        private static void HandleReadMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.F[ins.Dst] = s.Api.ReadMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarFloat)));
+        }
+
+        private static void HandleWriteMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // store.Write(Imm=varName keyId, I[A]); map resolved from E[B] (0xFF → caster).
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarInt)),
+                s.I[ins.A]);
+        }
+
+        private static void HandleWriteMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarFloat)),
+                s.F[ins.A]);
+        }
+
+        private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
+        {
+            if (s.World == null ||
+                !s.World.IsAlive(scope) ||
+                !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
+            }
+
+            return mapEntity.MapId;
         }
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

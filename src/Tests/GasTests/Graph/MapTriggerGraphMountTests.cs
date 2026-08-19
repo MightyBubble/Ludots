@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
@@ -240,13 +241,17 @@ namespace Ludots.Tests.Gas.Graph
                 new MapTriggerGraphEntry("close", GameEvents.MapUnloaded.Value, 0, once: false),
             });
 
-            List<MapTriggerGraphMountTrigger> triggers = MapTriggerGraphMounting.BuildTriggers(session, programs);
+            List<Trigger> triggers = MapTriggerGraphMounting.BuildTriggers(session, programs);
+            List<MapTriggerGraphMountTrigger> mounts = triggers.OfType<MapTriggerGraphMountTrigger>().ToList();
+            List<MapTriggerGraphResumeTrigger> resumes = triggers.OfType<MapTriggerGraphResumeTrigger>().ToList();
 
-            Assert.That(triggers.Count, Is.EqualTo(2));
-            Assert.That(triggers[0].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:open"));
-            Assert.That(triggers[0].EventKey, Is.EqualTo(GameEvents.MapLoaded));
-            Assert.That(triggers[1].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:close"));
-            Assert.That(triggers[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
+            Assert.That(mounts.Count, Is.EqualTo(2));
+            Assert.That(mounts[0].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:open"));
+            Assert.That(mounts[0].EventKey, Is.EqualTo(GameEvents.MapLoaded));
+            Assert.That(mounts[1].Name, Is.EqualTo($"MapTriggerGraph:{GraphName}:close"));
+            Assert.That(mounts[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
+            Assert.That(resumes.Count, Is.EqualTo(2), "Each entry gets a think-wave resume companion.");
+            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.ThinkWaveElapsed));
         }
 
         [Test]
@@ -306,7 +311,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void ExecuteAsync_BudgetSuspendedInsteadOfHalt_Throws()
+        public void ExecuteAsync_NonHaltingLoop_SuspendsThenFailsAtPerRunInstructionCap()
         {
             using var fixture = MapTriggerEngineFixture.Create(includeMapMount: false);
             using GameEngine engine = fixture.CreateEngine();
@@ -322,21 +327,31 @@ namespace Ludots.Tests.Gas.Graph
             var trigger = new MapTriggerGraphMountTrigger(graphId, GraphName,
                 new MapTriggerGraphEntry("spin", GameEvents.MapLoaded.Value, startPc: 0, once: false),
                 Entity.Null);
+            var resume = new MapTriggerGraphResumeTrigger(trigger);
+            ScriptContext context = engine.CreateContext();
+
+            trigger.ExecuteAsync(context);
+
+            Assert.That(trigger.LastSliceResult.BudgetSuspended, Is.True,
+                "A slice-budget suspension parks the run instead of throwing.");
+            Assert.That(trigger.IsSuspended, Is.True);
 
             string? message = null;
-            try
+            while (message == null)
             {
-                trigger.ExecuteAsync(engine.CreateContext());
-            }
-            catch (InvalidOperationException ex)
-            {
-                message = ex.Message;
+                try
+                {
+                    resume.ExecuteAsync(context);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    message = ex.Message;
+                }
             }
 
-            Assert.That(message, Is.Not.Null);
             Assert.That(message, Does.Contain(GraphName));
             Assert.That(message, Does.Contain("spin"));
-            Assert.That(message, Does.Contain("BudgetSuspended"));
+            Assert.That(message, Does.Contain(nameof(GraphVmLimits.MaxInstructionsPerExecution)));
         }
 
         [Test]

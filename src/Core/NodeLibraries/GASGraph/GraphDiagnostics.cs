@@ -31,6 +31,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string RegisterAliasConflict = "GASG0021";
         public const string ForbiddenEntryTable = "GASG0022";
         public const string DuplicateEntryLabel = "GASG0023";
+        public const string InvalidEntryFilters = "GASG0024";
+        public const string InvalidEntryRefire = "GASG0025";
     }
 }
 

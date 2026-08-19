@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
@@ -106,6 +107,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
+        private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -216,6 +218,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _panelHost = host ?? throw new ArgumentNullException(nameof(host));
         }
 
+        /// <summary>
+        /// Resolves a map id to its live <see cref="Gameplay.MapTriggers.MapVariableStore"/>.
+        /// The engine binds this lazily because map sessions are created after the graph API.
+        /// </summary>
+        public void BindMapVariableStoreResolver(Func<MapId, Gameplay.MapTriggers.MapVariableStore?> resolver)
+        {
+            _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -278,22 +289,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ShowPanel(int panelTypeId)
         {
-            PanelActivationApi?.ShowPanel(ResolvePanelTypeName(panelTypeId));
+            RequirePanelActivationApi().ShowPanel(ResolvePanelTypeName(panelTypeId));
         }
 
         public void HidePanel(int panelTypeId)
         {
-            PanelActivationApi?.HidePanel(ResolvePanelTypeName(panelTypeId));
+            RequirePanelActivationApi().HidePanel(ResolvePanelTypeName(panelTypeId));
         }
 
         public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
-            _panelHost?.Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
+            RequirePanelHost().Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
         }
 
         public void DestroyPanel(int templateKeyId, Entity scope)
         {
-            _panelHost?.DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+            RequirePanelHost().DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
         }
 
         private string ResolvePanelTypeName(int panelTypeId)
@@ -301,6 +312,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
             return name ?? throw new InvalidOperationException(
                 $"Panel op references unregistered config key id {panelTypeId}.");
+        }
+
+        public int ReadMapVarInt(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadInt(ResolveMapVariableName(varKeyId));
+
+        public float ReadMapVarFloat(int varKeyId, MapId mapId)
+            => ResolveMapVariableStore(mapId).ReadFloat(ResolveMapVariableName(varKeyId));
+
+        public void WriteMapVarInt(int varKeyId, MapId mapId, int value)
+            => ResolveMapVariableStore(mapId).WriteInt(ResolveMapVariableName(varKeyId), value);
+
+        public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
+            => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
+        {
+            var resolver = _mapVariableStoreResolver
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MapVariableStoreUnavailable");
+            return resolver(mapId)
+                ?? throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableStoreUnavailable: map '{mapId.Value}' has no live variable store.");
+        }
+
+        private string ResolveMapVariableName(int varKeyId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(varKeyId);
+            return name ?? throw new InvalidOperationException(
+                $"GAS.GRAPH.ERR.MapVariableNameUnknown: map variable op references unregistered config key id {varKeyId}.");
+        }
+
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi RequirePanelActivationApi()
+        {
+            return _panelActivationApi ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
+        }
+
+        private Ludots.Core.UI.PanelHosting.PanelHost RequirePanelHost()
+        {
+            return _panelHost ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)

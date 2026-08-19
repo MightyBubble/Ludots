@@ -963,6 +963,7 @@ namespace Ludots.Core.Engine
                 panelTemplates,
                 new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
             gasGraphApi.BindPanelHost(panelHost);
+            gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -1863,6 +1864,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new ThinkWaveClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
@@ -2158,6 +2161,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                WireMapVariablePhaseDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
@@ -2325,6 +2329,7 @@ namespace Ludots.Core.Engine
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
+            WireMapVariablePhaseDispatcher(session);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 

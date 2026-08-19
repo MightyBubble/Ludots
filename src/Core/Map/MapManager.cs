@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -112,6 +113,13 @@ namespace Ludots.Core.Map
                     {
                         var jsonStr = fragments[fi].ToJsonString();
                         RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
+                        ValidateThinkWaveIntervalTicks(fragments[fi], jsonPath);
+                        _ = MapVariableDeclarations.Parse(
+                            fragments[fi] is JsonObject fragmentRoot &&
+                            TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
+                                ? variablesNode
+                                : null,
+                            mapId.Value);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
                         if (config != null) configs.Add(config);
                     }
@@ -317,8 +325,66 @@ namespace Ludots.Core.Map
                 }
             }
 
+            // Merge Regions (append region objects)
+            if (source.Regions != null)
+            {
+                if (target.Regions is JsonArray targetRegionArray && source.Regions is JsonArray sourceRegionArray)
+                {
+                    for (int i = 0; i < sourceRegionArray.Count; i++)
+                    {
+                        targetRegionArray.Add(sourceRegionArray[i]?.DeepClone());
+                    }
+                }
+                else
+                {
+                    target.Regions = source.Regions.DeepClone();
+                }
+            }
+
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
+
+            // Merge ThinkWaveIntervalTicks (source wins)
+            if (source.ThinkWaveIntervalTicks.HasValue)
+            {
+                target.ThinkWaveIntervalTicks = source.ThinkWaveIntervalTicks;
+            }
+
+            // Merge Variables (later fragment / child map replaces same-name declaration)
+            if (source.Variables != null && source.Variables.Count > 0)
+            {
+                foreach (var sourceVariable in source.Variables)
+                {
+                    string name = (sourceVariable.Name ?? string.Empty).Trim();
+                    int existing = target.Variables.FindIndex(v =>
+                        string.Equals((v.Name ?? string.Empty).Trim(), name, StringComparison.Ordinal));
+                    if (existing >= 0)
+                    {
+                        target.Variables[existing] = sourceVariable;
+                    }
+                    else
+                    {
+                        target.Variables.Add(sourceVariable);
+                    }
+                }
+            }
+        }
+
+        private static void ValidateThinkWaveIntervalTicks(JsonNode fragment, string jsonPath)
+        {
+            if (fragment is not JsonObject root ||
+                !TryGetPropertyCaseInsensitive(root, "ThinkWaveIntervalTicks", out JsonNode node))
+            {
+                return;
+            }
+
+            if (node is not JsonValue value ||
+                !value.TryGetValue<int>(out int intervalTicks) ||
+                intervalTicks < 1)
+            {
+                throw new InvalidOperationException(
+                    $"Map config '{jsonPath}' field 'ThinkWaveIntervalTicks' requires an integer >= 1.");
+            }
         }
 
         private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)

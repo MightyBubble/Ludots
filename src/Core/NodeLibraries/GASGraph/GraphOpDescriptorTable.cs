@@ -63,9 +63,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static bool IsPolicyAllowed(GraphKind kind, GraphNodeOp op, in EffectOperationMetadata metadata)
         {
             GraphOpDescriptor descriptor = Get(op);
-            if (descriptor.ScriptOnly)
+            if (descriptor.ScriptSliceOnly)
             {
-                return kind == GraphKind.Script;
+                return kind is GraphKind.Script or GraphKind.MapTrigger;
             }
 
             if (kind == GraphKind.Effect)

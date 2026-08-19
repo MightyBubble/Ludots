@@ -5,13 +5,14 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 
 namespace Ludots.Core.Gameplay.MapTriggers
 {
     public static class MapTriggerGraphMounting
     {
-        public static List<MapTriggerGraphMountTrigger> BuildTriggers(MapSession session, GraphProgramRegistry? programs)
+        public static List<Trigger> BuildTriggers(MapSession session, GraphProgramRegistry? programs)
         {
             if (session == null)
             {
@@ -20,7 +21,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             string mapId = session.MapId.Value;
             List<MapTriggerGraphMount> mounts = MapTriggerGraphMount.ParseList(session.MapConfig?.MapTriggerGraphs, mapId);
-            var triggers = new List<MapTriggerGraphMountTrigger>();
+            var triggers = new List<Trigger>();
             if (mounts.Count == 0)
             {
                 return triggers;
@@ -41,7 +42,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         }
 
         private static void AppendMountTriggers(
-            List<MapTriggerGraphMountTrigger> triggers,
+            List<Trigger> triggers,
             MapSession session,
             GraphProgramRegistry programs,
             MapTriggerGraphMount mount,
@@ -69,14 +70,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             GraphInstruction[] program = registration.Program;
-            for (int i = 0; i < program.Length; i++)
-            {
-                if (program[i].Op == (ushort)GraphNodeOp.Yield)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapId}' {MapTriggerGraphMount.FieldName} graph '{mount.Graph}' contains Yield; MapTrigger graphs mounted on a map must halt in one slice.");
-                }
-            }
 
             Entity scope = Entity.Null;
             if (mount.ScopeInstanceId != null)
@@ -95,7 +88,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
                         $"Map '{mapId}' {MapTriggerGraphMount.FieldName} graph '{mount.Graph}' entry '{entry.Label}' has start pc {entry.StartPc} outside the program (length {program.Length}).");
                 }
 
-                triggers.Add(new MapTriggerGraphMountTrigger(graphId, mount.Graph, entry, scope));
+                var refirePolicy = entry.Refire == MapTriggerGraphEntry.RefireRestart
+                    ? MapTriggerGraphRefirePolicy.Restart
+                    : MapTriggerGraphRefirePolicy.Ignore;
+                var mountTrigger = new MapTriggerGraphMountTrigger(graphId, mount.Graph, entry, scope, refirePolicy);
+                triggers.Add(mountTrigger);
+                if (!mountTrigger.EntryIsResumeEvent)
+                {
+                    triggers.Add(new MapTriggerGraphResumeTrigger(mountTrigger));
+                }
             }
         }
     }

@@ -67,6 +67,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.HidePanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ReadMapVarInt:
+                    case GraphNodeOp.ReadMapVarFloat:
+                    case GraphNodeOp.WriteMapVarInt:
+                    case GraphNodeOp.WriteMapVarFloat:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.CreatePanel:
                         ins.Imm = UI.PanelHosting.PanelOpEncoding.Pack(
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),

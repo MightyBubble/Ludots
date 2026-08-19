@@ -1836,6 +1836,38 @@
       ]
     },
     {
+      "op": "ReadMapVarFloat",
+      "authorableKinds": [
+        "MapTrigger",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadMapVarFloat",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarFloatVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
+      "op": "ReadMapVarInt",
+      "authorableKinds": [
+        "MapTrigger",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_ReadMapVarInt",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.ReadMapVarIntVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
       "op": "RelationshipAddMetric",
       "authorableKinds": [
         "Effect"
@@ -2538,6 +2570,38 @@
       ]
     },
     {
+      "op": "WriteMapVarFloat",
+      "authorableKinds": [
+        "MapTrigger",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_WriteMapVarFloat",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarFloatVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
+      "op": "WriteMapVarInt",
+      "authorableKinds": [
+        "MapTrigger",
+        "Script"
+      ],
+      "showcaseId": "capability_standard_graph_op_WriteMapVarInt",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryMapVarAcceptanceTests.WriteMapVarIntVignette_ExecutesOpWithoutThrow"
+      ]
+    },
+    {
       "op": "WriteSelfAttribute",
       "authorableKinds": [
         "Derived",
@@ -2560,6 +2624,7 @@
     {
       "op": "Yield",
       "authorableKinds": [
+        "MapTrigger",
         "Script"
       ],
       "showcaseId": "capability_standard_graph_op_Yield",

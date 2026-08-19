@@ -325,6 +325,61 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void MapTrigger_RefireRestart_AcceptedAndCarried()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "MapTrigger",
+                  "entries": [
+                    { "label": "on_pulse", "event": "ManualPulse", "start": "a1", "refire": "restart" }
+                  ],
+                  "nodes": [
+                    { "id": "a1", "op": "ConstInt", "intValue": 1 },
+                    { "id": "aHalt", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "a1", "fromPort": "next", "to": "aHalt" }
+                  ],
+                  "valueEdges": [
+                    { "from": "a1", "fromPort": "value", "to": "aHalt", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.maptrigger.refire-restart");
+
+            Assert.That(compiled.Package!.Value.MapTriggerEntries[0].Refire, Is.EqualTo("restart"));
+        }
+
+        [Test]
+        public void MapTrigger_RefireUnknownValue_Rejected()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "MapTrigger",
+                  "entries": [
+                    { "label": "on_pulse", "event": "ManualPulse", "start": "a1", "refire": "queue" }
+                  ],
+                  "nodes": [
+                    { "id": "a1", "op": "ConstInt", "intValue": 1 },
+                    { "id": "aHalt", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "a1", "fromPort": "next", "to": "aHalt" }
+                  ],
+                  "valueEdges": [
+                    { "from": "a1", "fromPort": "value", "to": "aHalt", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.maptrigger.refire-bad");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics), Does.Contain("refire"));
+        }
+
+        [Test]
         public void MapTrigger_EmptyLabel_FailsClosed()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -451,7 +506,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void MapTrigger_WaitNode_RejectedNamingGraphAndNode()
+        public void MapTrigger_WaitNode_NowLowersToYield()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
@@ -476,16 +531,15 @@ namespace Ludots.Tests.Gas.Graph
                 """,
                 "tests.maptrigger.wait-node");
 
-            Assert.That(compiled.Succeeded, Is.False);
-            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
-                d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
-                d.NodeId == "pause" &&
-                d.Message.Contains("Wait", StringComparison.Ordinal) &&
-                d.Message.Contains("tests.maptrigger.wait-node", StringComparison.Ordinal)));
+            Assert.That(compiled.Succeeded, Is.True);
+            Assert.That(
+                compiled.Program.Any(i => i.Op == (ushort)GraphNodeOp.Yield),
+                Is.True,
+                "Wait must lower to Yield now that the MapTrigger host resumes yielded slices");
         }
 
         [Test]
-        public void MapTrigger_YieldNode_RejectedNamingGraphAndNode()
+        public void MapTrigger_YieldNode_NowAccepted()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
                 """
@@ -510,12 +564,11 @@ namespace Ludots.Tests.Gas.Graph
                 """,
                 "tests.maptrigger.yield-node");
 
-            Assert.That(compiled.Succeeded, Is.False);
-            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
-                d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
-                d.NodeId == "pause" &&
-                d.Message.Contains("Yield", StringComparison.Ordinal) &&
-                d.Message.Contains("tests.maptrigger.yield-node", StringComparison.Ordinal)));
+            Assert.That(compiled.Succeeded, Is.True);
+            Assert.That(
+                compiled.Program.Any(i => i.Op == (ushort)GraphNodeOp.Yield),
+                Is.True,
+                "Yield is authorable for MapTrigger now that the host resumes yielded slices");
         }
 
         [Test]
@@ -609,15 +662,18 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void DescriptorProjections_MapTriggerMirrorsScriptExceptYield()
+        public void DescriptorProjections_MapTriggerMirrorsScriptIncludingYield()
         {
-            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.Yield), Is.False,
-                "Yield stays Script-only in the authorable projection");
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.Yield), Is.True,
+                "Yield is authorable for MapTrigger now that the host resumes yielded slices");
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.Yield), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.Jump), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ConstInt), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.InvokeScript), Is.True);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.MoveInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ReadMapVarInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Script, GraphNodeOp.ReadMapVarInt), Is.True);
+            Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.Effect, GraphNodeOp.ReadMapVarInt), Is.False);
             Assert.That(GraphOpDescriptorTable.IsAuthorable(GraphKind.MapTrigger, GraphNodeOp.ApplyEffectTemplate), Is.False,
                 "effect-transactional ops stay out of the MapTrigger dialect");
 
@@ -629,7 +685,7 @@ namespace Ludots.Tests.Gas.Graph
 
             Assert.That(
                 GraphOpDescriptorTable.ProjectCoverageAuthorableKinds(GraphNodeOp.Yield),
-                Is.EqualTo(new[] { "Script" }));
+                Is.EqualTo(new[] { "MapTrigger", "Script" }));
         }
 
         [Test]

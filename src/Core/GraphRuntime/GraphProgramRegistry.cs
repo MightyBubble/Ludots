@@ -235,6 +235,15 @@ namespace Ludots.Core.GraphRuntime
                         throw new InvalidOperationException(
                             $"Graph program id {graphId} MapTrigger entry '{label}' StartPc {startPc} is outside the program (length {program.Length}).");
                     }
+
+                    ValidateMapTriggerEntryFilters(graphId, label, entries[i].Filters);
+
+                    string refire = entries[i].Refire ?? MapTriggerGraphEntry.RefireIgnore;
+                    if (refire != MapTriggerGraphEntry.RefireIgnore && refire != MapTriggerGraphEntry.RefireRestart)
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph program id {graphId} MapTrigger entry '{label}' refire '{refire}' must be \"ignore\" or \"restart\".");
+                    }
                 }
 
                 return entries;
@@ -247,6 +256,28 @@ namespace Ludots.Core.GraphRuntime
             }
 
             return Array.Empty<MapTriggerGraphEntry>();
+        }
+
+        private static void ValidateMapTriggerEntryFilters(int graphId, string label, MapTriggerEntryFilters filters)
+        {
+            if ((filters.Region != null && filters.Region.Trim().Length == 0) ||
+                (filters.Tag != null && filters.Tag.Trim().Length == 0))
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'region'/'tag' require non-empty strings.");
+            }
+
+            if (filters.Threshold.HasValue != filters.Direction.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'threshold' and 'direction' must be declared together.");
+            }
+
+            if (filters.Direction.HasValue && !Enum.IsDefined(typeof(MapTriggerEntryFilterDirection), filters.Direction.Value))
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} MapTrigger entry '{label}' filters 'direction' value '{filters.Direction.Value}' is not a defined direction.");
+            }
         }
 
         private static void EnsureProgramValid(int graphId, GraphInstruction[] program, GraphKind kind)
