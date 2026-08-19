@@ -81,7 +81,7 @@
 作者只走一条边、只进一扇门：https://github.com/MightyBubble/Ludots/issues/861  
 画廊和一批门已经合了。三张旁路票只剩关单，分层没拆完，所以总账还开着。
 
-新开了一条线，别当成图能力收口的回锅：地图触发器图（MapTriggerGraph，含事件词典、挂载域、叠加仲裁），计划与作者样例只认 https://github.com/MightyBubble/Ludots/issues/1030 。首批方言/挂载切片在 feature 分支上，合不合、什么时候合，看那张票。
+新开了一条线，别当成图能力收口的回锅：地图触发器图（MapTriggerGraph，含事件词典、挂载域、叠加仲裁），计划与作者样例只认 https://github.com/MightyBubble/Ludots/issues/1030 。方言/挂载、事件词典（think wave/实体/区域）、地图变量存储、时间线续跑与「夜袭三波」全数据旗舰 showcase，连同旧 LevelDirector 试验线的退役，都已落在 codex/panel-four-skins-showcase 分支上；挂载域、叠加仲裁与 trigger override 还开在票里。合不合、什么时候合，看那张票。
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 

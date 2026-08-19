@@ -2,7 +2,6 @@ using CapabilityStandardAbilityGraphSandboxMod.Runtime;
 using CapabilityStandardBehaviorTreeArenaMod.Runtime;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
-using CapabilityStandardLevelBlueprintTrialMod.Runtime;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -48,23 +47,6 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(ShowcaseThinkBudgetMs));
-        }
-    }
-
-    [TestFixture]
-    [NonParallelizable]
-    [Category("ci-gate")]
-    public sealed class LevelBlueprintTrialShowcaseAcceptanceTests
-    {
-        [Test]
-        public void RegistryName_DelegatesToSeparatedSuite()
-        {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
-            var runtime = new LevelBlueprintTrialRuntime();
-            runtime.Bind(programs, actions);
-            runtime.EnsureWorld();
-            for (int i = 0; i < 40; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.GateOpen, Is.True);
         }
     }
 

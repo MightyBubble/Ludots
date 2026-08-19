@@ -26,6 +26,14 @@
       }
     },
     {
+      "name": "clash_of_clones",
+      "target": {
+        "type": "path",
+        "value": "mods/games/coc/ClashOfClonesMod",
+        "projectPath": "ClashOfClonesMod.csproj"
+      }
+    },
+    {
       "name": "champion_skill_stress",
       "target": {
         "type": "path",
@@ -408,11 +416,11 @@
       }
     },
     {
-      "name": "capability_standard_level_blueprint_trial",
+      "name": "map_trigger_night_raid",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod",
-        "projectPath": "CapabilityStandardLevelBlueprintTrialMod.csproj"
+        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
+        "projectPath": "MapTriggerNightRaidMod.csproj"
       }
     },
     {
@@ -1508,6 +1516,38 @@
         "type": "path",
         "value": "mods/showcases/panel_skin_web/PanelSkinWebMod",
         "projectPath": "PanelSkinWebMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ReadMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpReadMapVarIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteMapVarFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_WriteMapVarInt",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
+        "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
       }
     }
   ],
