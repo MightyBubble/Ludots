@@ -7014,7 +7014,14 @@
       "summary": "士气存在地图变量里，指针一动读数就到。",
       "tier": "T2",
       "category": "capability",
-      "tags": ["graph", "capability-standard", "gas", "graph-ops", "per-op", "ReadMapVarFloat"],
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ReadMapVarFloat"
+      ],
       "binding": "capability_standard_graph_op_ReadMapVarFloat",
       "preset": "capability_standard_graph_op_ReadMapVarFloat_raylib",
       "docsPath": "gitbook/reference/graph-node-op-wiki/ReadMapVarFloat.md",
@@ -7034,7 +7041,14 @@
       "summary": "地图变量记得每一场胜利，开局张口就报数。",
       "tier": "T2",
       "category": "capability",
-      "tags": ["graph", "capability-standard", "gas", "graph-ops", "per-op", "ReadMapVarInt"],
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ReadMapVarInt"
+      ],
       "binding": "capability_standard_graph_op_ReadMapVarInt",
       "preset": "capability_standard_graph_op_ReadMapVarInt_raylib",
       "docsPath": "gitbook/reference/graph-node-op-wiki/ReadMapVarInt.md",
@@ -7054,7 +7068,14 @@
       "summary": "一次补给写回士气变量，地图记得这份涨幅。",
       "tier": "T2",
       "category": "capability",
-      "tags": ["graph", "capability-standard", "gas", "graph-ops", "per-op", "WriteMapVarFloat"],
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "WriteMapVarFloat"
+      ],
       "binding": "capability_standard_graph_op_WriteMapVarFloat",
       "preset": "capability_standard_graph_op_WriteMapVarFloat_raylib",
       "docsPath": "gitbook/reference/graph-node-op-wiki/WriteMapVarFloat.md",
@@ -7074,7 +7095,14 @@
       "summary": "赢一场就写回地图变量，战绩板自己会涨。",
       "tier": "T2",
       "category": "capability",
-      "tags": ["graph", "capability-standard", "gas", "graph-ops", "per-op", "WriteMapVarInt"],
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "WriteMapVarInt"
+      ],
       "binding": "capability_standard_graph_op_WriteMapVarInt",
       "preset": "capability_standard_graph_op_WriteMapVarInt_raylib",
       "docsPath": "gitbook/reference/graph-node-op-wiki/WriteMapVarInt.md",

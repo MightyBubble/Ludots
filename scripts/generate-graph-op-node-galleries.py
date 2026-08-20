@@ -135,6 +135,7 @@ def write_map(
     actors: list,
     camera: dict | None = None,
     template_teams: dict[str, int] | None = None,
+    variables: list | None = None,
 ) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
@@ -156,6 +157,8 @@ def write_map(
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
+    if variables:
+        payload["Variables"] = variables
     dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
@@ -414,7 +417,14 @@ def main() -> int:
         ns = f"CapabilityStandardGraphOp{op}EntryMod"
         entry_path = f"{ENTRY_ROOT_REL}/{ns}"
         map_path = maps_dir / f"{sid}.json"
-        write_map(map_path, sid, scene.get("actors") or [], scene.get("camera"), template_teams)
+        write_map(
+            map_path,
+            sid,
+            scene.get("actors") or [],
+            scene.get("camera"),
+            template_teams,
+            scene.get("variables"),
+        )
         write_entry_mod(repo, op, title)
 
         upsert_by_key(
