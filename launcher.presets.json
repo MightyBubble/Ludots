@@ -2068,6 +2068,60 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_ink_raylib",
+      "name": "Panel Theme Ink-wash Raylib",
+      "selectors": [
+        "$panel_theme_ink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_ink_web_raylib",
+      "name": "Panel Theme Ink-wash Web Raylib",
+      "selectors": [
+        "$panel_theme_ink_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_fantasy_raylib",
+      "name": "Panel Theme Fantasy Raylib",
+      "selectors": [
+        "$panel_theme_fantasy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_fantasy_web_raylib",
+      "name": "Panel Theme Fantasy Web Raylib",
+      "selectors": [
+        "$panel_theme_fantasy_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_minimal_raylib",
+      "name": "Panel Theme Minimal Raylib",
+      "selectors": [
+        "$panel_theme_minimal"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "panel_theme_minimal_web_raylib",
+      "name": "Panel Theme Minimal Web Raylib",
+      "selectors": [
+        "$panel_theme_minimal_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

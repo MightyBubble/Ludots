@@ -179,11 +179,75 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         AssertPanelValues(panelHost, FindPanel(panelHost, FindEntity(engine.World, "Hero")), health: 100f, mana: 80f, attack: 25f);
     }
 
-    private static GameEngine CreateEngine(string? skinMod, out TestInputBackend backend)
+    [Test]
+    public void PanelFireballThemePack_LoadsAndAppliesToAutoLayoutContract()
+    {
+        using GameEngine engine = CreateEngine("PanelThemeInkMod", out TestInputBackend _, extraMods: new[] { "PanelThemeShowcaseMod" });
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(engine);
+        Assert.That(theme, Is.Not.Null, "The ink-wash theme pack must load through the merged themes catalog.");
+        Assert.That(theme!.Id, Is.EqualTo("ink-wash"));
+        Assert.That(theme.WebCss, Does.Contain("data:"), "The web variant must inline images as data URIs.");
+
+        UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+        Assert.That(root.Scene, Is.Not.Null, "Themed panel must mount through the default presentation.");
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "panel-fireball-status"), Is.Not.Null,
+            "Auto-layout nodes must carry the CSS class contract (.panel-<template>).");
+        Assert.That(FindNodeByClass(root.Scene!.Root!, "row-health"), Is.Not.Null,
+            "Value rows must carry variable classes (.row-<name>).");
+    }
+
+    [Test]
+    public void PanelFireballThemePack_MinimalTheme_RendersWithZeroImageAssets()
+    {
+        using GameEngine engine = CreateEngine("PanelThemeMinimalMod", out TestInputBackend _, extraMods: new[] { "PanelThemeShowcaseMod" });
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(engine);
+        Assert.That(theme, Is.Not.Null);
+        Assert.That(theme!.Id, Is.EqualTo("minimal"));
+        UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+        Assert.That(root.Scene, Is.Not.Null);
+    }
+
+    private static Ludots.UI.Runtime.UiNode? FindNodeByClass(Ludots.UI.Runtime.UiNode node, string className)
+    {
+        foreach (string name in node.ClassNames)
+        {
+            if (string.Equals(name, className, System.StringComparison.Ordinal))
+            {
+                return node;
+            }
+        }
+
+        foreach (Ludots.UI.Runtime.UiNode child in node.Children)
+        {
+            if (FindNodeByClass(child, className) is { } match)
+            {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    private static GameEngine CreateEngine(string? skinMod, out TestInputBackend backend, string[]? extraMods = null)
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
-        string[] mods = skinMod == null ? BaseMods : BaseMods.Append(skinMod).ToArray();
+        IEnumerable<string> mods = skinMod == null ? BaseMods : BaseMods.Append(skinMod);
+        if (extraMods != null)
+        {
+            mods = mods.Concat(extraMods);
+        }
+        mods = mods.ToArray();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
             Path.Combine(repoRoot, "assets"));

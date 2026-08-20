@@ -179,6 +179,14 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             await surface.NavigateAsync(new BrowserNavigationRequest(
                 BrowserLocalAppUri.Create("/", "topic=" + Uri.EscapeDataString(panel.Topic)))).ConfigureAwait(false);
 
+            Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(_engine);
+            if (theme != null)
+            {
+                await surface.Messages.ExecuteScriptAsync(
+                    $"(function(){{var s=document.createElement('style');s.id='ludots-panel-theme';s.textContent=decodeURIComponent(\"{Uri.EscapeDataString(theme.WebCss)}\");document.head.appendChild(s);}})();",
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+
             panel.Attach(surface, dataPlane, pump, lease, canvasContent);
         }
         catch (Exception ex)

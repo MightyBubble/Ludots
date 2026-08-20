@@ -97,6 +97,14 @@ namespace Ludots.Core.Config
         public string? PanelSkin { get; set; }
 
         /// <summary>
+        /// Visual theme pack id for engine-side panel presentation (orthogonal to
+        /// PanelSkin: skin = which backend renders, theme = what it looks like).
+        /// Resolved through the merged PanelThemes/themes.json catalog; the entry's
+        /// mod-scoped root points at theme.css + images/ + fonts/.
+        /// </summary>
+        public string? PanelTheme { get; set; }
+
+        /// <summary>
         /// For the "web" panel skin: mod-VFS path of the overlay app index.html
         /// (e.g. "PanelSkinWebMod:Assets/overlay-app/index.html").
         /// </summary>

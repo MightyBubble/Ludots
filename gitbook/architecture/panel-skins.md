@@ -63,6 +63,21 @@ panel_skin_{markup,compose,reactive,web}（四个选皮演示 mod——0 C#，�
 原生三皮各一 TestCase（加载对应 asset-only 选皮 mod，断言全链）；web headless 用例（无 CEF 宿主：面板与变量全链成立）。
 launcher 预设：`preset:panel_skin_{markup,compose,reactive,web}_raylib`。
 
+## 主题轴：CSS/切图/字体与后端正交
+
+皮（backend）与主题（theme）是两个正交轴：`panelSkin` 决定谁渲染，`panelTheme` 决定长什么样。主题包 = theme.css + images/ + fonts/，任何后端渲染任何主题。
+
+**主题包合同**（`assets/PanelThemes/<id>/`，发现走 `PanelThemes/themes.json` ArrayById——同 id 下游整包替换）：
+
+- `theme.css`：类选择器契约 `.panel-<template点转横线>` / `.title` / `.rows` / `.row-<变量名>` / `.row-paired|.row-single` / `.hint`；支持 background-image（url 指包内相对路径，装载器改写绝对路径/data URI）、font-family、颜色/边框/圆角/keyframes。
+- `images/`：切图（PNG/SVG；AI 生图 + `tools/panel_theme/cutout.py` 程序化抠图：边框采样 key、similarity/blend、去溢色、羽化、裁边）。
+- `fonts/`：字体文件经 `UiFontRegistry.RegisterFile` 注册；亦可引系统族（如 KaiTi/Georgia）。
+- web 后端：`PanelWebSkin` 在页面就绪后注入同一份 theme.css（url 改写 data URI）——**同一份 CSS 双吃**。
+
+**三主题 showcase**（`PanelThemeShowcaseMod` + 六个 0-C# 变体壳，预设 `preset:panel_theme_{ink,fantasy,minimal}[_web]_raylib`）：水墨（宣纸纹理/墨字楷体/朱砂印）、西方魔幻（羊皮纸/鎏金边/衬线）、极简（**纯 CSS 零图片**——主题可不带任何切图）。
+
+**选择面**：game.json `panelTheme`（全局）；模板/op 级主题覆盖与皮肤同构，后续切片。
+
 ## 边界
 
 - 皮不算数：渲染一律只读 `PanelVariableSet` 与激活商店；引擎侧系统不查 World。

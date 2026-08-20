@@ -1490,32 +1490,28 @@
       "name": "panel_skin_markup",
       "target": {
         "type": "path",
-        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
-        "projectPath": "PanelSkinMarkupMod.csproj"
+        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod"
       }
     },
     {
       "name": "panel_skin_compose",
       "target": {
         "type": "path",
-        "value": "mods/showcases/panel_skin_compose/PanelSkinComposeMod",
-        "projectPath": "PanelSkinComposeMod.csproj"
+        "value": "mods/showcases/panel_skin_compose/PanelSkinComposeMod"
       }
     },
     {
       "name": "panel_skin_reactive",
       "target": {
         "type": "path",
-        "value": "mods/showcases/panel_skin_reactive/PanelSkinReactiveMod",
-        "projectPath": "PanelSkinReactiveMod.csproj"
+        "value": "mods/showcases/panel_skin_reactive/PanelSkinReactiveMod"
       }
     },
     {
       "name": "panel_skin_web",
       "target": {
         "type": "path",
-        "value": "mods/showcases/panel_skin_web/PanelSkinWebMod",
-        "projectPath": "PanelSkinWebMod.csproj"
+        "value": "mods/showcases/panel_skin_web/PanelSkinWebMod"
       }
     },
     {
@@ -1548,6 +1544,55 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
         "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
+      }
+    },
+    {
+      "name": "panel_theme_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod"
+      }
+    },
+    {
+      "name": "panel_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_ink/PanelThemeInkMod"
+      }
+    },
+    {
+      "name": "panel_theme_ink_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_ink_web/PanelThemeInkWebMod"
+      }
+    },
+    {
+      "name": "panel_theme_fantasy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_fantasy/PanelThemeFantasyMod"
+      }
+    },
+    {
+      "name": "panel_theme_fantasy_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_fantasy_web/PanelThemeFantasyWebMod"
+      }
+    },
+    {
+      "name": "panel_theme_minimal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_minimal/PanelThemeMinimalMod"
+      }
+    },
+    {
+      "name": "panel_theme_minimal_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_minimal_web/PanelThemeMinimalWebMod"
       }
     }
   ],

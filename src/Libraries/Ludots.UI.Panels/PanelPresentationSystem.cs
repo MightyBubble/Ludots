@@ -32,6 +32,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly IUiSurfaceHost _surfaceHost;
     private readonly UIRoot _root;
     private readonly string? _globalSkin;
+    private readonly UiStyleSheet? _themeSheet;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -42,7 +43,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         UiPanelActivationStore activation,
         IUiSurfaceHost surfaceHost,
         UIRoot root,
-        string? globalSkin)
+        string? globalSkin,
+        UiStyleSheet? themeSheet = null)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
@@ -50,6 +52,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _surfaceHost = surfaceHost ?? throw new ArgumentNullException(nameof(surfaceHost));
         _root = root ?? throw new ArgumentNullException(nameof(root));
         _globalSkin = globalSkin;
+        _themeSheet = themeSheet;
     }
 
     public void Initialize() { }
@@ -93,7 +96,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     UiSurfaceSegment.Main,
                     priority: info.ZOrder));
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                    () => BuildPanel(info.Handle, rect, skin)));
+                    () => BuildPanel(info.Handle, rect, skin),
+                    styleSheets: _themeSheet == null ? null : new[] { _themeSheet }));
                 mounted = new MountedPanel(lease);
                 _mounted[key] = mounted;
             }
@@ -152,6 +156,8 @@ public sealed class PanelPresentationSystem : ISystem<float>
         var dim = new UiColor(136, 136, 136);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
+            .Class("panel")
+            .Class(TemplateClassToken(template.Id))
             .Background(new UiColor(20, 20, 35, 220))
             .Border(2, accent)
             .Radius(8)
@@ -160,13 +166,16 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Gap(4)
             .Absolute(rect.X, rect.Y)
             .Children(
+                BuildRows(template, values),
                 new UiElementBuilder(UiNodeKind.Text)
+                    .Class("title")
                     .Text(DisplayTitle(template.Id))
                     .FontSize(16)
                     .Bold()
                     .Color(accent),
                 BuildRows(template, values),
                 new UiElementBuilder(UiNodeKind.Text)
+                    .Class("hint")
                     .Text($"[{skin.Label}]")
                     .FontSize(11)
                     .Color(dim));
@@ -199,10 +208,16 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 text = $"{variable.Name.ToUpperInvariant()}  {values.Get(variable.Name):F0}";
             }
 
-            rows.Add(new UiElementBuilder(UiNodeKind.Text).Text(text).FontSize(14).Color(color));
+            rows.Add(new UiElementBuilder(UiNodeKind.Text)
+                .Class("row")
+                .Class($"row-{variable.Name}")
+                .Class(HasVariable(template, variable.Name + "Base") ? "row-paired" : "row-single")
+                .Text(text)
+                .FontSize(14)
+                .Color(color));
         }
 
-        return new UiElementBuilder(UiNodeKind.Container).Column().Gap(4).Children(rows.ToArray());
+        return new UiElementBuilder(UiNodeKind.Container).Column().Class("rows").Gap(4).Children(rows.ToArray());
     }
 
     private static bool HasVariable(PanelTemplate template, string name)
@@ -254,6 +269,11 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         return PanelSkinCatalog.Resolve(name);
+    }
+
+    private static string TemplateClassToken(string templateId)
+    {
+        return templateId.Replace('.', '-').TrimStart('-');
     }
 
     private static string DisplayTitle(string templateId)

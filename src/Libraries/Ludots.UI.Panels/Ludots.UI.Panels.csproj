@@ -7,5 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj" />
+    <ProjectReference Include="..\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>
 </Project>

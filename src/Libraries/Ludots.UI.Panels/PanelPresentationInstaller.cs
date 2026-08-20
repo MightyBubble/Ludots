@@ -32,12 +32,14 @@ public static class PanelPresentationInstaller
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("Panel presentation requires UIRoot engine service.");
 
+        PanelTheme? theme = PanelThemeCatalog.TryLoad(engine);
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
             activation,
             surfaceHost,
             root,
-            engine.MergedConfig?.PanelSkin));
+            engine.MergedConfig?.PanelSkin,
+            theme?.StyleSheet));
     }
 }
