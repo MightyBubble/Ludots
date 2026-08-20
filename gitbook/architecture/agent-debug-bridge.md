@@ -36,12 +36,15 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 - `GET /tools` → 自描述工具目录（name / description / inputSchema）
 - `POST /rpc` → JSON-RPC 2.0：`{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
 
-## 内置工具（17）
+## 内置工具（20）
 
 | 域 | 工具 | 能力 |
 |----|------|------|
 | 会话 | `ludots.session.info` | tick / 地图 / Mod 清单 / 相机 / 分辨率 |
 | 时间 | `ludots.time.get` · `ludots.time.control` | pause（换绑 TurnBasedPacemaker）/ step N（响应带 `targetTick`）/ resume |
+| 相机 | `ludots.camera.control` | `get` 姿态与活动虚拟相机；`set` 部分姿态（经 `ApplyPose` 持久）；`follow {entityId}` / `unfollow` 实体跟随 |
+| 日志 | `ludots.logs.tail` | 进程内日志环形缓冲（激活时经 `Log.AddBackend` 挂入）；`count/minLevel/channel/contains` 过滤 |
+| 事件 | `ludots.events.fire` | 经 `TriggerManager.FireEventAsync` 发送任意事件键，响应带本次 `triggerErrors` |
 | 实体 | `ludots.entities.query` | 世界坐标→屏幕投影 rect、**屏幕占比**、可见性；`offset/limit/nameFilter/onScreenOnly` |
 | UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
 | GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |
