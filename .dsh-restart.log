@@ -1,7 +1,0 @@
-﻿2026-08-18 19:50:02 === restart script started ===
-2026-08-18 19:50:02 dsh --version => 0.1.0-rc.7
-2026-08-18 19:50:03 stopping old harness pid 10704
-2026-08-18 19:50:04 port 3080 free
-2026-08-18 19:50:04 launched 'dsh web' as pid 1960
-2026-08-18 19:50:28 OK: harness listening on 3080 (pid 74480)
-2026-08-18 19:50:28 === restart script finished ===

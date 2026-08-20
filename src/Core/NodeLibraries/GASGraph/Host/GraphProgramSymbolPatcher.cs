@@ -78,9 +78,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
                         ins.Dst = 0;
-                        ins.B = ins.B == byte.MaxValue
-                            ? UI.PanelHosting.PanelSkinIds.Unspecified
-                            : UI.PanelHosting.PanelSkinIds.ToId(ResolveSymbol(symbols, ins.B));
+                        bool skinAuthored = (ins.Flags & 1) != 0 && ins.B != byte.MaxValue;
+                        ins.B = skinAuthored
+                            ? UI.PanelHosting.PanelSkinIds.ToId(ResolveSymbol(symbols, ins.B))
+                            : UI.PanelHosting.PanelSkinIds.Unspecified;
+                        ins.Flags = 0;
                         if (ins.ImmF == 0f)
                         {
                             ins.ImmF = 100f;

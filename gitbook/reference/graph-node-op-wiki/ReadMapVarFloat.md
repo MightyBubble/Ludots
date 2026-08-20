@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Script / MapTrigger |
+| 可用图种 | Script / TriggerGraph |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |

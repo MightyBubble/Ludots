@@ -62,6 +62,7 @@ KIND_MASK_LABELS = {
     "LinearAndScript": "Effect / Score / Validation / Derived / Script",
     "LinearQueryScript": "六种全可用（Effect / Score / Validation / Derived / Query / Script）",
     "EffectAndScript": "Effect / Script",
+    "ScriptAndTriggerGraph": "Script / TriggerGraph",
 }
 
 TYPE_LABELS = {

@@ -166,7 +166,6 @@ public sealed class PanelPresentationSystem : ISystem<float>
             .Gap(4)
             .Absolute(rect.X, rect.Y)
             .Children(
-                BuildRows(template, values),
                 new UiElementBuilder(UiNodeKind.Text)
                     .Class("title")
                     .Text(DisplayTitle(template.Id))

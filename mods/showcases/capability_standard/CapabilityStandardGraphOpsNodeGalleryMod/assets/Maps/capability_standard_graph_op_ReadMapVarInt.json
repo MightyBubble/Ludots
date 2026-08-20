@@ -63,12 +63,5 @@
       "TeamId": 2,
       "RepresentativeInstanceId": "target"
     }
-  ],
-  "Variables": [
-    {
-      "name": "gallery.kills",
-      "type": "int",
-      "initial": 42
-    }
   ]
 }

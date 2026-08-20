@@ -25,14 +25,6 @@
 {"id": "toggle", "op": "CreatePanel", "panelType": "showcase.panel.test", "panelAnchor": "screen.topRight"}
 ```
 
-## 参数：panelSkin 与 panelZOrder（创建即选皮）
-
-```json
-{"id": "create", "op": "CreatePanel", "panelType": "panel.fireball.status", "panelAnchor": "screen.topRight", "panelSkin": "markup", "panelZOrder": 120}
-```
-
-两者都可省略。皮肤解析是四级链：**图 op `panelSkin` > 模板 `skin` 字段 > game.json `panelSkin` > `default`**——皮是面板实例的渲染属性（同 anchor），同屏多皮共存是结构后果。已知皮：`default / markup / compose / reactive / web`；写错名字装载期即抛。`panelZOrder` 对齐虚幻 Add to Viewport 的 ZOrder 语义（越大越靠上），缺省 100，直通表面租约优先级。
-
 ## 这场是怎么搭出来的
 
 上面的录像不是特效，是画廊里一张真实可跑的图（作者图 `mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/GAS/graphs/CreatePanel.json`，共 4 个节点）。照抄这张图，你就能在自家 mod 里得到同样的效果：

@@ -55,10 +55,16 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     private readonly IUiSurfaceHost _surfaceHost;
     private readonly UIRoot _root;
 
+    private const int MaxInitAttempts = 3;
+
     private readonly Dictionary<string, WebPanel> _panels = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _initAttempts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _failedPanels = new(StringComparer.Ordinal);
     private float _secondsSincePublish;
     private bool _disposed;
-    private bool _initFailed;
+
+    /// <summary>Templates that exhausted their init budget, with the last failure reason. Loud, pollable fail-closed state.</summary>
+    public IReadOnlyDictionary<string, string> FailedPanels => _failedPanels;
 
     public PanelWebSkinSystem(GameEngine engine, IBrowserRuntime runtime, GameConfig config)
     {
@@ -93,8 +99,9 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         foreach (PanelHostInstanceInfo info in _panelHost.SnapshotInstances())
         {
             if (!_activation.IsVisible(info.TemplateId) ||
+                !IsWebRouted(info) ||
                 _panels.ContainsKey(info.TemplateId) ||
-                !IsWebRouted(info))
+                _failedPanels.ContainsKey(info.TemplateId))
             {
                 continue;
             }
@@ -191,10 +198,21 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         }
         catch (Exception ex)
         {
-            _initFailed = true;
+            _panels.Remove(panel.TemplateId);
+            int attempts = _initAttempts.GetValueOrDefault(panel.TemplateId) + 1;
+            _initAttempts[panel.TemplateId] = attempts;
+            if (attempts < MaxInitAttempts)
+            {
+                Ludots.Core.Diagnostics.Log.Error(
+                    in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"[PanelWebSkin] init attempt {attempts} failed for '{panel.TemplateId}', will retry: {ex.Message}");
+                return;
+            }
+
+            _failedPanels[panel.TemplateId] = ex.Message;
             Ludots.Core.Diagnostics.Log.Error(
                 in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"[PanelWebSkin] failed to initialize web panel '{panel.TemplateId}': {ex.Message}");
+                $"[PanelWebSkin] giving up on web panel '{panel.TemplateId}' after {attempts} attempts; data stays alive without a surface: {ex.Message}");
         }
     }
 
@@ -253,6 +271,8 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         public UiSurfaceLeaseHandle Lease { get; private set; }
         public PanelWebCanvasContent? CanvasContent { get; private set; }
 
+        public bool HasAttached { get; private set; }
+
         public void Attach(
             IBrowserSurface surface,
             WebUiDataPlaneRuntime dataPlane,
@@ -265,6 +285,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             Pump = pump;
             Lease = lease;
             CanvasContent = canvasContent;
+            HasAttached = true;
         }
     }
 
