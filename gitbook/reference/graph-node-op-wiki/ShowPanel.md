@@ -2,9 +2,7 @@
 
 选中单位的一瞬间，属性卡跟着亮起来。
 
-<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ShowPanel/poster.png" src="artifacts/evidence/capability_standard_graph_op_ShowPanel/play.mp4">
-你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ShowPanel/play.mp4`。
-</video>
+> 录像资产待补；下面的作者图和启动命令可直接复现这颗节点的效果。
 
 ## 作者写法
 
