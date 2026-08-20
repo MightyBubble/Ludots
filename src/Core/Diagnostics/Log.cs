@@ -151,6 +151,16 @@ namespace Ludots.Core.Diagnostics
         }
 
         /// <summary>
+        /// Adds a backend alongside the current one. Unlike <see cref="Initialize"/>,
+        /// channel level configuration is preserved.
+        /// </summary>
+        public static void AddBackend(ILogBackend backend)
+        {
+            ArgumentNullException.ThrowIfNull(backend);
+            _backend = _backend is NullLogBackend ? backend : new MultiLogBackend(_backend, backend);
+        }
+
+        /// <summary>
         /// Reset all state. For testing only.
         /// </summary>
         internal static void Reset()

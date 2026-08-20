@@ -17,7 +17,8 @@ namespace Ludots.AgentBridge.Tools
         private int _intervalMs;
         private int _maxFrames;
         private int _frameCount;
-        private bool _captureInFlight;
+        // Cleared on threadpool continuations, read on the game thread.
+        private volatile bool _captureInFlight;
         private DateTime _startedUtc;
         private DateTime _nextDueUtc;
 
