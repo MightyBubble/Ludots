@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.Browser\Ludots.WebUI.Browser.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
     <ProjectReference Include="..\..\..\UiShowcaseCoreMod\UiShowcaseCoreMod.csproj" />
     <ProjectReference Include="..\..\panel_fireball_shared\FireballSharedMod\FireballSharedMod.csproj" />
   </ItemGroup>

@@ -1,5 +1,10 @@
 {
   "startupMapId": "fireball_arena",
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  },
   "startupInputContexts": [
     "Default_Gameplay"
   ],
@@ -11,5 +16,10 @@
   ],
   "windowTitle": "Ludots - Panel Web UI Skin",
   "windowWidth": 1600,
-  "windowHeight": 900
+  "windowHeight": 900,
+  "logging": {
+    "fileLogging": true,
+    "logFilePath": "panel_skin_web.log",
+    "globalLevel": "Info"
+  }
 }

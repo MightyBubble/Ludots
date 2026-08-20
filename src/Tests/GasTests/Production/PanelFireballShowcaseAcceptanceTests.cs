@@ -46,7 +46,6 @@ public sealed class PanelFireballShowcaseAcceptanceTests
     [TestCase("PanelSkinMarkupMod")]
     [TestCase("PanelSkinComposeMod")]
     [TestCase("PanelSkinReactiveMod")]
-    [TestCase("PanelSkinWebMod")]
     public void PanelFireballSkinShowcase_QCastsGasFireballAndRefreshesPanel(string skinMod)
     {
         using GameEngine engine = CreateEngine(skinMod, out TestInputBackend input);
@@ -96,6 +95,22 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         });
         AssertPanelValues(panelHost, panel, health: 100f, mana: 70f, attack: 25f);
         AssertSkinMounted(engine, skinMod);
+    }
+
+
+    [Test]
+    public void PanelFireballWebSkin_HeadlessHost_SkipsCefOverlayButCreatesPanel()
+    {
+        using GameEngine engine = CreateEngine("PanelSkinWebMod", out TestInputBackend _);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost missing.");
+        Assert.That(panelHost.Count, Is.EqualTo(1), "The map trigger still creates the panel instance headlessly.");
+        AssertPanelValues(panelHost, FindPanel(panelHost, FindEntity(engine.World, "Hero")), health: 100f, mana: 80f, attack: 25f);
     }
 
     private static GameEngine CreateEngine(string skinMod, out TestInputBackend backend)
