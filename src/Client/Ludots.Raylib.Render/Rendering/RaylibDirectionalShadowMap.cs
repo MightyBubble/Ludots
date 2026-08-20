@@ -12,7 +12,7 @@ namespace Ludots.Raylib.Render
     /// </summary>
     public sealed unsafe class RaylibDirectionalShadowMap : IDisposable
     {
-        public const int MapSize = 2048;
+        public const int DefaultMapSize = 2048;
         public const float DefaultReceiverBiasWorld = 0.04f;
 
         private readonly RenderTexture2D _rt;
@@ -29,8 +29,12 @@ namespace Ludots.Raylib.Render
         private bool _frameActive;
         private bool _disposed;
 
-        public RaylibDirectionalShadowMap()
+        public RaylibDirectionalShadowMap(RaylibShadowConfig? config = null)
         {
+            RaylibShadowConfig effective = config?.Validate() ?? RaylibShadowConfig.CreateDefault();
+            MapSize = effective.MapSize;
+            ReceiverBiasWorld = effective.ReceiverBiasWorld;
+
             _rt = Rl.LoadRenderTexture(MapSize, MapSize);
             Rl.SetTextureFilter(_rt.texture, Rl.TextureFilter.TEXTURE_FILTER_POINT);
             Rl.SetTextureWrap(_rt.texture, Rl.TextureWrap.TEXTURE_WRAP_CLAMP);
@@ -69,6 +73,10 @@ namespace Ludots.Raylib.Render
         }
 
         public Texture2D DepthTexture => _rt.texture;
+
+        public int MapSize { get; }
+
+        public float ReceiverBiasWorld { get; }
 
         public bool HasFrame { get; private set; }
 

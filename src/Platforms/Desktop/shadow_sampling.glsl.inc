@@ -3,6 +3,7 @@ uniform mat4 uLightSpaceMatrix;
 uniform float uShadowEnabled;
 uniform float uShadowTexelWorld;
 uniform float uShadowBias;
+uniform float uShadowMapTexel;
 
 float UnpackDepth(vec4 packed)
 {
@@ -26,7 +27,7 @@ float SampleShadow(vec3 worldPos, vec3 N)
     }
 
     float receiverDepth = proj.z;
-    float texel = 1.0 / 2048.0;
+    float texel = uShadowMapTexel;
     vec2 shadowUv = proj.xy;
     float lit = 0.0;
     for (int y = -1; y <= 1; y++)

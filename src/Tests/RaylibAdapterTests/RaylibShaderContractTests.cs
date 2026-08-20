@@ -95,6 +95,8 @@ public sealed class RaylibShaderContractTests
         Assert.That(include, Does.Not.Contain("1.0 - proj.y"));
         Assert.That(include, Does.Contain("uniform float uShadowBias"));
         Assert.That(include, Does.Contain("stored + uShadowBias"));
+        Assert.That(include, Does.Contain("uniform float uShadowMapTexel"));
+        Assert.That(include, Does.Not.Contain("1.0 / 2048.0"));
 
         foreach (string receiver in new[] { "model_lit.fs", "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
         {
@@ -103,6 +105,19 @@ public sealed class RaylibShaderContractTests
             Assert.That(fragment, Does.Not.Contain("float UnpackDepth("), receiver);
             Assert.That(fragment, Does.Not.Contain("uniform float uShadowBias"), receiver);
         }
+    }
+
+    [Test]
+    public void RaylibShadowConfig_ValidatesMapSizeAndBias()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 1000, ReceiverBiasWorld: 0.04f).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 128, ReceiverBiasWorld: 0.04f).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: 0f).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RaylibShadowConfig(MapSize: 2048, ReceiverBiasWorld: -0.1f).Validate());
+
+        RaylibShadowConfig defaults = RaylibShadowConfig.CreateDefault();
+        Assert.DoesNotThrow(() => defaults.Validate());
+        Assert.That(defaults.MapSize, Is.EqualTo(2048));
     }
 
     [Test]

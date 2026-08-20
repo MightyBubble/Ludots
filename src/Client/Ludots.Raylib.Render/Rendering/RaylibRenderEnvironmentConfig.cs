@@ -8,7 +8,8 @@ namespace Ludots.Raylib.Render
         RaylibLightingConfig Lighting,
         RaylibSkyboxConfig Skybox,
         RaylibWaterRenderConfig Water,
-        RaylibPostProcessConfig PostProcess)
+        RaylibPostProcessConfig PostProcess,
+        RaylibShadowConfig Shadow)
     {
         public static RaylibRenderEnvironmentConfig CreateDefault()
         {
@@ -16,7 +17,8 @@ namespace Ludots.Raylib.Render
                 RaylibLightingConfig.CreateDefault(),
                 RaylibSkyboxConfig.CreateDefault(),
                 RaylibWaterRenderConfig.CreateDefault(),
-                RaylibPostProcessConfig.CreateDefault()).NormalizeAndValidate();
+                RaylibPostProcessConfig.CreateDefault(),
+                RaylibShadowConfig.CreateDefault()).NormalizeAndValidate();
         }
 
         public RaylibRenderEnvironmentConfig NormalizeAndValidate()
@@ -26,7 +28,8 @@ namespace Ludots.Raylib.Render
                 Lighting = Lighting.NormalizeAndValidate(),
                 Skybox = Skybox.Validate(),
                 Water = Water.Validate(),
-                PostProcess = PostProcess.Validate()
+                PostProcess = PostProcess.Validate(),
+                Shadow = Shadow.Validate()
             };
         }
 
@@ -214,6 +217,28 @@ namespace Ludots.Raylib.Render
             RaylibRenderEnvironmentConfig.RequireRange(Contrast, 0.05f, 8f, nameof(Contrast));
             RaylibRenderEnvironmentConfig.RequireRange(Saturation, 0f, 8f, nameof(Saturation));
             RaylibRenderEnvironmentConfig.RequireRange(VignetteStrength, 0f, 1f, nameof(VignetteStrength));
+            return this;
+        }
+    }
+
+    public readonly record struct RaylibShadowConfig(int MapSize, float ReceiverBiasWorld)
+    {
+        public static RaylibShadowConfig CreateDefault()
+        {
+            return new RaylibShadowConfig(
+                RaylibDirectionalShadowMap.DefaultMapSize,
+                RaylibDirectionalShadowMap.DefaultReceiverBiasWorld);
+        }
+
+        public RaylibShadowConfig Validate()
+        {
+            if (MapSize < 256 || MapSize > 8192 || (MapSize & (MapSize - 1)) != 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(MapSize), MapSize, "MapSize must be a power of two in [256, 8192].");
+            }
+
+            RaylibRenderEnvironmentConfig.RequirePositive(ReceiverBiasWorld, nameof(ReceiverBiasWorld));
+            RaylibRenderEnvironmentConfig.RequireRange(ReceiverBiasWorld, 0f, 1f, nameof(ReceiverBiasWorld));
             return this;
         }
     }

@@ -11,19 +11,22 @@ namespace Ludots.Raylib.Render
         public readonly int ShadowEnabled;
         public readonly int ShadowTexelWorld;
         public readonly int ShadowBias;
+        public readonly int ShadowMapTexel;
 
         private RaylibShadowSamplingLocations(
             int shadowMap,
             int lightSpaceMatrix,
             int shadowEnabled,
             int shadowTexelWorld,
-            int shadowBias)
+            int shadowBias,
+            int shadowMapTexel)
         {
             ShadowMap = shadowMap;
             LightSpaceMatrix = lightSpaceMatrix;
             ShadowEnabled = shadowEnabled;
             ShadowTexelWorld = shadowTexelWorld;
             ShadowBias = shadowBias;
+            ShadowMapTexel = shadowMapTexel;
         }
 
         public static unsafe RaylibShadowSamplingLocations ResolveOrThrow(
@@ -36,8 +39,9 @@ namespace Ludots.Raylib.Render
             int shadowEnabled = RaylibShaderBindingGuard.RequireUniform(shader, "uShadowEnabled", shaderLabel);
             int shadowTexelWorld = RaylibShaderBindingGuard.RequireUniform(shader, "uShadowTexelWorld", shaderLabel);
             int shadowBias = RaylibShaderBindingGuard.RequireUniform(shader, "uShadowBias", shaderLabel);
+            int shadowMapTexel = RaylibShaderBindingGuard.RequireUniform(shader, "uShadowMapTexel", shaderLabel);
             shader.locs[(int)shaderTextureSlot] = shadowMap;
-            return new RaylibShadowSamplingLocations(shadowMap, lightSpaceMatrix, shadowEnabled, shadowTexelWorld, shadowBias);
+            return new RaylibShadowSamplingLocations(shadowMap, lightSpaceMatrix, shadowEnabled, shadowTexelWorld, shadowBias, shadowMapTexel);
         }
 
         public unsafe void ApplyUniforms(Shader shader, RaylibDirectionalShadowMap? shadow, float shadowTexelWorld)
@@ -49,11 +53,13 @@ namespace Ludots.Raylib.Render
 
             float enabled = shadow != null ? 1f : 0f;
             float bias = shadow != null
-                ? RaylibDirectionalShadowMap.DefaultReceiverBiasWorld / shadow.DepthRange
+                ? shadow.ReceiverBiasWorld / shadow.DepthRange
                 : 0f;
+            float shadowMapTexel = shadow != null ? 1f / shadow.MapSize : 0f;
             Rl.SetShaderValue(shader, ShadowEnabled, &enabled, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(shader, ShadowTexelWorld, &shadowTexelWorld, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(shader, ShadowBias, &bias, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(shader, ShadowMapTexel, &shadowMapTexel, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             if (shadow != null)
             {
                 Rl.SetShaderValueMatrix(shader, LightSpaceMatrix, shadow.LightViewProjection);

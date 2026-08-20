@@ -30,6 +30,7 @@ namespace Ludots.Raylib.Render
         private readonly int _locShadowEnabled;
         private readonly int _locShadowTexelWorld;
         private readonly int _locShadowBias;
+        private readonly int _locShadowMapTexel;
         private RaylibSkyIbl? _skyIbl;
         private RaylibFrameLighting? _lighting;
         private bool _disposed;
@@ -51,6 +52,7 @@ namespace Ludots.Raylib.Render
             _locShadowEnabled = RequireLocation("uShadowEnabled");
             _locShadowTexelWorld = RequireLocation("uShadowTexelWorld");
             _locShadowBias = RequireLocation("uShadowBias");
+            _locShadowMapTexel = RequireLocation("uShadowMapTexel");
             int locMvp = RaylibShaderBindingGuard.RequireUniform(_shader, "mvp", "model_lit");
             int locMatModel = RaylibShaderBindingGuard.RequireUniform(_shader, "matModel", "model_lit");
             int locVertexPosition = RaylibShaderBindingGuard.RequireAttribute(_shader, "vertexPosition", "model_lit");
@@ -105,11 +107,13 @@ namespace Ludots.Raylib.Render
 
             float shadowEnabled = shadow != null ? 1f : 0f;
             float shadowBias = shadow != null
-                ? RaylibDirectionalShadowMap.DefaultReceiverBiasWorld / shadow.DepthRange
+                ? shadow.ReceiverBiasWorld / shadow.DepthRange
                 : 0f;
+            float shadowMapTexel = shadow != null ? 1f / shadow.MapSize : 0f;
             Rl.SetShaderValue(_shader, _locShadowEnabled, &shadowEnabled, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_shader, _locShadowTexelWorld, &shadowTexelWorld, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_shader, _locShadowBias, &shadowBias, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locShadowMapTexel, &shadowMapTexel, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             if (shadow != null)
             {
                 Rl.SetMaterialTexture(ref _material, ShadowMapSlot, shadow.DepthTexture);
