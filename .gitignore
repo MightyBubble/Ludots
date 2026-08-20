@@ -5,6 +5,9 @@
 # ----- .NET / C# 构建产物 -----
 **/bin/
 **/obj/
+# Ludots Pi frontend CLI is source, not a .NET build directory
+!src/Tools/Ludots.Pi/web/bin/
+!src/Tools/Ludots.Pi/web/bin/**
 **/publish/
 *.nupkg
 *.snupkg

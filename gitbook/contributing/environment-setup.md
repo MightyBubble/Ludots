@@ -23,6 +23,7 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
+.\scripts\run-ludots-pi.cmd
 ```
 
 规则：
@@ -30,6 +31,7 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 - 正式入口是 launcher web 和 launcher CLI。
 - `.\scripts\run-mod-launcher.cmd cli ...` 是 canonical wrapper 形式。
 - 直接运行 `src/Apps/...` 只用于 adapter 级调试。
+- `.\scripts\run-ludots-pi.cmd` 是编码助手前端，不是游戏启动入口。
 
 ## 4 常用测试命令
 

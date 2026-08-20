@@ -51,6 +51,7 @@
   - [Core Minimap Authoring](architecture/core-minimap-authoring.md)
 - [参考资料](reference/README.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
+  - [Ludots Pi](reference/ludots-pi.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
   - [Agent Profile](reference/agent-profile.md)

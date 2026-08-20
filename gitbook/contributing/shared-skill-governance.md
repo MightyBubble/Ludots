@@ -37,7 +37,7 @@ leaf skill 必须具备：
 ## 4 工具链
 
 - 校验：`scripts/validate-skills.ps1`
-- 同步：`scripts/sync-skills.ps1`
+- 同步：`scripts/sync-skills.ps1`（Codex / Claude / Pi）
 - CI：`.github/workflows/skills-governance.yml`
 - Owner：`.github/CODEOWNERS`
 

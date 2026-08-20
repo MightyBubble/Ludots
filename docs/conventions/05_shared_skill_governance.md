@@ -115,6 +115,7 @@ leaf skill 目录内不得新增 `README.md`、`CHANGELOG.md`、`INSTALL.md` 等
 
 - Codex：`$HOME/.codex/skills/`
 - Claude：`$HOME/.claude/skills/`
+- Pi：`$HOME/.pi/agent/skills/`
 
 同步结果不得作为手工编辑入口。所有变更必须先改仓库源文件，再重新同步。
 

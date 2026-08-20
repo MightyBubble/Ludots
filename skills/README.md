@@ -79,6 +79,7 @@
 - 同步：`scripts/sync-skills.ps1` 将分层目录扁平同步到本地运行时目录：
   - Codex：`$HOME/.codex/skills/`
   - Claude：`$HOME/.claude/skills/`
+  - Pi：`$HOME/.pi/agent/skills/`
 
 同步后的目录不是手工编辑入口。需要变更 skill 时，必须改仓库内源文件再重新同步。
 

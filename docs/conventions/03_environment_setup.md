@@ -36,6 +36,9 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 # Launch a single mod
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 
+# Open the Ludots Pi coding assistant
+.\scripts\run-ludots-pi.cmd
+
 # Launch directly into the camera hotpath acceptance map
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance_hotpath --adapter raylib
 
