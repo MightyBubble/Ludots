@@ -28,7 +28,7 @@ namespace Ludots.Raylib.Render
         }
         private readonly IRenderAssetPathResolver? _vfs;
         private readonly IRenderMaterialAssets? _materials;
-        private readonly RaylibMaterialHostBinder? _materialHostBinder;
+        private readonly RaylibMaterialLibrary? _materialLibrary;
         private readonly string? _diagnosticPath;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
@@ -207,16 +207,16 @@ namespace Ludots.Raylib.Render
             _channelRegistrar = channelRegistrar ?? ThrowMissingChannelRegistrar;
             _vfs = vfs;
             _materials = materials;
-            _materialHostBinder = vfs != null && materials != null
-                ? new RaylibMaterialHostBinder(vfs, materials)
+            _materialLibrary = vfs != null && materials != null
+                ? new RaylibMaterialLibrary(vfs, materials)
                 : null;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
-            _materialPipeline = new RaylibInstancedMaterialPipeline(_materialHostBinder);
+            _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
             _gpuSkinned = new RaylibGpuSkinnedBatchRenderer(_gpuSkinnedModelCache, _materialPipeline, _maxModelInstancesPerDraw);
             _vfxRenderer = new RaylibVfxRenderer(vfs);
-            _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialHostBinder);
+            _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialLibrary);
         }
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
@@ -2237,7 +2237,7 @@ namespace Ludots.Raylib.Render
         }
         private void ApplyHostMapsToModel(ref Model model, int materialId)
         {
-            if (_materialHostBinder == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
+            if (_materialLibrary == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
             {
                 return;
             }
@@ -2563,7 +2563,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 Model model = kvp.Value.Model;
-                _materialHostBinder?.DetachOwnedMaps(model);
+                _materialLibrary?.DetachOwnedMaps(model);
                 Rl.UnloadModel(model);
             }
             _modelCache.Clear();
@@ -2584,7 +2584,7 @@ namespace Ludots.Raylib.Render
 
             if (_proceduralMeshMaterialLoaded)
             {
-                _materialHostBinder?.DetachOwnedMaps(ref _proceduralMeshMaterial);
+                _materialLibrary?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 RaylibShadowSampling.ClearTexture(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
@@ -2601,11 +2601,11 @@ namespace Ludots.Raylib.Render
             _vegetationCutout.Dispose();
             _gpuSkinned.Dispose();
 
-            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
+            _gpuSkinnedModelCache.UnloadAll(model => _materialLibrary?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
             _vfxRenderer.Dispose();
             _effectShaders.Dispose();
-            _materialHostBinder?.Dispose();
+            _materialLibrary?.Dispose();
             _skyIbl?.Dispose();
             _skyIbl = null;
             _immediateLit?.Dispose();

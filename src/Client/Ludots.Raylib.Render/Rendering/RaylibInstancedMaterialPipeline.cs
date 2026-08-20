@@ -14,27 +14,27 @@ namespace Ludots.Raylib.Render
 
     internal sealed unsafe class RaylibInstancedMaterialPipeline
     {
-        private readonly RaylibMaterialHostBinder? _materialHostBinder;
+        private readonly RaylibMaterialLibrary? _materialLibrary;
         private readonly HashSet<int> _reportedInvalidInstancedMaterials = new HashSet<int>();
 
-        public RaylibInstancedMaterialPipeline(RaylibMaterialHostBinder? materialHostBinder)
+        public RaylibInstancedMaterialPipeline(RaylibMaterialLibrary? materialLibrary)
         {
-            _materialHostBinder = materialHostBinder;
+            _materialLibrary = materialLibrary;
         }
 
         public void ApplyHostMaterialMaps(ref Material material, int materialId, Shader shader, in RaylibPbrUniformLocations pbrLocs)
         {
-            if (_materialHostBinder == null || materialId <= 0)
+            if (_materialLibrary == null || materialId <= 0)
             {
-                _materialHostBinder?.DetachOwnedMaps(ref material);
+                _materialLibrary?.DetachOwnedMaps(ref material);
                 ApplyPbrUniforms(shader, in pbrLocs, materialId: 0, hostBound: false);
                 return;
             }
 
-            bool hostBound = _materialHostBinder.TryApplyHostMaps(ref material, materialId);
+            bool hostBound = _materialLibrary.TryApplyMaps(ref material, materialId);
             if (!hostBound)
             {
-                _materialHostBinder.DetachOwnedMaps(ref material);
+                _materialLibrary.DetachOwnedMaps(ref material);
             }
 
             ApplyPbrUniforms(shader, in pbrLocs, materialId, hostBound);
@@ -131,14 +131,14 @@ namespace Ludots.Raylib.Render
 
         private void ApplyPbrUniforms(Shader shader, in RaylibPbrUniformLocations locs, int materialId, bool hostBound)
         {
-            float roughness = RaylibMaterialHostBinder.DefaultRoughness;
-            float metallic = RaylibMaterialHostBinder.DefaultMetallic;
+            float roughness = RaylibMaterialLibrary.DefaultRoughness;
+            float metallic = RaylibMaterialLibrary.DefaultMetallic;
             int hasRoughnessMap = 0;
             int hasMetallicMap = 0;
 
             if (hostBound &&
-                _materialHostBinder != null &&
-                _materialHostBinder.TryGetHostPbrParams(
+                _materialLibrary != null &&
+                _materialLibrary.TryGetPbrParams(
                     materialId,
                     out roughness,
                     out metallic,

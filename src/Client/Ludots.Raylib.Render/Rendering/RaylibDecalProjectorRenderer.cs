@@ -10,7 +10,7 @@ namespace Ludots.Raylib.Render
     internal sealed unsafe class RaylibDecalProjectorRenderer : IDisposable
     {
         private readonly IRenderMaterialAssets? _materials;
-        private readonly RaylibMaterialHostBinder? _materialHostBinder;
+        private readonly RaylibMaterialLibrary? _materialLibrary;
 
         private Shader _decalProjectShader;
         private Material _decalMaterial;
@@ -27,10 +27,10 @@ namespace Ludots.Raylib.Render
         private const float DecalAlphaBlendCutoff = 0.02f;
         private const float DecalCutoutAlphaCutoff = RaylibPrimitiveRenderer.DefaultVegetationAlphaCutoff;
 
-        public RaylibDecalProjectorRenderer(IRenderMaterialAssets? materials, RaylibMaterialHostBinder? materialHostBinder)
+        public RaylibDecalProjectorRenderer(IRenderMaterialAssets? materials, RaylibMaterialLibrary? materialLibrary)
         {
             _materials = materials;
-            _materialHostBinder = materialHostBinder;
+            _materialLibrary = materialLibrary;
         }
 
         public void Draw(
@@ -48,14 +48,14 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibDecalProjectorRenderer)} Decal stableId={stableId} requires a positive materialId with host albedo.");
             }
 
-            if (_materialHostBinder == null)
+            if (_materialLibrary == null)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibDecalProjectorRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
+                    $"{nameof(RaylibDecalProjectorRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialLibrary)}.");
             }
 
             EnsureDecalResources();
-            if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
+            if (!_materialLibrary.TryApplyMaps(ref _decalMaterial, materialId))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibDecalProjectorRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
@@ -183,7 +183,7 @@ namespace Ludots.Raylib.Render
                     Rl.EndBlendMode();
                 }
 
-                _materialHostBinder.DetachOwnedMaps(ref _decalMaterial);
+                _materialLibrary.DetachOwnedMaps(ref _decalMaterial);
             }
         }
 
@@ -191,7 +191,7 @@ namespace Ludots.Raylib.Render
         {
             if (_decalMaterialLoaded)
             {
-                _materialHostBinder?.DetachOwnedMaps(ref _decalMaterial);
+                _materialLibrary?.DetachOwnedMaps(ref _decalMaterial);
                 _decalMaterial.shader = default;
                 Rl.UnloadMaterial(_decalMaterial);
                 _decalMaterialLoaded = false;

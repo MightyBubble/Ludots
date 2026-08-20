@@ -6,7 +6,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
-    /// <summary>材质绑定：RaylibMaterialHostBinder 把同一网格绑到三种宿主材质（不透明棋盘 / 裁切条纹 / 半透明光斑）。</summary>
+    /// <summary>材质绑定：RaylibMaterialLibrary 把同一网格绑到三种宿主材质（不透明棋盘 / 裁切条纹 / 半透明光斑）。</summary>
     public sealed unsafe class MaterialBindingScene : IEngineScene
     {
         private const int CheckerMaterialId = 621;
@@ -21,14 +21,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryLitProps _litProps = new();
         private readonly RaylibSkyboxRenderer _skybox = new();
 
-        private RaylibMaterialHostBinder _binder = null!;
+        private RaylibMaterialLibrary _binder = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _cube;
         private bool _disposed;
 
         public string Id => "material_binding";
         public string Title => "材质绑定";
-        public string Summary => "RaylibMaterialHostBinder 同网格多材质/混合模式";
+        public string Summary => "RaylibMaterialLibrary 同网格多材质/混合模式";
 
         public MaterialBindingScene()
         {
@@ -79,13 +79,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided),
                 new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_glow.png" });
 
-            _binder = new RaylibMaterialHostBinder(_paths, _materials);
+            _binder = new RaylibMaterialLibrary(_paths, _materials);
             _cube = Rl.GenMeshCube(3f, 3f, 3f);
 
             for (int i = 0; i < _slots.Length; i++)
             {
                 Material material = Rl.LoadMaterialDefault();
-                if (!_binder.TryApplyHostMaps(ref material, _slots[i].MaterialId))
+                if (!_binder.TryApplyMaps(ref material, _slots[i].MaterialId))
                 {
                     Rl.UnloadMaterial(material);
                     throw new InvalidOperationException($"Gallery material '{_slots[i].Label}' has no host albedo binding.");
