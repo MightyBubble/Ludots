@@ -1,0 +1,12 @@
+{
+  "name": "NightRaidShowcaseMod",
+  "version": "1.0.0",
+  "description": "Readable interaction layer for the data-driven Night Raid showcase.",
+  "main": "bin/net8.0/NightRaidShowcaseMod.dll",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "tags": ["showcase", "night-raid", "graph"]
+}

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
@@ -39,6 +41,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     {
         "LudotsCoreMod",
         "CoreInputMod",
+        "NightRaidShowcaseMod",
         "MapTriggerNightRaidMod",
     };
 
@@ -131,6 +134,60 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             "The showcase assembly must contain only the presentation-only entry; all level flow lives in map/graph data.");
     }
 
+    [Test]
+    public void GivenANewPlayer_WhenTheyFollowTheNightRaidPrompts_ThenTheyCanFinishTheRaidAndSeeWhyTheGraphAdvanced()
+    {
+        using GameEngine engine = CreateEngine();
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, HeartbeatIntervalTicks * 4);
+
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("Night Raid requires the shared screen overlay buffer.");
+        PlayerInputHandler input = engine.GetService(CoreServiceKeys.InputHandler)
+            ?? throw new InvalidOperationException("Night Raid requires the shared input handler.");
+        MapVariableStore variables = engine.CurrentMapSession?.Variables
+            ?? throw new InvalidOperationException("night_raid must declare map variables.");
+        World world = engine.World;
+        Entity hero = FindEntity(world, "NightRaidHero");
+
+        Assert.Multiple(() =>
+        {
+            AssertOverlayContains(overlay, "NIGHT RAID");
+            AssertOverlayContains(overlay, "Left click: select");
+            AssertOverlayContains(overlay, "Wave 0/2");
+        });
+
+        engine.GlobalContext[CoreServiceKeys.TabTargetEntity.Name] = hero;
+        PressCommand(engine, input);
+        TickUntil(engine, () => variables.ReadInt("wave") == 1, HeartbeatIntervalTicks * 3,
+            () => "Right-clicking the selected hero did not enter the raid circle and start wave 1.");
+
+        input.InjectButtonPress("TabTarget");
+        Tick(engine, 1);
+        Tick(engine, 1);
+        Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out object? tabTarget) && tabTarget is Entity,
+            Is.True,
+            "Tab must focus a live hostile target for a player who does not click it directly.");
+
+        DefeatTeamWithPlayerCommands(engine, input, teamId: 2);
+        TickUntil(engine, () => variables.ReadInt("wave") == 2, HeartbeatIntervalTicks * 8,
+            () => "Defeating the first raider group through player commands did not advance to wave 2.");
+        AssertOverlayContains(overlay, "Wave 2/2");
+
+        DefeatTeamWithPlayerCommands(engine, input, teamId: 4);
+        TickUntil(engine, () => variables.ReadInt("phase") == 2, HeartbeatIntervalTicks * 3,
+            () => "Defeating the boss through player commands did not advance to phase 2.");
+
+        Assert.Multiple(() =>
+        {
+            AssertOverlayContains(overlay, "VICTORY - phase 2 reached");
+            Assert.That(engine.GetService(CoreServiceKeys.PanelHost)?.Count, Is.EqualTo(1),
+                "Finishing the player-driven raid must reveal the existing victory panel.");
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+        });
+    }
+
     private static GameEngine CreateEngine()
     {
         string repoRoot = FindRepoRoot();
@@ -154,6 +211,28 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static void MoveHeroIntoRaidCircle(World world, Entity hero, int xCm, int yCm)
     {
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
+    }
+
+    private static void DefeatTeamWithPlayerCommands(GameEngine engine, PlayerInputHandler input, int teamId)
+    {
+        foreach (Entity target in CollectTeam(engine.World, teamId).ToArray())
+        {
+            engine.GlobalContext[CoreServiceKeys.TabTargetEntity.Name] = target;
+            for (int strike = 0; strike < 40 && engine.World.IsAlive(target); strike++)
+            {
+                PressCommand(engine, input);
+            }
+
+            TickUntil(engine, () => !engine.World.IsAlive(target), maxFrames: 12,
+                () => $"Player command strikes did not defeat team-{teamId} target {target}.");
+        }
+    }
+
+    private static void PressCommand(GameEngine engine, PlayerInputHandler input)
+    {
+        input.InjectButtonPress("Command");
+        Tick(engine, 1);
+        Tick(engine, 1);
     }
 
     private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames, Func<string> describeFailure)
@@ -238,6 +317,25 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static void AssertTeamCounts(World world, int teamId, int expected, string because)
     {
         Assert.That(CollectTeam(world, teamId).Count, Is.EqualTo(expected), because);
+    }
+
+    private static void AssertOverlayContains(ScreenOverlayBuffer overlay, string expected)
+    {
+        foreach (ref readonly ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text)
+            {
+                continue;
+            }
+
+            string? text = overlay.GetString(item.StringId);
+            if (!string.IsNullOrEmpty(text) && text.Contains(expected, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        Assert.Fail($"Night Raid HUD did not contain '{expected}'.");
     }
 
     private static string FindRepoRoot()

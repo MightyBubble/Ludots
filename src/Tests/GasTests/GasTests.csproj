@@ -102,6 +102,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\CapabilityStandardBehaviorTreeArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\map_trigger_night_raid\MapTriggerNightRaidMod\MapTriggerNightRaidMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\night_raid_showcase\NightRaidShowcaseMod\NightRaidShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\CapabilityStandardScriptFlowSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
