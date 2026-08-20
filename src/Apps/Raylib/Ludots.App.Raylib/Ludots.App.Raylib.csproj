@@ -106,11 +106,11 @@
       <Link>postprocess.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\ambient_day_ramp.json">
+    <None Include="..\..\..\Client\Ludots.Raylib.Render\Resources\ambient_day_ramp.json">
       <Link>ambient_day_ramp.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\distance_fog.json">
+    <None Include="..\..\..\Client\Ludots.Raylib.Render\Resources\distance_fog.json">
       <Link>distance_fog.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
