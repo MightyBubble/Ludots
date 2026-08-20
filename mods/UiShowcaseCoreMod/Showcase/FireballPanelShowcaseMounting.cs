@@ -155,6 +155,9 @@ public static class FireballPanelShowcaseMounting
                 _surfaceHost.Publish(_lease, UiSurfaceContribution.FromBuilder(
                     _ => BuildPanel(_panelHost, _panel, _skinLabel, _accentR, _accentG, _accentB)));
                 _mounted = true;
+                Ludots.Core.Diagnostics.Log.Info(
+                    in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"[FireballSkin] surface '{_skinLabel}' MOUNTED panel {_panel.Id}#{_panel.Generation}.");
                 return;
             }
 

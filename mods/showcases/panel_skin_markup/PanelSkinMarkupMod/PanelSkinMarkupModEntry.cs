@@ -25,6 +25,9 @@ public sealed class PanelSkinMarkupModEntry : IMod
             }
             catch (System.Exception ex)
             {
+                Ludots.Core.Diagnostics.Log.Error(
+                    in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"[PanelSkinMarkupMod] InstallSkinSurface failed: {ex}");
                 return Task.FromException(ex);
             }
         });
