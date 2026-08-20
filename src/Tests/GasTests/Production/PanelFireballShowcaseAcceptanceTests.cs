@@ -124,6 +124,47 @@ public sealed class PanelFireballShowcaseAcceptanceTests
     }
 
     [Test]
+    public void PanelFireballSkinRouting_InstanceSkinBeatsTemplateAndGlobal_FourSkinsCoexist()
+    {
+        using GameEngine engine = CreateEngine(null, out TestInputBackend _);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost missing.");
+        Entity hero = FindEntity(engine.World, "Hero");
+
+        PanelInstanceHandle markup = panelHost.Instantiate(PanelTemplateId, "screen.topRight", hero, "markup", 100);
+        PanelInstanceHandle reactive = panelHost.Instantiate(PanelTemplateId, "screen.topRight", hero, "reactive", 200);
+        Ludots.Core.UI.PanelActivation.PanelActivationApi activationApi = engine.GetService(CoreServiceKeys.PanelActivationApi)
+            ?? throw new InvalidOperationException("PanelActivationApi missing.");
+        activationApi.ShowPanel(PanelTemplateId);
+        Tick(engine, 4);
+
+        UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+        Assert.That(root.Scene, Is.Not.Null, "Default presentation must own a scene.");
+        int containers = CountContainers(root.Scene!.Root!);
+        Assert.That(containers, Is.GreaterThanOrEqualTo(3),
+            "Map panel plus two per-instance skins must all be mounted concurrently; got " + containers + ".");
+
+        Assert.That(panelHost.TryGetValues(markup, out _), Is.True);
+        Assert.That(panelHost.TryGetValues(reactive, out _), Is.True);
+    }
+
+    private static int CountContainers(Ludots.UI.Runtime.UiNode node)
+    {
+        int count = node.Kind == Ludots.UI.Runtime.UiNodeKind.Container ? 1 : 0;
+        foreach (Ludots.UI.Runtime.UiNode child in node.Children)
+        {
+            count += CountContainers(child);
+        }
+
+        return count;
+    }
+
+    [Test]
     public void PanelFireballWebSkin_HeadlessHost_SkipsCefOverlayButCreatesPanel()
     {
         using GameEngine engine = CreateEngine("PanelSkinWebMod", out TestInputBackend _);

@@ -78,6 +78,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
                             ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
                         ins.Dst = 0;
+                        ins.B = ins.B == byte.MaxValue
+                            ? UI.PanelHosting.PanelSkinIds.Unspecified
+                            : UI.PanelHosting.PanelSkinIds.ToId(ResolveSymbol(symbols, ins.B));
+                        if (ins.ImmF == 0f)
+                        {
+                            ins.ImmF = 100f;
+                        }
                         break;
                     case GraphNodeOp.DestroyPanel:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));

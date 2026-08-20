@@ -299,7 +299,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
-            RequirePanelHost().Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
+            CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            RequirePanelHost().Instantiate(
+                ResolvePanelTypeName(templateKeyId),
+                ResolvePanelTypeName(anchorKeyId),
+                scope,
+                UI.PanelHosting.PanelSkinIds.ToName(skinId),
+                (int)zOrder);
         }
 
         public void DestroyPanel(int templateKeyId, Entity scope)

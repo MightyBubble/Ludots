@@ -773,6 +773,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CreatePanel:
                     instruction.Imm = RequireSymbol(node.PanelType, "panelType", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.PanelAnchor, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.B = string.IsNullOrWhiteSpace(node.PanelSkin)
+                        ? byte.MaxValue
+                        : EncodeByteSymbol(node.PanelSkin, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    instruction.ImmF = node.PanelZOrder ?? 0f;
                     instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
                         ? ResolveValueInput(
                             node, GraphControlFlowPorts.Source, GraphValueType.Entity,

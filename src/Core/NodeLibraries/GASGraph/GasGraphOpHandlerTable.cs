@@ -990,7 +990,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.CreatePanel(
                 UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
                 UI.PanelHosting.PanelOpEncoding.UnpackAnchor(ins.Imm),
-                scope);
+                scope,
+                ins.B,
+                ins.ImmF);
         }
 
         private static void HandleDestroyPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

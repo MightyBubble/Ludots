@@ -20,14 +20,6 @@ public static class PanelPresentationInstaller
     {
         ArgumentNullException.ThrowIfNull(engine);
 
-        string? requestedSkin = engine.MergedConfig?.PanelSkin;
-        if (PanelSkinCatalog.IsBrowserStackSkin(requestedSkin))
-        {
-            // The browser UI stack owns rendering for the "web" skin; when no browser
-            // runtime is provisioned (headless hosts) the panels stay data-alive with
-            // no surface — the ControlPlane headless precedent.
-            return;
-        }
 
         PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("Panel presentation requires PanelHost engine service.");
@@ -40,13 +32,12 @@ public static class PanelPresentationInstaller
         UIRoot root = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("Panel presentation requires UIRoot engine service.");
 
-        PanelSkinDescriptor skin = PanelSkinCatalog.Resolve(engine.MergedConfig?.PanelSkin);
         engine.RegisterPresentationSystem(new PanelPresentationSystem(
             panelHost,
             templates,
             activation,
             surfaceHost,
             root,
-            skin));
+            engine.MergedConfig?.PanelSkin));
     }
 }

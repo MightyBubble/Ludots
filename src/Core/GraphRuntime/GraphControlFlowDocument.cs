@@ -75,6 +75,10 @@ namespace Ludots.Core.GraphRuntime
         public string? PanelType { get; set; }
         /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
         public string? PanelAnchor { get; set; }
+        /// <summary>Skin id for CreatePanel (Unreal-style creation-time render param; optional).</summary>
+        public string? PanelSkin { get; set; }
+        /// <summary>Viewport Z-order for CreatePanel; maps to surface lease priority. Default 100.</summary>
+        public float? PanelZOrder { get; set; }
         /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
         public string? Var { get; set; }
         public string? RelationshipType { get; set; }

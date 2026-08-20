@@ -39,13 +39,18 @@ namespace Ludots.Core.UI.PanelHosting
         /// </summary>
         public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope)
         {
+            return Instantiate(templateId, anchor, scope, null, 100);
+        }
+
+        public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope, string? skin, int zOrder)
+        {
             if (string.IsNullOrWhiteSpace(anchor))
             {
                 throw new ArgumentException($"Panel '{templateId}' requires a non-empty anchor.", nameof(anchor));
             }
 
             PanelTemplate template = _templates.Require(templateId);
-            var entry = new Entry(template, anchor.Trim(), scope);
+            var entry = new Entry(template, anchor.Trim(), scope, skin, zOrder);
             EvaluateAll(entry);
 
             int slot = _freeSlots.Count > 0 ? _freeSlots.Pop() : _entries.Count;
@@ -226,7 +231,9 @@ namespace Ludots.Core.UI.PanelHosting
                         entry.Template.Id,
                         entry.Anchor,
                         entry.Scope,
-                        entry.Revision));
+                        entry.Revision,
+                        entry.Skin,
+                        entry.ZOrder));
                 }
             }
 
@@ -283,11 +290,13 @@ namespace Ludots.Core.UI.PanelHosting
 
         private sealed class Entry
         {
-            public Entry(PanelTemplate template, string anchor, Entity scope)
+            public Entry(PanelTemplate template, string anchor, Entity scope, string? skin, int zOrder)
             {
                 Template = template;
                 Anchor = anchor;
                 Scope = scope;
+                Skin = skin;
+                ZOrder = zOrder;
                 Values = new Dictionary<string, float>(template.Variables.Count, StringComparer.Ordinal);
                 Revisions = new Dictionary<string, uint>(template.Variables.Count, StringComparer.Ordinal);
             }
@@ -295,6 +304,8 @@ namespace Ludots.Core.UI.PanelHosting
             public PanelTemplate Template { get; }
             public string Anchor { get; }
             public Entity Scope { get; }
+            public string? Skin { get; }
+            public int ZOrder { get; }
             public Dictionary<string, float> Values { get; }
             public Dictionary<string, uint> Revisions { get; }
             public uint Revision { get; set; }

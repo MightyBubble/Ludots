@@ -34,18 +34,7 @@ public static class PanelWebSkinInstaller
 
         GameConfig config = engine.MergedConfig
             ?? throw new InvalidOperationException("Panel web skin requires merged game config.");
-        if (!string.Equals(config.PanelSkin, "web", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(config.PanelWebApp))
-        {
-            throw new InvalidOperationException(
-                "panelSkin \"web\" requires game.json \"panelWebApp\" — a mod-VFS path to the overlay index.html.");
-        }
-
-        engine.RegisterPresentationSystem(new PanelWebSkinSystem(engine, runtime, config.PanelWebApp.Trim()));
+        engine.RegisterPresentationSystem(new PanelWebSkinSystem(engine, runtime, config));
         return true;
     }
 }
@@ -59,7 +48,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
 
     private readonly GameEngine _engine;
     private readonly IBrowserRuntime _runtime;
-    private readonly string _appIndexPath;
+    private readonly GameConfig _config;
     private readonly PanelHost _panelHost;
     private readonly PanelTemplateRegistry _templates;
     private readonly UiPanelActivationStore _activation;
@@ -71,11 +60,11 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     private bool _disposed;
     private bool _initFailed;
 
-    public PanelWebSkinSystem(GameEngine engine, IBrowserRuntime runtime, string appIndexPath)
+    public PanelWebSkinSystem(GameEngine engine, IBrowserRuntime runtime, GameConfig config)
     {
         _engine = engine;
         _runtime = runtime;
-        _appIndexPath = appIndexPath;
+        _config = config;
         _panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("Panel web skin requires PanelHost.");
         _templates = engine.GetService(CoreServiceKeys.PanelTemplateRegistry)
@@ -103,7 +92,9 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         // showcase contract; multi-instance stacking is the W5 slice).
         foreach (PanelHostInstanceInfo info in _panelHost.SnapshotInstances())
         {
-            if (!_activation.IsVisible(info.TemplateId) || _panels.ContainsKey(info.TemplateId))
+            if (!_activation.IsVisible(info.TemplateId) ||
+                _panels.ContainsKey(info.TemplateId) ||
+                !IsWebRouted(info))
             {
                 continue;
             }
@@ -199,10 +190,21 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         }
     }
 
+    private bool IsWebRouted(PanelHostInstanceInfo info)
+    {
+        return string.Equals(
+            info.Skin ?? _templates.Require(info.TemplateId).Skin ?? _config.PanelSkin,
+            "web",
+            StringComparison.Ordinal);
+    }
+
     private string ResolveAssetRoot()
     {
+        string appIndexPath = _config.PanelWebApp ??
+            throw new InvalidOperationException(
+                "panelSkin \"web\" requires game.json \"panelWebApp\" — a mod-VFS path to the overlay index.html.");
         if (_engine.VFS != null &&
-            _engine.VFS.TryResolveFullPath(_appIndexPath, out string indexPath))
+            _engine.VFS.TryResolveFullPath(appIndexPath, out string indexPath))
         {
             string? root = Path.GetDirectoryName(indexPath);
             if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
@@ -212,7 +214,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         }
 
         throw new InvalidOperationException(
-            $"Panel web skin cannot resolve overlay app '{_appIndexPath}' through the mod VFS.");
+            $"Panel web skin cannot resolve overlay app '{appIndexPath}' through the mod VFS.");
     }
 
     private void TearDownPanel(WebPanel panel)

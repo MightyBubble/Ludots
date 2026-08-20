@@ -31,7 +31,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly UiPanelActivationStore _activation;
     private readonly IUiSurfaceHost _surfaceHost;
     private readonly UIRoot _root;
-    private readonly PanelSkinDescriptor _skin;
+    private readonly string? _globalSkin;
 
     private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -42,14 +42,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
         UiPanelActivationStore activation,
         IUiSurfaceHost surfaceHost,
         UIRoot root,
-        PanelSkinDescriptor skin)
+        string? globalSkin)
     {
         _panelHost = panelHost ?? throw new ArgumentNullException(nameof(panelHost));
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _activation = activation ?? throw new ArgumentNullException(nameof(activation));
         _surfaceHost = surfaceHost ?? throw new ArgumentNullException(nameof(surfaceHost));
         _root = root ?? throw new ArgumentNullException(nameof(root));
-        _skin = skin;
+        _globalSkin = globalSkin;
     }
 
     public void Initialize() { }
@@ -78,6 +78,12 @@ public sealed class PanelPresentationSystem : ISystem<float>
             int stackIndex = anchorStack.TryGetValue(anchorKey, out int count) ? count : 0;
             anchorStack[anchorKey] = stackIndex + 1;
 
+            PanelSkinDescriptor skin = ResolveSkin(info);
+            if (skin.Name == PanelSkinCatalog.DefaultSkinName && IsWebRouted(info))
+            {
+                continue;
+            }
+
             string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
             if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
             {
@@ -85,9 +91,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
                     $"panel-skin:{key}",
                     UiSurfaceSegment.Main,
-                    priority: 100));
+                    priority: info.ZOrder));
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                    () => BuildPanel(info.Handle, rect)));
+                    () => BuildPanel(info.Handle, rect, skin)));
                 mounted = new MountedPanel(lease);
                 _mounted[key] = mounted;
             }
@@ -133,7 +139,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         _mounted.Clear();
     }
 
-    private UiElementBuilder BuildPanel(PanelInstanceHandle handle, UiRect rect)
+    private UiElementBuilder BuildPanel(PanelInstanceHandle handle, UiRect rect, PanelSkinDescriptor skin)
     {
         if (!_panelHost.TryGetValues(handle, out PanelVariableSet values))
         {
@@ -142,7 +148,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
 
         PanelTemplate template = _templates.Require(values.TemplateId);
-        var accent = new UiColor(_skin.AccentR, _skin.AccentG, _skin.AccentB);
+        var accent = new UiColor(skin.AccentR, skin.AccentG, skin.AccentB);
         var dim = new UiColor(136, 136, 136);
 
         var builder = new UiElementBuilder(UiNodeKind.Container).Column()
@@ -161,7 +167,7 @@ public sealed class PanelPresentationSystem : ISystem<float>
                     .Color(accent),
                 BuildRows(template, values),
                 new UiElementBuilder(UiNodeKind.Text)
-                    .Text($"[{_skin.Label}]")
+                    .Text($"[{skin.Label}]")
                     .FontSize(11)
                     .Color(dim));
         return builder;
@@ -220,6 +226,34 @@ public sealed class PanelPresentationSystem : ISystem<float>
             "mana" => new UiColor(68, 136, 255),
             _ => new UiColor(230, 230, 230),
         };
+    }
+
+    /// <summary>
+    /// Resolution chain (#1011): instance op param &gt; template skin field &gt; game.json
+    /// global default &gt; "default". Skin is a per-instance render route — instances may
+    /// mix native skins and web skins on one screen.
+    /// </summary>
+    private string? ResolvedSkinName(PanelHostInstanceInfo info)
+    {
+        return info.Skin ?? _templates.Require(info.TemplateId).Skin ?? _globalSkin;
+    }
+
+    private bool IsWebRouted(PanelHostInstanceInfo info)
+    {
+        return PanelSkinCatalog.IsBrowserStackSkin(ResolvedSkinName(info));
+    }
+
+    private PanelSkinDescriptor ResolveSkin(PanelHostInstanceInfo info)
+    {
+        string? name = ResolvedSkinName(info);
+        if (PanelSkinCatalog.IsBrowserStackSkin(name))
+        {
+            // Web-routed instances are owned by the browser stack; the native renderer
+            // must step aside per-instance, not per-game.
+            return new PanelSkinDescriptor(PanelSkinCatalog.DefaultSkinName, "Default", 120, 120, 140);
+        }
+
+        return PanelSkinCatalog.Resolve(name);
     }
 
     private static string DisplayTitle(string templateId)

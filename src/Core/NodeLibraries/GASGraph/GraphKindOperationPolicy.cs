@@ -140,8 +140,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         or GraphNodeOp.ReadMapVarInt
                         or GraphNodeOp.ReadMapVarFloat;
                 // WriteMapVar* 的 B 是可选 scope 操作数：byte.MaxValue 表示"缺省"（→caster）。
+                // CreatePanel 的 B 是可选皮肤符号索引：byte.MaxValue 表示"未指定皮"（走模板/全局默认链）。
                 bool bIsOptionalAbsent = instruction.B == byte.MaxValue &&
-                    op is GraphNodeOp.WriteMapVarInt or GraphNodeOp.WriteMapVarFloat;
+                    op is GraphNodeOp.WriteMapVarInt
+                        or GraphNodeOp.WriteMapVarFloat
+                        or GraphNodeOp.CreatePanel;
                 if (!aIsOptionalAbsent)
                 {
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);

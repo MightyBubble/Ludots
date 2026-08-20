@@ -16,5 +16,7 @@ namespace Ludots.Core.UI.PanelHosting
         string TemplateId,
         string Anchor,
         Arch.Core.Entity Scope,
-        uint Revision);
+        uint Revision,
+        string? Skin = null,
+        int ZOrder = 100);
 }

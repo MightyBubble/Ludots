@@ -38,6 +38,8 @@ panel_skin_{markup,compose,reactive,web}（四个选皮演示 mod——0 C#，�
 
 ## 换肤现状与 CSS 合同
 
+**解析链（四级，#1011）**：`CreatePanel 图 op panelSkin` > `模板 skin 字段` > `game.json panelSkin` > `default`。皮是实例属性：同屏可混排四皮（原生按实例取 accent，web 按实例建 CEF 表面）；`panelZOrder`（缺省 100）直通租约优先级，对齐虚幻 ZOrder。实例句柄出值边（虚幻 Create Widget 返回引用喂下游）需图 VM 新值类型，已登记下一片。
+
 **今天**：换皮 = game.json `"panelSkin"` 一行（default/markup/compose/reactive 为 accent 变体，web 为浏览器皮）。引擎侧渲染按模板变量声明自动布局，无任何皮 C#。
 
 **Web 皮的三条硬合同**（接坑记录，页面作者必读）：
