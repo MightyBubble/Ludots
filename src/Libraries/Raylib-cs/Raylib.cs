@@ -628,6 +628,14 @@ namespace Raylib_cs
             TEXTURE_FILTER_ANISOTROPIC_16X
         }
 
+        public enum TextureWrap
+        {
+            TEXTURE_WRAP_REPEAT = 0,
+            TEXTURE_WRAP_CLAMP,
+            TEXTURE_WRAP_MIRROR_REPEAT,
+            TEXTURE_WRAP_MIRROR_CLAMP
+        }
+
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe Image GenImageColor(int width, int height, Color color);
 
@@ -654,6 +662,9 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SetTextureFilter(Texture2D texture, TextureFilter filter);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetTextureWrap(Texture2D texture, TextureWrap wrap);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);

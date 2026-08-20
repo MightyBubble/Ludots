@@ -32,6 +32,8 @@ namespace Ludots.Raylib.Render
         public RaylibDirectionalShadowMap()
         {
             _rt = Rl.LoadRenderTexture(MapSize, MapSize);
+            Rl.SetTextureFilter(_rt.texture, Rl.TextureFilter.TEXTURE_FILTER_POINT);
+            Rl.SetTextureWrap(_rt.texture, Rl.TextureWrap.TEXTURE_WRAP_CLAMP);
             string baseDir = AppContext.BaseDirectory;
             string fsPath = System.IO.Path.Combine(baseDir, "shadow_depth.fs");
             _depthShader = Rl.LoadShader(System.IO.Path.Combine(baseDir, "shadow_depth.vs"), fsPath);

@@ -101,6 +101,57 @@ public sealed class RaylibShaderContractTests
         }
     }
 
+    [Test]
+    public void ReceiverShaders_ShareIdenticalShadowSamplingBlock()
+    {
+        string repoRoot = FindRepoRoot();
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string baseline = ExtractShadowSamplingBlock(File.ReadAllText(Path.Combine(shaderRoot, "model_lit.fs")));
+
+        foreach (string receiver in new[] { "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
+        {
+            string block = ExtractShadowSamplingBlock(File.ReadAllText(Path.Combine(shaderRoot, receiver)));
+            Assert.That(block, Is.EqualTo(baseline), receiver);
+        }
+    }
+
+    private static string ExtractShadowSamplingBlock(string shaderText)
+    {
+        string text = shaderText.Replace("\r\n", "\n");
+
+        int blockStart = text.IndexOf("float UnpackDepth(", StringComparison.Ordinal);
+        Assert.That(blockStart, Is.GreaterThanOrEqualTo(0), "Could not locate UnpackDepth in shader.");
+
+        int sampleShadow = text.IndexOf("float SampleShadow(", StringComparison.Ordinal);
+        Assert.That(sampleShadow, Is.GreaterThanOrEqualTo(0), "Could not locate SampleShadow in shader.");
+
+        int bodyOpen = text.IndexOf('{', sampleShadow);
+        Assert.That(bodyOpen, Is.GreaterThanOrEqualTo(0), "Could not locate SampleShadow body opening brace.");
+
+        int braceDepth = 0;
+        int blockEnd = -1;
+        for (int i = bodyOpen; i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                braceDepth++;
+            }
+            else if (text[i] == '}')
+            {
+                braceDepth--;
+                if (braceDepth == 0)
+                {
+                    blockEnd = i;
+                    break;
+                }
+            }
+        }
+
+        Assert.That(blockEnd, Is.GreaterThanOrEqualTo(0), "Could not locate SampleShadow closing brace.");
+
+        return text.Substring(blockStart, blockEnd - blockStart + 1).Trim();
+    }
+
     private static string FindRepoRoot()
     {
         DirectoryInfo? current = new(AppContext.BaseDirectory);
