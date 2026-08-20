@@ -24,7 +24,7 @@ curl -s -X POST http://127.0.0.1:47921/rpc \
   -d '{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}'
 ```
 
-环境变量：`LUDOTS_AGENT_BRIDGE=0` 强制关闭；`LUDOTS_AGENT_BRIDGE_PORT` 换端口（默认 47921，占用自动 +1）；`artifacts/agent-bridge/session.json` 是发现文件（含 port/pid/完整工具目录），进程退出即删。仅绑定 127.0.0.1，无鉴权调试接口。
+环境变量：`LUDOTS_AGENT_BRIDGE=0` 强制关闭；`LUDOTS_AGENT_BRIDGE_PORT` 换端口（默认 47921，占用自动 +1）；发现文件是 artifacts/agent-bridge/session.json（运行时生成、不入库，含 port/pid/完整工具目录），进程退出即删。仅绑定 127.0.0.1，无鉴权调试接口。
 
 ## Agent 标准工作循环：观察 → 驱动 → 验证
 
