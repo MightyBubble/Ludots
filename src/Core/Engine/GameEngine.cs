@@ -974,6 +974,9 @@ namespace Ludots.Core.Engine
                 panelTemplates,
                 new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
             gasGraphApi.BindPanelHost(panelHost);
+            var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
+            var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
+            gasGraphApi.BindPanelActivation(panelActivationApi);
             gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
@@ -1510,6 +1513,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.PanelHost, panelHost);
+            SetService(CoreServiceKeys.PanelActivationApi, panelActivationApi);
+            SetService(CoreServiceKeys.PanelActivationStore, panelActivationStore);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
