@@ -1505,6 +1505,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.OrderAdmissionResultBuffer, orderAdmissionResults);
             SetService(CoreServiceKeys.OrderTerminalResultBuffer, orderTerminalResults);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
+            SetService(CoreServiceKeys.RngStreamService, new Randomization.RngStreamService());
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);

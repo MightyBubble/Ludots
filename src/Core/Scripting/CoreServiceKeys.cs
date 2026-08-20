@@ -105,6 +105,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
+        public static readonly ServiceKey<Ludots.Core.Engine.Randomization.IRngStreamService> RngStreamService = new("RngStreamService");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
