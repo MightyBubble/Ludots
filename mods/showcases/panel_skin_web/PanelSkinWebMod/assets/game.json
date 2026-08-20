@@ -1,19 +1,9 @@
 {
-  "startupMapId": "fireball_arena",
   "browserRuntime": {
     "enabled": true,
     "required": true,
     "provider": "cef"
   },
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots - Panel Web UI Skin",
   "windowWidth": 1600,
   "windowHeight": 900,
@@ -21,5 +11,7 @@
     "fileLogging": true,
     "logFilePath": "panel_skin_web.log",
     "globalLevel": "Info"
-  }
+  },
+  "panelSkin": "web",
+  "panelWebApp": "PanelSkinWebMod:Assets/overlay-app/index.html"
 }

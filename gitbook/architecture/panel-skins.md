@@ -4,48 +4,41 @@
 
 ## 结构
 
+**作者拓扑（#1011 修正后）**：皮肤是引擎能力，不是作者负担。mod 作者 0 编码——写模板/图/地图 JSON，面板自动可见；换皮 = game.json 一行 `"panelSkin"`。
+
 ```text
-FireballSharedMod（共享基建，无皮）
+FireballSharedMod（共享玩法，无皮，自带可玩钥匙）
   assets/Panels/panel_templates.json   模板：变量声明+取数来源（health/mana/attack realtime + healthBase/manaBase）
-  assets/GAS/graphs.json               Graph.Fireball.Panel.OpenStatus（kind:TriggerGraph）
-  assets/Maps/fireball_arena.json      MapTriggerGraphs 挂载（scopeInstanceId=fireball-hero）
-  assets/GAS/{abilities,effects}.json  火球玩法（弹道/耗蓝/伤害，全数据）
-  assets/Input/                        SkillQ=<Keyboard>/q + 自动索敌
-  Runtime/                             仅输入 order source 装配；零面板逻辑
+  assets/GAS/graphs.json               Graph.Fireball.Panel.OpenStatus（TriggerGraph：CreatePanel → ShowPanel）
+  assets/game.json                     startupMapId/输入上下文/座位（可玩钥匙归共享 mod 所有）
+  assets/Maps、GAS、Input、Runtime/     火球玩法（弹道/耗蓝/伤害，全数据）
 
-UiShowcaseCoreMod/Showcase/FireballPanelShowcaseMounting.cs（皮的唯一 C#）
-  InstallSkinSurface(context, ownerId, skinLabel, accentR/G/B)   挂表面系统
-  FireballPanelSurfaceSystem                                      找单实例→租 UiSurface→发布 UI→每帧 Invalidate
-  BuildPanel                                                      UiElementBuilder 砌 UI（读 PanelVariableSet，分母走 AttributeBase）
+引擎侧（src/Libraries，作者零接触）
+  Ludots.UI.Panels                     PanelPresentationSystem：可见实例→自动布局上屏（变量→行，X/XBase→成对"cur / base"）；
+                                       PanelSkinCatalog：default/markup/compose/reactive 四个 accent 变体；PanelPresentationInstaller
+  Ludots.WebUI.Browser/PanelWebSkin    "web" 皮肤：CEF 离屏表面 + DataPlane（topic=ludots.panel.<templateId>，变量全量平铺）；
+                                       由宿主在浏览器运行时装好后接装；headless 无运行时则面板数据照活、无表面
+  宿主接线                             RaylibHostComposer/WebHostComposer/AcceptanceUiHostInstaller 统一调 PanelPresentationInstaller.Install
 
-panel_skin_{markup,compose,reactive}（三个原生皮 mod，结构同构）
-  Entry.cs    一次 InstallSkinSurface 调用：皮名 + 主题色三字节（≈15 行）
-  game.json   startupInputContexts/startupLocalSeats（启动器可玩钥匙）+ 窗口配置
-  mod.json    严格 schema（name/main/version/priority/dependencies）
-  csproj      仅 Ludots.Core + UiShowcaseCoreMod + FireballSharedMod 三个引用
-
-panel_skin_web（真正的浏览器皮：CEF + WebUI DataPlane）
-  Entry.cs                       IBrowserRuntime.CreateSurfaceAsync 建 CEF 表面；headless 宿主（无 BrowserRuntime）记录并跳过，面板照常创建
-  FireballWebSkinTopicProducer   IWebUiTopicProducer：从 PanelHost 投影取值发 LatestWins 快照（topic=ludots.showcase.fireball.status）
-  FireballWebSkinDataPlaneSystem 每帧 Invalidate 租约 + 0.25s 节流 PublishTopics
-  FireballWebSkinCanvasContent   CEF 表面 → Ui.Canvas 合成（右上角 320×220）
-  Assets/overlay-app/            页面三件（index.html/styles.css/main.js），走 BrowserAppResourceResolver
-  game.json                      另需 browserRuntime 块（enabled/required/provider=cef）供启动器供给 CEF
+panel_skin_{markup,compose,reactive,web}（四个选皮演示 mod——0 C#，纯声明）
+  mod.json     依赖 FireballSharedMod；无 main（asset-only，launcher ResourceOnly 一等公民）
+  game.json    "panelSkin": "markup|compose|reactive|web" + 窗口配置；web 另需 browserRuntime 块 + "panelWebApp"（overlay 首页的 mod-VFS 路径）
+  （web 专属）assets/overlay-app/ 页面三件（index.html/styles.css/main.js）
 ```
 
-每 mod 的文件就四样；皮间零共享代码、零交叉引用，全部差异集中在 Entry 的参数里。
+四个皮 mod 没有任何 C#、csproj、DLL；它们存在的意义只是给画廊/启动器四个可玩的选皮变体。
 
 ## 生命周期与数据流
 
-1. 装载地图 → TriggerGraph 挂载触发器在 MapLoaded 入口跑图 → `CreatePanel` op 建面板实例（scope=hero）。
-2. 皮 mod 的 MapLoaded handler 调 `InstallSkinSurface` 注册表面系统（此刻不要求面板已存在）。
-3. 表面系统首个表现帧：`RequireSinglePanelInstance` 取实例（唯一性强制）→ 租 `UiSurfaceSegment.Main` → 发布 `UiSurfaceContribution`。
-4. 每帧 `Invalidate`；realtime 变量由 `PanelRealtimeRefreshSystem`（Cleanup 组）重算，修订号变化才真正重画。
-5. 面板值全部来自 `PanelProjectionReader` 五路读嘴（SingleAttribute/AttributeBase/Derived/GraphOutput/TableLookup），fail-closed。
+1. 装载地图 → TriggerGraph 挂载触发器在 MapLoaded 入口跑图 → `CreatePanel` 建实例（scope=hero）→ `ShowPanel` 写入激活商店。
+2. 引擎侧 `PanelPresentationSystem`（表现系统）每帧扫可见实例 → 租 `UiSurfaceSegment.Main` → 发布自动布局 UI → 每帧 `Invalidate`。
+3. realtime 变量由 `PanelRealtimeRefreshSystem`（Cleanup 组）重算，修订号变化才真正重画。
+4. 面板值全部来自 `PanelProjectionReader` 五路读嘴（SingleAttribute/AttributeBase/Derived/GraphOutput/TableLookup），fail-closed。
+5. 显隐唯一写入口 `PanelActivationApi`（合同五）；皮渲染只读激活商店。
 
 ## 换肤现状与 CSS 合同
 
-**今天**：三个原生皮共享同一个 `BuildPanel`（C# `UiElementBuilder`，颜色内联在调用里）；"换皮" = `skinLabel + accent` 参数。Web 皮已换真身——CEF 离屏表面合成进 `Ui.Canvas`，数据走 WebUI DataPlane（topic 快照，LatestWins），页面是 mod 自带 `Assets/overlay-app` 静态三件。
+**今天**：换皮 = game.json `"panelSkin"` 一行（default/markup/compose/reactive 为 accent 变体，web 为浏览器皮）。引擎侧渲染按模板变量声明自动布局，无任何皮 C#。
 
 **Web 皮的三条硬合同**（接坑记录，页面作者必读）：
 1. `window.ludotsDataplane` facade 在 `FrameLoadEnd` 之后才注入，跑在内联脚本之后——页面握手/订阅必须轮询等待 facade 出现，不能一次性判定缺席。
@@ -63,10 +56,15 @@ panel_skin_web（真正的浏览器皮：CEF + WebUI DataPlane）
 
 ## 验收
 
-`src/Tests/GasTests/Production/PanelFireballShowcaseAcceptanceTests.cs`：原生三皮一套夹具三用例（每皮一个 `[TestCase]`），全链断言（单实例、变量真值含分母、Q→GAS 结算→realtime 刷新、表面挂载）；Web 皮单独用例 `PanelFireballWebSkin_HeadlessHost_SkipsCefOverlayButCreatesPanel`（headless 宿主无 CEF：跳过表面但面板与变量全链成立）。launcher 预设：`preset:panel_skin_{markup,compose,reactive,web}_raylib`。
+`src/Tests/GasTests/Production/PanelFireballShowcaseAcceptanceTests.cs`：五用例全绿——
+`PanelFireballDefaultSkin_NoSkinMod_ZeroCodePanelBecomesVisible`（**零编码主用例**：无任何皮 mod，仅共享玩法三 mod，面板自动可见+数值活）；
+原生三皮各一 TestCase（加载对应 asset-only 选皮 mod，断言全链）；web headless 用例（无 CEF 宿主：面板与变量全链成立）。
+launcher 预设：`preset:panel_skin_{markup,compose,reactive,web}_raylib`。
 
 ## 边界
 
-- 皮不得查 World 找实体、不得算数值——数据一律经 PanelVariableSet（历史上的反例已在收敛批删除）。
-- 皮 mod 间禁止互相引用；共享逻辑一律上移 UiShowcaseCoreMod 或 Core。
+- 皮不算数：渲染一律只读 `PanelVariableSet` 与激活商店；引擎侧系统不查 World。
+- 显隐唯一写入口 `PanelActivationApi`；图必须显式 `ShowPanel`（旧皮不查激活的宽松期已废除）。
+- 可玩钥匙（输入上下文/座位/启动地图）归共享玩法 mod 所有，皮 mod 只带选皮与窗口声明。
+- fail-closed：未知 panelSkin 直接抛错列出已知项；`web` 缺 `panelWebApp` 同样抛错。
 - `ref/` 目录式的构建残渣不得入库（已清理过一轮，csproj 不引用即删）。

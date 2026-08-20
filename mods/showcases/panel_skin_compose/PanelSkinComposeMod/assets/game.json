@@ -1,15 +1,6 @@
 {
-  "startupMapId": "fireball_arena",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
-  "startupLocalSeats": [
-    {
-      "seatId": "seat.0",
-      "playerId": 1
-    }
-  ],
   "windowTitle": "Ludots - Panel Compose Skin",
   "windowWidth": 1600,
-  "windowHeight": 900
+  "windowHeight": 900,
+  "panelSkin": "compose"
 }

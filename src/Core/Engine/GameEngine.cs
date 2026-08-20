@@ -1515,6 +1515,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.PanelHost, panelHost);
+            SetService(CoreServiceKeys.PanelTemplateRegistry, panelTemplates);
             SetService(CoreServiceKeys.PanelActivationApi, panelActivationApi);
             SetService(CoreServiceKeys.PanelActivationStore, panelActivationStore);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);

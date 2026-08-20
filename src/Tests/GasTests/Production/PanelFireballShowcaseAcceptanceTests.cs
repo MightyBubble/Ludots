@@ -40,7 +40,6 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         "LudotsCoreMod",
         "CoreInputMod",
         "FireballSharedMod",
-        "UiShowcaseCoreMod",
     };
 
     [TestCase("PanelSkinMarkupMod")]
@@ -99,6 +98,32 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
 
     [Test]
+    public void PanelFireballDefaultSkin_NoSkinMod_ZeroCodePanelBecomesVisible()
+    {
+        using GameEngine engine = CreateEngine(null, out TestInputBackend input);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        var world = engine.World;
+        Entity hero = FindEntity(world, "Hero");
+        Entity target = FindEntity(world, "Target");
+        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost missing.");
+        PanelInstanceHandle panel = FindPanel(panelHost, hero);
+
+        PressButton(engine, input, "<Keyboard>/q");
+        TickUntil(
+            engine,
+            () => ReadAttribute(world, target, "Health") <= 105f,
+            maxFrames: 90,
+            describeFailure: () => BuildFireballDiagnostics(engine, world, hero, target));
+
+        AssertPanelValues(panelHost, panel, health: 100f, mana: 70f, attack: 25f);
+        AssertSkinMounted(engine, "engine default skin");
+    }
+
+    [Test]
     public void PanelFireballWebSkin_HeadlessHost_SkipsCefOverlayButCreatesPanel()
     {
         using GameEngine engine = CreateEngine("PanelSkinWebMod", out TestInputBackend _);
@@ -113,13 +138,11 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         AssertPanelValues(panelHost, FindPanel(panelHost, FindEntity(engine.World, "Hero")), health: 100f, mana: 80f, attack: 25f);
     }
 
-    private static GameEngine CreateEngine(string skinMod, out TestInputBackend backend)
+    private static GameEngine CreateEngine(string? skinMod, out TestInputBackend backend)
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
-        string[] mods = new string[BaseMods.Length + 1];
-        Array.Copy(BaseMods, mods, BaseMods.Length);
-        mods[^1] = skinMod;
+        string[] mods = skinMod == null ? BaseMods : BaseMods.Append(skinMod).ToArray();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
             Path.Combine(repoRoot, "assets"));

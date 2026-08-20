@@ -4,8 +4,6 @@
   "description": "Markup-skin panel: HTML/CSS rendered from PanelHost realtime variables",
   "priority": 0,
   "dependencies": {
-    "FireballSharedMod": "^1.0.0",
-    "UiShowcaseCoreMod": "^1.0.0"
-  },
-  "main": "bin/net8.0/PanelSkinMarkupMod.dll"
+    "FireballSharedMod": "^1.0.0"
+  }
 }

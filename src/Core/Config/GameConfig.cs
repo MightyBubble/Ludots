@@ -90,6 +90,19 @@ namespace Ludots.Core.Config
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
 
         /// <summary>
+        /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",
+        /// "reactive", "web"). Null means the built-in default skin. Authors never write C#
+        /// to change skins — this is the whole selection surface.
+        /// </summary>
+        public string? PanelSkin { get; set; }
+
+        /// <summary>
+        /// For the "web" panel skin: mod-VFS path of the overlay app index.html
+        /// (e.g. "PanelSkinWebMod:Assets/overlay-app/index.html").
+        /// </summary>
+        public string? PanelWebApp { get; set; }
+
+        /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>

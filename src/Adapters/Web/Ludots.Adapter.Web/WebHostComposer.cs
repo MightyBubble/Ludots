@@ -61,6 +61,7 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
+            Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
 
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
