@@ -2,6 +2,20 @@
 
 `sync_cc0_assets.ps1` downloads every asset pack that the official Kenney catalog declares CC0 and every public KayKit repository that explicitly declares CC0. Archives and provider-scoped manifests are kept under `external/cc0-assets/`, which is intentionally excluded from Git because the complete collection is a large, third-party binary archive.
 
+The verified archive is published at [MightyBubble/Ludots-Assets](https://github.com/MightyBubble/Ludots-Assets). Clone it into the default local asset path to obtain the complete collection through Git LFS:
+
+```powershell
+git clone https://github.com/MightyBubble/Ludots-Assets.git external/cc0-assets
+```
+
+To inspect manifests and sources without downloading the 486 MiB LFS payload:
+
+```powershell
+$env:GIT_LFS_SKIP_SMUDGE = '1'
+git clone https://github.com/MightyBubble/Ludots-Assets.git external/cc0-assets
+Remove-Item Env:GIT_LFS_SKIP_SMUDGE
+```
+
 Run from the repository root:
 
 ```powershell
