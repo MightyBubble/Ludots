@@ -1,7 +1,7 @@
 using System;
 using Ludots.Core.Engine.Randomization;
 
-namespace RngCapabilityMod.Rng;
+namespace Ludots.Core.Gameplay.Rng;
 
 public sealed class DistributionTable
 {

@@ -1,14 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Engine.Randomization;
-using Ludots.Core.Scripting;
 
-namespace RngCapabilityMod.Rng;
-
-public static class RngCapabilityServiceKeys
-{
-    public static readonly ServiceKey<RngPickService> PickService = new("RngCapabilityMod.PickService");
-}
+namespace Ludots.Core.Gameplay.Rng;
 
 public sealed class RngPickService
 {

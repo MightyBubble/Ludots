@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace RngCapabilityMod.Rng;
+namespace Ludots.Core.Gameplay.Rng;
 
 public sealed record DistributionConfig(
     [property: JsonPropertyName("id")] string Id,

@@ -4,7 +4,7 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Engine.Randomization;
 
-namespace RngCapabilityMod.Rng;
+namespace Ludots.Core.Gameplay.Rng;
 
 public sealed class DistributionConfigLoader
 {

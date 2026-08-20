@@ -861,6 +861,9 @@ namespace Ludots.Core.Engine
             AbilityFormSetIdRegistry.Clear();
             ContextGroupIdRegistry.Clear();
             var itemConfigLoader = new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions);
+            var rngStreams = new Randomization.RngStreamService();
+            var rngTables = new Gameplay.Rng.DistributionConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, rngStreams);
+            var rngPickService = new Gameplay.Rng.RngPickService(rngStreams, rngTables);
             var exchangeLoader = new ExchangeConfigLoader(
                 ConfigPipeline,
                 exchangeOperations,
@@ -1505,7 +1508,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.OrderAdmissionResultBuffer, orderAdmissionResults);
             SetService(CoreServiceKeys.OrderTerminalResultBuffer, orderTerminalResults);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
-            SetService(CoreServiceKeys.RngStreamService, new Randomization.RngStreamService());
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
@@ -1588,6 +1590,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
+            SetService(CoreServiceKeys.RngStreamService, rngStreams);
+            SetService(CoreServiceKeys.RngPickService, rngPickService);
             SetService(CoreServiceKeys.OwnershipResolver, ownershipResolver);
             SetService(CoreServiceKeys.InventoryRuntimeService, inventoryRuntime);
             SetService(CoreServiceKeys.ExchangeOperationRegistry, exchangeOperations);

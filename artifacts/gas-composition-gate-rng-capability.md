@@ -75,3 +75,21 @@
 | 新增 Layer 1 | 无（本切片无事务壳） |
 | 新增 Layer 2 | `RngCapabilityMod.WeightedPick` extension op + 分布 catalog schema + 运行时 `DistributionTable` |
 | 禁止 | 无新 profile DSL、无平行加载器、无隐式全局流 fallback |
+
+---
+
+## 附录：分层修正（2026-08-20，随评审意见落地）
+
+原方案把分布机制放在 `RngCapabilityMod`（mod 侧）。评审指出并经仓库证据确认（Core 已收
+`ItemDefinitionRegistry`/`InventoryRuntimeService` 等领域通用机制，§4.4 两个以上 Mod 复用应提取 Core）：
+加权分布是与物品/背包同级的**引擎原语**，capability mod 应是利用该基建的 loot 语法糖。已重分层：
+
+- 机制下沉 Core：`src/Core/Gameplay/Rng/`（DistributionTable/Config/Loader/RngPickService），
+  `CoreServiceKeys.RngStreamService/RngPickService` 上册，GameEngine 初始化装配；
+  Core `assets/config_catalog.json` 声明 `Rng/distributions.json`（ArrayById + AllowEmpty），
+  各 mod 以 `assets/Rng/distributions.json` 分片贡献作者数据（与 Items 同模式）。
+- `RngCapabilityMod` 撤销；`RngCapabilityMod.WeightedPick` mod op 与 interning 上下文删除
+  （作者图尚不能引用 mod op，待前门缺口修复后直接做 Core op）。loot 语法糖（嵌套掉落/稀有度/保底/可耗尽）
+  归属后续 LootCapabilityMod / showcase 切片。
+
+判定不变：A（op 组合，无 enum/preset 开关）。

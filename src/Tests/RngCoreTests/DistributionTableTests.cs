@@ -1,7 +1,7 @@
 using System;
 using Ludots.Core.Engine.Randomization;
 using NUnit.Framework;
-using RngCapabilityMod.Rng;
+using Ludots.Core.Gameplay.Rng;
 
 namespace RngCoreTests
 {
@@ -164,13 +164,13 @@ namespace RngCoreTests
     }
 
     [TestFixture]
-    public class WeightedPickGraphOpTests
+    public class RngPickServiceTests
     {
-        private static RngPickService CreateInstalledService(RngGraphOpContext opContext, uint seed = 777u)
+        private static RngPickService CreateService(uint seed = 777u)
         {
             var streams = new RngStreamService();
             streams.DeclareStream("loot", seed);
-            var service = new RngPickService(streams, new[]
+            return new RngPickService(streams, new[]
             {
                 new DistributionTable("test.loot", "loot", new[]
                 {
@@ -179,50 +179,35 @@ namespace RngCoreTests
                     new DistributionEntryConfig("epic", 10, true, true, null)
                 })
             });
-            opContext.InstallService(service);
-            return service;
         }
 
         [Test]
-        public void WeightedPickOp_Execute_ServiceNotInstalled_Throws()
+        public void RngPickService_GetDistribution_Undeclared_Throws()
         {
-            var opContext = new RngGraphOpContext();
+            var service = new RngPickService(new RngStreamService(), Array.Empty<DistributionTable>());
 
             Assert.That(
-                () => WeightedPickGraphOp.Execute(opContext, 1, 0f),
-                Throws.InvalidOperationException.With.Message.Contains("not installed"));
+                () => service.GetDistribution("missing"),
+                Throws.InvalidOperationException.With.Message.Contains("not declared"));
         }
 
         [Test]
-        public void WeightedPickOp_Execute_UnknownDistributionOpId_Throws()
+        public void RngPickService_Pick_SnapshotRestore_ReplaysIdenticalSequence()
         {
-            var opContext = new RngGraphOpContext();
-            CreateInstalledService(opContext);
-
-            Assert.That(
-                () => WeightedPickGraphOp.Execute(opContext, 999, 0f),
-                Throws.InvalidOperationException.With.Message.Contains("Unknown distribution"));
-        }
-
-        [Test]
-        public void WeightedPickOp_Execute_SnapshotRestore_ReplaysIdenticalPicks()
-        {
-            var opContext = new RngGraphOpContext();
-            var service = CreateInstalledService(opContext);
-            var distributionOpId = opContext.GetDistributionOpId("test.loot");
+            var service = CreateService();
             var stream = service.GetDistributionStream("test.loot");
             var snapshot = stream.CaptureSnapshot();
 
             var firstRun = new int[50];
             for (var i = 0; i < firstRun.Length; i++)
             {
-                firstRun[i] = WeightedPickGraphOp.Execute(opContext, distributionOpId, 0f);
+                firstRun[i] = service.Pick("test.loot", 0f);
             }
 
             var divergedRun = new int[50];
             for (var i = 0; i < divergedRun.Length; i++)
             {
-                divergedRun[i] = WeightedPickGraphOp.Execute(opContext, distributionOpId, 0.5f);
+                divergedRun[i] = service.Pick("test.loot", 0.5f);
             }
 
             stream.RestoreSnapshot(in snapshot);
@@ -230,22 +215,11 @@ namespace RngCoreTests
             var replayRun = new int[50];
             for (var i = 0; i < replayRun.Length; i++)
             {
-                replayRun[i] = WeightedPickGraphOp.Execute(opContext, distributionOpId, 0f);
+                replayRun[i] = service.Pick("test.loot", 0f);
             }
 
             Assert.That(replayRun, Is.EqualTo(firstRun));
             Assert.That(divergedRun, Is.Not.EqualTo(firstRun), "Positive modulation must change the pick sequence.");
-        }
-
-        [Test]
-        public void RngPickService_GetDistribution_Undeclared_Throws()
-        {
-            var streams = new RngStreamService();
-            var service = new RngPickService(streams, Array.Empty<DistributionTable>());
-
-            Assert.That(
-                () => service.GetDistribution("missing"),
-                Throws.InvalidOperationException.With.Message.Contains("not declared"));
         }
     }
 }
