@@ -3749,26 +3749,27 @@
       "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
-      "id": "capability_standard_level_blueprint_trial",
-      "path": "mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod",
-      "projectPath": "CapabilityStandardLevelBlueprintTrialMod.csproj",
-      "title": "关卡蓝图试炼",
-      "summary": "独立关卡导演/触发器演示（不含 BT/HFSM/技能）。",
+      "id": "map_trigger_night_raid",
+      "path": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
+      "projectPath": "MapTriggerNightRaidMod.csproj",
+      "title": "夜袭三波",
+      "summary": "英雄进入区域后触发夜袭，清波推进，Boss 阵亡翻阶段并打开胜利面板。",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "graph",
+        "map-trigger",
         "capability-standard"
       ],
-      "binding": "capability_standard_level_blueprint_trial",
-      "preset": "capability_standard_level_blueprint_trial_raylib",
-      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "binding": "map_trigger_night_raid",
+      "preset": "map_trigger_night_raid_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
-      "acceptanceTest": "LevelBlueprintTrialShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_level_blueprint_trial",
+      "acceptanceTest": "MapTriggerNightRaidAcceptanceTests",
+      "artifactDir": null,
       "screenshot": null,
       "status": "active",
-      "notes": "Headless think-wave acceptance first; visual captures follow."
+      "notes": "地图 JSON + TriggerGraph 驱动；无关卡导演运行时代码。"
     },
     {
       "id": "capability_standard_live_skill_workbench",

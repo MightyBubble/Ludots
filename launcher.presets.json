@@ -459,10 +459,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_level_blueprint_trial_raylib",
-      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "id": "map_trigger_night_raid_raylib",
+      "name": "Map Trigger Night Raid Raylib",
       "selectors": [
-        "$capability_standard_level_blueprint_trial"
+        "$map_trigger_night_raid"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

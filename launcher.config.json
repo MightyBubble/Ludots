@@ -408,11 +408,11 @@
       }
     },
     {
-      "name": "capability_standard_level_blueprint_trial",
+      "name": "map_trigger_night_raid",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod",
-        "projectPath": "CapabilityStandardLevelBlueprintTrialMod.csproj"
+        "value": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
+        "projectPath": "MapTriggerNightRaidMod.csproj"
       }
     },
     {
