@@ -83,36 +83,50 @@ public sealed class RaylibShaderContractTests
         string repoRoot = FindRepoRoot();
         string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
         string depth = File.ReadAllText(Path.Combine(shaderRoot, "shadow_depth.fs"));
+        string include = File.ReadAllText(Path.Combine(shaderRoot, "shadow_sampling.glsl.inc"));
 
         Assert.That(depth, Does.Contain("finalColor = vec4(enc, 1.0)"));
         Assert.That(depth, Does.Not.Contain("enc.a"));
 
+        Assert.That(
+            include,
+            Does.Contain("dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0))"));
+        Assert.That(include, Does.Contain("vec2 shadowUv = proj.xy"));
+        Assert.That(include, Does.Not.Contain("1.0 - proj.y"));
+        Assert.That(include, Does.Contain("uniform float uShadowBias"));
+        Assert.That(include, Does.Contain("stored + uShadowBias"));
+
         foreach (string receiver in new[] { "model_lit.fs", "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
         {
             string fragment = File.ReadAllText(Path.Combine(shaderRoot, receiver));
-            Assert.That(
-                fragment,
-                Does.Contain("dot(packed.rgb, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0))"),
-                receiver);
-            Assert.That(fragment, Does.Contain("vec2 shadowUv = proj.xy"), receiver);
-            Assert.That(fragment, Does.Not.Contain("1.0 - proj.y"), receiver);
-            Assert.That(fragment, Does.Contain("uniform float uShadowBias"), receiver);
-            Assert.That(fragment, Does.Contain("stored + uShadowBias"), receiver);
+            Assert.That(fragment, Does.Contain("// ludo:include shadow_sampling.glsl.inc"), receiver);
+            Assert.That(fragment, Does.Not.Contain("float UnpackDepth("), receiver);
+            Assert.That(fragment, Does.Not.Contain("uniform float uShadowBias"), receiver);
         }
     }
 
     [Test]
-    public void ReceiverShaders_ShareIdenticalShadowSamplingBlock()
+    public void ReceiverShaders_ExpandToIdenticalShadowSamplingBlock()
     {
         string repoRoot = FindRepoRoot();
         string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
-        string baseline = ExtractShadowSamplingBlock(File.ReadAllText(Path.Combine(shaderRoot, "model_lit.fs")));
+        string baseline = ExpandAndExtract(shaderRoot, "model_lit.fs");
 
         foreach (string receiver in new[] { "instancing.fs", "skinning_instanced.fs", "terrain.fs" })
         {
-            string block = ExtractShadowSamplingBlock(File.ReadAllText(Path.Combine(shaderRoot, receiver)));
-            Assert.That(block, Is.EqualTo(baseline), receiver);
+            Assert.That(ExpandAndExtract(shaderRoot, receiver), Is.EqualTo(baseline), receiver);
         }
+    }
+
+    private static string ExpandAndExtract(string shaderRoot, string fileName)
+    {
+        string raw = File.ReadAllText(Path.Combine(shaderRoot, fileName));
+        string expanded = RaylibShaderLoader.ExpandIncludes(raw, shaderRoot, fileName, 0);
+        Assert.That(
+            expanded.Replace("\r\n", "\n").Split("float UnpackDepth(").Length - 1,
+            Is.EqualTo(1),
+            fileName);
+        return ExtractShadowSamplingBlock(expanded);
     }
 
     private static string ExtractShadowSamplingBlock(string shaderText)

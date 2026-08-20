@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Numerics;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -38,13 +37,7 @@ namespace Ludots.Raylib.Render
         public RaylibLitModel()
         {
             string baseDir = AppContext.BaseDirectory;
-            _shader = Rl.LoadShader(
-                Path.Combine(baseDir, "model_lit.vs"),
-                Path.Combine(baseDir, "model_lit.fs"));
-            if (_shader.id == 0)
-            {
-                throw new InvalidOperationException("Failed to load model_lit shader (shader.id == 0).");
-            }
+            _shader = RaylibShaderLoader.Load(baseDir, "model_lit.vs", "model_lit.fs", "model_lit");
 
             _lightingLocations = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "model_lit");
             _locTint = RequireLocation("tint");

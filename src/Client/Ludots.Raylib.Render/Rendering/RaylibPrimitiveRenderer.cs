@@ -3096,8 +3096,7 @@ namespace Ludots.Raylib.Render
             _vfxMaterialLoaded = true;
 
             string baseDir = AppContext.BaseDirectory;
-            _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
-            if (_shader.id == 0) throw new InvalidOperationException("Failed to load instancing shader (shader.id == 0).");
+            _shader = RaylibShaderLoader.Load(baseDir, "instancing.vs", "instancing.fs", "instancing");
 
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
@@ -3224,11 +3223,7 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibPrimitiveRenderer)} GpuSkinnedInstance requires skinning_instanced.vs/.fs beside the binary (missing under '{baseDir}').");
             }
 
-            _skinningShader = Rl.LoadShader(vsPath, fsPath);
-            if (_skinningShader.id == 0)
-            {
-                throw new InvalidOperationException("Failed to load skinning_instanced shader (shader.id == 0).");
-            }
+            _skinningShader = RaylibShaderLoader.Load(baseDir, "skinning_instanced.vs", "skinning_instanced.fs", "skinning_instanced");
 
             _locBoneMatrices = Rl.GetShaderLocation(_skinningShader, "boneMatrices");
             _locSkinningTint = Rl.GetShaderLocation(_skinningShader, "tint");

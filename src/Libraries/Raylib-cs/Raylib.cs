@@ -528,6 +528,9 @@ namespace Raylib_cs
         public static extern Shader LoadShader(string vsFileName, string fsFileName);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Shader LoadShaderFromMemory(string vsCode, string fsCode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void UnloadShader(Shader shader);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
