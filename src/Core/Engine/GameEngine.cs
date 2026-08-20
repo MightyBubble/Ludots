@@ -968,6 +968,7 @@ namespace Ludots.Core.Engine
                 clock,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
+            gasGraphApi.BindTriggerManager(TriggerManager);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var panelHost = new PanelHost(
