@@ -96,6 +96,8 @@ public sealed class RaylibShaderContractTests
                 receiver);
             Assert.That(fragment, Does.Contain("vec2 shadowUv = proj.xy"), receiver);
             Assert.That(fragment, Does.Not.Contain("1.0 - proj.y"), receiver);
+            Assert.That(fragment, Does.Contain("uniform float uShadowBias"), receiver);
+            Assert.That(fragment, Does.Contain("stored + uShadowBias"), receiver);
         }
     }
 

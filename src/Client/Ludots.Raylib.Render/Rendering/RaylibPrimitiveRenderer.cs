@@ -103,6 +103,7 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _shadowInstanceBatches = new();
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
+        private bool _gpuSkinnedBatchesPreparedForShadow;
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibVfxRenderer _vfxRenderer;
@@ -700,7 +701,11 @@ namespace Ludots.Raylib.Render
         private void DrawSkinnedBatch(ISkinnedVisualBatchSnapshot skinnedBatch, Camera3D camera, IRenderMeshAssets meshes, float scaleMul)
         {
             var span = skinnedBatch.GetSpan();
-            PrepareGpuSkinnedInstanceBatches();
+            bool reuseShadowBatches = _gpuSkinnedBatchesPreparedForShadow;
+            if (!reuseShadowBatches)
+            {
+                PrepareGpuSkinnedInstanceBatches();
+            }
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -731,6 +736,7 @@ namespace Ludots.Raylib.Render
             }
 
             FlushGpuSkinnedInstanceBatches();
+            _gpuSkinnedBatchesPreparedForShadow = false;
         }
 
         private void PrepareGpuSkinnedInstanceBatches()
@@ -738,6 +744,7 @@ namespace Ludots.Raylib.Render
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
                 _activeGpuSkinnedInstanceBatches[i].Count = 0;
+                _activeGpuSkinnedInstanceBatches[i].BonesPrepared = false;
             }
 
             _activeGpuSkinnedInstanceBatches.Clear();
@@ -782,6 +789,11 @@ namespace Ludots.Raylib.Render
                 batch.Animations = entry.Animations;
                 batch.AnimCount = entry.AnimCount;
                 _activeGpuSkinnedInstanceBatches.Add(batch);
+            }
+
+            if (_gpuSkinnedBatchesPreparedForShadow && batch.Count > 0)
+            {
+                return true;
             }
 
             batch.Add(RaylibMatrix.FromSystemNumerics(
@@ -834,6 +846,8 @@ namespace Ludots.Raylib.Render
 
                 DrawGpuSkinnedInstanceBatchShadow(batch, shadow);
             }
+
+            _gpuSkinnedBatchesPreparedForShadow = true;
         }
 
         private void DrawGpuSkinnedInstanceBatchShadow(GpuSkinnedInstanceBatch batch, RaylibDirectionalShadowMap shadow)
@@ -860,6 +874,7 @@ namespace Ludots.Raylib.Render
 
             ModelAnimation anim = batch.Animations[clipIndex];
             Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+            batch.BonesPrepared = true;
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
@@ -2741,7 +2756,11 @@ namespace Ludots.Raylib.Render
             }
 
             ModelAnimation anim = batch.Animations[clipIndex];
-            Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+            if (!batch.BonesPrepared)
+            {
+                Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+                batch.BonesPrepared = true;
+            }
 
             EnsureFrameLightingAppliedForSkinning();
             int drawCalls = 0;
@@ -3562,6 +3581,7 @@ namespace Ludots.Raylib.Render
             public Model Model;
             public ModelAnimation* Animations;
             public int AnimCount;
+            public bool BonesPrepared;
 
             public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
             {

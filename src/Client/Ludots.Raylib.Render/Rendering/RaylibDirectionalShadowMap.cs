@@ -13,6 +13,7 @@ namespace Ludots.Raylib.Render
     public sealed unsafe class RaylibDirectionalShadowMap : IDisposable
     {
         public const int MapSize = 2048;
+        public const float DefaultReceiverBiasWorld = 0.04f;
 
         private readonly RenderTexture2D _rt;
         private readonly Shader _depthShader;
@@ -24,6 +25,7 @@ namespace Ludots.Raylib.Render
         private readonly int _locDepthSkinningBoneMatrices;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
+        private float _depthRange;
         private bool _frameActive;
         private bool _disposed;
 
@@ -70,6 +72,8 @@ namespace Ludots.Raylib.Render
 
         public RaylibMatrix LightViewProjection => Multiply(_lightView, _lightProjection);
 
+        public float DepthRange => _depthRange;
+
         public void BeginFrame(Vector3 lightDirectionToward, Vector3 sceneCenter, float sceneRadius)
         {
             if (_disposed)
@@ -97,9 +101,11 @@ namespace Ludots.Raylib.Render
             _lightView = BuildLookAt(eye, sceneCenter, upHint);
 
             float halfExtent = MathF.Max(sceneRadius * 1.35f, 4f);
+            float farPlane = eyeDistance + (sceneRadius * 2.2f);
+            _depthRange = farPlane - 0.1f;
             _lightProjection = BuildOrtho(
                 -halfExtent, halfExtent, -halfExtent, halfExtent,
-                0.1f, eyeDistance + (sceneRadius * 2.2f));
+                0.1f, farPlane);
 
             Rl.BeginTextureMode(_rt);
             Rl.ClearBackground(new Color(255, 255, 255, 255));
