@@ -361,6 +361,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
+        // ── TriggerManager bridge (map-scoped event firing) ──
+
+        /// <summary>
+        /// Fires a TriggerManager event resolved from a config-key id. Resolves the
+        /// scope entity's map and fires map-scoped when one is present; otherwise falls
+        /// back to the global event bus. Optional bridge — requires a bound TriggerManager.
+        /// </summary>
+        void FireEventKey(Entity scope, int eventKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
         // ── Entity lifecycle graph composition ──
         void BeginLifecycleTransaction()
         {
