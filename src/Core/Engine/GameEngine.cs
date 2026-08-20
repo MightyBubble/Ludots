@@ -1882,7 +1882,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
-            RegisterSystem(new ThinkWaveClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup

@@ -33,7 +33,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private const float DeltaTime = 1f / 60f;
     private const string MapId = "night_raid";
     private const string VictoryPanelTemplateId = "panel.night_raid.victory";
-    private const int ThinkWaveIntervalTicks = 6;
+    private const int HeartbeatIntervalTicks = 6;
 
     private static readonly string[] Mods =
     {
@@ -48,7 +48,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         using GameEngine engine = CreateEngine();
         engine.Start();
         engine.LoadMap(MapId);
-        Tick(engine, ThinkWaveIntervalTicks * 4);
+        Tick(engine, HeartbeatIntervalTicks * 4);
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         MapVariableStore variables = engine.CurrentMapSession?.Variables
@@ -68,7 +68,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         var phaseProbe = new PhaseChangedProbe(engine, MapId);
 
         MoveHeroIntoRaidCircle(world, hero, xCm: 0, yCm: 0);
-        TickUntil(engine, () => variables.ReadInt("wave") == 1, ThinkWaveIntervalTicks * 3,
+        TickUntil(engine, () => variables.ReadInt("wave") == 1, HeartbeatIntervalTicks * 3,
             () => $"RegionEntered never advanced wave (wave={variables.ReadInt("wave")}).");
 
         Assert.Multiple(() =>
@@ -84,7 +84,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             world.Destroy(raider);
         }
 
-        TickUntil(engine, () => variables.ReadInt("wave") == 2, ThinkWaveIntervalTicks * 8,
+        TickUntil(engine, () => variables.ReadInt("wave") == 2, HeartbeatIntervalTicks * 8,
             () => $"EntityAliveCountChanged never advanced wave (wave={variables.ReadInt("wave")}).");
 
         Assert.Multiple(() =>
@@ -99,7 +99,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
 
         world.Destroy(FindEntity(world, "NightRaidBoss"));
 
-        TickUntil(engine, () => variables.ReadInt("phase") == 2, ThinkWaveIntervalTicks * 3,
+        TickUntil(engine, () => variables.ReadInt("phase") == 2, HeartbeatIntervalTicks * 3,
             () => $"EntityDied(boss team) never wrote phase (phase={variables.ReadInt("phase")}).");
 
         Assert.Multiple(() =>

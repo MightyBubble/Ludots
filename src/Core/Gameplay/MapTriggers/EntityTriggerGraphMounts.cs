@@ -64,7 +64,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _decorators = decorators ?? throw new ArgumentNullException(nameof(decorators));
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
             _world.SubscribeEntityDestroyed(OnEntityDestroyed);
-            _triggerManager.RegisterEventHandler(GameEvents.ThinkWaveElapsed, OnThinkWaveElapsed);
+            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
         /// <summary>Mounts created for still-unswept dead entities; test observability.</summary>
@@ -242,7 +242,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private Task OnThinkWaveElapsed(ScriptContext context)
+        private Task OnMapHeartbeat(ScriptContext context)
         {
             MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
             if (mapId.Value != null && _mapMounts.TryGetValue(mapId, out List<EntityMountSet> sets))

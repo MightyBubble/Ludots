@@ -60,7 +60,7 @@ namespace Ludots.Core.Config
         /// Fixed ticks per think wave for this map (integer &gt;= 1).
         /// Null means the engine default interval applies.
         /// </summary>
-        public int? ThinkWaveIntervalTicks { get; set; }
+        public int? HeartbeatIntervalTicks { get; set; }
 
         /// <summary>
         /// Data-declared trigger regions for this map. Raw authoring nodes;

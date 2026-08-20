@@ -19,7 +19,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// One mounted TriggerGraph entry. Entry dispatch executes one slice
     /// (TriggerGraphLimits.SliceBudgetSteps); a Yield or slice-budget
     /// suspension parks the run inside this instance (cursor, registers, call
-    /// stack) and the map's think wave ("ThinkWaveElapsed") resumes it one
+    /// stack) and the map's think wave ("MapHeartbeat") resumes it one
     /// slice per wave until Halt. Resume wiring: a companion
     /// TriggerGraphResumeTrigger is registered per entry unless the entry's
     /// EventName IS the resume event, in which case the entry's own dispatch
@@ -122,7 +122,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _scope = scope;
             _domain = domain;
             _refirePolicy = refirePolicy;
-            _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.ThinkWaveElapsed;
+            _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.MapHeartbeat;
             _runCaster = scope;
             EventKey = new EventKey(entry.EventName);
             Priority = 0;
@@ -370,7 +370,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public TriggerGraphResumeTrigger(TriggerGraphMountTrigger owner)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            EventKey = GameEvents.ThinkWaveElapsed;
+            EventKey = GameEvents.MapHeartbeat;
             Priority = 0;
         }
 
