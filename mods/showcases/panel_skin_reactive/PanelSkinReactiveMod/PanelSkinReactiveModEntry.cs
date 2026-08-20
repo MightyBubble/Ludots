@@ -1,15 +1,7 @@
-using System;
 using System.Threading.Tasks;
-using Arch.Core;
-using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
-using Ludots.Core.UI.PanelHosting;
-using Ludots.UI.Compose;
-using Ludots.UI.Runtime;
-using Ludots.UI.Surface;
-using PanelSkinMarkupMod;
+using UiShowcaseCoreMod.Showcase;
 
 namespace PanelSkinReactiveMod;
 
@@ -20,29 +12,21 @@ public sealed class PanelSkinReactiveModEntry : IMod
         context.Log("[PanelSkinReactiveMod] Loaded — Reactive skin");
         context.OnEvent(GameEvents.MapLoaded, ctx =>
         {
-            if (ctx.Get(CoreServiceKeys.Engine) is not GameEngine engine ||
-                engine.GetService(CoreServiceKeys.PanelHost) is not PanelHost panelHost ||
-                ctx.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            try
             {
+                FireballPanelShowcaseMounting.InstallSkinSurface(
+                    ctx,
+                    ownerId: "reactive-panel",
+                    skinLabel: "Reactive",
+                    accentR: 156,
+                    accentG: 39,
+                    accentB: 176);
                 return Task.CompletedTask;
             }
-
-            Entity hero = Entity.Null;
-            var query = new QueryDescription().WithAll<Team>();
-            engine.World.Query(in query, (Entity e, ref Team team) =>
+            catch (System.Exception ex)
             {
-                if (team.Id == 1 && hero == Entity.Null) hero = e;
-            });
-            if (hero == Entity.Null) return Task.CompletedTask;
-
-            PanelInstanceHandle handle = panelHost.Instantiate("panel.fireball.status", "reactive-hero", hero);
-            var lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest("reactive-panel", UiSurfaceSegment.Main, priority: 100));
-
-            surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                _ => PanelShowcaseShared.BuildPanel(panelHost, handle, "Reactive", 156, 39, 176)));
-
-            engine.RegisterPresentationSystem(new PanelInvalidationSystem(surfaceHost, lease));
-            return Task.CompletedTask;
+                return Task.FromException(ex);
+            }
         });
     }
 

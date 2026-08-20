@@ -10,6 +10,6 @@
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\..\UiShowcaseCoreMod\UiShowcaseCoreMod.csproj" />
-    <ProjectReference Include="..\..\panel_skin_markup\PanelSkinMarkupMod\PanelSkinMarkupMod.csproj" />
+    <ProjectReference Include="..\..\panel_fireball_shared\FireballSharedMod\FireballSharedMod.csproj" />
   </ItemGroup>
 </Project>
