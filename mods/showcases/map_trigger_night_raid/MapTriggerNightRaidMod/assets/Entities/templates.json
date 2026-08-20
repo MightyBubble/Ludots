@@ -39,6 +39,10 @@
       "Team": {
         "Id": 2
       },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 600,
@@ -64,6 +68,10 @@
       },
       "Team": {
         "Id": 4
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
       },
       "WorldPositionCm": {
         "Value": {
