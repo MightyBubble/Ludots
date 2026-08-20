@@ -139,7 +139,11 @@ namespace Ludots.Raylib.Render
         Vector3 HorizonColor,
         Vector3 GroundHazeColor,
         Color ClearColor,
-        Color DeepClearColor)
+        Color DeepClearColor,
+        float SunDiskSharpness,
+        float SunDiskIntensity,
+        float SunGlowSharpness,
+        float SunGlowIntensity)
     {
         public static RaylibSkyboxConfig CreateDefault()
         {
@@ -150,7 +154,11 @@ namespace Ludots.Raylib.Render
                 HorizonColor: new Vector3(0.72f, 0.84f, 0.92f),
                 GroundHazeColor: new Vector3(0.52f, 0.64f, 0.66f),
                 ClearColor: new Color(84, 125, 158, 255),
-                DeepClearColor: new Color(6, 10, 16, 255));
+                DeepClearColor: new Color(6, 10, 16, 255),
+                SunDiskSharpness: 720f,
+                SunDiskIntensity: 2.4f,
+                SunGlowSharpness: 22f,
+                SunGlowIntensity: 0.34f);
         }
 
         public RaylibSkyboxConfig Validate()
@@ -159,6 +167,10 @@ namespace Ludots.Raylib.Render
             RaylibRenderEnvironmentConfig.RequireColor(ZenithColor, nameof(ZenithColor));
             RaylibRenderEnvironmentConfig.RequireColor(HorizonColor, nameof(HorizonColor));
             RaylibRenderEnvironmentConfig.RequireColor(GroundHazeColor, nameof(GroundHazeColor));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunDiskSharpness, nameof(SunDiskSharpness));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunDiskIntensity, nameof(SunDiskIntensity));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunGlowSharpness, nameof(SunGlowSharpness));
+            RaylibRenderEnvironmentConfig.RequirePositive(SunGlowIntensity, nameof(SunGlowIntensity));
             return this;
         }
     }

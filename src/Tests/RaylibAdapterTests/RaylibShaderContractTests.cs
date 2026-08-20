@@ -17,8 +17,10 @@ public sealed class RaylibShaderContractTests
             "Ludots.Raylib.Render",
             "Rendering",
             "RaylibSkyEnvironment.cs"));
-        string vertex = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "sky_daynight.vs"));
-        string fragment = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "sky_daynight.fs"));
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string vertex = File.ReadAllText(Path.Combine(shaderRoot, "sky_daynight.vs"));
+        string fragment = File.ReadAllText(Path.Combine(shaderRoot, "sky_daynight.fs"));
+        string fragmentExpanded = RaylibShaderLoader.ExpandIncludes(fragment, shaderRoot, "sky_daynight.fs", 0);
 
         Assert.That(skyEnvironment, Does.Contain("\"sky_daynight.vs\""));
         Assert.That(skyEnvironment, Does.Contain("\"sky_daynight.fs\""));
@@ -27,8 +29,8 @@ public sealed class RaylibShaderContractTests
         Assert.That(vertex, Does.Contain("uniform mat4 matProjection"));
         Assert.That(fragment, Does.Contain("uniform sampler2D texture0"));
         Assert.That(fragment, Does.Contain("uniform float uDayPhase"));
-        Assert.That(fragment, Does.Contain("uniform vec3 uSunDirection"));
-        Assert.That(fragment, Does.Contain("uniform vec3 uSunColor"));
+        Assert.That(fragmentExpanded, Does.Contain("uniform vec3 uSunDirection"));
+        Assert.That(fragmentExpanded, Does.Contain("uniform vec3 uSunColor"));
         Assert.That(fragment, Does.Not.Contain("uTime"));
     }
 
@@ -43,8 +45,10 @@ public sealed class RaylibShaderContractTests
             "Ludots.Raylib.Render",
             "Rendering",
             "RaylibSkyboxRenderer.cs"));
-        string vertex = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "skybox.vs"));
-        string fragment = File.ReadAllText(Path.Combine(repoRoot, "src", "Platforms", "Desktop", "skybox.fs"));
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string vertex = File.ReadAllText(Path.Combine(shaderRoot, "skybox.vs"));
+        string fragment = File.ReadAllText(Path.Combine(shaderRoot, "skybox.fs"));
+        string fragmentExpanded = RaylibShaderLoader.ExpandIncludes(fragment, shaderRoot, "skybox.fs", 0);
 
         Assert.That(skyboxRenderer, Does.Contain("\"skybox.vs\""));
         Assert.That(skyboxRenderer, Does.Contain("\"skybox.fs\""));
@@ -52,10 +56,45 @@ public sealed class RaylibShaderContractTests
         Assert.That(vertex, Does.Contain("uniform mat4 matModel"));
         Assert.That(vertex, Does.Not.Contain("matView"));
         Assert.That(vertex, Does.Not.Contain("matProjection"));
-        Assert.That(fragment, Does.Contain("uniform vec3 uSunDirection"));
+        Assert.That(fragmentExpanded, Does.Contain("uniform vec3 uSunDirection"));
         Assert.That(fragment, Does.Contain("uniform float uTime"));
         Assert.That(fragment, Does.Not.Contain("uDayPhase"));
         Assert.That(fragment, Does.Not.Contain("texture0"));
+    }
+
+    [Test]
+    public void SunHalo_SingleSourceAcrossSkyShaders()
+    {
+        string repoRoot = FindRepoRoot();
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string rendererRoot = Path.Combine(repoRoot, "src", "Client", "Ludots.Raylib.Render", "Rendering");
+        string[] sunUniforms = { "uSunDiskSharpness", "uSunDiskIntensity", "uSunGlowSharpness", "uSunGlowIntensity" };
+
+        foreach (string fileName in new[] { "skybox.fs", "sky_daynight.fs" })
+        {
+            string raw = File.ReadAllText(Path.Combine(shaderRoot, fileName));
+            Assert.That(raw, Does.Contain("// ludo:include sun_disk.glsl.inc"), fileName);
+            Assert.That(raw, Does.Not.Contain("pow(sunDot,"), fileName);
+
+            string expanded = RaylibShaderLoader.ExpandIncludes(raw, shaderRoot, fileName, 0);
+            Assert.That(
+                expanded.Replace("\r\n", "\n").Split("vec3 SunHalo(").Length - 1,
+                Is.EqualTo(1),
+                fileName);
+            Assert.That(expanded, Does.Contain("normalize(uSunDirection)"), fileName);
+            foreach (string uniform in sunUniforms)
+            {
+                Assert.That(expanded, Does.Contain(uniform), $"{fileName} missing '{uniform}'");
+            }
+        }
+
+        string skyboxRenderer = File.ReadAllText(Path.Combine(rendererRoot, "RaylibSkyboxRenderer.cs"));
+        string skyEnvironment = File.ReadAllText(Path.Combine(rendererRoot, "RaylibSkyEnvironment.cs"));
+        foreach (string uniform in sunUniforms)
+        {
+            Assert.That(skyboxRenderer, Does.Contain(uniform), $"RaylibSkyboxRenderer.cs missing '{uniform}'");
+            Assert.That(skyEnvironment, Does.Contain(uniform), $"RaylibSkyEnvironment.cs missing '{uniform}'");
+        }
     }
 
     [Test]

@@ -49,6 +49,7 @@
     <None Include="..\..\Platforms\Desktop\model_lit.vs"><Link>model_lit.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\model_lit.fs"><Link>model_lit.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_sampling.glsl.inc"><Link>shadow_sampling.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\sun_disk.glsl.inc"><Link>sun_disk.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth.vs"><Link>shadow_depth.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth.fs"><Link>shadow_depth.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth_instanced.vs"><Link>shadow_depth_instanced.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>

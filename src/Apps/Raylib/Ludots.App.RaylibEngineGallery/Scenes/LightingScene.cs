@@ -69,14 +69,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             var skyConfig = RaylibRenderEnvironmentConfig.CreateDefault() with
             {
-                Skybox = new RaylibSkyboxConfig(
-                    Enabled: true,
-                    SizeMeters: 1200f,
-                    ZenithColor: new Vector3(0.10f, 0.30f, 0.62f),
-                    HorizonColor: new Vector3(0.84f, 0.72f, 0.58f),
-                    GroundHazeColor: new Vector3(0.46f, 0.42f, 0.38f),
-                    ClearColor: new Color(120, 150, 180, 255),
-                    DeepClearColor: new Color(6, 10, 16, 255)),
+                Skybox = RaylibSkyboxConfig.CreateDefault() with
+                {
+                    SizeMeters = 1200f,
+                    ZenithColor = new Vector3(0.10f, 0.30f, 0.62f),
+                    HorizonColor = new Vector3(0.84f, 0.72f, 0.58f),
+                    GroundHazeColor = new Vector3(0.46f, 0.42f, 0.38f),
+                    ClearColor = new Color(120, 150, 180, 255),
+                },
                 Lighting = RaylibLightingConfig.CreateDefault() with
                 {
                     SunDirection = sun,

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Numerics;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -18,6 +17,10 @@ namespace Ludots.Raylib.Render
         private int _locHorizonColor;
         private int _locGroundHazeColor;
         private int _locTime;
+        private int _locSunDiskSharpness;
+        private int _locSunDiskIntensity;
+        private int _locSunGlowSharpness;
+        private int _locSunGlowIntensity;
 
         public void Draw(in Camera3D camera, double timeSeconds, RaylibRenderEnvironmentConfig config)
         {
@@ -61,11 +64,7 @@ namespace Ludots.Raylib.Render
             _cubeMesh = Rl.GenMeshSphere(0.5f, 64, 32);
 
             string baseDir = AppContext.BaseDirectory;
-            _shader = Rl.LoadShader(Path.Combine(baseDir, "skybox.vs"), Path.Combine(baseDir, "skybox.fs"));
-            if (_shader.id == 0)
-            {
-                throw new InvalidOperationException("Failed to load skybox shader (shader.id == 0).");
-            }
+            _shader = RaylibShaderLoader.Load(baseDir, "skybox.vs", "skybox.fs", "skybox");
 
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
@@ -84,6 +83,10 @@ namespace Ludots.Raylib.Render
 
             _locSunDirection = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunDirection", "skybox");
             _locSunColor = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunColor", "skybox");
+            _locSunDiskSharpness = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunDiskSharpness", "skybox");
+            _locSunDiskIntensity = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunDiskIntensity", "skybox");
+            _locSunGlowSharpness = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunGlowSharpness", "skybox");
+            _locSunGlowIntensity = RaylibShaderBindingGuard.RequireUniform(_shader, "uSunGlowIntensity", "skybox");
             _locZenithColor = RaylibShaderBindingGuard.RequireUniform(_shader, "uZenithColor", "skybox");
             _locHorizonColor = RaylibShaderBindingGuard.RequireUniform(_shader, "uHorizonColor", "skybox");
             _locGroundHazeColor = RaylibShaderBindingGuard.RequireUniform(_shader, "uGroundHazeColor", "skybox");
@@ -101,9 +104,17 @@ namespace Ludots.Raylib.Render
             Vector3 horizonColor = skybox.HorizonColor;
             Vector3 groundHazeColor = skybox.GroundHazeColor;
             float time = (float)(timeSeconds % 100000.0);
+            float sunDiskSharpness = skybox.SunDiskSharpness;
+            float sunDiskIntensity = skybox.SunDiskIntensity;
+            float sunGlowSharpness = skybox.SunGlowSharpness;
+            float sunGlowIntensity = skybox.SunGlowIntensity;
 
             Rl.SetShaderValue(_shader, _locSunDirection, &sunDirection, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locSunColor, &sunColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_shader, _locSunDiskSharpness, &sunDiskSharpness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunDiskIntensity, &sunDiskIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunGlowSharpness, &sunGlowSharpness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_shader, _locSunGlowIntensity, &sunGlowIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_shader, _locZenithColor, &zenithColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locHorizonColor, &horizonColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_shader, _locGroundHazeColor, &groundHazeColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
