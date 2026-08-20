@@ -34,7 +34,7 @@ namespace Ludots.Raylib.Render
         private const int HardMaxModelInstancesPerDraw = 131072;
 
         private bool _initialized;
-        private const float DefaultVegetationAlphaCutoff = 0.9f;
+        internal const float DefaultVegetationAlphaCutoff = 0.9f;
         private const string BillboardTextureRequiredError = "RAYLIB.PRIMITIVE.ERR.BillboardTextureRequired";
 
         private Mesh _cubeMesh;
@@ -45,24 +45,10 @@ namespace Ludots.Raylib.Render
         private Shader _shader;
         private Shader _skinningShader;
         private Shader _vegetationCutoutShader;
-        private Shader _decalProjectShader;
         private Material _material;
         private Material _vfxMaterial;
-        private Material _decalMaterial;
         private bool _vfxMaterialLoaded;
-        private bool _decalMaterialLoaded;
         private bool _vegetationCutoutShaderReady;
-        private bool _decalProjectShaderReady;
-        private int _locDecalProjectColDiffuse;
-        private int _locDecalProjectTint;
-        private int _locDecalProjectWorldToDecal;
-        private int _locDecalProjectAlphaCutoff;
-        private int _locDecalProjectMinReceiverNDotUp;
-        private int _locDecalProjectReceiverDepthBias;
-        private const float DecalMinReceiverNDotUp = 0.05f;
-        private const float DecalReceiverDepthBiasMeters = 0.04f;
-        private const float DecalAlphaBlendCutoff = 0.02f;
-        private const float DecalCutoutAlphaCutoff = DefaultVegetationAlphaCutoff;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
@@ -107,6 +93,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibVfxRenderer _vfxRenderer;
+        private readonly RaylibDecalProjectorRenderer _decalRenderer;
         private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
@@ -247,6 +234,7 @@ namespace Ludots.Raylib.Render
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
             _vfxRenderer = new RaylibVfxRenderer(vfs);
+            _decalRenderer = new RaylibDecalProjectorRenderer(materials, _materialHostBinder);
         }
 
         public void Draw(IPrimitiveDrawSnapshot draw, Camera3D camera, IRenderMeshAssets meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
@@ -629,10 +617,10 @@ namespace Ludots.Raylib.Render
             EnsureInitialized();
             LastDecalVisualCount++;
             TotalDecalVisualCount++;
-            DrawTexturedDecal(
+            _decalRenderer.Draw(
                 item.Position,
                 item.Rotation,
-                volume,
+                in volume,
                 item.Color,
                 item.MaterialId,
                 item.StableId,
@@ -1089,214 +1077,6 @@ namespace Ludots.Raylib.Render
             return $"primitive-lane bucketCount={bucketCount} firstBucketItems={itemCount} mesh={mesh} meshAssetId={item.MeshAssetId} stable={item.StableId} renderPath={item.RenderPath} mobility={item.Mobility} visibility={item.Visibility} pos=({item.Position.X:F2},{item.Position.Y:F2},{item.Position.Z:F2}) scale=({item.Scale.X:F2},{item.Scale.Y:F2},{item.Scale.Z:F2}) color=({item.Color.X:F2},{item.Color.Y:F2},{item.Color.Z:F2},{item.Color.W:F2})";
         }
 
-        private void DrawTexturedDecal(
-            in Vector3 position,
-            in Quaternion rotation,
-            in ProjectedDecalVolume volume,
-            in Vector4 color,
-            int materialId,
-            int stableId,
-            IRaylibReceiverMeshProjector projector)
-        {
-            EnsureInitialized();
-            if (materialId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires a positive materialId with host albedo.");
-            }
-
-            if (_materialHostBinder == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
-            }
-
-            EnsureDecalResources();
-            if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
-            }
-
-            if (!VisualMath.TryExtractFacingRadFromVisualYRotation(rotation, out float yaw))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector is yaw-about-Y only; authored rotation is not a planar yaw.");
-            }
-
-            Vector3 projectorCenter = projector.FitYawedStampProjectorCenter(
-                position,
-                yaw,
-                volume.StampSizeMeters,
-                stableId);
-            if (!volume.TryBuildWorldToLocal(
-                    projectorCenter,
-                    yaw,
-                    out Matrix4x4 worldToDecal,
-                    out float minX,
-                    out float minY,
-                    out float minZ,
-                    out float maxX,
-                    out float maxY,
-                    out float maxZ))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector volume is not invertible.");
-            }
-
-            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.AlphaBlend);
-            if (blendMode == MaterialBlendMode.Opaque)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} must use AlphaBlend or Cutout, not Opaque.");
-            }
-
-            if (_decalMaterial.maps == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} material maps were not allocated by LoadMaterialDefault.");
-            }
-
-            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-            _decalMaterial.maps[albedoIndex].color = Color.WHITE;
-
-            EnsureDecalProjectShader();
-            float alphaCutoff = blendMode == MaterialBlendMode.Cutout
-                ? DecalCutoutAlphaCutoff
-                : DecalAlphaBlendCutoff;
-            float minReceiver = DecalMinReceiverNDotUp;
-            float receiverDepthBias = DecalReceiverDepthBiasMeters;
-            Vector4 colDiffuse = Vector4.One;
-            Vector4 tint = color;
-            RaylibMatrix worldToDecalRay = RaylibMatrix.FromSystemNumerics(worldToDecal);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectColDiffuse,
-                &colDiffuse,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectTint,
-                &tint,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-            Rl.SetShaderValueMatrix(_decalProjectShader, _locDecalProjectWorldToDecal, worldToDecalRay);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectAlphaCutoff,
-                &alphaCutoff,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectMinReceiverNDotUp,
-                &minReceiver,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(
-                _decalProjectShader,
-                _locDecalProjectReceiverDepthBias,
-                &receiverDepthBias,
-                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-
-            bool blending = TryBeginAuthorBlendMode(blendMode);
-            bool depthMaskDisabled = blending;
-            if (depthMaskDisabled)
-            {
-                Rl.rlDisableDepthMask();
-            }
-
-            Shader previousShader = _decalMaterial.shader;
-            try
-            {
-                _decalMaterial.shader = _decalProjectShader;
-                int drawn = projector.DrawMeshesOverlappingAabbMeters(
-                    minX,
-                    minY,
-                    minZ,
-                    maxX,
-                    maxY,
-                    maxZ,
-                    _decalMaterial);
-                if (drawn <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector AABB " +
-                        $"({minX:F1},{minY:F1},{minZ:F1})-({maxX:F1},{maxY:F1},{maxZ:F1}) overlaps no receiver meshes.");
-                }
-            }
-            finally
-            {
-                _decalMaterial.shader = previousShader;
-
-                if (depthMaskDisabled)
-                {
-                    Rl.rlEnableDepthMask();
-                }
-
-                if (blending)
-                {
-                    Rl.EndBlendMode();
-                }
-
-                _materialHostBinder.DetachOwnedMaps(ref _decalMaterial);
-            }
-        }
-
-        private void EnsureDecalResources()
-        {
-            if (!_decalMaterialLoaded)
-            {
-                _decalMaterial = Rl.LoadMaterialDefault();
-                _decalMaterialLoaded = true;
-            }
-        }
-
-        private void EnsureDecalProjectShader()
-        {
-            if (_decalProjectShaderReady)
-            {
-                return;
-            }
-
-            string baseDir = AppContext.BaseDirectory;
-            _decalProjectShader = Rl.LoadShader(
-                Path.Combine(baseDir, "decal_project.vs"),
-                Path.Combine(baseDir, "decal_project.fs"));
-            if (_decalProjectShader.id == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} failed to load decal_project shader.");
-            }
-
-            _locDecalProjectColDiffuse = Rl.GetShaderLocation(_decalProjectShader, "colDiffuse");
-            _locDecalProjectTint = Rl.GetShaderLocation(_decalProjectShader, "tint");
-            _locDecalProjectWorldToDecal = Rl.GetShaderLocation(_decalProjectShader, "matWorldToDecal");
-            _locDecalProjectAlphaCutoff = Rl.GetShaderLocation(_decalProjectShader, "alphaCutoff");
-            _locDecalProjectMinReceiverNDotUp = Rl.GetShaderLocation(_decalProjectShader, "minReceiverNDotUp");
-            _locDecalProjectReceiverDepthBias = Rl.GetShaderLocation(_decalProjectShader, "receiverDepthBias");
-            int locMap = Rl.GetShaderLocation(_decalProjectShader, "texture0");
-            int locMvp = Rl.GetShaderLocation(_decalProjectShader, "mvp");
-            int locMatModel = Rl.GetShaderLocation(_decalProjectShader, "matModel");
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexPosition");
-            int locVertexNormal = Rl.GetShaderLocationAttrib(_decalProjectShader, "vertexNormal");
-            if (_locDecalProjectColDiffuse < 0 ||
-                _locDecalProjectTint < 0 ||
-                _locDecalProjectWorldToDecal < 0 ||
-                _locDecalProjectAlphaCutoff < 0 ||
-                _locDecalProjectMinReceiverNDotUp < 0 ||
-                _locDecalProjectReceiverDepthBias < 0 ||
-                locMap < 0 ||
-                locMvp < 0 ||
-                locMatModel < 0 ||
-                locVertexPosition < 0 ||
-                locVertexNormal < 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} decal_project is missing required attribs/uniforms.");
-            }
-
-            _decalProjectShaderReady = true;
-        }
-
-
         private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
             EnsureInitialized();
@@ -1643,7 +1423,7 @@ namespace Ludots.Raylib.Render
             // Billboard art ships pre-colored; multiply once by frame lighting so night/dusk dims vegetation.
             byte alpha = Clamp01ToByte(color.W);
             Vector3 litRgb = ResolveBillboardLitTintRgb();
-            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
+            MaterialBlendMode blendMode = RaylibMaterialDrawState.ResolveBlendMode(_materials, materialId, MaterialBlendMode.Opaque, nameof(RaylibPrimitiveRenderer));
             // DrawBillboardRec multiplies by tint; keep cutout colDiffuse at identity to avoid double-dim.
             Color tint = new Color(
                 Clamp01ToByte(litRgb.X),
@@ -1660,7 +1440,7 @@ namespace Ludots.Raylib.Render
                 Rl.rlDisableBackfaceCulling();
             }
 
-            bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool blending = RaylibMaterialDrawState.TryBeginAuthorBlendMode(blendMode, nameof(RaylibPrimitiveRenderer));
             bool cutoutShader = false;
             try
             {
@@ -2238,28 +2018,6 @@ namespace Ludots.Raylib.Render
         }
 
 
-        private MaterialBlendMode ResolveMaterialBlendMode(int materialId, MaterialBlendMode defaultWhenMissing)
-        {
-            if (materialId <= 0)
-            {
-                return defaultWhenMissing;
-            }
-
-            if (_materials == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(IRenderMaterialAssets)} was provided.");
-            }
-
-            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve blend mode for unknown materialId={materialId}.");
-            }
-
-            return MaterialBlendModeResolver.Resolve(descriptor.Flags);
-        }
-
         private bool IsMaterialDoubleSided(int materialId)
         {
             if (materialId <= 0 || _materials == null)
@@ -2274,25 +2032,6 @@ namespace Ludots.Raylib.Render
             }
 
             return (descriptor.Flags & MaterialAssetFlags.DoubleSided) != 0;
-        }
-
-        private static bool TryBeginAuthorBlendMode(MaterialBlendMode blendMode)
-        {
-            switch (blendMode)
-            {
-                case MaterialBlendMode.Opaque:
-                case MaterialBlendMode.Cutout:
-                    return false;
-                case MaterialBlendMode.AlphaBlend:
-                    Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
-                    return true;
-                case MaterialBlendMode.Additive:
-                    Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
-                    return true;
-                default:
-                    throw new InvalidOperationException(
-                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize material blend mode '{blendMode}'.");
-            }
         }
 
         private void EnsureVegetationCutoutShader()
@@ -3439,13 +3178,7 @@ namespace Ludots.Raylib.Render
                 _vfxMaterialLoaded = false;
             }
 
-            if (_decalMaterialLoaded)
-            {
-                _materialHostBinder?.DetachOwnedMaps(ref _decalMaterial);
-                _decalMaterial.shader = default;
-                Rl.UnloadMaterial(_decalMaterial);
-                _decalMaterialLoaded = false;
-            }
+            _decalRenderer.Dispose();
 
             _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
@@ -3474,11 +3207,6 @@ namespace Ludots.Raylib.Render
             {
                 Rl.UnloadShader(_vegetationCutoutShader);
                 _vegetationCutoutShaderReady = false;
-            }
-            if (_decalProjectShaderReady)
-            {
-                Rl.UnloadShader(_decalProjectShader);
-                _decalProjectShaderReady = false;
             }
             if (_skinningShaderReady)
             {
