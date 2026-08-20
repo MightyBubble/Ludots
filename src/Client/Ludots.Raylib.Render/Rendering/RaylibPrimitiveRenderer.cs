@@ -44,11 +44,9 @@ namespace Ludots.Raylib.Render
         private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
         private Shader _skinningShader;
-        private Shader _vegetationCutoutShader;
         private Material _material;
         private Material _vfxMaterial;
         private bool _vfxMaterialLoaded;
-        private bool _vegetationCutoutShaderReady;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
@@ -56,8 +54,6 @@ namespace Ludots.Raylib.Render
         private int _locMetallic;
         private int _locHasRoughnessMap;
         private int _locHasMetallicMap;
-        private int _locVegetationCutoutColDiffuse;
-        private int _locVegetationCutoutAlphaCutoff;
         private int _locSkinningColDiffuse;
         private int _locSkinningTint;
         private int _locSkinningRoughness;
@@ -94,6 +90,7 @@ namespace Ludots.Raylib.Render
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
         private readonly RaylibVfxRenderer _vfxRenderer;
         private readonly RaylibDecalProjectorRenderer _decalRenderer;
+        private readonly RaylibVegetationCutoutRenderer _vegetationCutout = new();
         private double _frameTimeSeconds;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
@@ -1441,37 +1438,26 @@ namespace Ludots.Raylib.Render
             }
 
             bool blending = RaylibMaterialDrawState.TryBeginAuthorBlendMode(blendMode, nameof(RaylibPrimitiveRenderer));
-            bool cutoutShader = false;
             try
             {
                 if (blendMode == MaterialBlendMode.Cutout)
                 {
-                    EnsureVegetationCutoutShader();
-                    float cutoff = DefaultVegetationAlphaCutoff;
-                    Vector4 colDiffuse = Vector4.One;
-                    Rl.SetShaderValue(
-                        _vegetationCutoutShader,
-                        _locVegetationCutoutColDiffuse,
-                        &colDiffuse,
-                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-                    Rl.SetShaderValue(
-                        _vegetationCutoutShader,
-                        _locVegetationCutoutAlphaCutoff,
-                        &cutoff,
-                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-                    Rl.BeginShaderMode(_vegetationCutoutShader);
-                    cutoutShader = true;
+                    _vegetationCutout.DrawBillboard(
+                        in camera,
+                        cached.Texture,
+                        in source,
+                        billboardPosition,
+                        new Vector2(width, height),
+                        tint,
+                        DefaultVegetationAlphaCutoff);
                 }
-
-                Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+                else
+                {
+                    Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+                }
             }
             finally
             {
-                if (cutoutShader)
-                {
-                    Rl.EndShaderMode();
-                }
-
                 if (blending)
                 {
                     Rl.EndBlendMode();
@@ -2033,68 +2019,6 @@ namespace Ludots.Raylib.Render
 
             return (descriptor.Flags & MaterialAssetFlags.DoubleSided) != 0;
         }
-
-        private void EnsureVegetationCutoutShader()
-        {
-            if (_vegetationCutoutShaderReady)
-            {
-                return;
-            }
-
-            string baseDir = AppContext.BaseDirectory;
-            string vsPath = Path.Combine(baseDir, "vegetation_cutout.vs");
-            string fsPath = Path.Combine(baseDir, "vegetation_cutout.fs");
-            if (!File.Exists(vsPath))
-            {
-                throw new FileNotFoundException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout vertex shader missing under BaseDirectory '{baseDir}'. Expected '{vsPath}'.",
-                    vsPath);
-            }
-
-            if (!File.Exists(fsPath))
-            {
-                throw new FileNotFoundException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout fragment shader missing under BaseDirectory '{baseDir}'. Expected '{fsPath}'.",
-                    fsPath);
-            }
-
-            _vegetationCutoutShader = Rl.LoadShader(vsPath, fsPath);
-            if (_vegetationCutoutShader.id == 0)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} failed to compile vegetation_cutout from '{vsPath}' + '{fsPath}' (shader.id == 0).");
-            }
-
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexPosition");
-            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexTexCoord");
-            int locVertexColor = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexColor");
-            int locMvp = Rl.GetShaderLocation(_vegetationCutoutShader, "mvp");
-            int locMapDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "texture0");
-            _locVegetationCutoutColDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "colDiffuse");
-            _locVegetationCutoutAlphaCutoff = Rl.GetShaderLocation(_vegetationCutoutShader, "alphaCutoff");
-
-            if (locVertexPosition < 0 || locMvp < 0 || locMapDiffuse < 0 ||
-                _locVegetationCutoutColDiffuse < 0 || _locVegetationCutoutAlphaCutoff < 0)
-            {
-                Rl.UnloadShader(_vegetationCutoutShader);
-                _vegetationCutoutShader = default;
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} vegetation_cutout is missing required attribs/uniforms (vertexPosition/mvp/texture0/colDiffuse/alphaCutoff).");
-            }
-
-            if (_vegetationCutoutShader.locs != null)
-            {
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapDiffuse;
-                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locVegetationCutoutColDiffuse;
-            }
-
-            _vegetationCutoutShaderReady = true;
-        }
-
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
         {
@@ -3179,6 +3103,7 @@ namespace Ludots.Raylib.Render
             }
 
             _decalRenderer.Dispose();
+            _vegetationCutout.Dispose();
 
             _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
@@ -3203,11 +3128,6 @@ namespace Ludots.Raylib.Render
             RaylibShadowSampling.ClearTexture(ref _material);
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
-            if (_vegetationCutoutShaderReady)
-            {
-                Rl.UnloadShader(_vegetationCutoutShader);
-                _vegetationCutoutShaderReady = false;
-            }
             if (_skinningShaderReady)
             {
                 Rl.UnloadShader(_skinningShader);
