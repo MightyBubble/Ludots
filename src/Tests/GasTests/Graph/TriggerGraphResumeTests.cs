@@ -59,7 +59,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mount.DroppedCount, Is.EqualTo(0));
 
             engine.TriggerManager.FireMapEvent(
-                new MapId(MapId), GameEvents.ThinkWaveElapsed, engine.CreateContext());
+                new MapId(MapId), GameEvents.MapHeartbeat, engine.CreateContext());
 
             Assert.That(mount.IsSuspended, Is.False, "The think wave must resume the suspended run.");
             Assert.That(mount.LastSliceResult.Halted, Is.True);
@@ -226,7 +226,7 @@ namespace Ludots.Tests.Gas.Graph
 
             engine.TriggerManager.FireMapEvent(new MapId(MapId), new EventKey(EntryEventName), engine.CreateContext());
 
-            var waveKey = GameEvents.ThinkWaveElapsed;
+            var waveKey = GameEvents.MapHeartbeat;
             for (int wave = 0; wave < 200 && engine.TriggerManager.Errors.Count == 0; wave++)
             {
                 engine.TriggerManager.FireMapEvent(new MapId(MapId), waveKey, engine.CreateContext());
@@ -283,10 +283,10 @@ namespace Ludots.Tests.Gas.Graph
             using GameEngine engine = fixture.CreateEngine();
             int graphId = fixture.RegisterTriggerGraph(engine, BudgetSuspensionProgram(haltRegister: 1), new[]
             {
-                new TriggerGraphEntry("wave", GameEvents.ThinkWaveElapsed.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
             });
             var mount = new TriggerGraphMountTrigger(graphId, GraphName,
-                new TriggerGraphEntry("wave", GameEvents.ThinkWaveElapsed.Value, startPc: 0, once: false),
+                new TriggerGraphEntry("wave", GameEvents.MapHeartbeat.Value, startPc: 0, once: false),
                 Entity.Null);
 
             Assert.That(mount.EntryIsResumeEvent, Is.True);

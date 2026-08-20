@@ -210,17 +210,17 @@ API:
 
 ## 10 TriggerGraph 事件词汇表（ThinkWave 时钟域）
 
-`ThinkWaveClockSystem`（注册于 `SystemGroup.DeferredTriggerCollection`）为每张 Active 的地图按固定步长累计 tick；每张地图可在 MapConfig 里声明 `"ThinkWaveIntervalTicks"`（整数 ≥1，缺省 30）。Suspended 的地图不推进、不触发。每个 wave 依次触发以下 Map-scoped 事件（payload key 见 `MapTriggerEventPayloadKeys`）：
+`MapHeartbeatClockSystem`（注册于 `SystemGroup.DeferredTriggerCollection`）为每张 Active 的地图按固定步长累计 tick；每张地图可在 MapConfig 里声明 `"HeartbeatIntervalTicks"`（整数 ≥1，缺省 30）。Suspended 的地图不推进、不触发。每个 wave 依次触发以下 Map-scoped 事件（payload key 见 `MapTriggerEventPayloadKeys`）：
 
 | 事件 | 触发时机 | Payload |
 |------|----------|---------|
 | `EntitySpawned` | wave 内加入地图的实体 | `SourceEntity`、`SourceTeamId` |
 | `EntityDied` | wave 内被销毁的实体（flush 时实体可能已回收，Team 在销毁时读取） | `SourceEntity`、`SourceTeamId` |
 | `EntityAliveCountChanged` | 某队伍存活数（带 `AttributeBuffer`）与上一 wave 不同 | `SourceTeamId`、`Count`、`Delta` |
-| `ThinkWaveElapsed` | wave 收尾（供消费方读取本 wave 汇总） | `WaveIndex` |
+| `MapHeartbeat` | wave 收尾（供消费方读取本 wave 汇总） | `HeartbeatIndex` |
 | `RegionEntered` / `RegionExited` | 区域系统（进入/离开 region） | `SourceEntity`、`RegionId` |
 
-Spawn/death 观察来自 World 结构事件（`ComponentAdded<MapEntity>` / `EntityDestroyed`），覆盖全部正式 spawn 路径；每地图队列上限 1024，溢出计入可读的丢弃计数（`ThinkWaveClockSystem.GetDroppedLifecycleEvents` / `TotalDroppedLifecycleEvents`）。
+Spawn/death 观察来自 World 结构事件（`ComponentAdded<MapEntity>` / `EntityDestroyed`），覆盖全部正式 spawn 路径；每地图队列上限 1024，溢出计入可读的丢弃计数（`MapHeartbeatClockSystem.GetDroppedLifecycleEvents` / `TotalDroppedLifecycleEvents`）。
 
 ### 10.1 入口过滤（entries[].filters）
 

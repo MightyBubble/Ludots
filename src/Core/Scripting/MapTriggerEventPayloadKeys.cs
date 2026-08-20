@@ -2,7 +2,7 @@ namespace Ludots.Core.Scripting
 {
     /// <summary>
     /// ScriptContext payload keys carried by map trigger events
-    /// (ThinkWaveElapsed / EntitySpawned / EntityDied / EntityAliveCountChanged /
+    /// (MapHeartbeat / EntitySpawned / EntityDied / EntityAliveCountChanged /
     /// RegionEntered / RegionExited).
     /// </summary>
     public static class MapTriggerEventPayloadKeys
@@ -16,7 +16,7 @@ namespace Ludots.Core.Scripting
         public const string VarValueFloat = "MapTrigger.VarValueFloat";    // float
         public const string VarValueInt = "MapTrigger.VarValueInt";        // int
         public const string Phase = "MapTrigger.Phase";                    // int
-        public const string WaveIndex = "MapTrigger.WaveIndex";            // int
+        public const string HeartbeatIndex = "MapTrigger.HeartbeatIndex";            // int
         public const string TargetEntity = "MapTrigger.TargetEntity";      // Entity
         public const string TagId = "MapTrigger.TagId";                    // int
         public const string Magnitude = "MapTrigger.Magnitude";            // float

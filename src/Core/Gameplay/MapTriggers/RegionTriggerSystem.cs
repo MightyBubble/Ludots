@@ -20,8 +20,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// with the crossing entity and region id.
     ///
     /// Semantics:
-    /// - Cadence: piggybacks on <see cref="ThinkWaveClockSystem"/> — the clock fires the map-scoped
-    ///   <see cref="GameEvents.ThinkWaveElapsed"/> event when a map's think-wave interval elapses,
+    /// - Cadence: piggybacks on <see cref="MapHeartbeatClockSystem"/> — the clock fires the map-scoped
+    ///   <see cref="GameEvents.MapHeartbeat"/> event when a map's think-wave interval elapses,
     ///   and this system evaluates that map's regions from a handler on that event. There is no
     ///   second tick accumulator; the pump's interval resolution and suspend rules apply as-is.
     /// - Map suspend: the clock never flushes waves for suspended sessions, so suspended maps are
@@ -68,7 +68,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
         public override void Initialize()
         {
-            _triggerManager.RegisterEventHandler(GameEvents.ThinkWaveElapsed, OnThinkWaveElapsed);
+            _triggerManager.RegisterEventHandler(GameEvents.MapHeartbeat, OnMapHeartbeat);
         }
 
         public override void Update(in float t)
@@ -82,7 +82,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             SyncSessions(sessions);
         }
 
-        private Task OnThinkWaveElapsed(ScriptContext context)
+        private Task OnMapHeartbeat(ScriptContext context)
         {
             MapId mapId = context.Get<MapId>(CoreServiceKeys.MapId);
             MapSessionManager? sessions = _sessions();

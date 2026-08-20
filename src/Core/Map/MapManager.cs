@@ -114,7 +114,7 @@ namespace Ludots.Core.Map
                         var jsonStr = fragments[fi].ToJsonString();
                         RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
                         RejectLegacyTriggerGraphMountKey(fragments[fi], jsonPath);
-                        ValidateThinkWaveIntervalTicks(fragments[fi], jsonPath);
+                        ValidateHeartbeatIntervalTicks(fragments[fi], jsonPath);
                         _ = MapVariableDeclarations.Parse(
                             fragments[fi] is JsonObject fragmentRoot &&
                             TryGetPropertyCaseInsensitive(fragmentRoot, "Variables", out JsonNode variablesNode)
@@ -345,10 +345,10 @@ namespace Ludots.Core.Map
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
 
-            // Merge ThinkWaveIntervalTicks (source wins)
-            if (source.ThinkWaveIntervalTicks.HasValue)
+            // Merge HeartbeatIntervalTicks (source wins)
+            if (source.HeartbeatIntervalTicks.HasValue)
             {
-                target.ThinkWaveIntervalTicks = source.ThinkWaveIntervalTicks;
+                target.HeartbeatIntervalTicks = source.HeartbeatIntervalTicks;
             }
 
             // Merge Variables (later fragment / child map replaces same-name declaration)
@@ -388,10 +388,10 @@ namespace Ludots.Core.Map
             }
         }
 
-        private static void ValidateThinkWaveIntervalTicks(JsonNode fragment, string jsonPath)
+        private static void ValidateHeartbeatIntervalTicks(JsonNode fragment, string jsonPath)
         {
             if (fragment is not JsonObject root ||
-                !TryGetPropertyCaseInsensitive(root, "ThinkWaveIntervalTicks", out JsonNode node))
+                !TryGetPropertyCaseInsensitive(root, "HeartbeatIntervalTicks", out JsonNode node))
             {
                 return;
             }
@@ -401,7 +401,7 @@ namespace Ludots.Core.Map
                 intervalTicks < 1)
             {
                 throw new InvalidOperationException(
-                    $"Map config '{jsonPath}' field 'ThinkWaveIntervalTicks' requires an integer >= 1.");
+                    $"Map config '{jsonPath}' field 'HeartbeatIntervalTicks' requires an integer >= 1.");
             }
         }
 

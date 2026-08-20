@@ -292,14 +292,14 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Enter_WaitsForThinkWaveBoundary_DefaultInterval30()
+        public void Enter_WaitsForHeartbeatBoundary_DefaultInterval30()
         {
             using var harness = RegionHarness.Create(
                 """[ { "id": "ring", "shape": "circle", "x": 100, "y": 100, "radiusCm": 50 } ]""",
-                thinkWaveIntervalTicks: ThinkWaveClockSystem.DefaultIntervalTicks);
+                thinkWaveIntervalTicks: MapHeartbeatClockSystem.DefaultIntervalTicks);
             Entity entity = harness.SpawnPositioned(100, 100);
 
-            for (int i = 0; i < ThinkWaveClockSystem.DefaultIntervalTicks - 1; i++)
+            for (int i = 0; i < MapHeartbeatClockSystem.DefaultIntervalTicks - 1; i++)
             {
                 harness.Tick();
             }
@@ -316,7 +316,7 @@ namespace Ludots.Tests.Gas.Graph
         {
             using var harness = RegionHarness.Create(
                 """[ { "id": "ring", "shape": "circle", "x": 100, "y": 100, "radiusCm": 50 } ]""",
-                thinkWaveIntervalTicks: ThinkWaveClockSystem.DefaultIntervalTicks);
+                thinkWaveIntervalTicks: MapHeartbeatClockSystem.DefaultIntervalTicks);
             Entity entity = harness.SpawnPositioned(100, 100);
             harness.Session.State = MapSessionState.Suspended;
 
@@ -328,7 +328,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(harness.Entered.Count, Is.EqualTo(0), "Suspended maps must not evaluate regions.");
 
             harness.Session.State = MapSessionState.Active;
-            const int interval = ThinkWaveClockSystem.DefaultIntervalTicks;
+            const int interval = MapHeartbeatClockSystem.DefaultIntervalTicks;
             for (int i = 0; i < interval - 1; i++)
             {
                 harness.Tick();
@@ -349,7 +349,7 @@ namespace Ludots.Tests.Gas.Graph
                 World world,
                 MapSession session,
                 TriggerManager triggers,
-                ThinkWaveClockSystem pump,
+                MapHeartbeatClockSystem pump,
                 RegionTriggerSystem system,
                 List<RegionEvent> entered,
                 List<RegionEvent> exited)
@@ -366,7 +366,7 @@ namespace Ludots.Tests.Gas.Graph
             public World World { get; }
             public MapSession Session { get; }
             public TriggerManager Triggers { get; }
-            public ThinkWaveClockSystem Pump { get; }
+            public MapHeartbeatClockSystem Pump { get; }
             public RegionTriggerSystem System { get; }
             public List<RegionEvent> Entered { get; }
             public List<RegionEvent> Exited { get; }
@@ -377,14 +377,14 @@ namespace Ludots.Tests.Gas.Graph
                 var sessions = new MapSessionManager();
                 var config = new MapConfig { Id = MapId };
                 config.Regions = JsonNode.Parse(regionsJson);
-                config.ThinkWaveIntervalTicks = thinkWaveIntervalTicks;
+                config.HeartbeatIntervalTicks = thinkWaveIntervalTicks;
                 MapSession session = sessions.CreateSession(new MapId(MapId), config);
                 var triggers = new TriggerManager();
                 var entered = new List<RegionEvent>();
                 var exited = new List<RegionEvent>();
                 triggers.RegisterEventHandler(GameEvents.RegionEntered, ctx => Capture(entered, ctx));
                 triggers.RegisterEventHandler(GameEvents.RegionExited, ctx => Capture(exited, ctx));
-                var pump = new ThinkWaveClockSystem(() => sessions, world, triggers, () => new ScriptContext());
+                var pump = new MapHeartbeatClockSystem(() => sessions, world, triggers, () => new ScriptContext());
                 var system = new RegionTriggerSystem(world, () => sessions, triggers, () => new ScriptContext());
                 system.Initialize();
                 return new RegionHarness(world, session, triggers, pump, system, entered, exited);

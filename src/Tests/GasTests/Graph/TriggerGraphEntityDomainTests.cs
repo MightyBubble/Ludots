@@ -15,7 +15,7 @@ namespace Ludots.Tests.Gas.Graph
     /// Entity-domain TriggerGraph mounts end to end on a real engine: an entity
     /// template declares "TriggerGraphs", the mounted graph reacts to its own
     /// lifecycle (EntitySpawned same tick, EntityDied on the destroy tick,
-    /// ThinkWaveElapsed with self scope), reads its own attributes, writes its
+    /// MapHeartbeat with self scope), reads its own attributes, writes its
     /// map's variables, goes inert after death, and is swept and cleaned up.
     /// A second entity mount declared through map JSON (domain "entity") follows
     /// the same lifecycle contract.
@@ -30,7 +30,7 @@ namespace Ludots.Tests.Gas.Graph
         private const string WatcherTemplateId = "entity_domain_watcher";
         private const string ProbeGraphName = "Graph.EntityDomain.Probe";
         private const string WatcherGraphName = "Graph.EntityDomain.Watcher";
-        private const int ThinkWaveIntervalTicks = 2;
+        private const int HeartbeatIntervalTicks = 2;
 
         [Test]
         public void EntitySpawnedEntry_RunsSameTick_WithSelfScope_AndOwnAttributesAndMapVarsResolve()
@@ -59,7 +59,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void ThinkWaveElapsedEntry_FiresWithSelfScope()
+        public void MapHeartbeatEntry_FiresWithSelfScope()
         {
             using EntityDomainFixture fixture = EntityDomainFixture.Create();
             using GameEngine engine = fixture.CreateEngine();
@@ -68,8 +68,8 @@ namespace Ludots.Tests.Gas.Graph
             MapVariableStore variables = RequireVariables(engine);
             Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(0), "No wave may fire the entry before the interval elapses.");
 
-            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, ThinkWaveIntervalTicks * 4,
-                () => $"ThinkWaveElapsed entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
+            TickUntil(engine, () => variables.ReadInt("wave_ran") == 1, HeartbeatIntervalTicks * 4,
+                () => $"MapHeartbeat entry never ran (wave_ran={variables.ReadInt("wave_ran")}).");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         }
@@ -99,18 +99,18 @@ namespace Ludots.Tests.Gas.Graph
             });
 
             int waveRuns = variables.ReadInt("wave_ran");
-            Tick(engine, ThinkWaveIntervalTicks * 4);
+            Tick(engine, HeartbeatIntervalTicks * 4);
             Assert.Multiple(() =>
             {
                 Assert.That(variables.ReadInt("wave_ran"), Is.EqualTo(waveRuns),
-                    "A dead entity's ThinkWaveElapsed mount must stay inert.");
+                    "A dead entity's MapHeartbeat mount must stay inert.");
                 Assert.That(variables.ReadInt("died"), Is.EqualTo(1),
                     "The wave-granularity EntityDied broadcast must not re-fire the entity-domain entry.");
             });
 
             TickUntil(engine,
                 () => engine.EntityTriggerGraphMounts.GetDeadMountCount(new MapId(MapId)) == 0,
-                ThinkWaveIntervalTicks * 6,
+                HeartbeatIntervalTicks * 6,
                 () => "Dead entity mounts must be swept at think waves.");
         }
 
@@ -361,7 +361,7 @@ namespace Ludots.Tests.Gas.Graph
                         "kind": "TriggerGraph",
                         "entries": [
                           { "label": "on_spawn", "event": "EntitySpawned", "start": "spawn_begin", "once": true },
-                          { "label": "on_wave", "event": "ThinkWaveElapsed", "start": "wave_begin" },
+                          { "label": "on_wave", "event": "MapHeartbeat", "start": "wave_begin" },
                           { "label": "on_death", "event": "EntityDied", "start": "death_begin", "once": true }
                         ],
                         "nodes": [
@@ -456,7 +456,7 @@ namespace Ludots.Tests.Gas.Graph
                     {
                       "Id": "{{MapId}}",
                       "Tags": [ "camera.skip_default_on_load" ],
-                      "ThinkWaveIntervalTicks": {{ThinkWaveIntervalTicks}},
+                      "HeartbeatIntervalTicks": {{HeartbeatIntervalTicks}},
                       "Variables": [
                         { "name": "spawned", "type": "int", "initial": 0 },
                         { "name": "wave_ran", "type": "int", "initial": 0 },

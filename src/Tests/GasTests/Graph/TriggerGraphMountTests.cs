@@ -251,7 +251,7 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(mounts[1].Name, Is.EqualTo($"TriggerGraph:{GraphName}:close"));
             Assert.That(mounts[1].EventKey, Is.EqualTo(GameEvents.MapUnloaded));
             Assert.That(resumes.Count, Is.EqualTo(2), "Each entry gets a think-wave resume companion.");
-            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.ThinkWaveElapsed));
+            Assert.That(resumes[0].EventKey, Is.EqualTo(GameEvents.MapHeartbeat));
         }
 
         [Test]

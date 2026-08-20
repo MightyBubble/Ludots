@@ -1,7 +1,7 @@
 {
   "Id": "night_raid",
   "Tags": ["showcase", "night-raid"],
-  "ThinkWaveIntervalTicks": 6,
+  "HeartbeatIntervalTicks": 6,
   "Variables": [
     { "name": "wave", "type": "int", "initial": 0 },
     { "name": "phase", "type": "int", "initial": 0, "phase": true }

@@ -58,9 +58,9 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Map-scoped: fired when a map's think-wave interval of fixed ticks elapses.
-        /// Payload: MapTriggerEventPayloadKeys.WaveIndex.
+        /// Payload: MapTriggerEventPayloadKeys.HeartbeatIndex.
         /// </summary>
-        public static readonly EventKey ThinkWaveElapsed = new EventKey("ThinkWaveElapsed");
+        public static readonly EventKey MapHeartbeat = new EventKey("MapHeartbeat");
 
         /// <summary>
         /// Map-scoped: fired at think-wave granularity for entities that joined the map

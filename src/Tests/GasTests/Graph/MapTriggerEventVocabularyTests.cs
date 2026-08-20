@@ -39,13 +39,13 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(MapTriggerEventPayloadKeys.VarValueFloat, Is.EqualTo("MapTrigger.VarValueFloat"));
             Assert.That(MapTriggerEventPayloadKeys.VarValueInt, Is.EqualTo("MapTrigger.VarValueInt"));
             Assert.That(MapTriggerEventPayloadKeys.Phase, Is.EqualTo("MapTrigger.Phase"));
-            Assert.That(MapTriggerEventPayloadKeys.WaveIndex, Is.EqualTo("MapTrigger.WaveIndex"));
+            Assert.That(MapTriggerEventPayloadKeys.HeartbeatIndex, Is.EqualTo("MapTrigger.HeartbeatIndex"));
         }
 
         [Test]
         public void GameEvents_TriggerGraphEventKeys_UseExactStrings()
         {
-            Assert.That(GameEvents.ThinkWaveElapsed.Value, Is.EqualTo("ThinkWaveElapsed"));
+            Assert.That(GameEvents.MapHeartbeat.Value, Is.EqualTo("MapHeartbeat"));
             Assert.That(GameEvents.EntitySpawned.Value, Is.EqualTo("EntitySpawned"));
             Assert.That(GameEvents.EntityDied.Value, Is.EqualTo("EntityDied"));
             Assert.That(GameEvents.EntityAliveCountChanged.Value, Is.EqualTo("EntityAliveCountChanged"));
@@ -352,63 +352,63 @@ namespace Ludots.Tests.Gas.Graph
     public sealed class ThinkWaveIntervalParseTests
     {
         [Test]
-        public void LoadMap_ValidThinkWaveIntervalTicks_Parses()
+        public void LoadMap_ValidHeartbeatIntervalTicks_Parses()
         {
-            MapConfig? config = LoadMapWithJson("""{ "id": "wave_map", "ThinkWaveIntervalTicks": 45 }""");
+            MapConfig? config = LoadMapWithJson("""{ "id": "wave_map", "HeartbeatIntervalTicks": 45 }""");
 
             Assert.That(config, Is.Not.Null);
-            Assert.That(config!.ThinkWaveIntervalTicks, Is.EqualTo(45));
+            Assert.That(config!.HeartbeatIntervalTicks, Is.EqualTo(45));
         }
 
         [Test]
-        public void LoadMap_MissingThinkWaveIntervalTicks_StaysNull()
+        public void LoadMap_MissingHeartbeatIntervalTicks_StaysNull()
         {
             MapConfig? config = LoadMapWithJson("""{ "id": "wave_map" }""");
 
             Assert.That(config, Is.Not.Null);
-            Assert.That(config!.ThinkWaveIntervalTicks, Is.Null);
+            Assert.That(config!.HeartbeatIntervalTicks, Is.Null);
         }
 
         [Test]
-        public void LoadMap_ZeroThinkWaveIntervalTicks_Rejected()
+        public void LoadMap_ZeroHeartbeatIntervalTicks_Rejected()
         {
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                LoadMapWithJson("""{ "id": "wave_map", "ThinkWaveIntervalTicks": 0 }"""));
+                LoadMapWithJson("""{ "id": "wave_map", "HeartbeatIntervalTicks": 0 }"""));
 
-            Assert.That(ex!.Message, Does.Contain("ThinkWaveIntervalTicks"));
+            Assert.That(ex!.Message, Does.Contain("HeartbeatIntervalTicks"));
         }
 
         [Test]
-        public void LoadMap_FractionalThinkWaveIntervalTicks_Rejected()
+        public void LoadMap_FractionalHeartbeatIntervalTicks_Rejected()
         {
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                LoadMapWithJson("""{ "id": "wave_map", "ThinkWaveIntervalTicks": 2.5 }"""));
+                LoadMapWithJson("""{ "id": "wave_map", "HeartbeatIntervalTicks": 2.5 }"""));
 
-            Assert.That(ex!.Message, Does.Contain("ThinkWaveIntervalTicks"));
+            Assert.That(ex!.Message, Does.Contain("HeartbeatIntervalTicks"));
         }
 
         [Test]
-        public void LoadMap_StringThinkWaveIntervalTicks_Rejected()
+        public void LoadMap_StringHeartbeatIntervalTicks_Rejected()
         {
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                LoadMapWithJson("""{ "id": "wave_map", "ThinkWaveIntervalTicks": "30" }"""));
+                LoadMapWithJson("""{ "id": "wave_map", "HeartbeatIntervalTicks": "30" }"""));
 
-            Assert.That(ex!.Message, Does.Contain("ThinkWaveIntervalTicks"));
+            Assert.That(ex!.Message, Does.Contain("HeartbeatIntervalTicks"));
         }
 
         [Test]
-        public void LoadMap_ChildOverridesThinkWaveIntervalTicks()
+        public void LoadMap_ChildOverridesHeartbeatIntervalTicks()
         {
             string tempRoot = CreateTempDir();
             try
             {
-                WriteMapConfig(tempRoot, "parent", """{ "id": "parent", "ThinkWaveIntervalTicks": 60 }""");
-                WriteMapConfig(tempRoot, "child", """{ "id": "child", "parentId": "parent", "ThinkWaveIntervalTicks": 5 }""");
+                WriteMapConfig(tempRoot, "parent", """{ "id": "parent", "HeartbeatIntervalTicks": 60 }""");
+                WriteMapConfig(tempRoot, "child", """{ "id": "child", "parentId": "parent", "HeartbeatIntervalTicks": 5 }""");
 
                 MapConfig? config = CreateMapManager(tempRoot).LoadMap("child");
 
                 Assert.That(config, Is.Not.Null);
-                Assert.That(config!.ThinkWaveIntervalTicks, Is.EqualTo(5));
+                Assert.That(config!.HeartbeatIntervalTicks, Is.EqualTo(5));
             }
             finally
             {
@@ -468,12 +468,12 @@ namespace Ludots.Tests.Gas.Graph
 
     [TestFixture]
     [NonParallelizable]
-    public sealed class ThinkWaveClockSystemTests
+    public sealed class MapHeartbeatClockSystemTests
     {
         private const string MapId = "think_wave_probe_map";
 
         [Test]
-        public void ThinkWaveElapsed_FiresAtConfiguredCadence()
+        public void MapHeartbeat_FiresAtConfiguredCadence()
         {
             using var harness = new WaveHarness(intervalTicks: 3);
 
@@ -483,7 +483,7 @@ namespace Ludots.Tests.Gas.Graph
 
             harness.System.Update(0f);
             Assert.That(harness.Events.Count, Is.EqualTo(1));
-            Assert.That(harness.Events[0].WaveIndex, Is.EqualTo(1));
+            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
 
             harness.System.Update(0f);
             harness.System.Update(0f);
@@ -491,11 +491,11 @@ namespace Ludots.Tests.Gas.Graph
 
             harness.System.Update(0f);
             Assert.That(harness.Events.Count, Is.EqualTo(2));
-            Assert.That(harness.Events[1].WaveIndex, Is.EqualTo(2));
+            Assert.That(harness.Events[1].HeartbeatIndex, Is.EqualTo(2));
         }
 
         [Test]
-        public void ThinkWaveElapsed_DefaultsToThirtyTicksWhenUndeclared()
+        public void MapHeartbeat_DefaultsToThirtyTicksWhenUndeclared()
         {
             using var harness = new WaveHarness(intervalTicks: null);
 
@@ -508,7 +508,7 @@ namespace Ludots.Tests.Gas.Graph
 
             harness.System.Update(0f);
             Assert.That(harness.Events.Count, Is.EqualTo(1));
-            Assert.That(harness.Events[0].WaveIndex, Is.EqualTo(1));
+            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
         }
 
         [Test]
@@ -529,7 +529,7 @@ namespace Ludots.Tests.Gas.Graph
             harness.System.Update(0f);
 
             Assert.That(harness.Events.Count, Is.EqualTo(1), "Resume continues from the pre-suspend accumulation.");
-            Assert.That(harness.Events[0].WaveIndex, Is.EqualTo(1));
+            Assert.That(harness.Events[0].HeartbeatIndex, Is.EqualTo(1));
         }
 
         [Test]
@@ -651,7 +651,7 @@ namespace Ludots.Tests.Gas.Graph
 
             const int overflow = 100;
             var victims = new List<Entity>();
-            for (int i = 0; i < ThinkWaveClockSystem.LifecycleQueueCapacity + overflow; i++)
+            for (int i = 0; i < MapHeartbeatClockSystem.LifecycleQueueCapacity + overflow; i++)
             {
                 victims.Add(harness.CreateMapEntity(teamId: 3));
             }
@@ -674,14 +674,14 @@ namespace Ludots.Tests.Gas.Graph
         {
             using var harness = new WaveHarness(intervalTicks: 1);
 
-            for (int i = 0; i < ThinkWaveClockSystem.LifecycleQueueCapacity + 10; i++)
+            for (int i = 0; i < MapHeartbeatClockSystem.LifecycleQueueCapacity + 10; i++)
             {
                 harness.CreateMapEntity(teamId: 1);
             }
 
             harness.System.Update(0f);
 
-            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value), Is.EqualTo(ThinkWaveClockSystem.LifecycleQueueCapacity));
+            Assert.That(harness.Events.Count(e => e.Key == GameEvents.EntitySpawned.Value), Is.EqualTo(MapHeartbeatClockSystem.LifecycleQueueCapacity));
             Assert.That(harness.System.GetDroppedLifecycleEvents(new MapId(MapId)), Is.EqualTo(10));
             Assert.That(harness.System.TotalDroppedLifecycleEvents, Is.EqualTo(10));
         }
@@ -691,7 +691,7 @@ namespace Ludots.Tests.Gas.Graph
             public readonly World World = World.Create();
             public readonly MapSessionManager Sessions = new();
             public readonly TriggerManager Triggers = new();
-            public readonly ThinkWaveClockSystem System;
+            public readonly MapHeartbeatClockSystem System;
             public readonly MapSession Session;
             public readonly List<CapturedEvent> Events = new();
 
@@ -700,13 +700,13 @@ namespace Ludots.Tests.Gas.Graph
                 var config = new MapConfig { Id = MapId };
                 if (intervalTicks.HasValue)
                 {
-                    config.ThinkWaveIntervalTicks = intervalTicks;
+                    config.HeartbeatIntervalTicks = intervalTicks;
                 }
 
                 Session = Sessions.CreateSession(new MapId(MapId), config);
                 Sessions.PushFocused(new MapId(MapId));
-                System = new ThinkWaveClockSystem(() => Sessions, World, Triggers, () => new ScriptContext());
-                Register(GameEvents.ThinkWaveElapsed);
+                System = new MapHeartbeatClockSystem(() => Sessions, World, Triggers, () => new ScriptContext());
+                Register(GameEvents.MapHeartbeat);
                 Register(GameEvents.EntitySpawned);
                 Register(GameEvents.EntityDied);
                 Register(GameEvents.EntityAliveCountChanged);
@@ -747,7 +747,7 @@ namespace Ludots.Tests.Gas.Graph
                         TryGet(context, MapTriggerEventPayloadKeys.SourceTeamId, out int teamId) ? teamId : null,
                         TryGet(context, MapTriggerEventPayloadKeys.Count, out int count) ? count : null,
                         TryGet(context, MapTriggerEventPayloadKeys.Delta, out int delta) ? delta : null,
-                        TryGet(context, MapTriggerEventPayloadKeys.WaveIndex, out int waveIndex) ? waveIndex : null));
+                        TryGet(context, MapTriggerEventPayloadKeys.HeartbeatIndex, out int waveIndex) ? waveIndex : null));
                     return Task.CompletedTask;
                 });
             }
@@ -776,6 +776,6 @@ namespace Ludots.Tests.Gas.Graph
             int? SourceTeamId,
             int? Count,
             int? Delta,
-            int? WaveIndex);
+            int? HeartbeatIndex);
     }
 }
