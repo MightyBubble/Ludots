@@ -212,33 +212,42 @@ namespace Ludots.Raylib.Render
                 return true;
             }
 
-            if (!_materials.TryGet(materialAssetId, out MaterialAssetDescriptor descriptor))
+            if (!_materials.TryResolve(materialAssetId, out ResolvedMaterialAsset resolved))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibMaterialHostBinder)} cannot bind materialId={materialAssetId}: material is not registered in {nameof(IRenderMaterialAssets)}.");
             }
 
-            if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+            if (resolved.TextureUris.Count == 0)
             {
                 return false;
             }
 
             string materialName = _materials.GetName(materialAssetId);
-            Texture2D albedo = LoadRequiredMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 0, slotName: "albedo");
+            foreach (KeyValuePair<string, string> pair in resolved.TextureUris)
+            {
+                if (!IsWellKnownSlot(pair.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibMaterialHostBinder)} materialId={materialAssetId} ({materialName}) declares unknown texture slot '{pair.Key}'; well-known slots are albedo/roughness/metallic/normal.");
+                }
+            }
+
+            Texture2D albedo = LoadRequiredMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Albedo);
             Texture2D roughness = default;
             Texture2D metallic = default;
             Texture2D normal = default;
-            bool hasRoughness = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 1, slotName: "roughness", out roughness);
-            bool hasMetallic = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 2, slotName: "metallic", out metallic);
-            bool hasNormal = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 3, slotName: "normal", out normal);
+            bool hasRoughness = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Roughness, out roughness);
+            bool hasMetallic = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Metallic, out metallic);
+            bool hasNormal = TryLoadOptionalMap(materialAssetId, materialName, resolved.TextureUris, MaterialTextureSlots.Normal, out normal);
 
             binding = new HostMaterialBinding(
                 albedo,
                 roughness,
                 metallic,
                 normal,
-                DefaultRoughness,
-                DefaultMetallic,
+                resolved.Roughness,
+                resolved.Metallic,
                 hasRoughness,
                 hasMetallic,
                 hasNormal);
@@ -246,37 +255,43 @@ namespace Ludots.Raylib.Render
             return true;
         }
 
+        private static bool IsWellKnownSlot(string slot)
+        {
+            return string.Equals(slot, MaterialTextureSlots.Albedo, StringComparison.Ordinal) ||
+                   string.Equals(slot, MaterialTextureSlots.Roughness, StringComparison.Ordinal) ||
+                   string.Equals(slot, MaterialTextureSlots.Metallic, StringComparison.Ordinal) ||
+                   string.Equals(slot, MaterialTextureSlots.Normal, StringComparison.Ordinal);
+        }
+
         private Texture2D LoadRequiredMap(
             int materialAssetId,
             string materialName,
-            string[] sourceUris,
-            int slotIndex,
+            IReadOnlyDictionary<string, string> textureUris,
             string slotName)
         {
-            if (slotIndex >= sourceUris.Length || string.IsNullOrWhiteSpace(sourceUris[slotIndex]))
+            if (!textureUris.TryGetValue(slotName, out string? uri) || string.IsNullOrWhiteSpace(uri))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} materialId={materialAssetId} ({materialName}) has an empty {slotName} sourceUris[{slotIndex}].");
+                    $"{nameof(RaylibMaterialHostBinder)} materialId={materialAssetId} ({materialName}) has no '{slotName}' texture URI.");
             }
 
-            return LoadMapOrThrow(materialAssetId, materialName, sourceUris[slotIndex], slotName, slotIndex);
+            return LoadMapOrThrow(materialAssetId, materialName, uri, slotName);
         }
 
         private bool TryLoadOptionalMap(
             int materialAssetId,
             string materialName,
-            string[] sourceUris,
-            int slotIndex,
+            IReadOnlyDictionary<string, string> textureUris,
             string slotName,
             out Texture2D texture)
         {
             texture = default;
-            if (slotIndex >= sourceUris.Length || string.IsNullOrWhiteSpace(sourceUris[slotIndex]))
+            if (!textureUris.TryGetValue(slotName, out string? uri) || string.IsNullOrWhiteSpace(uri))
             {
                 return false;
             }
 
-            texture = LoadMapOrThrow(materialAssetId, materialName, sourceUris[slotIndex], slotName, slotIndex);
+            texture = LoadMapOrThrow(materialAssetId, materialName, uri, slotName);
             return true;
         }
 
@@ -284,13 +299,12 @@ namespace Ludots.Raylib.Render
             int materialAssetId,
             string materialName,
             string uri,
-            string slotName,
-            int slotIndex)
+            string slotName)
         {
             if (!_vfs.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} cannot resolve {slotName} URI '{uri}' (sourceUris[{slotIndex}]) for materialId={materialAssetId} ({materialName}).");
+                    $"{nameof(RaylibMaterialHostBinder)} cannot resolve {slotName} URI '{uri}' for materialId={materialAssetId} ({materialName}).");
             }
 
             if (!File.Exists(fullPath))

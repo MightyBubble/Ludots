@@ -66,18 +66,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _materials.Register("gallery.mat.checker", new MaterialAssetDescriptor(
                 CheckerMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/mat_checker.png" },
-                MaterialAssetFlags.None));
+                MaterialAssetFlags.None),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_checker.png" });
             _materials.Register("gallery.mat.stripe", new MaterialAssetDescriptor(
                 StripeMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/mat_stripes.png" },
-                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_stripes.png" });
             _materials.Register("gallery.mat.glow", new MaterialAssetDescriptor(
                 GlowMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/mat_glow.png" },
-                MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_glow.png" });
 
             _binder = new RaylibMaterialHostBinder(_paths, _materials);
             _cube = Rl.GenMeshCube(3f, 3f, 3f);

@@ -70,18 +70,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _materials.Register("gallery.decal.ring", new MaterialAssetDescriptor(
                 RingMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_ring.png" },
-                MaterialAssetFlags.Transparent));
+                MaterialAssetFlags.Transparent),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_ring.png" });
             _materials.Register("gallery.decal.arrow", new MaterialAssetDescriptor(
                 ArrowMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_arrow.png" },
-                MaterialAssetFlags.Cutout));
+                MaterialAssetFlags.Cutout),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_arrow.png" });
             _materials.Register("gallery.decal.target", new MaterialAssetDescriptor(
                 TargetMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_target.png" },
-                MaterialAssetFlags.Transparent));
+                MaterialAssetFlags.Transparent),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_target.png" });
 
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.44f);
             _shadowMap = new RaylibDirectionalShadowMap();

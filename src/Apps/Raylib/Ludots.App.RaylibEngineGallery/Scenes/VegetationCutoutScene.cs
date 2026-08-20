@@ -82,13 +82,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _materials.Register("gallery.vegetation.grass", new MaterialAssetDescriptor(
                 GrassMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/grass_billboard.png" },
-                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/grass_billboard.png" });
             _materials.Register("gallery.vegetation.tree", new MaterialAssetDescriptor(
                 TreeMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/tree_billboard.png" },
-                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/tree_billboard.png" });
 
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.5f);
             _shadowMap = new RaylibDirectionalShadowMap();
