@@ -182,6 +182,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         CreatePanel = 441,
         /// <summary>Dispose panel instances of a template. Imm = template key id (symbol pre-patch); E[A] = scope entity (A=0xFF → any scope).</summary>
         DestroyPanel = 442,
+        /// <summary>Pick an entry index from a weighted distribution. Imm = distribution key id (interned at load); I[A] = modulation permille [-1000,1000].</summary>
+        WeightedPick = 443,
     }
 
     public static class GraphNodeOpParser

@@ -82,6 +82,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
         public EntityCollectionStore EntityCollections { get; }
         public GraphLookupTableRegistry? LookupTables { get; }
+
         public EntitySetQueryRuntime EntityQueries { get; }
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
@@ -103,6 +104,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private Gameplay.Rng.RngPickService? _rngPickService;
         private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
@@ -255,6 +257,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
         }
 
+
+        public void BindRngPickService(Gameplay.Rng.RngPickService rngPickService)
+        {
+            _rngPickService = rngPickService ?? throw new ArgumentNullException(nameof(rngPickService));
+        }
+
+        public int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            var picks = _rngPickService
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+            return picks.PickByKeyId(distributionKeyId, modulationPermille / 1000f);
+        }
         public int ResolveTableRow(int tableId, int key)
         {
             var tables = _lookupTables

@@ -8,6 +8,7 @@ public sealed class RngPickService
 {
     private readonly IRngStreamService _streams;
     private readonly Dictionary<string, DistributionTable> _tables;
+    private readonly Dictionary<int, string> _tablesByKeyId = new();
 
     public RngPickService(IRngStreamService streams, IReadOnlyList<DistributionTable> tables)
     {
@@ -21,6 +22,7 @@ public sealed class RngPickService
             }
 
             _tables.Add(table.Id, table);
+            _tablesByKeyId.Add(_tablesByKeyId.Count + 1, table.Id);
         }
     }
 
@@ -42,6 +44,27 @@ public sealed class RngPickService
         var table = GetDistribution(distributionId);
         var stream = _streams.GetStream(table.StreamName);
         return table.Pick(stream, modulation);
+    }
+
+    public int GetDistributionKeyId(string distributionId)
+    {
+        var table = GetDistribution(distributionId);
+        foreach (var pair in _tablesByKeyId)
+        {
+            if (_tables[pair.Value] == table) return pair.Key;
+        }
+
+        throw new InvalidOperationException($"Distribution '{distributionId}' has no key id.");
+    }
+
+    public int PickByKeyId(int keyId, float modulation)
+    {
+        if (!_tablesByKeyId.TryGetValue(keyId, out var distributionId))
+        {
+            throw new InvalidOperationException($"Unknown distribution key id {keyId}.");
+        }
+
+        return Pick(distributionId, modulation);
     }
 
     public RngStream GetDistributionStream(string distributionId)

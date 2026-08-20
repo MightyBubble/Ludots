@@ -61,6 +61,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
         }
 
+        int WeightedPick(int distributionKeyId, int modulationPermille)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
+        }
+
         int TableReadInt(int fieldId, int rowHandle)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");

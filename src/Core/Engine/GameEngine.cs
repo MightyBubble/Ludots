@@ -965,6 +965,7 @@ namespace Ludots.Core.Engine
                 panelTemplates,
                 new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
             gasGraphApi.BindPanelHost(panelHost);
+            gasGraphApi.BindRngPickService(rngPickService);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,

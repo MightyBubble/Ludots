@@ -732,6 +732,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
             Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
             Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
+            Register(GraphNodeOp.WeightedPick, HandleWeightedPick, "WeightedPick graph opcode.");
             Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
             Register(GraphNodeOp.QueryHexRing, HandleQueryHexRing, "QueryHexRing graph opcode.");
             Register(GraphNodeOp.QueryHexNeighbors, HandleQueryHexNeighbors, "QueryHexNeighbors graph opcode.");
@@ -1563,6 +1564,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleKnowledgeHasProjection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             s.B[ins.Dst] = (byte)(s.Api.HasKnowledgeProjection(s.E[ins.A], s.E[ins.B]) ? 1 : 0);
+        }
+
+        private static void HandleWeightedPick(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = WeightedPick(Imm=distribution key id, I[A]=modulation permille)
+            s.I[ins.Dst] = s.Api.WeightedPick(ins.Imm, s.I[ins.A]);
         }
 
         private static void HandleRandomFloat01(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

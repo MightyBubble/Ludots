@@ -192,6 +192,24 @@ namespace RngCoreTests
         }
 
         [Test]
+        public void RngPickService_KeyIdRoundTrip_PicksSameEntry()
+        {
+            var service = CreateService();
+            var keyId = service.GetDistributionKeyId("test.loot");
+            var stream = service.GetDistributionStream("test.loot");
+            var snapshot = stream.CaptureSnapshot();
+
+            var byName = service.Pick("test.loot", 0f);
+            stream.RestoreSnapshot(in snapshot);
+            var byKey = service.PickByKeyId(keyId, 0f);
+
+            Assert.That(byKey, Is.EqualTo(byName));
+            Assert.That(
+                () => service.PickByKeyId(999, 0f),
+                Throws.InvalidOperationException.With.Message.Contains("Unknown distribution key id"));
+        }
+
+        [Test]
         public void RngPickService_Pick_SnapshotRestore_ReplaysIdenticalSequence()
         {
             var service = CreateService();
