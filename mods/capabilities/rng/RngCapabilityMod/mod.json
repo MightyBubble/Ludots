@@ -1,0 +1,10 @@
+{
+  "name": "RngCapabilityMod",
+  "version": "0.1.0",
+  "description": "Deterministic weighted distribution picking on named RNG streams (Epic #1039).",
+  "main": "bin/net8.0/RngCapabilityMod.dll",
+  "priority": 0,
+  "dependencies": { "LudotsCoreMod": "^1.0.0" },
+  "author": "Ludots Team",
+  "tags": ["capability", "rng", "distribution", "loot"]
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "id": "hunt.loot",
+    "stream": "loot",
+    "entries": [
+      { "id": "ammo", "weight": 45, "enabled": true, "locked": false },
+      { "id": "scrap", "weight": 30, "enabled": true, "locked": false },
+      { "id": "gear", "weight": 18, "enabled": true, "locked": false,
+        "modulation": { "minPermille": 600, "maxPermille": 1500 } },
+      { "id": "relic", "weight": 7, "enabled": true, "locked": true }
+    ]
+  },
+  {
+    "id": "hunt.critical",
+    "stream": "combat",
+    "streamSeed": 20260820,
+    "entries": [
+      { "id": "normal", "weight": 85, "enabled": true, "locked": false },
+      { "id": "critical", "weight": 15, "enabled": true, "locked": false,
+        "modulation": { "minPermille": 400, "maxPermille": 2600, "invert": false } },
+      { "id": "fumble", "weight": 5, "enabled": false, "locked": false,
+        "modulation": { "minPermille": 100, "maxPermille": 2000, "invert": true } }
+    ]
+  }
+]

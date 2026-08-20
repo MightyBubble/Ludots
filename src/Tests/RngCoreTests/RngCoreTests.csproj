@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\rng\RngCapabilityMod\RngCapabilityMod.csproj" />
   </ItemGroup>
 
 </Project>
