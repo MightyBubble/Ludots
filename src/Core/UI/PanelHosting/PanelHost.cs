@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Map;
 using Ludots.Core.UI.PanelProjection;
 
 namespace Ludots.Core.UI.PanelHosting
@@ -96,7 +97,7 @@ namespace Ludots.Core.UI.PanelHosting
             for (int i = 0; i < _entries.Count; i++)
             {
                 Entry entry = _entries[i];
-                if (!entry.Alive || !entry.HasRealtime)
+                if (!entry.Alive)
                 {
                     continue;
                 }
@@ -109,6 +110,11 @@ namespace Ludots.Core.UI.PanelHosting
                     _freeSlots.Push(i);
                     Count--;
                     autoCollected++;
+                    continue;
+                }
+
+                if (!entry.HasRealtime)
+                {
                     continue;
                 }
 
@@ -199,6 +205,26 @@ namespace Ludots.Core.UI.PanelHosting
                 if (!entry.Alive ||
                     !string.Equals(entry.Template.Id, templateId, StringComparison.Ordinal) ||
                     (scope != Entity.Null && entry.Scope != scope))
+                {
+                    continue;
+                }
+
+                entry.Alive = false;
+                _freeSlots.Push(i);
+                Count--;
+                disposed++;
+            }
+
+            return disposed;
+        }
+
+        public int DisposeMapScoped(MapId mapId)
+        {
+            int disposed = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (!entry.Alive || !_reader.IsOwnerInMap(entry.Scope, mapId))
                 {
                     continue;
                 }

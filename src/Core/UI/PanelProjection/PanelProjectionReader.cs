@@ -1,7 +1,9 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.UI.PanelProjection
@@ -37,6 +39,13 @@ namespace Ludots.Core.UI.PanelProjection
         public bool IsOwnerLive(Entity owner)
         {
             return owner != Entity.Null && _world.IsAlive(owner);
+        }
+
+        public bool IsOwnerInMap(Entity owner, MapId mapId)
+        {
+            return IsOwnerLive(owner) &&
+                _world.Has<MapEntity>(owner) &&
+                _world.Get<MapEntity>(owner).MapId == mapId;
         }
 
         public PanelProjectionValue Resolve(Entity owner, in PanelVariableBinding binding)

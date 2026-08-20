@@ -2276,12 +2276,14 @@ namespace Ludots.Core.Engine
             _massNavigationRuntime.HandleMapUnloaded(this, mid);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
             RemoveRuntimeEntitySpawnRequestsForMap(mid);
+            EntityTriggerGraphMounts?.DropMap(mid);
+            session.DestroyVariables();
+            GetService(CoreServiceKeys.PanelHost)?.DisposeMapScoped(mid);
 
             // Check if this map is at the top of the focus stack
             var focused = MapSessions.FocusedSession;
             bool wasFocused = focused != null && focused.MapId == mid;
 
-            EntityTriggerGraphMounts?.DropMap(mid);
             MapSessions.UnloadSession(mid, World);
             _mapLoadStatuses.Remove(mid);
 
@@ -2448,13 +2450,15 @@ namespace Ludots.Core.Engine
                 _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
                 RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
+                EntityTriggerGraphMounts?.DropMap(innerSession.MapId);
+                innerSession.DestroyVariables();
+                GetService(CoreServiceKeys.PanelHost)?.DisposeMapScoped(innerSession.MapId);
             }
 
             // Pop focus — restores previous session
             var poppedId = MapSessions.PopFocused();
             if (innerSession != null)
             {
-                EntityTriggerGraphMounts?.DropMap(poppedId);
                 MapSessions.UnloadSession(poppedId, World);
                 _mapLoadStatuses.Remove(poppedId);
             }

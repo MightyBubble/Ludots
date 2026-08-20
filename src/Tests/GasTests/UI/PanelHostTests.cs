@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.UI.PanelHosting;
@@ -255,6 +257,46 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(host.TryGetValues(
                 FindSingle(host), out PanelVariableSet values), Is.True);
             Assert.That(values.Get("attack"), Is.EqualTo(12f));
+        }
+
+        [Test]
+        public void RefreshRealtime_DeadScopeWithoutRealtimeVariables_AutoCollectsInstance()
+        {
+            const string staticTemplateJson = """
+            {
+              "id": "tests.panel.static.dead",
+              "variables": [
+                { "name": "attack", "kind": "Float",
+                  "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.attack" } }
+              ]
+            }
+            """;
+            var templates = new PanelTemplateRegistry();
+            templates.Register(PanelTemplateLoader.Load(staticTemplateJson));
+            templates.Freeze();
+            var host = new PanelHost(templates, new PanelProjectionReader(_world));
+            host.Instantiate("tests.panel.static.dead", AnchorId, _caster);
+
+            _world.Destroy(_caster);
+
+            Assert.That(host.RefreshRealtime(), Is.Zero);
+            Assert.That(host.AutoCollectedLastRefresh, Is.EqualTo(1));
+            Assert.That(host.Count, Is.Zero);
+        }
+
+        [Test]
+        public void DisposeMapScoped_DisposesOnlyMatchingMapInstances()
+        {
+            MapId firstMap = new("first");
+            MapId secondMap = new("second");
+            _world.Add(_caster, new MapEntity { MapId = firstMap });
+            _world.Add(_target, new MapEntity { MapId = secondMap });
+            _host.Instantiate(TemplateId, AnchorId, _caster);
+            _host.Instantiate(TemplateId, AnchorId, _target);
+
+            Assert.That(_host.DisposeMapScoped(firstMap), Is.EqualTo(1));
+            Assert.That(_host.Count, Is.EqualTo(1));
+            Assert.That(_host.SnapshotInstances()[0].Scope, Is.EqualTo(_target));
         }
 
         [Test]
