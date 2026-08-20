@@ -1,6 +1,7 @@
 using System;
+using Ludots.Core.Gameplay.AI.BehaviorTree;
 
-namespace Ludots.Core.Gameplay.AI.BehaviorTree
+namespace Ludots.Tests
 {
     public static class BehaviorTreeFactory
     {
