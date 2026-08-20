@@ -36,7 +36,7 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 - `GET /tools` → 自描述工具目录（name / description / inputSchema）
 - `POST /rpc` → JSON-RPC 2.0：`{"jsonrpc":"2.0","id":1,"method":"ludots.session.info","params":{}}`
 
-## 内置工具（20）
+## 内置工具（24）
 
 | 域 | 工具 | 能力 |
 |----|------|------|
@@ -45,6 +45,8 @@ MCP 客户端（Claude Code、pi 等）另配零依赖 stdio 适配器 `src/Tool
 | 相机 | `ludots.camera.control` | `get` 姿态与活动虚拟相机；`set` 部分姿态（经 `ApplyPose` 持久）；`follow {entityId}` / `unfollow` 实体跟随 |
 | 日志 | `ludots.logs.tail` | 进程内日志环形缓冲（激活时经 `Log.AddBackend` 挂入）；`count/minLevel/channel/contains` 过滤 |
 | 事件 | `ludots.events.fire` | 经 `TriggerManager.FireEventAsync` 发送任意事件键，响应带本次 `triggerErrors` |
+| 空间 | `ludots.entities.pick` · `ludots.spatial.query` | 屏幕点选实体（生产 `CommandSourcePointerHitResolver` 同算法）；radius/aabb/cone/rect/line 探针（生产 `ISpatialQueryService`） |
+| 导航 | `ludots.nav.project` · `ludots.nav.findPath` | 世界点 → 可行走三角形投影；A→B 寻路 + 路径点 + 代价（生产 `NavQueryService`） |
 | 实体 | `ludots.entities.query` | 世界坐标→屏幕投影 rect、**屏幕占比**、可见性；`offset/limit/nameFilter/onScreenOnly` |
 | UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
 | GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |

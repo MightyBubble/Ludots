@@ -91,6 +91,10 @@ namespace AgentBridgeMod
             tools.Register(new CameraControlTool());
             tools.Register(new LogsTailTool(_logRing));
             tools.Register(new EventsFireTool());
+            tools.Register(new EntitiesPickTool());
+            tools.Register(new SpatialQueryTool());
+            tools.Register(new NavProjectTool());
+            tools.Register(new NavFindPathTool());
 
             engine.SetService(ToolRegistryKey, tools);
 

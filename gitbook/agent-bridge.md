@@ -1,6 +1,6 @@
 # Agent Bridge
 
-> 面向 AI coding agent 的 Ludots 运行时操控与取证通道：环回 HTTP JSON-RPC，20 个自描述工具，零多模态依赖——看画面、点 UI、放技能、查状态、抓证据，全部用结构化 JSON 完成，取代 screenshot + computer-use 的脆弱路径。
+> 面向 AI coding agent 的 Ludots 运行时操控与取证通道：环回 HTTP JSON-RPC，24 个自描述工具，零多模态依赖——看画面、点 UI、放技能、查状态、抓证据，全部用结构化 JSON 完成，取代 screenshot + computer-use 的脆弱路径。
 >
 > 设计 SSOT：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md)；工具域参考手册：[架构页 · Agent 调试桥](architecture/agent-debug-bridge.md)。**本页是任务视角的实操指南**，所有请求/响应示例来自真实验证会话（`raylib.agent-demo` · ChampionSkillSandbox）。
 
@@ -48,6 +48,9 @@ curl -s -X POST http://127.0.0.1:47921/rpc \
 |-----------|--------|---------------|
 | 确认游戏活着、-loaded 了哪些 mod | `ludots.session.info` | 无参；tick 在涨=循环活着 |
 | 找一个实体（敌人/英雄/召唤物） | `ludots.entities.query` | `nameFilter`（大小写不敏感子串）、`onScreenOnly:true` 只看镜头内的；返回 `screenCoverage`（占屏比）判断"看得清吗" |
+| 屏幕某点下面是哪个实体 | `ludots.entities.pick` | `{x, y, radiusPixels?=24}`；与点击选中同一条生产解析链（selectable + 知识门控），未命中返回 `hit:false` |
+| 一片区域里有谁（半径/扇形/直线） | `ludots.spatial.query` | `shape: radius/aabb/cone/rect/line` + 中心与尺寸参数；直走生产空间查询服务（技能/自动索敌同层），带 `distanceCmToCenter` 与 `dropped` 诊断 |
+| 某点可不可走 / A→B 怎么走 | `ludots.nav.project` / `ludots.nav.findPath` | project 命中可行走三角形；findPath 返回 `status`（NotReady=瓦片未就绪）+ 路径点 + `travelCostCm` |
 | 看某实体的血量/属性/技能槽 | `ludots.gas.entity` | `{entityId}`；tags 名称已解析、attributes 只列非零 |
 | 看面板/按钮长什么样 | `ludots.ui.tree` / `ludots.ui.query` | tree 全量；query 用 CSS 选择器——**实测注意**：选择器按 tag/`#id`/`.class` 匹配，本仓 UI 多用 tag（`selector:"button"` 命中 10 个，`.button` 命中 0 个，因为节点没有 class） |
 | 点一个按钮 | `ludots.ui.click` | `{elementId}` 或裸坐标 `{x,y}`；返回 `handled:true/false` + 命中节点的 rect/pseudoState——点到容器会 `handled:false`，换 elementId |
