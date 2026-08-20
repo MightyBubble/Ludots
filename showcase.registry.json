@@ -20,6 +20,21 @@
       "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardModExtensibleRuntimeShowcaseShared",
       "reason": "shared panel runtime for extensible-mod-runtime showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "panel_theme_showcase",
+      "reason": "shared theme asset library (CSS/art/fonts) for panel theme showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "clash_of_clones",
+      "reason": "parallel-session work in flight (mods/games/coc); replace with a formal entry when it lands"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
+      "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
     }
   ],
   "showcases": [
