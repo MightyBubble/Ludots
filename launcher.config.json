@@ -1509,6 +1509,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWriteMapVarIntEntryMod",
         "projectPath": "CapabilityStandardGraphOpWriteMapVarIntEntryMod.csproj"
       }
+    },
+    {
+      "name": "night_raid_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
+        "projectPath": "NightRaidShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {
