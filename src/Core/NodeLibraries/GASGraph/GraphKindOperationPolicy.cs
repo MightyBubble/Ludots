@@ -133,7 +133,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireRegisterIndex(graphId, i, nameof(GraphInstruction.Dst), instruction.Dst, entrypoint);
                 }
 
-                RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
+                // CreatePanel/DestroyPanel 的 A 是可选 scope 操作数：byte.MaxValue 表示"缺省"（CreatePanel→caster，DestroyPanel→任意 scope），不是寄存器引用。
+                bool aIsOptionalAbsent = instruction.A == byte.MaxValue &&
+                    op is GraphNodeOp.CreatePanel or GraphNodeOp.DestroyPanel;
+                if (!aIsOptionalAbsent)
+                {
+                    RequireRegisterIndex(graphId, i, nameof(GraphInstruction.A), instruction.A, entrypoint);
+                }
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.B), instruction.B, entrypoint);
                 RequireRegisterIndex(graphId, i, nameof(GraphInstruction.C), instruction.C, entrypoint);
             }

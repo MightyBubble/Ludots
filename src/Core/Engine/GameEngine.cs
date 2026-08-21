@@ -47,6 +47,8 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Core.UI.CommandDeck;
+using Ludots.Core.UI.PanelHosting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.Core.UI.ProductionOverview;
 using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Systems;
@@ -955,6 +957,11 @@ namespace Ludots.Core.Engine
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
+            var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var panelHost = new PanelHost(
+                panelTemplates,
+                new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
+            gasGraphApi.BindPanelHost(panelHost);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -1489,6 +1496,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
+            SetService(CoreServiceKeys.PanelHost, panelHost);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
@@ -1859,6 +1867,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
             RegisterSystem(new GraphOutputValueCleanupSystem(World, graphOutputValueStore), SystemGroup.Cleanup);
+            RegisterSystem(new PanelRealtimeRefreshSystem(panelHost), SystemGroup.Cleanup);
             RegisterSystem(new OrderAdmissionEntityIntakeEndSystem(orderAdmissionResults), SystemGroup.Cleanup);
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);

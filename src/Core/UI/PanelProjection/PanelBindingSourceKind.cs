@@ -24,5 +24,11 @@ namespace Ludots.Core.UI.PanelProjection
         /// Graph Summary output (same read mouth as AggregateProjection; authoring alias).
         /// </summary>
         GraphOutput = 4,
+
+        /// <summary>
+        /// Generic lookup table cell (#881): key read from an owner attribute,
+        /// row resolved and field read through GraphLookupTableRegistry.
+        /// </summary>
+        TableLookup = 5,
     }
 }

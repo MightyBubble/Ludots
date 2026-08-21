@@ -170,6 +170,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TableReadInt = 437,
         /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
         TableReadFloat = 438,
+
+        // ── Panel visibility control (#1014, contract five) ──
+        /// <summary>Request the named panel type to become visible. Imm = panel type symbol.</summary>
+        ShowPanel = 439,
+        /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
+        HidePanel = 440,
+
+        // ── Panel instance lifecycle ──
+        /// <summary>Instantiate a panel. Imm = packed template|anchor key ids (symbol pair pre-patch); E[A] = scope entity (A=0xFF → caster).</summary>
+        CreatePanel = 441,
+        /// <summary>Dispose panel instances of a template. Imm = template key id (symbol pre-patch); E[A] = scope entity (A=0xFF → any scope).</summary>
+        DestroyPanel = 442,
     }
 
     public static class GraphNodeOpParser

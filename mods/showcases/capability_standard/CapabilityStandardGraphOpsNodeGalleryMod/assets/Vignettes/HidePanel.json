@@ -1,0 +1,38 @@
+{
+  "op": "HidePanel",
+  "driver": "linear",
+  "title": "收起情报面板",
+  "beat": "点掉选中，属性卡跟着隐去。",
+  "detailTemplate": "面板隐了——{healthBefore}→{healthAfter}。",
+  "assertDetailContains": [
+    "面板隐了"
+  ],
+  "featuredNodeId": "toggle",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

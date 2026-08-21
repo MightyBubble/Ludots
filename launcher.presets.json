@@ -1996,6 +1996,42 @@
         "--json",
         "artifacts/acceptance/engine_raylib_crowd_anim/stats.json"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_HidePanel_raylib",
+      "name": "Graph Op HidePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_HidePanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ShowPanel_raylib",
+      "name": "Graph Op ShowPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ShowPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_CreatePanel_raylib",
+      "name": "Graph Op CreatePanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_CreatePanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_DestroyPanel_raylib",
+      "name": "Graph Op DestroyPanel Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_DestroyPanel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

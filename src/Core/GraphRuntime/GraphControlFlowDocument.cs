@@ -42,6 +42,10 @@ namespace Ludots.Core.GraphRuntime
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
+        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops (#1014).</summary>
+        public string? PanelType { get; set; }
+        /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
+        public string? PanelAnchor { get; set; }
         public string? RelationshipType { get; set; }
         public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }

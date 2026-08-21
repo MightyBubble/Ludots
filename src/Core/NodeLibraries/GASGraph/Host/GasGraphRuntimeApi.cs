@@ -103,6 +103,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private readonly GraphLookupTableRegistry? _lookupTables;
+        private Ludots.Core.UI.PanelActivation.PanelActivationApi? _panelActivationApi;
+        private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -200,6 +202,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return typed;
         }
 
+        public Ludots.Core.UI.PanelActivation.PanelActivationApi? PanelActivationApi => _panelActivationApi;
+
+        public void BindPanelActivation(Ludots.Core.UI.PanelActivation.PanelActivationApi api)
+        {
+            _panelActivationApi = api ?? throw new ArgumentNullException(nameof(api));
+        }
+
+        public Ludots.Core.UI.PanelHosting.PanelHost? PanelHost => _panelHost;
+
+        public void BindPanelHost(Ludots.Core.UI.PanelHosting.PanelHost host)
+        {
+            _panelHost = host ?? throw new ArgumentNullException(nameof(host));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -258,6 +274,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tables = _lookupTables
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
             return tables.ReadFloat(rowHandle, fieldId);
+        }
+
+        public void ShowPanel(int panelTypeId)
+        {
+            PanelActivationApi?.ShowPanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void HidePanel(int panelTypeId)
+        {
+            PanelActivationApi?.HidePanel(ResolvePanelTypeName(panelTypeId));
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
+        {
+            _panelHost?.Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
+        }
+
+        public void DestroyPanel(int templateKeyId, Entity scope)
+        {
+            _panelHost?.DisposeMatching(ResolvePanelTypeName(templateKeyId), scope);
+        }
+
+        private string ResolvePanelTypeName(int panelTypeId)
+        {
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(panelTypeId);
+            return name ?? throw new InvalidOperationException(
+                $"Panel op references unregistered config key id {panelTypeId}.");
         }
 
         public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)

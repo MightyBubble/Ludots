@@ -2,6 +2,7 @@
 
 - [Ludots 文档](README.md)
 - [快速开始](quick-start.md)
+- [Agent Bridge](agent-bridge.md)
 - [贡献与开发](contributing/README.md)
   - [编码标准](contributing/coding-standards.md)
   - [Feature 开发工作流](contributing/feature-development-workflow.md)

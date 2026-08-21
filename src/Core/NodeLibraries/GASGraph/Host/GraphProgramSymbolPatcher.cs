@@ -63,6 +63,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.TableReadFloat:
                         ins.Imm = symbolResolver.ResolveGraphLookupField(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.ShowPanel:
+                    case GraphNodeOp.HidePanel:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.CreatePanel:
+                        ins.Imm = UI.PanelHosting.PanelOpEncoding.Pack(
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm)),
+                            ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Dst)));
+                        ins.Dst = 0;
+                        break;
+                    case GraphNodeOp.DestroyPanel:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
