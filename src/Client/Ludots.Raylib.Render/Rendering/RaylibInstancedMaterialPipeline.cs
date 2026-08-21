@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Raylib.Render
 {
@@ -16,6 +17,7 @@ namespace Ludots.Raylib.Render
     {
         private readonly RaylibMaterialLibrary? _materialLibrary;
         private readonly HashSet<int> _reportedInvalidInstancedMaterials = new HashSet<int>();
+        private readonly Dictionary<uint, Dictionary<string, int>> _paramLocationsByShader = new();
 
         public RaylibInstancedMaterialPipeline(RaylibMaterialLibrary? materialLibrary)
         {
@@ -38,6 +40,69 @@ namespace Ludots.Raylib.Render
             }
 
             ApplyPbrUniforms(shader, in pbrLocs, materialId, hostBound);
+            if (_materialLibrary.TryGetResolved(materialId, out ResolvedMaterialAsset resolved))
+            {
+                ApplyNamedParams(shader, in resolved);
+            }
+        }
+
+        /// <summary>命名 float/color 参数按 uniform 名直推（知名 roughness/metallic 已由 PBR 流程承载）；着色器未声明即抛。</summary>
+        private void ApplyNamedParams(Shader shader, in ResolvedMaterialAsset resolved)
+        {
+            if (resolved.Floats.Count == 0 && resolved.Colors.Count == 0)
+            {
+                return;
+            }
+
+            if (!_paramLocationsByShader.TryGetValue(shader.id, out Dictionary<string, int>? locations))
+            {
+                locations = new Dictionary<string, int>(StringComparer.Ordinal);
+                _paramLocationsByShader[shader.id] = locations;
+            }
+
+            foreach (KeyValuePair<string, float> pair in resolved.Floats)
+            {
+                if (string.Equals(pair.Key, MaterialParameterNames.Roughness, StringComparison.Ordinal) ||
+                    string.Equals(pair.Key, MaterialParameterNames.Metallic, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                int loc = RequireParamLocation(shader, locations, pair.Key);
+                float value = pair.Value;
+                Rl.SetShaderValue(shader, loc, &value, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            }
+
+            foreach (KeyValuePair<string, Vector4> pair in resolved.Colors)
+            {
+                int loc = RequireParamLocation(shader, locations, pair.Key);
+                Vector4 value = pair.Value;
+                Rl.SetShaderValue(shader, loc, &value, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
+        }
+
+        private static int RequireParamLocation(Shader shader, Dictionary<string, int> locations, string name)
+        {
+            if (locations.TryGetValue(name, out int loc))
+            {
+                return loc;
+            }
+
+            loc = Rl.GetShaderLocation(shader, name);
+            if (loc < 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibInstancedMaterialPipeline)} material param '{name}' has no matching uniform in shader id={shader.id}; declare and consume it in the shader or remove the param.");
+            }
+
+            locations[name] = loc;
+            return loc;
+        }
+
+        public bool TryGetResolvedForLane(int materialId, out ResolvedMaterialAsset resolved)
+        {
+            resolved = default;
+            return _materialLibrary != null && _materialLibrary.TryGetResolved(materialId, out resolved);
         }
 
         public bool TryResolveInstancedModelMaterial(

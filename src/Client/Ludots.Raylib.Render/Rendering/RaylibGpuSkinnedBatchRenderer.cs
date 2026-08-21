@@ -233,6 +233,10 @@ namespace Ludots.Raylib.Render
             int drawCalls = 0;
             uint colorKey = batch.Key.ColorKey;
             int materialId = batch.Key.MaterialId;
+            if (_materials.TryGetResolvedForLane(materialId, out ResolvedMaterialAsset skinnedResolved))
+            {
+                RaylibMaterialDrawState.RequireLaneShaderKey(in skinnedResolved, materialId, "GpuSkinnedInstance");
+            }
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {

@@ -54,6 +54,8 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibDecalProjectorRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialLibrary)}.");
             }
 
+            RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, nameof(RaylibDecalProjectorRenderer));
+
             EnsureDecalResources();
             if (!_materialLibrary.TryApplyMaps(ref _decalMaterial, materialId))
             {

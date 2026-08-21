@@ -33,6 +33,41 @@ namespace Ludots.Raylib.Render
             return MaterialBlendModeResolver.Resolve(descriptor.Flags);
         }
 
+        /// <summary>shaderKey 分派仅实例化合批车道支持；其余车道遇非默认 key 必须 fail-loud，不静默降级。</summary>
+        public static void RequireLaneShaderKey(
+            IRenderMaterialAssets? materials,
+            int materialId,
+            string callerName)
+        {
+            if (materialId <= 0)
+            {
+                return;
+            }
+
+            if (materials == null)
+            {
+                throw new InvalidOperationException(
+                    $"{callerName} received materialId={materialId} but no {nameof(IRenderMaterialAssets)} was provided.");
+            }
+
+            if (!materials.TryResolve(materialId, out ResolvedMaterialAsset resolved))
+            {
+                throw new InvalidOperationException(
+                    $"{callerName} cannot resolve shaderKey for unknown materialId={materialId}.");
+            }
+
+            RequireLaneShaderKey(in resolved, materialId, callerName);
+        }
+
+        public static void RequireLaneShaderKey(in ResolvedMaterialAsset resolved, int materialId, string callerName)
+        {
+            if (!string.Equals(resolved.ShaderKey, MaterialAssetDescriptor.DefaultShaderKey, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{callerName} does not support material shaderKey '{resolved.ShaderKey}' (materialId={materialId}); shaderKey dispatch is only available on instanced lanes.");
+            }
+        }
+
         public static bool TryBeginAuthorBlendMode(MaterialBlendMode blendMode, string callerName)
         {
             switch (blendMode)

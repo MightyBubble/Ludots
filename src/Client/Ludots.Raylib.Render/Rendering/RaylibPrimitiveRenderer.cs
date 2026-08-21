@@ -44,17 +44,12 @@ namespace Ludots.Raylib.Render
         private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
         private Material _material;
+        private RaylibLaneShader _instancingLane = null!;
+        private readonly RaylibShaderCatalog _shaderCatalog = new();
         private Material _vfxMaterial;
         private bool _vfxMaterialLoaded;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
-        private int _locColDiffuse;
-        private int _locTint;
-        private int _locRoughness;
-        private int _locMetallic;
-        private int _locHasRoughnessMap;
-        private int _locHasMetallicMap;
         private RaylibPbrUniformLocations _instancingPbrLocs;
-        private RaylibFrameLightingLocations _instancingLightingLocs;
         private RaylibFrameLighting? _frameLighting;
         private Vector3 _frameViewPos;
         private bool _hasFrameViewPos;
@@ -62,10 +57,6 @@ namespace Ludots.Raylib.Render
         private float _frameShadowTexelWorld = 0.04f;
         private RaylibSkyIbl? _skyIbl;
         private RaylibLitModel? _immediateLit;
-        private int _locSkyZenith;
-        private int _locSkyGround;
-        private int _locEnvSpecular;
-        private RaylibShadowSamplingLocations _instancingShadowLocs;
         private Mesh _billboardShadowMesh;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
@@ -135,10 +126,8 @@ namespace Ludots.Raylib.Render
             _frameShadowTexelWorld = shadowTexelWorld;
             if (_initialized)
             {
-                lighting.Apply(_shader, in _instancingLightingLocs);
-                lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
-                ApplySkyIbl(lighting);
-                ApplyFrameShadow(_shader, in _instancingShadowLocs);
+                ApplyLightingToInstancingLanes(lighting, viewPos);
+                ApplyFrameShadowToInstancingLanes();
             }
 
             _gpuSkinned.ApplyFrameLighting(lighting, viewPos, shadow, shadowTexelWorld);
@@ -149,8 +138,8 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        /// <summary>split-sum IBL：烘焙/重烘环境立方图 + LUT，喂 uniform 并挂到合批材质槽位。</summary>
-        private void ApplySkyIbl(RaylibFrameLighting lighting)
+        /// <summary>split-sum IBL：烘焙/重烘环境立方图 + LUT，光照与天空 uniform 推到全部已注册车道着色器，IBL 纹理挂合批材质槽位（与 shader 无关）。</summary>
+        private void ApplyLightingToInstancingLanes(RaylibFrameLighting lighting, Vector3 viewPos)
         {
             if (!_initialized)
             {
@@ -161,17 +150,22 @@ namespace Ludots.Raylib.Render
             _skyIbl.Ensure(lighting);
             Vector3 zenith = lighting.SkyZenithColor;
             Vector3 ground = lighting.SkyGroundColor;
-            float envSpecular = 1f;
-            Rl.SetShaderValue(_shader, _locSkyZenith, &zenith, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_shader, _locSkyGround, &ground, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_shader, _locEnvSpecular, &envSpecular, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
+            {
+                lane.ApplyFrameLighting(lighting, viewPos);
+                lane.ApplySkyUniforms(zenith, ground, envSpecular: 1f);
+            }
+
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_CUBEMAP, _skyIbl.EnvCubemap);
             Rl.SetMaterialTexture(ref _material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_BRDF, _skyIbl.BrdfLut);
         }
 
-        private void ApplyFrameShadow(Shader shader, in RaylibShadowSamplingLocations locations)
+        private void ApplyFrameShadowToInstancingLanes()
         {
-            locations.ApplyUniforms(shader, _frameShadow, _frameShadowTexelWorld);
+            foreach (RaylibLaneShader lane in _shaderCatalog.InstancingShaders)
+            {
+                lane.ApplyFrameShadow(_frameShadow, _frameShadowTexelWorld);
+            }
         }
 
         private void BindFrameShadow(ref Material material)
@@ -1220,6 +1214,7 @@ namespace Ludots.Raylib.Render
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
+            RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} immediate model");
             ApplyHostMapsToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
@@ -1261,6 +1256,7 @@ namespace Ludots.Raylib.Render
             byte alpha = Clamp01ToByte(color.W);
             Vector3 litRgb = ResolveBillboardLitTintRgb();
             MaterialBlendMode blendMode = RaylibMaterialDrawState.ResolveBlendMode(_materials, materialId, MaterialBlendMode.Opaque, nameof(RaylibPrimitiveRenderer));
+            RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} billboard");
             // DrawBillboardRec multiplies by tint; keep cutout colDiffuse at identity to avoid double-dim.
             Color tint = new Color(
                 Clamp01ToByte(litRgb.X),
@@ -1473,6 +1469,8 @@ namespace Ludots.Raylib.Render
                     throw new InvalidOperationException(
                         $"{nameof(RaylibPrimitiveRenderer)} only supports surface-domain procedural mesh materials (meshAssetId={meshAssetId}, materialId={materialId}, domain={material.Domain}).");
                 }
+
+                RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} procedural mesh");
 
                 materialIds[i] = materialId;
             }
@@ -2212,17 +2210,18 @@ namespace Ludots.Raylib.Render
             int drawCalls = 0;
             long drawStart = Stopwatch.GetTimestamp();
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
+            RaylibLaneShader lane = ResolveInstancingLaneShader(materialId);
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
                     RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "Instanced ISM");
-                    if (!_materialPipeline.TryResolveInstancedModelMaterial(model, meshIndex, materialId, _shader, in _instancingPbrLocs, _skyIbl, _frameShadow, out Material material))
+                    if (!_materialPipeline.TryResolveInstancedModelMaterial(model, meshIndex, materialId, lane.Shader, in lane.PbrLocs, _skyIbl, _frameShadow, out Material material))
                     {
                         continue;
                     }
-                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    ApplyInstancedMaterialTint(ref material, colorKey, lane);
                     for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                     {
                         int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -2248,16 +2247,41 @@ namespace Ludots.Raylib.Render
                 _materialPipeline.ApplyHostMaterialMaps(ref material, materialId, material.shader.id != 0 ? material.shader : _shader, in _instancingPbrLocs);
             }
         }
-        private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
+        private void ApplyInstancedMaterialTint(ref Material material, uint colorKey, RaylibLaneShader lane)
         {
-            SetTintUniform(colorKey);
-            if (_locColDiffuse >= 0 && material.maps != null)
+            SetTintUniform(lane, colorKey);
+            if (material.maps != null)
             {
                 int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
                 Color color = material.maps[albedoIndex].color;
                 Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
-                Rl.SetShaderValue(_shader, _locColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                lane.SetColDiffuse(diffuse);
             }
+        }
+
+        /// <summary>材质 shaderKey → 车道着色程序；默认 lit 走内建实例化着色器，其余 key 必须已注册（fail-loud）。</summary>
+        private RaylibLaneShader ResolveInstancingLaneShader(int materialId)
+        {
+            if (materialId <= 0 || _materialLibrary == null)
+            {
+                return _instancingLane;
+            }
+
+            if (!_materialLibrary.TryGetResolved(materialId, out ResolvedMaterialAsset resolved))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve shaderKey for unknown materialId={materialId}.");
+            }
+
+            return string.Equals(resolved.ShaderKey, RaylibShaderKeys.Lit, StringComparison.Ordinal)
+                ? _instancingLane
+                : _shaderCatalog.RequireInstancing(resolved.ShaderKey);
+        }
+
+        /// <summary>给实例化合批车道注册自定义 shaderKey 着色程序（须满足 instancing 接线契约；注册方持有程序生命周期）。</summary>
+        public void RegisterInstancingShader(string shaderKey, RaylibLaneShader laneShader)
+        {
+            _shaderCatalog.RegisterInstancing(shaderKey, laneShader ?? throw new ArgumentNullException(nameof(laneShader)));
         }
         private static int ResolveMaxModelInstancesPerDraw()
         {
@@ -2308,9 +2332,11 @@ namespace Ludots.Raylib.Render
                 var b = batches[i];
                 if (b.Count == 0) continue;
 
-                SetTintUniform(b.ColorKey);
-                SetColDiffuseUniform(Vector4.One);
-                _materialPipeline.ApplyHostMaterialMaps(ref _material, b.MaterialId, _shader, in _instancingPbrLocs);
+                RaylibLaneShader lane = ResolveInstancingLaneShader(b.MaterialId);
+                _material.shader = lane.Shader;
+                SetTintUniform(lane, b.ColorKey);
+                lane.SetColDiffuse(Vector4.One);
+                _materialPipeline.ApplyHostMaterialMaps(ref _material, b.MaterialId, lane.Shader, in lane.PbrLocs);
                 BindFrameShadow(ref _material);
 
                 fixed (RaylibMatrix* p = b.Transforms)
@@ -2326,22 +2352,14 @@ namespace Ludots.Raylib.Render
             }
         }
 
-        private void SetTintUniform(uint colorKey)
+        private static void SetTintUniform(RaylibLaneShader lane, uint colorKey)
         {
-            if (_locTint < 0) return;
-
             float r = (colorKey & 0xFF) / 255f;
             float g = ((colorKey >> 8) & 0xFF) / 255f;
             float b = ((colorKey >> 16) & 0xFF) / 255f;
             float a = ((colorKey >> 24) & 0xFF) / 255f;
             var cd = new Vector4(r, g, b, a);
-            Rl.SetShaderValue(_shader, _locTint, &cd, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
-        }
-
-        private void SetColDiffuseUniform(Vector4 color)
-        {
-            if (_locColDiffuse < 0) return;
-            Rl.SetShaderValue(_shader, _locColDiffuse, &color, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            lane.SetTint(cd);
         }
 
         private void EnsureInitialized()
@@ -2383,92 +2401,22 @@ namespace Ludots.Raylib.Render
             _vfxMaterialLoaded = true;
 
             string baseDir = AppContext.BaseDirectory;
-            _shader = RaylibShaderLoader.Load(baseDir, "instancing.vs", "instancing.fs", "instancing");
+            _instancingLane = RaylibLaneShader.LoadInstancing(baseDir, "instancing.vs", "instancing.fs", "instancing");
+            _shaderCatalog.RegisterInstancing(RaylibShaderKeys.Lit, _instancingLane);
+            _shader = _instancingLane.Shader;
 
             _material = Rl.LoadMaterialDefault();
             _material.shader = _shader;
 
-            _locColDiffuse = Rl.GetShaderLocation(_shader, "colDiffuse");
-            _locTint = Rl.GetShaderLocation(_shader, "tint");
-            _locRoughness = Rl.GetShaderLocation(_shader, "uRoughness");
-            _locMetallic = Rl.GetShaderLocation(_shader, "uMetallic");
-            _locHasRoughnessMap = Rl.GetShaderLocation(_shader, "uHasRoughnessMap");
-            _locHasMetallicMap = Rl.GetShaderLocation(_shader, "uHasMetallicMap");
-            _instancingPbrLocs = new RaylibPbrUniformLocations(_locRoughness, _locMetallic, _locHasRoughnessMap, _locHasMetallicMap);
-            _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_shader, "uSkyZenith", "instancing");
-            _locSkyGround = RaylibShaderBindingGuard.RequireUniform(_shader, "uSkyGround", "instancing");
-            _locEnvSpecular = RaylibShaderBindingGuard.RequireUniform(_shader, "uEnvSpecular", "instancing");
-            int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
-            int locMapMetalness = Rl.GetShaderLocation(_shader, "texture1");
-            int locMapRoughness = Rl.GetShaderLocation(_shader, "texture3");
-            int locMvp = Rl.GetShaderLocation(_shader, "mvp");
-            int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
-            int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
-            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
-            int locVertexNormal = Rl.GetShaderLocationAttrib(_shader, "vertexNormal");
-            _instancingLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "instancing");
-            _instancingShadowLocs = RaylibShadowSamplingLocations.ResolveOrThrow(
-                _shader,
-                "instancing",
-                RaylibShadowSampling.ShaderTextureSlot);
-
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_VIEW] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_PROJECTION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VECTOR_VIEW] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locColDiffuse;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = _instancingShadowLocs.ShadowMap;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
-            // split-sum IBL 采样器：cubemap 走 MATERIAL_MAP_CUBEMAP 槽位（native 5.5
-            // DrawMeshInstanced 对该槽以 GL_TEXTURE_CUBE_MAP 绑定并回填 uniform=槽位号），LUT 走 BRDF 槽。
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] =
-                RaylibShaderBindingGuard.RequireUniform(_shader, "uPrefilteredEnv", "instancing");
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_IRRADIANCE] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_PREFILTER] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] =
-                RaylibShaderBindingGuard.RequireUniform(_shader, "uBrdfLut", "instancing");
-
-            if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
-            if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
-            if (locVertexNormal < 0) throw new InvalidOperationException("Shader attrib 'vertexNormal' not found.");
-            if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
-            if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
-            if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
-            if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
-            if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
-            if (_locRoughness < 0) throw new InvalidOperationException("Shader uniform 'uRoughness' not found.");
-            if (_locMetallic < 0) throw new InvalidOperationException("Shader uniform 'uMetallic' not found.");
-            if (_locHasRoughnessMap < 0) throw new InvalidOperationException("Shader uniform 'uHasRoughnessMap' not found.");
-            if (_locHasMetallicMap < 0) throw new InvalidOperationException("Shader uniform 'uHasMetallicMap' not found.");
-            if (locMapMetalness < 0) throw new InvalidOperationException("Shader uniform 'texture1' not found.");
-            if (locMapRoughness < 0) throw new InvalidOperationException("Shader uniform 'texture3' not found.");
+            _instancingPbrLocs = _instancingLane.PbrLocs;
 
             _materialPipeline.ApplyDefaultPbrUniforms(_shader, in _instancingPbrLocs);
 
             _initialized = true;
-            ApplyFrameShadow(_shader, in _instancingShadowLocs);
+            ApplyFrameShadowToInstancingLanes();
             if (_frameLighting != null)
             {
-                _frameLighting.Apply(_shader, in _instancingLightingLocs);
-                if (_hasFrameViewPos)
-                {
-                    _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
-                }
+                ApplyLightingToInstancingLanes(_frameLighting, _frameViewPos);
             }
         }
 
@@ -2508,10 +2456,8 @@ namespace Ludots.Raylib.Render
                     $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires camera view position before draw.");
             }
 
-            _frameLighting.Apply(_shader, in _instancingLightingLocs);
-            _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
-            ApplySkyIbl(_frameLighting);
-            ApplyFrameShadow(_shader, in _instancingShadowLocs);
+            ApplyLightingToInstancingLanes(_frameLighting, _frameViewPos);
+            ApplyFrameShadowToInstancingLanes();
         }
         private void EnsureImmediateLitFrame()
         {
