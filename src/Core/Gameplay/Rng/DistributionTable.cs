@@ -5,6 +5,8 @@ namespace Ludots.Core.Gameplay.Rng;
 
 public sealed class DistributionTable
 {
+    public const int MaxEntryCount = 1024;
+
     private readonly DistributionEntry[] _entries;
     private readonly float[] _shares;
     private readonly float _lockedShareAnchor;
@@ -19,6 +21,12 @@ public sealed class DistributionTable
         if (config == null || config.Length == 0)
         {
             throw new InvalidOperationException($"Distribution '{id}' must declare at least one entry.");
+        }
+
+        if (config.Length > MaxEntryCount)
+        {
+            throw new InvalidOperationException(
+                $"Distribution '{id}' declares {config.Length} entries; the supported maximum is {MaxEntryCount}.");
         }
 
         Id = id;

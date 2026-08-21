@@ -23,7 +23,7 @@ public sealed class DistributionConfigLoader
         var entry = ConfigPipeline.RequireEntry(catalog, CatalogPath, ConfigMergePolicy.ArrayById, "id");
         var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
-        var declaredStreams = new HashSet<string>(StringComparer.Ordinal);
+        var declaredStreamSeeds = new Dictionary<string, uint>(StringComparer.Ordinal);
         var tables = new List<DistributionTable>(merged.Count);
         for (var i = 0; i < merged.Count; i++)
         {
@@ -36,9 +36,19 @@ public sealed class DistributionConfigLoader
                     $"Distribution '{config.Id}' must declare a named rng stream; unnamed streams are not allowed.");
             }
 
-            if (declaredStreams.Add(config.Stream))
+            var seed = config.StreamSeed ?? DeriveStreamSeed(config.Stream);
+            if (declaredStreamSeeds.TryGetValue(config.Stream, out var existingSeed))
             {
-                streams.DeclareStream(config.Stream, config.StreamSeed ?? DeriveStreamSeed(config.Stream));
+                if (existingSeed != seed)
+                {
+                    throw new InvalidOperationException(
+                        $"Distributions sharing stream '{config.Stream}' declare conflicting seeds {existingSeed} and {seed}; pick one explicit seed.");
+                }
+            }
+            else
+            {
+                declaredStreamSeeds.Add(config.Stream, seed);
+                streams.DeclareStream(config.Stream, seed);
             }
 
             tables.Add(new DistributionTable(config.Id, config.Stream, config.Entries));

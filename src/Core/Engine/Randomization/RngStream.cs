@@ -58,7 +58,7 @@ namespace Ludots.Core.Engine.Randomization
                 throw new ArgumentOutOfRangeException(nameof(maxExclusive), "Upper bound must be greater than the lower bound.");
             }
 
-            var range = (uint)(maxExclusive - minInclusive);
+            var range = (uint)((long)maxExclusive - minInclusive);
             var limit = uint.MaxValue - uint.MaxValue % range;
             uint sample;
             do
@@ -66,7 +66,7 @@ namespace Ludots.Core.Engine.Randomization
                 sample = NextUInt();
             } while (sample >= limit);
 
-            return minInclusive + (int)(sample % range);
+            return (int)(minInclusive + (long)(sample % range));
         }
 
         public void Advance(int steps)

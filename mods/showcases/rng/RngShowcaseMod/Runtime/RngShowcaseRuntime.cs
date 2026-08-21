@@ -170,6 +170,7 @@ public sealed class RngShowcaseRuntime
             _segmentPicks = DrawBurst(_segmentPicks.Length > 0 ? _segmentPicks.Length : SegmentLengthCap);
         }
 
+        var beforeVerify = stream.CaptureSnapshot();
         stream.RestoreSnapshot(in _segmentSnapshot);
         var replayed = new int[_segmentPicks.Length];
         var segmentModulation = _segmentModulationPermille / 1000f;
@@ -177,6 +178,8 @@ public sealed class RngShowcaseRuntime
         {
             replayed[i] = _picks.Pick(DistributionId, segmentModulation);
         }
+
+        stream.RestoreSnapshot(in beforeVerify);
 
         var matched = replayed.SequenceEqual(_segmentPicks);
         return new JsonObject

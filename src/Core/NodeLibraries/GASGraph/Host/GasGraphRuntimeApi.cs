@@ -267,7 +267,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             var picks = _rngPickService
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.RngPickUnavailable");
-            return picks.PickByKeyId(distributionKeyId, modulationPermille / 1000f);
+            return picks.PickByKeyId(distributionKeyId, Math.Clamp(modulationPermille, -1000, 1000) / 1000f);
         }
         public int ResolveTableRow(int tableId, int key)
         {
