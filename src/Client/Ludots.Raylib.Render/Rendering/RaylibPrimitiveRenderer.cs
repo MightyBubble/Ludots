@@ -29,7 +29,6 @@ namespace Ludots.Raylib.Render
         private readonly IRenderAssetPathResolver? _vfs;
         private readonly IRenderMaterialAssets? _materials;
         private readonly RaylibMaterialLibrary? _materialLibrary;
-        private readonly string? _diagnosticPath;
         private const int DefaultMaxModelInstancesPerDraw = 32768;
         private const int HardMaxModelInstancesPerDraw = 131072;
 
@@ -76,8 +75,6 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
-        private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
-        private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
@@ -204,7 +201,6 @@ namespace Ludots.Raylib.Render
             _materialLibrary = vfs != null && materials != null
                 ? new RaylibMaterialLibrary(vfs, materials)
                 : null;
-            _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
             _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
             _materialPipeline = new RaylibInstancedMaterialPipeline(_materialLibrary);
@@ -1286,9 +1282,13 @@ namespace Ludots.Raylib.Render
                 Clamp01ToByte(litRgb.Z),
                 alpha);
             bool doubleSided = IsMaterialDoubleSided(materialId);
-            LogBillboardDrawDiagnostic(
-                meshAssetId,
-                $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} blend={blendMode} materialId={materialId} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
+            if (RenderDiagnostics.FileSinkEnabled)
+            {
+                RenderDiagnostics.Detail(
+                    "billboard-draw",
+                    meshAssetId,
+                    $"pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} blend={blendMode} materialId={materialId} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
+            }
 
             if (doubleSided)
             {
@@ -1585,7 +1585,7 @@ namespace Ludots.Raylib.Render
 
             if (_vfs == null || desc.SourceUris == null || desc.SourceUris.Length == 0)
             {
-                LogTextureDiagnostic(meshAssetId, $"texture-load skipped; vfsMissing={_vfs == null}; uriCount={desc.SourceUris?.Length ?? 0}");
+                RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load skipped; vfsMissing={_vfs == null}; uriCount={desc.SourceUris?.Length ?? 0}");
                 _textureCache[meshAssetId] = cached;
                 return false;
             }
@@ -1597,13 +1597,13 @@ namespace Ludots.Raylib.Render
 
                 if (!_vfs.TryResolveFullPath(uri, out string fullPath))
                 {
-                    LogTextureDiagnostic(meshAssetId, $"texture-resolve failed; uri={uri}");
+                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-resolve failed; uri={uri}");
                     continue;
                 }
 
                 if (!File.Exists(fullPath))
                 {
-                    LogTextureDiagnostic(meshAssetId, $"texture-file missing; uri={uri}; fullPath={fullPath}");
+                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-file missing; uri={uri}; fullPath={fullPath}");
                     continue;
                 }
 
@@ -1617,11 +1617,11 @@ namespace Ludots.Raylib.Render
                         AspectRatio = texture.height > 0 ? (float)texture.width / texture.height : 1f,
                     };
                     _textureCache[meshAssetId] = cached;
-                    LogTextureDiagnostic(meshAssetId, $"texture-load success; uri={uri}; fullPath={fullPath}; size={texture.width}x{texture.height}");
+                    RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load success; uri={uri}; fullPath={fullPath}; size={texture.width}x{texture.height}");
                     return true;
                 }
 
-                LogTextureDiagnostic(meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
+                RenderDiagnostics.Detail("texture", meshAssetId, $"texture-load failed; uri={uri}; fullPath={fullPath}; textureId={texture.id}; size={texture.width}x{texture.height}");
 
                 if (texture.id != 0)
                     Rl.UnloadTexture(texture);
@@ -1631,43 +1631,11 @@ namespace Ludots.Raylib.Render
             return false;
         }
 
-        private void LogTextureDiagnostic(int meshAssetId, string message)
-        {
-            if (string.IsNullOrWhiteSpace(_diagnosticPath))
-                return;
-
-            if (!_loggedTextureDiagnostics.Add(meshAssetId))
-                return;
-
-            string fullPath = Path.GetFullPath(_diagnosticPath);
-            string? directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-                Directory.CreateDirectory(directory);
-
-            File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] meshAssetId={meshAssetId} {message}{Environment.NewLine}");
-        }
-
         private static string FormatSourceUris(string[]? sourceUris)
         {
             return sourceUris == null || sourceUris.Length == 0
                 ? "(none)"
                 : string.Join("|", sourceUris);
-        }
-
-        private void LogBillboardDrawDiagnostic(int meshAssetId, string message)
-        {
-            if (string.IsNullOrWhiteSpace(_diagnosticPath))
-                return;
-
-            if (!_loggedBillboardDrawDiagnostics.Add(meshAssetId))
-                return;
-
-            string fullPath = Path.GetFullPath(_diagnosticPath);
-            string? directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-                Directory.CreateDirectory(directory);
-
-            File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] meshAssetId={meshAssetId} {message}{Environment.NewLine}");
         }
 
         private void WarnMissingModelSkipped(int meshAssetId, int stableId, string path)
