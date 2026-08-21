@@ -83,7 +83,7 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 - `GET /tools` → 工具目录（name / description / inputSchema JSON Schema），供 Agent 发现
 - `GET /` → 人读说明 + 发现文件路径
 
-内置工具（20，v1 13 个 + v2 帧捕获与窗口层输入 4 个 + v3 相机/日志/事件 3 个）：
+内置工具（24，v1 13 个 + v2 帧捕获与窗口层输入 4 个 + v3 相机/日志/事件 3 个 + v4 空间探针与导航 4 个）：
 
 | 工具 | 说明 |
 |------|------|
@@ -105,6 +105,9 @@ Ludots 进程:  AgentBridgeHttpServer (后台线程, 仅绑 127.0.0.1)
 | `ludots.camera.control` | 相机读/控：`get` / `set`（部分姿态，经 `CameraManager.ApplyPose` 持久进活动虚拟相机）/ `follow {entityId}`（实体跟随目标）/ `unfollow` |
 | `ludots.logs.tail` | 进程内日志环形缓冲（`AgentLogRingBackend` 经 `Log.AddBackend` 挂入，不动宿主级别配置）；`count/minLevel/channel/contains` 过滤 |
 | `ludots.events.fire` | 经 `TriggerManager.FireEventAsync` 发送任意事件键（与引擎生命周期事件同分发路径），响应带本次 `triggerErrors` |
+| `ludots.entities.pick` | 屏幕坐标 → 实体（复用生产点选解析器 `CommandSourcePointerHitResolver`：selectable 标签 + 知识门控 + 投影包围盒决胜） |
+| `ludots.spatial.query` | 空间探针：radius / aabb / cone / rect / line 五形（直走 `ISpatialQueryService` 生产查询层，与技能/自动索敌同一分区后端） |
+| `ludots.nav.project` / `ludots.nav.findPath` | NavMesh 探针：世界点投影到可行走三角形；A→B 寻路（`NavQueryService` 稳定读 + portal A*，状态 NotReady/NotReachable 显式上报） |
 
 错误协议：JSON-RPC error，`-32602` 参数错，`-32601` 未知工具，`-32000` 域错误并带 `data.code`（`AgentBridgeErrorCodes`：`invalid.params` / `service.unavailable` / `entity.not_found` / `capability.unavailable` / `tool.failed` / `bridge.timeout`，另有工具自带码如 `ui.node_not_found`、`ui.scene_not_mounted`）。
 
