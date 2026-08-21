@@ -58,6 +58,13 @@
       }
     }
   ],
+  "Variables": [
+    {
+      "name": "gallery.morale",
+      "type": "float",
+      "initial": 0.5
+    }
+  ],
   "Teams": [
     {
       "TeamId": 2,

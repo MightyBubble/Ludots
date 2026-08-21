@@ -58,6 +58,13 @@
       }
     }
   ],
+  "Variables": [
+    {
+      "name": "gallery.kills",
+      "type": "int",
+      "initial": 41
+    }
+  ],
   "Teams": [
     {
       "TeamId": 2,
