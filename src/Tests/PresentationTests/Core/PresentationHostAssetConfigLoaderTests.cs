@@ -443,6 +443,93 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex!.Message, Does.Contain("ghost.parent"));
         }
 
+        [Test]
+        public void Load_ParsesShaderKeyAndNamedParams()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.emissive",
+                    "domain": "Surface",
+                    "shaderKey": "emissive",
+                    "params": {
+                      "floats": { "roughness": 0.6, "uEmissiveStrength": 3.0 },
+                      "colors": { "uEmissiveColor": [ 1.0, 0.35, 0.15, 1.0 ] }
+                    }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+
+            int id = materials.GetId("demo.emissive");
+            Assert.That(materials.TryGet(id, out var descriptor), Is.True);
+            Assert.That(descriptor.ShaderKey, Is.EqualTo("emissive"));
+            Assert.That(descriptor.Roughness, Is.EqualTo(0.6f));
+            Assert.That(descriptor.FloatParams["uEmissiveStrength"], Is.EqualTo(3.0f));
+            Assert.That(descriptor.ColorParams["uEmissiveColor"].Y, Is.EqualTo(0.35f));
+        }
+
+        [Test]
+        public void Load_WhenTopLevelAndParamsDeclareSameWellKnownScalar_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.conflict",
+                    "domain": "Surface",
+                    "roughness": 0.4,
+                    "params": { "floats": { "roughness": 0.8 } }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("both at top level and in params.floats"));
+        }
+
+        [Test]
+        public void Load_WhenWellKnownFloatParamOutOfUnitRange_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "demo.bad_range",
+                    "domain": "Surface",
+                    "params": { "floats": { "metallic": 1.5 } }
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("within [0, 1]"));
+        }
+
         private static string CreateTempCoreRoot()
         {
             return Path.Combine(Path.GetTempPath(), "Ludots_HostAssetConfigTests", Guid.NewGuid().ToString("N"));

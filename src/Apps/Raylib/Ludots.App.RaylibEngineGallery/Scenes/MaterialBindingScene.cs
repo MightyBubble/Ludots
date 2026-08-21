@@ -6,15 +6,25 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.App.RaylibEngineGallery.Scenes
 {
-    /// <summary>材质绑定：RaylibMaterialLibrary 把同一网格绑到三种宿主材质（不透明棋盘 / 裁切条纹 / 半透明光斑）。</summary>
+    /// <summary>
+    /// 材质绑定：RaylibMaterialLibrary 同网格多材质（不透明棋盘 / 裁切条纹 / 半透明光斑）；
+    /// 实例行演示材质实例链（同父异贴图/异参数）与 shaderKey=emissive 自定义着色行为。
+    /// </summary>
     public sealed unsafe class MaterialBindingScene : IEngineScene
     {
         private const int CheckerMaterialId = 621;
         private const int StripeMaterialId = 622;
         private const int GlowMaterialId = 623;
+        private const int IronBaseMaterialId = 624;
+        private const int IronRustyMaterialId = 625;
+        private const int EmissiveMaterialId = 626;
+        private const int EmissiveHotMaterialId = 627;
+        private const int DemoCubeAssetId = 630;
 
         private readonly GalleryAssetPaths _paths = GalleryAssetPaths.Instance;
         private readonly GalleryMaterialAssets _materials = new();
+        private readonly GalleryMeshAssets _meshes = new();
+        private readonly GalleryPrimitiveSnapshot _snapshot = new();
         private readonly (int MaterialId, string Label, Color Panel)[] _slots;
         private readonly Material[] _boundMaterials = new Material[3];
         private readonly MaterialBlendMode[] _blendModes = new MaterialBlendMode[3];
@@ -22,13 +32,15 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly RaylibSkyboxRenderer _skybox = new();
 
         private RaylibMaterialLibrary _binder = null!;
+        private RaylibPrimitiveRenderer _primitives = null!;
+        private RaylibLaneShader _emissiveLane = null!;
         private RaylibDirectionalShadowMap _shadowMap = null!;
         private Mesh _cube;
         private bool _disposed;
 
         public string Id => "material_binding";
         public string Title => "材质绑定";
-        public string Summary => "RaylibMaterialLibrary 同网格多材质/混合模式";
+        public string Summary => "材质库多材质/混合模式 + 实例链覆盖 + shaderKey 自定义着色";
 
         public MaterialBindingScene()
         {
@@ -62,6 +74,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 byte alpha = (byte)(MathF.Pow(radial, 1.3f) * 235f);
                 return new Color(120, 240, 170, alpha);
             });
+            GalleryTextureFactory.WritePng("mat_rusty.png", 128, 128, (x, y) =>
+            {
+                float n = GalleryTextureFactory.SmoothNoise(x, y, 11);
+                return new Color((byte)(90 + (n * 110f)), (byte)(44 + (n * 52f)), (byte)(22 + (n * 30f)), 255);
+            });
 
             _materials.Register("gallery.mat.checker", new MaterialAssetDescriptor(
                 CheckerMaterialId,
@@ -78,6 +95,54 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 MaterialAssetDomain.Surface,
                 MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided),
                 new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_glow.png" });
+
+            // 实例链演示：rusty 继承 base 的 metallic=1 并覆盖 albedo/roughness；hot 覆盖 emissive 命名参数。
+            _materials.Register("gallery.mat.iron", new MaterialAssetDescriptor(
+                IronBaseMaterialId,
+                MaterialAssetDomain.Surface,
+                MaterialAssetFlags.None,
+                floatParams: new Dictionary<string, float>
+                {
+                    [MaterialParameterNames.Roughness] = 0.35f,
+                    [MaterialParameterNames.Metallic] = 1.0f,
+                }),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_checker.png" });
+            _materials.Register("gallery.mat.iron.rusty", new MaterialAssetDescriptor(
+                IronRustyMaterialId,
+                MaterialAssetDomain.Surface,
+                MaterialAssetFlags.None,
+                parentKey: "gallery.mat.iron",
+                floatParams: new Dictionary<string, float> { [MaterialParameterNames.Roughness] = 0.95f }),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_rusty.png" });
+            _materials.Register("gallery.mat.emissive", new MaterialAssetDescriptor(
+                EmissiveMaterialId,
+                MaterialAssetDomain.Surface,
+                MaterialAssetFlags.None,
+                shaderKey: "emissive",
+                floatParams: new Dictionary<string, float>
+                {
+                    [MaterialParameterNames.Roughness] = 0.6f,
+                    ["uEmissiveStrength"] = 1.5f,
+                },
+                colorParams: new Dictionary<string, Vector4> { ["uEmissiveColor"] = new Vector4(0.2f, 0.9f, 1.0f, 1f) }),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/mat_checker.png" });
+            _materials.Register("gallery.mat.emissive.hot", new MaterialAssetDescriptor(
+                EmissiveHotMaterialId,
+                MaterialAssetDomain.Surface,
+                MaterialAssetFlags.None,
+                parentKey: "gallery.mat.emissive",
+                floatParams: new Dictionary<string, float> { ["uEmissiveStrength"] = 3.0f },
+                colorParams: new Dictionary<string, Vector4> { ["uEmissiveColor"] = new Vector4(1.0f, 0.35f, 0.15f, 1f) }));
+
+            _meshes.Register("gallery.demo_cube", MeshAssetDescriptor.Primitive(DemoCubeAssetId, PrimitiveMeshKind.Cube));
+
+            _primitives = new RaylibPrimitiveRenderer(
+                RaylibPrimitiveRenderMode.Instanced,
+                _paths,
+                _materials,
+                channelRegistrar: GalleryAnimationChannels.Register);
+            _emissiveLane = RaylibLaneShader.LoadInstancing(AppContext.BaseDirectory, "mat_emissive.vs", "mat_emissive.fs", "mat_emissive");
+            _primitives.RegisterInstancingShader("emissive", _emissiveLane);
 
             _binder = new RaylibMaterialLibrary(_paths, _materials);
             _cube = Rl.GenMeshCube(3f, 3f, 3f);
@@ -133,6 +198,14 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     new Vector4(panel.r / 255f, panel.g / 255f, panel.b / 255f, 1f));
             }
 
+            _snapshot.BeginFrame();
+            _snapshot.Add(GalleryItems.Mesh(DemoCubeAssetId, 9001, new Vector3(-11.25f, 1.4f, -13f), new Vector3(2.8f, 2.8f, 2.8f), Vector4.One, IronBaseMaterialId));
+            _snapshot.Add(GalleryItems.Mesh(DemoCubeAssetId, 9002, new Vector3(-3.75f, 1.4f, -13f), new Vector3(2.8f, 2.8f, 2.8f), Vector4.One, IronRustyMaterialId));
+            _snapshot.Add(GalleryItems.Mesh(DemoCubeAssetId, 9003, new Vector3(3.75f, 1.4f, -13f), new Vector3(2.8f, 2.8f, 2.8f), Vector4.One, EmissiveMaterialId));
+            _snapshot.Add(GalleryItems.Mesh(DemoCubeAssetId, 9004, new Vector3(11.25f, 1.4f, -13f), new Vector3(2.8f, 2.8f, 2.8f), Vector4.One, EmissiveHotMaterialId));
+            _primitives.ApplyFrameLighting(_litProps.Lighting, camera.position, _shadowMap, shadowTexelWorld: 0.05f);
+            _primitives.Draw(_snapshot, camera, _meshes);
+
             Rl.EndMode3D();
 
             int x = 16;
@@ -142,6 +215,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 GalleryFont.Draw($"[{i + 1}] {_slots[i].Label} ({_blendModes[i]})", x + 4, 26, 18, GalleryColors.RayWhite);
                 x += 320;
             }
+
+            GalleryFont.Draw("instance row: [iron] base metallic | [rusty] albedo+roughness override | [emissive] shaderKey=emissive | [hot] instance param override", 16, 52, 18, GalleryColors.RayWhite);
         }
 
         private unsafe void DrawBoundCube(int slotIndex, Vector3 position, float yawRad, Color tint)
@@ -211,6 +286,13 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _binder?.Dispose();
+            _primitives?.Dispose();
+            if (_emissiveLane != null)
+            {
+                Rl.UnloadShader(_emissiveLane.Shader);
+                _emissiveLane = null!;
+            }
+
             _shadowMap?.Dispose();
             _skybox.Dispose();
             _litProps.Dispose();

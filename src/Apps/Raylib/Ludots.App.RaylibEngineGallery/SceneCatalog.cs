@@ -35,7 +35,7 @@ namespace Ludots.App.RaylibEngineGallery
             new("particles", "Quarks 粒子", "ParticleVfxAssetData 火花/烟雾/拉伸火星三组效果", static () => new Scenes.ParticlesScene()),
             new("decal_projection", "投影贴花", "decal_project shader 地表移动投影贴花", static () => new Scenes.DecalProjectionScene()),
             new("vegetation_cutout", "植被透贴", "vegetation_cutout shader 程序化草丛 billboard", static () => new Scenes.VegetationCutoutScene()),
-            new("material_binding", "材质绑定", "RaylibMaterialLibrary 同网格多材质/混合模式", static () => new Scenes.MaterialBindingScene()),
+            new("material_binding", "材质绑定", "材质库多材质/混合模式 + 实例链覆盖 + shaderKey 自定义着色", static () => new Scenes.MaterialBindingScene()),
             new("ribbon_overlay", "样条带覆盖层", "GroundOverlayBuffer + 样条带世界覆盖层", static () => new Scenes.RibbonOverlayScene()),
             new("skia_overlay", "Skia 2D 覆盖层", "RaylibSkiaRenderer + SkiaRasterLayer HUD 合成", static () => new Scenes.SkiaOverlayScene()),
             new("debug_draw", "调试绘制", "RaylibDebugDrawRenderer + DebugDrawCommandBuffer", static () => new Scenes.DebugDrawScene()),
