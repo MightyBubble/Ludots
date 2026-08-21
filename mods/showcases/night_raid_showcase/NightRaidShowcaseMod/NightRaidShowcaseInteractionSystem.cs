@@ -93,7 +93,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         }
 
         PublishReadabilityOverlays();
-        PublishHud();
+        PublishHud(ground, hasGround);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             return;
         }
 
-        ground.TryAdd(new Ludots.Platform.Abstractions.GroundOverlayItem
+        ground.Upsert(new Ludots.Platform.Abstractions.GroundOverlayItem
         {
             StableId = 910_002,
             Shape = Ludots.Platform.Abstractions.GroundOverlayShape.Ring,
@@ -123,7 +123,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         if (hero != Entity.Null && _engine.World.IsAlive(hero) &&
             _engine.World.TryGet(hero, out WorldPositionCm heroPos))
         {
-            ground.TryAdd(new Ludots.Platform.Abstractions.GroundOverlayItem
+            ground.Upsert(new Ludots.Platform.Abstractions.GroundOverlayItem
             {
                 StableId = 910_001,
                 Shape = Ludots.Platform.Abstractions.GroundOverlayShape.Ring,
@@ -156,7 +156,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             registry);
     }
 
-    private void PublishHud()
+    private void PublishHud(Vector3 ground, bool hasGround)
     {
         if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay)
         {
@@ -173,7 +173,8 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         var title = new Vector4(0.45f, 0.9f, 1f, 1f);
         var value = new Vector4(1f, 0.82f, 0.42f, 1f);
         var normal = new Vector4(0.92f, 0.95f, 0.98f, 1f);
-        overlay.AddRect(18, 18, 720, 150, new Vector4(0.03f, 0.05f, 0.08f, 0.9f),
+        var warn = new Vector4(1f, 0.45f, 0.4f, 1f);
+        overlay.AddRect(18, 18, 720, 176, new Vector4(0.03f, 0.05f, 0.08f, 0.9f),
             new Vector4(0.25f, 0.65f, 0.82f, 0.95f), 7400, 0);
         overlay.AddText(34, 32, "NIGHT RAID - TriggerGraph basics", 24, title, 7401, 1);
         overlay.AddText(34, 64,
@@ -183,6 +184,14 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             "1 load -> 2 enter circle -> kill raiders to threshold -> 3 boss phase -> 4 boss dies -> yield 2 beats -> 5 VICTORY panel",
             13, normal, 7405, 1);
         overlay.AddText(34, 118, _lastMessage, 14, normal, 7406, 1);
+        if (hasGround)
+        {
+            overlay.AddText(34, 146, $"pointer ground ({(int)ground.X}, {(int)ground.Z}) cm", 13, normal, 7407, 1);
+        }
+        else
+        {
+            overlay.AddText(34, 146, "pointer ground UNAVAILABLE - terrain/raycast not resolving, clicks dead", 13, warn, 7407, 1);
+        }
     }
 
     private Entity FindHero()

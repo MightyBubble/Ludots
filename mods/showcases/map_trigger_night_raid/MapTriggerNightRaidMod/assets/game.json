@@ -11,5 +11,6 @@
   ],
   "windowTitle": "Ludots - Night Raid",
   "windowWidth": 1600,
-  "windowHeight": 900
+  "windowHeight": 900,
+  "targetFps": 60
 }
