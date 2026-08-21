@@ -29,20 +29,32 @@ Rl.DrawModelEx(model, position, axis, angle, scale, color);
 
 画廊范式：`GalleryLitProps`（共享立方体/球 + 单实例）与 `GpuSkinningScene`（自有实例）。
 
-## 平面投影阴影：RaylibPlanarShadows
+## 方向光 Shadow Map：RaylibDirectionalShadowMap
+
+平面投影阴影（`RaylibPlanarShadows`）已退役，全场景统一走方向光 shadow map 车道：
 
 ```csharp
-var shadows = new RaylibPlanarShadows(alpha: 110);
-shadows.GroundY = 0.21f;                   // 接收平面高度（必须高于地面几何顶面）
-
-// 模型：换装默认着色器 → planar 矩阵 → 还原
-shadows.DrawModelShadow(model, position, rotationAngleY, scale, lighting.SunDirectionToward);
-
-// mesh：
-shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
+var shadow = new RaylibDirectionalShadowMap();   // 配置走环境配置树 RaylibShadowConfig(MapSize, ReceiverBiasWorld)
+shadow.BeginFrame(lighting.SunDirectionToward, sceneCenter, sceneRadius);
+// 各车道把投影体灌进深度 pass：
+primitiveRenderer.DrawShadow(snapshot, shadow, meshes, camera);   // 图元/模型/billboard
+primitiveRenderer.DrawShadow(skinnedBatch, shadow, meshes);       // GPU 蒙皮合批
+shadow.EndFrame();
 ```
 
-限制：接收面为水平面（`GroundY`）；重叠投影会加深。非平面接收需等 native 升级后的 shadow map 车道。
+- **深度编码**：硬件深度打包进 RGBA 颜色 RT（RGB 24 位进位），接收端经 `uLightSpaceMatrix` 投影 + 3×3 PCF；RT 点采样 + 钳制包裹（bilinear 解码打包深度在数学上是错的）。
+- **shader 单一来源**：四个接收 shader（`model_lit.fs` / `instancing.fs` / `skinning_instanced.fs` / `terrain.fs`）经 `// ludo:include shadow_sampling.glsl.inc` 共享同一块采样代码，`RaylibShaderLoader` 运行时展开（递归 ≤4、fail-loud、防路径穿越）；合同测试断言"禁内联 + 展开后逐字一致"双守卫。
+- **投影资格**（收口于 `DrawShadowLeafAsset` 单点，`RaylibMaterialDrawState.CastsShadow`）：
+
+| 材质 blend | 是否投影 | 说明 |
+|---|---|---|
+| Opaque | 是 | 实体深度 |
+| Cutout | 是 | `shadow_depth_cutout` 采样 albedo alpha 打孔（阈值 `DefaultVegetationAlphaCutoff`），树冠影呈斑驳形态而非实心矩形 |
+| AlphaBlend / Additive | 否 | alpha 是发光/覆盖语义，不构成遮挡体 |
+| VFX / Decal | 否 | 条目级跳过 |
+
+- **深度 pass shader 族**：`shadow_depth`（实体）、`shadow_depth_instanced`（ISM 合批）、`shadow_depth_skinning_instanced`（蒙皮合批）、`shadow_depth_cutout`（镂空 billboard）；镂空与实体打包编码逐字一致，合同测试锁定。
+- 无 `1/2048` 之类的硬编码：`uShadowMapTexel` 由 `RaylibShadowConfig.MapSize` 推导。
 
 ## 材质标量 PBR 合同
 
@@ -55,6 +67,16 @@ shadows.DrawMeshShadow(mesh, modelTransform, lighting.SunDirectionToward);
 - 有贴图 → 贴图优先（标量忽略）；无贴图 → 标量直达 `uRoughness`/`uMetallic`。
 - 越界（非 [0,1] / 非数字）装载期 fail-loud。
 - 合批管线与单物体通道同一合同（`MaterialAssetDescriptor.Roughness/Metalness`）。
+
+## 材质实例与 shaderKey（对齐商业引擎心智）
+
+材质是三轴正交的作者面，均数据驱动、解析期 fail-loud：
+
+- **材质实例链**：`MaterialAssetDescriptor.ParentKey` 指向父材质，`MaterialAssetResolver` 沿链合并——子材质只写差异字段（换贴图、改 roughness/metalness、改 blend flags），未写字段继承父级；`IRenderMaterialAssets.TryResolve` 给解析后视图。
+- **自定义着色行为**：`ShaderKey`（默认 `lit`）+ `RaylibShaderCatalog` 注册表分派。`RaylibLaneShader` 接线契约挂在实例化合批车道（`RegisterInstancingShader(key, lane)`）；非实例化车道遇非默认 shaderKey 一律 fail-loud，不静默降级。
+- **命名参数直推 uniform**：`FloatParams` / `ColorParams` 字典按键名直达 shader uniform（如 emissive 强度/颜色），实例材质改参数即生效。
+
+范式见引擎画廊 `material_binding` 场景：`[iron] 基础金属 → [rusty] 实例覆盖 albedo+roughness`、`[emissive] shaderKey=emissive 自发光车道 → [hot] 实例参数覆盖`。
 
 ## split-sum 天空 IBL（预滤波环境立方图 + BRDF LUT）
 
