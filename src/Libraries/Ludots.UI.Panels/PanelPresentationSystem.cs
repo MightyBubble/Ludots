@@ -77,15 +77,15 @@ public sealed class PanelPresentationSystem : ISystem<float>
                 continue;
             }
 
-            string anchorKey = NormalizeAnchor(info.Anchor);
-            int stackIndex = anchorStack.TryGetValue(anchorKey, out int count) ? count : 0;
-            anchorStack[anchorKey] = stackIndex + 1;
-
             PanelSkinDescriptor skin = ResolveSkin(info);
             if (skin.Name == PanelSkinCatalog.DefaultSkinName && IsWebRouted(info))
             {
                 continue;
             }
+
+            string anchorKey = NormalizeAnchor(info.Anchor);
+            int stackIndex = anchorStack.TryGetValue(anchorKey, out int count) ? count : 0;
+            anchorStack[anchorKey] = stackIndex + 1;
 
             string key = $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}";
             if (!_mounted.TryGetValue(key, out MountedPanel? mounted))

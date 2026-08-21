@@ -64,7 +64,7 @@ public static class PanelThemeCatalog
         string rawCss = File.ReadAllText(cssPath);
         foreach (var font in entry.Fonts)
         {
-            string fontPath = Path.Combine(rootPath, font.Value.Replace('/', Path.DirectorySeparatorChar));
+            string fontPath = ResolveInsideRoot(rootPath, font.Value, entry.Id, $"font '{font.Key}'");
             if (!File.Exists(fontPath))
             {
                 throw new InvalidOperationException(
@@ -75,10 +75,10 @@ public static class PanelThemeCatalog
         }
 
         UiStyleSheet styleSheet = UiCssParser.ParseStyleSheet(RewriteUrls(rawCss, source =>
-            Path.Combine(rootPath, source.Replace('/', Path.DirectorySeparatorChar))));
+            ResolveInsideRoot(rootPath, source, entry.Id, "image")));
         string webCss = RewriteUrls(rawCss, source =>
         {
-            string path = Path.Combine(rootPath, source.Replace('/', Path.DirectorySeparatorChar));
+            string path = ResolveInsideRoot(rootPath, source, entry.Id, "image");
             if (!File.Exists(path))
             {
                 throw new InvalidOperationException(
@@ -138,6 +138,20 @@ public static class PanelThemeCatalog
 
         throw new InvalidOperationException(
             $"Unknown panel theme '{themeId}'. Declare it in PanelThemes/themes.json (ArrayById, id field).");
+    }
+
+    private static string ResolveInsideRoot(string rootPath, string relative, string themeId, string what)
+    {
+        string combined = Path.GetFullPath(Path.Combine(rootPath, relative.Replace('/', Path.DirectorySeparatorChar)));
+        string rootFull = Path.GetFullPath(rootPath);
+        if (!combined.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(combined, rootFull, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Panel theme '{themeId}' {what} path '{relative}' escapes the theme root.");
+        }
+
+        return combined;
     }
 
     private static string ResolveRoot(GameEngine engine, string modScopedRoot)
