@@ -479,6 +479,10 @@ namespace Ludots.Tests.Gas.Graph
                         Path.Combine(Root, ModId),
                     },
                     Path.Combine(repoRoot, "assets"));
+                // The probe map uses a synthetic entry event; register it so the
+                // fail-closed entry-name validation accepts the fixture.
+                engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.CustomEventNameRegistry)
+                    ?.Register(EntryEventName);
                 return engine;
             }
 

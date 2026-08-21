@@ -200,6 +200,23 @@ namespace Ludots.Core.Scripting
         /// Triggers are sorted by Priority (lower values execute first).
         /// Also invokes matching EventHandlers.
         /// </summary>
+        /// <summary>
+        /// Facade for mod-declared custom events (Events/custom_events.json): validates the
+        /// name against the registry before dispatch so typos fail loudly instead of
+        /// silently never triggering anything.
+        /// </summary>
+        public void FireMapCustomEvent(MapId mapId, string eventName, ScriptContext context, Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry registry)
+        {
+            ArgumentNullException.ThrowIfNull(registry);
+            if (!registry.IsDeclaredCustom(eventName))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot fire '{eventName}' on map '{mapId.Value}': not a declared custom event. Declared: {registry.DescribeVocabulary()}.");
+            }
+
+            FireMapEvent(mapId, new EventKey(eventName), context);
+        }
+
         public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
         {
             // EventHandlers (mod callbacks) always fire

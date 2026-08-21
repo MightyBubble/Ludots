@@ -39,6 +39,7 @@
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\night_raid_showcase\NightRaidShowcaseMod\NightRaidShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\moba_demo\MobaDemoMod\MobaDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_api\DepApiMod\DepApiMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_consumer\DepConsumerMod\DepConsumerMod.csproj" />

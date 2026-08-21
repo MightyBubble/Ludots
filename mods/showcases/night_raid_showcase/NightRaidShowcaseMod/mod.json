@@ -1,0 +1,12 @@
+{
+  "name": "NightRaidShowcaseMod",
+  "version": "1.0.0",
+  "description": "Night raid interaction layer: click-to-teleport, right-click query, HUD. All level flow is map data.",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "MapTriggerNightRaidMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/NightRaidShowcaseMod.dll"
+}

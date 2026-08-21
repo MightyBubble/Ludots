@@ -972,6 +972,8 @@ namespace Ludots.Core.Engine
             gasGraphApi.BindTriggerManager(TriggerManager);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
             var panelHost = new PanelHost(
                 panelTemplates,
                 new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
@@ -2938,7 +2940,7 @@ namespace Ludots.Core.Engine
 
             // From JSON MapConfig.TriggerGraphs (graph mounts resolved against the entity index);
             // entity-domain mounts declared in map JSON route through the entity mount pipeline
-            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts));
+            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts, GetService(CoreServiceKeys.CustomEventNameRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

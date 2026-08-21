@@ -4,90 +4,597 @@
     "kind": "TriggerGraph",
     "entries": [
       {
-        "label": "on_raid_circle",
-        "event": "RegionEntered",
-        "start": "raid_scope",
-        "once": true,
-        "filters": { "region": "raid_circle" }
+        "label": "on_map_loaded",
+        "event": "MapLoaded",
+        "start": "load_scope",
+        "once": true
       },
       {
-        "label": "on_wave_clear",
-        "event": "EntityAliveCountChanged",
-        "start": "clear_scope",
+        "label": "on_raid_start",
+        "event": "RegionEntered",
+        "start": "circle_scope",
         "once": true,
-        "filters": { "team": 2, "threshold": 1, "direction": "cross_below" }
+        "filters": {
+          "region": "raid_circle"
+        }
+      },
+      {
+        "label": "on_raider_died",
+        "event": "EntityDied",
+        "start": "rd_scope",
+        "refire": "restart",
+        "filters": {
+          "team": 2
+        }
       },
       {
         "label": "on_boss_died",
         "event": "EntityDied",
-        "start": "boss_scope",
+        "start": "bd_scope",
         "once": true,
-        "filters": { "team": 4 }
+        "filters": {
+          "team": 4
+        }
       },
       {
-        "label": "on_phase_changed",
-        "event": "PhaseChanged",
-        "start": "victory_scope",
-        "once": true
+        "label": "on_kill_tool",
+        "event": "NightRaid.KillTool.Used",
+        "start": "kt_scope",
+        "refire": "restart"
       }
     ],
     "nodes": [
-      { "id": "raid_scope", "op": "LoadExplicitTarget" },
-      { "id": "wave_one", "op": "ConstInt", "intValue": 1 },
-      { "id": "write_wave_one", "op": "WriteMapVarInt", "var": "wave" },
-      { "id": "raid_done", "op": "HaltReturnInt" },
-
-      { "id": "clear_scope", "op": "LoadExplicitTarget" },
-      { "id": "wait_wave_a", "op": "Yield" },
-      { "id": "wait_wave_b", "op": "Yield" },
-      { "id": "wave_two", "op": "ConstInt", "intValue": 2 },
-      { "id": "write_wave_two", "op": "WriteMapVarInt", "var": "wave" },
-      { "id": "clear_done", "op": "HaltReturnInt" },
-
-      { "id": "boss_scope", "op": "LoadExplicitTarget" },
-      { "id": "phase_two", "op": "ConstInt", "intValue": 2 },
-      { "id": "write_phase_two", "op": "WriteMapVarInt", "var": "phase" },
-      { "id": "boss_done", "op": "HaltReturnInt" },
-
-      { "id": "victory_scope", "op": "LoadExplicitTarget" },
-      { "id": "victory_panel", "op": "CreatePanel", "panelType": "panel.night_raid.victory", "panelAnchor": "screen.topRight" },
-      { "id": "victory_ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "victory_done", "op": "HaltReturnInt" }
+      {
+        "id": "load_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "load_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "write_stage_one",
+        "op": "WriteMapVarInt",
+        "var": "stage"
+      },
+      {
+        "id": "load_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "load_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "circle_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "circle_two",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "write_stage_two",
+        "op": "WriteMapVarInt",
+        "var": "stage"
+      },
+      {
+        "id": "circle_ok",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "circle_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "rd_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "rd_read",
+        "op": "ReadMapVarInt",
+        "var": "kill_count"
+      },
+      {
+        "id": "rd_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "rd_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "rd_write",
+        "op": "WriteMapVarInt",
+        "var": "kill_count"
+      },
+      {
+        "id": "rd_read2",
+        "op": "ReadMapVarInt",
+        "var": "kill_count"
+      },
+      {
+        "id": "rd_thresh",
+        "op": "ReadMapVarInt",
+        "var": "kill_threshold"
+      },
+      {
+        "id": "rd_lt",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "rd_wait",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "rd_halt_const",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "rd_halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "stage_three",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "write_stage_three",
+        "op": "WriteMapVarInt",
+        "var": "stage"
+      },
+      {
+        "id": "rd_done_const",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "rd_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "bd_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "stage_four",
+        "op": "ConstInt",
+        "intValue": 4
+      },
+      {
+        "id": "write_stage_four",
+        "op": "WriteMapVarInt",
+        "var": "stage"
+      },
+      {
+        "id": "wait_beat_a",
+        "op": "Yield"
+      },
+      {
+        "id": "wait_beat_b",
+        "op": "Yield"
+      },
+      {
+        "id": "stage_five",
+        "op": "ConstInt",
+        "intValue": 5
+      },
+      {
+        "id": "write_stage_five",
+        "op": "WriteMapVarInt",
+        "var": "stage"
+      },
+      {
+        "id": "victory_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.night_raid.victory",
+        "panelAnchor": "screen.topRight"
+      },
+      {
+        "id": "bd_ok",
+        "op": "ConstInt",
+        "intValue": 5
+      },
+      {
+        "id": "bd_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "kt_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "kt_read",
+        "op": "ReadMapVarInt",
+        "var": "tool_uses"
+      },
+      {
+        "id": "kt_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "kt_add",
+        "op": "AddInt"
+      },
+      {
+        "id": "kt_write",
+        "op": "WriteMapVarInt",
+        "var": "tool_uses"
+      },
+      {
+        "id": "kt_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "kt_done",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "raid_scope", "fromPort": "next", "to": "wave_one" },
-      { "from": "wave_one", "fromPort": "next", "to": "write_wave_one" },
-      { "from": "write_wave_one", "fromPort": "next", "to": "raid_done" },
-
-      { "from": "clear_scope", "fromPort": "next", "to": "wait_wave_a" },
-      { "from": "wait_wave_a", "fromPort": "next", "to": "wait_wave_b" },
-      { "from": "wait_wave_b", "fromPort": "next", "to": "wave_two" },
-      { "from": "wave_two", "fromPort": "next", "to": "write_wave_two" },
-      { "from": "write_wave_two", "fromPort": "next", "to": "clear_done" },
-
-      { "from": "boss_scope", "fromPort": "next", "to": "phase_two" },
-      { "from": "phase_two", "fromPort": "next", "to": "write_phase_two" },
-      { "from": "write_phase_two", "fromPort": "next", "to": "boss_done" },
-
-      { "from": "victory_scope", "fromPort": "next", "to": "victory_panel" },
-      { "from": "victory_panel", "fromPort": "next", "to": "victory_ok" },
-      { "from": "victory_ok", "fromPort": "next", "to": "victory_done" }
+      {
+        "from": "load_scope",
+        "fromPort": "next",
+        "to": "load_one"
+      },
+      {
+        "from": "load_one",
+        "fromPort": "next",
+        "to": "write_stage_one"
+      },
+      {
+        "from": "write_stage_one",
+        "fromPort": "next",
+        "to": "load_ok"
+      },
+      {
+        "from": "load_ok",
+        "fromPort": "next",
+        "to": "load_done"
+      },
+      {
+        "from": "circle_scope",
+        "fromPort": "next",
+        "to": "circle_two"
+      },
+      {
+        "from": "circle_two",
+        "fromPort": "next",
+        "to": "write_stage_two"
+      },
+      {
+        "from": "write_stage_two",
+        "fromPort": "next",
+        "to": "circle_ok"
+      },
+      {
+        "from": "circle_ok",
+        "fromPort": "next",
+        "to": "circle_done"
+      },
+      {
+        "from": "rd_scope",
+        "fromPort": "next",
+        "to": "rd_read"
+      },
+      {
+        "from": "rd_read",
+        "fromPort": "next",
+        "to": "rd_one"
+      },
+      {
+        "from": "rd_one",
+        "fromPort": "next",
+        "to": "rd_add"
+      },
+      {
+        "from": "rd_add",
+        "fromPort": "next",
+        "to": "rd_write"
+      },
+      {
+        "from": "rd_write",
+        "fromPort": "next",
+        "to": "rd_read2"
+      },
+      {
+        "from": "rd_read2",
+        "fromPort": "next",
+        "to": "rd_thresh"
+      },
+      {
+        "from": "rd_thresh",
+        "fromPort": "next",
+        "to": "rd_lt"
+      },
+      {
+        "from": "rd_lt",
+        "fromPort": "next",
+        "to": "rd_wait"
+      },
+      {
+        "from": "rd_wait",
+        "fromPort": "true",
+        "to": "rd_halt_const"
+      },
+      {
+        "from": "rd_wait",
+        "fromPort": "false",
+        "to": "stage_three"
+      },
+      {
+        "from": "rd_halt_const",
+        "fromPort": "next",
+        "to": "rd_halt"
+      },
+      {
+        "from": "stage_three",
+        "fromPort": "next",
+        "to": "write_stage_three"
+      },
+      {
+        "from": "write_stage_three",
+        "fromPort": "next",
+        "to": "rd_done_const"
+      },
+      {
+        "from": "rd_done_const",
+        "fromPort": "next",
+        "to": "rd_done"
+      },
+      {
+        "from": "bd_scope",
+        "fromPort": "next",
+        "to": "stage_four"
+      },
+      {
+        "from": "stage_four",
+        "fromPort": "next",
+        "to": "write_stage_four"
+      },
+      {
+        "from": "write_stage_four",
+        "fromPort": "next",
+        "to": "wait_beat_a"
+      },
+      {
+        "from": "wait_beat_a",
+        "fromPort": "next",
+        "to": "wait_beat_b"
+      },
+      {
+        "from": "wait_beat_b",
+        "fromPort": "next",
+        "to": "stage_five"
+      },
+      {
+        "from": "stage_five",
+        "fromPort": "next",
+        "to": "write_stage_five"
+      },
+      {
+        "from": "write_stage_five",
+        "fromPort": "next",
+        "to": "victory_panel"
+      },
+      {
+        "from": "victory_panel",
+        "fromPort": "next",
+        "to": "bd_ok"
+      },
+      {
+        "from": "bd_ok",
+        "fromPort": "next",
+        "to": "bd_done"
+      },
+      {
+        "from": "kt_scope",
+        "fromPort": "next",
+        "to": "kt_read"
+      },
+      {
+        "from": "kt_read",
+        "fromPort": "next",
+        "to": "kt_one"
+      },
+      {
+        "from": "kt_one",
+        "fromPort": "next",
+        "to": "kt_add"
+      },
+      {
+        "from": "kt_add",
+        "fromPort": "next",
+        "to": "kt_write"
+      },
+      {
+        "from": "kt_write",
+        "fromPort": "next",
+        "to": "kt_ok"
+      },
+      {
+        "from": "kt_ok",
+        "fromPort": "next",
+        "to": "kt_done"
+      }
     ],
     "valueEdges": [
-      { "from": "raid_scope", "fromPort": "value", "to": "write_wave_one", "toPort": "source" },
-      { "from": "wave_one", "fromPort": "value", "to": "write_wave_one", "toPort": "value" },
-      { "from": "wave_one", "fromPort": "value", "to": "raid_done", "toPort": "value" },
-
-      { "from": "clear_scope", "fromPort": "value", "to": "write_wave_two", "toPort": "source" },
-      { "from": "wave_two", "fromPort": "value", "to": "write_wave_two", "toPort": "value" },
-      { "from": "wave_two", "fromPort": "value", "to": "clear_done", "toPort": "value" },
-
-      { "from": "boss_scope", "fromPort": "value", "to": "write_phase_two", "toPort": "source" },
-      { "from": "phase_two", "fromPort": "value", "to": "write_phase_two", "toPort": "value" },
-      { "from": "phase_two", "fromPort": "value", "to": "boss_done", "toPort": "value" },
-
-      { "from": "victory_scope", "fromPort": "value", "to": "victory_panel", "toPort": "source" },
-      { "from": "victory_ok", "fromPort": "value", "to": "victory_done", "toPort": "value" }
+      {
+        "from": "load_scope",
+        "fromPort": "value",
+        "to": "write_stage_one",
+        "toPort": "source"
+      },
+      {
+        "from": "load_one",
+        "fromPort": "value",
+        "to": "write_stage_one",
+        "toPort": "value"
+      },
+      {
+        "from": "load_ok",
+        "fromPort": "value",
+        "to": "load_done",
+        "toPort": "value"
+      },
+      {
+        "from": "circle_scope",
+        "fromPort": "value",
+        "to": "write_stage_two",
+        "toPort": "source"
+      },
+      {
+        "from": "circle_two",
+        "fromPort": "value",
+        "to": "write_stage_two",
+        "toPort": "value"
+      },
+      {
+        "from": "circle_ok",
+        "fromPort": "value",
+        "to": "circle_done",
+        "toPort": "value"
+      },
+      {
+        "from": "rd_scope",
+        "fromPort": "value",
+        "to": "rd_write",
+        "toPort": "source"
+      },
+      {
+        "from": "rd_read",
+        "fromPort": "value",
+        "to": "rd_add",
+        "toPort": "a"
+      },
+      {
+        "from": "rd_one",
+        "fromPort": "value",
+        "to": "rd_add",
+        "toPort": "b"
+      },
+      {
+        "from": "rd_add",
+        "fromPort": "value",
+        "to": "rd_write",
+        "toPort": "value"
+      },
+      {
+        "from": "rd_read2",
+        "fromPort": "value",
+        "to": "rd_lt",
+        "toPort": "a"
+      },
+      {
+        "from": "rd_thresh",
+        "fromPort": "value",
+        "to": "rd_lt",
+        "toPort": "b"
+      },
+      {
+        "from": "rd_lt",
+        "fromPort": "value",
+        "to": "rd_wait",
+        "toPort": "condition"
+      },
+      {
+        "from": "rd_halt_const",
+        "fromPort": "value",
+        "to": "rd_halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rd_scope",
+        "fromPort": "value",
+        "to": "write_stage_three",
+        "toPort": "source"
+      },
+      {
+        "from": "stage_three",
+        "fromPort": "value",
+        "to": "write_stage_three",
+        "toPort": "value"
+      },
+      {
+        "from": "rd_done_const",
+        "fromPort": "value",
+        "to": "rd_done",
+        "toPort": "value"
+      },
+      {
+        "from": "bd_scope",
+        "fromPort": "value",
+        "to": "write_stage_four",
+        "toPort": "source"
+      },
+      {
+        "from": "stage_four",
+        "fromPort": "value",
+        "to": "write_stage_four",
+        "toPort": "value"
+      },
+      {
+        "from": "bd_scope",
+        "fromPort": "value",
+        "to": "write_stage_five",
+        "toPort": "source"
+      },
+      {
+        "from": "stage_five",
+        "fromPort": "value",
+        "to": "write_stage_five",
+        "toPort": "value"
+      },
+      {
+        "from": "bd_ok",
+        "fromPort": "value",
+        "to": "bd_done",
+        "toPort": "value"
+      },
+      {
+        "from": "kt_scope",
+        "fromPort": "value",
+        "to": "kt_write",
+        "toPort": "source"
+      },
+      {
+        "from": "kt_read",
+        "fromPort": "value",
+        "to": "kt_add",
+        "toPort": "a"
+      },
+      {
+        "from": "kt_one",
+        "fromPort": "value",
+        "to": "kt_add",
+        "toPort": "b"
+      },
+      {
+        "from": "kt_add",
+        "fromPort": "value",
+        "to": "kt_write",
+        "toPort": "value"
+      },
+      {
+        "from": "kt_ok",
+        "fromPort": "value",
+        "to": "kt_done",
+        "toPort": "value"
+      },
+      {
+        "from": "bd_scope",
+        "fromPort": "value",
+        "to": "victory_panel",
+        "toPort": "source"
+      }
     ]
   }
 ]

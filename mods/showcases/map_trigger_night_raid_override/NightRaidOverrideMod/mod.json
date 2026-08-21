@@ -1,0 +1,9 @@
+{
+  "name": "NightRaidOverrideMod",
+  "version": "1.0.0",
+  "description": "Inter-mod trigger override: lowers tick_threshold 10->4 and stacks an extra flow (override_active + second region listener).",
+  "priority": 50,
+  "dependencies": {
+    "MapTriggerNightRaidMod": "^1.0.0"
+  }
+}

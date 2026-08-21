@@ -462,7 +462,8 @@
       "id": "map_trigger_night_raid_raylib",
       "name": "Map Trigger Night Raid Raylib",
       "selectors": [
-        "$map_trigger_night_raid"
+        "$map_trigger_night_raid",
+        "$night_raid_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2029,6 +2030,17 @@
       "name": "Graph Op WriteMapVarInt Raylib",
       "selectors": [
         "$capability_standard_graph_op_WriteMapVarInt"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "map_trigger_night_raid_override_raylib",
+      "name": "Map Trigger Night Raid Override Raylib",
+      "selectors": [
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$night_raid_override"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

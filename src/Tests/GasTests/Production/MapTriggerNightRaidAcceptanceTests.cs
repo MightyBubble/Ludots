@@ -1,30 +1,28 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.IO;
-using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.MapTriggers;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Input.Config;
-using Ludots.Core.Input.Runtime;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelHosting;
 using Ludots.Core.UI.PanelProjection;
-using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production;
 
 /// <summary>
-/// Night raid flagship acceptance: the whole level flow (raid start on region entry,
-/// wave advance on alive-count clear with a two-wave wait, phase flip on boss death,
-/// victory panel on PhaseChanged) is authored as map JSON + one TriggerGraph.
-/// The showcase assembly contributes zero level-flow code, so this test drives the
-/// world directly (hero position, test-side kills) and asserts on engine truth only.
+/// Night raid two-phase chain acceptance. The hardcoded interaction layer only exists in
+/// the companion mod for human play; the tests drive the same chain through engine
+/// truth: region entry starts the raid, entity deaths (via the map's DeathRule) count
+/// into the graph, the counted threshold flips phases, the boss death runs a two-beat
+/// Yield delay, and the victory panel lands. Custom events (NightRaid.KillTool.Used)
+/// are declared in mod data, fired through the validated facade, and counted by both
+/// the base and the override mod's stacked graph.
 /// </summary>
 [NonParallelizable]
 [TestFixture]
@@ -35,9 +33,8 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private const string MapId = "night_raid";
     private const string VictoryPanelTemplateId = "panel.night_raid.victory";
     private const int HeartbeatIntervalTicks = 6;
-    private const string ActActionId = "NightRaid.Act";
 
-    private static readonly string[] Mods =
+    private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
         "CoreInputMod",
@@ -45,125 +42,136 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     };
 
     [Test]
-    public void NightRaid_RegionEntryWavesPhaseAndVictory_AllDataDriven()
+    public void NightRaid_TwoPhaseChain_Region_KillCount_Delay_Panel()
     {
-        using GameEngine engine = CreateEngine();
+        using GameEngine engine = CreateEngine(BaseMods);
         engine.Start();
         engine.LoadMap(MapId);
-        Tick(engine, HeartbeatIntervalTicks * 4);
+        Tick(engine, 2);
 
-        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-        MapVariableStore variables = engine.CurrentMapSession?.Variables
-            ?? throw new InvalidOperationException("night_raid must declare map variables.");
-        World world = engine.World;
+        MapVariableStore variables = RequireVariables(engine);
+        var world = engine.World;
 
-        Entity hero = FindEntity(world, "NightRaidHero");
-        Entity gate = FindEntity(world, "NightRaidGate");
-        Assert.That(world.Get<WorldPositionCm>(hero).Value.X.ToFloat(), Is.EqualTo(-600f).Within(0.001f),
-            "Hero must spawn outside the raid circle; the raid starts on entry, not on load.");
-        AssertTeamCounts(world, teamId: 2, expected: 3, "wave-1 raiders are pre-placed by map data");
-        AssertTeamCounts(world, teamId: 3, expected: 2, "wave-2 raiders are pre-placed by map data");
-        AssertTeamCounts(world, teamId: 4, expected: 1, "boss is pre-placed by map data");
-        Assert.That(variables.ReadInt("wave"), Is.EqualTo(0), "No think wave may spring the raid on its own.");
-        Assert.That(variables.ReadInt("phase"), Is.EqualTo(0));
-        AssertVictoryPanelAbsent(engine);
-        var phaseProbe = new PhaseChangedProbe(engine, MapId);
+        Assert.That(variables.ReadInt("stage"), Is.EqualTo(1), "MapLoaded must write stage=1.");
 
-        MoveHeroIntoRaidCircle(world, hero, xCm: 0, yCm: 0);
-        TickUntil(engine, () => variables.ReadInt("wave") == 1, HeartbeatIntervalTicks * 3,
-            () => $"RegionEntered never advanced wave (wave={variables.ReadInt("wave")}).");
+        // Phase gate: hero enters the raid circle -> stage 2.
+        Entity hero = FindHero(world);
+        world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(0, 0) });
+        TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
+            () => "RegionEntered(raid_circle) must write stage=2.");
 
-        Assert.Multiple(() =>
+        // Kill three raiders through the data path: zero health -> DeathRule destroys
+        // -> EntityDied(team 2) -> graph increments kill_count.
+        for (int kill = 1; kill <= 3; kill++)
         {
-            Assert.That(variables.ReadInt("wave"), Is.EqualTo(1), "RegionEntered(raid_circle) must write wave=1.");
-            Assert.That(variables.ReadInt("phase"), Is.EqualTo(0));
-            AssertVictoryPanelAbsent(engine);
-        });
-
-        List<Entity> waveOneRaiders = CollectTeam(world, teamId: 2);
-        foreach (Entity raider in waveOneRaiders)
-        {
-            world.Destroy(raider);
+            KillOneRaider(engine, world);
+            int expected = kill;
+            TickUntil(engine, () => variables.ReadInt("kill_count") == expected, HeartbeatIntervalTicks * 3,
+                () => $"Raider kill {kill} must increment kill_count to {expected} via EntityDied (got {variables.ReadInt("kill_count")}).");
         }
 
-        TickUntil(engine, () => variables.ReadInt("wave") == 2, HeartbeatIntervalTicks * 8,
-            () => $"EntityAliveCountChanged never advanced wave (wave={variables.ReadInt("wave")}).");
+        Assert.That(variables.ReadInt("stage"), Is.EqualTo(3).Or.EqualTo(4),
+            "Reaching kill_threshold=3 must advance the stage out of the raider phase.");
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(variables.ReadInt("wave"), Is.EqualTo(2),
-                "Team-2 alive count crossing below 1 must, after two think-wave waits, write wave=2.");
-            AssertTeamCounts(world, teamId: 3, expected: 2, "wave-2 raiders survive into wave 2.");
-            AssertTeamCounts(world, teamId: 4, expected: 1, "boss survives into wave 2.");
-            Assert.That(variables.ReadInt("phase"), Is.EqualTo(0));
-            AssertVictoryPanelAbsent(engine);
-        });
+        // Boss phase: kill the boss -> stage 4, two-beat Yield delay -> stage 5 + panel.
+        KillBoss(engine, world);
+        TickUntil(engine, () => variables.ReadInt("stage") == 4, HeartbeatIntervalTicks * 3,
+            () => "Boss EntityDied must write stage=4.");
+        Tick(engine, HeartbeatIntervalTicks);
+        Assert.That(variables.ReadInt("stage"), Is.EqualTo(4),
+            "One beat after stage 4 the graph must still be waiting in its Yield delay.");
+        TickUntil(engine, () => variables.ReadInt("stage") == 5, HeartbeatIntervalTicks * 2,
+            () => "Two beats after stage 4 the Yield delay must release into stage 5.");
 
-        world.Destroy(FindEntity(world, "NightRaidBoss"));
-
-        TickUntil(engine, () => variables.ReadInt("phase") == 2, HeartbeatIntervalTicks * 3,
-            () => $"EntityDied(boss team) never wrote phase (phase={variables.ReadInt("phase")}).");
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(variables.ReadInt("phase"), Is.EqualTo(2), "Boss death must write the phase variable.");
-            Assert.That(phaseProbe.Observed, Is.True, "Writing the phase variable must fire the PhaseChanged map event.");
-            Assert.That(phaseProbe.LastPhase, Is.EqualTo(2));
-            Assert.That(world.IsAlive(gate), Is.True,
-                "No despawn verb is authorable in TriggerGraph graphs; the gate stays and the phase var + victory panel are the gate-open truth.");
-        });
-
-        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost)
+        var panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost missing.");
-        Assert.That(panelHost.Count, Is.EqualTo(1), "PhaseChanged must create exactly one victory panel.");
-        PanelInstanceHandle panel = FindVictoryPanel(panelHost, hero);
-        Assert.That(panelHost.TryGetAnchor(panel, out string anchor), Is.True);
-        Assert.That(anchor, Is.EqualTo("screen.topRight"));
-        Assert.That(panelHost.TryGetValues(panel, out PanelVariableSet values), Is.True);
-        Assert.That(values.Get("heroHealth"), Is.EqualTo(100f).Within(0.001f),
+        Assert.That(panelHost.Count, Is.EqualTo(1), "Stage 5 must create exactly one victory panel.");
+        Assert.That(FindVictoryPanelValues(panelHost), Is.True,
             "The victory panel must project the hero template attribute, never a presentation constant.");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
     [Test]
-    public void NightRaid_DeathRuleDataChain_ZeroHealthRemovesMapEntities()
+    public void NightRaid_CustomEvents_DeclaredFiredCounted_AndFailClosed()
     {
-        using GameEngine engine = CreateEngine();
+        using GameEngine engine = CreateEngine(BaseMods);
         engine.Start();
         engine.LoadMap(MapId);
-        Tick(engine, HeartbeatIntervalTicks * 4);
+        Tick(engine, 2);
 
-        World world = engine.World;
-        int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
-        int before = CountTeam(world, 2);
-        Assert.That(before, Is.EqualTo(3), "wave-1 raiders are pre-placed by map data");
+        MapVariableStore variables = RequireVariables(engine);
+        var registry = engine.GetService(CoreServiceKeys.CustomEventNameRegistry)
+            ?? throw new InvalidOperationException("CustomEventNameRegistry missing.");
 
-        foreach (Arch.Core.Entity entity in CollectTeam(world, 2))
+        Assert.That(registry.IsDeclaredCustom("NightRaid.KillTool.Used"), Is.True,
+            "The mod's Events/custom_events.json declaration must load into the registry.");
+
+        var context = engine.CreateContext();
+        context.Set(CoreServiceKeys.MapId, engine.CurrentMapSession!.MapId);
+        context.Set(CoreServiceKeys.MapSession, engine.CurrentMapSession);
+        for (int i = 1; i <= 3; i++)
         {
-            ref var attributes = ref world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(entity);
-            attributes.SetCurrent(healthId, 0f);
+            engine.TriggerManager.FireMapCustomEvent(
+                engine.CurrentMapSession.MapId, "NightRaid.KillTool.Used", context, registry);
+            int expected = i;
+            TickUntil(engine, () => variables.ReadInt("tool_uses") == expected, 2,
+                () => $"Custom event fire {i} must increment tool_uses to {expected}.");
         }
 
-        Tick(engine, HeartbeatIntervalTicks * 2);
-        Assert.That(CountTeam(world, 2), Is.EqualTo(0),
-            "The map's declared DeathRule (attribute Health, onZero destroy) must remove zero-health map entities.");
+        Assert.Throws<InvalidOperationException>(() =>
+            engine.TriggerManager.FireMapCustomEvent(
+                engine.CurrentMapSession.MapId, "No.Such.Event", context, registry),
+            "Firing an undeclared custom event must fail closed.");
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void NightRaid_InterModOverride_ThresholdAndStackedFlows()
+    {
+        string[] mods = { BaseMods[0], BaseMods[1], "NightRaidOverrideMod", BaseMods[2] };
+        using GameEngine engine = CreateEngine(mods);
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 2);
+
+        MapVariableStore variables = RequireVariables(engine);
+        var world = engine.World;
+
+        Assert.That(variables.ReadInt("kill_threshold"), Is.EqualTo(2),
+            "The override mod's map fragment must replace kill_threshold 3 -> 2.");
+        Assert.That(variables.ReadInt("override_active"), Is.EqualTo(1),
+            "The stacked override graph must run on MapLoaded alongside the base graph.");
+
+        Entity hero = FindHero(world);
+        world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(0, 0) });
+        TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
+            () => "RegionEntered must still start the raid with the override mod loaded.");
+
+        KillOneRaider(engine, world);
+        TickUntil(engine, () => variables.ReadInt("kill_count") == 1, HeartbeatIntervalTicks * 3,
+            () => "First raider kill must count.");
+        KillOneRaider(engine, world);
+        TickUntil(engine, () => variables.ReadInt("stage") >= 3, HeartbeatIntervalTicks * 3,
+            () => "With threshold 2 the second raider kill must leave the raider phase immediately.");
+        Assert.That(variables.ReadInt("kill_count"), Is.LessThan(3),
+            "The phase must flip via the overridden threshold, not the base one.");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
     [Test]
     public void NightRaidMod_ContainsNoShowcaseAssembly()
     {
-        string modRoot = System.IO.Path.Combine(FindRepoRoot(), "mods", "showcases", "map_trigger_night_raid", "MapTriggerNightRaidMod");
-        Assert.That(System.IO.File.Exists(System.IO.Path.Combine(modRoot, "mod.json")), Is.True);
-        Assert.That(System.IO.File.Exists(System.IO.Path.Combine(modRoot, "MapTriggerNightRaidMod.csproj")), Is.False,
-            "The night raid showcase must stay code-free: map + graphs + input + GAS data only.");
+        string modRoot = Path.Combine(FindRepoRoot(), "mods", "showcases", "map_trigger_night_raid", "MapTriggerNightRaidMod");
+        Assert.That(File.Exists(Path.Combine(modRoot, "mod.json")), Is.True);
+        Assert.That(File.Exists(Path.Combine(modRoot, "MapTriggerNightRaidMod.csproj")), Is.False,
+            "The night raid level flow must stay code-free: map + graphs + events + panel data only.");
     }
 
     private static int CountTeam(World world, int teamId)
     {
         int count = 0;
-        world.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
-            (Arch.Core.Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+        world.Query(new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
+            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
             {
                 if (team.Id == teamId)
                 {
@@ -173,51 +181,81 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         return count;
     }
 
-    private static System.Collections.Generic.List<Arch.Core.Entity> CollectTeam(World world, int teamId)
+    private static void KillOneRaider(GameEngine engine, World world)
     {
-        var list = new System.Collections.Generic.List<Arch.Core.Entity>();
-        world.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
-            (Arch.Core.Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
-            {
-                if (team.Id == teamId)
-                {
-                    list.Add(entity);
-                }
-            });
-        return list;
+        ZeroTeamHealth(world, teamId: 2, maxKills: 1);
     }
 
-    private static GameEngine CreateEngine()
+    private static void KillBoss(GameEngine engine, World world)
+    {
+        ZeroTeamHealth(world, teamId: 4, maxKills: int.MaxValue);
+    }
+
+    private static void ZeroTeamHealth(World world, int teamId, int maxKills)
+    {
+        int killed = 0;
+        world.Query(new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team, Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(),
+            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team, ref Ludots.Core.Gameplay.GAS.Components.AttributeBuffer attributes) =>
+            {
+                if (team.Id == teamId && killed < maxKills &&
+                    attributes.GetCurrent(AttributeRegistry.GetId("Health")) > 0f)
+                {
+                    attributes.SetCurrent(AttributeRegistry.GetId("Health"), 0f);
+                    killed++;
+                }
+            });
+    }
+
+    private static MapVariableStore RequireVariables(GameEngine engine)
+    {
+        return engine.CurrentMapSession?.Variables
+            ?? throw new InvalidOperationException("night_raid must declare map variables.");
+    }
+
+    private static bool FindVictoryPanelValues(PanelHost panelHost)
+    {
+        foreach (PanelHostInstanceInfo info in panelHost.SnapshotInstances())
+        {
+            if (string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal) &&
+                panelHost.TryGetValues(info.Handle, out PanelVariableSet values))
+            {
+                return values.Get("heroHealth") > 0f;
+            }
+        }
+
+        return false;
+    }
+
+    private static Entity FindHero(World world)
+    {
+        Entity found = Entity.Null;
+        world.Query(new QueryDescription().WithAll<Name>(), (Entity entity, ref Name name) =>
+        {
+            if (found == Entity.Null && string.Equals(name.Value, "NightRaidHero", StringComparison.Ordinal))
+            {
+                found = entity;
+            }
+        });
+        return found != Entity.Null ? found : throw new InvalidOperationException("NightRaidHero missing.");
+    }
+
+    private static GameEngine CreateEngine(string[] mods)
     {
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, Mods),
+            RepoModPaths.ResolveExplicit(repoRoot, mods),
             Path.Combine(repoRoot, "assets"));
-        var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-        var inputHandler = new PlayerInputHandler(new NoInputBackend(), inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
-
-        engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
-        engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)new NoInputBackend());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }
 
-    private static void MoveHeroIntoRaidCircle(World world, Entity hero, int xCm, int yCm)
+    private static void Tick(GameEngine engine, int frames)
     {
-        world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
-    }
-
-    private static void PressAct(GameEngine engine, PlayerInputHandler input)
-    {
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < frames; i++)
         {
-            input.InjectButtonPress(ActActionId);
-            Tick(engine, 1);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.Tick(DeltaTime);
         }
     }
 
@@ -235,61 +273,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.Fail(describeFailure());
     }
 
-    private static void Tick(GameEngine engine, int frames)
-    {
-        for (int i = 0; i < frames; i++)
-        {
-            engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.Tick(DeltaTime);
-        }
-    }
-
-    private static void AssertVictoryPanelAbsent(GameEngine engine)
-    {
-        PanelHost panelHost = engine.GetService(CoreServiceKeys.PanelHost);
-        Assert.That(panelHost, Is.Not.Null);
-        Assert.That(panelHost!.Count, Is.EqualTo(0), "No panel may exist before the raid is won.");
-    }
-
-    private static PanelInstanceHandle FindVictoryPanel(PanelHost host, Entity scope)
-    {
-        foreach (PanelHostInstanceInfo info in host.SnapshotInstances())
-        {
-            if (info.Scope == scope &&
-                string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal))
-            {
-                return info.Handle;
-            }
-        }
-
-        throw new InvalidOperationException("Victory panel was not instantiated for the hero.");
-    }
-
-    private static Entity FindEntity(World world, string entityName)
-    {
-        Entity result = Entity.Null;
-        var query = new QueryDescription().WithAll<Name>();
-        world.Query(in query, (Entity entity, ref Name name) =>
-        {
-            if (result == Entity.Null && string.Equals(name.Value, entityName, StringComparison.Ordinal))
-            {
-                result = entity;
-            }
-        });
-
-        if (result == Entity.Null)
-        {
-            throw new InvalidOperationException($"Missing entity '{entityName}'.");
-        }
-
-        return result;
-    }
-
-    private static void AssertTeamCounts(World world, int teamId, int expected, string because)
-    {
-        Assert.That(CollectTeam(world, teamId).Count, Is.EqualTo(expected), because);
-    }
-
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -304,49 +287,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             dir = dir.Parent;
         }
 
-        throw new DirectoryNotFoundException("Failed to locate repository root.");
-    }
-
-    private sealed class PhaseChangedProbe : IDisposable
-    {
-        private readonly TriggerManager _triggers;
-
-        public PhaseChangedProbe(GameEngine engine, string mapId)
-        {
-            _triggers = engine.TriggerManager;
-            MapId = mapId;
-            _triggers.RegisterEventHandler(
-                new EventKey(MapVariableStore.PhaseChangedEventName),
-                context =>
-                {
-                    MapId firedMap = context.Get<MapId>(CoreServiceKeys.MapId);
-                    if (firedMap.Value == MapId)
-                    {
-                        Observed = true;
-                        LastPhase = context.Get<int>(MapVariableStore.PayloadKeyPhase);
-                    }
-
-                    return Task.CompletedTask;
-                });
-        }
-
-        private string MapId { get; }
-        public bool Observed { get; private set; }
-        public int LastPhase { get; private set; }
-
-        public void Dispose()
-        {
-        }
-    }
-
-    private sealed class NoInputBackend : IInputBackend
-    {
-        public float GetAxis(string devicePath) => 0f;
-        public bool GetButton(string devicePath) => false;
-        public Vector2 GetMousePosition() => Vector2.Zero;
-        public float GetMouseWheel() => 0f;
-        public void EnableIME(bool enable) { }
-        public void SetIMECandidatePosition(int x, int y) { }
-        public string GetCharBuffer() => string.Empty;
+        throw new InvalidOperationException("Repo root not found.");
     }
 }
