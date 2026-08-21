@@ -62,6 +62,8 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     private readonly Dictionary<string, int> _initAttempts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _failedPanels = new(StringComparer.Ordinal);
     private readonly ConcurrentQueue<InitOutcome> _initOutcomes = new();
+    private Ludots.UI.Panels.PanelTheme? _theme;
+    private bool _themeResolved;
     private int _inFlight;
     private float _secondsSincePublish;
     private bool _disposed;
@@ -113,10 +115,16 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
                 continue;
             }
 
+            if (!_themeResolved)
+            {
+                _themeResolved = true;
+                _theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(_engine);
+            }
+
             var panel = new WebPanel(info.TemplateId);
             _panels[info.TemplateId] = panel;
             Interlocked.Increment(ref _inFlight);
-            _ = InitializePanelAsync(panel);
+            _ = InitializePanelAsync(panel, _theme);
         }
 
         foreach (WebPanel panel in _panels.Values)
@@ -163,7 +171,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         _panels.Clear();
     }
 
-    private async Task InitializePanelAsync(WebPanel panel)
+    private async Task InitializePanelAsync(WebPanel panel, Ludots.UI.Panels.PanelTheme? theme)
     {
         IBrowserSurface? surface = null;
         WebUiDataPlaneRuntime? dataPlane = null;
@@ -190,7 +198,6 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             await surface.NavigateAsync(new BrowserNavigationRequest(
                 BrowserLocalAppUri.Create("/", "topic=" + Uri.EscapeDataString(panel.Topic)))).ConfigureAwait(false);
 
-            Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(_engine);
             if (theme != null)
             {
                 await surface.Messages.ExecuteScriptAsync(
@@ -214,39 +221,54 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     {
         if (outcome.Error == null)
         {
-            // Surface-host interaction stays on the update thread: Acquire/Publish touch
-            // shared lease and scene state with no locking.
-            UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
-                $"panel-web-skin:{outcome.Panel.TemplateId}",
-                UiSurfaceSegment.Main,
-                priority: 100));
-            _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                () => Ui.Canvas(outcome.CanvasContent!)
-                    .Id($"panel-web-skin-{outcome.Panel.TemplateId}")
-                    .WidthPercent(100f)
-                    .HeightPercent(100f)
-                    .Absolute(0f, 0f)
-                    .ZIndex(24)));
-            outcome.Panel.Attach(outcome.Surface!, outcome.DataPlane!, outcome.Pump!, lease, outcome.CanvasContent!);
-            return;
+            try
+            {
+                // Surface-host interaction stays on the update thread: Acquire/Publish touch
+                // shared lease and scene state with no locking.
+                UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                    $"panel-web-skin-{outcome.Panel.TemplateId}",
+                    UiSurfaceSegment.Main,
+                    priority: 100));
+                _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
+                    () => Ui.Canvas(outcome.CanvasContent!)
+                        .Id($"panel-web-skin-{outcome.Panel.TemplateId}")
+                        .WidthPercent(100f)
+                        .HeightPercent(100f)
+                        .Absolute(0f, 0f)
+                        .ZIndex(24)));
+                outcome.Panel.Attach(outcome.Surface!, outcome.DataPlane!, outcome.Pump!, lease, outcome.CanvasContent!);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Mid-attach failure must not strand the acquired lease or the panel entry.
+                ReleaseResources(outcome.Panel.TemplateId, default, outcome.DataPlane, outcome.CanvasContent, outcome.Surface);
+                RecordInitFailure(outcome.Panel.TemplateId, ex);
+                return;
+            }
         }
 
         ReleaseResources(outcome.Panel.TemplateId, lease: default, outcome.DataPlane, outcome.CanvasContent, outcome.Surface);
-        _panels.Remove(outcome.Panel.TemplateId);
-        int attempts = _initAttempts.GetValueOrDefault(outcome.Panel.TemplateId) + 1;
-        _initAttempts[outcome.Panel.TemplateId] = attempts;
+        RecordInitFailure(outcome.Panel.TemplateId, outcome.Error);
+    }
+
+    private void RecordInitFailure(string templateId, Exception error)
+    {
+        _panels.Remove(templateId);
+        int attempts = _initAttempts.GetValueOrDefault(templateId) + 1;
+        _initAttempts[templateId] = attempts;
         if (attempts < MaxInitAttempts)
         {
             Ludots.Core.Diagnostics.Log.Error(
                 in Ludots.Core.Diagnostics.LogChannels.Engine,
-                $"[PanelWebSkin] init attempt {attempts} failed for '{outcome.Panel.TemplateId}', will retry: {outcome.Error.Message}");
+                $"[PanelWebSkin] init attempt {attempts} failed for '{templateId}', will retry: {error.Message}");
             return;
         }
 
-        _failedPanels[outcome.Panel.TemplateId] = outcome.Error.Message;
+        _failedPanels[templateId] = error.Message;
         Ludots.Core.Diagnostics.Log.Error(
             in Ludots.Core.Diagnostics.LogChannels.Engine,
-            $"[PanelWebSkin] giving up on web panel '{outcome.Panel.TemplateId}' after {attempts} attempts; data stays alive without a surface: {outcome.Error.Message}");
+            $"[PanelWebSkin] giving up on web panel '{templateId}' after {attempts} attempts; data stays alive without a surface: {error.Message}");
     }
 
     private bool IsWebRouted(PanelHostInstanceInfo info)
