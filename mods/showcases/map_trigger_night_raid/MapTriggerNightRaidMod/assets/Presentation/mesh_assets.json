@@ -1,6 +1,4 @@
 [
-  { "id": "night_raid_showcase.hero_box", "type": "Primitive", "primitiveKind": "Cube" },
-  { "id": "night_raid_showcase.raider_box", "type": "Primitive", "primitiveKind": "Cube" },
-  { "id": "night_raid_showcase.boss_box", "type": "Primitive", "primitiveKind": "Cube" },
-  { "id": "night_raid_showcase.gate_pillar", "type": "Primitive", "primitiveKind": "Cube" }
+  { "id": "night_raid.agent.soldier", "type": "Model" },
+  { "id": "night_raid.structure.obelisk", "type": "Model" }
 ]
