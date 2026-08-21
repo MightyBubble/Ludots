@@ -1,0 +1,18 @@
+[
+  {
+    "id": "Effect.NightRaid.FireBoltHit",
+    "tags": [
+      "Effect.NightRaid.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
+    ]
+  }
+]

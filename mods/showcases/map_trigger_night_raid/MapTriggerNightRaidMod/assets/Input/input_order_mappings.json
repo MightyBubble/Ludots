@@ -1,0 +1,23 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "NightRaid.SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": {
+        "i0": 0
+      },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "moveTo"
+    }
+  ]
+}

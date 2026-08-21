@@ -27,7 +27,12 @@
           "Health": 100
         }
       },
-      "OrderBuffer": {}
+      "OrderBuffer": {},
+      "AbilityStateBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "GameplayTagContainer": {}
     }
   },
   {

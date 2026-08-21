@@ -462,8 +462,7 @@
       "id": "map_trigger_night_raid_raylib",
       "name": "Map Trigger Night Raid Raylib",
       "selectors": [
-        "$map_trigger_night_raid",
-        "$night_raid_showcase"
+        "$map_trigger_night_raid"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

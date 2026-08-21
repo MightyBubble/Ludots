@@ -1,0 +1,21 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.night_raid_move",
+      "inputContexts": [],
+      "defaults": {
+        "commandIntentId": "intent.command.default",
+        "castDispatchProfileId": "dispatch.all_together"
+      },
+      "axisMove": {
+        "actionId": "NightRaid.Move",
+        "orderTypeKey": "moveTo",
+        "throttleTicks": 6,
+        "stepDistanceCm": 400
+      }
+    }
+  ],
+  "allowedSchemes": [
+    "scheme.night_raid_move"
+  ]
+}

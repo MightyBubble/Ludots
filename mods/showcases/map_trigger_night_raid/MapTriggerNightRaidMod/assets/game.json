@@ -11,5 +11,16 @@
   ],
   "windowTitle": "Ludots - Night Raid",
   "windowWidth": 1600,
-  "windowHeight": 900
+  "windowHeight": 900,
+  "gasRuntimeCapacity": {
+    "orderAdmissionResultCapacity": 8192,
+    "orderAdmissionRejectionCapacity": 4096,
+    "orderQueueCapacity": 512,
+    "orderTerminalResultCapacity": 512,
+    "responseChainOrderQueueCapacity": 512,
+    "abilityExecSnapshotCapacity": 512,
+    "effectLifetimeSnapshotCapacity": 512,
+    "effectFanOutCommandCapacity": 4096,
+    "effectRequestQueueCapacity": 4096
+  }
 }

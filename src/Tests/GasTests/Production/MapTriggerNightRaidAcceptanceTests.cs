@@ -41,7 +41,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     {
         "LudotsCoreMod",
         "CoreInputMod",
-        "NightRaidShowcaseMod",
         "MapTriggerNightRaidMod",
     };
 
@@ -127,60 +126,65 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     }
 
     [Test]
-    public void NightRaidMod_AssemblyCarriesNoLevelFlowTypes()
-    {
-        Type[] types = typeof(MapTriggerNightRaidMod.MapTriggerNightRaidModEntry).Assembly.GetTypes();
-        Assert.That(types, Is.EqualTo(new[] { typeof(MapTriggerNightRaidMod.MapTriggerNightRaidModEntry) }),
-            "The showcase assembly must contain only the presentation-only entry; all level flow lives in map/graph data.");
-    }
-
-    [Test]
-    public void GivenANewPlayer_WhenTheyFollowTheNightRaidPrompts_ThenTheyCanFinishTheRaidAndSeeWhyTheGraphAdvanced()
+    public void NightRaid_DeathRuleDataChain_ZeroHealthRemovesMapEntities()
     {
         using GameEngine engine = CreateEngine();
         engine.Start();
         engine.LoadMap(MapId);
         Tick(engine, HeartbeatIntervalTicks * 4);
 
-        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
-            ?? throw new InvalidOperationException("Night Raid requires the shared screen overlay buffer.");
-        PlayerInputHandler input = engine.GetService(CoreServiceKeys.InputHandler)
-            ?? throw new InvalidOperationException("Night Raid requires the shared input handler.");
-        MapVariableStore variables = engine.CurrentMapSession?.Variables
-            ?? throw new InvalidOperationException("night_raid must declare map variables.");
         World world = engine.World;
-        Entity hero = FindEntity(world, "NightRaidHero");
+        int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
+        int before = CountTeam(world, 2);
+        Assert.That(before, Is.EqualTo(3), "wave-1 raiders are pre-placed by map data");
 
-        Assert.Multiple(() =>
+        foreach (Arch.Core.Entity entity in CollectTeam(world, 2))
         {
-            AssertOverlayContains(overlay, "NIGHT RAID");
-            AssertOverlayContains(overlay, "Gold ring = raid circle");
-            AssertOverlayContains(overlay, "Press SPACE");
-            AssertOverlayContains(overlay, "Do not box-select");
-            AssertOverlayContains(overlay, "Wave 0/2");
-        });
+            ref var attributes = ref world.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(entity);
+            attributes.SetCurrent(healthId, 0f);
+        }
 
-        Assert.That(world.Get<WorldPositionCm>(hero).Value.X.ToFloat(), Is.EqualTo(-600f).Within(0.001f));
-        PressAct(engine, input);
-        Assert.That(world.Get<WorldPositionCm>(hero).Value.X.ToFloat(), Is.EqualTo(0f).Within(0.001f),
-            "Pressing SPACE must send the hero into the gold ring without selecting or right-clicking.");
-        TickUntil(engine, () => variables.ReadInt("wave") == 1, HeartbeatIntervalTicks * 3,
-            () => "Pressing SPACE did not enter the raid circle and start wave 1.");
+        Tick(engine, HeartbeatIntervalTicks * 2);
+        Assert.That(CountTeam(world, 2), Is.EqualTo(0),
+            "The map's declared DeathRule (attribute Health, onZero destroy) must remove zero-health map entities.");
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+    }
 
-        ActUntil(engine, input, () => variables.ReadInt("wave") == 2, maxActs: 80,
-            "Pressing SPACE against the nearest enemies did not clear wave 1.");
-        AssertOverlayContains(overlay, "Wave 2/2");
+    [Test]
+    public void NightRaidMod_ContainsNoShowcaseAssembly()
+    {
+        string modRoot = System.IO.Path.Combine(FindRepoRoot(), "mods", "showcases", "map_trigger_night_raid", "MapTriggerNightRaidMod");
+        Assert.That(System.IO.File.Exists(System.IO.Path.Combine(modRoot, "mod.json")), Is.True);
+        Assert.That(System.IO.File.Exists(System.IO.Path.Combine(modRoot, "MapTriggerNightRaidMod.csproj")), Is.False,
+            "The night raid showcase must stay code-free: map + graphs + input + GAS data only.");
+    }
 
-        ActUntil(engine, input, () => variables.ReadInt("phase") == 2, maxActs: 80,
-            "Pressing SPACE against the nearest enemies did not defeat the boss.");
+    private static int CountTeam(World world, int teamId)
+    {
+        int count = 0;
+        world.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
+            (Arch.Core.Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+            {
+                if (team.Id == teamId)
+                {
+                    count++;
+                }
+            });
+        return count;
+    }
 
-        Assert.Multiple(() =>
-        {
-            AssertOverlayContains(overlay, "VICTORY - phase 2 reached");
-            Assert.That(engine.GetService(CoreServiceKeys.PanelHost)?.Count, Is.EqualTo(1),
-                "Finishing the player-driven raid must reveal the existing victory panel.");
-            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-        });
+    private static System.Collections.Generic.List<Arch.Core.Entity> CollectTeam(World world, int teamId)
+    {
+        var list = new System.Collections.Generic.List<Arch.Core.Entity>();
+        world.Query(new Arch.Core.QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
+            (Arch.Core.Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+            {
+                if (team.Id == teamId)
+                {
+                    list.Add(entity);
+                }
+            });
+        return list;
     }
 
     private static GameEngine CreateEngine()
@@ -206,21 +210,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static void MoveHeroIntoRaidCircle(World world, Entity hero, int xCm, int yCm)
     {
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
-    }
-
-    private static void ActUntil(GameEngine engine, PlayerInputHandler input, Func<bool> condition, int maxActs, string fail)
-    {
-        for (int i = 0; i < maxActs; i++)
-        {
-            if (condition())
-            {
-                return;
-            }
-
-            PressAct(engine, input);
-        }
-
-        Assert.Fail(fail);
     }
 
     private static void PressAct(GameEngine engine, PlayerInputHandler input)
@@ -296,43 +285,9 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         return result;
     }
 
-    private static List<Entity> CollectTeam(World world, int teamId)
-    {
-        var matches = new List<Entity>();
-        var query = new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>();
-        world.Query(in query, (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
-        {
-            if (team.Id == teamId)
-            {
-                matches.Add(entity);
-            }
-        });
-
-        return matches;
-    }
-
     private static void AssertTeamCounts(World world, int teamId, int expected, string because)
     {
         Assert.That(CollectTeam(world, teamId).Count, Is.EqualTo(expected), because);
-    }
-
-    private static void AssertOverlayContains(ScreenOverlayBuffer overlay, string expected)
-    {
-        foreach (ref readonly ScreenOverlayItem item in overlay.GetSpan())
-        {
-            if (item.Kind != ScreenOverlayItemKind.Text)
-            {
-                continue;
-            }
-
-            string? text = overlay.GetString(item.StringId);
-            if (!string.IsNullOrEmpty(text) && text.Contains(expected, StringComparison.Ordinal))
-            {
-                return;
-            }
-        }
-
-        Assert.Fail($"Night Raid HUD did not contain '{expected}'.");
     }
 
     private static string FindRepoRoot()

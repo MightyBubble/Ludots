@@ -75,6 +75,13 @@ namespace Ludots.Core.Config
         public List<MapVariableDeclaration> Variables { get; set; } = new List<MapVariableDeclaration>();
 
         /// <summary>
+        /// Data-declared death rule: when the declared attribute's current value reaches
+        /// zero, map entities go through the presentation-aware destroy pipeline, feeding
+        /// EntityDied / EntityAliveCountChanged for TriggerGraphs. Null = no death policy.
+        /// </summary>
+        public Ludots.Core.Gameplay.MapTriggers.MapDeathRule DeathRule { get; set; }
+
+        /// <summary>
         /// Default camera state when this map is loaded.
         /// If null, the engine uses CameraState defaults.
         /// Editor reads/writes this to ensure camera consistency across tools.

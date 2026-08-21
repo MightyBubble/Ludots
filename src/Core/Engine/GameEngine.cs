@@ -220,6 +220,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
+        private Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem _mapDeathRuleSystem;
         private TimeFlowService _timeFlow;
 
         // Spatial systems — kept for hot-swap on map load
@@ -1883,6 +1884,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
+            _mapDeathRuleSystem = new MapDeathRuleSystem(World, () => CurrentMapSession);
+            RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
 
@@ -2183,6 +2186,14 @@ namespace Ludots.Core.Engine
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 WireMapVariablePhaseDispatcher(session);
+                if (mapConfig.DeathRule != null)
+                {
+                    _mapDeathRuleSystem.Declare(mid, mapConfig.DeathRule);
+                }
+                else
+                {
+                    _mapDeathRuleSystem.Retract(mid);
+                }
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
