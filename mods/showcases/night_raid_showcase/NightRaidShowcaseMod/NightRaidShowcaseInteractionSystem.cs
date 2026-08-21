@@ -78,7 +78,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         {
             _rightCooldown = ActionCooldownTicks;
             Entity target = FindNearest(new Vector2(ground.X, ground.Z), maxDistanceCm: 400f);
-            if (target == Entity.Null)
+            if (target == Entity.Null || !_engine.World.IsAlive(target))
             {
                 _lastMessage = "Kill tool: nothing within 400cm of the cursor";
             }
@@ -215,6 +215,11 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         var query = new QueryDescription().WithAll<WorldPositionCm, Name>();
         _engine.World.Query(in query, (Entity entity, ref WorldPositionCm position) =>
         {
+            if (!_engine.World.IsAlive(entity))
+            {
+                return;
+            }
+
             if (_engine.World.TryGet(entity, out Name name) &&
                 string.Equals(name.Value, "NightRaidHero", StringComparison.Ordinal))
             {
