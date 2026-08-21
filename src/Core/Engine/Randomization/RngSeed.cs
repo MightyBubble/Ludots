@@ -1,8 +1,8 @@
 namespace Ludots.Core.Engine.Randomization
 {
     /// <summary>
-    /// FNV-1a style seed mixing shared by all random-seed derivation sites,
-    /// keeping named stream seeds and per-execution graph seeds in one hash family.
+    /// FNV-1a seed mixing shared by random-seed derivation sites (named stream
+    /// derivation and per-execution graph seed building).
     /// </summary>
     public static class RngSeed
     {

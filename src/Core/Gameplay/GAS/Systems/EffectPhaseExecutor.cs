@@ -920,22 +920,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseId phase,
             uint executionSeed)
         {
-            uint hash = executionSeed == 0u ? 2166136261u : executionSeed;
-            hash = Mix(hash, caster.Id);
-            hash = Mix(hash, caster.Version);
-            hash = Mix(hash, target.Id);
-            hash = Mix(hash, target.Version);
-            hash = Mix(hash, targetContext.Id);
-            hash = Mix(hash, targetContext.Version);
-            hash = Mix(hash, graphProgramId);
-            hash = Mix(hash, effectTemplateId);
-            hash = Mix(hash, (int)phase);
-            return hash == 0u ? 1u : hash;
-        }
-
-        private static uint Mix(uint hash, int value)
-        {
-            return (hash ^ unchecked((uint)value)) * 16777619u;
+            var hash = Ludots.Core.Engine.Randomization.RngSeed.Begin(executionSeed);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, caster.Id);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, caster.Version);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, target.Id);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, target.Version);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, targetContext.Id);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, targetContext.Version);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, graphProgramId);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, effectTemplateId);
+            hash = Ludots.Core.Engine.Randomization.RngSeed.Mix(hash, (int)phase);
+            return Ludots.Core.Engine.Randomization.RngSeed.Finalize(hash);
         }
 
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)

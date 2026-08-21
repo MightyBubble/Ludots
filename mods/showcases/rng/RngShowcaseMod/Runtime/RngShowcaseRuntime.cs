@@ -28,6 +28,8 @@ public sealed class RngShowcaseRuntime
     private readonly Dictionary<string, long> _totalsByDistribution = new(StringComparer.Ordinal);
     private int[] _segmentPicks = Array.Empty<int>();
     private RngStreamSnapshot _segmentSnapshot;
+    private string? _segmentDistributionId;
+    private int _segmentModulationPermille;
     private bool _hasSegment;
 
     public RngShowcaseRuntime(RngPickService picks)
@@ -96,6 +98,8 @@ public sealed class RngShowcaseRuntime
         _totalsByDistribution[DistributionId] = total;
         _segmentSnapshot = snapshot;
         _segmentPicks = results;
+        _segmentDistributionId = DistributionId;
+        _segmentModulationPermille = ModulationPermille;
         _hasSegment = true;
         return results;
     }
@@ -108,6 +112,12 @@ public sealed class RngShowcaseRuntime
         bool? autoRun = null,
         bool resetStats = false)
     {
+        if ((distributionId != null && distributionId != DistributionId) || modulationPermille.HasValue)
+        {
+            _hasSegment = false;
+            _segmentPicks = Array.Empty<int>();
+        }
+
         if (distributionId != null)
         {
             _picks.GetDistribution(distributionId);
@@ -155,11 +165,17 @@ public sealed class RngShowcaseRuntime
             _segmentPicks = DrawBurst(SegmentLengthCap);
         }
 
+        if (_segmentDistributionId != DistributionId || _segmentModulationPermille != ModulationPermille)
+        {
+            _segmentPicks = DrawBurst(_segmentPicks.Length > 0 ? _segmentPicks.Length : SegmentLengthCap);
+        }
+
         stream.RestoreSnapshot(in _segmentSnapshot);
         var replayed = new int[_segmentPicks.Length];
+        var segmentModulation = _segmentModulationPermille / 1000f;
         for (var i = 0; i < replayed.Length; i++)
         {
-            replayed[i] = _picks.Pick(DistributionId, modulation);
+            replayed[i] = _picks.Pick(DistributionId, segmentModulation);
         }
 
         var matched = replayed.SequenceEqual(_segmentPicks);

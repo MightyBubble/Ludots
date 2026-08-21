@@ -9,7 +9,7 @@
 |---|---|---|
 | 种子流 | `src/Core/Engine/Randomization/` | 命名确定性流（xorshift32 显式推进、快照/恢复、FNV 种子混合）；fail-closed 声明/查询 |
 | 分布原语 | `src/Core/Gameplay/Rng/` | `DistributionTable`（权重归一化、锁定份额构造期锚定、调制 permille clamp）；`RngPickService`（分布 registry + key id intern） |
-| 图 op | `GraphNodeOp.WeightedPick = 443` | `Imm`=分布 key id、`I[A]`=调制 permille、`I[Dst]`=条目索引；经 `IGraphRuntimeApi.WeightedPick` 执行 |
+| 图 op | `GraphNodeOp.WeightedPick = 443` | `Imm`=分布 key id、`I[A]`=调制 permille、`I[Dst]`=条目索引；经 `IGraphRuntimeApi.WeightedPick` 执行。**注意：作者 JSON 引用该 op 的符号绑定（分布名→key id）尚未实现，当前仅 C# 侧可调用** |
 | 作者数据 | mod `assets/Rng/distributions.json` | Core catalog 声明 `Rng/distributions.json`（ArrayById+AllowEmpty），各 mod 分片供数据 |
 | Showcase | `mods/showcases/rng/RngShowcaseMod` | 自动抽取主循环 + 旋钮 + 重放证明 + AgentBridge 工具 |
 
@@ -34,7 +34,7 @@
 
 ## 四、验收
 
-- 单测：`src/Tests/RngCoreTests/`（32 项固定种子断言：同种子同序列、快照重放、锁定守恒、调制方向/熔断、失败关闭、key 互通）。
+- 单测：`src/Tests/RngCoreTests/`（33 项固定种子断言：同种子同序列、快照重放、锁定守恒、调制方向/熔断、失败关闭、key 互通）。
 - 桥验收：`ludots.rng.replay` 必须 `matched:true`；`ludots.rng.draw` 两次同快照序列相等；调制拨动后 expectedPct 偏移。
 - 启动：`run-mod-launcher.cmd cli launch --selector rng_showcase --mod AgentBridgeMod`。
 

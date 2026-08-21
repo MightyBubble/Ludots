@@ -127,7 +127,15 @@ public sealed class DistributionTable
             }
         }
 
-        return effective.Length - 1;
+        for (var i = effective.Length - 1; i >= 0; i--)
+        {
+            if (effective[i] > 0f)
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
 
     public bool TrySetWeight(int index, int weight)
