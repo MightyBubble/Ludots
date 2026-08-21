@@ -37,7 +37,7 @@ internal sealed class InstallRngShowcaseOnGameStartTrigger : Trigger
                 "Core rng pick service is missing; the engine must register it during core system init.");
         var runtime = new RngShowcaseRuntime(picks);
         engine.SetService(RngShowcaseServiceKeys.Runtime, runtime);
-        engine.RegisterPresentationSystem(new RngShowcaseSystem(engine, runtime, _context.Log));
+        engine.RegisterSystem(new RngShowcaseSystem(engine, runtime, _context.Log), SystemGroup.Cleanup);
         _context.Log($"[RngShowcaseMod] Auto-pick loop running on distribution '{runtime.BuildState()["distribution"]}'.");
         return Task.CompletedTask;
     }

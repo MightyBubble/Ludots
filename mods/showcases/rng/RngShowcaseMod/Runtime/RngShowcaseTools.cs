@@ -38,7 +38,7 @@ public sealed class RngDrawTool : IAgentTool
         var count = 10;
         if (args != null && args.TryGetPropertyValue("count", out var countNode) && countNode != null)
         {
-            count = countNode.GetValue<int>();
+            count = Math.Clamp(countNode.GetValue<int>(), 1, 1000);
         }
 
         var picks = _runtime.DrawBurst(count);
@@ -68,6 +68,7 @@ public sealed class RngKnobTool : IAgentTool
             ["burstSize"] = new JsonObject { ["type"] = "integer", ["minimum"] = 1, ["maximum"] = 1000 },
             ["intervalTicks"] = new JsonObject { ["type"] = "integer", ["minimum"] = 1, ["maximum"] = 600 },
             ["autoRun"] = new JsonObject { ["type"] = "boolean" },
+            ["resetStats"] = new JsonObject { ["type"] = "boolean" },
             ["distribution"] = new JsonObject { ["type"] = "string" },
         },
     };
@@ -79,6 +80,7 @@ public sealed class RngKnobTool : IAgentTool
         int? burst = null;
         int? interval = null;
         bool? autoRun = null;
+        var resetStats = false;
 
         if (args != null)
         {
@@ -87,9 +89,10 @@ public sealed class RngKnobTool : IAgentTool
             if (args.TryGetPropertyValue("burstSize", out var burstNode) && burstNode != null) burst = burstNode.GetValue<int>();
             if (args.TryGetPropertyValue("intervalTicks", out var intervalNode) && intervalNode != null) interval = intervalNode.GetValue<int>();
             if (args.TryGetPropertyValue("autoRun", out var autoNode) && autoNode != null) autoRun = autoNode.GetValue<bool>();
+            if (args.TryGetPropertyValue("resetStats", out var resetNode) && resetNode != null) resetStats = resetNode.GetValue<bool>();
         }
 
-        return _runtime.SetKnobs(distribution, modulation, burst, interval, autoRun);
+        return _runtime.SetKnobs(distribution, modulation, burst, interval, autoRun, resetStats);
     }
 }
 
