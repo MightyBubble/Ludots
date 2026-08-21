@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 using Ludots.Raylib.Render;
 
 namespace Ludots.Tests.RaylibAdapter;
@@ -144,6 +145,81 @@ public sealed class RaylibShaderContractTests
             Assert.That(fragment, Does.Not.Contain("float UnpackDepth("), receiver);
             Assert.That(fragment, Does.Not.Contain("uniform float uShadowBias"), receiver);
         }
+    }
+
+    [Test]
+    public void ShadowDepthCutout_DiscardsBelowCutoffAndPacksIdenticallyToOpaqueDepth()
+    {
+        string repoRoot = FindRepoRoot();
+        string shaderRoot = Path.Combine(repoRoot, "src", "Platforms", "Desktop");
+        string opaque = File.ReadAllText(Path.Combine(shaderRoot, "shadow_depth.fs"));
+        string cutout = File.ReadAllText(Path.Combine(shaderRoot, "shadow_depth_cutout.fs"));
+        string cutoutVertex = File.ReadAllText(Path.Combine(shaderRoot, "shadow_depth_cutout.vs"));
+
+        Assert.That(cutout, Does.Contain("uniform sampler2D texture0"));
+        Assert.That(cutout, Does.Contain("uniform float alphaCutoff"));
+        Assert.That(cutout, Does.Contain("discard"));
+        Assert.That(cutoutVertex, Does.Contain("in vec2 vertexTexCoord"));
+        Assert.That(cutoutVertex, Does.Contain("uniform mat4 mvp"));
+
+        // 深度打包必须与实体 pass 逐字一致：接收端只解 RGB24 这一种编码。
+        Assert.That(ExtractDepthPackingBlock(cutout), Is.EqualTo(ExtractDepthPackingBlock(opaque)));
+
+        string shadowMap = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibDirectionalShadowMap.cs"));
+        Assert.That(shadowMap, Does.Contain("\"shadow_depth_cutout.vs\""));
+        Assert.That(shadowMap, Does.Contain("\"shadow_depth_cutout.fs\""));
+        Assert.That(shadowMap, Does.Contain("DrawMeshShadowCutout"));
+    }
+
+    [Test]
+    public void BillboardShadow_CutoutAlphaTestsAndTransparentCastsNothing()
+    {
+        string repoRoot = FindRepoRoot();
+        string renderer = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Raylib.Render",
+            "Rendering",
+            "RaylibPrimitiveRenderer.cs"));
+
+        int method = renderer.IndexOf("private void DrawBillboardShadow", StringComparison.Ordinal);
+        Assert.That(method, Is.GreaterThanOrEqualTo(0));
+        int next = renderer.IndexOf("private void DrawProceduralMesh(", method, StringComparison.Ordinal);
+        Assert.That(next, Is.GreaterThan(method));
+        string body = renderer[method..next];
+        Assert.That(body, Does.Contain("DrawMeshShadowCutout"));
+        Assert.That(body, Does.Contain("DefaultVegetationAlphaCutoff"));
+
+        int leaf = renderer.IndexOf("private void DrawShadowLeafAsset", StringComparison.Ordinal);
+        Assert.That(leaf, Is.GreaterThanOrEqualTo(0));
+        string leafBody = renderer[leaf..(leaf + 4000)];
+        Assert.That(leafBody, Does.Contain("RaylibMaterialDrawState.CastsShadow"));
+    }
+
+    [Test]
+    public void ShadowCastEligibility_OnlyOpaqueAndCutoutCast()
+    {
+        Assert.That(RaylibMaterialDrawState.CastsShadow(MaterialBlendMode.Opaque), Is.True);
+        Assert.That(RaylibMaterialDrawState.CastsShadow(MaterialBlendMode.Cutout), Is.True);
+        Assert.That(RaylibMaterialDrawState.CastsShadow(MaterialBlendMode.AlphaBlend), Is.False);
+        Assert.That(RaylibMaterialDrawState.CastsShadow(MaterialBlendMode.Additive), Is.False);
+    }
+
+    private static string ExtractDepthPackingBlock(string fragmentShader)
+    {
+        string text = fragmentShader.Replace("\r\n", "\n");
+        int start = text.IndexOf("float depth = gl_FragCoord.z;", StringComparison.Ordinal);
+        Assert.That(start, Is.GreaterThanOrEqualTo(0), "Could not locate depth packing start.");
+        int end = text.IndexOf("finalColor = vec4(enc, 1.0);", start, StringComparison.Ordinal);
+        Assert.That(end, Is.GreaterThanOrEqualTo(0), "Could not locate depth packing end.");
+        return text[start..(end + "finalColor = vec4(enc, 1.0);".Length)].Trim();
     }
 
     [Test]

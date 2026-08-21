@@ -86,5 +86,11 @@ namespace Ludots.Raylib.Render
                         $"{callerName} does not recognize material blend mode '{blendMode}'.");
             }
         }
+
+        /// <summary>投影资格：AlphaBlend/Additive 的 alpha 是发光/覆盖语义，不构成遮挡体，不进深度 pass。</summary>
+        public static bool CastsShadow(MaterialBlendMode blendMode)
+        {
+            return blendMode is MaterialBlendMode.Opaque or MaterialBlendMode.Cutout;
+        }
     }
 }

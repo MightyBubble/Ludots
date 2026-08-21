@@ -337,7 +337,8 @@ namespace Ludots.Raylib.Render
                     item.Scale * scaleMul,
                     camera,
                     meshes,
-                    shadow);
+                    shadow,
+                    item.MaterialId);
             }
         }
 
@@ -361,6 +362,15 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
+                if (!RaylibMaterialDrawState.CastsShadow(RaylibMaterialDrawState.ResolveBlendMode(
+                        _materials,
+                        item.MaterialId,
+                        MaterialBlendMode.Opaque,
+                        $"{nameof(RaylibPrimitiveRenderer)} skinned shadow")))
+                {
+                    continue;
+                }
+
                 if (_gpuSkinned.TrySubmit(in item, meshes, scaleMul))
                 {
                     continue;
@@ -373,7 +383,8 @@ namespace Ludots.Raylib.Render
                     item.Scale * scaleMul,
                     default,
                     meshes,
-                    shadow);
+                    shadow,
+                    item.MaterialId);
             }
 
             _gpuSkinned.FlushShadow(shadow);
@@ -844,12 +855,23 @@ namespace Ludots.Raylib.Render
             Vector3 scale,
             Camera3D camera,
             IRenderMeshAssets meshes,
-            RaylibDirectionalShadowMap shadow)
+            RaylibDirectionalShadowMap shadow,
+            int materialId)
         {
             if (!meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException(
                     $"{nameof(RaylibPrimitiveRenderer)} cannot shadow unknown meshAssetId={meshAssetId}.");
+            }
+
+            MaterialBlendMode blendMode = RaylibMaterialDrawState.ResolveBlendMode(
+                _materials,
+                materialId,
+                MaterialBlendMode.Opaque,
+                $"{nameof(RaylibPrimitiveRenderer)} shadow");
+            if (!RaylibMaterialDrawState.CastsShadow(blendMode))
+            {
+                return;
             }
 
             switch (descriptor.Type)
@@ -861,7 +883,7 @@ namespace Ludots.Raylib.Render
                     DrawModelShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
                     return;
                 case MeshAssetType.Billboard:
-                    DrawBillboardShadow(meshAssetId, in descriptor, position, scale, camera, shadow);
+                    DrawBillboardShadow(meshAssetId, in descriptor, position, scale, camera, shadow, blendMode);
                     return;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMeshShadow(meshAssetId, in descriptor, position, rotation, scale, shadow);
@@ -1312,7 +1334,8 @@ namespace Ludots.Raylib.Render
             Vector3 position,
             Vector3 scale,
             Camera3D camera,
-            RaylibDirectionalShadowMap shadow)
+            RaylibDirectionalShadowMap shadow,
+            MaterialBlendMode blendMode)
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out CachedTexture cached))
             {
@@ -1335,6 +1358,12 @@ namespace Ludots.Raylib.Render
                 Matrix4x4.CreateScale(width, height, 1f) *
                 Matrix4x4.CreateRotationY(yaw) *
                 Matrix4x4.CreateTranslation(center));
+            if (blendMode == MaterialBlendMode.Cutout)
+            {
+                shadow.DrawMeshShadowCutout(_billboardShadowMesh, transform, cached.Texture, DefaultVegetationAlphaCutoff);
+                return;
+            }
+
             shadow.DrawMeshShadow(_billboardShadowMesh, transform);
         }
 
@@ -2015,7 +2044,8 @@ namespace Ludots.Raylib.Render
                             item.Scale * scaleMul,
                             default,
                             meshes,
-                            shadow);
+                            shadow,
+                            item.MaterialId);
                     }
 
                     return;
@@ -2432,6 +2462,17 @@ namespace Ludots.Raylib.Render
                 -0.5f,  0.5f, 0f,
             };
 
+            // 镂空影子采样整张贴图：UV 与 DrawBillboardRec 全幅 source rect 同向（+Y 世界向上对应 v=0 图像顶部）。
+            float[] texcoords =
+            {
+                0f, 1f,
+                1f, 1f,
+                1f, 0f,
+                0f, 1f,
+                1f, 0f,
+                0f, 0f,
+            };
+
             Mesh mesh = new()
             {
                 vertexCount = 6,
@@ -2439,6 +2480,8 @@ namespace Ludots.Raylib.Render
             };
             mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertices.Length);
             vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
+            mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * texcoords.Length);
+            texcoords.AsSpan().CopyTo(new Span<float>(mesh.texcoords, texcoords.Length));
             Rl.UploadMesh(ref mesh, false);
             return mesh;
         }

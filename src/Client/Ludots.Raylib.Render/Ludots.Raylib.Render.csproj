@@ -52,6 +52,8 @@
     <None Include="..\..\Platforms\Desktop\sun_disk.glsl.inc"><Link>sun_disk.glsl.inc</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth.vs"><Link>shadow_depth.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth.fs"><Link>shadow_depth.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\shadow_depth_cutout.vs"><Link>shadow_depth_cutout.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <None Include="..\..\Platforms\Desktop\shadow_depth_cutout.fs"><Link>shadow_depth_cutout.fs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth_instanced.vs"><Link>shadow_depth_instanced.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="..\..\Platforms\Desktop\shadow_depth_skinning_instanced.vs"><Link>shadow_depth_skinning_instanced.vs</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Include="Resources\ambient_day_ramp.json"><Link>ambient_day_ramp.json</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>

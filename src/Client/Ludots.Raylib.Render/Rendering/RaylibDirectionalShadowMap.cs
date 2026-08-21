@@ -19,10 +19,13 @@ namespace Ludots.Raylib.Render
         private readonly Shader _depthShader;
         private readonly Shader _depthInstancedShader;
         private readonly Shader _depthSkinningInstancedShader;
+        private readonly Shader _depthCutoutShader;
         private Material _depthMaterial;
         private Material _depthInstancedMaterial;
         private Material _depthSkinningInstancedMaterial;
+        private Material _depthCutoutMaterial;
         private readonly int _locDepthSkinningBoneMatrices;
+        private readonly int _locCutoutAlphaCutoff;
         private RaylibMatrix _lightView;
         private RaylibMatrix _lightProjection;
         private float _depthRange;
@@ -58,11 +61,20 @@ namespace Ludots.Raylib.Render
                 throw new InvalidOperationException("Failed to load shadow_depth_skinning_instanced shader (shader.id == 0).");
             }
 
+            _depthCutoutShader = Rl.LoadShader(
+                System.IO.Path.Combine(baseDir, "shadow_depth_cutout.vs"),
+                System.IO.Path.Combine(baseDir, "shadow_depth_cutout.fs"));
+            if (_depthCutoutShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load shadow_depth_cutout shader (shader.id == 0).");
+            }
+
             ConfigureDepthShader(_depthShader, "shadow_depth");
             ConfigureInstancedDepthShader(_depthInstancedShader, "shadow_depth_instanced");
             _locDepthSkinningBoneMatrices = ConfigureSkinningInstancedDepthShader(
                 _depthSkinningInstancedShader,
                 "shadow_depth_skinning_instanced");
+            _locCutoutAlphaCutoff = ConfigureCutoutDepthShader(_depthCutoutShader, "shadow_depth_cutout");
 
             _depthMaterial = Rl.LoadMaterialDefault();
             _depthMaterial.shader = _depthShader;
@@ -70,6 +82,8 @@ namespace Ludots.Raylib.Render
             _depthInstancedMaterial.shader = _depthInstancedShader;
             _depthSkinningInstancedMaterial = Rl.LoadMaterialDefault();
             _depthSkinningInstancedMaterial.shader = _depthSkinningInstancedShader;
+            _depthCutoutMaterial = Rl.LoadMaterialDefault();
+            _depthCutoutMaterial.shader = _depthCutoutShader;
         }
 
         public Texture2D DepthTexture => _rt.texture;
@@ -135,6 +149,22 @@ namespace Ludots.Raylib.Render
         {
             EnsureFrameActive();
             Rl.DrawMesh(mesh, _depthMaterial, transform);
+        }
+
+        /// <summary>镂空深度：采样 albedo alpha 低于 cutoff 的纹素 discard，其余与实体深度同编码。</summary>
+        public void DrawMeshShadowCutout(Mesh mesh, RaylibMatrix transform, Texture2D albedo, float alphaCutoff)
+        {
+            EnsureFrameActive();
+            if (albedo.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(DrawMeshShadowCutout)} requires a loaded albedo texture (texture.id == 0).");
+            }
+
+            _depthCutoutMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture = albedo;
+            float cutoff = alphaCutoff;
+            Rl.SetShaderValue(_depthCutoutShader, _locCutoutAlphaCutoff, &cutoff, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.DrawMesh(mesh, _depthCutoutMaterial, transform);
         }
 
         public void DrawMeshInstancedShadow(Mesh mesh, RaylibMatrix* transforms, int count)
@@ -227,12 +257,15 @@ namespace Ludots.Raylib.Render
             _depthMaterial.shader = default;
             _depthInstancedMaterial.shader = default;
             _depthSkinningInstancedMaterial.shader = default;
+            _depthCutoutMaterial.shader = default;
             Rl.UnloadMaterial(_depthMaterial);
             Rl.UnloadMaterial(_depthInstancedMaterial);
             Rl.UnloadMaterial(_depthSkinningInstancedMaterial);
+            Rl.UnloadMaterial(_depthCutoutMaterial);
             Rl.UnloadShader(_depthShader);
             Rl.UnloadShader(_depthInstancedShader);
             Rl.UnloadShader(_depthSkinningInstancedShader);
+            Rl.UnloadShader(_depthCutoutShader);
             Rl.UnloadRenderTexture(_rt);
             _disposed = true;
         }
@@ -311,6 +344,32 @@ namespace Ludots.Raylib.Render
             }
 
             return locBoneMatrices;
+        }
+
+        private static int ConfigureCutoutDepthShader(Shader shader, string name)
+        {
+            ConfigureDepthShader(shader, name);
+            int locTexCoord = Rl.GetShaderLocationAttrib(shader, "vertexTexCoord");
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locTexCoord;
+            int locAlbedo = Rl.GetShaderLocation(shader, "texture0");
+            shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locAlbedo;
+            int locCutoff = Rl.GetShaderLocation(shader, "alphaCutoff");
+            if (locTexCoord < 0)
+            {
+                throw new InvalidOperationException($"{name} shader attrib 'vertexTexCoord' not found.");
+            }
+
+            if (locAlbedo < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'texture0' not found.");
+            }
+
+            if (locCutoff < 0)
+            {
+                throw new InvalidOperationException($"{name} shader uniform 'alphaCutoff' not found.");
+            }
+
+            return locCutoff;
         }
 
         private static RaylibMatrix BuildLookAt(Vector3 eye, Vector3 target, Vector3 up)
