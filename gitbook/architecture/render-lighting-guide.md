@@ -67,6 +67,7 @@ shadow.EndFrame();
 - 有贴图 → 贴图优先（标量忽略）；无贴图 → 标量直达 `uRoughness`/`uMetallic`。
 - 越界（非 [0,1] / 非数字）装载期 fail-loud。
 - 合批管线与单物体通道同一合同（`MaterialAssetDescriptor.Roughness/Metalness`）。
+- 可选字段的默认值是合同的一部分：新增或修改默认值必须配合同合同测试守卫（参照环境配置太阳盘四参数的 S3.5 守卫），不允许"顺手改默认值"静默通过。
 
 ## 材质实例与 shaderKey（对齐商业引擎心智）
 
@@ -98,6 +99,11 @@ shadow.EndFrame();
 | `SHADER_UNIFORM_VEC4` 通道不稳 | vec4 uniform 不生效 | 着色器矩阵列用 vec3 语义（`model_lit` 不依赖 vec4 uniform） |
 
 新增着色器时遵守：矩阵不进 uniform、模型 mesh 不按值过边界。
+
+## 渲染期资产缺失政策与诊断出口
+
+- **渲染期资产缺失**（模型/贴图运行期解析不到）：`RenderDiagnostics.Warn` warn-once + 跳过该条目绘制，**不画占位体**——缺失资产属于数据问题，由宿主日志与验收兜住，渲染器不造替代形。装载期错误（越界标量、shader 合同缺 uniform、JSON 解析失败）仍是 fail-loud，两者不要混。
+- **诊断出口**：`RenderDiagnostics.InfoSink/WarnSink` 由宿主启动时接线到正式日志，未接线静默（画廊可独立运行）。文件细节诊断（逐资产纹理加载、billboard 绘制参数）经环境变量 `LUDOTS_RAYLIB_DIAGNOSTIC_PATH` 开启、默认关闭，按 (category, key) 去重；热路径调用方先判 `RenderDiagnostics.FileSinkEnabled` 再构造消息，关闭时零分配。
 
 ## 宿主接入（表现 showcase 侧）
 
