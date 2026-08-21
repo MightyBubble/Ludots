@@ -1320,7 +1320,7 @@ namespace Ludots.Core.Engine
             SetService(
                 CoreServiceKeys.MinimapKnowledgeViewerProvider,
                 static (GameEngine engine, out Entity viewer) =>
-                    KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
+                    KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer(engine.World, engine.GlobalContext, out viewer));
 
             var abilitySystem = new AbilitySystem(
                 World,

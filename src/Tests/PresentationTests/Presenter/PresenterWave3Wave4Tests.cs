@@ -882,7 +882,7 @@ namespace Ludots.Tests.Presentation
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
             var instances = new PresenterEntityRuntime(world);
             var definitions = new PresenterDefinitionRegistry();
             var requests = new PresentationRequestBuffer();

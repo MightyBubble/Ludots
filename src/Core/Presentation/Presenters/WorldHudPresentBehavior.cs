@@ -88,7 +88,7 @@ namespace Ludots.Core.Presentation.Presenters
         private PresentAudienceContext ResolveAudienceContext(World world, Dictionary<string, object> globals)
         {
             if (globals != null &&
-                KnowledgeProjectionConsumer.TryResolveViewer(world, globals, Entity.Null, out Entity viewer))
+                KnowledgeProjectionConsumer.TryResolveSoleLocalSeatViewer(world, globals, out Entity viewer))
             {
                 return _phaseResolver.CreateAudienceContext(world, viewer, ResolveRevealHidden(globals));
             }
