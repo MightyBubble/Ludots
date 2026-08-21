@@ -1477,6 +1477,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpDestroyPanelEntryMod",
         "projectPath": "CapabilityStandardGraphOpDestroyPanelEntryMod.csproj"
       }
+    },
+    {
+      "name": "rng_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rng/RngShowcaseMod",
+        "projectPath": "RngShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

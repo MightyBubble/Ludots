@@ -1996,6 +1996,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "rng_showcase_raylib",
+      "name": "RNG Distribution Showcase Raylib",
+      "selectors": [
+        "$rng_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

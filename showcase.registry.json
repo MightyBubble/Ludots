@@ -7005,6 +7005,32 @@
       "video": "artifacts/evidence/capability_standard_graph_op_DestroyPanel/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "rng_distribution_showcase",
+      "path": "mods/showcases/rng/RngShowcaseMod",
+      "projectPath": "RngShowcaseMod.csproj",
+      "title": "确定性掉落分布猎场",
+      "summary": "自动刷怪掉落经命名种子流加权抽取：拨幸运看分布当场偏移，按重放看整段掉落逐个重现。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "rng",
+        "determinism",
+        "distribution",
+        "loot",
+        "core-capability"
+      ],
+      "binding": "rng_showcase",
+      "preset": "rng_showcase_raylib",
+      "docsPath": "gitbook/architecture/deterministic-rng.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "video": null,
+      "status": "experimental",
+      "notes": "Epic #1039 Phase 3 首切片：确定性核心+旋钮+重放证明经 AgentBridge 工具验收；视觉直方图面板为后续切片。"
     }
   ]
 }
