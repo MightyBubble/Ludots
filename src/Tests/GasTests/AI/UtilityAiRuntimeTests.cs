@@ -245,7 +245,7 @@ namespace Ludots.Tests.GAS
             using var fixture = RuntimeFixture.Create();
             _ = fixture.CreateHostile(100, 0);
             const int graphId = 3001;
-            fixture.Graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
+            fixture.Graphs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } }, GraphKind.Score);
             var runtime = fixture.CreateGraphScoreRuntime(orderTypeId: 102, graphId: graphId, maxCandidates: 1, graphConsiderationCount: 2);
             fixture.AddActor();
 

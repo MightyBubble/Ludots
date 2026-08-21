@@ -1795,7 +1795,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyIndicator", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
         }
 
         [Test]
@@ -1819,7 +1819,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyAimVisual", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'targeting.aimVisual': put aim visuals"));
+            That(ex!.Message, Does.Contain("field 'targeting.aimVisual' is removed"));
         }
 
         [Test]

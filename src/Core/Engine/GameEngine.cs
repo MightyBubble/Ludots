@@ -696,7 +696,6 @@ namespace Ludots.Core.Engine
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
-            TagRegistry.Clear();
             var extensionAttributeRegistry = new ExtensionAttributeRegistry();
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
             var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);

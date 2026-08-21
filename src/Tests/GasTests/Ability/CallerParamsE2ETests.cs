@@ -358,7 +358,6 @@ namespace Ludots.Tests.GAS
             var mergedParams = default(EffectConfigParams);
             mergedParams.TryAddEffectTemplateId(EffectParamKeys.PayloadEffectId, 902);
 
-            int dropped = 0;
             int count = TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 new EffectContext
@@ -385,8 +384,7 @@ namespace Ludots.Tests.GAS
                 buffer,
                 candidateCount: 1,
                 budget,
-                commands,
-                ref dropped);
+                commands);
 
             That(count, Is.EqualTo(1));
             That(commands.Count, Is.EqualTo(1));
@@ -417,6 +415,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = pulseAttributeId },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             }, GraphKind.Effect);
 
             var phaseBindings = new EffectPhaseGraphBindings();
@@ -555,7 +554,8 @@ namespace Ludots.Tests.GAS
                 templates: templates,
                 phaseExecutor: phaseExecutor,
                 graphApi: graphApi,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                presentationEvents: new Ludots.Core.Gameplay.GAS.Presentation.GasPresentationEventBuffer(16));
 
             abilityExec.Update(0f);
             That(requests.Count, Is.EqualTo(1));
