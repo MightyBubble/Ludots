@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -36,6 +35,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private const string MapId = "night_raid";
     private const string VictoryPanelTemplateId = "panel.night_raid.victory";
     private const int HeartbeatIntervalTicks = 6;
+    private const string ActActionId = "NightRaid.Act";
 
     private static readonly string[] Mods =
     {
@@ -154,30 +154,25 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.Multiple(() =>
         {
             AssertOverlayContains(overlay, "NIGHT RAID");
-            AssertOverlayContains(overlay, "Left click: select");
+            AssertOverlayContains(overlay, "Gold ring = raid circle");
+            AssertOverlayContains(overlay, "Press SPACE");
+            AssertOverlayContains(overlay, "Do not box-select");
             AssertOverlayContains(overlay, "Wave 0/2");
         });
 
-        engine.GlobalContext[CoreServiceKeys.TabTargetEntity.Name] = hero;
-        PressCommand(engine, input);
+        Assert.That(world.Get<WorldPositionCm>(hero).Value.X.ToFloat(), Is.EqualTo(-600f).Within(0.001f));
+        PressAct(engine, input);
+        Assert.That(world.Get<WorldPositionCm>(hero).Value.X.ToFloat(), Is.EqualTo(0f).Within(0.001f),
+            "Pressing SPACE must send the hero into the gold ring without selecting or right-clicking.");
         TickUntil(engine, () => variables.ReadInt("wave") == 1, HeartbeatIntervalTicks * 3,
-            () => "Right-clicking the selected hero did not enter the raid circle and start wave 1.");
+            () => "Pressing SPACE did not enter the raid circle and start wave 1.");
 
-        input.InjectButtonPress("TabTarget");
-        Tick(engine, 1);
-        Tick(engine, 1);
-        Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out object? tabTarget) && tabTarget is Entity,
-            Is.True,
-            "Tab must focus a live hostile target for a player who does not click it directly.");
-
-        DefeatTeamWithPlayerCommands(engine, input, teamId: 2);
-        TickUntil(engine, () => variables.ReadInt("wave") == 2, HeartbeatIntervalTicks * 8,
-            () => "Defeating the first raider group through player commands did not advance to wave 2.");
+        ActUntil(engine, input, () => variables.ReadInt("wave") == 2, maxActs: 80,
+            "Pressing SPACE against the nearest enemies did not clear wave 1.");
         AssertOverlayContains(overlay, "Wave 2/2");
 
-        DefeatTeamWithPlayerCommands(engine, input, teamId: 4);
-        TickUntil(engine, () => variables.ReadInt("phase") == 2, HeartbeatIntervalTicks * 3,
-            () => "Defeating the boss through player commands did not advance to phase 2.");
+        ActUntil(engine, input, () => variables.ReadInt("phase") == 2, maxActs: 80,
+            "Pressing SPACE against the nearest enemies did not defeat the boss.");
 
         Assert.Multiple(() =>
         {
@@ -213,26 +208,28 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         world.Set(hero, new WorldPositionCm { Value = Fix64Vec2.FromInt(xCm, yCm) });
     }
 
-    private static void DefeatTeamWithPlayerCommands(GameEngine engine, PlayerInputHandler input, int teamId)
+    private static void ActUntil(GameEngine engine, PlayerInputHandler input, Func<bool> condition, int maxActs, string fail)
     {
-        foreach (Entity target in CollectTeam(engine.World, teamId).ToArray())
+        for (int i = 0; i < maxActs; i++)
         {
-            engine.GlobalContext[CoreServiceKeys.TabTargetEntity.Name] = target;
-            for (int strike = 0; strike < 40 && engine.World.IsAlive(target); strike++)
+            if (condition())
             {
-                PressCommand(engine, input);
+                return;
             }
 
-            TickUntil(engine, () => !engine.World.IsAlive(target), maxFrames: 12,
-                () => $"Player command strikes did not defeat team-{teamId} target {target}.");
+            PressAct(engine, input);
         }
+
+        Assert.Fail(fail);
     }
 
-    private static void PressCommand(GameEngine engine, PlayerInputHandler input)
+    private static void PressAct(GameEngine engine, PlayerInputHandler input)
     {
-        input.InjectButtonPress("Command");
-        Tick(engine, 1);
-        Tick(engine, 1);
+        for (int i = 0; i < 8; i++)
+        {
+            input.InjectButtonPress(ActActionId);
+            Tick(engine, 1);
+        }
     }
 
     private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames, Func<string> describeFailure)

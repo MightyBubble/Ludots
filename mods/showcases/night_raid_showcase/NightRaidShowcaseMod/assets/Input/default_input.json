@@ -1,0 +1,54 @@
+{
+  "actions": [
+    {
+      "id": "NightRaid.Act",
+      "name": "NightRaid_Act",
+      "type": "Button"
+    },
+    {
+      "id": "NightRaid.Move",
+      "name": "NightRaid_Move",
+      "type": "Axis2D"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "NightRaid.Controls",
+      "name": "Night Raid Controls",
+      "priority": 80,
+      "bindings": [
+        {
+          "actionId": "NightRaid.Act",
+          "path": "<Keyboard>/space"
+        },
+        {
+          "actionId": "NightRaid.Act",
+          "path": "<Keyboard>/e"
+        },
+        {
+          "actionId": "NightRaid.Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            {
+              "path": "<Keyboard>/w"
+            },
+            {
+              "path": "<Keyboard>/s"
+            },
+            {
+              "path": "<Keyboard>/a"
+            },
+            {
+              "path": "<Keyboard>/d"
+            }
+          ],
+          "processors": [
+            {
+              "type": "Normalize"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -19,7 +19,7 @@ public sealed class NightRaidShowcaseModEntry : IMod
             engine.GlobalContext["NightRaidShowcaseMod.Installed"] = true;
             engine.RegisterSystem(new NightRaidShowcaseInteractionSystem(engine), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new NightRaidShowcasePresentationSystem(engine));
-            context.Log("[NightRaidShowcaseMod] Readable Night Raid HUD and selection feedback registered.");
+            context.Log("[NightRaidShowcaseMod] Space/E act: enter the gold ring, then strike the nearest enemy.");
             return Task.CompletedTask;
         });
     }
