@@ -76,6 +76,11 @@ namespace Ludots.Adapter.Raylib
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
+            Ludots.UI.Panels.PanelPresentationInstaller.Install(engine);
+            if (browserRuntime != null)
+            {
+                Ludots.WebUI.Browser.PanelWebSkinInstaller.TryInstall(engine, browserRuntime);
+            }
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var syntheticInput = new SyntheticInputDevice();

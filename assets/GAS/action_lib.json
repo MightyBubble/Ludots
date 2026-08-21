@@ -54,12 +54,6 @@
     "host": "Hfsm"
   },
   {
-    "name": "level.phaseAdvance",
-    "graph": "Graph.Level.PhaseAdvance",
-    "kind": "Script",
-    "host": "Level"
-  },
-  {
     "name": "script.drinkUntilFull",
     "graph": "Graph.Script.DrinkUntilFull",
     "kind": "Script",

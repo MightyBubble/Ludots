@@ -11,6 +11,16 @@ namespace Ludots.Core.GraphRuntime
 
     public struct GraphExecutionCursor
     {
+        public GraphExecutionCursor(int startPc)
+        {
+            Pc = startPc;
+            Steps = 0;
+            CallStackCount = 0;
+            ReturnInt = 0;
+            InvokeDepth = 0;
+            Status = GraphExecutionStatus.NotStarted;
+        }
+
         public int Pc;
         public int Steps;
         public int CallStackCount;

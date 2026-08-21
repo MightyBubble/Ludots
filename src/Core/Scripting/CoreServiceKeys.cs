@@ -135,6 +135,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<object> UiTextMeasurer = new("UiTextMeasurer");
         public static readonly ServiceKey<object> UiImageSizeProvider = new("UiImageSizeProvider");
         public static readonly ServiceKey<Ludots.Core.UI.PanelHosting.PanelHost> PanelHost = new("PanelHost");
+        public static readonly ServiceKey<Ludots.Core.UI.PanelHosting.PanelTemplateRegistry> PanelTemplateRegistry = new("PanelTemplateRegistry");
+        public static readonly ServiceKey<Ludots.Core.UI.PanelActivation.PanelActivationApi> PanelActivationApi = new("PanelActivationApi");
+        public static readonly ServiceKey<Ludots.Core.UI.PanelActivation.UiPanelActivationStore> PanelActivationStore = new("PanelActivationStore");
 
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");

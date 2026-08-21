@@ -200,5 +200,77 @@ namespace Ludots.Tests.GasTests.UI
                 AttributeRegistry.Clear();
             }
         }
+
+        [Test]
+        public void Load_AttributeBase_WithoutAttributeId_FailsNamingVariable()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.pool_card",
+              "variables": [
+                { "name": "pool.base", "kind": "Float", "source": { "sourceKind": "AttributeBase" } }
+              ]
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.Exception.With.Message.Contains("pool.base"));
+        }
+
+        [Test]
+        public void Load_AttributeBase_WithGraphOutputKey_FailsClosed()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.pool_card",
+              "variables": [
+                { "name": "pool.base", "kind": "Float",
+                  "source": { "sourceKind": "AttributeBase", "attributeId": "tests.panel.pool", "graphOutputKey": "k" } }
+              ]
+            }
+            """;
+
+            Assert.That(
+                () => PanelTemplateLoader.Load(json),
+                Throws.Exception.With.Message.Contains("graphOutputKey"));
+        }
+
+        [Test]
+        public void Evaluate_AttributeBase_ReadsBaseWhileCurrentDrifts()
+        {
+            AttributeRegistry.Clear();
+            int attrId = AttributeRegistry.Register("tests.panel.pool");
+            try
+            {
+                const string json = """
+                {
+                  "id": "tests.panel.pool_card",
+                  "variables": [
+                    { "name": "pool.current", "kind": "Float", "realtime": true,
+                      "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.panel.pool" } },
+                    { "name": "pool.base", "kind": "Float",
+                      "source": { "sourceKind": "AttributeBase", "attributeId": "tests.panel.pool" } }
+                  ]
+                }
+                """;
+                PanelTemplate template = PanelTemplateLoader.Load(json);
+                using World world = World.Create();
+                Entity owner = world.Create();
+                world.Add(owner, new AttributeBuffer());
+                world.Get<AttributeBuffer>(owner).SetBase(attrId, 80f);
+                world.Get<AttributeBuffer>(owner).SetCurrent(attrId, 55f);
+
+                var reader = new PanelProjectionReader(world);
+                PanelVariableSet result = new PanelInstance(template, owner).Evaluate(reader);
+
+                Assert.That(result.Get("pool.current"), Is.EqualTo(55f));
+                Assert.That(result.Get("pool.base"), Is.EqualTo(80f));
+            }
+            finally
+            {
+                AttributeRegistry.Clear();
+            }
+        }
     }
 }

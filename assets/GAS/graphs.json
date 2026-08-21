@@ -625,37 +625,6 @@
     ]
   },
   {
-    "id": "Graph.Level.PhaseAdvance",
-    "kind": "Script",
-    "entry": "c",
-    "nodes": [
-      {
-        "id": "c",
-        "op": "ConstInt",
-        "intValue": 7101
-      },
-      {
-        "id": "h",
-        "op": "HaltReturnInt"
-      }
-    ],
-    "controlEdges": [
-      {
-        "from": "c",
-        "fromPort": "next",
-        "to": "h"
-      }
-    ],
-    "valueEdges": [
-      {
-        "from": "c",
-        "fromPort": "value",
-        "to": "h",
-        "toPort": "value"
-      }
-    ]
-  },
-  {
     "id": "Graph.Ability.Slash",
     "kind": "Script",
     "entry": "c",

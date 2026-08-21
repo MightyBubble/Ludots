@@ -112,7 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             for (int i = 0; i < packages.Count; i++)
             {
-                var (name, symbols, program, kind) = packages[i];
+                var (name, symbols, program, kind, mapTriggerEntries) = packages[i];
                 GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections, _builtinHandlers);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
@@ -132,7 +132,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 GraphInstructionSourceMap sourceMap = _pendingSourceMaps.TryGetValue(name, out GraphInstructionSourceMap pendingMap)
                     ? pendingMap
                     : GraphInstructionSourceMap.Empty;
-                _registry.Register(id, program, kind, sourceMap, symbols);
+                _registry.Register(id, program, kind, sourceMap, symbols, mapTriggerEntries);
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
@@ -155,7 +155,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             for (int i = 0; i < packages.Count; i++)
             {
-                var (_, symbols, program, _) = packages[i];
+                var (_, symbols, program, _, _) = packages[i];
                 GraphProgramSymbolPatcher.PatchFuncLib(symbols, program, catalog);
             }
 

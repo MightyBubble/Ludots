@@ -1,0 +1,107 @@
+:root {
+  --fireball-accent: #ff9800;
+  --panel-bg: rgba(20, 20, 35, 0.88);
+  --hp-color: #ff4444;
+  --mp-color: #4488ff;
+  --atk-color: #ffaa00;
+  --hint-color: #888888;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 320px;
+  height: 220px;
+  overflow: hidden;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: transparent;
+}
+
+.panel.fireball {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--panel-bg);
+  border: 2px solid var(--fireball-accent);
+  border-radius: 10px;
+}
+
+.panel.fireball[data-ready="false"] {
+  opacity: 0.55;
+}
+
+.panel-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--fireball-accent);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  width: 34px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hp-label { color: var(--hp-color); }
+.mp-label { color: var(--mp-color); }
+.atk-label { color: var(--atk-color); }
+
+.bar {
+  flex: 1;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  transition: width 120ms linear;
+}
+
+.hp-fill { background: var(--hp-color); }
+.mp-fill { background: var(--mp-color); }
+
+.value {
+  width: 84px;
+  text-align: right;
+  font-size: 14px;
+  color: #dddddd;
+  font-variant-numeric: tabular-nums;
+}
+
+.atk-value {
+  width: auto;
+  color: var(--atk-color);
+  font-weight: 700;
+}
+
+.hint {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--hint-color);
+  text-align: right;
+}
+
+.link-status {
+  margin-top: 4px;
+  font-family: monospace;
+  text-align: left;
+}
