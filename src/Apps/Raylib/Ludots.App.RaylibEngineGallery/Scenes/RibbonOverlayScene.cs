@@ -14,6 +14,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
     {
         private readonly GroundOverlayBuffer _overlays = new(capacity: 64);
         private readonly SplineRibbonBuffer _ribbons = new(capacity: 16);
+        private readonly GalleryLitProps _litProps = new();
+        private readonly RaylibSkyboxRenderer _skybox = new();
+        private RaylibDirectionalShadowMap _shadowMap = null!;
 
         public string Id => "ribbon_overlay";
         public string Title => "样条带覆盖层";
@@ -21,18 +24,26 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
         {
             GalleryCamera.EnforceDistance(ref camera, 60f);
             float t = (float)totalTimeSeconds;
+            _litProps.Lighting.SetDayPhase(_litProps.DayPhase01);
 
-            Rl.ClearBackground(new Color(14, 16, 24, 255));
+            _shadowMap.BeginFrame(_litProps.Lighting.SunDirectionToward, Vector3.Zero, 42f);
+            DrawPropShadows();
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_litProps.Lighting, sizeMeters: 1300f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             Rl.BeginMode3D(camera);
-            Rl.DrawGrid(30, 3f);
-            Rl.DrawCube(new Vector3(-12f, 0.9f, 6f), 2.4f, 1.8f, 2.4f, new Color(74, 110, 168, 255));
-            Rl.DrawCube(new Vector3(13f, 0.9f, -8f), 2.4f, 1.8f, 2.4f, new Color(168, 96, 74, 255));
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
+            DrawProps();
 
             FillOverlays(t);
             RaylibWorldOverlayRenderer.DrawGroundOverlays(_overlays);
@@ -41,6 +52,19 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             RaylibWorldOverlayRenderer.DrawSplineRibbons(_ribbons);
 
             Rl.EndMode3D();
+        }
+
+        private void DrawProps()
+        {
+            _litProps.DrawCube(new Vector3(0f, -0.08f, 0f), new Vector3(70f, 0.16f, 70f), GalleryColors.ShadowReceiverGray, roughness: 0.9f);
+            _litProps.DrawCube(new Vector3(-12f, 0.9f, 6f), new Vector3(2.4f, 1.8f, 2.4f), new Vector4(0.29f, 0.43f, 0.66f, 1f));
+            _litProps.DrawCube(new Vector3(13f, 0.9f, -8f), new Vector3(2.4f, 1.8f, 2.4f), new Vector4(0.66f, 0.38f, 0.29f, 1f));
+        }
+
+        private void DrawPropShadows()
+        {
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(-12f, 0.9f, 6f), new Vector3(2.4f, 1.8f, 2.4f));
+            _litProps.DrawCubeShadow(_shadowMap, new Vector3(13f, 0.9f, -8f), new Vector3(2.4f, 1.8f, 2.4f));
         }
 
         private void FillOverlays(float t)
@@ -130,6 +154,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Dispose()
         {
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
+            _litProps.Dispose();
         }
     }
 }

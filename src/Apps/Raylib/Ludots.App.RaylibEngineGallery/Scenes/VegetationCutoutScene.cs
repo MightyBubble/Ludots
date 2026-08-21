@@ -18,9 +18,12 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryMaterialAssets _materials = new();
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
         private readonly (Vector3 Position, float Scale, int StableId)[] _tufts = BuildTufts();
+        private readonly GalleryLitProps _litProps = new();
 
         private RaylibPrimitiveRenderer _primitives = null!;
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "vegetation_cutout";
@@ -29,6 +32,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
         public void Load()
         {
+            _litProps.Load();
             GalleryTextureFactory.WritePng("grass_billboard.png", 96, 128, (x, y) =>
             {
                 float v = y / 127f;
@@ -78,15 +82,16 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _materials.Register("gallery.vegetation.grass", new MaterialAssetDescriptor(
                 GrassMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/grass_billboard.png" },
-                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/grass_billboard.png" });
             _materials.Register("gallery.vegetation.tree", new MaterialAssetDescriptor(
                 TreeMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/tree_billboard.png" },
-                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided));
+                MaterialAssetFlags.Cutout | MaterialAssetFlags.DoubleSided),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/tree_billboard.png" });
 
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.5f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _primitives = new RaylibPrimitiveRenderer(
                 RaylibPrimitiveRenderMode.Immediate,
                 GalleryAssetPaths.Instance,
@@ -100,13 +105,30 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             camera.target.Y = 3f;
 
             _lighting.SetDayPhase(0.5f);
+            BuildSnapshot();
 
-            Rl.ClearBackground(new Color(120, 158, 190, 255));
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 4f, 0f), 52f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _shadowMap.EndFrame();
+
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1200f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
+            _litProps.DayPhase01 = _lighting.DayPhase01;
+            _litProps.BeginFrame(camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             Rl.DrawGrid(30, 3f);
-            Rl.DrawCube(new Vector3(0f, -0.1f, 0f), 90f, 0.2f, 90f, new Color(64, 84, 52, 255));
+            _litProps.DrawCube(new Vector3(0f, -0.1f, 0f), new Vector3(90f, 0.2f, 90f), new Vector4(0.52f, 0.62f, 0.42f, 1f), roughness: 0.95f);
 
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.08f);
+            _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
+            Rl.EndMode3D();
+
+            GalleryFont.Draw($"cutout billboards {_snapshot.Count} (tufts {_tufts.Length} + trees)", 12, 28, 20, GalleryColors.RayWhite);
+        }
+
+        private void BuildSnapshot()
+        {
             _snapshot.BeginFrame();
             foreach ((Vector3 position, float scale, int stableId) in _tufts)
             {
@@ -130,11 +152,6 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                     new Vector4(1f, 1f, 1f, 1f),
                     TreeMaterialId));
             }
-
-            _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
-            Rl.EndMode3D();
-
-            GalleryFont.Draw($"cutout billboards {_snapshot.Count} (tufts {_tufts.Length} + trees)", 12, 28, 20, GalleryColors.RayWhite);
         }
 
         private static (Vector3, float, int)[] BuildTufts()
@@ -160,6 +177,9 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
+            _litProps.Dispose();
             _disposed = true;
         }
     }

@@ -42,6 +42,7 @@
   - [Core Field2D](architecture/core-field2d.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)
   - [Raylib 引擎能力标准化 Showcase](architecture/engine-capability-showcases.md)
+  - [渲染光照栈与下游使用指南](architecture/render-lighting-guide.md)
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)

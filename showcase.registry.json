@@ -6899,6 +6899,48 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "engine_raylib_lighting",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·光照全效",
+      "summary": "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_lighting",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_lighting",
+      "screenshot": "artifacts/acceptance/engine_raylib_lighting/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_crowd_anim",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·大量动画实例合批",
+      "summary": "4k mannequin 真骨骼 GPU 蒙皮实例化合批——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_crowd_anim",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_crowd_anim",
+      "screenshot": "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
       "id": "capability_standard_graph_op_HidePanel",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
       "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj",
