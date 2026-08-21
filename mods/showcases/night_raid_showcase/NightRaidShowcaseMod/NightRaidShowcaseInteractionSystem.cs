@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -17,8 +16,8 @@ namespace NightRaidShowcaseMod;
 
 /// <summary>
 /// Hard-coded interaction layer, deliberately dumb: left click teleports the hero to the
-/// clicked ground point, right click queries the entity near the cursor and shows a
-/// message. Every rule that fires afterwards (stage/tick/yield/panel) lives in the map's
+/// clicked ground point, right click zeroes Health on the nearest killable entity.
+/// Every rule that fires afterwards (stage/tick/yield/panel) lives in the map's
 /// TriggerGraph data — this system never touches map variables.
 /// </summary>
 internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
@@ -31,7 +30,6 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
 
     private readonly GameEngine _engine;
     private readonly int _healthId;
-    private string _lastMessage = "Left click: teleport hero | Right click: query entity";
     private int _leftCooldown;
     private int _rightCooldown;
 
@@ -70,7 +68,6 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
                 {
                     Value = Fix64Vec2.FromInt((int)ground.X, (int)ground.Z),
                 });
-                _lastMessage = $"Teleported hero to ({(int)ground.X}, {(int)ground.Z})";
             }
         }
 
@@ -78,22 +75,15 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         {
             _rightCooldown = ActionCooldownTicks;
             Entity target = FindNearest(new Vector2(ground.X, ground.Z), maxDistanceCm: 400f);
-            if (target == Entity.Null || !_engine.World.IsAlive(target))
+            if (target != Entity.Null && _engine.World.IsAlive(target) && _engine.World.Has<AttributeBuffer>(target))
             {
-                _lastMessage = "Kill tool: nothing within 400cm of the cursor";
-            }
-            else
-            {
-                string name = _engine.World.TryGet(target, out Name nameComponent) ? nameComponent.Value : "?";
                 ref AttributeBuffer attributes = ref _engine.World.Get<AttributeBuffer>(target);
                 attributes.SetCurrent(_healthId, 0f);
                 FireKillToolUsed(target);
-                _lastMessage = $"Kill tool zeroed {name} — the map DeathRule and graph take it from here";
             }
         }
 
         PublishReadabilityOverlays();
-        PublishHud(ground, hasGround);
     }
 
     /// <summary>
@@ -156,44 +146,6 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             registry);
     }
 
-    private void PublishHud(Vector3 ground, bool hasGround)
-    {
-        if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay)
-        {
-            return;
-        }
-
-        var variables = _engine.CurrentMapSession?.Variables;
-        int stage = variables?.ReadInt("stage") ?? 0;
-        int killCount = variables?.ReadInt("kill_count") ?? 0;
-        int threshold = variables?.ReadInt("kill_threshold") ?? -1;
-        int toolUses = variables?.ReadInt("tool_uses") ?? 0;
-        int overrideActive = variables?.ReadInt("override_active") ?? 0;
-
-        var title = new Vector4(0.45f, 0.9f, 1f, 1f);
-        var value = new Vector4(1f, 0.82f, 0.42f, 1f);
-        var normal = new Vector4(0.92f, 0.95f, 0.98f, 1f);
-        var warn = new Vector4(1f, 0.45f, 0.4f, 1f);
-        overlay.AddRect(18, 18, 720, 176, new Vector4(0.03f, 0.05f, 0.08f, 0.9f),
-            new Vector4(0.25f, 0.65f, 0.82f, 0.95f), 7400, 0);
-        overlay.AddText(34, 32, "NIGHT RAID - TriggerGraph basics", 24, title, 7401, 1);
-        overlay.AddText(34, 64,
-            $"stage {stage}/5   kills {killCount}/{threshold}   tool_uses {toolUses}   override {(overrideActive > 0 ? "ON" : "off")}",
-            16, value, 7403, 1);
-        overlay.AddText(34, 92,
-            "1 load -> 2 enter circle -> kill raiders to threshold -> 3 boss phase -> 4 boss dies -> yield 2 beats -> 5 VICTORY panel",
-            13, normal, 7405, 1);
-        overlay.AddText(34, 118, _lastMessage, 14, normal, 7406, 1);
-        if (hasGround)
-        {
-            overlay.AddText(34, 146, $"pointer ground ({(int)ground.X}, {(int)ground.Z}) cm", 13, normal, 7407, 1);
-        }
-        else
-        {
-            overlay.AddText(34, 146, "pointer ground UNAVAILABLE - terrain/raycast not resolving, clicks dead", 13, warn, 7407, 1);
-        }
-    }
-
     private Entity FindHero()
     {
         Entity found = Entity.Null;
@@ -212,7 +164,7 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
     {
         Entity nearest = Entity.Null;
         float best = maxDistanceCm * maxDistanceCm;
-        var query = new QueryDescription().WithAll<WorldPositionCm, Name>();
+        var query = new QueryDescription().WithAll<WorldPositionCm, Name, AttributeBuffer>();
         _engine.World.Query(in query, (Entity entity, ref WorldPositionCm position) =>
         {
             if (!_engine.World.IsAlive(entity))
