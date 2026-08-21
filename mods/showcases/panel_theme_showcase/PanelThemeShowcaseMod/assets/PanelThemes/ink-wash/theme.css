@@ -1,0 +1,36 @@
+/* ink-wash — 水墨主题：宣纸纹理、墨字、朱砂印章。 */
+.panel {
+  background-color: rgba(245, 240, 228, 235);
+  background-image: url(images/paper.png);
+  border: 3px solid rgba(43, 43, 43, 225);
+  border-radius: 4px;
+  padding: 14px;
+}
+
+.panel .title {
+  color: rgb(28, 28, 28);
+  font-family: "KaiTi", "STKaiti", "楷体", serif;
+  font-size: 18px;
+  letter-spacing: 6px;
+}
+
+.rows {
+  background-image: url(images/seal.png);
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+
+.row {
+  color: rgb(51, 51, 51);
+  font-family: "KaiTi", "STKaiti", "楷体", serif;
+  font-size: 15px;
+}
+
+.row-health { color: rgb(140, 29, 24); }
+.row-mana { color: rgb(31, 56, 100); }
+.row-attack { color: rgb(59, 47, 47); }
+
+.hint {
+  color: rgb(120, 110, 100);
+  font-family: "KaiTi", "STKaiti", "楷体", serif;
+}

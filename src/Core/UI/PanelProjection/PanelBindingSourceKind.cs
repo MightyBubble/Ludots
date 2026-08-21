@@ -30,5 +30,12 @@ namespace Ludots.Core.UI.PanelProjection
         /// row resolved and field read through GraphLookupTableRegistry.
         /// </summary>
         TableLookup = 5,
+
+        /// <summary>
+        /// Designed pool/base value from the same entity AttributeBuffer slot
+        /// (GetBase, not GetCurrent) — for current/max displays that must not
+        /// duplicate the base as presentation constants.
+        /// </summary>
+        AttributeBase = 6,
     }
 }

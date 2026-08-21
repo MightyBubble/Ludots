@@ -28,6 +28,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibSkyboxRenderer _skybox = new();
         private RaylibRenderEnvironmentConfig _environment = RaylibRenderEnvironmentConfig.CreateDefault();
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "water";
@@ -59,6 +60,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _water.LoadDescriptors(new MergedConfigEntry[] { new("gallery.ocean", waterConfig) });
             _water.EnsureActiveForMap("gallery");
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.42f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _environment = _environment with
             {
                 Skybox = _environment.Skybox with
@@ -77,7 +79,11 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             camera.target.Y = 1.5f;
 
             _lighting.SetDayPhase(0.42f);
-            _terrainRenderer.ApplyFrameLighting(_lighting);
+            _environment = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1200f);
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new System.Numerics.Vector3(camera.target.X, 3f, camera.target.Z), 180f);
+            _terrainRenderer.RenderTerrainShadow(_terrain, camera, _shadowMap);
+            _shadowMap.EndFrame();
+            _terrainRenderer.ApplyFrameLighting(_lighting, _shadowMap, shadowTexelWorld: 0.25f);
 
             _water.EnsureRenderTargets(Rl.GetScreenWidth(), Rl.GetScreenHeight());
             _water.Advance(deltaSeconds);
@@ -117,6 +123,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _terrainRenderer?.Dispose();
             _skybox?.Dispose();
             _water?.Dispose();
+            _shadowMap?.Dispose();
             _water = null!;
             _terrainRenderer = null!;
             _skybox = null!;

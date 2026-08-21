@@ -15,7 +15,8 @@ namespace Ludots.Core.UI.PanelProjection
             IReadOnlyList<PanelTemplateVariable> variables,
             IReadOnlyList<PanelTemplateBind>? binds = null,
             IReadOnlyList<PanelTemplateEvent>? events = null,
-            IReadOnlyList<PanelIntentMapEntry>? intents = null)
+            IReadOnlyList<PanelIntentMapEntry>? intents = null,
+            string? skin = null)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -89,6 +90,7 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             Id = id.Trim();
+            Skin = string.IsNullOrWhiteSpace(skin) ? null : skin.Trim();
             Variables = variables;
             Binds = safeBinds;
             Events = safeEvents;
@@ -96,6 +98,9 @@ namespace Ludots.Core.UI.PanelProjection
         }
 
         public string Id { get; }
+
+        /// <summary>Per-template default skin; instance op param wins, then game.json default.</summary>
+        public string? Skin { get; }
         public IReadOnlyList<PanelTemplateVariable> Variables { get; }
         public IReadOnlyList<PanelTemplateBind> Binds { get; }
         public IReadOnlyList<PanelTemplateEvent> Events { get; }
@@ -125,7 +130,8 @@ namespace Ludots.Core.UI.PanelProjection
             string? graphOutputKey = null,
             string? lookupTable = null,
             string? lookupField = null,
-            string? keyAttribute = null)
+            string? keyAttribute = null,
+            bool realtime = false)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -135,6 +141,7 @@ namespace Ludots.Core.UI.PanelProjection
             Name = name.Trim();
             Kind = kind;
             SourceKind = sourceKind;
+            Realtime = realtime;
 
             // Reuse the binding contract's own fail-closed field rules.
             Binding = new PanelVariableBinding(Name, sourceKind, attributeId, graphOutputKey, lookupTable, lookupField, keyAttribute, kind);
@@ -153,6 +160,9 @@ namespace Ludots.Core.UI.PanelProjection
         public string? LookupTable { get; }
         public string? LookupField { get; }
         public string? KeyAttribute { get; }
+
+        /// <summary>Opt-in: only realtime variables are touched by the host's realtime refresh pass.</summary>
+        public bool Realtime { get; }
 
         internal PanelVariableBinding Binding { get; }
 

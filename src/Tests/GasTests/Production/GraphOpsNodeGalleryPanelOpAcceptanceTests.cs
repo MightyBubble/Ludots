@@ -35,4 +35,32 @@ public sealed class GraphOpsNodeGalleryPanelOpAcceptanceTests
                 $"HidePanel detail missing phrase: {runtime.Metrics.Detail}");
         }
     }
+
+    [Test]
+    public void CreatePanelVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("CreatePanel");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"CreatePanel detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
+
+    [Test]
+    public void DestroyPanelVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("DestroyPanel");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"DestroyPanel detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
 }

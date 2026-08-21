@@ -9,6 +9,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -29,6 +30,7 @@ namespace Ludots.Core.Systems
         private readonly World _world;
         private readonly WorldMap _worldMap;
         private EffectRequestQueue _effectRequests;
+        private EntityTriggerGraphMounts? _entityTriggerGraphMounts;
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
         private PresenterEntityRuntime _presenterRuntime;
@@ -62,6 +64,11 @@ namespace Ludots.Core.Systems
         public void SetEffectRequestQueue(EffectRequestQueue effectRequests)
         {
             _effectRequests = effectRequests;
+        }
+
+        public void SetEntityTriggerGraphMounts(EntityTriggerGraphMounts entityTriggerGraphMounts)
+        {
+            _entityTriggerGraphMounts = entityTriggerGraphMounts ?? throw new ArgumentNullException(nameof(entityTriggerGraphMounts));
         }
 
         public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
@@ -98,10 +105,30 @@ namespace Ludots.Core.Systems
             _templateSources.Clear();
             foreach (var template in TemplateRegistry.GetAll())
             {
+                ValidateTemplateTriggerGraphs(template);
                 EntityTemplateKeys.Register(template.Id);
                 if (report != null && report.TryGetWinner("Entities/templates.json", template.Id, out string sourceUri))
                 {
                     _templateSources[template.Id] = sourceUri;
+                }
+            }
+        }
+
+        private static void ValidateTemplateTriggerGraphs(EntityTemplate template)
+        {
+            List<string>? graphs = template.TriggerGraphs;
+            if (graphs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                string? name = graphs[i];
+                if (string.IsNullOrWhiteSpace(name) || !string.Equals(name, name.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{template.Id}' TriggerGraphs[{i}] must be a trimmed non-empty graph id string.");
                 }
             }
         }
@@ -211,6 +238,7 @@ namespace Ludots.Core.Systems
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                    BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
                 }
 
                 if (hasDirectBootstrap)
@@ -301,10 +329,21 @@ namespace Ludots.Core.Systems
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
+                BufferEntityTriggerGraphs(entity, entityData.Template, templates[entityData.Template]);
             }
 
             FlushPendingTemplateBatch();
             return entityIndex;
+        }
+
+        private void BufferEntityTriggerGraphs(Entity entity, string templateId, EntityTemplate template)
+        {
+            if (_entityTriggerGraphMounts == null || template.TriggerGraphs is not { Count: > 0 })
+            {
+                return;
+            }
+
+            _entityTriggerGraphMounts.BufferMapLoadSpawn(entity, templateId, template.TriggerGraphs);
         }
 
         private static bool TryBuildBatchRequest(

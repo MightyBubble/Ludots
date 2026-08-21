@@ -2,6 +2,7 @@
 
 - [Ludots 文档](README.md)
 - [快速开始](quick-start.md)
+- [Agent Bridge](agent-bridge.md)
 - [贡献与开发](contributing/README.md)
   - [编码标准](contributing/coding-standards.md)
   - [Feature 开发工作流](contributing/feature-development-workflow.md)
@@ -15,6 +16,7 @@
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [UI 面板作者形态（四种表面）](architecture/ui-panel-authoring-form.md)
   - [UIP-0：Template / Instance / Router 合同](architecture/ui-panel-template-instance-router.md)
+  - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
@@ -41,6 +43,7 @@
   - [Core Field2D](architecture/core-field2d.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)
   - [Raylib 引擎能力标准化 Showcase](architecture/engine-capability-showcases.md)
+  - [渲染光照栈与下游使用指南](architecture/render-lighting-guide.md)
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)

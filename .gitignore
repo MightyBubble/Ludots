@@ -111,3 +111,9 @@ $RECYCLE.BIN/
 
 # 站点组装产物
 _site/
+
+# 本地工作环境产物——不得入库（PR 审计 #1037 教训）
+.npmcache/
+.tmp-logs/
+.dsh-*
+.worktrees/

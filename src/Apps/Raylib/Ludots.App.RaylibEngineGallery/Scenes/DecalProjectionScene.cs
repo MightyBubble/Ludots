@@ -27,8 +27,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private readonly GalleryPrimitiveSnapshot _snapshot = new();
 
         private RaylibVisualHeightmapRenderer _terrain = new() { VisibleRadiusCm = 60_000f };
+        private readonly RaylibSkyboxRenderer _skybox = new();
         private RaylibPrimitiveRenderer _primitives = null!;
         private RaylibFrameLighting _lighting = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "decal_projection";
@@ -68,20 +70,21 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             _materials.Register("gallery.decal.ring", new MaterialAssetDescriptor(
                 RingMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_ring.png" },
-                MaterialAssetFlags.Transparent));
+                MaterialAssetFlags.Transparent),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_ring.png" });
             _materials.Register("gallery.decal.arrow", new MaterialAssetDescriptor(
                 ArrowMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_arrow.png" },
-                MaterialAssetFlags.Cutout));
+                MaterialAssetFlags.Cutout),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_arrow.png" });
             _materials.Register("gallery.decal.target", new MaterialAssetDescriptor(
                 TargetMaterialId,
                 MaterialAssetDomain.Surface,
-                new[] { "generated/decal_target.png" },
-                MaterialAssetFlags.Transparent));
+                MaterialAssetFlags.Transparent),
+                new Dictionary<string, string> { [MaterialTextureSlots.Albedo] = "generated/decal_target.png" });
 
             _lighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: 0.44f);
+            _shadowMap = new RaylibDirectionalShadowMap();
             _terrain.ApplyFrameLighting(_lighting);
             _terrain.BindStampHeightSampleSource(_heightmap);
             _primitives = new RaylibPrimitiveRenderer(
@@ -99,13 +102,18 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             float t = (float)totalTimeSeconds;
             _lighting.SetDayPhase(0.44f);
-            _terrain.ApplyFrameLighting(_lighting);
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 8f, 0f), 190f);
+            _terrain.RenderShadow(_heightmap, camera, _shadowMap);
+            _shadowMap.EndFrame();
+            _terrain.ApplyFrameLighting(_lighting, _shadowMap, shadowTexelWorld: 0.35f);
 
-            Rl.ClearBackground(new Color(88, 120, 150, 255));
+            RaylibRenderEnvironmentConfig skyConfig = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1600f);
+            Rl.ClearBackground(skyConfig.Skybox.ClearColor);
             Rl.BeginMode3D(camera);
+            _skybox.Draw(camera, totalTimeSeconds, skyConfig);
             _terrain.Render(_heightmap, camera);
 
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.08f);
             _snapshot.BeginFrame();
             Vector3 ringPos = new(MathF.Cos(t * 0.35f) * 46f, 6f, MathF.Sin(t * 0.35f) * 46f);
             Vector3 arrowPos = new(MathF.Cos(t * 0.5f + 2.2f) * 30f, 6f, MathF.Sin(t * 0.5f + 2.2f) * 30f);
@@ -128,6 +136,8 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
 
             _primitives?.Dispose();
             _terrain?.Dispose();
+            _shadowMap?.Dispose();
+            _skybox.Dispose();
             _terrain = null!;
             _disposed = true;
         }

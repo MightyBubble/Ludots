@@ -84,7 +84,6 @@ namespace Ludots.Tests.Presentation
             int workerMaterialId = materials.Register(
                 "workerMetal",
                 MaterialAssetDomain.Surface,
-                new[] { "materials/workerMetal.mat" },
                 MaterialAssetFlags.None);
 
             Assert.That(defaultMaterialId, Is.GreaterThan(0));

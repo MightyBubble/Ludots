@@ -14,10 +14,39 @@ namespace Ludots.Core.GraphRuntime
         public string Id { get; set; } = string.Empty;
         public string Kind { get; set; } = string.Empty;
         public string Entry { get; set; } = string.Empty;
+        /// <summary>TriggerGraph-only dispatch table; replaces <see cref="Entry"/> for that kind and must be empty for every other kind.</summary>
+        public List<TriggerGraphEntryConfig> Entries { get; set; } = new();
         public List<GraphControlFlowNode> Nodes { get; set; } = new();
         public List<GraphControlFlowEdge> ControlEdges { get; set; } = new();
         public List<GraphControlFlowValueEdge> ValueEdges { get; set; } = new();
         public List<GraphOutputConfig> Outputs { get; set; } = new();
+    }
+
+    public sealed class TriggerGraphEntryConfig
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Event { get; set; } = string.Empty;
+        public string Start { get; set; } = string.Empty;
+        public bool Once { get; set; }
+        public string? Refire { get; set; }
+        public TriggerGraphEntryFiltersConfig? Filters { get; set; }
+        /// <summary>Compiled filter struct produced by entry validation; default when no filters are authored.</summary>
+        public TriggerGraphEntryFilters ParsedFilters { get; set; }
+        /// <summary>Normalized refire policy ("ignore"/"restart"); default "ignore".</summary>
+        public string NormalizedRefire { get; set; } = TriggerGraphEntry.RefireIgnore;
+    }
+
+    /// <summary>
+    /// Authoring shape of a TriggerGraph entry filters block; direction is authored as
+    /// "cross_above" / "cross_below" and compiled to the typed enum.
+    /// </summary>
+    public sealed class TriggerGraphEntryFiltersConfig
+    {
+        public string? Region { get; set; }
+        public string? Tag { get; set; }
+        public int? Team { get; set; }
+        public float? Threshold { get; set; }
+        public string? Direction { get; set; }
     }
 
     public sealed class GraphControlFlowNode
@@ -42,8 +71,16 @@ namespace Ludots.Core.GraphRuntime
         public string? BuiltinHandler { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
-        /// <summary>Panel type symbol for ShowPanel/HidePanel ops (#1014).</summary>
+        /// <summary>Panel type symbol for ShowPanel/HidePanel/CreatePanel/DestroyPanel ops (#1014).</summary>
         public string? PanelType { get; set; }
+        /// <summary>Placement anchor symbol for CreatePanel (surface-side region id).</summary>
+        public string? PanelAnchor { get; set; }
+        /// <summary>Skin id for CreatePanel (Unreal-style creation-time render param; optional).</summary>
+        public string? PanelSkin { get; set; }
+        /// <summary>Viewport Z-order for CreatePanel; maps to surface lease priority. Default 100.</summary>
+        public float? PanelZOrder { get; set; }
+        /// <summary>Map variable name symbol for ReadMapVarInt/ReadMapVarFloat/WriteMapVarInt/WriteMapVarFloat.</summary>
+        public string? Var { get; set; }
         public string? RelationshipType { get; set; }
         public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }

@@ -176,6 +176,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ShowPanel = 439,
         /// <summary>Request the named panel type to become hidden. Imm = panel type symbol.</summary>
         HidePanel = 440,
+
+        // ── Panel instance lifecycle ──
+        /// <summary>Instantiate a panel. Imm = packed template|anchor key ids (symbol pair pre-patch); E[A] = scope entity (A=0xFF → caster).</summary>
+        CreatePanel = 441,
+        /// <summary>Dispose panel instances of a template. Imm = template key id (symbol pre-patch); E[A] = scope entity (A=0xFF → any scope).</summary>
+        DestroyPanel = 442,
+
+        // ── Map-scoped variables (443-446) ──
+        /// <summary>I[Dst] = map variable (Imm=varName keyId) read from the map owning E[A] (A=0xFF → caster).</summary>
+        ReadMapVarInt = 443,
+        /// <summary>F[Dst] = map variable (Imm=varName keyId) read from the map owning E[A] (A=0xFF → caster).</summary>
+        ReadMapVarFloat = 444,
+        /// <summary>Map variable (Imm=varName keyId) of the map owning E[B] (B=0xFF → caster) := I[A].</summary>
+        WriteMapVarInt = 445,
+        /// <summary>Map variable (Imm=varName keyId) of the map owning E[B] (B=0xFF → caster) := F[A].</summary>
+        WriteMapVarFloat = 446,
     }
 
     public static class GraphNodeOpParser
