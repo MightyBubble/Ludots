@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Rng;
 namespace RngCoreTests
 {
     [TestFixture]
+    [Category("ci-gate")]
     public class DistributionTableTests
     {
         private static DistributionEntryConfig Entry(string id, int weight, bool enabled = true, bool locked = false, DistributionModulationConfig? modulation = null)
@@ -207,6 +208,24 @@ namespace RngCoreTests
             Assert.That(
                 () => service.PickByKeyId(999, 0f),
                 Throws.InvalidOperationException.With.Message.Contains("Unknown distribution key id"));
+        }
+
+        [Test]
+        public void RngPickService_ResolveDistributionKey_UnknownName_Throws()
+        {
+            var service = CreateService();
+
+            Assert.That(
+                () => service.ResolveDistributionKey("no.such.dist"),
+                Throws.InvalidOperationException.With.Message.Contains("no.such.dist"));
+        }
+
+        [Test]
+        public void RngPickService_ResolveDistributionKey_KnownName_MatchesGetDistributionKeyId()
+        {
+            var service = CreateService();
+
+            Assert.That(service.ResolveDistributionKey("test.loot"), Is.EqualTo(service.GetDistributionKeyId("test.loot")));
         }
 
         [Test]

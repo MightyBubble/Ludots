@@ -7031,6 +7031,33 @@
       "video": null,
       "status": "experimental",
       "notes": "Epic #1039 Phase 3 首切片：确定性核心+旋钮+重放证明经 AgentBridge 工具验收；视觉直方图面板为后续切片。"
+    },
+    {
+      "id": "capability_standard_graph_op_WeightedPick",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
+      "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj",
+      "title": "命运袋里掏一件",
+      "summary": "掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "WeightedPick"
+      ],
+      "binding": "capability_standard_graph_op_WeightedPick",
+      "preset": "capability_standard_graph_op_WeightedPick_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WeightedPick.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_WeightedPick",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WeightedPick/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WeightedPick/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

@@ -119,7 +119,7 @@ public sealed class GraphOpsNodeGallerySyncGateTests
             }
         }
 
-        Assert.That(entries.Count, Is.EqualTo(125), "per-op registry entry count");
+        Assert.That(entries.Count, Is.EqualTo(126), "per-op registry entry count");
         Assert.That(failures, Is.Empty, "Registry/vignette copy drift:\n" + string.Join("\n", failures));
     }
 

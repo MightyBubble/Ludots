@@ -398,6 +398,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveRngDistribution(string name)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.RngDistributionUnavailable");
+        }
+
         int ResolveGraphLookupTable(string name)
         {
             throw new InvalidOperationException(

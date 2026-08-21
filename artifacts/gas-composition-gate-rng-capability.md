@@ -93,3 +93,17 @@
   归属后续 LootCapabilityMod / showcase 切片。
 
 判定不变：A（op 组合，无 enum/preset 开关）。
+
+---
+
+## 附录 2：作者面切片（#1045，2026-08-21）
+
+**核心判断**：仍为 **A**——交付物是既有 op（443）的作者 JSON 接线：符号绑定走 `GraphProgramSymbolPatcher` + `GraphOperandRole.SymbolImm`（ResolveTableRow/panel ops 的既有前门机制），编译 case 走两个编译器的既有发射路径。无新 enum、无 profile DSL、无平行管线。
+
+**Layer assignment**：符号 patcher/双编译器 case = 作者管线接线（Layer 3 面）；覆盖注册表 + 画廊剧本 = 验收资产；StringIntRegistry 替换手搓 keyId 反查 = 消除插入序漂移（复用 `Ludots.Core.Registry.StringIntRegistry` 先例）。
+
+**失败关闭合同**：作者图引用未声明的分布名 → 编译期诊断失败（对照 lookupTable 未知表名行为）；运行期未知 key id 维持既有抛错。
+
+**复用清单**：GraphProgramSymbolPatcher、GraphOperandRole.SymbolImm、GraphControlFlowCompiler(.Linear) 既有 case 模板、graph_node_op_coverage.registry + Vignettes 画廊管线、ci-gate Category + solution-verify 接线、StringIntRegistry。
+
+**红线自查**：未新增 Core enum 变体（443 已存在）；未建第二符号系统（复用 patcher）；未知分布名不回退默认分布（编译期即拒）。

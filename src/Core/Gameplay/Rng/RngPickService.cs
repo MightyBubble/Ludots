@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Engine.Randomization;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.Rng;
 
@@ -8,7 +9,7 @@ public sealed class RngPickService
 {
     private readonly IRngStreamService _streams;
     private readonly Dictionary<string, DistributionTable> _tables;
-    private readonly Dictionary<int, string> _tablesByKeyId = new();
+    private readonly StringIntRegistry _keyIds = new(comparer: StringComparer.Ordinal);
 
     public RngPickService(IRngStreamService streams, IReadOnlyList<DistributionTable> tables)
     {
@@ -22,7 +23,7 @@ public sealed class RngPickService
             }
 
             _tables.Add(table.Id, table);
-            _tablesByKeyId.Add(_tablesByKeyId.Count + 1, table.Id);
+            _keyIds.Register(table.Id);
         }
     }
 
@@ -48,18 +49,26 @@ public sealed class RngPickService
 
     public int GetDistributionKeyId(string distributionId)
     {
-        var table = GetDistribution(distributionId);
-        foreach (var pair in _tablesByKeyId)
+        GetDistribution(distributionId);
+        return _keyIds.GetId(distributionId);
+    }
+
+    public int ResolveDistributionKey(string name)
+    {
+        var id = _keyIds.GetId(name);
+        if (id == _keyIds.InvalidId)
         {
-            if (_tables[pair.Value] == table) return pair.Key;
+            throw new InvalidOperationException(
+                $"Unknown rng distribution '{name}'. Declare it in assets/Rng/distributions.json before referencing it from a graph.");
         }
 
-        throw new InvalidOperationException($"Distribution '{distributionId}' has no key id.");
+        return id;
     }
 
     public int PickByKeyId(int keyId, float modulation)
     {
-        if (!_tablesByKeyId.TryGetValue(keyId, out var distributionId))
+        var distributionId = _keyIds.GetName(keyId);
+        if (string.IsNullOrEmpty(distributionId))
         {
             throw new InvalidOperationException($"Unknown distribution key id {keyId}.");
         }

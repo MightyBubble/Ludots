@@ -821,6 +821,9 @@ namespace Ludots.Core.Engine
                 fogKnowledgeProjector);
             // Lookup TextToken columns resolve against PresentationTextCatalog; load catalog before graphs.
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var rngStreams = new Randomization.RngStreamService();
+            var rngTables = new Gameplay.Rng.DistributionConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, rngStreams);
+            var rngPickService = new Gameplay.Rng.RngPickService(rngStreams, rngTables);
             var graphLookupTables = new GraphLookupTableLoader(ConfigPipeline, presentationTextCatalog)
                 .Load(ConfigCatalog, ConfigConflictReport);
             var graphSymbolResolver = new GasGraphSymbolResolver(
@@ -830,7 +833,8 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
-                lookupTables: graphLookupTables);
+                lookupTables: graphLookupTables,
+                rngPicks: rngPickService);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
@@ -861,9 +865,6 @@ namespace Ludots.Core.Engine
             AbilityFormSetIdRegistry.Clear();
             ContextGroupIdRegistry.Clear();
             var itemConfigLoader = new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions);
-            var rngStreams = new Randomization.RngStreamService();
-            var rngTables = new Gameplay.Rng.DistributionConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport, rngStreams);
-            var rngPickService = new Gameplay.Rng.RngPickService(rngStreams, rngTables);
             var exchangeLoader = new ExchangeConfigLoader(
                 ConfigPipeline,
                 exchangeOperations,

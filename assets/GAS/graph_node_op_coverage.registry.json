@@ -2542,6 +2542,26 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy"
       ]
+    },
+    {
+      "op": "WeightedPick",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_WeightedPick",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPickVignette_PicksFromDeclaredDistributionAndSettles",
+        "GraphOpsNodeGalleryRngAcceptanceTests.WeightedPick_AuthoringWithEmptyDistribution_FailsClosedAtCompile"
+      ]
     }
   ]
 }

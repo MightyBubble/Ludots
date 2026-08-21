@@ -5,6 +5,7 @@ using NUnit.Framework;
 namespace RngCoreTests
 {
     [TestFixture]
+    [Category("ci-gate")]
     public class RngStreamServiceTests
     {
         [Test]
