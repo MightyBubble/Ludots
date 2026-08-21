@@ -1,4 +1,4 @@
-﻿# 架构决策记录
+# 架构决策记录
 
 本目录存放 Ludots 的架构决策记录。ADR 用于说明“为什么采用当前方案”，不重复完整规范与实现细节。
 
@@ -6,8 +6,9 @@
 
 *   [ADR-0001 文档 SSOT 分层结构](ADR-0001-docs-ssot-layout.md)
 *   [ADR-0002 统一 UI Runtime 与三前端写法](ADR-0002-unified-ui-runtime-and-authoring-models.md)
-*   [ADR-0003 Exchange Operation 与 Scope Key 身份模型](ADR-0003-exchange-operation-scope-key.md)
+*   [ADR-0003 Browser UI Runtime Contract](ADR-0003-browser-ui-runtime-contract.md)
 *   [ADR-0004 时间体系：Entity-local 时间域与回合语义收敛](ADR-0004-time-system-entity-local-and-turn-semantics.md)
+*   [ADR-0005 Exchange Operation 与 Scope Key 身份模型](ADR-0005-exchange-operation-scope-key.md)
 
 ## 2 编写规则
 

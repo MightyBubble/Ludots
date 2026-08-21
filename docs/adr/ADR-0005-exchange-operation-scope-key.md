@@ -1,4 +1,4 @@
-# ADR-0003 Exchange Operation 与 Scope Key 身份模型
+# ADR-0005 Exchange Operation 与 Scope Key 身份模型
 
 本记录说明 Ludots 为什么采用 `operationId + scopeKey` 表达动态 Exchange 实例，并把商店、合成、配方和未来 4X 交易统一收敛到中性 `Exchange` 语义。
 

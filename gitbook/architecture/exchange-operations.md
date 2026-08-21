@@ -85,4 +85,4 @@ GAS 使用 `Exchange` preset 和 `ExecuteExchange` handler 触发结算：
 ## 深度材料
 
 * 深度架构：`docs/architecture/exchange_architecture.md`
-* 决策记录：`docs/adr/ADR-0003-exchange-operation-scope-key.md`
+* 决策记录：`docs/adr/ADR-0005-exchange-operation-scope-key.md`

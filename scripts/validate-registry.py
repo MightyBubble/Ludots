@@ -21,11 +21,18 @@
     两个方向均可通过注册表 exemptions 数组豁免。
   ⑤ mods/showcases/ 下每个 csproj（含 csproj 的目录）必须有注册表条目覆盖，
     或列入注册表 exemptions 数组。
+  ⑥ 每条目非空 artifactDir 必须存在于 git 树中。存量缺失记警告（治理追赶项，
+    见 tests.html），补齐后转错误。
+  ⑦ artifacts/acceptance/ 与 artifacts/evidence/ 下每个第一层条目（目录或文件）
+    必须被某个 artifactDir 引用（含前缀包含），或列入 exemptions（治理追赶项，
+    先记警告）。
 
 exemptions 数组元素格式（写在 showcase.registry.json 顶层）：
-  { "kind": "csproj",  "value": "mods/showcases/foo/FooMod/FooMod.csproj", "reason": "..." }
-  { "kind": "binding", "value": "some_binding_name",                       "reason": "..." }
-kind=csproj 的 value 也可以是含 csproj 的目录路径。
+  { "kind": "csproj",      "value": "mods/showcases/foo/FooMod/FooMod.csproj", "reason": "..." }
+  { "kind": "binding",     "value": "some_binding_name",                       "reason": "..." }
+  { "kind": "artifactDir", "value": "artifacts/acceptance/some_dir",           "reason": "..." }
+kind=csproj 的 value 也可以是含 csproj 的目录路径；kind=artifactDir 的 value
+是 artifacts/acceptance 或 artifacts/evidence 下的第一层条目路径。
 
 失败时以非零码退出并打印全部错误。
 """
@@ -54,6 +61,7 @@ STATUSES = {"active", "experimental", "retired"}
 REQUIRED_FIELDS = ("id", "tier", "category", "title")
 T1_REQUIRED_FIELDS = ("binding", "preset", "acceptanceTest", "screenshot")
 DEFAULT_SCAN_ROOT = "mods/showcases"
+ARTIFACT_SCAN_ROOTS = ("artifacts/acceptance", "artifacts/evidence")
 
 
 def norm(path: str) -> str:
@@ -110,6 +118,23 @@ def list_csproj_dirs(repo: Path, scan_root: str) -> list:
     return sorted(dirs)
 
 
+def list_first_level(repo: Path, root: str) -> list:
+    """列出 root 下的第一层条目名（目录与文件），git 树优先，回退文件系统。"""
+    ok, out = git(repo, ["ls-tree", "--name-only", "HEAD", "--", root + "/"])
+    if ok:
+        names = []
+        for line in out.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            names.append(line[len(root) + 1:] if line.startswith(root + "/") else line)
+        return sorted(names)
+    root_path = repo / root
+    if not root_path.is_dir():
+        return []
+    return sorted(p.name for p in root_path.iterdir())
+
+
 def load_json(path: Path, label: str, errors: list):
     if not path.is_file():
         errors.append(f"{label} 不存在: {path}")
@@ -159,6 +184,7 @@ def main() -> int:
         exemptions = []
     csproj_exempts = set()
     binding_exempts = set()
+    artifact_exempts = set()
     for i, ex in enumerate(exemptions):
         if isinstance(ex, str):  # 兼容简写：纯字符串按 csproj 路径豁免
             csproj_exempts.add(norm(ex))
@@ -172,6 +198,8 @@ def main() -> int:
             csproj_exempts.add(norm(ex["value"]))
         elif ex["kind"] == "binding":
             binding_exempts.add(str(ex["value"]))
+        elif ex["kind"] == "artifactDir":
+            artifact_exempts.add(norm(ex["value"]))
         else:
             warnings.append(f"exemptions[{i}] 未知 kind={ex['kind']!r}，已忽略")
 
@@ -283,6 +311,35 @@ def main() -> int:
             f"{scan_root} 下目录 '{d}' 含 csproj 但无注册表条目"
             f"（需新增条目或加入 exemptions: kind=csproj）"
         )
+
+    # ---------- ⑥ artifactDir 存在性 ----------
+    # 注册表声明的证据目录必须真实存在；存量缺口先记警告（治理追赶项，
+    # 见 #1034 评论的反向对账），补齐后转错误。
+    artifact_dirs = {}  # 归一化 artifactDir -> entry
+    for i, entry in entries:
+        label = f"showcases[{i}](id={entry.get('id', '?')})"
+        ad = entry.get("artifactDir")
+        if not non_empty(ad):
+            continue
+        rel = norm(ad)
+        artifact_dirs.setdefault(rel, entry)
+        if not path_exists_in_tree(repo, rel):
+            warnings.append(f"{label} artifactDir 在 git 树中不存在: {rel}")
+
+    # ---------- ⑦ acceptance/evidence 孤儿反查 ----------
+    # 证据目录存在但没有任何 artifactDir 指向它，说明注册表没接线或证据是
+    # 残留；先记警告，接线/清理/豁免后转错误。
+    for artifact_root in ARTIFACT_SCAN_ROOTS:
+        for child in list_first_level(repo, artifact_root):
+            rel = f"{artifact_root}/{child}"
+            if rel in artifact_exempts:
+                continue
+            covered = any(rel == ad or ad.startswith(rel + "/") for ad in artifact_dirs)
+            if not covered:
+                warnings.append(
+                    f"{artifact_root} 下 '{child}' 未被任何 artifactDir 引用"
+                    f"（需接线、清理或加入 exemptions: kind=artifactDir）"
+                )
 
     # ---------- 汇总 ----------
     for w in warnings:

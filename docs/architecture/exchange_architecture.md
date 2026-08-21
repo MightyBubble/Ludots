@@ -107,4 +107,4 @@ Architecture guard tests enforce the absence of obvious scenario words and alloc
 * `src/Core/Gameplay/GAS/BuiltinHandlers.cs`
 * `assets/Configs/Exchange/operations.json`
 * `mods/showcases/item_system/ItemSystemShowcaseMod/assets/Exchange/operations.json`
-* `docs/adr/ADR-0003-exchange-operation-scope-key.md`
+* `docs/adr/ADR-0005-exchange-operation-scope-key.md`

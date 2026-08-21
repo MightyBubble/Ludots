@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string[]]$Paths = @()
 )
@@ -329,6 +329,27 @@ foreach ($markdownFile in $markdownFilesForNaming) {
     foreach ($rule in $namingRules) {
         if ($relativeSource.StartsWith($rule.Prefix) -and ($name -notmatch $rule.Pattern)) {
             Add-Finding -Collection $findings -Rule $rule.Rule -Source $relativeSource -Detail "file name does not match pattern '$($rule.Pattern)'"
+        }
+    }
+}
+
+if (-not $scopedMode) {
+    $adrDir = Join-Path $repoRoot 'docs/adr'
+    $adrReadme = Join-Path $adrDir 'README.md'
+    if ((Test-Path $adrDir) -and (Test-Path $adrReadme)) {
+        $adrFiles = Get-ChildItem -Path $adrDir -File -Filter 'ADR-*.md'
+        $adrGroups = $adrFiles | Group-Object { if ($_.Name -match '^ADR-(\d{4})-') { $Matches[1] } }
+        foreach ($group in $adrGroups) {
+            if ($group.Count -gt 1) {
+                $names = ($group.Group | ForEach-Object { "docs/adr/$($_.Name)" }) -join ', '
+                Add-Finding -Collection $findings -Rule 'adr-duplicate-number' -Source $names -Detail "duplicate ADR number '$($group.Name)'"
+            }
+        }
+        $adrReadmeContent = Get-Content -Raw -Encoding UTF8 $adrReadme
+        foreach ($adrFile in $adrFiles) {
+            if ($adrReadmeContent -notmatch [regex]::Escape($adrFile.Name)) {
+                Add-Finding -Collection $findings -Rule 'adr-not-indexed' -Source "docs/adr/$($adrFile.Name)" -Detail 'ADR file is not listed in docs/adr/README.md'
+            }
         }
     }
 }
