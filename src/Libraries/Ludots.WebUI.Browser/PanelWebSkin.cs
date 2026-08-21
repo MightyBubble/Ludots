@@ -99,10 +99,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
 
         // Async init only enqueues outcomes on worker threads; every dictionary mutation
         // and resource release happens here on the update thread (single-writer rule).
-        while (_initOutcomes.TryDequeue(out InitOutcome outcome))
-        {
-            ApplyInitOutcome(outcome);
-        }
+        DrainInitOutcomes();
 
         // Panels appear per template id; one web surface per template (single-instance
         // showcase contract; multi-instance stacking is the W5 slice).
@@ -155,10 +152,8 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         }
 
         _disposed = true;
-        while (_initOutcomes.TryDequeue(out InitOutcome outcome))
-        {
-            ApplyInitOutcome(outcome);
-        }
+        WaitForInitCompletion();
+        DrainInitOutcomes();
 
         foreach (WebPanel panel in _panels.Values)
         {
@@ -173,7 +168,6 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         IBrowserSurface? surface = null;
         WebUiDataPlaneRuntime? dataPlane = null;
         WebUiDataPlaneTickPump? pump = null;
-        UiSurfaceLeaseHandle lease = default;
         PanelWebCanvasContent? canvasContent = null;
         try
         {
@@ -192,17 +186,6 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             pump.TrackTopic(panel.Topic);
 
             canvasContent = new PanelWebCanvasContent(surface, _root);
-            lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
-                $"panel-web-skin:{panel.TemplateId}",
-                UiSurfaceSegment.Main,
-                priority: 100));
-            _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                () => Ui.Canvas(canvasContent)
-                    .Id($"panel-web-skin-{panel.TemplateId}")
-                    .WidthPercent(100f)
-                    .HeightPercent(100f)
-                    .Absolute(0f, 0f)
-                    .ZIndex(24)));
 
             await surface.NavigateAsync(new BrowserNavigationRequest(
                 BrowserLocalAppUri.Create("/", "topic=" + Uri.EscapeDataString(panel.Topic)))).ConfigureAwait(false);
@@ -215,11 +198,11 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
                     CancellationToken.None).ConfigureAwait(false);
             }
 
-            _initOutcomes.Enqueue(InitOutcome.Succeeded(panel, surface, dataPlane, pump, lease, canvasContent));
+            _initOutcomes.Enqueue(InitOutcome.Succeeded(panel, surface, dataPlane, pump, canvasContent));
         }
         catch (Exception ex)
         {
-            _initOutcomes.Enqueue(InitOutcome.Failed(panel, surface, dataPlane, pump, lease, canvasContent, ex));
+            _initOutcomes.Enqueue(InitOutcome.Failed(panel, surface, dataPlane, pump, canvasContent, ex));
         }
         finally
         {
@@ -231,31 +214,24 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     {
         if (outcome.Error == null)
         {
-            outcome.Panel.Attach(outcome.Surface!, outcome.DataPlane!, outcome.Pump!, outcome.Lease, outcome.CanvasContent!);
+            // Surface-host interaction stays on the update thread: Acquire/Publish touch
+            // shared lease and scene state with no locking.
+            UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                $"panel-web-skin:{outcome.Panel.TemplateId}",
+                UiSurfaceSegment.Main,
+                priority: 100));
+            _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
+                () => Ui.Canvas(outcome.CanvasContent!)
+                    .Id($"panel-web-skin-{outcome.Panel.TemplateId}")
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .Absolute(0f, 0f)
+                    .ZIndex(24)));
+            outcome.Panel.Attach(outcome.Surface!, outcome.DataPlane!, outcome.Pump!, lease, outcome.CanvasContent!);
             return;
         }
 
-        // Release every partially-acquired resource in teardown order before retry bookkeeping.
-        if (outcome.CanvasContent != null)
-        {
-            outcome.CanvasContent.Dispose();
-        }
-
-        if (outcome.DataPlane != null)
-        {
-            outcome.DataPlane.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-
-        if (outcome.Surface != null)
-        {
-            outcome.Surface.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-
-        if (outcome.Lease != default)
-        {
-            _surfaceHost.Release(outcome.Lease);
-        }
-
+        ReleaseResources(outcome.Panel.TemplateId, lease: default, outcome.DataPlane, outcome.CanvasContent, outcome.Surface);
         _panels.Remove(outcome.Panel.TemplateId);
         int attempts = _initAttempts.GetValueOrDefault(outcome.Panel.TemplateId) + 1;
         _initAttempts[outcome.Panel.TemplateId] = attempts;
@@ -302,14 +278,77 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
 
     private void TearDownPanel(WebPanel panel)
     {
-        if (panel.Lease != default)
+        ReleaseResources(panel.TemplateId, panel.Lease, panel.DataPlane, panel.CanvasContent, panel.Surface);
+    }
+
+    private void DrainInitOutcomes()
+    {
+        while (_initOutcomes.TryDequeue(out InitOutcome outcome))
         {
-            _surfaceHost.Release(panel.Lease);
+            try
+            {
+                ApplyInitOutcome(outcome);
+            }
+            catch (Exception ex)
+            {
+                // One poisoned outcome must not abort the update loop or the remaining drain.
+                Ludots.Core.Diagnostics.Log.Error(
+                    in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"[PanelWebSkin] init outcome handling failed for '{outcome.Panel.TemplateId}': {ex.Message}");
+            }
+        }
+    }
+
+    private void WaitForInitCompletion()
+    {
+        long deadline = Environment.TickCount64 + 2000;
+        while (Volatile.Read(ref _inFlight) > 0 && Environment.TickCount64 < deadline)
+        {
+            Thread.Sleep(10);
+        }
+    }
+
+    /// <summary>Teardown order shared by failure cleanup and full dispose: lease, data plane, canvas, surface.</summary>
+    private void ReleaseResources(
+        string templateId,
+        UiSurfaceLeaseHandle lease,
+        WebUiDataPlaneRuntime? dataPlane,
+        PanelWebCanvasContent? canvasContent,
+        IBrowserSurface? surface)
+    {
+        if (lease != default)
+        {
+            TryRelease(() => _surfaceHost.Release(lease), templateId, "lease");
         }
 
-        panel.DataPlane?.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        panel.CanvasContent?.Dispose();
-        panel.Surface?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        if (dataPlane != null)
+        {
+            TryRelease(() => dataPlane.DisposeAsync().AsTask().GetAwaiter().GetResult(), templateId, "data plane");
+        }
+
+        if (canvasContent != null)
+        {
+            TryRelease(canvasContent.Dispose, templateId, "canvas content");
+        }
+
+        if (surface != null)
+        {
+            TryRelease(() => surface.DisposeAsync().AsTask().GetAwaiter().GetResult(), templateId, "surface");
+        }
+    }
+
+    private void TryRelease(Action release, string templateId, string what)
+    {
+        try
+        {
+            release();
+        }
+        catch (Exception ex)
+        {
+            Ludots.Core.Diagnostics.Log.Error(
+                in Ludots.Core.Diagnostics.LogChannels.Engine,
+                $"[PanelWebSkin] releasing {what} for '{templateId}' failed: {ex.Message}");
+        }
     }
 
     private sealed record InitOutcome(
@@ -317,7 +356,6 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         IBrowserSurface? Surface,
         WebUiDataPlaneRuntime? DataPlane,
         WebUiDataPlaneTickPump? Pump,
-        UiSurfaceLeaseHandle Lease,
         PanelWebCanvasContent? CanvasContent,
         Exception? Error)
     {
@@ -326,19 +364,17 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             IBrowserSurface surface,
             WebUiDataPlaneRuntime dataPlane,
             WebUiDataPlaneTickPump pump,
-            UiSurfaceLeaseHandle lease,
             PanelWebCanvasContent canvasContent)
-            => new(panel, surface, dataPlane, pump, lease, canvasContent, null);
+            => new(panel, surface, dataPlane, pump, canvasContent, null);
 
         public static InitOutcome Failed(
             WebPanel panel,
             IBrowserSurface? surface,
             WebUiDataPlaneRuntime? dataPlane,
             WebUiDataPlaneTickPump? pump,
-            UiSurfaceLeaseHandle lease,
             PanelWebCanvasContent? canvasContent,
             Exception error)
-            => new(panel, surface, dataPlane, pump, lease, canvasContent, error);
+            => new(panel, surface, dataPlane, pump, canvasContent, error);
     }
 
     private sealed class WebPanel
