@@ -31,7 +31,7 @@ public sealed class RngShowcaseRuntime
     public RngShowcaseRuntime(RngPickService picks)
     {
         _picks = picks ?? throw new ArgumentNullException(nameof(picks));
-        DistributionId = FirstDistributionId() ?? throw new InvalidOperationException(
+        DistributionId = FeaturedDistributionId() ?? throw new InvalidOperationException(
             "RngShowcaseMod requires at least one distribution in Rng/distributions.json.");
     }
 
@@ -43,9 +43,10 @@ public sealed class RngShowcaseRuntime
     public long TotalPicks { get; private set; }
     public int TickCounter { get; private set; }
 
-    private string? FirstDistributionId()
+    private string? FeaturedDistributionId()
     {
-        return _picks.DistributionIds.OrderBy(id => id, StringComparer.Ordinal).FirstOrDefault();
+        var ordered = _picks.DistributionIds.OrderBy(id => id, StringComparer.Ordinal).ToList();
+        return ordered.FirstOrDefault(id => id.EndsWith(".loot", StringComparison.Ordinal)) ?? ordered.FirstOrDefault();
     }
 
     public void Tick()
@@ -158,9 +159,14 @@ public sealed class RngShowcaseRuntime
         var modulation = ModulationPermille / 1000f;
         var entries = new JsonArray();
         var actualTotal = 0L;
+        var pickableTotal = 0f;
         for (var i = 0; i < table.EntryCount && i < _actualCounts.Length; i++)
         {
             actualTotal += _actualCounts[i];
+            if (table.GetEntry(i).Enabled)
+            {
+                pickableTotal += table.GetEffectiveShare(i, modulation);
+            }
         }
 
         for (var i = 0; i < table.EntryCount && i < _actualCounts.Length; i++)
@@ -178,7 +184,7 @@ public sealed class RngShowcaseRuntime
                 ["effectiveShare"] = Math.Round(expected, 5),
                 ["actual"] = _actualCounts[i],
                 ["actualPct"] = actualTotal > 0 ? Math.Round(_actualCounts[i] * 100.0 / actualTotal, 2) : 0,
-                ["expectedPct"] = Math.Round(expected * 100, 2),
+                ["expectedPct"] = entry.Enabled && pickableTotal > 0 ? Math.Round(expected / pickableTotal * 100, 2) : 0,
             });
         }
 

@@ -288,7 +288,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ShowPanel or
                 GraphNodeOp.HidePanel or
                 GraphNodeOp.CreatePanel or
-                GraphNodeOp.DestroyPanel
+                GraphNodeOp.DestroyPanel or
+                GraphNodeOp.WeightedPick
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
