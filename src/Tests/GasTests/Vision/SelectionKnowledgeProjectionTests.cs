@@ -131,7 +131,7 @@ public sealed class SelectionKnowledgeProjectionTests
         var globals = new Dictionary<string, object>
         {
         };
-        ClientLocalSeatTestBindings.BindSoleSeat(globals, diagnosticsViewer, 1);
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, diagnosticsViewer, 1, "seat.0");
         var store = new KnowledgeProjectionStore();
         store.Upsert(localViewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, localViewer));
         globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
@@ -163,7 +163,7 @@ public sealed class SelectionKnowledgeProjectionTests
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = input,
         };
-        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
         var store = new KnowledgeProjectionStore();
         store.Upsert(local, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, local));
         store.Upsert(local, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
@@ -205,7 +205,7 @@ public sealed class SelectionKnowledgeProjectionTests
             [CoreServiceKeys.EntityCollectionStore.Name] = new EntityCollectionStore(collectionKeys),
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
         };
-        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
+        ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1, "seat.0");
         return globals;
     }
 

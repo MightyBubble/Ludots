@@ -201,7 +201,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             FlushSpawnDiff(session, state);
             FlushLifecycleRing(session, state, state.Deaths, GameEvents.EntityDied);
             FlushAliveCounts(session, state);
-            FireHeartbeat(session, state.HeartbeatIndex);
+            Fire(session, GameEvents.MapHeartbeat, ctx =>
+                ctx.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, state.HeartbeatIndex));
         }
 
         private void CollectCurrentMembers(MapSession session, MapHeartbeatState state)
@@ -247,7 +248,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 Entity spawned = state.SpawnScratch[i];
                 int teamId = ResolveTeamId(spawned);
-                FireSource(session, GameEvents.EntitySpawned, spawned, teamId);
+                Fire(session, GameEvents.EntitySpawned, ctx =>
+                {
+                    ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, spawned);
+                    ctx.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
+                });
             }
 
             HashSet<Entity> swapped = state.PreviousMembers;
@@ -267,7 +272,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 for (int i = 0; i < drained; i++)
                 {
                     QueuedLifecycleEvent queued = _drainScratch[i];
-                    FireSource(session, eventKey, queued.Source, queued.TeamId);
+                    Fire(session, eventKey, ctx =>
+                    {
+                        ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, queued.Source);
+                        ctx.Set(MapTriggerEventPayloadKeys.SourceTeamId, queued.TeamId);
+                    });
                 }
             }
         }
@@ -298,7 +307,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 int count = current.Value;
                 int delta = count - last;
                 state.LastAliveCounts[current.Key] = count;
-                FireAliveCountChanged(session, teamId, count, delta);
+                Fire(session, GameEvents.EntityAliveCountChanged, ctx =>
+                {
+                    ctx.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
+                    ctx.Set(MapTriggerEventPayloadKeys.Count, count);
+                    ctx.Set(MapTriggerEventPayloadKeys.Delta, delta);
+                });
             }
 
             state.TeamPruneScratch.Clear();
@@ -320,41 +334,23 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                FireAliveCountChanged(session, teamId, 0, -last);
+                Fire(session, GameEvents.EntityAliveCountChanged, ctx =>
+                {
+                    ctx.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
+                    ctx.Set(MapTriggerEventPayloadKeys.Count, 0);
+                    ctx.Set(MapTriggerEventPayloadKeys.Delta, -last);
+                });
             }
         }
 
-        private void FireHeartbeat(MapSession session, int heartbeatIndex)
-        {
-            ScriptContext context = CreateMapEventContext(session);
-            context.Set(MapTriggerEventPayloadKeys.HeartbeatIndex, heartbeatIndex);
-            _triggerManager.FireMapEvent(session.MapId, GameEvents.MapHeartbeat, context);
-        }
-
-        private void FireSource(MapSession session, EventKey eventKey, Entity source, int teamId)
-        {
-            ScriptContext context = CreateMapEventContext(session);
-            context.Set(MapTriggerEventPayloadKeys.SourceEntity, source);
-            context.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
-            _triggerManager.FireMapEvent(session.MapId, eventKey, context);
-        }
-
-        private void FireAliveCountChanged(MapSession session, int teamId, int count, int delta)
-        {
-            ScriptContext context = CreateMapEventContext(session);
-            context.Set(MapTriggerEventPayloadKeys.SourceTeamId, teamId);
-            context.Set(MapTriggerEventPayloadKeys.Count, count);
-            context.Set(MapTriggerEventPayloadKeys.Delta, delta);
-            _triggerManager.FireMapEvent(session.MapId, GameEvents.EntityAliveCountChanged, context);
-        }
-
-        private ScriptContext CreateMapEventContext(MapSession session)
+        private void Fire(MapSession session, EventKey eventKey, Action<ScriptContext> setPayload)
         {
             ScriptContext context = _contextFactory();
             context.Set(CoreServiceKeys.MapId, session.MapId);
             context.Set(CoreServiceKeys.MapSession, session);
             context.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
-            return context;
+            setPayload(context);
+            _triggerManager.FireMapEvent(session.MapId, eventKey, context);
         }
 
         private readonly struct QueuedLifecycleEvent

@@ -24,6 +24,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
         private RaylibRenderEnvironmentConfig _config = RaylibRenderEnvironmentConfig.CreateDefault();
         private RaylibFrameLighting _lighting = null!;
         private RaylibPrimitiveRenderer _primitives = null!;
+        private RaylibDirectionalShadowMap _shadowMap = null!;
         private bool _disposed;
 
         public string Id => "atmosphere_fog";
@@ -61,6 +62,7 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 vfs: null,
                 materials: null,
                 channelRegistrar: GalleryAnimationChannels.Register);
+            _shadowMap = new RaylibDirectionalShadowMap();
         }
 
         public void Draw(float deltaSeconds, double totalTimeSeconds, ref Camera3D camera)
@@ -69,13 +71,15 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             camera.target = new Vector3(0f, 18f, -180f);
 
             _lighting.SetDayPhase(0.40f);
-            _environment.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), new Color(120, 146, 168, 255));
-
-            Rl.BeginMode3D(camera);
-            _environment.DrawSkybox(camera, totalTimeSeconds);
-
-            _primitives.ApplyFrameLighting(_lighting, camera.position);
+            _config = BuildEnvironmentConfig();
+            _environment.Config = _config;
             _snapshot.BeginFrame();
+            _snapshot.Add(GalleryItems.Mesh(
+                101,
+                999000,
+                new Vector3(0f, -0.12f, -340f),
+                new Vector3(92f, 0.24f, 720f),
+                new Vector4(0.28f, 0.32f, 0.36f, 1f)));
             for (int i = 0; i < 20; i++)
             {
                 float z = -20f - (i * 34f);
@@ -85,10 +89,40 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
                 _snapshot.Add(GalleryItems.Mesh(101, 300 + i, new Vector3(0f, 6f, z - 17f), new Vector3(20f, 12f, 8f), tint * 0.55f));
             }
 
+            _shadowMap.BeginFrame(_lighting.SunDirectionToward, new Vector3(0f, 8f, -340f), 380f);
+            _primitives.DrawShadow(_snapshot, _shadowMap, _meshes, camera);
+            _shadowMap.EndFrame();
+
+            _environment.BeginWorldFrame(Rl.GetScreenWidth(), Rl.GetScreenHeight(), _config.Skybox.ClearColor);
+
+            Rl.BeginMode3D(camera);
+            _environment.DrawSkybox(camera, totalTimeSeconds);
+
+            _primitives.ApplyFrameLighting(_lighting, camera.position, _shadowMap, shadowTexelWorld: 0.85f);
             _primitives.Draw(_snapshot, camera, _meshes, timeSeconds: totalTimeSeconds);
             Rl.EndMode3D();
 
             _environment.EndWorldFrame(totalTimeSeconds);
+        }
+
+        private RaylibRenderEnvironmentConfig BuildEnvironmentConfig()
+        {
+            RaylibRenderEnvironmentConfig sunSky = GallerySunSky.CreateConfig(_lighting, sizeMeters: 1600f);
+            return sunSky with
+            {
+                Lighting = sunSky.Lighting with
+                {
+                    FogColor = _lighting.FogColor,
+                    FogNearMeters = _lighting.FogParams.Y,
+                    FogFarMeters = _lighting.FogParams.Z,
+                    FogDensity = _lighting.FogParams.X,
+                },
+                Skybox = sunSky.Skybox with
+                {
+                    HorizonColor = _lighting.FogColor,
+                    GroundHazeColor = _lighting.FogColor * 0.8f,
+                },
+            };
         }
 
         public void Dispose()
@@ -99,8 +133,10 @@ namespace Ludots.App.RaylibEngineGallery.Scenes
             }
 
             _primitives?.Dispose();
+            _shadowMap?.Dispose();
             _environment?.Dispose();
             _environment = null!;
+            _shadowMap = null!;
             _disposed = true;
         }
     }

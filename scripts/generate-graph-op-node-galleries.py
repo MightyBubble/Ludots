@@ -4,7 +4,7 @@
 Reads:
   mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/{Op}.json
 Writes/upserts (do not hand-edit these outputs):
-  - gallery maps
+  - gallery maps (Variables copied from vignette.variables; MapVar ops fail-fast if missing)
   - thin entry mods under mods/showcases/capability_standard/graph_op_entries/
   - launcher.config.json bindings
   - launcher.presets.json raylib presets
@@ -53,6 +53,17 @@ MAP_TAGS = [
     "graph-ops",
     "per-op",
 ]
+
+MAP_VAR_OPS = frozenset(
+    {
+        "ReadMapVarInt",
+        "ReadMapVarFloat",
+        "WriteMapVarInt",
+        "WriteMapVarFloat",
+    }
+)
+
+VARIABLE_FIELDS = frozenset({"name", "type", "initial", "phase"})
 
 
 def merge_field(vignette_dir: Path, vignette: dict) -> dict:
@@ -129,13 +140,58 @@ def collect_team_bindings(actors: list, template_teams: dict[str, int]) -> list[
     ]
 
 
+def map_variables_from_vignette(op: str, vignette: dict) -> list[dict]:
+    raw = vignette.get("variables") or []
+    if op in MAP_VAR_OPS and not raw:
+        raise SystemExit(
+            f"Vignette {op} drives a map-variable op but has no variables[]; "
+            "gallery maps must declare Variables or MapVariableStore fail-closes."
+        )
+    if not raw:
+        return []
+    if not isinstance(raw, list):
+        raise SystemExit(f"Vignette {op} variables must be an array.")
+    declared: list[dict] = []
+    seen: set[str] = set()
+    for i, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise SystemExit(f"Vignette {op} variables[{i}] must be an object.")
+        unknown = set(item) - VARIABLE_FIELDS
+        if unknown:
+            raise SystemExit(
+                f"Vignette {op} variables[{i}] unknown fields: {sorted(unknown)}; "
+                f"allowed: {sorted(VARIABLE_FIELDS)}"
+            )
+        name = item.get("name")
+        typ = item.get("type")
+        if not isinstance(name, str) or not name.strip():
+            raise SystemExit(f"Vignette {op} variables[{i}] name is required.")
+        key = name.strip()
+        if key in seen:
+            raise SystemExit(f"Vignette {op} duplicate variable '{key}'.")
+        seen.add(key)
+        if typ not in ("int", "float"):
+            raise SystemExit(f"Vignette {op} variables[{i}] type must be int or float.")
+        if "initial" not in item:
+            raise SystemExit(f"Vignette {op} variables[{i}] initial is required.")
+        entry = {
+            "name": key,
+            "type": typ,
+            "initial": json_number(item["initial"]),
+        }
+        if item.get("phase"):
+            entry["phase"] = True
+        declared.append(entry)
+    return declared
+
+
 def write_map(
     path: Path,
     map_id: str,
     actors: list,
     camera: dict | None = None,
     template_teams: dict[str, int] | None = None,
-    variables: list | None = None,
+    variables: list[dict] | None = None,
 ) -> None:
     if not actors:
         raise SystemExit(f"Map {map_id} has no actors; per-op galleries must spawn people through MapLoader.")
@@ -154,11 +210,11 @@ def write_map(
         },
         "Entities": [actor_to_entity(actor) for actor in actors],
     }
+    if variables:
+        payload["Variables"] = variables
     teams = collect_team_bindings(actors, template_teams or {})
     if teams:
         payload["Teams"] = teams
-    if variables:
-        payload["Variables"] = variables
     dump(path, payload)
 
 ENTRY_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
@@ -423,7 +479,7 @@ def main() -> int:
             scene.get("actors") or [],
             scene.get("camera"),
             template_teams,
-            scene.get("variables"),
+            map_variables_from_vignette(op, scene),
         )
         write_entry_mod(repo, op, title)
 

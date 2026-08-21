@@ -1016,7 +1016,7 @@ namespace Ludots.Tests.GAS.Production
             if (!engine.World.IsAlive(owner))
             {
                 owner = target;
-                ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
+                ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
             }
 
             Span<Entity> next = stackalloc Entity[1];
@@ -1048,7 +1048,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner, 1, "seat.0");
         }
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)

@@ -17,8 +17,8 @@ namespace Ludots.Core.Client
         public static void BindSoleSeat(
             System.Collections.Generic.IDictionary<string, object> globals,
             Entity possessedRep,
-            int playerId = 1,
-            string seatId = "seat.0",
+            int playerId,
+            string seatId,
             CameraManager? primaryCamera = null,
             Vector2? presentResolutionPx = null)
         {
@@ -50,8 +50,8 @@ namespace Ludots.Core.Client
         public static void BindSoleSeat(
             GameEngine engine,
             Entity possessedRep,
-            int playerId = 1,
-            string seatId = "seat.0",
+            int playerId,
+            string seatId,
             Vector2? presentResolutionPx = null)
         {
             ArgumentNullException.ThrowIfNull(engine);

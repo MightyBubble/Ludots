@@ -2,7 +2,9 @@
 
 地图变量记得每一场胜利，开局张口就报数。
 
-> 录像资产待补；下面的作者图和启动命令可直接复现这颗节点的效果。
+<video controls playsinline preload="metadata" poster="artifacts/evidence/capability_standard_graph_op_ReadMapVarInt/poster.png" src="artifacts/evidence/capability_standard_graph_op_ReadMapVarInt/play.mp4">
+你的浏览器打不开这段录像。请从仓库打开 `artifacts/evidence/capability_standard_graph_op_ReadMapVarInt/play.mp4`。
+</video>
 
 ## 作者写法
 
@@ -10,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Script / MapTrigger |
+| 可用图种 | Script / TriggerGraph |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |

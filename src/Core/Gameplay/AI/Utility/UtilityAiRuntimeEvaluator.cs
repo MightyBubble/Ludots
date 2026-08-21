@@ -233,6 +233,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
+            if (task.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Utility AI task attempted to submit order type id {task.OrderTypeId} without a positive player id.");
+            }
+
             int slotIndex = task.AbilitySlotIndex >= 0
                 ? task.AbilitySlotIndex
                 : decision.AbilitySlotIndex;

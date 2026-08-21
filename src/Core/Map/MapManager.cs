@@ -351,9 +351,6 @@ namespace Ludots.Core.Map
                 target.HeartbeatIntervalTicks = source.HeartbeatIntervalTicks;
             }
 
-            // Merge DeathRule (source wins)
-            if (source.DeathRule != null) target.DeathRule = source.DeathRule;
-
             // Merge Variables (later fragment / child map replaces same-name declaration)
             if (source.Variables != null && source.Variables.Count > 0)
             {

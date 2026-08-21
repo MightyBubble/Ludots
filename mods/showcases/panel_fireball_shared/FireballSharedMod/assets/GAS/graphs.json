@@ -29,6 +29,11 @@
       {
         "id": "halt",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "show",
+        "op": "ShowPanel",
+        "panelType": "panel.fireball.status"
       }
     ],
     "controlEdges": [
@@ -39,6 +44,11 @@
       },
       {
         "from": "create",
+        "fromPort": "next",
+        "to": "show"
+      },
+      {
+        "from": "show",
         "fromPort": "next",
         "to": "ok"
       },

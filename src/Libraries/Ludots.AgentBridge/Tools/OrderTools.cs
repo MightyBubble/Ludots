@@ -14,7 +14,7 @@ namespace Ludots.AgentBridge.Tools
         public string Description =>
             "Inspect order pipeline state. Params: {entityId?: int, recent?: int (default 20)}. " +
             "With entityId: that entity's OrderBuffer (active order, queued orders with priority). " +
-            "Always includes global admission/terminal result buffers (most recent first).";
+            "Always includes global admission/terminal result buffers (most recent first) and the orderTypes key catalog (valid keys for ludots.orders.issue).";
 
         public JsonObject? InputSchema => new JsonObject
         {
@@ -85,6 +85,25 @@ namespace Ludots.AgentBridge.Tools
                     ["count"] = terminal.Count,
                     ["recent"] = terminalArray,
                 };
+            }
+
+            if (context.TryGetService(CoreServiceKeys.OrderTypeRegistry, out var orderTypes))
+            {
+                var typeArray = new JsonArray();
+                foreach (int typeId in orderTypes.GetRegisteredIds())
+                {
+                    if (orderTypes.TryGet(typeId, out var config))
+                    {
+                        typeArray.Add(new JsonObject
+                        {
+                            ["id"] = typeId,
+                            ["key"] = config.Key,
+                            ["label"] = config.Label,
+                        });
+                    }
+                }
+
+                result["orderTypes"] = typeArray;
             }
 
             return result;
@@ -194,7 +213,7 @@ namespace Ludots.AgentBridge.Tools
                 {
                     throw new AgentToolException(
                         AgentBridgeErrorCodes.InvalidParams,
-                        $"Unknown order type key '{key}'. Use ludots.orders.inspect or config to discover valid keys.");
+                        $"Unknown order type key '{key}'. Discover valid keys via ludots.orders.inspect (orderTypes field) or the order_types.json config.");
                 }
             }
             else

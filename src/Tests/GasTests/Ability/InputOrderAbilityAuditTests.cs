@@ -1476,7 +1476,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate, playerId: 1);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
 

@@ -123,6 +123,88 @@ public sealed class GraphOpsNodeGallerySyncGateTests
         Assert.That(failures, Is.Empty, "Registry/vignette copy drift:\n" + string.Join("\n", failures));
     }
 
+    [Test]
+    public void GeneratedMaps_DeclareVignetteVariables()
+    {
+        string repo = FindRepoRoot();
+        string vignetteDir = Path.Combine(repo, GalleryRelative, "Vignettes");
+        string mapsDir = Path.Combine(repo, GalleryRelative, "Maps");
+        var failures = new List<string>();
+
+        foreach (string file in Directory.GetFiles(vignetteDir, "*.json").OrderBy(f => f))
+        {
+            string op = Path.GetFileNameWithoutExtension(file);
+            if (op.StartsWith('_'))
+            {
+                continue;
+            }
+
+            using JsonDocument vignette = JsonDocument.Parse(File.ReadAllText(file));
+            if (!vignette.RootElement.TryGetProperty("variables", out JsonElement expected) ||
+                expected.ValueKind != JsonValueKind.Array ||
+                expected.GetArrayLength() == 0)
+            {
+                continue;
+            }
+
+            string mapPath = Path.Combine(mapsDir, "capability_standard_graph_op_" + op + ".json");
+            if (!File.Exists(mapPath))
+            {
+                failures.Add($"{op}: generated map missing {mapPath}");
+                continue;
+            }
+
+            using JsonDocument map = JsonDocument.Parse(File.ReadAllText(mapPath));
+            if (!map.RootElement.TryGetProperty("Variables", out JsonElement actual) ||
+                actual.ValueKind != JsonValueKind.Array)
+            {
+                failures.Add($"{op}: map has no Variables[] (rerun generate-graph-op-node-galleries.py after generator fix)");
+                continue;
+            }
+
+            if (actual.GetArrayLength() != expected.GetArrayLength())
+            {
+                failures.Add($"{op}: map Variables count {actual.GetArrayLength()} != vignette {expected.GetArrayLength()}");
+                continue;
+            }
+
+            for (int i = 0; i < expected.GetArrayLength(); i++)
+            {
+                JsonElement want = expected[i];
+                JsonElement got = actual[i];
+                string wantName = want.GetProperty("name").GetString()!;
+                string gotName = got.GetProperty("name").GetString()!;
+                if (wantName != gotName)
+                {
+                    failures.Add($"{op}: Variables[{i}].name map '{gotName}' != vignette '{wantName}'");
+                }
+
+                string wantType = want.GetProperty("type").GetString()!;
+                string gotType = got.GetProperty("type").GetString()!;
+                if (!string.Equals(wantType, gotType, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    failures.Add($"{op}: Variables[{i}].type map '{gotType}' != vignette '{wantType}'");
+                }
+
+                if (!JsonElementNumericEquals(want.GetProperty("initial"), got.GetProperty("initial")))
+                {
+                    failures.Add($"{op}: Variables[{i}].initial map {got.GetProperty("initial")} != vignette {want.GetProperty("initial")}");
+                }
+
+                bool wantPhase = want.TryGetProperty("phase", out JsonElement wantPhaseEl) &&
+                                 wantPhaseEl.ValueKind == JsonValueKind.True;
+                bool gotPhase = got.TryGetProperty("phase", out JsonElement gotPhaseEl) &&
+                                gotPhaseEl.ValueKind == JsonValueKind.True;
+                if (wantPhase != gotPhase)
+                {
+                    failures.Add($"{op}: Variables[{i}].phase map {gotPhase} != vignette {wantPhase}");
+                }
+            }
+        }
+
+        Assert.That(failures, Is.Empty, "Map/vignette Variables drift:\n" + string.Join("\n", failures));
+    }
+
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
@@ -133,5 +215,15 @@ public sealed class GraphOpsNodeGallerySyncGateTests
 
         Assert.That(dir, Is.Not.Null, "Repository root not found.");
         return dir.FullName;
+    }
+
+    private static bool JsonElementNumericEquals(JsonElement left, JsonElement right)
+    {
+        if (left.ValueKind != JsonValueKind.Number || right.ValueKind != JsonValueKind.Number)
+        {
+            return left.GetRawText() == right.GetRawText();
+        }
+
+        return left.GetDouble() == right.GetDouble();
     }
 }

@@ -105,11 +105,6 @@ namespace Ludots.Core.Map
 
         public IReadOnlyList<Trigger> Triggers => _triggers;
 
-        public void DestroyVariables()
-        {
-            Variables = null;
-        }
-
         /// <summary>
         /// Destroy entities belonging to THIS map (filtered by MapId) and dispose all boards.
         /// </summary>
@@ -167,7 +162,7 @@ namespace Ludots.Core.Map
                 }
             }
             _boards.Clear();
-            DestroyVariables();
+            Variables = null;
 
             State = MapSessionState.Disposed;
         }
@@ -181,7 +176,7 @@ namespace Ludots.Core.Map
                     try { kvp.Value.Dispose(); } catch { }
                 }
                 _boards.Clear();
-                DestroyVariables();
+                Variables = null;
                 State = MapSessionState.Disposed;
             }
         }

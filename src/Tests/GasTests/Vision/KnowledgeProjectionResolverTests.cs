@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
@@ -505,13 +505,14 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1, "seat.0");
 
-            Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);
+            Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, viewer, scout, out _), Is.True);
 
             long allocated = MeasureConsumerResolutionAllocations(
                 world,
                 globals,
+                viewer,
                 scout,
                 out int resolvedCount);
             Assert.That(resolvedCount, Is.EqualTo(10_000));
@@ -559,6 +560,7 @@ namespace Ludots.Tests.GAS
         private static long MeasureConsumerResolutionAllocations(
             World world,
             Dictionary<string, object> globals,
+            Entity viewer,
             Entity target,
             out int resolvedCount)
         {
@@ -567,7 +569,7 @@ namespace Ludots.Tests.GAS
             resolvedCount = 0;
             for (int i = 0; i < 10_000; i++)
             {
-                if (KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, target, out _))
+                if (KnowledgeProjectionConsumer.TryResolve(world, globals, viewer, target, out _))
                 {
                     resolvedCount++;
                 }

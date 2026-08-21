@@ -26,6 +26,14 @@
       }
     },
     {
+      "name": "clash_of_clones",
+      "target": {
+        "type": "path",
+        "value": "mods/games/coc/ClashOfClonesMod",
+        "projectPath": "ClashOfClonesMod.csproj"
+      }
+    },
+    {
       "name": "champion_skill_stress",
       "target": {
         "type": "path",
@@ -1478,6 +1486,34 @@
       }
     },
     {
+      "name": "panel_skin_markup",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod"
+      }
+    },
+    {
+      "name": "panel_skin_compose",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_compose/PanelSkinComposeMod"
+      }
+    },
+    {
+      "name": "panel_skin_reactive",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_reactive/PanelSkinReactiveMod"
+      }
+    },
+    {
+      "name": "panel_skin_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_skin_web/PanelSkinWebMod"
+      }
+    },
+    {
       "name": "capability_standard_graph_op_ReadMapVarFloat",
       "target": {
         "type": "path",
@@ -1522,6 +1558,55 @@
       "target": {
         "type": "path",
         "value": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod"
+      }
+    },
+    {
+      "name": "panel_theme_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_showcase/PanelThemeShowcaseMod"
+      }
+    },
+    {
+      "name": "panel_theme_ink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_ink/PanelThemeInkMod"
+      }
+    },
+    {
+      "name": "panel_theme_ink_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_ink_web/PanelThemeInkWebMod"
+      }
+    },
+    {
+      "name": "panel_theme_fantasy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_fantasy/PanelThemeFantasyMod"
+      }
+    },
+    {
+      "name": "panel_theme_fantasy_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_fantasy_web/PanelThemeFantasyWebMod"
+      }
+    },
+    {
+      "name": "panel_theme_minimal",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_minimal/PanelThemeMinimalMod"
+      }
+    },
+    {
+      "name": "panel_theme_minimal_web",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/panel_theme_minimal_web/PanelThemeMinimalWebMod"
       }
     }
   ],

@@ -1,0 +1,9 @@
+{
+  "name": "PanelSkinMarkupMod",
+  "version": "1.0.0",
+  "description": "Markup-skin panel: HTML/CSS rendered from PanelHost realtime variables",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0"
+  }
+}

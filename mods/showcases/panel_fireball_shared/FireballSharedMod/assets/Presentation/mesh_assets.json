@@ -1,0 +1,5 @@
+[
+  { "id": "fireball_showcase.hero_box", "type": "Primitive", "primitiveKind": "Cube" },
+  { "id": "fireball_showcase.target_box", "type": "Primitive", "primitiveKind": "Cube" },
+  { "id": "fireball_showcase.projectile_orb", "type": "Primitive", "primitiveKind": "Sphere" }
+]

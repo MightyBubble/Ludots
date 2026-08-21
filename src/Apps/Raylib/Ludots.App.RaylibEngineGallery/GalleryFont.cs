@@ -38,6 +38,19 @@ namespace Ludots.App.RaylibEngineGallery
             canvas.DrawText(text, x, y + (size * BaselineOffsetFactor), font, paint);
         }
 
+        public static void Reset()
+        {
+            if (!Instance.IsValueCreated)
+            {
+                return;
+            }
+
+            GalleryFont self = Instance.Value;
+            self._renderer?.Dispose();
+            self._renderer = null;
+            self._frameBegun = false;
+        }
+
         public static void Flush()
         {
             if (!Instance.IsValueCreated)

@@ -92,6 +92,7 @@ namespace Ludots.Tests.Presentation
                 globals,
                 owner,
                 playerId: 1,
+                seatId: "seat.0",
                 primaryCamera: logicCamera,
                 presentResolutionPx: new Vector2(800f, 600f));
 
@@ -124,6 +125,7 @@ namespace Ludots.Tests.Presentation
                 globals,
                 owner,
                 playerId: 1,
+                seatId: "seat.0",
                 primaryCamera: logicCamera,
                 presentResolutionPx: new Vector2(800f, 600f));
 

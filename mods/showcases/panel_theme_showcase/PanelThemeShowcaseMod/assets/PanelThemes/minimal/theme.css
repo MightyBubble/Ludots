@@ -1,0 +1,33 @@
+/* minimal — pure CSS theme, zero image assets. */
+.panel {
+  background-color: rgba(250, 250, 250, 245);
+  border: 1px solid rgba(20, 20, 20, 200);
+  border-radius: 2px;
+  padding: 16px;
+}
+
+.panel .title {
+  color: rgb(17, 17, 17);
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+}
+
+.row {
+  color: rgb(51, 51, 51);
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+}
+
+.row-paired {
+  color: rgb(17, 17, 17);
+}
+
+.row-health { color: rgb(17, 17, 17); }
+.row-mana { color: rgb(68, 68, 68); }
+.row-attack { color: rgb(34, 34, 34); }
+
+.hint {
+  color: rgb(153, 153, 153);
+  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+}

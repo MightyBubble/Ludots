@@ -990,7 +990,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.CreatePanel(
                 UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
                 UI.PanelHosting.PanelOpEncoding.UnpackAnchor(ins.Imm),
-                scope);
+                scope,
+                ins.B,
+                ins.ImmF);
         }
 
         private static void HandleDestroyPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1039,20 +1041,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
         {
-            // Event-driven graphs often carry dead sources (EntityDied's caster is the
-            // destroyed entity); the trigger mount scope is always a live map anchor, so it
-            // is the fallback before failing.
-            if (s.World != null &&
-                (!s.World.IsAlive(scope) || !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity)) &&
-                s.World.IsAlive(s.ExplicitTarget) &&
-                s.World.TryGet(s.ExplicitTarget, out mapEntity))
-            {
-                scope = s.ExplicitTarget;
-            }
-
             if (s.World == null ||
                 !s.World.IsAlive(scope) ||
-                !s.World.TryGet<MapEntity>(scope, out mapEntity))
+                !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity))
             {
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");

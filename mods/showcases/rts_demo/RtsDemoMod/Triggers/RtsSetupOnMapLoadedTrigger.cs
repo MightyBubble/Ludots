@@ -54,23 +54,22 @@ namespace RtsDemoMod.Triggers
 
             RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
             EnsureLocalCommandSourceOwner(engine, world);
-            EnsurePlayerOwnership(world);
+            RequirePlayerOwnership(world);
             RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
-            EnsureDefaultCommandSource(engine, world);
             return Task.CompletedTask;
         }
 
-        private static void EnsurePlayerOwnership(World world, int playerId = 1)
+        private static void RequirePlayerOwnership(World world)
         {
             var query = new QueryDescription().WithAll<Team>();
             world.Query(in query, (Entity entity, ref Team team) =>
             {
-                if (team.Id != playerId || world.Has<PlayerOwner>(entity))
+                if (!world.TryGet(entity, out PlayerOwner owner) ||
+                    owner.PlayerId != team.Id)
                 {
-                    return;
+                    throw new InvalidOperationException(
+                        $"RTS showcase entity {entity} has Team {team.Id} but no matching PlayerOwner. Author ownership in the entity template or map data.");
                 }
-
-                world.Add(entity, new PlayerOwner { PlayerId = playerId });
             });
         }
 
@@ -84,23 +83,6 @@ namespace RtsDemoMod.Triggers
             }
         }
 
-        private static void EnsureDefaultCommandSource(GameEngine engine, World world)
-        {
-            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
-            {
-                return;
-            }
-
-            Entity target = FindPreferredTarget(engine, world);
-            if (target == Entity.Null || !world.IsAlive(target))
-            {
-                return;
-            }
-
-            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(engine, target, snapCamera: false);
-        }
-
         private static bool HasTag(List<string> tags, string t)
         {
             for (int i = 0; i < tags.Count; i++)
@@ -110,150 +92,5 @@ namespace RtsDemoMod.Triggers
             return false;
         }
 
-        private static Entity FindFirstNamedEntity(World world, string nameToFind)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name>();
-            world.Query(in query, (Entity entity, ref Name name) =>
-            {
-                if (result == Entity.Null &&
-                    string.Equals(name.Value, nameToFind, StringComparison.OrdinalIgnoreCase))
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
-        }
-
-        private static Entity FindPreferredTarget(GameEngine engine, World world)
-        {
-            if (HasMapTag(engine, "rts_training"))
-            {
-                if (HasMapTag(engine, "war3"))
-                {
-                    Entity war3Producer = FindFirstNamedEntityContaining(world, "Barracks");
-                    if (war3Producer != Entity.Null)
-                    {
-                        return war3Producer;
-                    }
-                }
-
-                if (HasMapTag(engine, "cnc"))
-                {
-                    Entity cncProducer = FindFirstNamedEntityContaining(world, "War Factory");
-                    if (cncProducer != Entity.Null)
-                    {
-                        return cncProducer;
-                    }
-                }
-
-                if (HasMapTag(engine, "sc2"))
-                {
-                    Entity sc2Producer = FindFirstNamedEntityContaining(world, "Gateway");
-                    if (sc2Producer != Entity.Null)
-                    {
-                        return sc2Producer;
-                    }
-                }
-            }
-
-            Entity result = FindFirstNamedEntityContaining(world, "Peasant");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Barracks");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "War Factory");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Gateway");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "ConYard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Construction Yard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Drone");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            return FindFirstAbilityTarget(world);
-        }
-
-        private static bool HasMapTag(GameEngine engine, string tag)
-        {
-            var tags = engine.CurrentMapSession?.MapConfig?.Tags;
-            if (tags == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < tags.Count; i++)
-            {
-                if (string.Equals(tags[i], tag, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static Entity FindFirstNamedEntityContaining(World world, string token)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name>();
-            world.Query(in query, (Entity entity, ref Name name) =>
-            {
-                if (result != Entity.Null ||
-                    string.IsNullOrWhiteSpace(name.Value) ||
-                    name.Value.IndexOf(token, StringComparison.OrdinalIgnoreCase) < 0)
-                {
-                    return;
-                }
-
-                result = entity;
-            });
-
-            return result;
-        }
-
-        private static Entity FindFirstAbilityTarget(World world)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name, AbilityStateBuffer>();
-            world.Query(in query, (Entity entity, ref Name _, ref AbilityStateBuffer _) =>
-            {
-                if (result == Entity.Null)
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
-        }
     }
 }

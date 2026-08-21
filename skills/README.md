@@ -38,6 +38,8 @@
 | `ludots-visual-review` | audit | 基于关键帧和截图的视觉审阅 |
 | `ludots-hook-orchestrator` | tooling | hook packet 校验与后续 skill 路由 |
 | `ludots-ci-audit-gate` | tooling | PR / CI 证据完整性 gate |
+| `ludots-showcase-design` | delivery | 从模糊需求八步推导用户可读 showcase 设计（消融/解释层/旋钮/反向 API 审计） |
+| `ludots-agent-bridge` | tooling | 经环回 Agent Debug Bridge 驱动运行中的游戏进程：观察→驱动→验证与取证 |
 
 完整元数据见 `skills/registry.json`。
 

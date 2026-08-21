@@ -87,6 +87,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
         }
 
+        void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
+        }
+
         void DestroyPanel(int templateKeyId, Entity scope)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");

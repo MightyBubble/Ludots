@@ -59,7 +59,9 @@ namespace Ludots.Core.UI.PanelProjection
             return binding.SourceKind switch
             {
                 PanelBindingSourceKind.SingleAttribute or PanelBindingSourceKind.DerivedAttribute
-                    => ResolveAttribute(owner, in binding),
+                    => ResolveAttribute(owner, in binding, readBase: false),
+                PanelBindingSourceKind.AttributeBase
+                    => ResolveAttribute(owner, in binding, readBase: true),
                 PanelBindingSourceKind.AggregateProjection or PanelBindingSourceKind.GraphOutput
                     => ResolveGraphOutput(owner, in binding),
                 PanelBindingSourceKind.TableLookup
@@ -69,7 +71,7 @@ namespace Ludots.Core.UI.PanelProjection
             };
         }
 
-        private PanelProjectionValue ResolveAttribute(Entity owner, in PanelVariableBinding binding)
+        private PanelProjectionValue ResolveAttribute(Entity owner, in PanelVariableBinding binding, bool readBase)
         {
             string attributeId = binding.AttributeId
                 ?? throw new InvalidOperationException(
@@ -94,7 +96,7 @@ namespace Ludots.Core.UI.PanelProjection
                     $"Panel binding '{binding.VariableId}' attribute '{attributeId}' is not defined on owner #{owner.Id}.");
             }
 
-            float value = buffer.GetCurrent(id);
+            float value = readBase ? buffer.GetBase(id) : buffer.GetCurrent(id);
             uint revision = (uint)BitConverter.SingleToInt32Bits(value);
             return new PanelProjectionValue(binding.VariableId, binding.SourceKind, value, revision);
         }

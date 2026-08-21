@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
@@ -28,6 +27,7 @@
 
   <ItemGroup>
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
+    <Compile Include="..\TestCommon\BehaviorTreeFactory.cs" Link="BehaviorTreeFactory.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />
     <Compile Include="..\TestCommon\EntityCollectionTestAccess.cs" Link="EntityCollectionTestAccess.cs" />
     <Compile Include="..\TestCommon\ClientLocalSeatTestBindings.cs" Link="ClientLocalSeatTestBindings.cs" />
@@ -39,7 +39,6 @@
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\night_raid_showcase\NightRaidShowcaseMod\NightRaidShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\moba_demo\MobaDemoMod\MobaDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_api\DepApiMod\DepApiMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\dep_consumer\DepConsumerMod\DepConsumerMod.csproj" />
@@ -102,6 +101,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsNodeGalleryMod\CapabilityStandardGraphOpsNodeGalleryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\CapabilityStandardBehaviorTreeArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\map_trigger_night_raid\MapTriggerNightRaidMod\MapTriggerNightRaidMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\CapabilityStandardScriptFlowSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
@@ -136,6 +136,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Panels\Ludots.UI.Panels.csproj" />
   </ItemGroup>
 
   <ItemGroup>

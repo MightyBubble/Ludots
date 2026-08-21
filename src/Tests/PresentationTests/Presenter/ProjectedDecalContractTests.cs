@@ -264,7 +264,7 @@ namespace Ludots.Tests.Presentation
                 FindRepoRoot(),
                 "src",
                 "Client",
-                "Ludots.Client.Raylib",
+                "Ludots.Raylib.Render",
                 "Rendering",
                 "RaylibPrimitiveRenderer.cs"));
             int method = source.IndexOf("private bool TryDrawDecalItem", StringComparison.Ordinal);
@@ -292,16 +292,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void DrawTexturedDecal_FitsThroughReceiverContractNotFrameHeightmap()
+        public void DecalProjectorDraw_FitsThroughReceiverContractNotFrameHeightmap()
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
                 "src",
                 "Client",
-                "Ludots.Client.Raylib",
+                "Ludots.Raylib.Render",
                 "Rendering",
-                "RaylibPrimitiveRenderer.cs"));
-            int method = source.IndexOf("private void DrawTexturedDecal", StringComparison.Ordinal);
+                "RaylibDecalProjectorRenderer.cs"));
+            int method = source.IndexOf("public void Draw(", StringComparison.Ordinal);
             Assert.That(method, Is.GreaterThanOrEqualTo(0));
             int next = source.IndexOf("private void EnsureDecalResources", method, StringComparison.Ordinal);
             Assert.That(next, Is.GreaterThan(method));

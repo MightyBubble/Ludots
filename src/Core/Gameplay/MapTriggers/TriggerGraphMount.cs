@@ -8,7 +8,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
     {
         Map = 0,
         Entity = 1,
-        Ability = 2,
     }
 
     public sealed class TriggerGraphMount
@@ -17,7 +16,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private const string GraphField = "graph";
         private const string ScopeInstanceIdField = "scopeInstanceId";
         private const string DomainField = "domain";
-        private const string AbilityField = "ability";
 
         public string Graph { get; }
         public string ScopeInstanceId { get; }
@@ -25,19 +23,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// <summary>Mount domain; "map" unless authored otherwise.</summary>
         public TriggerGraphMountDomain Domain { get; }
 
-        /// <summary>
-        /// Ability config id binding for ability-domain mounts (map-JSON authored).
-        /// Null for map/entity-domain mounts; required for ability-domain mounts so the
-        /// per-instance identity (which ability's moments fire the graph) is explicit.
-        /// </summary>
-        public string Ability { get; }
-
-        private TriggerGraphMount(string graph, string scopeInstanceId, TriggerGraphMountDomain domain, string ability)
+        private TriggerGraphMount(string graph, string scopeInstanceId, TriggerGraphMountDomain domain)
         {
             Graph = graph;
             ScopeInstanceId = scopeInstanceId;
             Domain = domain;
-            Ability = ability;
         }
 
         public static List<TriggerGraphMount> ParseList(JsonNode? node, string mapId)
@@ -74,11 +64,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (!string.Equals(kvp.Key, GraphField, StringComparison.Ordinal) &&
                     !string.Equals(kvp.Key, ScopeInstanceIdField, StringComparison.Ordinal) &&
-                    !string.Equals(kvp.Key, DomainField, StringComparison.Ordinal) &&
-                    !string.Equals(kvp.Key, AbilityField, StringComparison.Ordinal))
+                    !string.Equals(kvp.Key, DomainField, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"{context} has unknown field '{kvp.Key}'. Allowed fields: '{GraphField}', '{ScopeInstanceIdField}', '{DomainField}', '{AbilityField}'.");
+                        $"{context} has unknown field '{kvp.Key}'. Allowed fields: '{GraphField}', '{ScopeInstanceIdField}', '{DomainField}'.");
                 }
             }
 
@@ -101,34 +90,13 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 domain = ParseDomain(domainText, context);
             }
 
-            string? ability = null;
-            if (obj.TryGetPropertyValue(AbilityField, out JsonNode? abilityNode) && abilityNode != null)
-            {
-                ability = ReadRequiredTrimmedString(obj, AbilityField, context);
-            }
-
             if (domain == TriggerGraphMountDomain.Entity && scopeInstanceId == null)
             {
                 throw new InvalidOperationException(
                     $"{context} domain 'entity' requires '{ScopeInstanceIdField}'; the entity-domain mount scope is the referenced entity.");
             }
 
-            if (domain == TriggerGraphMountDomain.Ability)
-            {
-                if (scopeInstanceId == null)
-                {
-                    throw new InvalidOperationException(
-                        $"{context} domain 'ability' requires '{ScopeInstanceIdField}'; the ability-domain mount scope is the caster entity.");
-                }
-
-                if (ability == null)
-                {
-                    throw new InvalidOperationException(
-                        $"{context} domain 'ability' requires '{AbilityField}'; ability-domain mounts bind to one ability instance.");
-                }
-            }
-
-            return new TriggerGraphMount(graph, scopeInstanceId, domain, ability);
+            return new TriggerGraphMount(graph, scopeInstanceId, domain);
         }
 
         private static TriggerGraphMountDomain ParseDomain(string text, string context)
@@ -145,11 +113,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (string.Equals(text, "ability", StringComparison.Ordinal))
             {
-                return TriggerGraphMountDomain.Ability;
+                throw new InvalidOperationException(
+                    $"{context} domain 'ability' is not mountable yet; ability-domain mounts land with the ability-domain slice.");
             }
 
             throw new InvalidOperationException(
-                $"{context} field 'domain' value '{text}' is not a mount domain; expected \"map\", \"entity\", or \"ability\".");
+                $"{context} field 'domain' value '{text}' is not a mount domain; expected \"map\" or \"entity\".");
         }
 
         private static string ReadRequiredTrimmedString(JsonObject obj, string field, string context)

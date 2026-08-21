@@ -20,6 +20,21 @@
       "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardModExtensibleRuntimeShowcaseShared",
       "reason": "shared panel runtime for extensible-mod-runtime showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "panel_theme_showcase",
+      "reason": "shared theme asset library (CSS/art/fonts) for panel theme showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "binding",
+      "value": "clash_of_clones",
+      "reason": "parallel-session work in flight (mods/games/coc); replace with a formal entry when it lands"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
+      "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
     }
   ],
   "showcases": [
@@ -4939,6 +4954,29 @@
       ]
     },
     {
+      "id": "map_trigger_night_raid",
+      "path": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
+      "projectPath": "MapTriggerNightRaidMod.csproj",
+      "title": "夜袭三波",
+      "summary": "MapTriggerGraph 旗舰展厅：英雄进圈开袭、清场跨思考波过第二波、Boss 阵亡翻阶段并开出胜利面板；关卡流全部在地图 JSON + 触发图数据里。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "map-trigger",
+        "showcase"
+      ],
+      "binding": "map_trigger_night_raid",
+      "preset": "map_trigger_night_raid_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "MapTriggerNightRaidAcceptanceTests",
+      "artifactDir": "artifacts/evidence/map_trigger_night_raid",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless data-flow acceptance; raid parties are map-data pre-placed entities (MapTrigger graphs are pure-op only, no spawn op yet)."
+    },
+    {
       "id": "multi_layer_fog_field",
       "path": "mods/showcases/fog_of_war/MultiLayerFogFieldShowcaseMod",
       "projectPath": "MultiLayerFogFieldShowcaseMod.csproj",
@@ -6900,6 +6938,48 @@
       "docsPath": "gitbook/architecture/engine-capability-showcases.md"
     },
     {
+      "id": "engine_raylib_lighting",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·光照全效",
+      "summary": "GGX 粗糙度×金属度梯度 + 环绕太阳 + 天空环境近似 + 深度阴影——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_lighting",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_lighting",
+      "screenshot": "artifacts/acceptance/engine_raylib_lighting/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
+      "id": "engine_raylib_crowd_anim",
+      "path": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery",
+      "projectPath": "Ludots.App.RaylibEngineGallery.csproj",
+      "title": "引擎能力·大量动画实例合批",
+      "summary": "4k mannequin 真骨骼 GPU 蒙皮实例化合批——零 Core 依赖独立场景",
+      "tier": "T1",
+      "category": "engine",
+      "tags": [
+        "engine",
+        "raylib",
+        "rendering"
+      ],
+      "status": "active",
+      "binding": "engine_gallery",
+      "preset": "engine_raylib_crowd_anim",
+      "acceptanceTest": "RaylibEngineGalleryTests",
+      "artifactDir": "artifacts/acceptance/engine_raylib_crowd_anim",
+      "screenshot": "artifacts/acceptance/engine_raylib_crowd_anim/screen.png",
+      "docsPath": "gitbook/architecture/engine-capability-showcases.md"
+    },
+    {
       "id": "capability_standard_graph_op_HidePanel",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpHidePanelEntryMod",
       "projectPath": "CapabilityStandardGraphOpHidePanelEntryMod.csproj",
@@ -7008,6 +7088,94 @@
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     },
     {
+      "id": "panel_skin_markup",
+      "path": "mods/showcases/panel_skin_markup/PanelSkinMarkupMod",
+      "title": "Panel Markup Skin",
+      "summary": "Fireball arena with markup-flavored realtime panel",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_skin_markup",
+      "preset": "panel_skin_markup_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel-skin-markup",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "markup",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_skin_compose",
+      "path": "mods/showcases/panel_skin_compose/PanelSkinComposeMod",
+      "title": "Panel Compose Skin",
+      "summary": "Fireball arena with compose-flavored realtime panel",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_skin_compose",
+      "preset": "panel_skin_compose_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel-skin-compose",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "compose",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_skin_reactive",
+      "path": "mods/showcases/panel_skin_reactive/PanelSkinReactiveMod",
+      "title": "Panel Reactive Skin",
+      "summary": "Fireball arena with reactive-flavored realtime panel",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_skin_reactive",
+      "preset": "panel_skin_reactive_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel-skin-reactive",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "reactive",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_skin_web",
+      "path": "mods/showcases/panel_skin_web/PanelSkinWebMod",
+      "title": "Panel Web Skin",
+      "summary": "Fireball arena with web-flavored realtime panel",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_skin_web",
+      "preset": "panel_skin_web_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel-skin-web",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "web",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_ReadMapVarFloat",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpReadMapVarFloatEntryMod",
       "projectPath": "CapabilityStandardGraphOpReadMapVarFloatEntryMod.csproj",
@@ -7114,6 +7282,147 @@
       "video": "artifacts/evidence/capability_standard_graph_op_WriteMapVarInt/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "panel_theme_ink",
+      "path": "mods/showcases/panel_theme_ink/PanelThemeInkMod",
+      "title": "Panel Theme Ink-wash",
+      "summary": "Ink-wash themed fireball panel (KaiTi, cinnabar accents, xuan paper)",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_ink",
+      "preset": "panel_theme_ink_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_ink",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "ink-wash",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_theme_ink_web",
+      "path": "mods/showcases/panel_theme_ink_web/PanelThemeInkWebMod",
+      "title": "Panel Theme Ink-wash Web",
+      "summary": "Ink-wash theme rendered by the CEF web skin — same CSS, browser backend",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_ink_web",
+      "preset": "panel_theme_ink_web_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_ink_web",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "ink-wash",
+        "web",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_theme_fantasy",
+      "path": "mods/showcases/panel_theme_fantasy/PanelThemeFantasyMod",
+      "title": "Panel Theme Fantasy",
+      "summary": "Western-fantasy themed fireball panel (parchment, gold, serif)",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_fantasy",
+      "preset": "panel_theme_fantasy_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_fantasy",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "fantasy",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_theme_fantasy_web",
+      "path": "mods/showcases/panel_theme_fantasy_web/PanelThemeFantasyWebMod",
+      "title": "Panel Theme Fantasy Web",
+      "summary": "Fantasy theme on the CEF web skin — same CSS, browser backend",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_fantasy_web",
+      "preset": "panel_theme_fantasy_web_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_fantasy_web",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "fantasy",
+        "web",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_theme_minimal",
+      "path": "mods/showcases/panel_theme_minimal/PanelThemeMinimalMod",
+      "title": "Panel Theme Minimal",
+      "summary": "Minimal themed fireball panel — pure CSS theme with zero image assets",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_minimal",
+      "preset": "panel_theme_minimal_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_minimal",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "minimal",
+        "showcase"
+      ]
+    },
+    {
+      "id": "panel_theme_minimal_web",
+      "path": "mods/showcases/panel_theme_minimal_web/PanelThemeMinimalWebMod",
+      "title": "Panel Theme Minimal Web",
+      "summary": "Minimal theme on the CEF web skin — same CSS, browser backend",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_minimal_web",
+      "preset": "panel_theme_minimal_web_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/acceptance/panel_theme_minimal_web",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "minimal",
+        "web",
+        "showcase"
+      ]
     }
   ]
 }

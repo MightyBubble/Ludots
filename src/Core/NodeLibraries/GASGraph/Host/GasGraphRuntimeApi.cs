@@ -108,7 +108,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
-        private Ludots.Core.Scripting.TriggerManager? _triggerManager;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -228,15 +227,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         }
 
-        /// <summary>
-        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
-        /// events via <see cref="FireEventKey"/>.
-        /// </summary>
-        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
-        {
-            _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
-        }
-
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -309,7 +299,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
-            RequirePanelHost().Instantiate(ResolvePanelTypeName(templateKeyId), ResolvePanelTypeName(anchorKeyId), scope);
+            CreatePanel(templateKeyId, anchorKeyId, scope, UI.PanelHosting.PanelSkinIds.Unspecified, 100f);
+        }
+
+        public void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope, byte skinId, float zOrder)
+        {
+            RequirePanelHost().Instantiate(
+                ResolvePanelTypeName(templateKeyId),
+                ResolvePanelTypeName(anchorKeyId),
+                scope,
+                UI.PanelHosting.PanelSkinIds.ToName(skinId),
+                (int)zOrder);
         }
 
         public void DestroyPanel(int templateKeyId, Entity scope)
@@ -335,43 +335,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
             => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
-
-        public void FireEventKey(Entity scope, int eventKeyId)
-        {
-            RejectDerivedAttributeSideEffect(nameof(FireEventKey));
-            var triggerManager = _triggerManager
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
-
-            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId);
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: FireEventKey references unregistered config key id {eventKeyId}.");
-            }
-
-            var context = new ScriptContext();
-            MapId mapId = ResolveMapId(scope);
-            if (!string.IsNullOrEmpty(mapId.Value))
-            {
-                context.Set(ContextKeys.MapId, mapId);
-                context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
-                triggerManager.FireMapEvent(mapId, new EventKey(name), context);
-            }
-            else
-            {
-                triggerManager.FireEvent(new EventKey(name), context);
-            }
-        }
-
-        private MapId ResolveMapId(Entity entity)
-        {
-            if (entity == Entity.Null || !_world.IsAlive(entity) || !_world.Has<Components.MapEntity>(entity))
-            {
-                return default;
-            }
-
-            return _world.Get<Components.MapEntity>(entity).MapId;
-        }
 
         private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
         {

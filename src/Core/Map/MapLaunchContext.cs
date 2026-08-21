@@ -32,19 +32,6 @@ namespace Ludots.Core.Map
             return context.IsEmpty ? null : context;
         }
 
-        /// <summary>Single-seat launch convenience — expands to seat id <c>seat.0</c>.</summary>
-        public static MapLaunchContext? Create(int playerId, IReadOnlyDictionary<string, object>? metadata = null)
-        {
-            if (playerId <= 0)
-            {
-                return Create(Array.Empty<LocalSeatLaunchBinding>(), metadata);
-            }
-
-            return Create(
-                new[] { new LocalSeatLaunchBinding("seat.0", playerId) },
-                metadata);
-        }
-
         private static IReadOnlyList<LocalSeatLaunchBinding> NormalizeSeats(IReadOnlyList<LocalSeatLaunchBinding>? seats)
         {
             if (seats == null || seats.Count == 0)
