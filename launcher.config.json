@@ -1561,6 +1561,14 @@
       }
     },
     {
+      "name": "agent_bridge",
+      "target": {
+        "type": "path",
+        "value": "mods/AgentBridgeMod",
+        "projectPath": "AgentBridgeMod.csproj"
+      }
+    },
+    {
       "name": "panel_theme_showcase",
       "target": {
         "type": "path",

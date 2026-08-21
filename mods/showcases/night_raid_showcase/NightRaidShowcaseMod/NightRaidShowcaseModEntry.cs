@@ -20,10 +20,15 @@ public sealed class NightRaidShowcaseModEntry : IMod
 
     private static Task OnMapLoaded(ScriptContext context)
     {
+        Ludots.Core.Diagnostics.Log.Info(
+            in Ludots.Core.Diagnostics.LogChannels.Engine,
+            $"[NightRaidShowcase] MapLoaded ctx mapId={(context.TryGet(CoreServiceKeys.MapId, out Ludots.Core.Map.MapId probeMapId) ? probeMapId.Value : "MISSING")} engine={(context.GetEngine() != null ? "present" : "MISSING")}");
+
         if (context.TryGet(CoreServiceKeys.MapId, out Ludots.Core.Map.MapId mapId) &&
             string.Equals(mapId.Value, MapId, System.StringComparison.OrdinalIgnoreCase))
         {
-            if (context.Get(CoreServiceKeys.Engine) is GameEngine engine)
+            var engine = context.GetEngine();
+            if (engine != null)
             {
                 engine.RegisterSystem(new NightRaidShowcaseInteractionSystem(engine), SystemGroup.InputCollection);
             }

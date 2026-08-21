@@ -198,6 +198,11 @@
         "panelAnchor": "screen.topRight"
       },
       {
+        "id": "victory_show",
+        "op": "ShowPanel",
+        "panelType": "panel.night_raid.victory"
+      },
+      {
         "id": "bd_ok",
         "op": "ConstInt",
         "intValue": 5
@@ -388,7 +393,7 @@
       {
         "from": "victory_panel",
         "fromPort": "next",
-        "to": "bd_ok"
+        "to": "victory_show"
       },
       {
         "from": "bd_ok",
@@ -424,6 +429,11 @@
         "from": "kt_ok",
         "fromPort": "next",
         "to": "kt_done"
+      },
+      {
+        "from": "victory_show",
+        "fromPort": "next",
+        "to": "bd_ok"
       }
     ],
     "valueEdges": [

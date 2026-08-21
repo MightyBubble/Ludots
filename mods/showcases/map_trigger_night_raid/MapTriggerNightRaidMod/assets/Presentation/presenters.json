@@ -445,14 +445,14 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "night_raid.structure.obelisk",
+          "assetId": "night_raid.structure.pillar",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
           "localScale": [
-            2.5,
+            1.2,
             3.5,
-            2.5
+            1.2
           ]
         },
         "style": {

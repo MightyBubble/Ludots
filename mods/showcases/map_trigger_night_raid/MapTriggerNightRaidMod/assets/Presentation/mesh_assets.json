@@ -1,4 +1,11 @@
 [
-  { "id": "night_raid.agent.soldier", "type": "Model" },
-  { "id": "night_raid.structure.obelisk", "type": "Model" }
+  {
+    "id": "night_raid.agent.soldier",
+    "type": "Model"
+  },
+  {
+    "id": "night_raid.structure.pillar",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  }
 ]

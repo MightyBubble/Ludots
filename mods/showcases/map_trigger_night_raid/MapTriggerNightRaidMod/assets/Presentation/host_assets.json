@@ -7,14 +7,5 @@
     "sourceUris": [
       "MapTriggerNightRaidMod:assets/Models/night_raid_agent_soldier.glb"
     ]
-  },
-  {
-    "id": "night_raid.structure.obelisk.raylib",
-    "assetKind": "Mesh",
-    "assetId": "night_raid.structure.obelisk",
-    "backendId": "raylib",
-    "sourceUris": [
-      "MapTriggerNightRaidMod:assets/Models/night_raid_gate_obelisk.obj"
-    ]
   }
 ]
