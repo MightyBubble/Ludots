@@ -113,6 +113,7 @@ namespace Ludots.Core.Engine
 {
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
+        private Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem _mapDeathRuleSystem;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
         private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
@@ -799,6 +800,8 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
+            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
@@ -970,6 +973,7 @@ namespace Ludots.Core.Engine
                 clock,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
+            gasGraphApi.BindTriggerManager(TriggerManager);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var panelHost = new PanelHost(
@@ -1887,6 +1891,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
+            RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
@@ -2925,7 +2931,15 @@ namespace Ludots.Core.Engine
 
             // From JSON MapConfig.TriggerGraphs (graph mounts resolved against the entity index);
             // entity-domain mounts declared in map JSON route through the entity mount pipeline
-            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts));
+            if (mapConfig.DeathRule != null)
+            {
+                _mapDeathRuleSystem.Declare(session.MapId, mapConfig.DeathRule);
+            }
+            else
+            {
+                _mapDeathRuleSystem.Retract(session.MapId);
+            }
+            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts, GetService(CoreServiceKeys.CustomEventNameRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

@@ -3,10 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-<<<<<<<< HEAD:mods/showcases/night_raid_showcase/NightRaidShowcaseMod/NightRaidShowcaseMod.csproj
-========
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
->>>>>>>> origin/main:mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/MapTriggerNightRaidMod.csproj
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Map;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
@@ -56,7 +57,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 return;
             }
-
             MapSession? session = _currentSession();
             if (session == null ||
                 !_rulesByMap.TryGetValue(session.MapId.Value ?? string.Empty, out MapDeathRule rule))

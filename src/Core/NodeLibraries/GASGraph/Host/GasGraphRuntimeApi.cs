@@ -108,6 +108,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Ludots.Core.UI.PanelHosting.PanelHost? _panelHost;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
+        private Ludots.Core.Scripting.TriggerManager? _triggerManager;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -227,6 +228,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _mapVariableStoreResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         }
 
+        /// <summary>
+        /// Binds the engine TriggerManager so graph programs can fire map-scoped trigger
+        /// events via <see cref="FireEventKey"/>.
+        /// </summary>
+        public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
+        {
+            _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
         public GasGraphRuntimeApi(
             World world,
             ISpatialQueryService? spatialQueries = null,
@@ -335,6 +345,49 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void WriteMapVarFloat(int varKeyId, MapId mapId, float value)
             => ResolveMapVariableStore(mapId).WriteFloat(ResolveMapVariableName(varKeyId), value);
+
+        /// <summary>
+        /// Fires a config-key-named trigger event from a graph program: map-scoped when the
+        /// scope resolves to a map, global otherwise.
+        /// </summary>
+        public void FireEventKey(Entity scope, int eventKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(FireEventKey));
+            var triggerManager = _triggerManager
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+
+            string? name = Gameplay.GAS.Registry.ConfigKeyRegistry.GetName(eventKeyId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.EventKeyNameUnknown: FireEventKey references unregistered config key id {eventKeyId}.");
+            }
+
+            var context = new ScriptContext();
+            MapId mapId = ResolveMapId(scope);
+            if (!string.IsNullOrEmpty(mapId.Value))
+            {
+                context.Set(ContextKeys.MapId, mapId);
+                context.Set(MapTriggerEventPayloadKeys.SourceEntity, scope);
+                triggerManager.FireMapEvent(mapId, new EventKey(name), context);
+            }
+            else
+            {
+                triggerManager.FireEvent(new EventKey(name), context);
+            }
+        }
+
+        private MapId ResolveMapId(Entity entity)
+        {
+            if (_world != null &&
+                _world.IsAlive(entity) &&
+                _world.TryGet<Ludots.Core.Components.MapEntity>(entity, out var mapEntity))
+            {
+                return mapEntity.MapId;
+            }
+
+            return new MapId(string.Empty);
+        }
 
         private Gameplay.MapTriggers.MapVariableStore ResolveMapVariableStore(MapId mapId)
         {
