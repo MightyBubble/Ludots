@@ -221,11 +221,12 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
     {
         if (outcome.Error == null)
         {
+            UiSurfaceLeaseHandle lease = default;
             try
             {
                 // Surface-host interaction stays on the update thread: Acquire/Publish touch
                 // shared lease and scene state with no locking.
-                UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
                     $"panel-web-skin-{outcome.Panel.TemplateId}",
                     UiSurfaceSegment.Main,
                     priority: 100));
@@ -242,7 +243,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             catch (Exception ex)
             {
                 // Mid-attach failure must not strand the acquired lease or the panel entry.
-                ReleaseResources(outcome.Panel.TemplateId, default, outcome.DataPlane, outcome.CanvasContent, outcome.Surface);
+                ReleaseResources(outcome.Panel.TemplateId, lease, outcome.DataPlane, outcome.CanvasContent, outcome.Surface);
                 RecordInitFailure(outcome.Panel.TemplateId, ex);
                 return;
             }
