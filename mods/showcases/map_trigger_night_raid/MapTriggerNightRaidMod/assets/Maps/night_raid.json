@@ -229,11 +229,11 @@
     "PlayerTeams": []
   },
   "DefaultCamera": {
-    "TargetXCm": 200,
+    "TargetXCm": 150,
     "TargetYCm": 0,
     "Yaw": 45,
-    "Pitch": 35,
-    "DistanceCm": 1400,
+    "Pitch": 52,
+    "DistanceCm": 2200,
     "FovYDeg": 50
   },
   "DeathRule": {
