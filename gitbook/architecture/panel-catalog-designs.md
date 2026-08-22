@@ -46,6 +46,20 @@
 }
 ```
 
+### 1.2.1 realtime 判定规则（总合同条款）
+
+`realtime: true` = 值本身会动，帧扫重算（`PanelRealtimeRefreshSystem`）。按读嘴定死：
+
+| 读嘴 | realtime | 理由 |
+|---|---|---|
+| SingleAttribute（活属性：血/蓝/资源） | ✅ | 战斗中真变 |
+| GraphOutput（活输出：时钟/经济聚合/未读数） | ✅ | 图每拍重算 |
+| AttributeBase | ❌（buff 改基数时显式 Refresh） | 基础值通常静止 |
+| TableLookup | ❌ | 查的是启动装载的静态表，结果不动；key 动态换行属例外，走显式 Refresh，不帧扫 |
+| Derived | 按被派生源 | 随源 |
+
+配套建模纪律：**活游戏状态（gold/人口/时钟）一律 GraphOutput 中转**——查表只放静态数据（税率/周期/文案表）。这同时满足完成核"数字溯源到图"。地图变量（MapVariableStore）不在五路读嘴内：全局状态经图输出中转是刻意设计；若实践中"每项全局状态开一张图"爆炸，再议第六读嘴（G7 候选，暂不立项）。
+
 ### 1.3 实例参数（四级链，已落地）
 
 `panelAnchor`（screen.topLeft/topRight/bottomLeft/bottomRight）· `panelSkin`（default/markup/compose/reactive/web）· `panelZOrder`（缺省 100）· `panelTheme`（game.json 全局；模板/op 级为缺口 G4）。
@@ -82,10 +96,13 @@
 ```jsonc
 { "id": "panel.player.aggregate", "scope": "global",
   "variables": [
-    { "name": "gold", "kind": "Int", "realtime": true, "source": { "sourceKind": "TableLookup", "lookupTable": "economy", "lookupField": "gold", "keyAttribute": "TeamId" } },
+    { "name": "gold", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "economy.gold" } },
     { "name": "popUsed", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.used" } },
-    { "name": "popCap", "kind": "Int", "source": { "sourceKind": "TableLookup", "lookupTable": "economy", "lookupField": "popCap", "keyAttribute": "TeamId" } } ],
+    { "name": "popCap", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.cap" } } ],
   "binds": [ { "control": "lbl.gold", "variable": "gold" }, { "control": "lbl.pop", "variable": "popUsed" } ] }
+// 注：gold/pop 是活状态 → GraphOutput 中转（§1.2.1 纪律）；economy 查表放静态（如
+// 每级人口上限 popCapByLevel），面板侧不标 realtime。初稿曾把活状态建模成查表+
+// realtime——用户审稿揪出的反例，规则因此入合同。
 ```
 
 ```text
