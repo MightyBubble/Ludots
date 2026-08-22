@@ -8,30 +8,29 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace NightRaidShowcaseMod;
 
 /// <summary>
-/// Hard-coded interaction layer, deliberately dumb: left click teleports the hero to the
-/// clicked ground point, right click zeroes Health on the nearest killable entity.
-/// Every rule that fires afterwards (stage/tick/yield/panel) lives in the map's
-/// TriggerGraph data — this system never touches map variables.
+/// Transitional kill-tool residue. Teleport and the hero ring are already pure
+/// data (InputActionFired bridge + SetWorldPosition graph op; presenter GroundOverlay
+/// slot). What remains here is the right-click execution tool and the raid-circle
+/// ground ring, both scheduled for removal by their engine slices:
+/// kill via the order→ability→effect damage pipeline, the circle via a
+/// region-overlay presenter. No level-flow logic lives in this file.
 /// </summary>
 internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
 {
     private const string MapId = "night_raid";
-    private const string LeftClickAction = "CommandSourceAcquire";
     private const string RightClickAction = "Command";
-    private const string GroundPointerAction = "__runtime.PointerGroundWorldCm";
-    private const int ActionCooldownTicks = 12;
+    private const int KillCooldownTicks = 12;
+    private const int KillPickRadiusCm = 400;
 
     private readonly GameEngine _engine;
     private readonly int _healthId;
-    private int _leftCooldown;
-    private int _rightCooldown;
+    private int _killCooldown;
 
     public NightRaidShowcaseInteractionSystem(GameEngine engine)
     {
@@ -52,81 +51,48 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             return;
         }
 
-        _leftCooldown = Math.Max(0, _leftCooldown - 1);
-        _rightCooldown = Math.Max(0, _rightCooldown - 1);
+        _killCooldown = Math.Max(0, _killCooldown - 1);
 
-        // IsDown semantics, not value comparison: world (0, 0) is a legal ground point
-        // (the raid circle is centered on the origin) and must not read as "no pointer".
-        bool hasGround = AuthoritativeGroundPointerHelper.TryRead(input, out Ludots.Platform.Abstractions.WorldCmInt2 groundCm);
-        Vector3 ground = hasGround ? new Vector3(groundCm.X, 0f, groundCm.Y) : Vector3.Zero;
-
-        if (hasGround && input.IsDown(LeftClickAction) && _leftCooldown == 0)
+        if (input.PressedThisFrame(RightClickAction) && _killCooldown == 0 &&
+            AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 ground))
         {
-            _leftCooldown = ActionCooldownTicks;
-            Entity hero = FindHero();
-            if (hero != Entity.Null && _engine.World.IsAlive(hero))
-            {
-                _engine.World.Set(hero, new WorldPositionCm
-                {
-                    Value = Fix64Vec2.FromInt((int)ground.X, (int)ground.Z),
-                });
-            }
+            _killCooldown = KillCooldownTicks;
+            ExecuteNearest(new Vector2(ground.X, ground.Y));
         }
 
-        if (hasGround && input.IsDown(RightClickAction) && _rightCooldown == 0)
-        {
-            _rightCooldown = ActionCooldownTicks;
-            Entity target = FindNearest(new Vector2(ground.X, ground.Z), maxDistanceCm: 400f);
-            if (target != Entity.Null && _engine.World.IsAlive(target) && _engine.World.Has<AttributeBuffer>(target))
-            {
-                ref AttributeBuffer attributes = ref _engine.World.Get<AttributeBuffer>(target);
-                attributes.SetCurrent(_healthId, 0f);
-                FireKillToolUsed(target);
-            }
-        }
-
-        PublishReadabilityOverlays();
+        PublishRaidCircle();
     }
 
-    /// <summary>
-    /// Observation-only anchors: the gold raid circle and the cyan hero ring. Same
-    /// contract as the old presentation layer — pure reads, no game state writes.
-    /// </summary>
-    private void PublishReadabilityOverlays()
+    private void ExecuteNearest(Vector2 origin)
     {
-        if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not Ludots.Platform.Abstractions.GroundOverlayBuffer ground)
+        Entity nearest = Entity.Null;
+        float best = KillPickRadiusCm * KillPickRadiusCm;
+        var query = new QueryDescription().WithAll<WorldPositionCm, AttributeBuffer>();
+        _engine.World.Query(in query, (Entity entity, ref WorldPositionCm position) =>
+        {
+            if (!_engine.World.IsAlive(entity))
+            {
+                return;
+            }
+
+            float dx = position.Value.X.ToFloat() - origin.X;
+            float dy = position.Value.Y.ToFloat() - origin.Y;
+            float dist = (dx * dx) + (dy * dy);
+            if (dist <= best)
+            {
+                best = dist;
+                nearest = entity;
+            }
+        });
+
+        if (nearest == Entity.Null || !_engine.World.IsAlive(nearest))
         {
             return;
         }
 
-        ground.Upsert(new Ludots.Platform.Abstractions.GroundOverlayItem
-        {
-            StableId = 910_002,
-            Shape = Ludots.Platform.Abstractions.GroundOverlayShape.Ring,
-            Center = new Vector3(0f, 0.02f, 0f),
-            Radius = 2.5f,
-            InnerRadius = 2.28f,
-            FillColor = new Vector4(1f, 0.85f, 0.35f, 0.10f),
-            BorderColor = new Vector4(1f, 0.85f, 0.35f, 0.95f),
-            BorderWidth = 0.10f,
-        });
-
-        Entity hero = FindHero();
-        if (hero != Entity.Null && _engine.World.IsAlive(hero) &&
-            _engine.World.TryGet(hero, out WorldPositionCm heroPos))
-        {
-            ground.Upsert(new Ludots.Platform.Abstractions.GroundOverlayItem
-            {
-                StableId = 910_001,
-                Shape = Ludots.Platform.Abstractions.GroundOverlayShape.Ring,
-                Center = new Vector3(heroPos.Value.X.ToFloat() * 0.01f, 0.03f, heroPos.Value.Y.ToFloat() * 0.01f),
-                Radius = 1.5f,
-                InnerRadius = 1.25f,
-                FillColor = new Vector4(0.2f, 0.95f, 0.95f, 0.12f),
-                BorderColor = new Vector4(0.2f, 0.95f, 0.95f, 0.95f),
-                BorderWidth = 0.09f,
-            });
-        }
+        ref AttributeBuffer attributes = ref _engine.World.Get<AttributeBuffer>(nearest);
+        attributes.SetCurrent(_healthId, 0f);
+        FireKillToolUsed(nearest);
     }
 
     private void FireKillToolUsed(Arch.Core.Entity target)
@@ -148,47 +114,27 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
             registry);
     }
 
-    private Entity FindHero()
+    /// <summary>
+    /// Raid-circle ground ring. Transitional: moves to a region-overlay presenter
+    /// slice; the radius mirrors map region raid_circle radiusCm=250 (meters here).
+    /// </summary>
+    private void PublishRaidCircle()
     {
-        Entity found = Entity.Null;
-        var query = new QueryDescription().WithAll<Name>();
-        _engine.World.Query(in query, (Entity entity, ref Name name) =>
+        if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not GroundOverlayBuffer ground)
         {
-            if (found == Entity.Null && string.Equals(name.Value, "NightRaidHero", StringComparison.Ordinal))
-            {
-                found = entity;
-            }
-        });
-        return found;
-    }
+            return;
+        }
 
-    private Entity FindNearest(Vector2 origin, float maxDistanceCm)
-    {
-        Entity nearest = Entity.Null;
-        float best = maxDistanceCm * maxDistanceCm;
-        var query = new QueryDescription().WithAll<WorldPositionCm, Name, AttributeBuffer>();
-        _engine.World.Query(in query, (Entity entity, ref WorldPositionCm position) =>
+        ground.Upsert(new GroundOverlayItem
         {
-            if (!_engine.World.IsAlive(entity))
-            {
-                return;
-            }
-
-            if (_engine.World.TryGet(entity, out Name name) &&
-                string.Equals(name.Value, "NightRaidHero", StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            float dx = position.Value.X.ToFloat() - origin.X;
-            float dy = position.Value.Y.ToFloat() - origin.Y;
-            float dist = (dx * dx) + (dy * dy);
-            if (dist <= best)
-            {
-                best = dist;
-                nearest = entity;
-            }
+            StableId = 910_002,
+            Shape = GroundOverlayShape.Ring,
+            Center = new Vector3(0f, 0.02f, 0f),
+            Radius = 2.5f,
+            InnerRadius = 2.28f,
+            FillColor = new Vector4(1f, 0.85f, 0.35f, 0.10f),
+            BorderColor = new Vector4(1f, 0.85f, 0.35f, 0.95f),
+            BorderWidth = 0.10f,
         });
-        return nearest;
     }
 }

@@ -7476,6 +7476,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SetWorldPosition",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetWorldPositionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSetWorldPositionEntryMod.csproj",
+      "title": "隔空落子",
+      "summary": "不用挪动命令，一枚棋子从图里被放到了指定点。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SetWorldPosition"
+      ],
+      "binding": "capability_standard_graph_op_SetWorldPosition",
+      "preset": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SetWorldPosition.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

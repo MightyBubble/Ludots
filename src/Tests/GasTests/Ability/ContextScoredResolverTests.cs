@@ -428,6 +428,10 @@ namespace Ludots.Tests.GAS
             public void SpawnTemplate(int templateKeyId, Arch.Core.Entity source, float xCm, float yCm, bool hasPosition)
             {
             }
+            public void SetWorldPosition(Arch.Core.Entity target, int xCm, int yCm)
+            {
+            }
+
 
             private readonly World _world;
 

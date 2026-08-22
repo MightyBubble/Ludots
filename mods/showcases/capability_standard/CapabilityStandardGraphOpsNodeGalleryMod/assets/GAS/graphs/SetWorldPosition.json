@@ -1,0 +1,96 @@
+[
+  {
+    "id": "showcase.graph_op.SetWorldPosition",
+    "kind": "Effect",
+    "entry": "drain",
+    "nodes": [
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "px",
+        "op": "ConstInt",
+        "intValue": 400
+      },
+      {
+        "id": "py",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "move",
+        "op": "SetWorldPosition"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "px"
+      },
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "move"
+      },
+      {
+        "from": "move",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "source"
+      },
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "a"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "move",
+        "toPort": "b"
+      }
+    ]
+  }
+]

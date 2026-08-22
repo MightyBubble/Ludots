@@ -37,5 +37,11 @@ namespace Ludots.Core.UI.PanelProjection
         /// duplicate the base as presentation constants.
         /// </summary>
         AttributeBase = 6,
+
+        /// <summary>
+        /// Map variable read from the map owning the panel's scope entity
+        /// (variable name = the panel variable's own name).
+        /// </summary>
+        MapVariable = 7,
     }
 }

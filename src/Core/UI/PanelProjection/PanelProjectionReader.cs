@@ -18,16 +18,19 @@ namespace Ludots.Core.UI.PanelProjection
         private readonly GraphOutputValueStore? _graphOutputs;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GraphLookupTableRegistry? _lookupTables;
         private readonly Func<string, int> _resolveAttributeId;
+        private readonly Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStores;
 
         public PanelProjectionReader(
             World world,
             GraphOutputValueStore? graphOutputs = null,
             Func<string, int>? resolveAttributeId = null,
-            Ludots.Core.NodeLibraries.GASGraph.Host.GraphLookupTableRegistry? lookupTables = null)
+            Ludots.Core.NodeLibraries.GASGraph.Host.GraphLookupTableRegistry? lookupTables = null,
+            Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? mapVariableStores = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _graphOutputs = graphOutputs;
             _resolveAttributeId = resolveAttributeId ?? AttributeRegistry.GetId;
+            _mapVariableStores = mapVariableStores;
             _lookupTables = lookupTables;
         }
 
@@ -66,6 +69,8 @@ namespace Ludots.Core.UI.PanelProjection
                     => ResolveGraphOutput(owner, in binding),
                 PanelBindingSourceKind.TableLookup
                     => ResolveTableLookup(owner, in binding),
+                PanelBindingSourceKind.MapVariable
+                    => ResolveMapVariable(owner, in binding),
                 _ => throw new InvalidOperationException(
                     $"Panel binding '{binding.VariableId}' has unsupported sourceKind '{binding.SourceKind}'."),
             };
@@ -97,6 +102,28 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             float value = readBase ? buffer.GetBase(id) : buffer.GetCurrent(id);
+            uint revision = (uint)BitConverter.SingleToInt32Bits(value);
+            return new PanelProjectionValue(binding.VariableId, binding.SourceKind, value, revision);
+        }
+
+        private PanelProjectionValue ResolveMapVariable(Entity owner, in PanelVariableBinding binding)
+        {
+            var stores = _mapVariableStores
+                ?? throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' with sourceKind 'MapVariable' requires a map variable store resolver.");
+
+            if (!_world.TryGet(owner, out MapEntity mapEntity))
+            {
+                throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' requires the scope owner to anchor a map for MapVariable reads.");
+            }
+
+            Gameplay.MapTriggers.MapVariableStore? store = stores(mapEntity.MapId)
+                ?? throw new InvalidOperationException(
+                    $"Panel binding '{binding.VariableId}' found no map variable store for map '{mapEntity.MapId.Value}'.");
+
+            string name = binding.VariableId;
+            float value = binding.ValueKind == PanelTemplateVariableKind.Int ? store.ReadInt(name) : store.ReadFloat(name);
             uint revision = (uint)BitConverter.SingleToInt32Bits(value);
             return new PanelProjectionValue(binding.VariableId, binding.SourceKind, value, revision);
         }

@@ -49,6 +49,20 @@ namespace Ludots.Core.UI.PanelProjection
                     GraphOutputKey = null;
                     break;
 
+                case PanelBindingSourceKind.MapVariable:
+                    if (!string.IsNullOrWhiteSpace(attributeId) ||
+                        !string.IsNullOrWhiteSpace(graphOutputKey) ||
+                        !string.IsNullOrWhiteSpace(lookupTable))
+                    {
+                        throw new ArgumentException(
+                            $"Binding '{VariableId}' with sourceKind 'MapVariable' must not declare attributeId, graphOutputKey or lookup fields (the map variable name is the binding id).",
+                            nameof(attributeId));
+                    }
+
+                    AttributeId = null;
+                    GraphOutputKey = null;
+                    break;
+
                 case PanelBindingSourceKind.AggregateProjection:
                 case PanelBindingSourceKind.GraphOutput:
                     if (string.IsNullOrWhiteSpace(graphOutputKey))

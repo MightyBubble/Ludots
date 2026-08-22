@@ -1148,7 +1148,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadTargetPosX",
@@ -1170,7 +1172,9 @@
       "authorableKinds": [
         "Derived",
         "Effect",
+        "TriggerGraph",
         "Score",
+        "Script",
         "Validation"
       ],
       "showcaseId": "capability_standard_graph_op_LoadTargetPosY",
@@ -2367,6 +2371,27 @@
         "GraphOpsNodeGallerySyncGateTests.RegistryEntries_MatchVignetteCopy",
         "GraphOpsNodeGallerySyncGateTests.WikiPages_QuoteCurrentVignetteCopy",
         "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit"
+      ]
+    },
+    {
+      "op": "SetWorldPosition",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "TriggerGraph",
+        "Query",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "showcaseId": "capability_standard_graph_op_SetWorldPosition",
+      "status": "covered",
+      "unitTestRefs": [
+        "GraphOpsNodeGalleryAcceptanceTests.EveryExecutableOp_HasVignetteGraphAndUniqueShowcaseId",
+        "GraphOpsNodeGalleryAcceptanceTests.EveryVignette_TicksOnce_WithChineseCaption",
+        "GraphOpsNodeGalleryAcceptanceTests.ExistingVignettes_CompileWithFeaturedOp",
+        "GraphOpsNodeGalleryAcceptanceTests.GeneratedMaps_SpawnEveryVignetteActor",
+        "GraphOpsNodeGalleryPanelOpAcceptanceTests.SetWorldPositionVignette_ExecutesOpWithoutThrow"
       ]
     },
     {

@@ -392,6 +392,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         /// <summary>
+        /// Sets an entity's world position. Fail-closed on dead or unmapped targets.
+        /// </summary>
+        public void SetWorldPosition(Entity target, int xCm, int yCm)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetWorldPosition));
+            if (_world == null || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetWorldPositionTargetDead: target entity {target} is not alive.");
+            }
+
+            var position = new Ludots.Core.Components.WorldPositionCm
+            {
+                Value = Mathematics.FixedPoint.Fix64Vec2.FromInt(xCm, yCm),
+            };
+
+            if (_world.TryGet(target, out Ludots.Core.Components.WorldPositionCm existing))
+            {
+                _world.Set(target, position);
+            }
+            else
+            {
+                _world.Add(target, position);
+            }
+        }
+
+        /// <summary>
         /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
         /// unknown template symbols, unmapped spawn anchors, and queue capacity.
         /// </summary>

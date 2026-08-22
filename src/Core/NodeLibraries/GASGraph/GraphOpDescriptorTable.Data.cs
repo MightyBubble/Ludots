@@ -142,6 +142,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.HidePanel, LinearQueryScript, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.CreatePanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.SpawnTemplate, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.SetWorldPosition, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB);
             Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarInt, ScriptAndTriggerGraph, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptAndTriggerGraph, GraphValueType.Float, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
@@ -190,8 +191,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.RelationshipHasLink, LinearAndQuery, GraphValueType.Bool, portSourceTarget, queryOut: GraphValueType.Bool, queryPorts: portSourceTarget, flags: GraphOperandRole.RelationshipTypeFlags);
             Add(rows, GraphNodeOp.BeginLifecycleTransaction, LinearEffect, GraphValueType.Void);
             Add(rows, GraphNodeOp.InvokeBuiltin, LinearEffect, GraphValueType.Void, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.LoadTargetPosX, LinearAll, GraphValueType.Int);
-            Add(rows, GraphNodeOp.LoadTargetPosY, LinearAll, GraphValueType.Int);
+            Add(rows, GraphNodeOp.LoadTargetPosX, LinearAndScript, GraphValueType.Int);
+            Add(rows, GraphNodeOp.LoadTargetPosY, LinearAndScript, GraphValueType.Int);
             Add(rows, GraphNodeOp.ClampTargetToRange, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.IsPointInCircle, LinearAll, GraphValueType.Bool, portAB);
             Add(rows, GraphNodeOp.SnapToNearestInCollection, LinearAll, GraphValueType.Entity, portSourceValue, flags: GraphOperandRole.BoolScratchFlags, imm: GraphOperandRole.SymbolImm);

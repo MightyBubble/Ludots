@@ -90,7 +90,18 @@ public sealed class MapTriggerNightRaidAcceptanceTests
 
         var panelHost = engine.GetService(CoreServiceKeys.PanelHost)
             ?? throw new InvalidOperationException("PanelHost missing.");
-        Assert.That(panelHost.Count, Is.EqualTo(1), "Stage 5 must create exactly one victory panel.");
+        int victoryCount = 0;
+        foreach (PanelHostInstanceInfo info in panelHost.SnapshotInstances())
+        {
+            if (string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal))
+            {
+                victoryCount++;
+            }
+        }
+
+        Assert.That(victoryCount, Is.EqualTo(1), "Stage 5 must create exactly one victory panel.");
+        Assert.That(panelHost.Count, Is.EqualTo(3),
+            "Map load (progress), boss spawn (alert), and victory each own one panel instance.");
         Assert.That(FindVictoryPanelValues(panelHost), Is.True,
             "The victory panel must project the hero template attribute, never a presentation constant.");
         float heroHealth = engine.World.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(hero).GetCurrent(AttributeRegistry.GetId("Health"));

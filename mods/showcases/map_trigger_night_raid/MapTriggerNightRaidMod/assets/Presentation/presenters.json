@@ -121,6 +121,30 @@
           "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "night_raid_hero"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "night_raid_hero_ring",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "night_raid_hero"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
@@ -550,6 +574,89 @@
           "mode": "SnapToGround",
           "offset": 0,
           "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "night_raid_hero_ring",
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1.5
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 1.25
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.2
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.12
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.2
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.09
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable"
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.03,
+          "updatePolicy": "EveryFrame"
         }
       }
     ]

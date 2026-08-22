@@ -1,5 +1,10 @@
 [
   {
+    "Path": "Input/trigger_actions.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  },
+  {
     "Path": "Entities/templates.json",
     "Policy": "ArrayById",
     "IdField": "id"

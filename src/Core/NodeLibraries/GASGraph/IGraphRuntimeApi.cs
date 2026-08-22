@@ -82,6 +82,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
 
+        /// <summary>Sets an entity's world position in centimeters (int, matches LoadTargetPosX/Y).</summary>
+        void SetWorldPosition(Entity target, int xCm, int yCm);
+
         /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
         void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
 

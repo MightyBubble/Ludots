@@ -2181,6 +2181,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "name": "Graph Op SetWorldPosition Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetWorldPosition"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

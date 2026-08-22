@@ -259,6 +259,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.Template, "template", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.SetWorldPosition:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.ReadMapVarInt:
                 case GraphNodeOp.ReadMapVarFloat:
                     if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
@@ -833,6 +838,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                             valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     }
 
+                    break;
+
+                case GraphNodeOp.SetWorldPosition:
+                    instruction.A = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source))
+                        ? ResolveValueInput(
+                            node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics)
+                        : byte.MaxValue;
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.ReadMapVarInt:

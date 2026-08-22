@@ -2,8 +2,56 @@
   {
     "id": "panel.night_raid.victory",
     "variables": [
-      { "name": "heroHealth", "kind": "Float", "realtime": true,
-        "source": { "sourceKind": "SingleAttribute", "attributeId": "Health" } }
+      {
+        "name": "heroHealth",
+        "kind": "Float",
+        "realtime": true,
+        "source": {
+          "sourceKind": "SingleAttribute",
+          "attributeId": "Health"
+        }
+      }
+    ]
+  },
+  {
+    "id": "panel.night_raid.progress",
+    "variables": [
+      {
+        "name": "stage",
+        "kind": "Int",
+        "realtime": true,
+        "source": {
+          "sourceKind": "MapVariable"
+        }
+      },
+      {
+        "name": "kill_count",
+        "kind": "Int",
+        "realtime": true,
+        "source": {
+          "sourceKind": "MapVariable"
+        }
+      },
+      {
+        "name": "kill_threshold",
+        "kind": "Int",
+        "source": {
+          "sourceKind": "MapVariable"
+        }
+      }
+    ]
+  },
+  {
+    "id": "panel.night_raid.boss_alert",
+    "variables": [
+      {
+        "name": "stage",
+        "kind": "Int",
+        "realtime": true,
+        "source": {
+          "sourceKind": "MapVariable"
+        }
+      }
     ]
   }
 ]

@@ -41,6 +41,15 @@
         "event": "NightRaid.KillTool.Used",
         "start": "kt_scope",
         "refire": "restart"
+      },
+      {
+        "label": "on_teleport",
+        "event": "InputActionFired",
+        "start": "tp_caster",
+        "refire": "restart",
+        "filters": {
+          "action": "CommandSourceAcquire"
+        }
       }
     ],
     "nodes": [
@@ -57,6 +66,17 @@
         "id": "write_stage_one",
         "op": "WriteMapVarInt",
         "var": "stage"
+      },
+      {
+        "id": "progress_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.night_raid.progress",
+        "panelAnchor": "screen.topLeft"
+      },
+      {
+        "id": "progress_show",
+        "op": "ShowPanel",
+        "panelType": "panel.night_raid.progress"
       },
       {
         "id": "load_ok",
@@ -166,6 +186,17 @@
         "floatValue": 0.0
       },
       {
+        "id": "boss_alert_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.night_raid.boss_alert",
+        "panelAnchor": "screen.topCenter"
+      },
+      {
+        "id": "boss_alert_show",
+        "op": "ShowPanel",
+        "panelType": "panel.night_raid.boss_alert"
+      },
+      {
         "id": "rd_done_const",
         "op": "ConstInt",
         "intValue": 3
@@ -257,6 +288,26 @@
       {
         "id": "kt_done",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "tp_caster",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "tp_x",
+        "op": "LoadTargetPosX"
+      },
+      {
+        "id": "tp_y",
+        "op": "LoadTargetPosY"
+      },
+      {
+        "id": "tp_move",
+        "op": "SetWorldPosition"
+      },
+      {
+        "id": "tp_done",
+        "op": "HaltReturnInt"
       }
     ],
     "controlEdges": [
@@ -273,7 +324,7 @@
       {
         "from": "write_stage_one",
         "fromPort": "next",
-        "to": "load_ok"
+        "to": "progress_panel"
       },
       {
         "from": "load_ok",
@@ -463,7 +514,47 @@
       {
         "from": "spawn_boss",
         "fromPort": "next",
+        "to": "boss_alert_panel"
+      },
+      {
+        "from": "progress_panel",
+        "fromPort": "next",
+        "to": "progress_show"
+      },
+      {
+        "from": "progress_show",
+        "fromPort": "next",
+        "to": "load_ok"
+      },
+      {
+        "from": "boss_alert_panel",
+        "fromPort": "next",
+        "to": "boss_alert_show"
+      },
+      {
+        "from": "boss_alert_show",
+        "fromPort": "next",
         "to": "rd_done_const"
+      },
+      {
+        "from": "tp_caster",
+        "fromPort": "next",
+        "to": "tp_x"
+      },
+      {
+        "from": "tp_x",
+        "fromPort": "next",
+        "to": "tp_y"
+      },
+      {
+        "from": "tp_y",
+        "fromPort": "next",
+        "to": "tp_move"
+      },
+      {
+        "from": "tp_move",
+        "fromPort": "next",
+        "to": "tp_done"
       }
     ],
     "valueEdges": [
@@ -652,6 +743,36 @@
         "fromPort": "value",
         "to": "spawn_boss",
         "toPort": "source"
+      },
+      {
+        "from": "load_scope",
+        "fromPort": "value",
+        "to": "progress_panel",
+        "toPort": "source"
+      },
+      {
+        "from": "rd_scope",
+        "fromPort": "value",
+        "to": "boss_alert_panel",
+        "toPort": "source"
+      },
+      {
+        "from": "tp_caster",
+        "fromPort": "value",
+        "to": "tp_move",
+        "toPort": "source"
+      },
+      {
+        "from": "tp_x",
+        "fromPort": "value",
+        "to": "tp_move",
+        "toPort": "a"
+      },
+      {
+        "from": "tp_y",
+        "fromPort": "value",
+        "to": "tp_move",
+        "toPort": "b"
       }
     ]
   }

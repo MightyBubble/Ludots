@@ -38,6 +38,15 @@ namespace Ludots.Core.GraphRuntime
                 return false;
             }
 
+            if (filters.Action != null)
+            {
+                if (!TryGetPayloadString(context, MapTriggerEventPayloadKeys.InputAction, out string actionId) ||
+                    !string.Equals(actionId, filters.Action, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
             if (filters.Team.HasValue)
             {
                 if (!TryGetPayloadInt(context, MapTriggerEventPayloadKeys.SourceTeamId, out int teamId) ||

@@ -978,7 +978,7 @@ namespace Ludots.Core.Engine
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var panelHost = new PanelHost(
                 panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
+                new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables, mapVariableStores: mapId => MapSessions?.GetSession(mapId)?.Variables));
             gasGraphApi.BindPanelHost(panelHost);
             var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
             var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
@@ -1894,6 +1894,16 @@ namespace Ludots.Core.Engine
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
             RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
+            var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            RegisterSystem(
+                new Ludots.Core.Gameplay.MapTriggers.InputActionTriggerBridgeSystem(
+                    World,
+                    () => CurrentMapSession,
+                    TriggerManager,
+                    CreateContext,
+                    () => GetService(CoreServiceKeys.AuthoritativeInput),
+                    inputTriggerActions),
+                SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
