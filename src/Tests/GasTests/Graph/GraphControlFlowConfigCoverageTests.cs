@@ -667,6 +667,10 @@ namespace Ludots.Tests.GAS
 
         private sealed class RecordingGraphApi : IGraphRuntimeApi
         {
+            public void SpawnTemplate(int templateKeyId, Arch.Core.Entity source, float xCm, float yCm, bool hasPosition)
+            {
+            }
+
             private readonly World _world;
 
             public RecordingGraphApi(World world)

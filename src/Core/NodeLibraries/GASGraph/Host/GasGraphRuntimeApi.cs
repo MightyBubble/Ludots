@@ -109,6 +109,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Ludots.Core.Scripting.TriggerManager? _triggerManager;
+        private Gameplay.Spawning.RuntimeEntitySpawnQueue? _runtimeEntitySpawnQueue;
+        private Gameplay.Spawning.EntityTemplateKeyRegistry? _entityTemplateKeys;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
         private ControlDomainQuery? _controlDomains;
@@ -235,6 +237,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindTriggerManager(Ludots.Core.Scripting.TriggerManager triggerManager)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
+        }
+
+        /// <summary>
+        /// Binds the runtime entity spawn queue and template key registry so graph
+        /// programs can enqueue template spawns via <see cref="SpawnTemplate"/>.
+        /// </summary>
+        public void BindRuntimeEntitySpawn(
+            Gameplay.Spawning.RuntimeEntitySpawnQueue queue,
+            Gameplay.Spawning.EntityTemplateKeyRegistry templateKeys)
+        {
+            _runtimeEntitySpawnQueue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _entityTemplateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
         }
 
         public GasGraphRuntimeApi(
@@ -374,6 +388,51 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             else
             {
                 triggerManager.FireEvent(new EventKey(name), context);
+            }
+        }
+
+        /// <summary>
+        /// Enqueues a template entity spawn on the runtime spawn queue. Fail-closed on
+        /// unknown template symbols, unmapped spawn anchors, and queue capacity.
+        /// </summary>
+        public void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SpawnTemplate));
+            var queue = _runtimeEntitySpawnQueue
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.SpawnQueueUnavailable");
+            if (_entityTemplateKeys == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.TemplateKeysUnavailable");
+            }
+
+            string templateName = _entityTemplateKeys.GetName(templateKeyId);
+            if (string.IsNullOrWhiteSpace(templateName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.TemplateUnknown: SpawnTemplate references unregistered template key id {templateKeyId}.");
+            }
+
+            MapId mapId = ResolveMapId(source);
+            if (string.IsNullOrEmpty(mapId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnSourceUnmapped: SpawnTemplate source must anchor a map (template '{templateName}').");
+            }
+
+            var request = new Gameplay.Spawning.RuntimeEntitySpawnRequest
+            {
+                Kind = Gameplay.Spawning.RuntimeEntitySpawnKind.Template,
+                Source = source,
+                TemplateId = templateName,
+                MapId = mapId,
+                WorldPositionCm = Mathematics.FixedPoint.Fix64Vec2.FromInt((int)xCm, (int)yCm),
+                HasWorldPosition = hasPosition ? (byte)1 : (byte)0,
+            };
+
+            if (!queue.TryEnqueue(in request))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpawnQueueFull: SpawnTemplate '{templateName}' dropped because the runtime spawn queue is at capacity.");
             }
         }
 

@@ -97,6 +97,30 @@
           "kind": "DestroyPresenterScope",
           "scopeSource": "EventPayloadA"
         }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "night_raid_boss_camp"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "night_raid_boss_camp",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "night_raid_boss_camp"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
@@ -494,6 +518,38 @@
           "orientationParamKey": "none",
           "orientationOffsetRad": 0,
           "orientationLengthPx": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "night_raid_boss_camp",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "night_raid.structure.pillar",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            0.8,
+            2.2,
+            0.8
+          ]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0,
+          "updatePolicy": "Once"
         }
       }
     ]

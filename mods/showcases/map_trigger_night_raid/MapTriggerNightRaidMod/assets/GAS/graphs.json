@@ -151,6 +151,21 @@
         "var": "stage"
       },
       {
+        "id": "spawn_boss",
+        "op": "SpawnTemplate",
+        "template": "night_raid_boss"
+      },
+      {
+        "id": "boss_x",
+        "op": "ConstFloat",
+        "floatValue": 1000.0
+      },
+      {
+        "id": "boss_y",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
         "id": "rd_done_const",
         "op": "ConstInt",
         "intValue": 3
@@ -346,11 +361,6 @@
         "to": "write_stage_three"
       },
       {
-        "from": "write_stage_three",
-        "fromPort": "next",
-        "to": "rd_done_const"
-      },
-      {
         "from": "rd_done_const",
         "fromPort": "next",
         "to": "rd_done"
@@ -434,6 +444,26 @@
         "from": "victory_show",
         "fromPort": "next",
         "to": "bd_ok"
+      },
+      {
+        "from": "write_stage_three",
+        "fromPort": "next",
+        "to": "boss_x"
+      },
+      {
+        "from": "boss_x",
+        "fromPort": "next",
+        "to": "boss_y"
+      },
+      {
+        "from": "boss_y",
+        "fromPort": "next",
+        "to": "spawn_boss"
+      },
+      {
+        "from": "spawn_boss",
+        "fromPort": "next",
+        "to": "rd_done_const"
       }
     ],
     "valueEdges": [
@@ -603,6 +633,24 @@
         "from": "bd_scope",
         "fromPort": "value",
         "to": "victory_panel",
+        "toPort": "source"
+      },
+      {
+        "from": "boss_x",
+        "fromPort": "value",
+        "to": "spawn_boss",
+        "toPort": "a"
+      },
+      {
+        "from": "boss_y",
+        "fromPort": "value",
+        "to": "spawn_boss",
+        "toPort": "b"
+      },
+      {
+        "from": "rd_scope",
+        "fromPort": "value",
+        "to": "spawn_boss",
         "toPort": "source"
       }
     ]

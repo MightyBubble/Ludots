@@ -508,7 +508,7 @@
     },
     {
       "id": "capability_standard_graph_score_raylib",
-      "name": "\u6b8b\u8840\u7684\u5206\u66f4\u9ad8",
+      "name": "残血的分更高",
       "selectors": [
         "$capability_standard_graph_score"
       ],
@@ -1642,7 +1642,7 @@
     },
     {
       "id": "engine_raylib_skybox",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7skybox",
+      "name": "引擎画廊·skybox",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1660,7 +1660,7 @@
     },
     {
       "id": "engine_raylib_sky_daynight",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7sky_daynight",
+      "name": "引擎画廊·sky_daynight",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1678,7 +1678,7 @@
     },
     {
       "id": "engine_raylib_water",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7water",
+      "name": "引擎画廊·water",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1696,7 +1696,7 @@
     },
     {
       "id": "engine_raylib_terrain_surface",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7terrain_surface",
+      "name": "引擎画廊·terrain_surface",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1714,7 +1714,7 @@
     },
     {
       "id": "engine_raylib_terrain_heightmap",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7terrain_heightmap",
+      "name": "引擎画廊·terrain_heightmap",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1732,7 +1732,7 @@
     },
     {
       "id": "engine_raylib_atmosphere_fog",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7atmosphere_fog",
+      "name": "引擎画廊·atmosphere_fog",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1750,7 +1750,7 @@
     },
     {
       "id": "engine_raylib_frame_lighting",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7frame_lighting",
+      "name": "引擎画廊·frame_lighting",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1768,7 +1768,7 @@
     },
     {
       "id": "engine_raylib_postprocess",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7postprocess",
+      "name": "引擎画廊·postprocess",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1786,7 +1786,7 @@
     },
     {
       "id": "engine_raylib_gpu_skinning",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7gpu_skinning",
+      "name": "引擎画廊·gpu_skinning",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1804,7 +1804,7 @@
     },
     {
       "id": "engine_raylib_instancing",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7instancing",
+      "name": "引擎画廊·instancing",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1822,7 +1822,7 @@
     },
     {
       "id": "engine_raylib_particles",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7particles",
+      "name": "引擎画廊·particles",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1840,7 +1840,7 @@
     },
     {
       "id": "engine_raylib_decal_projection",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7decal_projection",
+      "name": "引擎画廊·decal_projection",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1858,7 +1858,7 @@
     },
     {
       "id": "engine_raylib_vegetation_cutout",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7vegetation_cutout",
+      "name": "引擎画廊·vegetation_cutout",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1876,7 +1876,7 @@
     },
     {
       "id": "engine_raylib_material_binding",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7material_binding",
+      "name": "引擎画廊·material_binding",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1894,7 +1894,7 @@
     },
     {
       "id": "engine_raylib_ribbon_overlay",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7ribbon_overlay",
+      "name": "引擎画廊·ribbon_overlay",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1912,7 +1912,7 @@
     },
     {
       "id": "engine_raylib_skia_overlay",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7skia_overlay",
+      "name": "引擎画廊·skia_overlay",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1930,7 +1930,7 @@
     },
     {
       "id": "engine_raylib_debug_draw",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7debug_draw",
+      "name": "引擎画廊·debug_draw",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1948,7 +1948,7 @@
     },
     {
       "id": "engine_raylib_primitives",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7primitives",
+      "name": "引擎画廊·primitives",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1966,7 +1966,7 @@
     },
     {
       "id": "engine_raylib_lighting",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7\u5149\u7167\u5168\u6548",
+      "name": "引擎画廊·光照全效",
       "selectors": [
         "$engine_gallery"
       ],
@@ -1984,7 +1984,7 @@
     },
     {
       "id": "engine_raylib_crowd_anim",
-      "name": "\u5f15\u64ce\u753b\u5eca\u00b7\u5927\u91cf\u52a8\u753b\u5b9e\u4f8b\u5408\u6279",
+      "name": "引擎画廊·大量动画实例合批",
       "selectors": [
         "$engine_gallery"
       ],
@@ -2170,6 +2170,15 @@
       "name": "Panel Theme Minimal Web Raylib",
       "selectors": [
         "$panel_theme_minimal_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "name": "Graph Op SpawnTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SpawnTemplate"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

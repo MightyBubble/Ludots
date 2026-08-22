@@ -60,6 +60,9 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         TickUntil(engine, () => variables.ReadInt("stage") == 2, HeartbeatIntervalTicks * 3,
             () => "RegionEntered(raid_circle) must write stage=2.");
 
+        Assert.That(CountBossEntities(world), Is.EqualTo(0),
+            "The boss must not exist before the raid threshold — two-phase reveal is graph-spawned.");
+
         // Kill three raiders through the data path: zero health -> DeathRule destroys
         // -> EntityDied(team 2) -> graph increments kill_count.
         for (int kill = 1; kill <= 3; kill++)
@@ -73,7 +76,9 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(variables.ReadInt("stage"), Is.EqualTo(3).Or.EqualTo(4),
             "Reaching kill_threshold=3 must advance the stage out of the raider phase.");
 
-        // Boss phase: kill the boss -> stage 4, two-beat Yield delay -> stage 5 + panel.
+        // Boss phase: the graph spawns the boss at stage 3 — before that it must not exist.
+        TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
+            () => "Stage 3 must spawn the boss template via the SpawnTemplate graph op.");
         KillBoss(engine, world);
         TickUntil(engine, () => variables.ReadInt("stage") == 4, HeartbeatIntervalTicks * 3,
             () => "Boss EntityDied must write stage=4.");
@@ -184,6 +189,35 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static void KillOneRaider(GameEngine engine, World world)
     {
         ZeroTeamHealth(world, teamId: 2, maxKills: 1);
+    }
+
+    private static int CountTeamEntities(World world, int teamId)
+    {
+        int count = 0;
+        world.Query(new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
+            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+            {
+                if (team.Id == teamId)
+                {
+                    count++;
+                }
+            });
+        return count;
+    }
+
+    private static int CountBossEntities(World world)
+    {
+        int count = 0;
+        world.Query(
+            new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team, Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(),
+            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
+            {
+                if (team.Id == 4)
+                {
+                    count++;
+                }
+            });
+        return count;
     }
 
     private static void KillBoss(GameEngine engine, World world)

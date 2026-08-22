@@ -7423,6 +7423,33 @@
         "web",
         "showcase"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_SpawnTemplate",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",
+      "title": "图内造兵",
+      "summary": "不用预置实体，阈值一到援军从图里长了出来。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SpawnTemplate"
+      ],
+      "binding": "capability_standard_graph_op_SpawnTemplate",
+      "preset": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SpawnTemplate.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

@@ -294,7 +294,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ReadMapVarInt or
                 GraphNodeOp.ReadMapVarFloat or
                 GraphNodeOp.WriteMapVarInt or
-                GraphNodeOp.WriteMapVarFloat
+                GraphNodeOp.WriteMapVarFloat or
+                GraphNodeOp.SpawnTemplate
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -790,6 +791,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
             Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
+        Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
@@ -999,6 +1001,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Entity scope = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
             s.Api.DestroyPanel(ins.Imm, scope);
+        }
+
+        private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SpawnTemplate(
+                ins.Imm,
+                source,
+                s.F[ins.B],
+                s.F[ins.C],
+                ins.Flags == 1);
         }
 
         // ── Map-scoped variables ──

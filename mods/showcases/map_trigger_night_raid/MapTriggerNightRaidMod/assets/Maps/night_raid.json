@@ -130,8 +130,8 @@
       }
     },
     {
-      "InstanceId": "night_raid_boss",
-      "Template": "night_raid_boss"
+      "InstanceId": "boss_camp",
+      "Template": "night_raid_boss_camp"
     }
   ],
   "Teams": [
@@ -149,7 +149,7 @@
     },
     {
       "TeamId": 4,
-      "RepresentativeInstanceId": "night_raid_boss"
+      "RepresentativeInstanceId": "boss_camp"
     }
   ],
   "Players": [
@@ -183,29 +183,8 @@
         "Symmetric": true
       },
       {
-        "TeamA": 4,
-        "TeamB": 4,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
         "TeamA": 2,
         "TeamB": 3,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 2,
-        "TeamB": 4,
-        "TypeId": "LudotsCore.Participant",
-        "Attitude": "Friendly",
-        "Symmetric": true
-      },
-      {
-        "TeamA": 3,
-        "TeamB": 4,
         "TypeId": "LudotsCore.Participant",
         "Attitude": "Friendly",
         "Symmetric": true
@@ -222,6 +201,20 @@
         "TeamB": 3,
         "TypeId": "LudotsCore.Participant",
         "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
         "Symmetric": true
       },
       {

@@ -82,6 +82,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelActivationUnavailable");
         }
 
+        /// <summary>Enqueues a template entity spawn (runtime spawn queue; explicit position optional).</summary>
+        void SpawnTemplate(int templateKeyId, Entity source, float xCm, float yCm, bool hasPosition);
+
         void CreatePanel(int templateKeyId, int anchorKeyId, Entity scope)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.PanelHostUnavailable");
