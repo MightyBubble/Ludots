@@ -2178,6 +2178,11 @@ namespace Ludots.Core.Engine
         {
             _physics2DController?.AfterPhysicsFixedTick();
             _gasController?.AfterFixedTick();
+            if (TryGetService(CoreServiceKeys.CheckpointCoordinator, out CheckpointCoordinator? coordinator) &&
+                coordinator != null)
+            {
+                coordinator.TryCaptureFromCompletedTick(this, out _);
+            }
         }
 
         private void ApplyBuiltInTimeFlowScales()

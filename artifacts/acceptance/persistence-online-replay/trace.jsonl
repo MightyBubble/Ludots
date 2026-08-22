@@ -1,0 +1,6 @@
+{"step":"checkpoint","tick":2,"status":"captured"}
+{"step":"authoritative-frame","sequence":0,"tick":3,"status":"accepted"}
+{"step":"disconnect","status":"simulated"}
+{"step":"reconnect","status":"replaying"}
+{"step":"digest-compare","status":"evidence-pending","reason":"online adapter not wired"}
+{"step":"ablation","input":"missing-frame","status":"rejected","reason":"sequence is not contiguous"}

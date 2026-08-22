@@ -44,6 +44,29 @@
   ],
   "showcases": [
     {
+      "id": "persistence_online_replay",
+      "path": "src/Core/Persistence",
+      "projectPath": "src/Core/Ludots.Core.csproj",
+      "title": "Persistence, Replay and Online Recovery",
+      "summary": "A playable RTS scenario showing checkpoint restore, deterministic replay and explicit reconnect rejection.",
+      "tier": "T2",
+      "category": "infrastructure",
+      "binding": null,
+      "preset": null,
+      "docsPath": "gitbook/architecture/persistence-online-replay-showcase-design.md",
+      "readmePath": null,
+      "acceptanceTest": "gitbook/acceptance/persistence-online-replay.feature",
+      "artifactDir": "artifacts/acceptance/persistence-online-replay",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "persistence",
+        "replay",
+        "online-recovery",
+        "showcase"
+      ]
+    },
+    {
       "id": "ai_demo",
       "path": "mods/showcases/ai_demo/AIDemoMod",
       "projectPath": "AIDemoMod.csproj",

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Persistence;
 
 namespace Ludots.Core.Input.Runtime
 {
@@ -98,6 +99,24 @@ namespace Ludots.Core.Input.Runtime
             return !string.IsNullOrWhiteSpace(actionId) &&
                    _states.TryGetValue(actionId, out var state) &&
                    state.ReleasedThisFrame;
+        }
+
+        public void CopyAuthoritativeActions(List<AuthoritativeAction> destination)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            destination.Clear();
+            foreach (KeyValuePair<string, ActionState> pair in _states)
+            {
+                ActionState state = pair.Value;
+                destination.Add(new AuthoritativeAction(
+                    pair.Key,
+                    state.Value,
+                    state.IsDown,
+                    state.PressedThisFrame,
+                    state.ReleasedThisFrame));
+            }
+
+            destination.Sort(static (left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
         }
 
         private static bool IsNonZero(Vector3 value)
