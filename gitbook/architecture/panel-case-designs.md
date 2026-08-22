@@ -70,7 +70,8 @@ Scenario: 资源条随经济同帧刷新
   Given Full-HUD 验收场启动
   And panel.player.aggregate 可见
   When 玩家花费 200 金生产一队兵
-  Then gold 变量减少 200 且 popUsed 增加
+  Then gold 变量减少 200
+  And popUsed 增加
   And 与图输出 economy.gold 同帧
 
 Scenario: 溯源失败即拒
