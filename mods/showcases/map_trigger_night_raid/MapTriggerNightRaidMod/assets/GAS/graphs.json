@@ -30,7 +30,7 @@
       {
         "label": "on_boss_died",
         "event": "EntityDied",
-        "start": "bd_scope",
+        "start": "hero_scope",
         "once": true,
         "filters": {
           "team": 4
@@ -125,7 +125,7 @@
       },
       {
         "id": "rd_lt",
-        "op": "CompareLtInt"
+        "op": "CompareEqInt"
       },
       {
         "id": "rd_wait",
@@ -175,7 +175,7 @@
         "op": "HaltReturnInt"
       },
       {
-        "id": "bd_scope",
+        "id": "hero_scope",
         "op": "LoadExplicitTarget"
       },
       {
@@ -343,12 +343,12 @@
       {
         "from": "rd_wait",
         "fromPort": "true",
-        "to": "rd_halt_const"
+        "to": "stage_three"
       },
       {
         "from": "rd_wait",
         "fromPort": "false",
-        "to": "stage_three"
+        "to": "rd_halt_const"
       },
       {
         "from": "rd_halt_const",
@@ -366,7 +366,7 @@
         "to": "rd_done"
       },
       {
-        "from": "bd_scope",
+        "from": "hero_scope",
         "fromPort": "next",
         "to": "stage_four"
       },
@@ -570,7 +570,7 @@
         "toPort": "value"
       },
       {
-        "from": "bd_scope",
+        "from": "hero_scope",
         "fromPort": "value",
         "to": "write_stage_four",
         "toPort": "source"
@@ -582,7 +582,7 @@
         "toPort": "value"
       },
       {
-        "from": "bd_scope",
+        "from": "hero_scope",
         "fromPort": "value",
         "to": "write_stage_five",
         "toPort": "source"
@@ -630,7 +630,7 @@
         "toPort": "value"
       },
       {
-        "from": "bd_scope",
+        "from": "hero_scope",
         "fromPort": "value",
         "to": "victory_panel",
         "toPort": "source"

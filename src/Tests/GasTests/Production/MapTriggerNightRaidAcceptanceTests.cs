@@ -93,6 +93,9 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         Assert.That(panelHost.Count, Is.EqualTo(1), "Stage 5 must create exactly one victory panel.");
         Assert.That(FindVictoryPanelValues(panelHost), Is.True,
             "The victory panel must project the hero template attribute, never a presentation constant.");
+        float heroHealth = engine.World.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(hero).GetCurrent(AttributeRegistry.GetId("Health"));
+        Assert.That(FindVictoryPanelValue(panelHost, "heroHealth"), Is.EqualTo(heroHealth),
+            "heroHealth must equal the mount anchor hero's current health — pinning the LoadExplicitTarget scope semantics.");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
@@ -160,6 +163,16 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             () => "With threshold 2 the second raider kill must leave the raider phase immediately.");
         Assert.That(variables.ReadInt("kill_count"), Is.LessThan(3),
             "The phase must flip via the overridden threshold, not the base one.");
+
+        // N3 regression: kills past the threshold restart the raider-death chain; the
+        // equality crossing guard must keep the boss population at exactly one.
+        TickUntil(engine, () => CountBossEntities(world) == 1, HeartbeatIntervalTicks * 3,
+            () => "Crossing the overridden threshold must spawn exactly one boss.");
+        KillOneRaider(engine, world);
+        KillOneRaider(engine, world);
+        Tick(engine, HeartbeatIntervalTicks * 2);
+        Assert.That(CountBossEntities(world), Is.EqualTo(1),
+            "Post-threshold kills must never spawn a second boss (equality crossing guard).");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
@@ -172,37 +185,9 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             "The night raid level flow must stay code-free: map + graphs + events + panel data only.");
     }
 
-    private static int CountTeam(World world, int teamId)
-    {
-        int count = 0;
-        world.Query(new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
-            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
-            {
-                if (team.Id == teamId)
-                {
-                    count++;
-                }
-            });
-        return count;
-    }
-
     private static void KillOneRaider(GameEngine engine, World world)
     {
         ZeroTeamHealth(world, teamId: 2, maxKills: 1);
-    }
-
-    private static int CountTeamEntities(World world, int teamId)
-    {
-        int count = 0;
-        world.Query(new QueryDescription().WithAll<Ludots.Core.Gameplay.Components.Team>(),
-            (Entity entity, ref Ludots.Core.Gameplay.Components.Team team) =>
-            {
-                if (team.Id == teamId)
-                {
-                    count++;
-                }
-            });
-        return count;
     }
 
     private static int CountBossEntities(World world)
@@ -244,6 +229,20 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     {
         return engine.CurrentMapSession?.Variables
             ?? throw new InvalidOperationException("night_raid must declare map variables.");
+    }
+
+    private static float FindVictoryPanelValue(PanelHost panelHost, string variable)
+    {
+        foreach (PanelHostInstanceInfo info in panelHost.SnapshotInstances())
+        {
+            if (string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal) &&
+                panelHost.TryGetValues(info.Handle, out PanelVariableSet values))
+            {
+                return values.Get(variable);
+            }
+        }
+
+        throw new InvalidOperationException("Victory panel instance missing.");
     }
 
     private static bool FindVictoryPanelValues(PanelHost panelHost)

@@ -55,8 +55,10 @@ internal sealed class NightRaidShowcaseInteractionSystem : ISystem<float>
         _leftCooldown = Math.Max(0, _leftCooldown - 1);
         _rightCooldown = Math.Max(0, _rightCooldown - 1);
 
-        Vector3 ground = input.ReadAction<Vector3>(GroundPointerAction);
-        bool hasGround = ground != Vector3.Zero;
+        // IsDown semantics, not value comparison: world (0, 0) is a legal ground point
+        // (the raid circle is centered on the origin) and must not read as "no pointer".
+        bool hasGround = AuthoritativeGroundPointerHelper.TryRead(input, out Ludots.Platform.Abstractions.WorldCmInt2 groundCm);
+        Vector3 ground = hasGround ? new Vector3(groundCm.X, 0f, groundCm.Y) : Vector3.Zero;
 
         if (hasGround && input.IsDown(LeftClickAction) && _leftCooldown == 0)
         {

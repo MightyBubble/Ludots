@@ -1,7 +1,7 @@
 {
   "name": "MapTriggerNightRaidMod",
   "version": "1.0.0",
-  "description": "Night raid: WASD orders, Q ability strike, heartbeat-query waves and victory - 100% map + graphs + input + GAS JSON, zero showcase code",
+  "description": "纯数据两段式关卡：进圈开怪 → 击杀达 kill_threshold 阈值 → SpawnTemplate 图 op（op 447）图内生成 boss → 杀 boss → 胜利面板；关卡流全部在地图 JSON + TriggerGraph 数据里，零 showcase 代码",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",

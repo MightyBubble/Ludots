@@ -99,7 +99,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.AddInt, LinearAndScript, GraphValueType.Int, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Int);
             Add(rows, GraphNodeOp.CompareGtFloat, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB, scriptOut: GraphValueType.Bool);
             Add(rows, GraphNodeOp.CompareLtInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
-            Add(rows, GraphNodeOp.CompareEqInt, LinearAll, GraphValueType.Bool, portAB);
+            Add(rows, GraphNodeOp.CompareEqInt, LinearAndScript, GraphValueType.Bool, portAB, scriptPorts: portAB);
             Add(rows, GraphNodeOp.HasTag, LinearQueryScript, GraphValueType.Bool, portSource, queryOut: GraphValueType.Bool, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Bool, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.CompareEqEntity, LinearAndQuery, GraphValueType.Bool, portAB, queryOut: GraphValueType.Bool, queryPorts: portAB);
             Add(rows, GraphNodeOp.SelectEntity, LinearAll, GraphValueType.Entity, portConditionAB);

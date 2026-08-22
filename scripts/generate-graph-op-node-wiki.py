@@ -26,6 +26,7 @@ COVERAGE_REL = "assets/GAS/graph_node_op_coverage.registry.json"
 WIKI_REL = "gitbook/reference/graph-node-op-wiki"
 EVIDENCE_REL = "artifacts/evidence"
 DESCRIPTOR_REL = "src/Core/NodeLibraries/GASGraph/GraphOpDescriptorTable.Data.cs"
+KIND_ENUM_REL = "src/Core/NodeLibraries/GASGraph/GraphOpDescriptor.cs"
 HANDBOOK_CONFIG_REL = "gitbook/reference/mod-editor-prd/config"
 
 DRIVER_LABELS = {
@@ -52,18 +53,58 @@ HANDBOOK_BY_DRIVER = {
     "sandbox": ("gr-02-document.md", "图文档写法 · gr-02"),
 }
 
-KIND_MASK_LABELS = {
-    "LinearAll": "Effect / Score / Validation / Derived",
-    "LinearEffect": "仅 Effect",
-    "LinearEffectDerived": "Effect / Derived",
-    "QueryOnly": "仅 Query",
-    "ScriptOnlyMask": "仅 Script",
-    "LinearAndQuery": "Effect / Score / Validation / Derived / Query",
-    "LinearAndScript": "Effect / Score / Validation / Derived / Script",
-    "LinearQueryScript": "六种全可用（Effect / Score / Validation / Derived / Query / Script）",
-    "EffectAndScript": "Effect / Script",
-    "ScriptAndTriggerGraph": "Script / TriggerGraph",
-}
+ALL_KINDS = [
+    "Effect", "Score", "Validation", "Derived", "Query", "Script", "TriggerGraph"
+]
+
+_CN_NUM = {1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八", 9: "九"}
+
+
+def _cn(n: int) -> str:
+    return _CN_NUM.get(n, str(n))
+
+
+def parse_kind_enum(path: Path) -> list[str]:
+    """读 GraphKindMask 枚举：图种全集的单一事实源。"""
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"enum\s+GraphKindMask\s*:\s*byte\s*\{(.*?)\}", text, re.S)
+    if not m:
+        raise SystemExit(f"GraphKindMask 枚举定义未找到：{path}")
+    return [n for n in re.findall(r"\b([A-Z]\w*)\s*=", m.group(1)) if n != "None"]
+
+
+def parse_kind_masks(text: str) -> dict[str, list[str]]:
+    """解析 GraphOpDescriptorTable.Data.cs 里的 authorableKinds 掩码常量，按定义顺序展开为图种名列表。"""
+    consts: dict[str, str] = {}
+    for m in re.finditer(r"private\s+const\s+GraphKindMask\s+(\w+)\s*=\s*([^;]*);", text):
+        consts[m.group(1)] = m.group(2)
+
+    def expand(expr: str, chain: tuple[str, ...]) -> list[str]:
+        kinds: list[str] = []
+        for member, name in re.findall(r"GraphKindMask\.(\w+)|\b([A-Za-z_]\w*)\b", expr):
+            if member:
+                if member != "None":
+                    kinds.append(member)
+            elif name in consts:
+                if name in chain:
+                    raise SystemExit(f"GraphKindMask 掩码常量循环引用：{' → '.join(chain + (name,))}")
+                kinds.extend(expand(consts[name], chain + (name,)))
+        out: list[str] = []
+        for k in kinds:
+            if k not in out:
+                out.append(k)
+        return out
+
+    return {name: expand(expr, (name,)) for name, expr in consts.items()}
+
+
+def render_kind_label(names: list[str]) -> str:
+    """把图种名列表渲染成作者表里的「可用图种」文案。"""
+    if len(names) == 1:
+        return f"仅 {names[0]}"
+    if names == ALL_KINDS:
+        return f"{_cn(len(names))}种全可用（{' / '.join(names)}）"
+    return " / ".join(names)
 
 TYPE_LABELS = {
     "GraphValueType.Void": "无（副作用节点）",
@@ -135,7 +176,7 @@ def _split_args(text: str) -> list[str]:
     return [a.strip() for a in args if a.strip()]
 
 
-def parse_descriptor_table(path: Path) -> dict[str, dict]:
+def parse_descriptor_table(path: Path, kind_masks: dict[str, list[str]]) -> dict[str, dict]:
     """解析引擎描述表：op → 图种/返回类型/端口/操作数角色（作者签名 SSOT）。"""
     text = path.read_text(encoding="utf-8")
     port_arrays: dict[str, list[str]] = {"noPorts": []}
@@ -161,8 +202,9 @@ def parse_descriptor_table(path: Path) -> dict[str, dict]:
             kw[ADD_PARAM_ORDER[i]] = v
 
         mask = kw["authorable"].split(".")[-1]
-        if mask not in KIND_MASK_LABELS:
-            raise SystemExit(f"未知图种掩码 {mask}（op={op}）：请在生成器 KIND_MASK_LABELS 补词条")
+        if mask not in kind_masks:
+            raise SystemExit(f"未知图种掩码 {mask}（op={op}）：GraphOpDescriptorTable.Data.cs 未定义该 authorableKinds 常量")
+        kind_names = kind_masks[mask]
 
         def type_of(key: str) -> str:
             raw = kw.get(key, "GraphValueType.Void")
@@ -197,7 +239,8 @@ def parse_descriptor_table(path: Path) -> dict[str, dict]:
             return ROLE_LABELS[raw]
 
         descs[op] = {
-            "kinds": KIND_MASK_LABELS[mask],
+            "kind_names": kind_names,
+            "kinds": render_kind_label(kind_names),
             "out": type_of("linearOut"),
             "ports": ports_of("linearPorts", "queryPorts", "scriptPorts"),
             "dst": role_of("dst") if kw.get("dst") else (
@@ -229,10 +272,7 @@ def extract_usage(doc: dict, op: str) -> tuple[str, list[str]]:
         for e in doc.get("valueEdges", [])
         if e.get("to") == n["id"]
     ]
-    return entry, wires[:2]
-
-
-ALL_KINDS = ["Effect", "Score", "Validation", "Derived", "Query", "Script"]
+    return entry, wires
 
 
 def node_sequence(doc: dict, op: str) -> list[tuple[str, bool]]:
@@ -286,7 +326,7 @@ def scene_section(op: str, doc: dict, detail: str, graph_path: Path) -> str:
 
 
 def boundary_section(op: str, driver: str, desc: dict) -> str:
-    present = [k for k in ALL_KINDS if k in desc["kinds"]]
+    present = [k for k in ALL_KINDS if k in desc["kind_names"]]
     missing = [k for k in ALL_KINDS if k not in present]
     lines = []
     if missing:
@@ -294,7 +334,7 @@ def boundary_section(op: str, driver: str, desc: dict) -> str:
             "图种边界：可用于 " + " / ".join(present) + "；" + " / ".join(missing) + " 图不可用（编译期白名单拒绝）。"
         )
     else:
-        lines.append("图种边界：六种图全都能用，不必为它挑图种。")
+        lines.append(f"图种边界：{_cn(len(ALL_KINDS))}种图全都能用，不必为它挑图种。")
     if not desc["ports"] or desc["ports"] == []:
         lines.append("不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。")
     if desc["imm"] == "imm 填符号名（编译期解析）":
@@ -450,7 +490,15 @@ def main() -> int:
 
     coverage = load(repo / COVERAGE_REL)
     ops = [e["op"] for e in coverage["entries"]]
-    descs = parse_descriptor_table(repo / DESCRIPTOR_REL)
+    enum_kinds = parse_kind_enum(repo / KIND_ENUM_REL)
+    if set(enum_kinds) != set(ALL_KINDS):
+        raise SystemExit(
+            "GraphKindMask 枚举与生成器 ALL_KINDS 不同步：\n"
+            f"  枚举={enum_kinds}\n  ALL_KINDS={ALL_KINDS}"
+        )
+    descriptor_text = (repo / DESCRIPTOR_REL).read_text(encoding="utf-8")
+    kind_masks = parse_kind_masks(descriptor_text)
+    descs = parse_descriptor_table(repo / DESCRIPTOR_REL, kind_masks)
     missing_desc = [op for op in ops if op not in descs]
     if missing_desc:
         raise SystemExit(

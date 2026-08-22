@@ -37,7 +37,7 @@ ConstInt → **Call**（本篇） → HaltReturnInt → Yield → Return
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Script；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进

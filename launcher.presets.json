@@ -464,7 +464,6 @@
       "selectors": [
         "$map_trigger_night_raid",
         "$night_raid_showcase",
-        "$map_trigger_night_raid",
         "$agent_bridge"
       ],
       "adapterId": "raylib",
