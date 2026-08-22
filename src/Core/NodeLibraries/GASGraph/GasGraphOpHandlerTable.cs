@@ -1077,6 +1077,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 !s.World.IsAlive(scope) ||
                 !s.World.TryGet<MapEntity>(scope, out mapEntity))
             {
+                Ludots.Core.Diagnostics.Log.Warn(
+                    in Ludots.Core.Diagnostics.LogChannels.Engine,
+                    $"[MapVarScopeDebug] {opName}: scope=({scope.Id},{scope.Version}) worldNull={s.World == null} alive={s.World?.IsAlive(scope)} caster=({s.Caster.Id},{s.Caster.Version}) explicit=({s.ExplicitTarget.Id},{s.ExplicitTarget.Version})");
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
             }

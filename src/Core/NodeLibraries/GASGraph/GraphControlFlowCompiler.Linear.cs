@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.UI.PanelHosting;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -249,6 +250,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.CreatePanel:
                     RequireNonEmpty(node.PanelType, "panelType", node, graphId, diagnostics);
                     RequireNonEmpty(node.PanelAnchor, "panelAnchor", node, graphId, diagnostics);
+                    if (!PanelAnchorCatalog.IsSupported(node.PanelAnchor))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidPanelAnchor,
+                            $"Node '{node.Id}' panelAnchor '{node.PanelAnchor}' is not a supported panel anchor. Supported anchors: {PanelAnchorCatalog.Describe()}.", node.Id));
+                    }
                     break;
 
                 case GraphNodeOp.DestroyPanel:

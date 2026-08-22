@@ -303,17 +303,21 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private UiRect ResolvePanelRect(string anchorKey, int stackIndex)
     {
         bool left = anchorKey.Contains("left", StringComparison.OrdinalIgnoreCase);
-        bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
-        if (!left && !anchorKey.Contains("right", StringComparison.OrdinalIgnoreCase))
+        bool right = !left && anchorKey.Contains("right", StringComparison.OrdinalIgnoreCase);
+        bool center = !left && !right && anchorKey.Contains("center", StringComparison.OrdinalIgnoreCase);
+        if (!left && !right && !center)
         {
             throw new InvalidOperationException(
                 $"Panel anchor '{anchorKey}' is not supported by the built-in presentation. " +
-                "Supported anchors: screen.topLeft, screen.topRight, screen.bottomLeft, screen.bottomRight.");
+                "Supported anchors: screen.topLeft, screen.topCenter, screen.topRight, screen.bottomLeft, screen.bottomCenter, screen.bottomRight.");
         }
 
+        bool top = anchorKey.Contains("top", StringComparison.OrdinalIgnoreCase);
         float x = left
             ? AnchorMargin
-            : MathF.Max(AnchorMargin, _root.Width - PanelWidth - AnchorMargin);
+            : right
+                ? MathF.Max(AnchorMargin, _root.Width - PanelWidth - AnchorMargin)
+                : MathF.Max(AnchorMargin, (_root.Width - PanelWidth) * 0.5f);
         float stackOffset = stackIndex * (PanelChromeHeight + (3 * RowHeight) + PanelStackGap);
         float y = top ? AnchorMargin + stackOffset : MathF.Max(AnchorMargin, _root.Height - PanelChromeHeight - (3 * RowHeight) - AnchorMargin - stackOffset);
         return new UiRect(x, y, PanelWidth, PanelChromeHeight + (3 * RowHeight));
