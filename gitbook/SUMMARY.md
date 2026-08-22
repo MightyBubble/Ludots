@@ -17,6 +17,7 @@
   - [UIP-0：Template / Instance / Router 合同](architecture/ui-panel-template-instance-router.md)
   - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
   - [面板目录设计：配置形状与线框](architecture/panel-catalog-designs.md)
+  - [面板典型案例全设计](architecture/panel-case-designs.md)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)

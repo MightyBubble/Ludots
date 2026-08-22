@@ -1,0 +1,277 @@
+# 面板典型案例全设计——四个样板间的完整设计案
+
+本页是 [面板目录设计](panel-catalog-designs.md) 的第一批**全设计案**：从分组一挑选四个最典型 case（覆盖纯展示、交互全链、模态浮层、零变量命令四种形态，踩中 G3/G5/G6 全部缺口），每案含：玩家旅程、完整配置、线框、数据流、事件-意图链、显隐编排、验收断言、依赖与边界。本批同时作为后续 31 类的设计范式模板。
+
+**通用约定**（不再每案重复）：实例参数四级链（op > 模板 > game.json > default）；皮与主题正交（`panelSkin` × `panelTheme`），本页线框均为内容语义，视觉由主题决定；所有 JSON fail-closed——未知字段/未知读嘴/未知事件手势装载期即抛。
+
+---
+
+## 案 A：玩家信息聚合 `panel.player.aggregate` —— 纯展示 · global scope · 活状态中转
+
+### A1 玩家旅程
+开局即见顶栏左角资源条；造一队兵花掉 200 金——金币数字掉、人口 8→10；再花光时人口变红提示超限。全程零交互，纯被动读取。
+
+### A2 完整配置
+
+```jsonc
+{
+  "id": "panel.player.aggregate",
+  "scope": "global",                          // G3：无 scope 实体，地图级唯一实例
+  "variables": [
+    { "name": "gold", "kind": "Int", "realtime": true,
+      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "economy.gold" } },
+    { "name": "popUsed", "kind": "Int", "realtime": true,
+      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.used" } },
+    { "name": "popCap", "kind": "Int", "realtime": true,
+      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.cap" } }
+  ],
+  "binds": [
+    { "control": "lbl.gold", "variable": "gold" },
+    { "control": "lbl.popUsed", "variable": "popUsed" },
+    { "control": "lbl.popCap", "variable": "popCap" }
+  ]
+  // 无 events / 无 intents —— 纯展示面板零交互面
+}
+```
+
+### A3 线框
+
+```text
+screen.topLeft ┌──────────────────────────────┐  panelZOrder 100（常驻最底）
+               │ ⛁ 1,240     👥 8/20          │  超 popCap 时皮层把 👥 行标红
+               └──────────────────────────────┘  （皮读双变量自行比较，模板不做逻辑）
+```
+
+### A4 数据流（溯源到图）
+
+```text
+经济系统(实体属性) ──┐
+人口系统(集合计数) ──┼→ Graph.Economy.Aggregate（Derived 图，心跳拍重算）
+地图变量(储备)    ──┘        │ graphOutputKey: economy.gold / pop.used / pop.cap
+                             ▼
+                 PanelProjectionReader(GraphOutput 读嘴, realtime 帧扫)
+                             ▼
+                 PanelVariableSet{gold,popUsed,popCap} ──binds──> 控件 lbl.*
+```
+
+要点：面板**不直读**地图变量/实体——一切活状态经图输出中转（完成核"数字溯源到图"）；图心跳拍重算，面板帧扫取值，两级节流天然存在。
+
+### A5 显隐编排
+常驻面板：地图装载图（TriggerGraph）`CreatePanel(panelAnchor: "screen.topLeft")` 后**不调** `ShowPanel` 之外的任何显隐逻辑——开局默认隐藏由激活商店语义决定（`IsVisible` 缺省 false），装载图随即 `ShowPanel("panel.player.aggregate")` 常亮。整局无再隐需求。
+
+### A6 验收断言
+- 自动化（headless）：装载地图 → 实例 1 个、变量初值正确；驱动经济图输出变化 → 面板变量同帧跟随（现有 PanelFireball 断言模式复用）。
+- 30 秒人验：`preset:panel_fullhud` 打开即见资源条；按 U 造兵 → 金掉/人口涨可见。
+- 边界（fail-closed）：`graphOutputKey` 写错 → 装载期抛错点名 key；缺图（Graph.Economy.Aggregate 未注册）→ 同上，无 0 兜底。
+
+### A7 依赖与边界
+依赖：**G3**（scope=global 实例语义，#1012 主战场）。明确不做：货币动画/溢出滚动（皮层自由实现，模板不承诺）；不读敌方经济（图输出仅己方 scope）。
+
+---
+
+## 案 B：时间控制 `panel.time.control` —— 交互全链 · 事件/意图/回读闭环
+
+### B1 玩家旅程
+游戏进行中，玩家点【3x】→ 游戏明显加速，【3x】按钮进入高亮态；再点【⏸】→ 游戏停，暂停键高亮。全程面板不知道"游戏速度"是什么——它只发事件、收回读。
+
+### B2 完整配置
+
+```jsonc
+{
+  "id": "panel.time.control",
+  "scope": "global",
+  "variables": [
+    { "name": "speed", "kind": "Int", "realtime": true,          // 回读：当前速度挡
+      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.speed" } }
+  ],
+  "binds": [
+    { "control": "lbl.speed", "variable": "speed" }               // 高亮态由皮按 speed 值决定
+  ],
+  "events": [                                                     // 四挡合一事件，载荷区分
+    { "eventId": "speed.set", "control": "btn.pause", "gesture": "click", "payload": { "speed": "Int" } },
+    { "eventId": "speed.set", "control": "btn.speed1", "gesture": "click", "payload": { "speed": "Int" } },
+    { "eventId": "speed.set", "control": "btn.speed2", "gesture": "click", "payload": { "speed": "Int" } },
+    { "eventId": "speed.set", "control": "btn.speed3", "gesture": "click", "payload": { "speed": "Int" } }
+  ],
+  "intents": [
+    { "eventId": "speed.set", "intent": "game.setSpeed",
+      "args": { "speed": "$payload.speed" },
+      "playerSource": "seat", "actorSource": "commandSource.primary" }
+  ]
+}
+```
+
+### B3 线框
+
+```text
+screen.topRight 时间条右侧 ┌───────────────────┐
+                           │ 【⏸】【1x】【2x】【3x】│  speed=0..3，皮层高亮 bind 到 lbl.speed
+                           └───────────────────┘
+```
+
+### B4 事件-意图链（UI 永不直构 Order）
+
+```text
+点击 btn.speed3 ──gesture:click──> 事件 speed.set {speed:3}
+      │（皮侧只声明，不实现）
+      ▼
+PanelEventBus（声明层校验：eventId/控件/手势/载荷类型四对四）
+      ▼
+IntentMap：speed.set → game.setSpeed，args={$payload.speed}
+      │ 归因：playerSource=seat（座位 2 点的就是座位 2 的）
+      ▼
+意图 admission 中间层（预算/合法性裁决——UI 不碰）
+      ▼ 通过                              ▼ 拒绝
+Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
+      ▼
+时钟系统执行 → GraphOutput clock.speed=3
+      ▼
+面板 realtime 回读 → 【3x】高亮
+```
+
+要点：**回读闭环**——高亮不是点击直接置位，而是意图落地后经 `clock.speed` 图输出回流。暂停键点两下、网络延迟、admission 拒绝，面板状态永远与游戏真值一致。
+
+### B5 显隐编排
+常驻（同案 A）：装载图 CreatePanel + ShowPanel。暂停菜单打开时可选择 HidePanel（由暂停菜单的图决定，本面板不自理）。
+
+### B6 验收断言
+- 自动化：模拟事件 speed.set{3} → 意图入队且 args 归因正确；置 admission 预算 0 → 意图被拒、`clock.speed` 不变、面板回读不变（拒绝回执显示属 #1015 回执场景，此处只验状态一致）。
+- 30 秒人验：点 3x 游戏加速+按钮高亮；点暂停画面静止。
+- 边界：未声明 payload 字段被塞入 → 事件层校验拒绝；`$payload.speed` 拼错 → 装载期抛（意图 args 校验）。
+
+### B7 依赖与边界
+依赖：**G3** + **#1015 交互回调**（事件分发→意图→admission 链路本体）。不做：热键绑定（输入系统域，面板只管点击）；变速过渡动画（皮层）。
+
+---
+
+## 案 C：设置 `panel.settings` —— 模态浮层 · 连续手势 · 全局副作用
+
+### C1 玩家旅程
+玩家点右上角常驻【⚙】→ 模态浮层弹出（其余输入挂起）；拖音量滑条 → 音量实时变化；点【✕】或浮层外 → 关闭，输入恢复。点【退出到主菜单】→ 二次确认后退出。
+
+### C2 完整配置
+
+```jsonc
+{
+  "id": "panel.settings",
+  "scope": "global",
+  "variables": [
+    { "name": "volume", "kind": "Float", "realtime": true,
+      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "settings.volume" } }
+  ],
+  "binds": [
+    { "control": "slider.volume", "variable": "volume" }          // 滑条位置=volume 回读
+  ],
+  "events": [
+    { "eventId": "settings.volume", "control": "slider.volume", "gesture": "change",
+      "payload": { "value": "Float" } },
+    { "eventId": "settings.exit", "control": "btn.exit", "gesture": "click" },
+    { "eventId": "settings.close", "control": "btn.close", "gesture": "click" }
+  ],
+  "intents": [
+    { "eventId": "settings.volume", "intent": "settings.setVolume",
+      "args": { "value": "$payload.value" }, "playerSource": "seat", "actorSource": "none" },
+    { "eventId": "settings.exit", "intent": "game.exitToMenu",
+      "args": {}, "playerSource": "seat", "actorSource": "none" }
+    // settings.close 无意图——纯 UI 事件，显隐编排层消费（见 C5）
+  ]
+}
+```
+
+### C3 线框
+
+```text
+模态锚点 modal.center（G5）   ┌──────────────────────┐ zOrder 500（浮层最高层）
+                              │ 设置            【✕】 │
+                              │ 音量 ▁▂▃▅▆▇ 【━━●━】 │ ← gesture:change 连续派发
+                              │ 【退出到主菜单】       │
+                              └──────────────────────┘
+   背景输入挂起（模态语义）；【⚙】入口按钮属 subsystem.entries（2.9），非本面板
+```
+
+### C4 数据流与事件链
+- 音量：滑条 change → settings.volume 事件（连续）→ 意图 settings.setVolume → 设置系统落值 → `settings.volume` 图输出 → 面板 realtime 回读（滑条跟随）。与案 B 同构，差别在 gesture=change 高频派发——**意图层须做合流**（admission 对连续意图只取末值，#1015 设计点）。
+- 退出：click → game.exitToMenu 意图（无载荷）→ 确认流程属玩法域。
+
+### C5 显隐编排（本案的灵魂）
+默认隐藏：装载图只 `CreatePanel(panelAnchor: "modal.center")` **不 Show**。
+- 开：⚙ 入口的事件 `sub.open{sub:settings}` 走图（TriggerGraph 监听 UI 事件）调 `ShowPanel("panel.settings")` + 输入焦点捕获。
+- 关：`settings.close` 事件被同一张图消费 → `HidePanel` + 释放焦点。**纯 UI 事件不经意图层**——无 order 副作用的关闭动作在编排层终结。
+
+### C6 验收断言
+- 自动化：声明校验（gesture=change 合法手势表内）；显隐图驱动 Show/Hide 后激活商店真值正确；连续事件合流后仅一条 setVolume 意图入队。
+- 30 秒人验：⚙ 开浮层→拖滑条声音变→✕ 关闭恢复操作。
+- 边界：`actorSource: "none"` 合法性（无实体归因的设置类意图）；modal 锚点未实现时（G5 未落地）本面板配置装载即拒——不静默降级为角落面板。
+
+### C7 依赖与边界
+依赖：**G5 模态锚点+焦点语义**（#840 前置小片）、**#1015**（change 手势+连续合流）。不做：热键 Esc 关闭（输入域）；设置持久化（存档域，仅回读已存值）。
+
+---
+
+## 案 D：全局指令 `panel.command.global` —— 零变量纯命令 · G6 缺口样板
+
+### D1 玩家旅程
+玩家框选一队兵后点底栏【集结】→ 进入指定目标模式，光标变化；点【全选】→ 场上己方作战单位全亮。按钮按下即命令，面板自身无任何状态显示。
+
+### D2 完整配置
+
+```jsonc
+{
+  "id": "panel.command.global",
+  "scope": "global",
+  "variables": [],                        // G6：现行装载器要求 ≥1 变量，纯命令面板需放开为 0
+  "binds": [],
+  "events": [
+    { "eventId": "army.selectAll", "control": "btn.selectAll", "gesture": "click" },
+    { "eventId": "army.rally", "control": "btn.rally", "gesture": "click" },
+    { "eventId": "army.stop", "control": "btn.stop", "gesture": "click" },
+    { "eventId": "army.retreat", "control": "btn.retreat", "gesture": "click" }
+  ],
+  "intents": [
+    { "eventId": "army.selectAll", "intent": "selection.allArmy", "args": {},
+      "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "eventId": "army.rally", "intent": "army.setRally", "args": {},
+      "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "eventId": "army.stop", "intent": "army.stopAll", "args": {},
+      "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "eventId": "army.retreat", "intent": "army.retreat", "args": {},
+      "playerSource": "seat", "actorSource": "commandSource.primary" }
+  ]
+}
+```
+
+### D3 线框
+
+```text
+screen.bottomCenter ┌────────────────────────────────┐
+                    │ 【全选】【集结】【停止】【撤退】 │  无状态显示：按钮永远不高亮
+                    └────────────────────────────────┘  （可用性态=灰，由皮读意图
+                                                          admission 状态渲染，非模板变量）
+```
+
+### D4 事件链
+与案 B 同构（click → 意图 → admission → order）。特点：**四事件零载荷零变量**——载荷/变量/binds 全部缺席，最小事件面板。`args: {}` 合法（无参意图）。
+
+### D5 显隐编排
+常驻。特殊编排需求：**指挥模式互斥**——当玩家进入其他命令模式（如建筑放置）时，指挥图调 `HidePanel`；退出模式恢复 Show。仍由图驱动，面板不自理。
+
+### D6 验收断言
+- 自动化：G6 落地后本配置装载通过；四事件各自意图入队断言；`args:{}` 无参意图合法。
+- 30 秒人验：选兵→点集结→光标变指定态；点全选→全军亮。
+- 边界：`variables: []` 在 G6 落地前装载即抛并提示"纯命令面板需 G6"——不静默塞假变量。
+
+### D7 依赖与边界
+依赖：**G6**（零变量放开，小改）、**#1015**、**G3**。不做：按钮冷却是皮层自由实现（读 admission 状态），模板不承诺。
+
+---
+
+## 四案覆盖矩阵
+
+| 维度 | A 聚合 | B 时间控制 | C 设置 | D 全局指令 |
+|---|---|---|---|---|
+| scope=global (G3) | ✅ | ✅ | ✅ | ✅ |
+| 变量/binds | 有+realtime | 有（回读） | 有（回读） | **无（G6）** |
+| events/intents | 无 | click+载荷 | **change 连续+合流** | click 无载荷 |
+| 显隐 | 常驻 | 常驻 | **模态编排（开/关图）** | 互斥编排 |
+| 锚点 | topLeft | topRight | **modal.center（G5）** | bottomCenter |
+| 溯源形态 | 图聚合输出 | 图输出回读闭环 | 图输出+连续意图 | 纯意图 |
