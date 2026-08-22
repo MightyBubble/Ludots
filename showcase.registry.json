@@ -23,6 +23,11 @@
     },
     {
       "kind": "binding",
+      "value": "agent_bridge",
+      "reason": "Agent Bridge 基础调试绑定，由多个可运行 showcase 共用"
+    },
+    {
+      "kind": "binding",
       "value": "panel_theme_showcase",
       "reason": "shared theme asset library (CSS/art/fonts) for panel theme showcases; not a standalone showcase entry"
     },
@@ -50,7 +55,7 @@
       "title": "Persistence, Replay and Online Recovery",
       "summary": "A playable RTS scenario showing checkpoint restore, deterministic replay and explicit reconnect rejection.",
       "tier": "T2",
-      "category": "infrastructure",
+      "category": "demo",
       "binding": "persistence_online_replay_showcase",
       "preset": "persistence_online_replay_showcase_raylib",
       "docsPath": "gitbook/architecture/persistence-online-replay-showcase-design.md",

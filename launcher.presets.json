@@ -4,7 +4,10 @@
     {
       "id": "persistence_online_replay_showcase_raylib",
       "name": "Persistence, Replay and Online Recovery Raylib",
-      "selectors": ["$persistence_online_replay_showcase", "$agent_bridge"],
+      "selectors": [
+        "$persistence_online_replay_showcase",
+        "$agent_bridge"
+      ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
