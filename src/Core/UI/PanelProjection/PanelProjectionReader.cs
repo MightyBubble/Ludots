@@ -5,7 +5,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// v2 pin reader: panel pins read exactly one thing — their graph's output for
+    /// Pin reader: panel pins read exactly one thing — their graph's output for
     /// the owning scope, materialized in <see cref="GraphOutputValueStore"/> by
     /// GraphReturnWriter. Missing output resolves to the pin default (no error,
     /// no empty); structural errors were rejected at load.

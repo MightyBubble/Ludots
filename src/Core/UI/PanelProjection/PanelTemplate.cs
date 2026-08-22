@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Author-facing panel contract v2 (#1011 graph-pinned panels): a panel is the
+    /// Author-facing panel contract (#1011 graph-pinned panels): a panel is the
     /// output-pin set of ONE graph (ShaderGraph analogy). The template declares pins
     /// plus the graph id; all dataflow — attribute loads, table lookups, aggregation,
     /// nested func graphs — lives inside the graph VM. Pins carry the data contract:

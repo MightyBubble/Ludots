@@ -8,111 +8,45 @@
 2. 设计发现的基建缺口回填对应子单（票号写在依赖栏），不在本页开实现；
 3. 归类修正（某行其实不是框、是机制或全屏效果）发生在本页，目录行数允许微调。
 
-## 〇、Schema v2 总合同（graph-pinned panels，已实现）
+## 一、总合同（graph-pinned panels，已实现）
 
-**面板 = 一张图的输出引脚集**（ShaderGraph 同构）：模板只声明 `graph` + `pins[]`；取值/查表/聚合/嵌套函数图全部是图内节点，图 VM 是唯一轮子。v1 的五路 inline source 与 binds 已退役删除。
+**面板 = 一张图的输出引脚集**（ShaderGraph 同构）：模板只声明 `graph` + `pins[]`；取值/查表/聚合/嵌套函数图全部是图内节点，图 VM 是唯一轮子。
 
 ```jsonc
 {
   "id": "panel.<域>.<名>",
-  "graph": "Graph.Economy.Aggregate",      // 唯一数据源：一张图（名字=图 id）
-  "pins": [                                 // 引脚 = 图 outputs 的消费子集
+  "skin": "markup",                              // 可选：本模板默认皮（实例 op 可覆盖）
+  "graph": "Graph.Economy.Aggregate",            // 唯一数据源：一张图（名字=图 id）
+  "pins": [                                      // 引脚 = 图 outputs 的消费子集
     { "name": "gold", "key": "economy.gold", "mode": "realtime", "default": 0 },
     { "name": "tier", "key": "economy.tier", "mode": "snapshot", "default": 1 }
   ],
-  "events":  [ ... ],                       // 原样保留（数据出，非数据入）
+  "events":  [ ... ],                            // 交互出链（数据出，非数据入）
   "intents": [ ... ]
 }
 ```
 
-**数据合同（用户钦定）**：结构错误（字段坏/pin 重复/mode 拼错）装载期 fail-closed；**数据缺失一律落 default——图没跑、没注册、执行失败，面板显示默认值，不报错不留空**。求值：realtime pin 每刷新拍执行图（GraphReturnWriter 按 owner 物化输出）后读 store；snapshot pin 实例化时执行一次。引擎实现：PanelHost 内置求值器（单写者主线程）、PanelProjectionReader 只读 store+默认回落。
+**数据合同**：结构错误（字段坏/pin 重复/mode 拼错/未知字段）装载期 fail-closed；**数据缺失一律落 default——图没跑、没注册、执行失败，面板显示默认值，不报错不留空**。
 
-## 一、共同骨架（v1 存档，字段以 〇 节 v2 为准）
+**引脚模式**：`realtime` 每刷新拍执行图（GraphReturnWriter 按 owner 物化输出进 store）后读值；`snapshot` 实例化时执行一次。求值由引擎内置（面板宿主主线程单写者），执行失败保持旧值/默认并记日志。
 
-### 1.1 一个面板类型的全部组成
+**实体链路**：模板不声明实体——CreatePanel 图 op 的 `source` 值边传 scope（缺省=图 caster）；求值时 scope 即值图执行上下文的 self，图内 `LoadSelfAttribute` 读的就是它。同模板多实例=多 scope 各读各的。
 
-```text
-面板类型 = assets/Panels/panel_templates.json 里的一个条目（下述模板骨架）
-         + PanelThemes 目录（#841）里的一行（登记与完成核字段）
-         + 本页的一条线框与 30 秒预期
-实例参数 = 图 op（CreatePanel: panelType/panelAnchor/panelSkin/panelZOrder）
-         > 模板 skin 字段 > game.json panelSkin/panelTheme > default
-```
+**events/intents 字段**：事件 `{eventId, control?, gesture, payload{字段:类型}}`；意图 `{event, intent, args{$payload.x 或常量}, playerSource, actorSource}`（意图的事件字段名是 `event:`）。
 
-### 1.2 模板骨架（真实 schema 的全字段注释版，非发明）
-
-```jsonc
-{
-  "id": "panel.<域>.<名>",            // 顶点前缀 panel.，点分命名空间
-  "skin": "markup",                    // 可选：本模板默认皮（实例 op 可覆盖）
-  // scope 不是今日 schema 字段（行为侧设计见 §1.4）——出现即被白名单拒绝
-  "variables": [                       // 至少一条；kind 目前 Float|Int（缺口 G1: Bool|String）
-    { "name": "gold", "kind": "Int", "realtime": true,
-      "source": {                      // 六路读嘴（真实枚举名），fail-closed：
-        "sourceKind": "TableLookup",   //   六路读嘴（真实枚举名，fail-closed）：
-                                       //   SingleAttribute / DerivedAttribute / AggregateProjection /
-                                       //   GraphOutput / TableLookup / AttributeBase
-        "lookupTable": "economy",      //   GraphOutput / TableLookup
-        "lookupField": "goldPerTick",
-        "keyAttribute": "TeamId" } } ],
-  "binds": [                           // 控件 ↔ 变量（皮侧按 control id 寻址）
-    { "control": "lbl.gold", "variable": "gold" } ],
-  "events": [                          // 0 编码事件（#1013 已落地）
-    { "event": "speed.set", "control": "btn.speed2", "gesture": "click",
-      "payload": { "speed": "Int" } } ],   // 载荷类型已有 String|Int|Float|Bool
-  "intents": [                         // 事件 → 玩法意图（面板永不直构 Order）
-    { "event": "speed.set", "intent": "game.setSpeed",
-      "args": { "speed": "$payload.speed" },
-      "playerSource": "seat", "actorSource": "commandSource.primary" } ]
-}
-```
-
-### 1.2.1 realtime 判定规则（总合同条款）
-
-`realtime: true` = 值本身会动，帧扫重算（`PanelRealtimeRefreshSystem`）。按读嘴定死：
-
-| 读嘴 | realtime | 理由 |
-|---|---|---|
-| SingleAttribute（活属性：血/蓝/资源） | ✅ | 战斗中真变 |
-| GraphOutput（活输出：时钟/经济聚合/未读数） | ✅ | 图每拍重算 |
-| AggregateProjection（聚合投影） | ✅ | 随集合变化——#1012 集合面板的现成地基 |
-| AttributeBase | ❌（buff 改基数时显式 Refresh） | 基础值通常静止 |
-| TableLookup | ❌ | 查的是启动装载的静态表，结果不动；key 动态换行属例外，走显式 Refresh，不帧扫 |
-| DerivedAttribute | 随派生源 | 派生图绑定写入 AttributeBuffer |
-
-配套建模纪律：**活游戏状态（gold/人口/时钟）一律 GraphOutput 中转**——查表只放静态数据（税率/周期/文案表）。这同时满足完成核"数字溯源到图"。地图变量（MapVariableStore）不在六路读嘴内：全局状态经图输出中转是刻意设计；若实践中"每项全局状态开一张图"爆炸，再议第七路读嘴（G7 候选，暂不立项）。
-
-### 1.3 实例参数（四级链，已落地）
-
-`panelAnchor`（screen.topLeft/topRight/bottomLeft/bottomRight）· `panelSkin`（default/markup/compose/reactive/web）· `panelZOrder`（缺省 100）· `panelTheme`（game.json 全局；模板/op 级为缺口 G4）。
-
-### 1.4 行为侧骨架（设计位；#1012 落地）
-
-```jsonc
-"scope": "item"  |  "collection"  |  "global"
-// ⚠ 设计位字段：装载器 RootFields 白名单今日无 "scope"——出现即抛。G3 落地时增补，
-//   落地前案例文档凡用此字段均标 🔴 目标态，不得当作今日可装载配置抄写。
-// item:       一物一面（现状：scope=hero 实体）
-// collection: 一集一面——框选集合变化时同一模板切形态，模板 id 不变，
-//             变量读嘴允许集合聚合（缺口 G2: 聚合读嘴 sourceKind，如 AggSum 队列项）
-// global:     全局面板（无 scope 实体；地图变量/查表为源）——缺口 G3: scope=global 的
-//             实例语义（当前 Instantiate 要求 scope 实体）
-```
-
-### 1.5 缺口登记（设计即排期）
+### 缺口登记（设计即排期）
 
 | # | 缺口 | 归属 |
 |---|---|---|
-| G1 | 变量 kind 扩展 Bool/String（载荷已有，变量侧缺） | #1010 尾巴 |
-| G2 | 集合聚合读嘴（AggSum/Avg/Count 队列项） | #1012 |
-| G3 | scope=global 实例语义 | #1012 |
-| G4 | panelTheme 模板/op 级覆盖 | #1011 后续 |
+| G3 | scope=global 实例语义（面板的 global 域） | #1012 |
 | G5 | 浮层/模态锚点（设置、子系统详情） | #840 前置小片 |
-| G8 | 手势载荷值来源（按钮→事件携带定值的机制）与 intent args 常量语义（"$payload.x" 引用与字面常量混排） | #1015 |
-| G9 | actorSource 值域扩展（"none"——设置类无实体归因意图；解析器现拒） | #1015 |
-| G10 | TriggerGraph 消费 UI 事件的接线（编排层入口：UI 事件→图触发；当前触发器事件词典无 UI 域） | #1013/#1030 交界 |
+| G6 | 纯命令面板零引脚放开（pins ≥1 约束） | #1012 |
+| G8 | 手势载荷值来源与 intent args 常量语义 | #1015 |
+| G9 | actorSource 值域扩展（"none"） | #1015 |
+| G10 | TriggerGraph 消费 UI 事件的接线 | #1013/#1030 交界 |
+| G11 | 图内读属性 base 值的节点（现用 ConstFloat 顶） | 图 op 家族 |
 
----
+（G1/G2/G4/G7 随 schema 收编消失：变量种类=图输出类型的事、聚合=图内节点、主题覆盖/地图变量读法另议。）
 
 ## 二、分组一：全局 HUD（9 类）
 

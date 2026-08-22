@@ -10,7 +10,7 @@
 
 ## 案 A：玩家信息聚合 `panel.player.aggregate` —— 纯展示 · global scope · 活状态中转
 
-> 🔴 **目标态**：`scope` 字段今日不在装载器白名单（G3）。落地前本配置装载即拒——拒因：unknown field 'scope'。
+> 🔴 **目标态**：`scope: "global"` 字段不在装载器白名单（G3）。落地前装载即拒——拒因：unknown field 'scope'。
 
 ### A1 玩家旅程
 开局即见顶栏左角资源条；造一队兵花掉 200 金——金币数字掉、人口 8→10；再花光时人口变红提示超限。全程零交互，纯被动读取。
@@ -20,19 +20,11 @@
 ```jsonc
 {
   "id": "panel.player.aggregate",
-  "scope": "global",                          // G3：无 scope 实体，地图级唯一实例
-  "variables": [
-    { "name": "gold", "kind": "Int", "realtime": true,
-      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "economy.gold" } },
-    { "name": "popUsed", "kind": "Int", "realtime": true,
-      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.used" } },
-    { "name": "popCap", "kind": "Int", "realtime": true,
-      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.cap" } }
-  ],
-  "binds": [
-    { "control": "lbl.gold", "variable": "gold" },
-    { "control": "lbl.popUsed", "variable": "popUsed" },
-    { "control": "lbl.popCap", "variable": "popCap" }
+  "graph": "Graph.Economy.Aggregate",           // 唯一数据源：经济聚合图（心跳拍重算）
+  "pins": [
+    { "name": "gold",    "key": "economy.gold", "mode": "realtime", "default": 0 },
+    { "name": "popUsed", "key": "pop.used",     "mode": "realtime", "default": 0 },
+    { "name": "popCap",  "key": "pop.cap",      "mode": "realtime", "default": 20 }
   ]
   // 无 events / 无 intents —— 纯展示面板零交互面
 }
@@ -53,7 +45,7 @@ screen.topLeft ┌────────────────────�
 人口系统(集合计数) ──┼→ Graph.Economy.Aggregate（Derived 图，心跳拍重算）
 地图变量(储备)    ──┘        │ graphOutputKey: economy.gold / pop.used / pop.cap
                              ▼
-                 PanelProjectionReader(GraphOutput 读嘴, realtime 帧扫)
+                 PanelProjectionReader（读图输出 store，realtime 拍刷新）
                              ▼
                  PanelVariableSet{gold,popUsed,popCap} ──binds──> 控件 lbl.*
 ```
@@ -89,7 +81,7 @@ Scenario: 溯源失败即拒
 
 ## 案 B：时间控制 `panel.time.control` —— 交互全链 · 事件/意图/回读闭环
 
-> 🔴 **目标态**：拒因=① `scope`（G3）② intents 字段名用 `event:` 非 `eventId:`（本文已按真实 loader 修正）③ args 常量语义（{"speed":"3"}）未定义——引用 `$payload.x` 与字面常量的区分规则属 G8；④ 手势载荷值来源（按钮怎么把自己的挡位塞进事件）同属 G8。
+> 🔴 **目标态**：拒因=① `scope`（G3）② args 字面常量语义未定义——`$payload.x` 引用与常量的区分规则属 G8。intents 用 `event:`、四事件独立、args 定挡均已是引擎现实。
 
 ### B1 玩家旅程
 游戏进行中，玩家点【3x】→ 游戏明显加速，【3x】按钮进入高亮态；再点【⏸】→ 游戏停，暂停键高亮。全程面板不知道"游戏速度"是什么——它只发事件、收回读。
@@ -99,27 +91,22 @@ Scenario: 溯源失败即拒
 ```jsonc
 {
   "id": "panel.time.control",
-  "scope": "global",
-  "variables": [
-    { "name": "speed", "kind": "Int", "realtime": true,          // 回读：当前速度挡
-      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.speed" } }
+  "graph": "Graph.Clock",
+  "pins": [
+    { "name": "speed", "key": "clock.speed", "mode": "realtime", "default": 1 }   // 回读：当前速度挡
   ],
-  "binds": [
-    { "control": "lbl.speed", "variable": "speed" }               // 高亮态由皮按 speed 值决定
-  ],
-  "events": [                                                     // 四挡四事件（装载器拒重复 eventId）
-    { "eventId": "speed.set.pause", "control": "btn.pause", "gesture": "click" },
-    { "eventId": "speed.set.1", "control": "btn.speed1", "gesture": "click" },
-    { "eventId": "speed.set.2", "control": "btn.speed2", "gesture": "click" },
-    { "eventId": "speed.set.3", "control": "btn.speed3", "gesture": "click" }
+  "events": [                                                    // 四挡四事件（装载器拒重复 eventId）
+    { "eventId": "speed.set.pause", "control": "btn.pause",  "gesture": "click" },
+    { "eventId": "speed.set.1",     "control": "btn.speed1", "gesture": "click" },
+    { "eventId": "speed.set.2",     "control": "btn.speed2", "gesture": "click" },
+    { "eventId": "speed.set.3",     "control": "btn.speed3", "gesture": "click" }
   ],
   "intents": [
     { "event": "speed.set.pause", "intent": "game.setSpeed", "args": { "speed": "0" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "event": "speed.set.1", "intent": "game.setSpeed", "args": { "speed": "1" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "event": "speed.set.2", "intent": "game.setSpeed", "args": { "speed": "2" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "event": "speed.set.3", "intent": "game.setSpeed", "args": { "speed": "3" }, "playerSource": "seat", "actorSource": "commandSource.primary" }
+    { "event": "speed.set.1",     "intent": "game.setSpeed", "args": { "speed": "1" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "event": "speed.set.2",     "intent": "game.setSpeed", "args": { "speed": "2" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "event": "speed.set.3",     "intent": "game.setSpeed", "args": { "speed": "3" }, "playerSource": "seat", "actorSource": "commandSource.primary" }
   ]
-  // 装载器 intents 的事件字段名是 event:（非 eventId:）；四挡四独立事件各自映射，args 字面常量定挡位（语义规则 G8）
 }
 ```
 
@@ -199,13 +186,9 @@ Scenario: 载荷校验 fail-closed
 ```jsonc
 {
   "id": "panel.settings",
-  "scope": "global",
-  "variables": [
-    { "name": "volume", "kind": "Float", "realtime": true,
-      "source": { "sourceKind": "GraphOutput", "graphOutputKey": "settings.volume" } }
-  ],
-  "binds": [
-    { "control": "slider.volume", "variable": "volume" }          // 滑条位置=volume 回读
+  "graph": "Graph.Settings",
+  "pins": [
+    { "name": "volume", "key": "settings.volume", "mode": "realtime", "default": 0.8 }   // 滑条位置=volume 回读
   ],
   "events": [
     { "eventId": "settings.volume", "control": "slider.volume", "gesture": "change",
@@ -217,7 +200,7 @@ Scenario: 载荷校验 fail-closed
     { "event": "settings.volume", "intent": "settings.setVolume",
       "args": { "value": "$payload.value" }, "playerSource": "seat", "actorSource": "none" },
     { "event": "settings.exit", "intent": "game.exitToMenu",
-      "args": {}, "playerSource": "seat", "actorSource": "none" }  // actorSource none → G9
+      "args": {}, "playerSource": "seat", "actorSource": "none" }
     // settings.close 无意图——纯 UI 事件，显隐编排层消费（见 C5）
   ]
 }
@@ -278,7 +261,7 @@ Scenario: 模态锚点未落地即拒
 
 ## 案 D：全局指令 `panel.command.global` —— 零变量纯命令 · G6 缺口样板
 
-> 🔴 **目标态**：拒因=① `scope`（G3）② `variables:[]`（G6）③ `actorSource:"none"`（G9）。D5 的模式互斥编排同样依赖 G10。
+> 🔴 **目标态**：拒因=① `scope`（G3）② `pins: []` 零引脚约束（G6）③ `actorSource:"none"` 值域（G9）。D5 的模式互斥编排同样依赖 G10。
 
 ### D1 玩家旅程
 玩家框选一队兵后点底栏【集结】→ 进入指定目标模式，光标变化；点【全选】→ 场上己方作战单位全亮。按钮按下即命令，面板自身无任何状态显示。
@@ -288,14 +271,13 @@ Scenario: 模态锚点未落地即拒
 ```jsonc
 {
   "id": "panel.command.global",
-  "scope": "global",
-  "variables": [],                        // G6：现行装载器要求 ≥1 变量，纯命令面板需放开为 0
-  "binds": [],
+  "graph": "Graph.CommandGlobal",     // 纯命令面板：图为空壳（G6 放开前 pins ≥1 约束在）
+  "pins": [],
   "events": [
     { "eventId": "army.selectAll", "control": "btn.selectAll", "gesture": "click" },
-    { "eventId": "army.rally", "control": "btn.rally", "gesture": "click" },
-    { "eventId": "army.stop", "control": "btn.stop", "gesture": "click" },
-    { "eventId": "army.retreat", "control": "btn.retreat", "gesture": "click" }
+    { "eventId": "army.rally",     "control": "btn.rally",     "gesture": "click" },
+    { "eventId": "army.stop",      "control": "btn.stop",      "gesture": "click" },
+    { "eventId": "army.retreat",   "control": "btn.retreat",   "gesture": "click" }
   ],
   "intents": [
     { "event": "army.selectAll", "intent": "selection.allArmy", "args": {},
