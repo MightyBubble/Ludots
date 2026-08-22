@@ -64,40 +64,13 @@ screen.topLeft ┌────────────────────�
 ```
 30 秒预期：花 200 金造兵 → 金掉、人口 +1 同帧。依赖 G3。
 
-### 2.2 时间流逝 `panel.time.elapsed`
+### 2.2 时间流逝 —— 配置唯一源：案例页（五、其余案例设计对应案）
 
-```jsonc
-{ "id": "panel.time.elapsed", "scope": "global",
-  "variables": [
-    { "name": "elapsedMin", "kind": "Float", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.elapsedMin" } },
-    { "name": "dayPhase", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.dayPhase" } } ],
-  "binds": [ { "control": "lbl.clock", "variable": "elapsedMin" } ] }
-```
+线框与 30 秒预期见案例页；依赖见案内状态行。
 
-```text
-screen.topRight 区、信息聚合左侧 ┌──────────┐
-                                 │ ☀ 12:34  │   （dayPhase 驱动日夜图标换肤）
-                                 └──────────┘
-```
-30 秒预期：表走字、昼夜图标随 dayPhase 切换。
-依赖：G3；无交互。
+### 2.3 日期 —— 配置唯一源：案例页（五、其余案例设计对应案）
 
-### 2.3 日期 `panel.date.cycle`
-
-```jsonc
-{ "id": "panel.date.cycle", "scope": "global",
-  "variables": [
-    { "name": "dayIndex", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.dayIndex" } } ],
-  "binds": [ { "control": "lbl.date", "variable": "dayIndex" } ] }
-```
-
-```text
-紧贴时间条右侧 ┌────────────────┐
-               │ 第 3 年 · 春 · 7 │   （年/季由 dayIndex 查表）
-               └────────────────┘
-```
-30 秒预期：过夜后日期 +1，季节图标换。
-依赖：G3；TableLookup 周期表（现有读嘴）。
+线框与 30 秒预期见案例页；依赖见案内状态行。
 
 ### 2.4 时间控制 `panel.time.control` —— 配置唯一源：[全设计案 B](panel-case-designs.md)
 
@@ -117,72 +90,21 @@ screen.topRight 区、信息聚合左侧 ┌──────────┐
 ```
 30 秒预期：选兵点集结→光标变指定态。依赖 G3/G6/G9/G10/#1015。
 
-### 2.6 全局功能 tab `panel.tabs.global`
+### 2.6 全局功能 tab —— 配置唯一源：案例页（五、其余案例设计对应案）
 
-```jsonc
-{ "id": "panel.tabs.global", "scope": "global",
-  "variables": [
-    { "name": "activeTab", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "ui.activeTab" } } ],
-  "events": [
-    { "event": "tab.switch", "control": "tab.bar", "gesture": "click", "payload": { "tab": "Int" } } ],
-  "intents": [
-    { "event": "tab.switch", "intent": "ui.switchTab", "args": { "tab": "$payload.tab" }, "playerSource": "seat", "actorSource": "none" } ] }
-```
+线框与 30 秒预期见案例页；依赖见案内状态行。
 
-```text
-左上（信息聚合下方）┌──────────────────────────┐
-                    │【信息】【科技】【外交】【生产】│  ← activeTab 高亮
-                    └──────────────────────────┘
-                     点击切换右侧主区域内容（子系统面板路由）
-```
-30 秒预期：点科技 → 右侧内容区切成科技面板，再点外交切走。
-依赖：G3 + #1015 + 子系统面板本体（2.9）。
+### 2.7 全局信息横幅 —— 配置唯一源：案例页（五、其余案例设计对应案）
 
-### 2.7 全局信息横幅 `panel.info.banner`
-
-```jsonc
-{ "id": "panel.info.banner", "scope": "global",
-  "variables": [
-    { "name": "bannerText", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "banner.current" } },   // G1: 应为 String（查表文案 id 兜底）
-    { "name": "bannerLevel", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "banner.level" } } ],
-  "binds": [ { "control": "lbl.banner", "variable": "bannerText" } ] }
-```
-
-```text
-screen.topCenter ┌────────────────────────────────┐
-                 │ ⚠ 敌军逼近北门（level=2 红底）  │   显隐由图：HidePanel 于平静、
-                 └────────────────────────────────┘   ShowPanel 于事件（#1014 现有）
-```
-30 秒预期：敌军进区 → 横幅弹出红字；威胁解除 → 消失。
-依赖：G3；G1（String 变量）让文案直读，否则查表 id。显隐图 op 现有。
+线框与 30 秒预期见案例页；依赖见案内状态行。
 
 ### 2.8 设置 `panel.settings` —— 配置唯一源：[全设计案 C](panel-case-designs.md)
 
 模态浮层（⚙ 入口，音量滑条+退出）。30 秒预期：开浮层拖滑条声音变、✕ 关闭。依赖 G5/G8/G9/G10/#1015。
 
-### 2.9 子系统入口 `panel.subsystem.entries`
+### 2.9 子系统入口 —— 配置唯一源：案例页（五、其余案例设计对应案）
 
-```jsonc
-{ "id": "panel.subsystem.entries", "scope": "global",
-  "variables": [
-    { "name": "techUnread", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "tech.unread" } } ],
-  "events": [
-    { "event": "sub.open", "control": "bar.subsystems", "gesture": "click", "payload": { "sub": "Int" } } ],
-  "intents": [
-    { "event": "sub.open", "intent": "ui.openSubsystem", "args": { "sub": "$payload.sub" }, "playerSource": "seat", "actorSource": "none" } ] }
-```
-
-```text
-右下角竖条 ┌───┐
-           │【🔬3】│ ← 角标=techUnread 未读数（超 9 显示 9+）
-           │【🛠】 │
-           │【📜】 │
-           └───┘   点击 = 路由打开对应子系统面板（与 2.6 tab 联动）
-```
-30 秒预期：科技完成 → 角标 +1 闪动；点开科技面板角标清零。
-依赖：G3 + #1015；与路由机制（原 #29）联动。
-
----
+线框与 30 秒预期见案例页；依赖见案内状态行。
 
 ## 三、分组二~七（待逐组过）
 
