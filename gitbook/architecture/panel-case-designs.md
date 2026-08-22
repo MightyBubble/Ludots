@@ -342,3 +342,740 @@ Scenario: 命令直达意图
 | actorSource none（G9） | — | — | ✅ | ✅ |
 | 图消费 UI 事件（G10） | — | — | ✅(开/关编排) | ✅(互斥编排) |
 | 溯源形态 | 图聚合输出 | 图输出回读闭环 | 图输出+连续意图 | 纯意图 |
+
+---
+
+## 五、其余案例设计（31 案）
+
+> 本批将目录分组全部立案：分组一剩余 5 案（2.2/2.3/2.6/2.7/2.9，案 A/B/D/C 已覆盖 2.1/2.4/2.5/2.8）+ 分组二~七 26 案，共 31 案，编号接续四案矩阵（案 1–31）。判断依据沿用四案契约：🟢 = 配置过 `PanelTemplateLoader` 白名单即可装载（纯展示；图缺数据落 default）；🔴 = 目标态（被拒字段/未落地链路，拒因点名 G 编号）。**新合同形状不写 `scope`**——scope 由 CreatePanel 图 op 的 `source` 值边携带（总合同实体链路），global 语义缺口仍记 G3 于依赖栏；查表/取值/聚合一律是图内节点，不写进模板字段。总合同与分组见 [面板目录设计](panel-catalog-designs.md)。
+
+### 分组一剩余 · 全局 HUD（案 1–5）
+
+#### 案 1：panel.time.elapsed —— 时间流逝（纯展示走表）
+
+> 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
+
+```jsonc
+{
+  "id": "panel.time.elapsed",
+  "graph": "Graph.Time.Elapsed",              // 时钟图输出 elapsedMin/dayPhase
+  "pins": [
+    { "name": "elapsedMin", "key": "clock.elapsedMin", "mode": "realtime", "default": 0 },
+    { "name": "dayPhase",   "key": "clock.dayPhase",   "mode": "realtime", "default": 1 }
+  ]
+  // 无 events/intents——纯展示；昼夜图标换肤=皮读 dayPhase 自行决定
+}
+```
+
+```text
+screen.topRight（信息聚合左侧）┌──────────────┐
+                              │ ☀ 12:34      │  dayPhase=2 换 ☾（皮层换肤）
+                              └──────────────┘
+```
+
+30 秒预期：表走字、昼夜图标随 dayPhase 切换。依赖：G3（global scope 语义）。
+
+#### 案 2：panel.date.cycle —— 日期（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；年/季/月查表为图内节点。
+
+```jsonc
+{
+  "id": "panel.date.cycle",
+  "graph": "Graph.Time.Date",                 // 时钟输出 dayIndex；年/季由图内 TableLookup 换算
+  "pins": [
+    { "name": "dayIndex", "key": "clock.dayIndex", "mode": "realtime", "default": 1 }
+  ]
+}
+```
+
+```text
+紧贴时间条右侧 ┌──────────────────┐
+               │ 第 3 年 · 春 · 7 │   年/季=dayIndex 查周期表（图内节点）
+               └──────────────────┘
+```
+
+30 秒预期：过夜日期 +1、季节图标换。依赖：G3（global scope 语义）。
+
+#### 案 3：panel.tabs.global —— 全局功能 tab（交互路由）
+
+> 状态：🔴 目标态——拒因：G8（$payload 引用语义）+ G9（actorSource none）+ #1015（意图链路本体）。
+
+```jsonc
+{
+  "id": "panel.tabs.global",
+  "graph": "Graph.UI.Tabs",                   // 回读 ui.activeTab 高亮
+  "pins": [ { "name": "activeTab", "key": "ui.activeTab", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "tab.switch", "control": "tab.bar", "gesture": "click", "payload": { "tab": "Int" } } ],
+  "intents": [ { "event": "tab.switch", "intent": "ui.switchTab", "args": { "tab": "$payload.tab" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+screen.topLeft（信息聚合下方）┌────────────────────────────┐
+                             │【信息】【科技】【外交】【生产】│ ← activeTab 高亮
+                             └────────────────────────────┘
+```
+
+30 秒预期：点科技→右侧切科技面板，再点外交切走。依赖：G3、G8、G9、#1015、子系统面板本体（2.9）。
+
+#### 案 4：panel.info.banner —— 全局信息横幅（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；显隐由 TriggerGraph 听游戏事件驱动（现有 op，非 UI 事件不涉 G10）。
+
+```jsonc
+{
+  "id": "panel.info.banner",
+  "graph": "Graph.Info.Banner",               // banner.current=文案 id；文案查表=图内节点
+  "pins": [
+    { "name": "bannerText",  "key": "banner.current", "mode": "realtime", "default": 0 },
+    { "name": "bannerLevel", "key": "banner.level",   "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+screen.topCenter ┌───────────────────────────────────┐
+                 │ ⚠ 敌军逼近北门（level=2 红底）     │  平静时 HidePanel、事件时 ShowPanel（图驱动）
+                 └───────────────────────────────────┘
+```
+
+30 秒预期：敌军进区横幅弹红字，威胁解除消失。依赖：G3（global scope 语义）。
+
+#### 案 5：panel.subsystem.entries —— 子系统入口（交互路由）
+
+> 状态：🔴 目标态——拒因：G8（$payload）+ G9（actorSource none）+ #1015。
+
+```jsonc
+{
+  "id": "panel.subsystem.entries",
+  "graph": "Graph.UI.Subsystems",             // tech.unread 等未读角标输出
+  "pins": [ { "name": "techUnread", "key": "tech.unread", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "sub.open", "control": "bar.subsystems", "gesture": "click", "payload": { "sub": "Int" } } ],
+  "intents": [ { "event": "sub.open", "intent": "ui.openSubsystem", "args": { "sub": "$payload.sub" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+screen.bottomRight 竖条 ┌────┐
+                        │【🔬3】│ ← 角标=techUnread（超 9 显示 9+）
+                        │【🛠】│
+                        └────┘
+```
+
+30 秒预期：科技完成角标+1，点开面板清零。依赖：G3、G8、G9、#1015、路由机制（#29）。
+
+### 分组二 · 地图/空间指示（案 6–12）
+
+#### 案 6：panel.minimap —— 小地图（纯展示覆盖层）
+
+> 状态：🟢 今日可装载——纯展示；图内聚合实体位置/阵营输出图层。
+
+```jsonc
+{
+  "id": "panel.minimap",
+  "graph": "Graph.Map.Minimap",               // 图内聚合实体位置+阵营 → 输出图层数据
+  "pins": [ { "name": "layer", "key": "minimap.layer", "mode": "realtime", "default": 0 } ]
+  // 覆盖层画布：皮按 layer 渲染；缺数据=空图层（default 合同）
+}
+```
+
+```text
+screen.bottomLeft ┌──────────┐
+                  │ ▦▦  ▦▦▦  │  己方蓝点/敌方红点（皮分层渲染）
+                  └──────────┘
+```
+
+30 秒预期：兵移动蓝点同步动。依赖：无。
+
+#### 案 7：panel.relation.indicator —— 关系图指示（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；关系边=图内读取。
+
+```jsonc
+{
+  "id": "panel.relation.indicator",
+  "graph": "Graph.Relation.Indicator",        // 图内读关系边（同盟/贸易/敌对）+ 强度
+  "pins": [
+    { "name": "edge",     "key": "relation.edge",     "mode": "realtime", "default": 0 },
+    { "name": "strength", "key": "relation.strength", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+世界锚点（关系边两端）┌──── 虚线 ────┐
+   城市A ─················· 城市B     同盟蓝线/敌对红线，线宽随 strength（皮层渲染）
+```
+
+30 秒预期：结盟后两城间出蓝线，断交变红。依赖：无。
+
+#### 案 8：panel.selection.marker —— 选中标记（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；选中集合=图内读取。
+
+```jsonc
+{
+  "id": "panel.selection.marker",
+  "graph": "Graph.Selection.Marker",          // 图内读 selection 集合 → 计数/形态
+  "pins": [
+    { "name": "selectedCount", "key": "selection.count", "mode": "realtime", "default": 0 },
+    { "name": "selectionKind", "key": "selection.kind", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+世界锚点（选中单位脚下）┌───────────┐
+                        │ ◉ 光圈      │ 单选=光圈；框选=三角阵（皮按 kind 画）
+                        └───────────┘
+```
+
+30 秒预期：点选出光圈、框选变多选标记。依赖：无。
+
+#### 案 9：panel.offscreen.indicator —— 屏外指示（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；屏外投影=图内节点。
+
+```jsonc
+{
+  "id": "panel.offscreen.indicator",
+  "graph": "Graph.Map.Offscreen",             // 图内投影屏外目标方向/距离
+  "pins": [
+    { "name": "dir",  "key": "offscreen.dir",  "mode": "realtime", "default": 0 },
+    { "name": "dist", "key": "offscreen.dist", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+屏幕边缘（世界锚点投影）┌──────────────────────────────┐
+                        │        ↗ 敌军编队 120m       │ 箭头贴边旋转指向
+                        └──────────────────────────────┘
+```
+
+30 秒预期：敌军移出屏幕，边缘箭头指向其方位。依赖：无。
+
+#### 案 10：panel.scene.tint —— 场景染色（全屏效果非框）
+
+> 状态：🟢 今日可装载——纯展示覆盖层；归类上属全屏效果非框（目录归类修正先例）。
+
+```jsonc
+{
+  "id": "panel.scene.tint",
+  "graph": "Graph.Scene.Tint",                // 输出整屏染色色/透明度（夜幕/中毒/低血）
+  "pins": [
+    { "name": "tintColor", "key": "scene.tint.color", "mode": "realtime", "default": 0 },
+    { "name": "tintAlpha", "key": "scene.tint.alpha", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+全屏覆盖（非框）┌───────────────────────────────────────────┐
+               │ ░░ 入夜整屏叠蓝黑（alpha 渐入渐出）░░     │
+               └───────────────────────────────────────────┘
+```
+
+30 秒预期：入夜场景渐染夜色，天明淡出。依赖：无。
+
+#### 案 11：panel.region.indicator —— 区域指示（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；区域归属/威胁=图内读取。
+
+```jsonc
+{
+  "id": "panel.region.indicator",
+  "graph": "Graph.Map.Region",                // 图内读区域归属/威胁等级；区域名查表=图内节点
+  "pins": [
+    { "name": "regionId",    "key": "region.id",    "mode": "realtime", "default": 0 },
+    { "name": "regionLevel", "key": "region.level", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+世界锚点（区域边界）┌────────────────────────┐
+                    │ ⚠ 危险区（红框）       │ 威胁级决定框色
+                    └────────────────────────┘
+```
+
+30 秒预期：进危险区边界泛红框，离开消失。依赖：无。
+
+#### 案 12：panel.road.indicator —— 路网指示（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；路网状态=图内读取。
+
+```jsonc
+{
+  "id": "panel.road.indicator",
+  "graph": "Graph.Map.Road",                  // 图内读路网状态（通畅/拥堵/损毁）
+  "pins": [
+    { "name": "roadState", "key": "road.state", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+世界锚点（路径上）┌──────────────────────────┐
+                  │ ═══ 通畅 ═══   拥堵=黄闪   │ 行军路线高亮，状态决定颜色
+                  └──────────────────────────┘
+```
+
+30 秒预期：点选行军路线路网高亮，拥堵变黄。依赖：无。
+
+### 分组三 · 选择与实体（案 13–18）
+
+#### 案 13：panel.entity.list —— 实体列表（交互选中）
+
+> 状态：🔴 目标态——拒因：G8（$payload）+ #1015（意图链路）。
+
+```jsonc
+{
+  "id": "panel.entity.list",
+  "graph": "Graph.Entity.List",               // 图内过滤+排序集合 → 行数据
+  "pins": [ { "name": "rowCount", "key": "list.rowCount", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "entity.pick", "control": "list.entities", "gesture": "click", "payload": { "row": "Int" } } ],
+  "intents": [ { "event": "entity.pick", "intent": "selection.setTarget", "args": { "row": "$payload.row" },
+                 "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+}
+```
+
+```text
+screen.leftCenter ┌──────────────────────┐
+                  │ ▸ 步兵班 A   8/8     │ 点击行→选中对应实体（行→实体映射在图内）
+                  │   弓手班 B   5/6     │
+                  └──────────────────────┘
+```
+
+30 秒预期：点列表行对应单位被选中并高亮。依赖：G8、#1015。
+
+#### 案 14：panel.entity.aggregate —— 实体信息聚合（纯展示）
+
+> 状态：🟢 今日可装载——纯展示，图内 LoadSelfAttribute 聚合（总合同实体链路）。
+
+```jsonc
+{
+  "id": "panel.entity.aggregate",
+  "graph": "Graph.Entity.Aggregate",          // 图内 LoadSelfAttribute 聚合 hp/mp/等级
+  "pins": [
+    { "name": "hp",    "key": "unit.hp",    "mode": "realtime", "default": 100 },
+    { "name": "mp",    "key": "unit.mp",    "mode": "realtime", "default": 0 },
+    { "name": "level", "key": "unit.level", "mode": "realtime", "default": 1 }
+  ]
+}
+```
+
+```text
+screen.rightCenter ┌────────────────────┐
+                   │ 圣骑士 Lv.6        │ scope=self（CreatePanel source 边传选中实体）
+                   │ ▓▓▓▓▓▓░░ 78/100 HP │
+                   └────────────────────┘
+```
+
+30 秒预期：切换选中单位详情随 scope 换内容。依赖：无。
+
+#### 案 15：panel.entity.relation —— 实体关系（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；关系边=图内读取。
+
+```jsonc
+{
+  "id": "panel.entity.relation",
+  "graph": "Graph.Entity.Relation",           // 图内读 self 关系边（所属/同盟/敌对）
+  "pins": [
+    { "name": "relationCount", "key": "relation.count", "mode": "realtime", "default": 0 },
+    { "name": "relationKind",  "key": "relation.kind",  "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+screen.rightCenter（聚合下方）┌─────────────────────┐
+                             │ 所属：王国 A         │
+                             │ 同盟：公会 B·敌对：C │
+                             └─────────────────────┘
+```
+
+30 秒预期：选中单位显示所属/同盟/敌对清单。依赖：无。
+
+#### 案 16：panel.collection.aggregate —— 集合聚合（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；聚合=图内节点（集合行为图本体随 #1012，缺数据落 default）。
+
+```jsonc
+{
+  "id": "panel.collection.aggregate",
+  "graph": "Graph.Collection.Aggregate",      // 图内聚合集合计数/均值（#1012 集合行为主战场）
+  "pins": [
+    { "name": "count", "key": "collection.count", "mode": "realtime", "default": 0 },
+    { "name": "avgHp", "key": "collection.avgHp", "mode": "realtime", "default": 0 },
+    { "name": "cap",   "key": "collection.cap",   "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+screen.topLeft（tab 下方）┌───────────────────┐
+                          │ 部队 24/30 均血 82% │
+                          └───────────────────┘
+```
+
+30 秒预期：部队增减数字同帧变化。依赖：无。
+
+#### 案 17：panel.context.route —— 选中路由（机制，不产配置）
+
+> 状态：机制说明——非模板不产配置、无装载面；落地依赖 G10 + #1015。
+
+```jsonc
+// 无配置——机制：选中实体 → 路由表决定挂载哪组面板 → 图编排显隐/置换
+// 不新建面板类型：由 CreatePanel 图 op 的 source 值边传选中 scope 驱动各面板
+```
+
+```text
+选中步兵 ─route→ 案14 聚合 + 案26 状态条 + 案27 技能
+选中建筑 ─route→ 案14 聚合 + 案28 装备 + 案11 区域
+切换选中 ───────→ 旧组 HidePanel / 新组 ShowPanel（图编排，面板不自理）
+```
+
+30 秒预期：选中不同类型实体右侧面板组整体置换。依赖：G10、#1015。
+
+#### 案 18：panel.linked.entities —— 关联实体集（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；关联收集=图内沿关系边遍历。
+
+```jsonc
+{
+  "id": "panel.linked.entities",
+  "graph": "Graph.Entity.Linked",             // 图内沿关系边收集关联实体（小队/编队成员）
+  "pins": [ { "name": "linkedCount", "key": "linked.count", "mode": "realtime", "default": 0 } ]
+}
+```
+
+```text
+screen.leftCenter（列表下方）┌──────────────────────┐
+                            │ 关联：A 班·B 班        │ 点击跳转属案17 路由机制
+                            └──────────────────────┘
+```
+
+30 秒预期：选编队队长，关联成员清单列出。依赖：无。
+
+### 分组四 · 信息流（案 19–21）
+
+#### 案 19：panel.events.feed —— 事件面板（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；滚动/展开=皮层手势不声明意图。
+
+```jsonc
+{
+  "id": "panel.events.feed",
+  "graph": "Graph.Events.Feed",               // 图内取最近 N 条事件（新→旧）
+  "pins": [ { "name": "feedCount", "key": "events.feedCount", "mode": "realtime", "default": 0 } ]
+}
+```
+
+```text
+screen.topRight 下方 ┌─────────────────────────┐
+                     │ ⚔ 遭遇战开始 08:12      │ 新事件顶入，超 N 条溢出
+                     │ ⚒ 铁矿 +50     08:11   │
+                     └─────────────────────────┘
+```
+
+30 秒预期：战斗打响事件顶入首行。依赖：无。
+
+#### 案 20：panel.events.entry —— 日志入口（交互）
+
+> 状态：🔴 目标态——拒因：G8/G9 + #1015（意图链路）。
+
+```jsonc
+{
+  "id": "panel.events.entry",
+  "graph": "Graph.Events.Entry",              // 未读日志数输出
+  "pins": [ { "name": "unread", "key": "events.unread", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "log.open", "control": "btn.log", "gesture": "click" } ],
+  "intents": [ { "event": "log.open", "intent": "ui.openLog", "args": {}, "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+screen.bottomRight（子系统入口上方）┌──────┐
+                                   │【📜3】│ ← unread 角标；点击开案21 日志
+                                   └──────┘
+```
+
+30 秒预期：战斗后角标+1，点开日志清零。依赖：G8、G9、#1015、日志面板本体（案21）。
+
+#### 案 21：panel.events.log —— 事件日志（交互模态）
+
+> 状态：🔴 目标态——拒因：G5（modal.center）+ G8（$payload）+ G9 + G10（close 编排）+ #1015。
+
+```jsonc
+{
+  "id": "panel.events.log",
+  "graph": "Graph.Events.Log",                // 全量事件分页输出；过滤=图内节点
+  "pins": [ { "name": "pageCount", "key": "events.pageCount", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "log.filter", "control": "tab.filter", "gesture": "click", "payload": { "kind": "Int" } },
+              { "eventId": "log.close",  "control": "btn.close",  "gesture": "click" } ],
+  "intents": [ { "event": "log.filter", "intent": "ui.setLogFilter", "args": { "kind": "$payload.kind" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+  // log.close 无意图——纯 UI 事件，编排图消费（G10）
+}
+```
+
+```text
+modal.center（G5）┌──────────────────────────────────┐
+                  │ 日志 【全部】【战斗】【✕】        │
+                  │ ⚔ 遭遇战 08:12 · ⚒ 铁矿+50 08:11 │
+                  └──────────────────────────────────┘
+```
+
+30 秒预期：开日志按类型过滤，✕ 关闭。依赖：G5、G8、G9、G10、#1015。
+
+### 分组五 · 编队生产任务（案 22–25）
+
+#### 案 22：panel.formation.info —— 编队信息（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；编队聚合=图内节点。
+
+```jsonc
+{
+  "id": "panel.formation.info",
+  "graph": "Graph.Formation.Info",            // 图内聚合编队成员属性 → 阵型/均速/士气
+  "pins": [
+    { "name": "formationKind", "key": "formation.kind", "mode": "realtime", "default": 0 },
+    { "name": "avgSpeed",      "key": "formation.avgSpeed", "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+screen.bottomLeft 上方 ┌─────────────────────────┐
+                       │ 楔形阵 均速 3.2 士气 80  │ 阵型名查表=图内节点
+                       └─────────────────────────┘
+```
+
+30 秒预期：切换阵型信息条同步更新。依赖：无。
+
+#### 案 23：panel.quests —— 任务面板（交互）
+
+> 状态：🔴 目标态——拒因：G8（$payload）+ G9 + #1015。
+
+```jsonc
+{
+  "id": "panel.quests",
+  "graph": "Graph.Quests",                    // 任务列表+进度输出
+  "pins": [ { "name": "questCount", "key": "quests.count", "mode": "realtime", "default": 0 },
+            { "name": "activeIndex", "key": "quests.active", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "quest.track", "control": "btn.track", "gesture": "click", "payload": { "slot": "Int" } } ],
+  "intents": [ { "event": "quest.track", "intent": "quest.setTracked", "args": { "slot": "$payload.slot" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+screen.rightCenter ┌──────────────────────────┐
+                   │ ☑ 守住北门 2/3 【追踪】    │ 进度=图内聚合；追踪高亮回读
+                   │ ☐ 招募 10 兵 0/10【追踪】  │
+                   └──────────────────────────┘
+```
+
+30 秒预期：点追踪切换引导目标。依赖：G8、G9、#1015。
+
+#### 案 24：panel.progress.tree —— 进度节点树（交互模态）
+
+> 状态：🔴 目标态——拒因：G5（modal.center）+ G8 + G9 + #1015。
+
+```jsonc
+{
+  "id": "panel.progress.tree",
+  "graph": "Graph.Progress.Tree",             // 节点解锁态+前置边输出（前置=图内关系读）
+  "pins": [ { "name": "nodeCount", "key": "tree.nodeCount", "mode": "realtime", "default": 0 },
+            { "name": "unlocked",  "key": "tree.unlocked",  "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "node.inspect", "control": "tree.nodes", "gesture": "click", "payload": { "node": "Int" } } ],
+  "intents": [ { "event": "node.inspect", "intent": "tree.inspect", "args": { "node": "$payload.node" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+modal.center（G5）┌───────────────────────────────┐
+                  │  ◉──◯──◯                    │ ◉已解锁 ◯可解锁
+                  │      └──◉──◯                │
+                  └───────────────────────────────┘
+```
+
+30 秒预期：点节点看详情，解锁态随图更新。依赖：G5、G8、G9、#1015。
+
+#### 案 25：panel.production.queue —— 生产队列（#1012 验收场景）
+
+> 状态：🔴 目标态——#1012 验收场景；拒因：G3（global scope）+ G2（进度百分比需 Float 图输出）。
+
+```jsonc
+{
+  "id": "panel.production.queue",
+  "graph": "Graph.Production.Queue",          // 队列项+进度输出（G2：百分比 Float 图输出）
+  "pins": [ { "name": "progressPercent", "key": "queue.progressPercent", "mode": "realtime", "default": 0 },
+            { "name": "queueCount", "key": "queue.count", "mode": "realtime", "default": 0 },
+            { "name": "queueCap", "key": "queue.cap", "mode": "realtime", "default": 5 } ],
+  "events": [ { "eventId": "queue.push", "control": "btn.enqueue", "gesture": "click" },
+              { "eventId": "queue.cancel", "control": "btn.cancel", "gesture": "click" } ],
+  "intents": [ { "event": "queue.push", "intent": "production.enqueue", "args": {}, "playerSource": "seat", "actorSource": "commandSource.primary" },
+               { "event": "queue.cancel", "intent": "production.cancel", "args": {}, "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+}
+```
+
+```text
+screen.bottomRight 上方 ┌───────────────────────────────┐
+                        │ ▓▓▓▓░░ 66% ▍弩手▍弩手▍▢       │ 进度=progressPercent 回读；满员置灰=皮读 queueCap 自比
+                        │ 【+1】【取消】                 │
+                        └───────────────────────────────┘
+```
+
+30 秒预期：点+1 弩手入队进度走，点取消出队。依赖：G2、G3、#1012（验收场本体）。
+
+### 分组六 · 单位操作（案 26–28）
+
+#### 案 26：panel.unit.status —— 状态条（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；图内 LoadSelfAttribute 聚合。
+
+```jsonc
+{
+  "id": "panel.unit.status",
+  "graph": "Graph.Unit.Status",               // 图内 LoadSelfAttribute → hp/hpMax/mp
+  "pins": [
+    { "name": "hp",    "key": "unit.hp",    "mode": "realtime", "default": 100 },
+    { "name": "hpMax", "key": "unit.hpMax", "mode": "realtime", "default": 100 },
+    { "name": "mp",    "key": "unit.mp",    "mode": "realtime", "default": 0 }
+  ]
+}
+```
+
+```text
+世界锚点（单位头顶）┌───────────────┐
+                    │ ▓▓▓▓▓░░ 78  │ 血条溢出屏外自动收起（皮读 hp/hpMax 自比）
+                    └───────────────┘
+```
+
+30 秒预期：单位挨打血条变短。依赖：无。
+
+#### 案 27：panel.abilities —— 技能指令（#1015 主战场）
+
+> 状态：🔴 目标态——#1015 主战场；拒因：G8（$payload）+ #1015（admission 拒绝回执→按钮态）。
+
+```jsonc
+{
+  "id": "panel.abilities",
+  "graph": "Graph.Unit.Abilities",            // 技能冷却/可用态输出
+  "pins": [ { "name": "cooldown", "key": "ability.cooldown", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "ability.cast", "control": "bar.abilities", "gesture": "click", "payload": { "slot": "Int" } } ],
+  "intents": [ { "event": "ability.cast", "intent": "unit.castAbility", "args": { "slot": "$payload.slot" },
+                 "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+}
+```
+
+```text
+screen.bottomCenter ┌────────────────────────────────────┐
+                    │ 【⚔】【🛡】【✨】【💥】              │ 冷却=cooldown 回读置灰转圈
+                    └────────────────────────────────────┘
+```
+
+30 秒预期：点技能释放、冷却转圈、预算拒绝回执置灰。依赖：G8、#1015。
+
+#### 案 28：panel.loadout —— 物品装备（交互）
+
+> 状态：🔴 目标态——拒因：G8（$payload）+ #1015。
+
+```jsonc
+{
+  "id": "panel.loadout",
+  "graph": "Graph.Unit.Loadout",              // 装备槽位+物品属性输出
+  "pins": [ { "name": "slotCount", "key": "loadout.slotCount", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "loadout.equip", "control": "grid.loadout", "gesture": "click", "payload": { "slot": "Int" } } ],
+  "intents": [ { "event": "loadout.equip", "intent": "unit.equipSlot", "args": { "slot": "$payload.slot" },
+                 "playerSource": "seat", "actorSource": "commandSource.primary" } ]
+}
+```
+
+```text
+screen.rightCenter（聚合下方）┌────────────────────────┐
+                             │ 武器 圣剑 +12  │ 点击槽位=装备/卸下（携带物清单在图内）
+                             │ 防具 板甲 +8   │
+                             └────────────────────────┘
+```
+
+30 秒预期：点槽位换装备，属性回读更新。依赖：G8、#1015。
+
+### 分组七 · 其他（案 29–31）
+
+#### 案 29：panel.view.filter —— 视图过滤器（交互）
+
+> 状态：🔴 目标态——拒因：G8（$payload）+ G9 + #1015。
+
+```jsonc
+{
+  "id": "panel.view.filter",
+  "graph": "Graph.View.Filter",               // 当前过滤条件回读
+  "pins": [ { "name": "filterState", "key": "view.filterState", "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "filter.toggle", "control": "bar.filter", "gesture": "click", "payload": { "flag": "Int" } } ],
+  "intents": [ { "event": "filter.toggle", "intent": "view.toggleFilter", "args": { "flag": "$payload.flag" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+screen.topLeft（tab 下方）┌─────────────────────────────┐
+                          │【兵】【建】【资源】【敌方】    │ 高亮=filterState 回读
+                          └─────────────────────────────┘
+```
+
+30 秒预期：点"敌方"隐藏敌方单位，再点恢复。依赖：G8、G9、#1015。
+
+#### 案 30：panel.extra.text —— 额外文本（纯展示）
+
+> 状态：🟢 今日可装载——纯展示；snapshot 手动刷新（教程阶段切换时作者主动 Refresh）。
+
+```jsonc
+{
+  "id": "panel.extra.text",
+  "graph": "Graph.Extra.Text",                // 任意文本 id 输出；文案查表=图内节点
+  "pins": [ { "name": "textId", "key": "extra.textId", "mode": "snapshot", "default": 0 } ]
+}
+```
+
+```text
+screen.bottomLeft ┌─────────────────────────────┐
+                  │ 版本 0.9.2 · 教程：按 U 造兵  │ 锚点由实例 op 覆盖（水印/提示通用）
+                  └─────────────────────────────┘
+```
+
+30 秒预期：教程阶段切换提示文字更新。依赖：无。
+
+#### 案 31：panel.collection.book —— 图鉴背包（交互模态）
+
+> 状态：🔴 目标态——拒因：G5（modal.center）+ G8 + G9 + #1015。
+
+```jsonc
+{
+  "id": "panel.collection.book",
+  "graph": "Graph.Collection.Book",           // 收集进度+分页条目输出
+  "pins": [ { "name": "collected", "key": "book.collected", "mode": "realtime", "default": 0 },
+            { "name": "total",     "key": "book.total",     "mode": "realtime", "default": 0 } ],
+  "events": [ { "eventId": "book.flip", "control": "btn.page", "gesture": "click", "payload": { "page": "Int" } } ],
+  "intents": [ { "event": "book.flip", "intent": "ui.bookPage", "args": { "page": "$payload.page" },
+                 "playerSource": "seat", "actorSource": "none" } ]
+}
+```
+
+```text
+modal.center（G5）┌─────────────────────────────────────┐
+                  │ 图鉴 12/40  ▦▦▦▦▦▦▦▦▦▦▦▦░░░░░░░░  │ 条目网格=图中收集集合
+                  │ 【◀ 上一页】【下一页 ▶】             │
+                  └─────────────────────────────────────┘
+```
+
+30 秒预期：翻页浏览图鉴，收集进度随获取增长。依赖：G5、G8、G9、#1015。
+
+至此目录 35 类全部立案（前四案 + 本批 31 案），逐组过核完成，目录行可作为 #841 种子行与 #840 对照物。
