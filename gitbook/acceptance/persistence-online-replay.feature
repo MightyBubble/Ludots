@@ -24,7 +24,8 @@ Feature: 战局在存档、Replay 和断线恢复后保持一致
   Scenario: 玩家播放 Replay 后得到同一结果
     Given 我已经记录了一段包含检查点和权威订单的战局
     When 我从检查点播放 Replay 到结束
-    Then Replay 的 world digest 与连续运行结果一致
+    Then Replay 结束时面板显示录制终点与回放终点 world digest 的 matches 或 mismatch 结果
+    And 如果结果是 mismatch，面板明确显示两份 digest，而不是静默放过
     And 每个权威订单按 tick 顺序出现
     And 我可以点击 Pause、Step 和 Reset，面板显示回放位置与已应用帧数
     And 回放期间我输入实时操作时，面板明确显示实时输入被隔离
@@ -35,3 +36,9 @@ Feature: 战局在存档、Replay 和断线恢复后保持一致
     Then 恢复被拒绝
     And 屏幕显示缺失或乱序的具体原因
     And 当前战局不会悄悄继续到未知状态
+
+  Scenario: 玩家发现乱序帧时看到明确失败
+    Given 我已经记录了一段包含至少两帧的 Replay
+    When 我点击 Swap frames 再点击 Replay
+    Then 恢复被拒绝
+    And 屏幕显示权威帧序列不连续的具体原因

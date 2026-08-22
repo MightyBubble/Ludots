@@ -26,9 +26,11 @@ public sealed class PersistenceOnlineReplayRuntime
     private ReplayArchive? _archive;
     private WorldSaveSnapshot? _checkpoint;
     private bool _checkpointRequested;
+    private bool _recordingRequested;
     private bool _recording;
     private bool _disconnected;
     private bool _ablateNextReplay;
+    private bool _swapNextReplay;
     private bool _replayPlaying;
     private bool _replayPaused;
     private int _replayIndex;
@@ -38,6 +40,7 @@ public sealed class PersistenceOnlineReplayRuntime
     private string _status = "Press Checkpoint, then Record. The HUD will show the real tick and digest.";
     private string _checkpointDigest = "n/a";
     private string _replayResult = "not compared";
+    private string _recordingTerminalDigest = "n/a";
     private string _recoverySource = "live";
 
     public PersistenceOnlineReplayRuntime(IModContext context)
@@ -65,12 +68,12 @@ public sealed class PersistenceOnlineReplayRuntime
 
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
-        if (context.GetEngine() is GameEngine engine && PersistenceOnlineReplayShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
+        if (context.GetEngine() is GameEngine engine)
         {
             engine.GetService(CoreServiceKeys.InputHandler)?.PopContext(PersistenceOnlineReplayShowcaseIds.InputContext);
             _panel.ClearIfOwned();
-            _engine = null;
         }
+        _engine = null;
         return Task.CompletedTask;
     }
 
@@ -135,12 +138,11 @@ public sealed class PersistenceOnlineReplayRuntime
         if (CurrentEngine() is not { } engine) return;
         try
         {
-            if (_checkpoint == null) throw new SaveContextException("Capture a checkpoint before recording.");
-            _recorder = new ReplayRecorder();
-            _recorder.SetCheckpoint(_checkpoint);
-            _nextSequence = 0;
-            _recording = true;
-            _status = $"Recording from checkpoint tick {_checkpoint.Header.Tick}.";
+            if (_recording || _recordingRequested) throw new SaveContextException("A recording is already active.");
+            _recordingRequested = true;
+            _checkpointRequested = true;
+            engine.GetService(CoreServiceKeys.CheckpointCoordinator)?.RequestCheckpoint();
+            _status = "Recording requested; waiting for a fresh completed checkpoint so frame 0 and the replay origin are identical.";
             Log(_status);
         }
         catch (Exception ex) { Fail(ex); }
@@ -154,6 +156,7 @@ public sealed class PersistenceOnlineReplayRuntime
         {
             if (_recorder == null || !_recording) throw new SaveContextException("No active recording.");
             _archive = _recorder.BuildArchive();
+            _recordingTerminalDigest = CaptureWorldDigest(engine);
             Directory.CreateDirectory(Path.GetDirectoryName(ReplayPath())!);
             File.WriteAllBytes(ReplayPath(), new ReplayArchiveCodec().Encode(_archive));
             _recording = false;
@@ -171,15 +174,18 @@ public sealed class PersistenceOnlineReplayRuntime
         try
         {
             if (_archive == null) throw new SaveContextException("Stop a recording before replaying.");
-            ReplayArchive archive = _ablateNextReplay ? RemoveOneFrame(_archive) : _archive;
+            if (_recording) throw new SaveContextException("Stop recording before replaying.");
+            ReplayArchive archive = _ablateNextReplay ? RemoveOneFrame(_archive) : _swapNextReplay ? SwapFrames(_archive) : _archive;
             new ReplayPlayer(archive).PlayFromCheckpoint(engine, new WorldRestoreService(), _ => { });
             _archive = archive;
             _replayFrames = 0;
             _replayIndex = 0;
             _replayPlaying = true;
             _replayPaused = false;
+            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader replayInput) replayInput.SetReplayInputIsolation(true);
             QueueNextReplayFrame(engine);
             _ablateNextReplay = false;
+            _swapNextReplay = false;
             _recoverySource = "replay";
             _replayResult = "playing";
             _status = $"Replay loaded from {ReplayPath()}; live input is isolated. Press Pause or Step.";
@@ -201,6 +207,7 @@ public sealed class PersistenceOnlineReplayRuntime
         if (CurrentEngine() is not { } engine) return;
         _disconnected = true;
         _recording = false;
+        if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader input) input.ClearReplayActions();
         engine.GetService(CoreServiceKeys.SimulationLoopController)?.PauseSimulation();
         _recoverySource = "disconnected";
         _status = "Disconnected: authoritative updates paused. Press Reconnect to restore the last checkpoint.";
@@ -243,7 +250,6 @@ public sealed class PersistenceOnlineReplayRuntime
         if (CurrentEngine() is { } engine)
         {
             engine.GetService(CoreServiceKeys.SimulationLoopController)?.Step();
-            AdvanceReplayFixedStep(engine);
         }
     }
 
@@ -251,13 +257,16 @@ public sealed class PersistenceOnlineReplayRuntime
     {
         if (CurrentEngine()?.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader input)
         {
-            input.ClearReplayActions();
+            input.Clear();
         }
         _replayPlaying = false;
         _replayPaused = false;
         _replayIndex = 0;
         _replayFrames = 0;
         _replayFrameQueued = false;
+        _recordingRequested = false;
+        _ablateNextReplay = false;
+        _swapNextReplay = false;
         _status = "Replay reset; live session is active.";
         Log(_status);
         if (CurrentEngine() is { } engine) RefreshPanel(engine);
@@ -271,6 +280,14 @@ public sealed class PersistenceOnlineReplayRuntime
         RefreshPanel(engine);
     }
 
+    public void SwapFrames()
+    {
+        if (CurrentEngine() is not { } engine) return;
+        if (_archive == null) _status = "Record a replay before swapping frames.";
+        else { _swapNextReplay = true; _status = "Ablation armed: next replay swaps two frames and must be rejected."; Log(_status); }
+        RefreshPanel(engine);
+    }
+
     internal PersistenceOnlineReplayPanelState BuildPanelState()
     {
         GameEngine? engine = CurrentEngine();
@@ -279,10 +296,10 @@ public sealed class PersistenceOnlineReplayRuntime
         int frames = _archive?.Frames.Count ?? _recorder?.FrameCount ?? 0;
         return new PersistenceOnlineReplayPanelState(
             "Persistence / Replay / Reconnect Lab",
-            "Give the RTS a checkpoint, record authoritative input, restart or reconnect, then compare what continues.",
+            "First click Checkpoint. This lab uses a single-process disconnect simulation; record, restart or reconnect, then compare what continues.",
             _status,
             new[] { $"tick: {tick}", $"checkpoints: {checkpoints}", $"replay frames: {frames}", $"replay applied: {_replayFrames}", $"recovery source: {_recoverySource}", $"checkpoint digest: {_checkpointDigest}", $"replay result: {_replayResult}", $"recording: {_recording}", $"connection: {(_disconnected ? "offline" : "online")}" },
-            new[] { "Checkpoint -> Save -> continue", "Record -> Stop -> Replay", "Pause / Step / Reset replay", "Disconnect -> Reconnect", "Delete frame -> Replay to see explicit rejection", "Keyboard: F4-F12 mirrors the buttons" },
+            new[] { "Checkpoint -> Save -> continue", "Record -> Stop -> Replay", "Pause / Step / Reset replay", "Disconnect -> Reconnect (single-process simulation)", "Delete or swap frame -> Replay to see explicit rejection", "Keyboard: F1-F13 mirrors the buttons" },
             _log.Count == 0 ? new[] { _status } : _log.ToArray());
     }
 
@@ -297,6 +314,16 @@ public sealed class PersistenceOnlineReplayRuntime
         _recoverySource = "live checkpoint";
         _status = $"Checkpoint captured at completed tick {_checkpoint.Header.Tick}; digest {_checkpointDigest}.";
         Log(_status);
+        if (_recordingRequested)
+        {
+            _recordingRequested = false;
+            _recorder = new ReplayRecorder();
+            _recorder.SetCheckpoint(_checkpoint);
+            _nextSequence = 0;
+            _recording = true;
+            _status = $"Recording from fresh checkpoint tick {_checkpoint.Header.Tick}; frame 0 shares this origin.";
+            Log(_status);
+        }
     }
 
     private GameEngine? CurrentEngine() => _engine;
@@ -321,7 +348,12 @@ public sealed class PersistenceOnlineReplayRuntime
         if (!_replayPlaying || _replayIndex >= (_archive?.Frames.Count ?? 0))
         {
             _replayPlaying = false;
-            _replayResult = $"completed {_replayFrames}/{_archive?.Frames.Count ?? 0} frames";
+            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is FrozenInputActionReader endedInput)
+            {
+                endedInput.SetReplayInputIsolation(false);
+            }
+            string digest = CaptureWorldDigest(engine);
+            _replayResult = $"completed {_replayFrames}/{_archive?.Frames.Count ?? 0} frames; digest {digest} {(string.Equals(digest, _recordingTerminalDigest, StringComparison.Ordinal) ? "matches" : $"mismatch vs {_recordingTerminalDigest}")}";
             _status = $"Replay finished: {_replayResult}.";
             Log(_status);
             return;
@@ -344,11 +376,23 @@ public sealed class PersistenceOnlineReplayRuntime
         QueueNextReplayFrame(engine);
     }
     private static string Digest(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).Substring(0, 12);
+    private static string CaptureWorldDigest(GameEngine engine)
+    {
+        WorldSaveSnapshot snapshot = new WorldSnapshotService().Capture(engine, SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+        return Digest(snapshot.WorldBytes);
+    }
     private static ReplayArchive RemoveOneFrame(ReplayArchive archive)
     {
         if (archive.Frames.Count < 2) throw new SaveContextException("Replay ablation needs at least two frames.");
         var frames = new List<AuthoritativeFrame>(archive.Frames);
         frames.RemoveAt(frames.Count / 2);
+        return new ReplayArchive(archive.Header, archive.Checkpoint, frames).Validate();
+    }
+    private static ReplayArchive SwapFrames(ReplayArchive archive)
+    {
+        if (archive.Frames.Count < 2) throw new SaveContextException("Replay ablation needs at least two frames.");
+        var frames = new List<AuthoritativeFrame>(archive.Frames);
+        (frames[0], frames[1]) = (frames[1], frames[0]);
         return new ReplayArchive(archive.Header, archive.Checkpoint, frames).Validate();
     }
     private void Fail(Exception ex) { _status = $"Rejected: {ex.Message}"; Log(_status); }

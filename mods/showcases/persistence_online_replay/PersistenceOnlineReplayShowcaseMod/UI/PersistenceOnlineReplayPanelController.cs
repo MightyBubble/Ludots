@@ -47,7 +47,7 @@ internal sealed class PersistenceOnlineReplayPanelController
             Ui.Column(
                 Ui.Text(state.Header).FontSize(22f).Bold().Color("#F5F7FA"),
                 Ui.Text(state.Summary).FontSize(12f).Color("#D6E0EA").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Keys: F5 Checkpoint, F6 Save, F7 Restore, F8 Record, F9 Stop, F10 Replay, F11 Disconnect, F12 Reconnect")
+                Ui.Text("Keys: F1 Pause, F2 Step, F3 Reset, F4 Delete, F5 Checkpoint, F6 Save, F7 Restore, F8 Record, F9 Stop, F10 Replay, F11 Disconnect, F12 Reconnect, F13 Swap")
                     .FontSize(10f).Color("#8AD7FF").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.Status).FontSize(13f).Bold().Color("#F0C36B"),
                 BuildButtons(),
@@ -66,11 +66,11 @@ internal sealed class PersistenceOnlineReplayPanelController
             Ui.Row(Button("Checkpoint", "checkpoint", r => r.RequestCheckpoint()), Button("Save", "save", r => r.SaveSlot()), Button("Restore", "restore", r => r.RestoreSlot())).Gap(6f).Wrap(),
             Ui.Row(Button("Record", "record", r => r.StartRecording()), Button("Stop", "stop", r => r.StopRecording()), Button("Replay", "replay", r => r.PlayReplay())).Gap(6f).Wrap(),
             Ui.Row(Button("Pause / Resume", "pause", r => r.ToggleReplayPause()), Button("Step", "step", r => r.StepReplay()), Button("Reset", "reset", r => r.ResetReplay())).Gap(6f).Wrap(),
-            Ui.Row(Button("Disconnect", "disconnect", r => r.SimulateDisconnect()), Button("Reconnect", "reconnect", r => r.Reconnect()), Button("Delete frame", "ablate", r => r.AblateFrame())).Gap(6f).Wrap());
+            Ui.Row(Button("Disconnect", "disconnect", r => r.SimulateDisconnect()), Button("Reconnect", "reconnect", r => r.Reconnect()), Button("Delete frame", "ablate", r => r.AblateFrame()), Button("Swap frames", "swap", r => r.SwapFrames())).Gap(6f).Wrap());
     }
 
     private UiElementBuilder Button(string label, string id, Action<PersistenceOnlineReplayRuntime> action)
-        => Ui.Button(label, _ => Run(action)).Id($"persistence-replay-{id}");
+        => Ui.Button(label, _ => Run(action)).Id($"persistence-replay-{id}").Height(36f);
 
     private void Run(Action<PersistenceOnlineReplayRuntime> action)
     {

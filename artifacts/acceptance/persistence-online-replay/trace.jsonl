@@ -11,5 +11,7 @@
 {"step":"replay","source":"disk replay","frames":40,"status":"playing"}
 {"step":"pause","replayApplied":14,"liveInput":"rejected","status":"paused"}
 {"step":"ablation","input":"missing-frame","expectedSequence":20,"actualSequence":21,"status":"rejected"}
+{"step":"ablation","input":"swapped-first-two-frames","status":"rejected","reason":"authoritative frame sequence is not contiguous"}
+{"step":"replay-terminal-compare","recordingDigest":"306E6A07E2CA","replayDigest":"1515D972E5FD","status":"visible-mismatch"}
 {"step":"disconnect","tickBefore":756,"tickAfter":756,"pacemaker":"TurnBasedPacemaker","status":"frozen"}
 {"step":"reconnect","source":"checkpoint recovery","tickBefore":765,"tickAfter":779,"pacemaker":"RealtimePacemaker","status":"verified-in-process"}

@@ -49,4 +49,33 @@ public sealed class ReplayInputSnapshotTests
 
         Assert.That(snapshot.IsDown("Stale"), Is.False);
     }
+
+    [Test]
+    public void ReplayIsolationRejectsLiveInputUntilExplicitlyDisabled()
+    {
+        var snapshot = new FrozenInputActionReader();
+        var accumulator = new AuthoritativeInputAccumulator();
+        var system = new AuthoritativeInputSnapshotSystem(snapshot, accumulator);
+
+        snapshot.SetReplayInputIsolation(true);
+        snapshot.SetActionState("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+        system.Update(1f / 60f);
+
+        Assert.That(snapshot.IsDown("Live"), Is.False);
+        snapshot.SetReplayInputIsolation(false);
+        accumulator.CaptureAction("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+        system.Update(1f / 60f);
+
+        Assert.That(snapshot.IsDown("Live"), Is.True);
+    }
+
+    [Test]
+    public void QueueingWhileAReplayFrameIsPendingIsRejected()
+    {
+        var snapshot = new FrozenInputActionReader();
+        snapshot.QueueReplayActions(Array.Empty<AuthoritativeAction>());
+
+        Assert.That(() => snapshot.QueueReplayActions(Array.Empty<AuthoritativeAction>()),
+            Throws.TypeOf<SaveContextException>());
+    }
 }

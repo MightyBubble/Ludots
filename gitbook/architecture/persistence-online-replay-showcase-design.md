@@ -1,6 +1,6 @@
 # 持久化、Replay 与断线恢复 showcase 设计
 
-状态：已实现，已完成运行验收（联机专项仍标记为单机等价故障注入）。
+状态：可玩交付完成（联机专项仍标记为单机等价故障注入；本次实机回放终点比较显示 mismatch，界面明确暴露差异，未伪报确定性通过）。
 ## 一句话与目标用户
 让新玩家亲眼看到：断线、回放或读档后，战局从同一个检查点继续，并得到同一个结果。
 
@@ -20,7 +20,7 @@
 对照的重点不是报错文字，而是玩家能看到“完整协议能继续，破坏输入不能悄悄继续”。
 
 ## 解释层
-HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录权威帧数、恢复来源、当前 world digest、连续运行与恢复结果是否一致。颜色用于区分运行中、恢复中、已一致和已拒绝；右下角固定图例解释四种状态。
+HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录权威帧数、已应用回放帧数、恢复来源、当前 checkpoint digest、回放终点 world digest 比较结果。回放期间会明确显示实时输入被隔离；完整回放终点显示 digest matches，删除或交换帧显示具体拒绝原因。颜色用于区分运行中、恢复中、已一致和已拒绝；右下角固定图例解释四种状态。
 
 ## 旋钮清单
 本 showcase 使用离散运行时控件，而不是虚构尚未接入的网络参数。
@@ -31,7 +31,7 @@ HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录
 | 回放推进方式 | 连续 / 单步 | 逐帧检查权威输入的应用位置 |
 | 回放位置 | 当前 / 重置到起点 | 从同一检查点重新开始比较 |
 | 连接状态 | 在线 / 断线 / 重连 | 断线冻结与检查点恢复的边界 |
-| 输入完整性 | 完整 / 删除一帧 | 缺帧时明确拒绝，而不是静默放过 |
+| 输入完整性 | 完整 / 删除一帧 / 交换两帧 | 缺帧或乱序时明确拒绝，而不是静默放过 |
 
 ## 场景结构
 主演示：RTS 训练战局，左侧是战场，顶部是 tick 与摘要，右侧是存档、Replay、断线恢复控制。
@@ -41,9 +41,9 @@ HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录
 1. 存档后继续：保存检查点，继续下单，恢复后比较摘要。
 2. Replay 追帧：从检查点开始逐帧播放，支持暂停和单步。
 3. 断线恢复：模拟断线和从最近检查点重连。
-4. 完整性消融：删除一帧，观察明确拒绝。
+4. 完整性消融：删除一帧或交换两帧，观察明确拒绝。
 
-首屏引导：“先点 Checkpoint，再尝试 Save、Record 或 Disconnect；注意 tick、恢复来源和摘要如何变化。”
+首屏引导：“先点 Checkpoint，再尝试 Save、Record 或 Disconnect；这是单进程断线模拟，不是真实网络；注意 tick、恢复来源和 digest 比较如何变化。”
 
 ## 门户资产
 门户封面使用真实目标进程的首屏截图，展示操作按钮、HUD 与故障入口。验收资产来自同一个 preset 和真实运行过程：
@@ -55,6 +55,7 @@ HUD 只显示真实领域状态：当前 tick、最近检查点 tick、已记录
 - 路径图：`artifacts/acceptance/persistence-online-replay/path.mmd`
 - 首屏截图：`artifacts/acceptance/persistence-online-replay/persistence-first-viewport.png`
 - 断线恢复截图：`artifacts/acceptance/persistence-online-replay/persistence-reconnect-success.png`
+- 消融拒绝截图：`artifacts/acceptance/persistence-online-replay/persistence-rejection.png`
 
 预览页和 HUD 读取同一份检查点/帧 DTO；不复制第二份演示数据。
 

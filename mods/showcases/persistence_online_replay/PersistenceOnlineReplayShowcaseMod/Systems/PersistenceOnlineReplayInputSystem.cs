@@ -30,6 +30,7 @@ internal sealed class PersistenceOnlineReplayInputSystem : BaseSystem<World, flo
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.SimulateDisconnect)) _runtime.SimulateDisconnect();
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.Reconnect)) _runtime.Reconnect();
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.AblateFrame)) _runtime.AblateFrame();
+            if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.SwapFrames)) _runtime.SwapFrames();
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.ToggleReplayPause)) _runtime.ToggleReplayPause();
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.StepReplay)) _runtime.StepReplay();
             if (input.PressedThisFrame(PersistenceOnlineReplayShowcaseIds.ResetReplay)) _runtime.ResetReplay();

@@ -9,6 +9,7 @@
     { "id": "PersistenceOnlineReplay.SimulateDisconnect", "name": "PersistenceOnlineReplay_SimulateDisconnect", "type": "Button" },
     { "id": "PersistenceOnlineReplay.Reconnect", "name": "PersistenceOnlineReplay_Reconnect", "type": "Button" },
     { "id": "PersistenceOnlineReplay.AblateFrame", "name": "PersistenceOnlineReplay_AblateFrame", "type": "Button" },
+    { "id": "PersistenceOnlineReplay.SwapFrames", "name": "PersistenceOnlineReplay_SwapFrames", "type": "Button" },
     { "id": "PersistenceOnlineReplay.ToggleReplayPause", "name": "PersistenceOnlineReplay_ToggleReplayPause", "type": "Button" },
     { "id": "PersistenceOnlineReplay.StepReplay", "name": "PersistenceOnlineReplay_StepReplay", "type": "Button" },
     { "id": "PersistenceOnlineReplay.ResetReplay", "name": "PersistenceOnlineReplay_ResetReplay", "type": "Button" }
@@ -27,10 +28,11 @@
         { "actionId": "PersistenceOnlineReplay.PlayReplay", "path": "<Keyboard>/f10" },
         { "actionId": "PersistenceOnlineReplay.SimulateDisconnect", "path": "<Keyboard>/f11" },
         { "actionId": "PersistenceOnlineReplay.Reconnect", "path": "<Keyboard>/f12" },
-        { "actionId": "PersistenceOnlineReplay.AblateFrame", "path": "<Keyboard>/f4" }
-        ,{ "actionId": "PersistenceOnlineReplay.ToggleReplayPause", "path": "<Keyboard>/f1" }
-        ,{ "actionId": "PersistenceOnlineReplay.StepReplay", "path": "<Keyboard>/f2" }
-        ,{ "actionId": "PersistenceOnlineReplay.ResetReplay", "path": "<Keyboard>/f3" }
+        { "actionId": "PersistenceOnlineReplay.AblateFrame", "path": "<Keyboard>/f4" },
+        { "actionId": "PersistenceOnlineReplay.SwapFrames", "path": "<Keyboard>/f13" },
+        { "actionId": "PersistenceOnlineReplay.ToggleReplayPause", "path": "<Keyboard>/f1" },
+        { "actionId": "PersistenceOnlineReplay.StepReplay", "path": "<Keyboard>/f2" },
+        { "actionId": "PersistenceOnlineReplay.ResetReplay", "path": "<Keyboard>/f3" }
       ]
     }
   ]

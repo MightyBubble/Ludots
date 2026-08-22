@@ -9,10 +9,19 @@ namespace Ludots.Core.Input.Runtime
     {
         private readonly Dictionary<string, ActionState> _states = new(StringComparer.Ordinal);
         private IReadOnlyList<AuthoritativeAction>? _replayOverride;
+        public bool ReplayInputIsolation { get; private set; }
+
+        public void SetReplayInputIsolation(bool enabled)
+        {
+            ReplayInputIsolation = enabled;
+            if (!enabled) _replayOverride = null;
+        }
 
         public void QueueReplayActions(IReadOnlyList<AuthoritativeAction> actions)
         {
-            _replayOverride = actions ?? throw new ArgumentNullException(nameof(actions));
+            if (actions == null) throw new ArgumentNullException(nameof(actions));
+            if (_replayOverride != null) throw new SaveContextException("Replay input frame is still pending consumption.");
+            _replayOverride = actions.Count == 0 ? Array.Empty<AuthoritativeAction>() : new List<AuthoritativeAction>(actions).ToArray();
         }
 
         public bool TryConsumeReplayActions(out IReadOnlyList<AuthoritativeAction>? actions)
@@ -30,6 +39,14 @@ namespace Ludots.Core.Input.Runtime
         public void Clear()
         {
             _states.Clear();
+            _replayOverride = null;
+            ReplayInputIsolation = false;
+        }
+
+        public void ClearSnapshot()
+        {
+            _states.Clear();
+            _replayOverride = null;
         }
 
         public void SetActionValue(string actionId, Vector3 value)

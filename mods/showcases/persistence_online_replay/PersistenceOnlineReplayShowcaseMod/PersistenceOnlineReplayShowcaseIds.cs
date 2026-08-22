@@ -15,6 +15,7 @@ internal static class PersistenceOnlineReplayShowcaseIds
     public const string SimulateDisconnect = "PersistenceOnlineReplay.SimulateDisconnect";
     public const string Reconnect = "PersistenceOnlineReplay.Reconnect";
     public const string AblateFrame = "PersistenceOnlineReplay.AblateFrame";
+    public const string SwapFrames = "PersistenceOnlineReplay.SwapFrames";
     public const string ToggleReplayPause = "PersistenceOnlineReplay.ToggleReplayPause";
     public const string StepReplay = "PersistenceOnlineReplay.StepReplay";
     public const string ResetReplay = "PersistenceOnlineReplay.ResetReplay";
