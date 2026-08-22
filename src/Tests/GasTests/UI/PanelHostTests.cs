@@ -309,6 +309,148 @@ namespace Ludots.Tests.GasTests.UI
             }
         }
 
+        [Test]
+        public void UnregisteredGraph_PinsStayOnDefaults()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.ungraph",
+              "graph": "tests.graph.not.registered",
+              "pins": [
+                { "name": "hp", "key": "tests.panel.ungraph.hp", "mode": "realtime", "default": 42 },
+                { "name": "tier", "key": "tests.panel.ungraph.tier", "mode": "snapshot", "default": 7 }
+              ]
+            }
+            """;
+
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            Assert.That(template.GraphId, Is.EqualTo(-1), "unregistered graph name leaves GraphId unbound");
+
+            var localTemplates = new PanelTemplateRegistry();
+            localTemplates.Register(template);
+            localTemplates.Freeze();
+            var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store));
+
+            PanelInstanceHandle handle = host.Instantiate("tests.panel.ungraph", AnchorId, _caster);
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet values), Is.True);
+            Assert.That(values.Get("hp"), Is.EqualTo(42f), "unregistered graph falls to the pin default");
+            Assert.That(values.Get("tier"), Is.EqualTo(7f), "unregistered graph falls to the pin default");
+
+            // GraphId = -1 skips evaluation entirely, so the realtime sweep changes nothing.
+            Assert.That(host.RefreshRealtime(), Is.EqualTo(0));
+            Assert.That(host.TryGetValues(handle, out values), Is.True);
+            Assert.That(values.Get("hp"), Is.EqualTo(42f), "defaults survive the realtime sweep");
+        }
+
+        [Test]
+        public void EvaluatorThrows_PinsKeepPreviousValues()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.thrower",
+              "graph": "tests.graph.thrower",
+              "pins": [
+                { "name": "hp", "key": "tests.panel.hp", "mode": "realtime", "default": 0 },
+                { "name": "attack", "key": "tests.panel.attack", "mode": "snapshot", "default": 12 }
+              ]
+            }
+            """;
+
+            var localTemplates = new PanelTemplateRegistry();
+            PanelTemplate template = PanelTemplateLoader.Load(json);
+            template.GraphId = 1; // bound graph id: evaluation runs (and fails) instead of being skipped
+            localTemplates.Register(template);
+            localTemplates.Freeze();
+
+            var thrower = new ThrowingEvaluator();
+            var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store), thrower);
+
+            // SetUp pre-seeded the store (hp=87, attack=12). The thrower fails during Instantiate,
+            // but pins read the store, so the pre-written values still land.
+            PanelInstanceHandle handle = host.Instantiate("tests.panel.thrower", AnchorId, _caster);
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet first), Is.True);
+            Assert.That(first.Get("hp"), Is.EqualTo(87f));
+            Assert.That(first.Get("attack"), Is.EqualTo(12f));
+            Assert.That(thrower.Calls, Is.EqualTo(1));
+
+            // A failed evaluation must leave previous pin values standing, even if the store moved.
+            _store.SetFloat(_caster, "tests.panel.hp", 50f);
+            Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "failed evaluation touches no instance");
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet second), Is.True);
+            Assert.That(second.Get("hp"), Is.EqualTo(87f), "evaluator failure keeps the previous value");
+            Assert.That(thrower.Calls, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SnapshotPin_ExplicitRefresh_Updates_ButRealtimeSweepDoesNot()
+        {
+            const string json = """
+            {
+              "id": "tests.panel.snapshot_only",
+              "graph": "tests.graph.snapshot.only",
+              "pins": [
+                { "name": "tier", "key": "tests.panel.snapshot.tier", "mode": "snapshot", "default": 1 }
+              ]
+            }
+            """;
+
+            var localTemplates = new PanelTemplateRegistry();
+            localTemplates.Register(PanelTemplateLoader.Load(json));
+            localTemplates.Freeze();
+            var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store));
+
+            _store.SetFloat(_caster, "tests.panel.snapshot.tier", 3f);
+            PanelInstanceHandle handle = host.Instantiate("tests.panel.snapshot_only", AnchorId, _caster);
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet first), Is.True);
+            Assert.That(first.Get("tier"), Is.EqualTo(3f), "snapshot pin captures the value at instantiate");
+
+            _store.SetFloat(_caster, "tests.panel.snapshot.tier", 9f);
+            Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "snapshot-only template is skipped by the realtime sweep");
+            Assert.That(host.TryGetValues(handle, out PanelVariableSet second), Is.True);
+            Assert.That(second.Get("tier"), Is.EqualTo(3f), "realtime sweep leaves the snapshot pin untouched");
+
+            PanelVariableSet third = host.Refresh(handle);
+            Assert.That(third.Get("tier"), Is.EqualTo(9f), "explicit Refresh re-evaluates the snapshot pin");
+        }
+
+        [Test]
+        public void Loader_TypeErrors_FailClosed()
+        {
+            const string badDefault = """
+            {
+              "id": "tests.panel.bad_default", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k", "default": "many" } ]
+            }
+            """;
+            Assert.That(
+                () => PanelTemplateLoader.Load(badDefault),
+                Throws.Exception.With.Message.Contains("default"));
+
+            const string badEvents = """
+            {
+              "id": "tests.panel.bad_events", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k" } ],
+              "events": { "eventId": "e1" }
+            }
+            """;
+            Assert.That(
+                () => PanelTemplateLoader.Load(badEvents),
+                Throws.Exception.With.Message.Contains("events"));
+
+            const string badPayload = """
+            {
+              "id": "tests.panel.bad_payload", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k" } ],
+              "events": [
+                { "eventId": "e1", "gesture": "click", "payload": [] }
+              ]
+            }
+            """;
+            Assert.That(
+                () => PanelTemplateLoader.Load(badPayload),
+                Throws.Exception.With.Message.Contains("payload"));
+        }
+
         // ── helpers ──
 
         private static GraphInstruction[] CreatePanelProgram(byte scopeRegister) => new[]
@@ -366,6 +508,17 @@ namespace Ludots.Tests.GasTests.UI
             throw new InvalidOperationException($"Expected exactly one live panel instance, found {instances.Count}.");
         }
 
+        private sealed class ThrowingEvaluator : IPanelGraphEvaluator
+        {
+            public int Calls { get; private set; }
+
+            public void Evaluate(int graphId, Entity owner)
+            {
+                Calls++;
+                throw new InvalidOperationException($"panel graph '{graphId}' evaluation failed for test");
+            }
+        }
+
         private sealed class ThrowingResolver : IGraphSymbolResolver
         {
             public int ResolveTag(string name) => throw new InvalidOperationException($"Unexpected tag '{name}'.");
@@ -380,3 +533,25 @@ namespace Ludots.Tests.GasTests.UI
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINDING — contract test that currently FAILS against src/Core/UI/PanelHosting/PanelHost.cs
+// (no product code was changed; per task instructions the finding is documented here instead).
+//
+// Test: EvaluatorThrows_PinsKeepPreviousValues
+// Contract: when the graph evaluator throws, pins must keep their previous values
+// (合同基准: “evaluator 抛异常保持旧值”). The test proves the thrower IS invoked on both
+// Instantiate and RefreshRealtime (Calls 1 → 2) and that Instantiate still reads the
+// pre-seeded store (hp=87), so the test setup is sound.
+//
+// Gap: PanelHost.RefreshRealtime calls EvaluateGraph(entry) (which swallows the thrower's
+// exception) and then unconditionally reads the store via _reader.Resolve(...) in the pin
+// loop. A store write that is independent of the failed evaluation therefore leaks through:
+// after _store.SetFloat(hp, 50f) the sweep reports touched=1 and the pin moves to 50,
+// instead of keeping the previous value 87.
+//
+// The “keep previous values” contract is only honored incidentally today — when the store
+// happens not to have moved. A failed evaluation must suppress the pin re-read for that
+// instance (e.g. EvaluateGraph returns success, and RefreshRealtime skips the pin loop on
+// failure) for this test to go green. No src/ change was made.
+// ─────────────────────────────────────────────────────────────────────────────

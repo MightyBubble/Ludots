@@ -122,7 +122,11 @@ namespace Ludots.Core.UI.PanelHosting
                     continue;
                 }
 
-                EvaluateGraph(entry);
+                if (!EvaluateGraph(entry))
+                {
+                    continue;
+                }
+
                 bool changed = false;
                 foreach (PanelPin pin in entry.Template.Pins)
                 {
@@ -267,25 +271,33 @@ namespace Ludots.Core.UI.PanelHosting
         /// values standing — the panel keeps rendering; structural failures were rejected
         /// at load. No evaluator (lightweight hosts) means read-only against the store.
         /// </summary>
-        private void EvaluateGraph(Entry entry)
+        /// <summary>
+        /// Returns false when this pass's evaluation FAILED — the realtime sweep then
+        /// skips re-reading pins so externally written store values cannot leak through
+        /// a failed evaluation. No evaluator (lightweight hosts) or an unregistered
+        /// graph means "the store is the source": not a failure, returns true.
+        /// </summary>
+        private bool EvaluateGraph(Entry entry)
         {
             System.Diagnostics.Debug.Assert(
                 Environment.CurrentManagedThreadId == _writerThreadId,
                 "PanelHost is single-writer: all mutations must run on the thread that constructed it.");
             if (_graphEvaluator == null || entry.Template.GraphId < 0)
             {
-                return;
+                return true;
             }
 
             try
             {
                 _graphEvaluator.Evaluate(entry.Template.GraphId, entry.Scope);
+                return true;
             }
             catch (Exception ex)
             {
                 Diagnostics.Log.Error(
                     in Diagnostics.LogChannels.Engine,
                     $"[PanelHost] graph '{entry.Template.Graph}' evaluation failed for panel '{entry.Template.Id}'; pins keep previous/default values: {ex.Message}");
+                return false;
             }
         }
 
