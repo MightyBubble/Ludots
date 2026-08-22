@@ -63,13 +63,24 @@ screen.topLeft ┌────────────────────�
 ### A5 显隐编排
 常驻面板：地图装载图（TriggerGraph）`CreatePanel(panelAnchor: "screen.topLeft")` 后**不调** `ShowPanel` 之外的任何显隐逻辑——开局默认隐藏由激活商店语义决定（`IsVisible` 缺省 false），装载图随即 `ShowPanel("panel.player.aggregate")` 常亮。整局无再隐需求。
 
-### A6 验收断言
-- 自动化（headless）：装载地图 → 实例 1 个、变量初值正确；驱动经济图输出变化 → 面板变量同帧跟随（现有 PanelFireball 断言模式复用）。
-- 30 秒人验：`preset:panel_fullhud` 打开即见资源条；按 U 造兵 → 金掉/人口涨可见。
-- 边界（fail-closed）：`graphOutputKey` 写错 → 装载期抛错点名 key；缺图（Graph.Economy.Aggregate 未注册）→ 同上，无 0 兜底。
+### A6 验收（Gherkin）
+
+```gherkin
+Scenario: 资源条随经济同帧刷新
+  Given Full-HUD 验收场启动且 panel.player.aggregate 可见
+  When 玩家花费 200 金生产一队兵
+  Then gold 变量减少 200 且 popUsed 增加，与图输出 economy.gold 同帧
+
+Scenario: 溯源失败即拒
+  Given 模板引用未注册的 graphOutputKey
+  When 装载地图
+  Then 装载失败并点名该 key（无 0 兜底）
+```
+
+30 秒人验：打开即见资源条；按 U 造兵 → 金掉/人口涨肉眼可见。
 
 ### A7 依赖与边界
-依赖：**G3**（scope=global 实例语义，#1012 主战场）。明确不做：货币动画/溢出滚动（皮层自由实现，模板不承诺）；不读敌方经济（图输出仅己方 scope）。
+依赖：G3（scope=global，#1012）。明确不做：货币动画/溢出滚动（皮层自由实现，模板不承诺）；不读敌方经济（图输出仅己方 scope）。
 
 ---
 
@@ -100,10 +111,12 @@ screen.topLeft ┌────────────────────�
     { "eventId": "speed.set.3", "control": "btn.speed3", "gesture": "click" }
   ],
   "intents": [
-    { "eventId": "speed.set", "intent": "game.setSpeed",
-      "args": { "speed": "$payload.speed" },
-      "playerSource": "seat", "actorSource": "commandSource.primary" }
+    { "event": "speed.set.pause", "intent": "game.setSpeed", "args": { "speed": "0" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "event": "speed.set.1", "intent": "game.setSpeed", "args": { "speed": "1" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "event": "speed.set.2", "intent": "game.setSpeed", "args": { "speed": "2" }, "playerSource": "seat", "actorSource": "commandSource.primary" },
+    { "event": "speed.set.3", "intent": "game.setSpeed", "args": { "speed": "3" }, "playerSource": "seat", "actorSource": "commandSource.primary" }
   ]
+  // 装载器 intents 的事件字段名是 event:（非 eventId:）；四挡四独立事件各自映射，args 字面常量定挡位（语义规则 G8）
 }
 ```
 
@@ -123,7 +136,7 @@ screen.topRight 时间条右侧 ┌───────────────
       ▼
 PanelEventBus（声明层校验：eventId/控件/手势/载荷类型四对四）
       ▼
-IntentMap：speed.set → game.setSpeed，args={$payload.speed}
+IntentMap：speed.set.3 → game.setSpeed，args={speed:"3"}（字面常量定挡，语义规则 G8）
       │ 归因：playerSource=seat（座位 2 点的就是座位 2 的）
       ▼
 意图 admission 中间层（预算/合法性裁决——UI 不碰）
@@ -140,13 +153,30 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
 ### B5 显隐编排
 常驻（同案 A）：装载图 CreatePanel + ShowPanel。暂停菜单打开时可选择 HidePanel（由暂停菜单的图决定，本面板不自理）。
 
-### B6 验收断言
-- 自动化：模拟事件 speed.set{3} → 意图入队且 args 归因正确；置 admission 预算 0 → 意图被拒、`clock.speed` 不变、面板回读不变（拒绝回执显示属 #1015 回执场景，此处只验状态一致）。
-- 30 秒人验：点 3x 游戏加速+按钮高亮；点暂停画面静止。
-- 边界：未声明 payload 字段被塞入 → 事件层校验拒绝；`$payload.speed` 拼错 → 装载期抛（意图 args 校验）。
+### B6 验收（Gherkin）
+
+```gherkin
+Scenario: 点挡加速且高亮回读
+  Given 游戏以 1x 运行且面板可见
+  When 玩家点击【3x】
+  Then game.setSpeed 意图以 args{speed:3} 入队并被 admission 放行
+  And clock.speed 输出变为 3 且【3x】进入高亮态
+
+Scenario: 拒绝时状态不漂移
+  Given admission 预算为 0
+  When 玩家点击【2x】
+  Then 意图被拒、clock.speed 不变、无按钮状态变化
+
+Scenario: 载荷校验 fail-closed
+  Given 事件携带未声明字段
+  When 事件分发
+  Then 事件层拒绝并点名字段
+```
+
+30 秒人验：点 3x 游戏明显加速+高亮；点暂停画面静止。
 
 ### B7 依赖与边界
-依赖：**G3** + **#1015 交互回调**（事件分发→意图→admission 链路本体）。不做：热键绑定（输入系统域，面板只管点击）；变速过渡动画（皮层）。
+依赖：G3、G8（args 常量）、#1015（事件分发→意图→admission 链路本体）。不做：热键绑定（输入系统域，面板只管点击）；变速过渡动画（皮层）。
 
 ---
 
@@ -206,13 +236,31 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
 - 开：⚙ 入口的事件 `sub.open{sub:settings}` 走图（TriggerGraph 监听 UI 事件）调 `ShowPanel("panel.settings")` + 输入焦点捕获。
 - 关：`settings.close` 事件被同一张图消费 → `HidePanel` + 释放焦点。**纯 UI 事件不经意图层**——无 order 副作用的关闭动作在编排层终结。
 
-### C6 验收断言
-- 自动化：声明校验（gesture=change 合法手势表内）；显隐图驱动 Show/Hide 后激活商店真值正确；连续事件合流后仅一条 setVolume 意图入队。
-- 30 秒人验：⚙ 开浮层→拖滑条声音变→✕ 关闭恢复操作。
-- 边界：`actorSource: "none"` 合法性（无实体归因的设置类意图）；modal 锚点未实现时（G5 未落地）本面板配置装载即拒——不静默降级为角落面板。
+### C6 验收（Gherkin）
+
+```gherkin
+Scenario: 模态开合由图编排
+  Given panel.settings 已创建且未显示
+  When ⚙ 入口事件出现（G10 接线后）
+  Then 编排图调 ShowPanel 且输入焦点被浮层捕获
+  When 玩家点击【✕】
+  Then 编排图调 HidePanel 且焦点释放
+
+Scenario: 连续意图合流
+  Given 浮层打开且音量滑条存在
+  When 玩家连续拖动产生 10 个 change 事件
+  Then 仅一条 settings.setVolume 意图携带末值入队
+
+Scenario: 模态锚点未落地即拒
+  Given G5 未实现且配置使用 modal.center
+  When 装载
+  Then 装载失败，不静默降级为角落面板
+```
+
+30 秒人验：⚙ 开浮层→拖滑条声音变→✕ 关闭恢复。
 
 ### C7 依赖与边界
-依赖：**G5 模态锚点+焦点语义**（#840 前置小片）、**#1015**（change 手势+连续合流）。不做：热键 Esc 关闭（输入域）；设置持久化（存档域，仅回读已存值）。
+依赖：G5（模态锚点，#840 前置）、G8（change 手势+载荷值）、G9（actorSource none）、G10（开/关编排接线）、#1015。不做：热键 Esc 关闭（输入域）；设置持久化（存档域，仅回读已存值）。
 
 ---
 
@@ -265,13 +313,24 @@ screen.bottomCenter ┌───────────────────
 ### D5 显隐编排
 常驻。特殊编排需求：**指挥模式互斥**——当玩家进入其他命令模式（如建筑放置）时，指挥图调 `HidePanel`；退出模式恢复 Show。仍由图驱动，面板不自理。
 
-### D6 验收断言
-- 自动化：G6 落地后本配置装载通过；四事件各自意图入队断言；`args:{}` 无参意图合法。
-- 30 秒人验：选兵→点集结→光标变指定态；点全选→全军亮。
-- 边界：`variables: []` 在 G6 落地前装载即抛并提示"纯命令面板需 G6"——不静默塞假变量。
+### D6 验收（Gherkin）
+
+```gherkin
+Scenario: 零变量命令面板装载（G6 后）
+  Given G6 已放开零变量约束
+  When 装载本模板
+  Then 装载通过且无假变量被塞入
+
+Scenario: 命令直达意图
+  Given 玩家已框选一队兵
+  When 玩家点击【集结】
+  Then army.setRally 意图入队，光标进入指定目标模式
+```
+
+30 秒人验：选兵→点集结→光标变指定态；点全选→全军亮。边界：G6 落地前 `variables: []` 装载即抛并提示"纯命令面板需 G6"。
 
 ### D7 依赖与边界
-依赖：**G6**（零变量放开，小改）、**#1015**、**G3**。不做：按钮冷却是皮层自由实现（读 admission 状态），模板不承诺。
+依赖：G6（零变量）、G9、G10（互斥编排）、#1015、G3。不做：按钮冷却是皮层自由实现（读 admission 状态），模板不承诺。
 
 ---
 

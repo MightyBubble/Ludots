@@ -26,10 +26,10 @@
 {
   "id": "panel.<域>.<名>",            // 顶点前缀 panel.，点分命名空间
   "skin": "markup",                    // 可选：本模板默认皮（实例 op 可覆盖）
-  "scope": "item",                     // item | collection | global —— 行为侧（§1.4）
+  // scope 不是今日 schema 字段（行为侧设计见 §1.4）——出现即被白名单拒绝
   "variables": [                       // 至少一条；kind 目前 Float|Int（缺口 G1: Bool|String）
     { "name": "gold", "kind": "Int", "realtime": true,
-      "source": {                      // 五路读嘴，fail-closed：
+      "source": {                      // 六路读嘴（真实枚举名），fail-closed：
         "sourceKind": "TableLookup",   //   六路读嘴（真实枚举名，fail-closed）：
                                        //   SingleAttribute / DerivedAttribute / AggregateProjection /
                                        //   GraphOutput / TableLookup / AttributeBase
@@ -61,7 +61,7 @@
 | TableLookup | ❌ | 查的是启动装载的静态表，结果不动；key 动态换行属例外，走显式 Refresh，不帧扫 |
 | DerivedAttribute | 随派生源 | 派生图绑定写入 AttributeBuffer |
 
-配套建模纪律：**活游戏状态（gold/人口/时钟）一律 GraphOutput 中转**——查表只放静态数据（税率/周期/文案表）。这同时满足完成核"数字溯源到图"。地图变量（MapVariableStore）不在五路读嘴内：全局状态经图输出中转是刻意设计；若实践中"每项全局状态开一张图"爆炸，再议第六读嘴（G7 候选，暂不立项）。
+配套建模纪律：**活游戏状态（gold/人口/时钟）一律 GraphOutput 中转**——查表只放静态数据（税率/周期/文案表）。这同时满足完成核"数字溯源到图"。地图变量（MapVariableStore）不在六路读嘴内：全局状态经图输出中转是刻意设计；若实践中"每项全局状态开一张图"爆炸，再议第七路读嘴（G7 候选，暂不立项）。
 
 ### 1.3 实例参数（四级链，已落地）
 
@@ -97,29 +97,18 @@
 
 ## 二、分组一：全局 HUD（9 类）
 
+> **单一配置源纪律**：本目录只留索引（id/线框/30 秒预期/依赖）；完整配置只住在案例页，分组内各类立案时逐案迁入。今日已立案四件（2.1/2.4/2.5/2.8 → 案 A/B/D/C）。
+
 约定：线框用锚点+尺寸语义描述；`【】`标交互控件（事件源）。
 
-### 2.1 玩家信息聚合 `panel.player.aggregate`
-
-```jsonc
-{ "id": "panel.player.aggregate", "scope": "global",
-  "variables": [
-    { "name": "gold", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "economy.gold" } },
-    { "name": "popUsed", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.used" } },
-    { "name": "popCap", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "pop.cap" } } ],
-  "binds": [ { "control": "lbl.gold", "variable": "gold" }, { "control": "lbl.pop", "variable": "popUsed" } ] }
-// 注：gold/pop 是活状态 → GraphOutput 中转（§1.2.1 纪律）；economy 查表放静态（如
-// 每级人口上限 popCapByLevel），面板侧不标 realtime。初稿曾把活状态建模成查表+
-// realtime——用户审稿揪出的反例，规则因此入合同。
-```
+### 2.1 玩家信息聚合 `panel.player.aggregate` —— 配置唯一源：[全设计案 A](panel-case-designs.md)
 
 ```text
 screen.topLeft ┌────────────────────────────┐
                │ ⛁ 1,240   👥 8/20   ⚡ 65 │
                └────────────────────────────┘
 ```
-30 秒预期：顶栏左角资源条；花 200 金造兵 → 金数字掉、人口 +1，同帧刷新。
-依赖：G3（global scope）。现有读嘴即可，G1/G2 不需要。
+30 秒预期：花 200 金造兵 → 金掉、人口 +1 同帧。依赖 G3。
 
 ### 2.2 时间流逝 `panel.time.elapsed`
 
@@ -156,48 +145,23 @@ screen.topRight 区、信息聚合左侧 ┌──────────┐
 30 秒预期：过夜后日期 +1，季节图标换。
 依赖：G3；TableLookup 周期表（现有读嘴）。
 
-### 2.4 时间控制 `panel.time.control`
-
-```jsonc
-{ "id": "panel.time.control", "scope": "global",
-  "variables": [
-    { "name": "speed", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "clock.speed" } } ],
-  "binds": [ { "control": "lbl.speed", "variable": "speed" } ],
-  "events": [
-    { "eventId": "speed.set", "control": "btn.speed", "gesture": "click", "payload": { "speed": "Int" } } ],
-  "intents": [
-    { "eventId": "speed.set", "intent": "game.setSpeed",
-      "args": { "speed": "$payload.speed" }, "playerSource": "seat", "actorSource": "commandSource.primary" } ] }
-```
+### 2.4 时间控制 `panel.time.control` —— 配置唯一源：[全设计案 B](panel-case-designs.md)
 
 ```text
 时间条右侧 ┌───────────────────┐
-           │ 【⏸】【1x】【2x】【3x】│   ← 点击切挡，当前挡高亮（speed 变量回读）
+           │ 【⏸】【1x】【2x】【3x】│
            └───────────────────┘
 ```
-30 秒预期：点 3x 游戏明显加速，按钮高亮跟随。
-依赖：G3 + **#1015 交互回调**（事件/意图声明已落地，回调链路待建）。
+30 秒预期：点 3x 加速+高亮回读。依赖 G3/G8/#1015。
 
-### 2.5 全局指令 `panel.command.global`
+### 2.5 全局指令 `panel.command.global` —— 配置唯一源：[全设计案 D](panel-case-designs.md)
 
-```jsonc
-{ "id": "panel.command.global", "scope": "global",
-  "variables": [],
-  "events": [
-    { "eventId": "army.selectAll", "control": "btn.selectAll", "gesture": "click" },
-    { "eventId": "army.rally", "control": "btn.rally", "gesture": "click" } ],
-  "intents": [
-    { "eventId": "army.selectAll", "intent": "selection.all", "args": {}, "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "eventId": "army.rally", "intent": "army.setRally", "args": {}, "playerSource": "seat", "actorSource": "commandSource.primary" } ] }
-```
-注：variables 至少一条的现行约束（模板骨架）对纯命令面板需放开为 0 条（记 **G6**）。
 ```text
 底栏中央 ┌──────────────────────────────┐
          │ 【全选】【集结】【停止】【撤退】 │
          └──────────────────────────────┘
 ```
-30 秒预期：点全选 → 场上己方单位全亮；点集结 → 进入指定目标状态。
-依赖：G6 + #1015。
+30 秒预期：选兵点集结→光标变指定态。依赖 G3/G6/G9/G10/#1015。
 
 ### 2.6 全局功能 tab `panel.tabs.global`
 
@@ -238,30 +202,9 @@ screen.topCenter ┌────────────────────
 30 秒预期：敌军进区 → 横幅弹出红字；威胁解除 → 消失。
 依赖：G3；G1（String 变量）让文案直读，否则查表 id。显隐图 op 现有。
 
-### 2.8 设置 `panel.settings`
+### 2.8 设置 `panel.settings` —— 配置唯一源：[全设计案 C](panel-case-designs.md)
 
-```jsonc
-{ "id": "panel.settings", "scope": "global",
-  "variables": [
-    { "name": "volume", "kind": "Float", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "settings.volume" } } ],
-  "events": [
-    { "eventId": "settings.volume", "control": "slider.volume", "gesture": "change", "payload": { "value": "Float" } },
-    { "eventId": "settings.exit", "control": "btn.exit", "gesture": "click" } ],
-  "intents": [
-    { "eventId": "settings.volume", "intent": "settings.setVolume", "args": { "value": "$payload.value" }, "playerSource": "seat", "actorSource": "none" },
-    { "eventId": "settings.exit", "intent": "game.exitToMenu", "args": {}, "playerSource": "seat", "actorSource": "none" } ] }
-```
-
-```text
-模态浮层（G5 锚点） ┌──────────────────────┐
-                    │ 设置            【✕】 │
-                    │ 音量 ▁▁▂▃▅▆▇ 【滑条】│
-                    │ 【退出到主菜单】       │
-                    └──────────────────────┘
-                     入口齿轮常驻右上；点开模态，其余输入挂起
-```
-30 秒预期：齿轮点开浮层拖音量即生效；点外部或 ✕ 关闭。
-依赖：G5（模态锚点）+ #1015（gesture=change 的滑条输入）。
+模态浮层（⚙ 入口，音量滑条+退出）。30 秒预期：开浮层拖滑条声音变、✕ 关闭。依赖 G5/G8/G9/G10/#1015。
 
 ### 2.9 子系统入口 `panel.subsystem.entries`
 
