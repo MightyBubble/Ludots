@@ -5,8 +5,9 @@ using Arch.Core;
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// One live panel: a template bound to a scope (#1010 MVP: the owner entity).
-    /// Evaluation goes exclusively through <see cref="PanelProjectionReader"/>.
+    /// One live panel: a template bound to a scope. Evaluation goes exclusively
+    /// through <see cref="PanelProjectionReader"/> — reading the graph output store;
+    /// graph execution is scheduled elsewhere (panel host / writer adapter).
     /// </summary>
     public sealed class PanelInstance
     {
@@ -23,12 +24,12 @@ namespace Ludots.Core.UI.PanelProjection
         {
             ArgumentNullException.ThrowIfNull(reader);
 
-            var values = new Dictionary<string, float>(Template.Variables.Count, StringComparer.Ordinal);
+            var values = new Dictionary<string, float>(Template.Pins.Count, StringComparer.Ordinal);
             uint revision = 0;
-            foreach (PanelTemplateVariable variable in Template.Variables)
+            foreach (PanelPin pin in Template.Pins)
             {
-                PanelProjectionValue value = reader.Resolve(Scope, variable.ToBinding());
-                values[variable.Name] = value.FloatValue;
+                PanelProjectionValue value = reader.Resolve(Scope, pin);
+                values[pin.Name] = value.FloatValue;
                 revision ^= value.Revision;
             }
 
@@ -37,35 +38,27 @@ namespace Ludots.Core.UI.PanelProjection
     }
 
     /// <summary>
-    /// Evaluated variables for one instance. Reads of unknown names fail loudly;
-    /// there is no silent zero.
+    /// Evaluated pin values for one instance. Reads of unknown names fail loudly;
+    /// missing graph outputs already resolved to pin defaults by the reader.
     /// </summary>
     public sealed class PanelVariableSet
     {
-        private readonly IReadOnlyDictionary<string, float> _values;
-
-        public PanelVariableSet(string templateId, IReadOnlyDictionary<string, float> values, uint revision)
+        public PanelVariableSet(string templateId, Dictionary<string, float> values, uint revision)
         {
             TemplateId = templateId;
-            _values = values;
+            Values = values ?? throw new ArgumentNullException(nameof(values));
             Revision = revision;
         }
 
         public string TemplateId { get; }
+        public Dictionary<string, float> Values { get; }
         public uint Revision { get; }
-        public int Count => _values.Count;
-        public IEnumerable<string> Names => _values.Keys;
 
-        public float Get(string variableName)
+        public float Get(string pinName)
         {
-            if (!_values.TryGetValue(variableName, out float value))
-            {
-                throw new InvalidOperationException($"Panel '{TemplateId}' has no evaluated variable '{variableName}'.");
-            }
-
-            return value;
+            return Values.TryGetValue(pinName, out float value)
+                ? value
+                : throw new InvalidOperationException($"Panel '{TemplateId}' has no pin '{pinName}'.");
         }
-
-        public bool TryGet(string variableName, out float value) => _values.TryGetValue(variableName, out value);
     }
 }

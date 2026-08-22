@@ -1,9 +1,14 @@
 [
   {
     "id": "panel.night_raid.victory",
-    "variables": [
-      { "name": "heroHealth", "kind": "Float", "realtime": true,
-        "source": { "sourceKind": "SingleAttribute", "attributeId": "Health" } }
+    "graph": "Graph.NightRaid.Panel.Values",
+    "pins": [
+      {
+        "name": "heroHealth",
+        "key": "nightraid.panel.heroHealth",
+        "mode": "realtime",
+        "default": 0
+      }
     ]
   }
 ]

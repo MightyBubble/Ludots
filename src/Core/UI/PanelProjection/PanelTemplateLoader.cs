@@ -11,10 +11,8 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public static class PanelTemplateLoader
     {
-        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "variables", "binds", "events", "intents" };
-        private static readonly HashSet<string> VariableFields = new(StringComparer.Ordinal) { "name", "kind", "source", "realtime" };
-        private static readonly HashSet<string> SourceFields = new(StringComparer.Ordinal) { "sourceKind", "attributeId", "graphOutputKey", "lookupTable", "lookupField", "keyAttribute" };
-        private static readonly HashSet<string> BindFields = new(StringComparer.Ordinal) { "control", "variable" };
+        private static readonly HashSet<string> RootFields = new(StringComparer.Ordinal) { "id", "skin", "graph", "pins", "events", "intents" };
+        private static readonly HashSet<string> PinFields = new(StringComparer.Ordinal) { "name", "key", "mode", "default" };
 
         public static PanelTemplate Load(string json)
         {
@@ -55,44 +53,45 @@ namespace Ludots.Core.UI.PanelProjection
                 PanelHosting.PanelSkinIds.ToId(skinText);
                 skin = skinText.Trim();
             }
-            if (rootObject["variables"] is not JsonArray variablesNode || variablesNode.Count == 0)
+            string graph = RequireString(rootObject, "graph", "panel template");
+            if (rootObject["pins"] is not JsonArray pinsNode || pinsNode.Count == 0)
             {
-                throw new InvalidOperationException($"Panel template '{id}' must declare a non-empty 'variables' array.");
+                throw new InvalidOperationException($"Panel template '{id}' must declare a non-empty 'pins' array.");
             }
 
-            var variables = new List<PanelTemplateVariable>(variablesNode.Count);
-            foreach (JsonNode? variableNode in variablesNode)
+            var pins = new List<PanelPin>(pinsNode.Count);
+            foreach (JsonNode? pinNode in pinsNode)
             {
-                if (variableNode is not JsonObject variableObject)
+                if (pinNode is not JsonObject pinObject)
                 {
-                    throw new InvalidOperationException($"Panel template '{id}' variables entries must be objects.");
+                    throw new InvalidOperationException($"Panel template '{id}' pins entries must be objects.");
                 }
 
-                RejectUnknownFields(variableObject, VariableFields, $"panel template '{id}' variable");
-                variables.Add(ParseVariable(id, variableObject));
-            }
-
-            var binds = new List<PanelTemplateBind>();
-            if (rootObject["binds"] is JsonArray bindsNode)
-            {
-                foreach (JsonNode? bindNode in bindsNode)
+                RejectUnknownFields(pinObject, PinFields, $"panel template '{id}' pin");
+                string pinName = RequireString(pinObject, "name", $"panel template '{id}' pin");
+                string pinKey = RequireString(pinObject, "key", $"panel template '{id}' pin '{pinName}'");
+                string modeText = OptionalString(pinObject, "mode") ?? "realtime";
+                if (!string.Equals(modeText, "realtime", StringComparison.Ordinal) &&
+                    !string.Equals(modeText, "snapshot", StringComparison.Ordinal))
                 {
-                    if (bindNode is not JsonObject bindObject)
-                    {
-                        throw new InvalidOperationException($"Panel template '{id}' binds entries must be objects.");
-                    }
-
-                    RejectUnknownFields(bindObject, BindFields, $"panel template '{id}' bind");
-                    binds.Add(new PanelTemplateBind(
-                        RequireString(bindObject, "control", $"panel template '{id}' bind"),
-                        RequireString(bindObject, "variable", $"panel template '{id}' bind")));
+                    throw new InvalidOperationException(
+                        $"Panel template '{id}' pin '{pinName}' mode must be realtime or snapshot, got '{modeText}'.");
                 }
+
+                float defaultValue = 0f;
+                if (pinObject["default"] is JsonValue defaultValueNode &&
+                    defaultValueNode.TryGetValue<double>(out double defaultValueRaw))
+                {
+                    defaultValue = (float)defaultValueRaw;
+                }
+
+                pins.Add(new PanelPin(pinName, pinKey, realtime: string.Equals(modeText, "realtime", StringComparison.Ordinal), defaultValue));
             }
 
             List<PanelTemplateEvent> events = ParseEvents(id, rootObject);
             List<PanelIntentMapEntry> intents = ParseIntents(id, rootObject, events);
 
-            return new PanelTemplate(id, variables, binds, events, intents, skin);
+            return new PanelTemplate(id, graph, pins, events, intents, skin);
         }
 
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)
@@ -181,51 +180,6 @@ namespace Ludots.Core.UI.PanelProjection
             }
 
             return intents;
-        }
-
-        private static PanelTemplateVariable ParseVariable(string templateId, JsonObject variableObject)
-        {
-            string name = RequireString(variableObject, "name", $"panel template '{templateId}' variable");
-            string kindText = RequireString(variableObject, "kind", $"panel template '{templateId}' variable '{name}'");
-            if (!Enum.TryParse<PanelTemplateVariableKind>(kindText, ignoreCase: false, out PanelTemplateVariableKind kind) ||
-                !Enum.IsDefined(typeof(PanelTemplateVariableKind), kind))
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' variable '{name}' has unknown kind '{kindText}' (allowed: Float, Int).");
-            }
-
-            if (variableObject["source"] is not JsonObject sourceObject)
-            {
-                throw new InvalidOperationException($"Panel template '{templateId}' variable '{name}' requires a 'source' object.");
-            }
-
-            RejectUnknownFields(sourceObject, SourceFields, $"panel template '{templateId}' variable '{name}' source");
-            string sourceKindText = RequireString(sourceObject, "sourceKind", $"panel template '{templateId}' variable '{name}' source");
-            if (!Enum.TryParse<PanelBindingSourceKind>(sourceKindText, ignoreCase: false, out PanelBindingSourceKind sourceKind) ||
-                !Enum.IsDefined(typeof(PanelBindingSourceKind), sourceKind))
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' variable '{name}' has unknown sourceKind '{sourceKindText}'.");
-            }
-
-            bool realtime = false;
-            if (variableObject["realtime"] is JsonNode realtimeNode &&
-                (realtimeNode is not JsonValue realtimeValue || !realtimeValue.TryGetValue(out realtime)))
-            {
-                throw new InvalidOperationException(
-                    $"Panel template '{templateId}' variable '{name}' field 'realtime' must be a boolean.");
-            }
-
-            return new PanelTemplateVariable(
-                name,
-                kind,
-                sourceKind,
-                attributeId: OptionalString(sourceObject, "attributeId"),
-                graphOutputKey: OptionalString(sourceObject, "graphOutputKey"),
-                lookupTable: OptionalString(sourceObject, "lookupTable"),
-                lookupField: OptionalString(sourceObject, "lookupField"),
-                keyAttribute: OptionalString(sourceObject, "keyAttribute"),
-                realtime: realtime);
         }
 
         private static string RequireString(JsonObject obj, string field, string context)

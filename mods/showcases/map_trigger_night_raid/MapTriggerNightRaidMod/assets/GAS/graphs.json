@@ -8,21 +8,29 @@
         "event": "RegionEntered",
         "start": "raid_scope",
         "once": true,
-        "filters": { "region": "raid_circle" }
+        "filters": {
+          "region": "raid_circle"
+        }
       },
       {
         "label": "on_wave_clear",
         "event": "EntityAliveCountChanged",
         "start": "clear_scope",
         "once": true,
-        "filters": { "team": 2, "threshold": 1, "direction": "cross_below" }
+        "filters": {
+          "team": 2,
+          "threshold": 1,
+          "direction": "cross_below"
+        }
       },
       {
         "label": "on_boss_died",
         "event": "EntityDied",
         "start": "boss_scope",
         "once": true,
-        "filters": { "team": 4 }
+        "filters": {
+          "team": 4
+        }
       },
       {
         "label": "on_phase_changed",
@@ -32,62 +40,250 @@
       }
     ],
     "nodes": [
-      { "id": "raid_scope", "op": "LoadExplicitTarget" },
-      { "id": "wave_one", "op": "ConstInt", "intValue": 1 },
-      { "id": "write_wave_one", "op": "WriteMapVarInt", "var": "wave" },
-      { "id": "raid_done", "op": "HaltReturnInt" },
-
-      { "id": "clear_scope", "op": "LoadExplicitTarget" },
-      { "id": "wait_wave_a", "op": "Yield" },
-      { "id": "wait_wave_b", "op": "Yield" },
-      { "id": "wave_two", "op": "ConstInt", "intValue": 2 },
-      { "id": "write_wave_two", "op": "WriteMapVarInt", "var": "wave" },
-      { "id": "clear_done", "op": "HaltReturnInt" },
-
-      { "id": "boss_scope", "op": "LoadExplicitTarget" },
-      { "id": "phase_two", "op": "ConstInt", "intValue": 2 },
-      { "id": "write_phase_two", "op": "WriteMapVarInt", "var": "phase" },
-      { "id": "boss_done", "op": "HaltReturnInt" },
-
-      { "id": "victory_scope", "op": "LoadExplicitTarget" },
-      { "id": "victory_panel", "op": "CreatePanel", "panelType": "panel.night_raid.victory", "panelAnchor": "screen.topRight" },
-      { "id": "victory_ok", "op": "ConstInt", "intValue": 1 },
-      { "id": "victory_done", "op": "HaltReturnInt" }
+      {
+        "id": "raid_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "wave_one",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "write_wave_one",
+        "op": "WriteMapVarInt",
+        "var": "wave"
+      },
+      {
+        "id": "raid_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "clear_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "wait_wave_a",
+        "op": "Yield"
+      },
+      {
+        "id": "wait_wave_b",
+        "op": "Yield"
+      },
+      {
+        "id": "wave_two",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "write_wave_two",
+        "op": "WriteMapVarInt",
+        "var": "wave"
+      },
+      {
+        "id": "clear_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "boss_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "phase_two",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "write_phase_two",
+        "op": "WriteMapVarInt",
+        "var": "phase"
+      },
+      {
+        "id": "boss_done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "victory_scope",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "victory_panel",
+        "op": "CreatePanel",
+        "panelType": "panel.night_raid.victory",
+        "panelAnchor": "screen.topRight"
+      },
+      {
+        "id": "victory_ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "victory_done",
+        "op": "HaltReturnInt"
+      }
     ],
     "controlEdges": [
-      { "from": "raid_scope", "fromPort": "next", "to": "wave_one" },
-      { "from": "wave_one", "fromPort": "next", "to": "write_wave_one" },
-      { "from": "write_wave_one", "fromPort": "next", "to": "raid_done" },
-
-      { "from": "clear_scope", "fromPort": "next", "to": "wait_wave_a" },
-      { "from": "wait_wave_a", "fromPort": "next", "to": "wait_wave_b" },
-      { "from": "wait_wave_b", "fromPort": "next", "to": "wave_two" },
-      { "from": "wave_two", "fromPort": "next", "to": "write_wave_two" },
-      { "from": "write_wave_two", "fromPort": "next", "to": "clear_done" },
-
-      { "from": "boss_scope", "fromPort": "next", "to": "phase_two" },
-      { "from": "phase_two", "fromPort": "next", "to": "write_phase_two" },
-      { "from": "write_phase_two", "fromPort": "next", "to": "boss_done" },
-
-      { "from": "victory_scope", "fromPort": "next", "to": "victory_panel" },
-      { "from": "victory_panel", "fromPort": "next", "to": "victory_ok" },
-      { "from": "victory_ok", "fromPort": "next", "to": "victory_done" }
+      {
+        "from": "raid_scope",
+        "fromPort": "next",
+        "to": "wave_one"
+      },
+      {
+        "from": "wave_one",
+        "fromPort": "next",
+        "to": "write_wave_one"
+      },
+      {
+        "from": "write_wave_one",
+        "fromPort": "next",
+        "to": "raid_done"
+      },
+      {
+        "from": "clear_scope",
+        "fromPort": "next",
+        "to": "wait_wave_a"
+      },
+      {
+        "from": "wait_wave_a",
+        "fromPort": "next",
+        "to": "wait_wave_b"
+      },
+      {
+        "from": "wait_wave_b",
+        "fromPort": "next",
+        "to": "wave_two"
+      },
+      {
+        "from": "wave_two",
+        "fromPort": "next",
+        "to": "write_wave_two"
+      },
+      {
+        "from": "write_wave_two",
+        "fromPort": "next",
+        "to": "clear_done"
+      },
+      {
+        "from": "boss_scope",
+        "fromPort": "next",
+        "to": "phase_two"
+      },
+      {
+        "from": "phase_two",
+        "fromPort": "next",
+        "to": "write_phase_two"
+      },
+      {
+        "from": "write_phase_two",
+        "fromPort": "next",
+        "to": "boss_done"
+      },
+      {
+        "from": "victory_scope",
+        "fromPort": "next",
+        "to": "victory_panel"
+      },
+      {
+        "from": "victory_panel",
+        "fromPort": "next",
+        "to": "victory_ok"
+      },
+      {
+        "from": "victory_ok",
+        "fromPort": "next",
+        "to": "victory_done"
+      }
     ],
     "valueEdges": [
-      { "from": "raid_scope", "fromPort": "value", "to": "write_wave_one", "toPort": "source" },
-      { "from": "wave_one", "fromPort": "value", "to": "write_wave_one", "toPort": "value" },
-      { "from": "wave_one", "fromPort": "value", "to": "raid_done", "toPort": "value" },
-
-      { "from": "clear_scope", "fromPort": "value", "to": "write_wave_two", "toPort": "source" },
-      { "from": "wave_two", "fromPort": "value", "to": "write_wave_two", "toPort": "value" },
-      { "from": "wave_two", "fromPort": "value", "to": "clear_done", "toPort": "value" },
-
-      { "from": "boss_scope", "fromPort": "value", "to": "write_phase_two", "toPort": "source" },
-      { "from": "phase_two", "fromPort": "value", "to": "write_phase_two", "toPort": "value" },
-      { "from": "phase_two", "fromPort": "value", "to": "boss_done", "toPort": "value" },
-
-      { "from": "victory_scope", "fromPort": "value", "to": "victory_panel", "toPort": "source" },
-      { "from": "victory_ok", "fromPort": "value", "to": "victory_done", "toPort": "value" }
+      {
+        "from": "raid_scope",
+        "fromPort": "value",
+        "to": "write_wave_one",
+        "toPort": "source"
+      },
+      {
+        "from": "wave_one",
+        "fromPort": "value",
+        "to": "write_wave_one",
+        "toPort": "value"
+      },
+      {
+        "from": "wave_one",
+        "fromPort": "value",
+        "to": "raid_done",
+        "toPort": "value"
+      },
+      {
+        "from": "clear_scope",
+        "fromPort": "value",
+        "to": "write_wave_two",
+        "toPort": "source"
+      },
+      {
+        "from": "wave_two",
+        "fromPort": "value",
+        "to": "write_wave_two",
+        "toPort": "value"
+      },
+      {
+        "from": "wave_two",
+        "fromPort": "value",
+        "to": "clear_done",
+        "toPort": "value"
+      },
+      {
+        "from": "boss_scope",
+        "fromPort": "value",
+        "to": "write_phase_two",
+        "toPort": "source"
+      },
+      {
+        "from": "phase_two",
+        "fromPort": "value",
+        "to": "write_phase_two",
+        "toPort": "value"
+      },
+      {
+        "from": "phase_two",
+        "fromPort": "value",
+        "to": "boss_done",
+        "toPort": "value"
+      },
+      {
+        "from": "victory_scope",
+        "fromPort": "value",
+        "to": "victory_panel",
+        "toPort": "source"
+      },
+      {
+        "from": "victory_ok",
+        "fromPort": "value",
+        "to": "victory_done",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.NightRaid.Panel.Values",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      {
+        "id": "hp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "heroHealth",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "nightraid.panel.heroHealth"
+      }
     ]
   }
 ]

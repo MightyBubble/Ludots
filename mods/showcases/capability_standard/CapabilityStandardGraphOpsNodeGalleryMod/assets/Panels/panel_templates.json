@@ -1,15 +1,13 @@
 [
   {
     "id": "showcase.panel.test",
-    "variables": [
+    "graph": "showcase.panel.test.graph.values",
+    "pins": [
       {
         "name": "health",
-        "kind": "Float",
-        "realtime": true,
-        "source": {
-          "sourceKind": "SingleAttribute",
-          "attributeId": "Health"
-        }
+        "key": "showcase.panel.test.health",
+        "mode": "realtime",
+        "default": 0
       }
     ]
   }

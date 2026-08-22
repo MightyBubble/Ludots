@@ -8,7 +8,26 @@
 2. 设计发现的基建缺口回填对应子单（票号写在依赖栏），不在本页开实现；
 3. 归类修正（某行其实不是框、是机制或全屏效果）发生在本页，目录行数允许微调。
 
-## 一、共同骨架（总合同）
+## 〇、Schema v2 总合同（graph-pinned panels，已实现）
+
+**面板 = 一张图的输出引脚集**（ShaderGraph 同构）：模板只声明 `graph` + `pins[]`；取值/查表/聚合/嵌套函数图全部是图内节点，图 VM 是唯一轮子。v1 的五路 inline source 与 binds 已退役删除。
+
+```jsonc
+{
+  "id": "panel.<域>.<名>",
+  "graph": "Graph.Economy.Aggregate",      // 唯一数据源：一张图（名字=图 id）
+  "pins": [                                 // 引脚 = 图 outputs 的消费子集
+    { "name": "gold", "key": "economy.gold", "mode": "realtime", "default": 0 },
+    { "name": "tier", "key": "economy.tier", "mode": "snapshot", "default": 1 }
+  ],
+  "events":  [ ... ],                       // 原样保留（数据出，非数据入）
+  "intents": [ ... ]
+}
+```
+
+**数据合同（用户钦定）**：结构错误（字段坏/pin 重复/mode 拼错）装载期 fail-closed；**数据缺失一律落 default——图没跑、没注册、执行失败，面板显示默认值，不报错不留空**。求值：realtime pin 每刷新拍执行图（GraphReturnWriter 按 owner 物化输出）后读 store；snapshot pin 实例化时执行一次。引擎实现：PanelHost 内置求值器（单写者主线程）、PanelProjectionReader 只读 store+默认回落。
+
+## 一、共同骨架（v1 存档，字段以 〇 节 v2 为准）
 
 ### 1.1 一个面板类型的全部组成
 

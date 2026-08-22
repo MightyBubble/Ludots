@@ -22,11 +22,14 @@ namespace Ludots.Core.UI.PanelHosting
         private readonly List<Entry> _entries = new();
         private readonly Stack<int> _freeSlots = new();
 
-        public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader)
+        public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader, IPanelGraphEvaluator? graphEvaluator = null)
         {
             _templates = templates ?? throw new ArgumentNullException(nameof(templates));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            _graphEvaluator = graphEvaluator;
         }
+
+        private readonly IPanelGraphEvaluator? _graphEvaluator;
 
         public int Count { get; private set; }
 
@@ -117,20 +120,21 @@ namespace Ludots.Core.UI.PanelHosting
                     continue;
                 }
 
+                EvaluateGraph(entry);
                 bool changed = false;
-                foreach (PanelTemplateVariable variable in entry.Template.Variables)
+                foreach (PanelPin pin in entry.Template.Pins)
                 {
-                    if (!variable.Realtime)
+                    if (!pin.Realtime)
                     {
                         continue;
                     }
 
-                    PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
-                    uint previous = entry.Revisions[variable.Name];
+                    PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
+                    uint previous = entry.Revisions[pin.Name];
                     if (previous != value.Revision)
                     {
-                        entry.Values[variable.Name] = value.FloatValue;
-                        entry.Revisions[variable.Name] = value.Revision;
+                        entry.Values[pin.Name] = value.FloatValue;
+                        entry.Revisions[pin.Name] = value.Revision;
                         entry.Revision ^= previous ^ value.Revision;
                         changed = true;
                     }
@@ -242,22 +246,47 @@ namespace Ludots.Core.UI.PanelHosting
 
         private void EvaluateAll(Entry entry)
         {
+            EvaluateGraph(entry);
             uint revision = 0;
-            foreach (PanelTemplateVariable variable in entry.Template.Variables)
+            foreach (PanelPin pin in entry.Template.Pins)
             {
-                PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
-                entry.Values[variable.Name] = value.FloatValue;
-                if (entry.Revisions.TryGetValue(variable.Name, out uint previous))
+                PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
+                entry.Values[pin.Name] = value.FloatValue;
+                if (entry.Revisions.TryGetValue(pin.Name, out uint previous))
                 {
                     revision ^= previous;
                 }
 
-                entry.Revisions[variable.Name] = value.Revision;
+                entry.Revisions[pin.Name] = value.Revision;
                 revision ^= value.Revision;
-                entry.HasRealtime |= variable.Realtime;
+                entry.HasRealtime |= pin.Realtime;
             }
 
             entry.Revision = revision;
+        }
+
+        /// <summary>
+        /// Data-plane contract: graph execution failure logs and leaves previous/default
+        /// values standing — the panel keeps rendering; structural failures were rejected
+        /// at load. No evaluator (lightweight hosts) means read-only against the store.
+        /// </summary>
+        private void EvaluateGraph(Entry entry)
+        {
+            if (_graphEvaluator == null || entry.Template.GraphId < 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _graphEvaluator.Evaluate(entry.Template.GraphId, entry.Scope);
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Error(
+                    in Diagnostics.LogChannels.Engine,
+                    $"[PanelHost] graph '{entry.Template.Graph}' evaluation failed for panel '{entry.Template.Id}'; pins keep previous/default values: {ex.Message}");
+            }
         }
 
         private static PanelVariableSet Snapshot(Entry entry)
@@ -297,8 +326,8 @@ namespace Ludots.Core.UI.PanelHosting
                 Scope = scope;
                 Skin = skin;
                 ZOrder = zOrder;
-                Values = new Dictionary<string, float>(template.Variables.Count, StringComparer.Ordinal);
-                Revisions = new Dictionary<string, uint>(template.Variables.Count, StringComparer.Ordinal);
+                Values = new Dictionary<string, float>(template.Pins.Count, StringComparer.Ordinal);
+                Revisions = new Dictionary<string, uint>(template.Pins.Count, StringComparer.Ordinal);
             }
 
             public PanelTemplate Template { get; }

@@ -26,15 +26,10 @@ namespace Ludots.Tests.GasTests.UI
         private const string TemplateJson = """
         {
           "id": "tests.panel.host",
-          "variables": [
-            { "name": "hp", "kind": "Float", "realtime": true,
-              "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.hp" } },
-            { "name": "attack", "kind": "Float",
-              "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.attack" } }
-          ],
-          "binds": [
-            { "control": "lbl.hp", "variable": "hp" },
-            { "control": "lbl.attack", "variable": "attack" }
+          "graph": "tests.graph.panel.values",
+          "pins": [
+            { "name": "hp", "key": "tests.panel.hp", "mode": "realtime", "default": 0 },
+            { "name": "attack", "key": "tests.panel.attack", "mode": "snapshot", "default": 12 }
           ]
         }
         """;
@@ -48,6 +43,8 @@ namespace Ludots.Tests.GasTests.UI
         private PanelHost _host = null!;
         private GasGraphRuntimeApi _api = null!;
         private GraphProgramRegistry _programs = null!;
+        private GraphOutputValueStore _store = null!;
+        private static readonly Ludots.Core.Registry.StringIntRegistry OutputKeys = new();
 
         [SetUp]
         public void SetUp()
@@ -65,8 +62,17 @@ namespace Ludots.Tests.GasTests.UI
             _templates = new PanelTemplateRegistry();
             _templates.Register(PanelTemplateLoader.Load(TemplateJson));
             _templates.Freeze();
+            foreach (PanelTemplate template in _templates.Snapshot())
+            {
+                template.GraphId = -1; // light host: no graph evaluation, store is seeded directly
+            }
 
-            _host = new PanelHost(_templates, new PanelProjectionReader(_world));
+            _store = new GraphOutputValueStore(OutputKeys, initialCapacity: 16);
+            _store.SetFloat(_caster, "tests.panel.hp", 87f);
+            _store.SetFloat(_caster, "tests.panel.attack", 12f);
+            _store.SetFloat(_target, "tests.panel.hp", 41f);
+            _store.SetFloat(_target, "tests.panel.attack", 5f);
+            _host = new PanelHost(_templates, new PanelProjectionReader(_world, _store));
             _api = new GasGraphRuntimeApi(_world);
             _api.BindPanelHost(_host);
             _programs = new GraphProgramRegistry();
@@ -123,12 +129,13 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         [Test]
-        public void Instantiate_BrokenBinding_FailsAtCreationNamingVariable()
+        public void Instantiate_ScopeWithoutGraphOutput_ShowsPinDefaults()
         {
             Entity bare = _world.Create();
-            Assert.That(
-                () => _host.Instantiate(TemplateId, AnchorId, bare),
-                Throws.InvalidOperationException.With.Message.Contains("hp"));
+            PanelInstanceHandle handle = _host.Instantiate(TemplateId, AnchorId, bare);
+            Assert.That(_host.TryGetValues(handle, out PanelVariableSet values), Is.True);
+            Assert.That(values.Get("hp"), Is.EqualTo(0f), "missing graph output resolves to the pin default");
+            Assert.That(values.Get("attack"), Is.EqualTo(12f));
         }
 
         [Test]
@@ -197,18 +204,13 @@ namespace Ludots.Tests.GasTests.UI
         public void RefreshRealtime_TouchesOnlyRealtimeVariables()
         {
             PanelInstanceHandle handle = _host.Instantiate(TemplateId, AnchorId, _caster);
+            Assert.That(_host.TryGetValues(handle, out _), Is.True);
 
-            ref AttributeBuffer buffer = ref _world.Get<AttributeBuffer>(_caster);
-            buffer.SetBase(_hpId, 50f);
-            buffer.SetBase(_attackId, 99f);
-
+            _store.SetFloat(_caster, "tests.panel.hp", 50f);
             Assert.That(_host.RefreshRealtime(), Is.EqualTo(1));
-            Assert.That(_host.TryGetValues(handle, out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("hp"), Is.EqualTo(50f), "realtime variable follows RefreshRealtime");
-            Assert.That(values.Get("attack"), Is.EqualTo(12f), "non-realtime variable stays put until manual refresh");
 
-            PanelVariableSet full = _host.Refresh(handle);
-            Assert.That(full.Get("attack"), Is.EqualTo(99f));
+            PanelVariableSet values = _host.Refresh(handle);
+            Assert.That(values.Get("hp"), Is.EqualTo(50f), "realtime pin follows the graph output revision");
         }
 
         [Test]
@@ -236,46 +238,42 @@ namespace Ludots.Tests.GasTests.UI
             const string staticTemplateJson = """
             {
               "id": "tests.panel.static",
-              "variables": [
-                { "name": "attack", "kind": "Float",
-                  "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.attack" } }
+              "graph": "tests.graph.static.values",
+              "pins": [
+                { "name": "hp", "key": "tests.panel.static.hp", "mode": "snapshot", "default": 5 }
               ]
             }
             """;
-            var templates = new PanelTemplateRegistry();
-            templates.Register(PanelTemplateLoader.Load(staticTemplateJson));
-            templates.Freeze();
-            var host = new PanelHost(templates, new PanelProjectionReader(_world));
+            var localTemplates = new PanelTemplateRegistry();
+            localTemplates.Register(PanelTemplateLoader.Load(staticTemplateJson));
+            localTemplates.Freeze();
+            var host = new PanelHost(localTemplates, new PanelProjectionReader(_world, _store));
             host.Instantiate("tests.panel.static", AnchorId, _caster);
 
-            ref AttributeBuffer buffer = ref _world.Get<AttributeBuffer>(_caster);
-            buffer.SetBase(_attackId, 77f);
+            _store.SetFloat(_caster, "tests.panel.static.hp", 77f);
 
-            Assert.That(host.RefreshRealtime(), Is.EqualTo(0));
+            Assert.That(host.RefreshRealtime(), Is.EqualTo(0), "snapshot-only templates are skipped by realtime refresh");
             Assert.That(host.TryGetValues(
                 FindSingle(host), out PanelVariableSet values), Is.True);
-            Assert.That(values.Get("attack"), Is.EqualTo(12f));
+            Assert.That(values.Get("hp"), Is.EqualTo(5f), "snapshot pin keeps its instantiated value");
         }
 
         [Test]
         public void Loader_RealtimeFlag_ParsesAndValidates()
         {
             PanelTemplate template = PanelTemplateLoader.Load(TemplateJson);
-            Assert.That(template.Variables[0].Realtime, Is.True);
-            Assert.That(template.Variables[1].Realtime, Is.False);
+            Assert.That(template.Pins[0].Realtime, Is.True);
+            Assert.That(template.Pins[1].Realtime, Is.False);
 
             const string badJson = """
             {
-              "id": "tests.panel.bad_realtime",
-              "variables": [
-                { "name": "hp", "kind": "Float", "realtime": "yes",
-                  "source": { "sourceKind": "SingleAttribute", "attributeId": "tests.attr.hp" } }
-              ]
+              "id": "tests.panel.bad_mode", "graph": "g",
+              "pins": [ { "name": "hp", "key": "k", "mode": "yes" } ]
             }
             """;
             Assert.That(
                 () => PanelTemplateLoader.Load(badJson),
-                Throws.InvalidOperationException.With.Message.Contains("realtime"));
+                Throws.InvalidOperationException.With.Message.Contains("mode"));
         }
 
         [Test]
@@ -300,7 +298,7 @@ namespace Ludots.Tests.GasTests.UI
 
                 PanelTemplateRegistry registry = new PanelTemplateCatalogLoader(pipeline).Load(catalog);
                 Assert.That(registry.Count, Is.EqualTo(1));
-                Assert.That(registry.Require(TemplateId).Variables[0].Realtime, Is.True);
+                Assert.That(registry.Require(TemplateId).Pins[0].Realtime, Is.True);
             }
             finally
             {
