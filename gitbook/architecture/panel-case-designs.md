@@ -67,9 +67,11 @@ screen.topLeft ┌────────────────────�
 
 ```gherkin
 Scenario: 资源条随经济同帧刷新
-  Given Full-HUD 验收场启动且 panel.player.aggregate 可见
+  Given Full-HUD 验收场启动
+  And panel.player.aggregate 可见
   When 玩家花费 200 金生产一队兵
-  Then gold 变量减少 200 且 popUsed 增加，与图输出 economy.gold 同帧
+  Then gold 变量减少 200 且 popUsed 增加
+  And 与图输出 economy.gold 同帧
 
 Scenario: 溯源失败即拒
   Given 模板引用未注册的 graphOutputKey
@@ -157,15 +159,19 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
 
 ```gherkin
 Scenario: 点挡加速且高亮回读
-  Given 游戏以 1x 运行且面板可见
+  Given 游戏以 1x 运行
+  And 面板可见
   When 玩家点击【3x】
   Then game.setSpeed 意图以 args{speed:3} 入队并被 admission 放行
-  And clock.speed 输出变为 3 且【3x】进入高亮态
+  And clock.speed 输出变为 3
+  And 【3x】进入高亮态
 
 Scenario: 拒绝时状态不漂移
   Given admission 预算为 0
   When 玩家点击【2x】
-  Then 意图被拒、clock.speed 不变、无按钮状态变化
+  Then 意图被拒
+  And clock.speed 不变
+  And 无按钮状态变化
 
 Scenario: 载荷校验 fail-closed
   Given 事件携带未声明字段
@@ -240,19 +246,24 @@ Scenario: 载荷校验 fail-closed
 
 ```gherkin
 Scenario: 模态开合由图编排
-  Given panel.settings 已创建且未显示
+  Given panel.settings 已创建
+  And 未显示
   When ⚙ 入口事件出现（G10 接线后）
-  Then 编排图调 ShowPanel 且输入焦点被浮层捕获
+  Then 编排图调 ShowPanel
+  And 输入焦点被浮层捕获
   When 玩家点击【✕】
-  Then 编排图调 HidePanel 且焦点释放
+  Then 编排图调 HidePanel
+  And 焦点释放
 
 Scenario: 连续意图合流
-  Given 浮层打开且音量滑条存在
+  Given 浮层打开
+  And 音量滑条存在
   When 玩家连续拖动产生 10 个 change 事件
   Then 仅一条 settings.setVolume 意图携带末值入队
 
 Scenario: 模态锚点未落地即拒
-  Given G5 未实现且配置使用 modal.center
+  Given G5 未实现
+  And 配置使用 modal.center
   When 装载
   Then 装载失败，不静默降级为角落面板
 ```
@@ -319,7 +330,8 @@ screen.bottomCenter ┌───────────────────
 Scenario: 零变量命令面板装载（G6 后）
   Given G6 已放开零变量约束
   When 装载本模板
-  Then 装载通过且无假变量被塞入
+  Then 装载通过
+  And 无假变量被塞入
 
 Scenario: 命令直达意图
   Given 玩家已框选一队兵

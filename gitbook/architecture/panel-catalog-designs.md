@@ -39,10 +39,10 @@
   "binds": [                           // 控件 ↔ 变量（皮侧按 control id 寻址）
     { "control": "lbl.gold", "variable": "gold" } ],
   "events": [                          // 0 编码事件（#1013 已落地）
-    { "eventId": "speed.set", "control": "btn.speed2", "gesture": "click",
+    { "event": "speed.set", "control": "btn.speed2", "gesture": "click",
       "payload": { "speed": "Int" } } ],   // 载荷类型已有 String|Int|Float|Bool
   "intents": [                         // 事件 → 玩法意图（面板永不直构 Order）
-    { "eventId": "speed.set", "intent": "game.setSpeed",
+    { "event": "speed.set", "intent": "game.setSpeed",
       "args": { "speed": "$payload.speed" },
       "playerSource": "seat", "actorSource": "commandSource.primary" } ]
 }
@@ -170,9 +170,9 @@ screen.topRight 区、信息聚合左侧 ┌──────────┐
   "variables": [
     { "name": "activeTab", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "ui.activeTab" } } ],
   "events": [
-    { "eventId": "tab.switch", "control": "tab.bar", "gesture": "click", "payload": { "tab": "Int" } } ],
+    { "event": "tab.switch", "control": "tab.bar", "gesture": "click", "payload": { "tab": "Int" } } ],
   "intents": [
-    { "eventId": "tab.switch", "intent": "ui.switchTab", "args": { "tab": "$payload.tab" }, "playerSource": "seat", "actorSource": "none" } ] }
+    { "event": "tab.switch", "intent": "ui.switchTab", "args": { "tab": "$payload.tab" }, "playerSource": "seat", "actorSource": "none" } ] }
 ```
 
 ```text
@@ -213,9 +213,9 @@ screen.topCenter ┌────────────────────
   "variables": [
     { "name": "techUnread", "kind": "Int", "realtime": true, "source": { "sourceKind": "GraphOutput", "graphOutputKey": "tech.unread" } } ],
   "events": [
-    { "eventId": "sub.open", "control": "bar.subsystems", "gesture": "click", "payload": { "sub": "Int" } } ],
+    { "event": "sub.open", "control": "bar.subsystems", "gesture": "click", "payload": { "sub": "Int" } } ],
   "intents": [
-    { "eventId": "sub.open", "intent": "ui.openSubsystem", "args": { "sub": "$payload.sub" }, "playerSource": "seat", "actorSource": "none" } ] }
+    { "event": "sub.open", "intent": "ui.openSubsystem", "args": { "sub": "$payload.sub" }, "playerSource": "seat", "actorSource": "none" } ] }
 ```
 
 ```text
