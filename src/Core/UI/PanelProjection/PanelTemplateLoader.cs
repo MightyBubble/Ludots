@@ -79,9 +79,15 @@ namespace Ludots.Core.UI.PanelProjection
                 }
 
                 float defaultValue = 0f;
-                if (pinObject["default"] is JsonValue defaultValueNode &&
-                    defaultValueNode.TryGetValue<double>(out double defaultValueRaw))
+                if (pinObject["default"] is { } defaultValueNode)
                 {
+                    if (defaultValueNode is not JsonValue defaultValueValue ||
+                        !defaultValueValue.TryGetValue<double>(out double defaultValueRaw))
+                    {
+                        throw new InvalidOperationException(
+                            $"Panel template '{id}' pin '{pinName}' default must be a number.");
+                    }
+
                     defaultValue = (float)defaultValueRaw;
                 }
 
@@ -97,9 +103,14 @@ namespace Ludots.Core.UI.PanelProjection
         private static List<PanelTemplateEvent> ParseEvents(string templateId, JsonObject rootObject)
         {
             var events = new List<PanelTemplateEvent>();
-            if (rootObject["events"] is not JsonArray eventsNode)
+            if (rootObject["events"] is null)
             {
                 return events;
+            }
+
+            if (rootObject["events"] is not JsonArray eventsNode)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' events must be an array.");
             }
 
             var allowed = new HashSet<string>(StringComparer.Ordinal) { "eventId", "control", "gesture", "payload" };
@@ -116,6 +127,12 @@ namespace Ludots.Core.UI.PanelProjection
                 string? control = OptionalString(eventObject, "control");
 
                 var payload = new Dictionary<string, PanelEventPayloadKind>(StringComparer.Ordinal);
+                if (eventObject["payload"] is { } payloadPresent && payloadPresent is not JsonObject)
+                {
+                    throw new InvalidOperationException(
+                        $"Panel template '{templateId}' event '{eventId}' payload must be an object.");
+                }
+
                 if (eventObject["payload"] is JsonObject payloadNode)
                 {
                     foreach (KeyValuePair<string, JsonNode?> field in payloadNode)
@@ -141,9 +158,14 @@ namespace Ludots.Core.UI.PanelProjection
         private static List<PanelIntentMapEntry> ParseIntents(string templateId, JsonObject rootObject, List<PanelTemplateEvent> events)
         {
             var intents = new List<PanelIntentMapEntry>();
-            if (rootObject["intents"] is not JsonArray intentsNode)
+            if (rootObject["intents"] is null)
             {
                 return intents;
+            }
+
+            if (rootObject["intents"] is not JsonArray intentsNode)
+            {
+                throw new InvalidOperationException($"Panel template '{templateId}' intents must be an array.");
             }
 
             var allowed = new HashSet<string>(StringComparer.Ordinal) { "event", "intent", "args", "playerSource", "actorSource" };

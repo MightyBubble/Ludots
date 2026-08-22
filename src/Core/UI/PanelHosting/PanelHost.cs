@@ -24,12 +24,14 @@ namespace Ludots.Core.UI.PanelHosting
 
         public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader, IPanelGraphEvaluator? graphEvaluator = null)
         {
+            _writerThreadId = Environment.CurrentManagedThreadId;
             _templates = templates ?? throw new ArgumentNullException(nameof(templates));
             _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             _graphEvaluator = graphEvaluator;
         }
 
         private readonly IPanelGraphEvaluator? _graphEvaluator;
+        private readonly int _writerThreadId;
 
         public int Count { get; private set; }
 
@@ -135,7 +137,7 @@ namespace Ludots.Core.UI.PanelHosting
                     {
                         entry.Values[pin.Name] = value.FloatValue;
                         entry.Revisions[pin.Name] = value.Revision;
-                        entry.Revision ^= previous ^ value.Revision;
+                        entry.Revision = (entry.Revision ^ previous ^ value.Revision) * 16777619;
                         changed = true;
                     }
                 }
@@ -247,18 +249,13 @@ namespace Ludots.Core.UI.PanelHosting
         private void EvaluateAll(Entry entry)
         {
             EvaluateGraph(entry);
-            uint revision = 0;
+            uint revision = 2166136261;
             foreach (PanelPin pin in entry.Template.Pins)
             {
                 PanelProjectionValue value = _reader.Resolve(entry.Scope, pin);
                 entry.Values[pin.Name] = value.FloatValue;
-                if (entry.Revisions.TryGetValue(pin.Name, out uint previous))
-                {
-                    revision ^= previous;
-                }
-
+                revision = (revision ^ value.Revision) * 16777619;
                 entry.Revisions[pin.Name] = value.Revision;
-                revision ^= value.Revision;
                 entry.HasRealtime |= pin.Realtime;
             }
 
@@ -272,6 +269,9 @@ namespace Ludots.Core.UI.PanelHosting
         /// </summary>
         private void EvaluateGraph(Entry entry)
         {
+            System.Diagnostics.Debug.Assert(
+                Environment.CurrentManagedThreadId == _writerThreadId,
+                "PanelHost is single-writer: all mutations must run on the thread that constructed it.");
             if (_graphEvaluator == null || entry.Template.GraphId < 0)
             {
                 return;

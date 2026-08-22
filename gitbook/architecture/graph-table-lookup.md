@@ -176,5 +176,5 @@ Feature: 作者用自建表查多字段
 | TagDisplay 清理 | [#877](https://github.com/MightyBubble/Ludots/issues/877) |
 | 过时/占位（应关） | #870 · #871 · #878 |
 
-作者形态：[`ui-panel-authoring-form.md`](ui-panel-authoring-form.md)  
+作者形态：[`panel-catalog-designs.md`](panel-catalog-designs.md)  
 旧文：[`tag-display-lookup.md`](tag-display-lookup.md)（**已废止**，仅作重定向）

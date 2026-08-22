@@ -28,7 +28,7 @@
 
 **数据合同**：结构错误（字段坏/pin 重复/mode 拼错/未知字段）装载期 fail-closed；**数据缺失一律落 default——图没跑、没注册、执行失败，面板显示默认值，不报错不留空**。
 
-**引脚模式**：`realtime` 每刷新拍执行图（GraphReturnWriter 按 owner 物化输出进 store）后读值；`snapshot` 实例化时执行一次。求值由引擎内置（面板宿主主线程单写者），执行失败保持旧值/默认并记日志。
+**引脚模式**：`realtime` 每刷新拍执行图（GraphReturnWriter 按 owner 物化输出进 store）后读值；`snapshot` 在实例化与显式 `Refresh(handle)` 时执行（手动快照——作者主动刷才更新）。求值由引擎内置（面板宿主主线程单写者），执行失败保持旧值/默认并记日志。
 
 **实体链路**：模板不声明实体——CreatePanel 图 op 的 `source` 值边传 scope（缺省=图 caster）；求值时 scope 即值图执行上下文的 self，图内 `LoadSelfAttribute` 读的就是它。同模板多实例=多 scope 各读各的。
 
