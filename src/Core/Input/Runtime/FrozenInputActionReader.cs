@@ -8,6 +8,24 @@ namespace Ludots.Core.Input.Runtime
     public sealed class FrozenInputActionReader : IInputActionReader
     {
         private readonly Dictionary<string, ActionState> _states = new(StringComparer.Ordinal);
+        private IReadOnlyList<AuthoritativeAction>? _replayOverride;
+
+        public void QueueReplayActions(IReadOnlyList<AuthoritativeAction> actions)
+        {
+            _replayOverride = actions ?? throw new ArgumentNullException(nameof(actions));
+        }
+
+        public bool TryConsumeReplayActions(out IReadOnlyList<AuthoritativeAction>? actions)
+        {
+            actions = _replayOverride;
+            _replayOverride = null;
+            return actions != null;
+        }
+
+        public void ClearReplayActions()
+        {
+            _replayOverride = null;
+        }
 
         public void Clear()
         {

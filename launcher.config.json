@@ -10,6 +10,22 @@
   ],
   "bindings": [
     {
+      "name": "agent_bridge",
+      "target": {
+        "type": "path",
+        "value": "mods/AgentBridgeMod",
+        "projectPath": "AgentBridgeMod.csproj"
+      }
+    },
+    {
+      "name": "persistence_online_replay_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/persistence_online_replay/PersistenceOnlineReplayShowcaseMod",
+        "projectPath": "PersistenceOnlineReplayShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "camera_acceptance",
       "target": {
         "type": "path",
