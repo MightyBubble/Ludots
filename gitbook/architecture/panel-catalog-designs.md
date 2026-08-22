@@ -30,7 +30,9 @@
   "variables": [                       // 至少一条；kind 目前 Float|Int（缺口 G1: Bool|String）
     { "name": "gold", "kind": "Int", "realtime": true,
       "source": {                      // 五路读嘴，fail-closed：
-        "sourceKind": "TableLookup",   //   SingleAttribute / AttributeBase / Derived /
+        "sourceKind": "TableLookup",   //   六路读嘴（真实枚举名，fail-closed）：
+                                       //   SingleAttribute / DerivedAttribute / AggregateProjection /
+                                       //   GraphOutput / TableLookup / AttributeBase
         "lookupTable": "economy",      //   GraphOutput / TableLookup
         "lookupField": "goldPerTick",
         "keyAttribute": "TeamId" } } ],
@@ -54,9 +56,10 @@
 |---|---|---|
 | SingleAttribute（活属性：血/蓝/资源） | ✅ | 战斗中真变 |
 | GraphOutput（活输出：时钟/经济聚合/未读数） | ✅ | 图每拍重算 |
+| AggregateProjection（聚合投影） | ✅ | 随集合变化——#1012 集合面板的现成地基 |
 | AttributeBase | ❌（buff 改基数时显式 Refresh） | 基础值通常静止 |
 | TableLookup | ❌ | 查的是启动装载的静态表，结果不动；key 动态换行属例外，走显式 Refresh，不帧扫 |
-| Derived | 按被派生源 | 随源 |
+| DerivedAttribute | 随派生源 | 派生图绑定写入 AttributeBuffer |
 
 配套建模纪律：**活游戏状态（gold/人口/时钟）一律 GraphOutput 中转**——查表只放静态数据（税率/周期/文案表）。这同时满足完成核"数字溯源到图"。地图变量（MapVariableStore）不在五路读嘴内：全局状态经图输出中转是刻意设计；若实践中"每项全局状态开一张图"爆炸，再议第六读嘴（G7 候选，暂不立项）。
 
@@ -68,6 +71,8 @@
 
 ```jsonc
 "scope": "item"  |  "collection"  |  "global"
+// ⚠ 设计位字段：装载器 RootFields 白名单今日无 "scope"——出现即抛。G3 落地时增补，
+//   落地前案例文档凡用此字段均标 🔴 目标态，不得当作今日可装载配置抄写。
 // item:       一物一面（现状：scope=hero 实体）
 // collection: 一集一面——框选集合变化时同一模板切形态，模板 id 不变，
 //             变量读嘴允许集合聚合（缺口 G2: 聚合读嘴 sourceKind，如 AggSum 队列项）
@@ -84,6 +89,9 @@
 | G3 | scope=global 实例语义 | #1012 |
 | G4 | panelTheme 模板/op 级覆盖 | #1011 后续 |
 | G5 | 浮层/模态锚点（设置、子系统详情） | #840 前置小片 |
+| G8 | 手势载荷值来源（按钮→事件携带定值的机制）与 intent args 常量语义（"$payload.x" 引用与字面常量混排） | #1015 |
+| G9 | actorSource 值域扩展（"none"——设置类无实体归因意图；解析器现拒） | #1015 |
+| G10 | TriggerGraph 消费 UI 事件的接线（编排层入口：UI 事件→图触发；当前触发器事件词典无 UI 域） | #1013/#1030 交界 |
 
 ---
 

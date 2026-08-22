@@ -2,11 +2,15 @@
 
 本页是 [面板目录设计](panel-catalog-designs.md) 的第一批**全设计案**：从分组一挑选四个最典型 case（覆盖纯展示、交互全链、模态浮层、零变量命令四种形态，踩中 G3/G5/G6 全部缺口），每案含：玩家旅程、完整配置、线框、数据流、事件-意图链、显隐编排、验收断言、依赖与边界。本批同时作为后续 31 类的设计范式模板。
 
+**状态分级契约（审稿产物）**：每案头部标装载状态——🟢 今日可装载（过 PanelTemplateLoader 即真）/ 🔴 目标态（依赖缺口，**今日装载会被拒**，是验收目标不是可抄配置）。判断依据只有一条：拿配置去碰 `PanelTemplateLoader` 的字段白名单与校验规则。目标态被拒的原因在案内逐条点名（哪个字段、哪条校验），缺口编号进 §1.5。
+
 **通用约定**（不再每案重复）：实例参数四级链（op > 模板 > game.json > default）；皮与主题正交（`panelSkin` × `panelTheme`），本页线框均为内容语义，视觉由主题决定；所有 JSON fail-closed——未知字段/未知读嘴/未知事件手势装载期即抛。
 
 ---
 
 ## 案 A：玩家信息聚合 `panel.player.aggregate` —— 纯展示 · global scope · 活状态中转
+
+> 🔴 **目标态**：`scope` 字段今日不在装载器白名单（G3）。落地前本配置装载即拒——拒因：unknown field 'scope'。
 
 ### A1 玩家旅程
 开局即见顶栏左角资源条；造一队兵花掉 200 金——金币数字掉、人口 8→10；再花光时人口变红提示超限。全程零交互，纯被动读取。
@@ -71,6 +75,8 @@ screen.topLeft ┌────────────────────�
 
 ## 案 B：时间控制 `panel.time.control` —— 交互全链 · 事件/意图/回读闭环
 
+> 🔴 **目标态**：拒因=① `scope`（G3）② intents 字段名用 `event:` 非 `eventId:`（本文已按真实 loader 修正）③ args 常量语义（{"speed":"3"}）未定义——引用 `$payload.x` 与字面常量的区分规则属 G8；④ 手势载荷值来源（按钮怎么把自己的挡位塞进事件）同属 G8。
+
 ### B1 玩家旅程
 游戏进行中，玩家点【3x】→ 游戏明显加速，【3x】按钮进入高亮态；再点【⏸】→ 游戏停，暂停键高亮。全程面板不知道"游戏速度"是什么——它只发事件、收回读。
 
@@ -87,11 +93,11 @@ screen.topLeft ┌────────────────────�
   "binds": [
     { "control": "lbl.speed", "variable": "speed" }               // 高亮态由皮按 speed 值决定
   ],
-  "events": [                                                     // 四挡合一事件，载荷区分
-    { "eventId": "speed.set", "control": "btn.pause", "gesture": "click", "payload": { "speed": "Int" } },
-    { "eventId": "speed.set", "control": "btn.speed1", "gesture": "click", "payload": { "speed": "Int" } },
-    { "eventId": "speed.set", "control": "btn.speed2", "gesture": "click", "payload": { "speed": "Int" } },
-    { "eventId": "speed.set", "control": "btn.speed3", "gesture": "click", "payload": { "speed": "Int" } }
+  "events": [                                                     // 四挡四事件（装载器拒重复 eventId）
+    { "eventId": "speed.set.pause", "control": "btn.pause", "gesture": "click" },
+    { "eventId": "speed.set.1", "control": "btn.speed1", "gesture": "click" },
+    { "eventId": "speed.set.2", "control": "btn.speed2", "gesture": "click" },
+    { "eventId": "speed.set.3", "control": "btn.speed3", "gesture": "click" }
   ],
   "intents": [
     { "eventId": "speed.set", "intent": "game.setSpeed",
@@ -112,7 +118,7 @@ screen.topRight 时间条右侧 ┌───────────────
 ### B4 事件-意图链（UI 永不直构 Order）
 
 ```text
-点击 btn.speed3 ──gesture:click──> 事件 speed.set {speed:3}
+点击 btn.speed3 ──gesture:click──> 事件 speed.set.3（挡位经 intent args 常量携带，G8）
       │（皮侧只声明，不实现）
       ▼
 PanelEventBus（声明层校验：eventId/控件/手势/载荷类型四对四）
@@ -146,6 +152,8 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
 
 ## 案 C：设置 `panel.settings` —— 模态浮层 · 连续手势 · 全局副作用
 
+> 🔴 **目标态**：拒因=① `scope`（G3）② `actorSource:"none"` 值域（G9，解析器现拒）③ `gesture:"change"` 连续手势不在现有手势表（G8）④ C5 的"图消费 UI 事件→调 ShowPanel"整条接线不存在——触发器事件词典无 UI 域（G10，本页初稿"#1014 现有"系高估，审稿纠正）；⑤ modal.center 锚点（G5）。
+
 ### C1 玩家旅程
 玩家点右上角常驻【⚙】→ 模态浮层弹出（其余输入挂起）；拖音量滑条 → 音量实时变化；点【✕】或浮层外 → 关闭，输入恢复。点【退出到主菜单】→ 二次确认后退出。
 
@@ -169,10 +177,10 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
     { "eventId": "settings.close", "control": "btn.close", "gesture": "click" }
   ],
   "intents": [
-    { "eventId": "settings.volume", "intent": "settings.setVolume",
+    { "event": "settings.volume", "intent": "settings.setVolume",
       "args": { "value": "$payload.value" }, "playerSource": "seat", "actorSource": "none" },
-    { "eventId": "settings.exit", "intent": "game.exitToMenu",
-      "args": {}, "playerSource": "seat", "actorSource": "none" }
+    { "event": "settings.exit", "intent": "game.exitToMenu",
+      "args": {}, "playerSource": "seat", "actorSource": "none" }  // actorSource none → G9
     // settings.close 无意图——纯 UI 事件，显隐编排层消费（见 C5）
   ]
 }
@@ -210,6 +218,8 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
 
 ## 案 D：全局指令 `panel.command.global` —— 零变量纯命令 · G6 缺口样板
 
+> 🔴 **目标态**：拒因=① `scope`（G3）② `variables:[]`（G6）③ `actorSource:"none"`（G9）。D5 的模式互斥编排同样依赖 G10。
+
 ### D1 玩家旅程
 玩家框选一队兵后点底栏【集结】→ 进入指定目标模式，光标变化；点【全选】→ 场上己方作战单位全亮。按钮按下即命令，面板自身无任何状态显示。
 
@@ -228,13 +238,13 @@ Order(game.setSpeed,3)                拒绝回执(reason)→面板显示
     { "eventId": "army.retreat", "control": "btn.retreat", "gesture": "click" }
   ],
   "intents": [
-    { "eventId": "army.selectAll", "intent": "selection.allArmy", "args": {},
+    { "event": "army.selectAll", "intent": "selection.allArmy", "args": {},
       "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "eventId": "army.rally", "intent": "army.setRally", "args": {},
+    { "event": "army.rally", "intent": "army.setRally", "args": {},
       "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "eventId": "army.stop", "intent": "army.stopAll", "args": {},
+    { "event": "army.stop", "intent": "army.stopAll", "args": {},
       "playerSource": "seat", "actorSource": "commandSource.primary" },
-    { "eventId": "army.retreat", "intent": "army.retreat", "args": {},
+    { "event": "army.retreat", "intent": "army.retreat", "args": {},
       "playerSource": "seat", "actorSource": "commandSource.primary" }
   ]
 }
@@ -274,4 +284,7 @@ screen.bottomCenter ┌───────────────────
 | events/intents | 无 | click+载荷 | **change 连续+合流** | click 无载荷 |
 | 显隐 | 常驻 | 常驻 | **模态编排（开/关图）** | 互斥编排 |
 | 锚点 | topLeft | topRight | **modal.center（G5）** | bottomCenter |
+| 手势载荷/args 常量（G8） | — | ✅ | ✅(change) | — |
+| actorSource none（G9） | — | — | ✅ | ✅ |
+| 图消费 UI 事件（G10） | — | — | ✅(开/关编排) | ✅(互斥编排) |
 | 溯源形态 | 图聚合输出 | 图输出回读闭环 | 图输出+连续意图 | 纯意图 |
