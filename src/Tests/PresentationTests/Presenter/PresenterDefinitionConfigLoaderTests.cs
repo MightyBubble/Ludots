@@ -520,11 +520,6 @@ namespace Ludots.Tests.Presentation
             "rules[0].command.paramValue")]
         [TestCase(
             """
-            { "kind": "SetParam", "paramKey": "strict.param", "paramLane": "Float", "valueSource": "Fixed", "ParamValue": 1.0 }
-            """,
-            "rules[0].command.paramValue")]
-        [TestCase(
-            """
             { "kind": "SetParam", "paramKey": "strict.param", "paramLane": "Int", "valueSource": "Fixed" }
             """,
             "rules[0].command.intValue")]
@@ -559,6 +554,34 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("requires an explicit"));
         }
 
+        [Test]
+        public void Load_RejectsCaseMismatchedCommandFieldAsUnknown()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "strict_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Strict" },
+                        "command": { "kind": "SetParam", "paramKey": "strict.param", "paramLane": "Float", "valueSource": "Fixed", "ParamValue": 1.0 }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("rules[0].command"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'ParamValue'"));
+        }
+
         [TestCase(
             """
             { "paramKey": "strict.binding", "source": "graph" }
@@ -572,11 +595,6 @@ namespace Ludots.Tests.Presentation
         [TestCase(
             """
             { "paramKey": "strict.binding", "source": "constant" }
-            """,
-            "Presenter binding constant.constantValue")]
-        [TestCase(
-            """
-            { "paramKey": "strict.binding", "source": "constant", "ConstantValue": 1.0 }
             """,
             "Presenter binding constant.constantValue")]
         public void Load_RejectsBindingsMissingRequiredSourcePayload(string bindingJson, string expectedContext)
@@ -628,6 +646,157 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("duplicates AttributeBinding behavior"));
             Assert.That(ex.Message, Does.Contain("attributeBinding.targetParamKey"));
+        }
+
+        [TestCase(
+            """
+            { "paramKey": "typo.binding", "source": "constant", "constantValu": 1.0 }
+            """,
+            "Presenter 'typo_binding_actor' bindings[0]",
+            "constantValu")]
+        [TestCase(
+            """
+            { "paramKey": "typo.binding", "sorce": "graph" }
+            """,
+            "Presenter 'typo_binding_actor' bindings[0]",
+            "sorce")]
+        [TestCase(
+            """
+            { "paramKey": "typo.binding", "source": "graph", "sourceId": 5, "textTken": "x" }
+            """,
+            "Presenter 'typo_binding_actor' bindings[0]",
+            "textTken")]
+        public void Load_RejectsUnknownBindingFields(string bindingJson, string expectedContext, string expectedField)
+        {
+            WriteCatalog();
+            WritePresenters($$"""
+                [
+                  {
+                    "id": "typo_binding_actor",
+                    "bindings": [
+                      {{bindingJson}}
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedContext));
+            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+        }
+
+        [TestCase(
+            """
+            { "paramKey": "typo.default", "lane": "Float", "floatValu": 1.0 }
+            """,
+            "Presenter 'typo_defaults_actor' paramDefaults[0]",
+            "floatValu")]
+        [TestCase(
+            """
+            { "paramKey": "typo.default", "lane": "Float", "floatValue": 1.0, "intValu": 2 }
+            """,
+            "Presenter 'typo_defaults_actor' paramDefaults[0]",
+            "intValu")]
+        public void Load_RejectsUnknownParamDefaultFields(string defaultJson, string expectedContext, string expectedField)
+        {
+            WriteCatalog();
+            WritePresenters($$"""
+                [
+                  {
+                    "id": "typo_defaults_actor",
+                    "paramDefaults": [
+                      {{defaultJson}}
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedContext));
+            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+        }
+
+        [TestCase(@"{ ""durationSeconds"": 1.0, ""persistenc"": ""Scoped"" }", "persistenc")]
+        [TestCase(@"{ ""durationSecnds"": 1.0 }", "durationSecnds")]
+        public void Load_RejectsUnknownLifecycleFields(string lifecycleJson, string expectedField)
+        {
+            WriteCatalog();
+            WritePresenters($$"""
+                [
+                  {
+                    "id": "typo_lifecycle_actor",
+                    "lifecycle": {{lifecycleJson}}
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_lifecycle_actor' lifecycle"));
+            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+        }
+
+        [TestCase(@"{ ""offet"": [0, 1, 0] }", "offet")]
+        [TestCase(@"{ ""offset"": [0, 1, 0], ""anchro"": true }", "anchro")]
+        public void Load_RejectsUnknownAnchorFields(string anchorJson, string expectedField)
+        {
+            WriteCatalog();
+            WritePresenters($$"""
+                [
+                  {
+                    "id": "typo_anchor_actor",
+                    "anchor": {{anchorJson}}
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_anchor_actor' anchor"));
+            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
+        }
+
+        [Test]
+        public void Load_IncludesOwnerDefinitionKeyInRulesUnknownFieldContext()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "owner_context_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X" },
+                        "condition": { "inlin": "SourceIsAlive" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'owner_context_actor' rules[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'inlin'"));
         }
 
         [TestCase(
@@ -2899,8 +3068,768 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
+        [Test]
+        public void Load_RejectsUnknownDefinitionFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_definition",
+                    "lifecycle": { "durationSeconds": 1.0 },
+                    "lifecyle": { "durationSeconds": 1.0 }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_definition'"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'lifecyle'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownBehaviorSlotFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_behavior",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "activeByDefaul": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "renderPath": "None",
+                          "mobility": "Movable"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_behavior' behavior[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'activeByDefaul'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownChildFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "typo_child",
+                    "children": [
+                      { "definitionId": "child_marker", "scopeTag": "structure", "scopeTeg": "structure" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'scopeTeg'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownRuleEventAndCommandFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_rule_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X", "kyeId": "Event.X" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException eventEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(eventEx.Message, Does.Contain("rules[0].event"));
+            Assert.That(eventEx.Message, Does.Contain("unknown field 'kyeId'"));
+
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_rule_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed", "scopeSorce": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            registry = new PresenterDefinitionRegistry();
+            (_, _, pipeline, catalog) = BuildPipeline();
+            loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException commandEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(commandEx.Message, Does.Contain("rules[0].command"));
+            Assert.That(commandEx.Message, Does.Contain("unknown field 'scopeSorce'"));
+        }
+
+        [Test]
+        public void Load_AcceptsLegalConfigAcrossAllEntryPoints()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "legal_root",
+                    "lifecycle": { "durationSeconds": 1.0 },
+                    "anchor": { "offset": [0, 1, 0] },
+                    "visibility": { "inline": "SourceIsAlive" },
+                    "bindings": [
+                      { "paramKey": "legal.binding", "source": "constant", "constantValue": 3 }
+                    ],
+                    "paramDefaults": [
+                      { "paramKey": "legal.default", "lane": "Int", "intValue": 2 }
+                    ],
+                    "children": [
+                      { "definitionId": "child_marker", "scopeTag": "structure" }
+                    ],
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Legal" },
+                        "condition": { "inline": "SourceIsAlive" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "renderPath": "None",
+                          "mobility": "Movable"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("legal_root"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(1));
+            Assert.That(definition.Children.Length, Is.EqualTo(1));
+            Assert.That(definition.Behaviors.Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Load_AcceptsReservedAuthoringMetaFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "meta_actor",
+                    "_comment": "Authoring note kept out of runtime consumption.",
+                    "maxVisibilityDistanceCm": 9000,
+                    "rules": [
+                      {
+                        "event": { "kind": "TagEffectiveChanged", "keyId": "Status.Buffed", "gained": true },
+                        "command": { "kind": "CreatePresenter", "definitionId": "meta_actor", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("meta_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(1));
+            Assert.That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.TagEffectiveChanged));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownRuleFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_rule_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" },
+                        "conditon": { "inline": "SourceIsAlive" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("rules[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'conditon'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownConditionFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_condition_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X" },
+                        "condition": { "inlin": "SourceIsAlive" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("rules[0].condition"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'inlin'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownAssetBindingFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_asset_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Static",
+                          "localSclae": [1, 1, 1]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AssetBinding"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'localSclae'"));
+        }
+
+        [Test]
+        public void Load_RejectsChildSnakeCaseTransformFieldsBeforeClosedSet()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "snake_child",
+                    "children": [
+                      { "definitionId": "child_marker", "local_position": [1, 2, 3] }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("snake_case"));
+            Assert.That(ex.Message, Does.Contain("overrides.transform.localPosition"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownChildOverrideKeys()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "override_typo",
+                    "children": [
+                      { "definitionId": "child_marker", "overrides": { "transfrom": {} } }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("overrides field 'transfrom' is unsupported"));
+        }
         private static void NoOpExtensionCommand(in PerformerCommandExecutionContext context)
         {
+        }
+
+        [Test]
+        public void Load_AcceptsLegalNestedPayloadConfig()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "legal_child" },
+                  {
+                    "id": "legal_nested",
+                    "_comment": "Exercises every nested payload allowlist.",
+                    "maxVisibilityDistanceCm": 9000,
+                    "children": [
+                      {
+                        "definitionId": "legal_child",
+                        "scopeTag": "structure",
+                        "overrides": {
+                          "transform": { "localPosition": [1, 0, 0], "localScale": [2, 2, 2] },
+                          "params": [ { "paramKey": "legal.override", "lane": "Float", "floatValue": 0.5 } ]
+                        }
+                      }
+                    ],
+                    "rules": [
+                      {
+                        "event": { "kind": "TagEffectiveChanged", "keyId": "Status.Buffed", "gained": true },
+                        "condition": { "inline": "SourceIsAlive" },
+                        "command": { "kind": "CreatePresenter", "definitionId": "legal_nested", "scopeSource": "Fixed" }
+                      }
+                    ],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "materialId": "knight_base",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Static",
+                          "localOffset": [0, 0, 0],
+                          "localRotation": [0, 0, 0, 1],
+                          "localScale": [1, 1, 1],
+                          "scaleParamKey": "legal.scale",
+                          "colorParamKey": "legal.color",
+                          "materialParamKey": "legal.material",
+                          "visibilityParamKey": "legal.visibility",
+                          "maxLod": "Low"
+                        },
+                        "style": { "color": [1, 0, 0, 1], "alphaPolicy": "FadeOverLifetime" },
+                        "motion": { "yDriftPerSecond": 0.5 }
+                      },
+                      {
+                        "slot": "attribute",
+                        "kind": "AttributeBinding",
+                        "attributeBinding": {
+                          "attributeId": "Health",
+                          "targetParamKey": "legal.health",
+                          "mode": "AttributeRatio",
+                          "thresholds": [
+                            { "threshold": 0.5, "outputParamKey": "legal.low", "outputValue": 1.0 }
+                          ]
+                        }
+                      },
+                      {
+                        "slot": "tag",
+                        "kind": "TagBinding",
+                        "tagBinding": { "tagId": "Status.Buffed", "targetParamKey": "legal.buffed", "invertLogic": false }
+                      },
+                      {
+                        "slot": "animator",
+                        "kind": "Animator",
+                        "animator": {
+                          "animatorControllerId": "controller",
+                          "animationProfileId": "profile",
+                          "speedParamKey": "legal.speed",
+                          "stateParamKey": "legal.state"
+                        }
+                      },
+                      {
+                        "slot": "attachment",
+                        "kind": "Attachment",
+                        "attachment": {
+                          "target": "Parent",
+                          "boneId": 3,
+                          "offset": [0, 0, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": true
+                        }
+                      },
+                      {
+                        "slot": "sound",
+                        "kind": "Sound",
+                        "sound": { "soundAssetId": "step", "loop": false, "volume": 0.8, "volumeParamKey": "legal.volume" }
+                      },
+                      {
+                        "slot": "material",
+                        "kind": "Material",
+                        "material": {
+                          "baseMaterialId": "knight_base",
+                          "materialSwapParamKey": "legal.material.state",
+                          "swapTable": [ { "paramValue": 0, "materialId": "knight_armor" } ]
+                        }
+                      },
+                      {
+                        "slot": "spline",
+                        "kind": "Spline",
+                        "spline": {
+                          "splineAssetId": "road",
+                          "usage": "Render",
+                          "widthParamKey": "legal.width",
+                          "colorParamKey": "legal.color",
+                          "speedParamKey": "legal.speed",
+                          "progressParamKey": "legal.progress",
+                          "loop": true,
+                          "pingPong": false,
+                          "waypointEventId": 7
+                        }
+                      },
+                      {
+                        "slot": "grounding",
+                        "kind": "Grounding",
+                        "grounding": { "mode": "SnapToGround", "offset": 0.1, "updatePolicy": "Once" }
+                      },
+                      {
+                        "slot": "minimap",
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [1, 1, 1, 1],
+                          "sizePx": 6.0,
+                          "colorParamKey": "legal.marker.color",
+                          "sizeParamKey": "legal.marker.size",
+                          "visibilityParamKey": "legal.marker.visibility",
+                          "orientationMode": "PresenterForward",
+                          "orientationOffsetRad": 0.1,
+                          "orientationLengthPx": 10.0
+                        }
+                      },
+                      {
+                        "slot": "hud",
+                        "kind": "WorldText",
+                        "worldText": {
+                          "textToken": "hud.combat.delta",
+                          "mode": "AttributeCurrent",
+                          "valueParamKey": "worldText.value0",
+                          "secondaryValueParamKey": "worldText.value1",
+                          "fontSize": 16
+                        }
+                      },
+                      {
+                        "slot": "surface",
+                        "kind": "SurfaceSource",
+                        "surfaceSource": {
+                          "kind": "SplineRibbon",
+                          "profileId": "road_profile",
+                          "geometrySource": {
+                            "controlPointSource": { "kind": "Constant", "id": "road.points" },
+                            "widthSource": { "kind": "Constant", "id": "road.width" },
+                            "segmentationPolicy": "Bezier12"
+                          },
+                          "chunkBake": {
+                            "enabled": true,
+                            "ownership": "PerChunk",
+                            "chunkInfluencePolicy": "ExplicitPayloadChunks",
+                            "rebakePolicy": "DirtyPayload",
+                            "usageHint": "Static"
+                          },
+                          "materialSet": { "primaryMaterialId": "mat.road", "allowInstanceOverride": true },
+                          "lodProfileId": "default_surface_lod",
+                          "grounding": { "mode": "None" },
+                          "boundsPolicy": "Auto"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "legal_instanced",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": { "batchAssetId": "forest.tree.cluster" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => string.Equals(key, "Health", StringComparison.Ordinal) ? 1 : 0,
+                resolveTextTokenId: key => string.Equals(key, "hud.combat.delta", StringComparison.Ordinal) ? 777 : 0,
+                resolveMaterialId: key => key switch
+                {
+                    "knight_base" => 100,
+                    "knight_armor" => 200,
+                    _ => 0,
+                },
+                resolveAnimatorControllerId: key => string.Equals(key, "controller", StringComparison.Ordinal) ? 11 : 0,
+                resolveAnimationProfileId: key => string.Equals(key, "profile", StringComparison.Ordinal) ? 22 : 0,
+                resolveBehaviorAssetId: (kind, key) => (kind, key) switch
+                {
+                    (AssetKind.Mesh, "cube") => 42,
+                    (AssetKind.Sound, "step") => 33,
+                    (AssetKind.Spline, "road") => 44,
+                    _ => 0,
+                },
+                resolveInstancedBatchAssetId: key =>
+                    string.Equals(key, "forest.tree.cluster", StringComparison.Ordinal) ? 55 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("legal_nested"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(1));
+            Assert.That(definition.Rules[0].Condition.Inline, Is.EqualTo(InlineConditionKind.SourceIsAlive));
+            Assert.That(definition.Children.Length, Is.EqualTo(1));
+            Assert.That(definition.Children[0].TransformOverride.HasOverride, Is.True);
+            Assert.That(definition.Children[0].ParamOverrides.Length, Is.EqualTo(1));
+            Assert.That(definition.Behaviors.Length, Is.EqualTo(12));
+            Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(42));
+            Assert.That(definition.Behaviors[1].AttributeBinding.AttributeId, Is.EqualTo(1));
+            Assert.That(definition.Behaviors[1].AttributeBinding.Thresholds[0].OutputParamKey, Is.EqualTo(PresenterParamKeyRegistry.Register("legal.low")));
+            Assert.That(definition.Behaviors[6].Material.BaseMaterialId, Is.EqualTo(100));
+            Assert.That(definition.Behaviors[6].Material.SwapTable[0].MaterialId, Is.EqualTo(200));
+            Assert.That(definition.Behaviors[9].MinimapMarker.SizePx, Is.EqualTo(6f));
+            Assert.That(definition.Behaviors[11].SurfaceSource, Is.Not.Null);
+            Assert.That(definition.Surface, Is.Not.Null);
+            Assert.That(registry.TryGet(registry.GetId("legal_instanced"), out var instanced), Is.True);
+            Assert.That(instanced.InstancedBatches.Length, Is.EqualTo(1));
+            Assert.That(instanced.InstancedBatches[0].BatchAssetId, Is.EqualTo(55));
+        }
+
+        [TestCase(
+            """
+            { "slot": "hud", "kind": "WorldText", "worldText": { "textToken": "hud.combat.delta", "mode": "AttributeCurrent", "fontSzie": 16 } }
+            """,
+            "worldText",
+            "fontSzie")]
+        [TestCase(
+            """
+            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "WorldHud", "renderPath": "None", "mobility": "Movable" }, "style": { "colr": [1, 1, 1, 1] } }
+            """,
+            "style",
+            "colr")]
+        [TestCase(
+            """
+            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "WorldHud", "renderPath": "None", "mobility": "Movable" }, "motion": { "yDrifPerSecond": 0.5 } }
+            """,
+            "motion",
+            "yDrifPerSecond")]
+        [TestCase(
+            """
+            { "slot": "attachment", "kind": "Attachment", "attachment": { "target": "Parent", "ofset": [0, 0, 0] } }
+            """,
+            "Attachment",
+            "ofset")]
+        [TestCase(
+            """
+            { "slot": "attribute", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "legal.health", "mod": "AttributeRatio" } }
+            """,
+            "AttributeBinding",
+            "mod")]
+        [TestCase(
+            """
+            { "slot": "tag", "kind": "TagBinding", "tagBinding": { "tagId": "Status.Buffed", "targetParamKey": "legal.buffed", "invertLogc": false } }
+            """,
+            "TagBinding",
+            "invertLogc")]
+        [TestCase(
+            """
+            { "slot": "animator", "kind": "Animator", "animator": { "animatorControllerId": "controller", "speeedParamKey": "legal.speed" } }
+            """,
+            "Animator",
+            "speeedParamKey")]
+        [TestCase(
+            """
+            { "slot": "sound", "kind": "Sound", "sound": { "soundAssetId": "step", "volum": 0.8 } }
+            """,
+            "Sound",
+            "volum")]
+        [TestCase(
+            """
+            { "slot": "material", "kind": "Material", "material": { "baseMaterialId": "knight_base", "swpTable": [] } }
+            """,
+            "Material",
+            "swpTable")]
+        [TestCase(
+            """
+            { "slot": "material", "kind": "Material", "material": { "baseMaterialId": "knight_base", "materialSwapParamKey": "legal.material.state", "swapTable": [ { "paramValue": 0, "materialIde": "knight_armor" } ] } }
+            """,
+            "swapTable[0]",
+            "materialIde")]
+        [TestCase(
+            """
+            { "slot": "spline", "kind": "Spline", "spline": { "splineAssetId": "road", "usge": "Render" } }
+            """,
+            "Spline",
+            "usge")]
+        [TestCase(
+            """
+            { "slot": "grounding", "kind": "Grounding", "grounding": { "mode": "SnapToGround", "updatePolicy": "Once", "ofset": 0.1 } }
+            """,
+            "Grounding",
+            "ofset")]
+        [TestCase(
+            """
+            { "slot": "minimap", "kind": "MinimapMarker", "minimapMarker": { "shape": "Circle", "sziePx": 6.0 } }
+            """,
+            "MinimapMarker",
+            "sziePx")]
+        [TestCase(
+            """
+            { "slot": "surface", "kind": "SurfaceSource", "surfaceSource": { "kind": "SplineRibbon", "profilId": "road_profile" } }
+            """,
+            "surfaceSource",
+            "profilId")]
+        [TestCase(
+            """
+            { "slot": "surface", "kind": "SurfaceSource", "surfaceSource": { "kind": "SplineRibbon", "geometrySource": { "controlPointSource": { "kind": "Constant", "id": "road.points" }, "segmentationPolic": "Bezier12" } } }
+            """,
+            "geometrySource",
+            "segmentationPolic")]
+        [TestCase(
+            """
+            { "slot": "body", "kind": "InstancedBatch", "instancedBatch": { "batchAssetId": "forest.tree.cluster", "batchAssettId": "forest.other" } }
+            """,
+            "instancedBatch",
+            "batchAssettId")]
+        [TestCase(
+            """
+            { "slot": "body", "kind": "AssetBinding", "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "renderPath": "StaticMesh", "mobility": "Static", "materialCustomData": [ { "slot": 0, "lane": "Float", "defaultFlooatValue": 1.0 } ] } }
+            """,
+            "materialCustomData[0]",
+            "defaultFlooatValue")]
+        [TestCase(
+            """
+            { "slot": "attribute", "kind": "AttributeBinding", "attributeBinding": { "attributeId": "Health", "targetParamKey": "legal.health", "mode": "AttributeRatio", "thresholds": [ { "threshold": 0.5, "outputParamKey": "legal.low", "outptValue": 1.0 } ] } }
+            """,
+            "thresholds[0]",
+            "outptValue")]
+        public void Load_RejectsUnknownNestedPayloadFields(string behaviorJson, string expectedContext, string expectedField)
+        {
+            WriteCatalog();
+            WritePresenters($$"""
+                [
+                  {
+                    "id": "typo_nested",
+                    "behaviors": [
+                      {{behaviorJson}}
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => string.Equals(key, "Health", StringComparison.Ordinal) ? 1 : 0,
+                resolveTextTokenId: key => string.Equals(key, "hud.combat.delta", StringComparison.Ordinal) ? 777 : 0,
+                resolveMaterialId: key => key switch
+                {
+                    "knight_base" => 100,
+                    "knight_armor" => 200,
+                    _ => 0,
+                },
+                resolveAnimatorControllerId: key => string.Equals(key, "controller", StringComparison.Ordinal) ? 11 : 0,
+                resolveBehaviorAssetId: (kind, key) => (kind, key) switch
+                {
+                    (AssetKind.Mesh, "cube") => 42,
+                    (AssetKind.Sound, "step") => 33,
+                    (AssetKind.Spline, "road") => 44,
+                    _ => 0,
+                },
+                resolveInstancedBatchAssetId: key =>
+                    string.Equals(key, "forest.tree.cluster", StringComparison.Ordinal) ? 55 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedContext));
+            Assert.That(ex.Message, Does.Contain($"unknown field '{expectedField}'"));
         }
 
         private static void NoOpExtensionBehavior(in PerformerBehaviorExecutionContext context)
