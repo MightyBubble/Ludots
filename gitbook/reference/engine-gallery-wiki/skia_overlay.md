@@ -16,7 +16,7 @@
 | 承接渲染器 | `RaylibSkiaRenderer` + `SkiaRasterLayer`（分层光栅） |
 | 注册表条目 | `engine_raylib_skia_overlay`（`showcase.registry.json`，tier T1） |
 
-绘制走 `SKCanvas` 原语（圆角矩形、线、文字），`SkiaRasterLayer` 分层光栅后 `DrawTo` 合成到 `RaylibSkiaRenderer` 的画布，`RenderToScreen` 一次性上屏。字体直接 `SKTypeface.FromFamilyName("Consolas")`。宿主侧同一渲染器承接 Skia 覆盖层合同；UI 面板四种表面的分工见 [UI 面板作者形态](../../architecture/ui-panel-authoring-form.md)。
+绘制走 `SKCanvas` 原语（圆角矩形、线、文字），`SkiaRasterLayer` 分层光栅后 `DrawTo` 合成到 `RaylibSkiaRenderer` 的画布，`RenderToScreen` 一次性上屏。字体直接 `SKTypeface.FromFamilyName("Consolas")`。宿主侧同一渲染器承接 Skia 覆盖层合同；UI 面板的工程形态见 [四皮面板：工程结构与换肤合同](../../architecture/panel-skins.md)。
 
 ## 这场演的是什么
 
