@@ -17,6 +17,8 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Client;
 
 namespace CapabilityStandardTimeFlowShowcaseMod.Runtime;
 
@@ -620,8 +622,8 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             throw new InvalidOperationException($"TimeFlow showcase camera '{cameraConfig.VirtualCameraId}' is not registered.");
         }
 
-        engine.GameSession.Camera.ResetVirtualCameras();
-        engine.GameSession.Camera.ActivateVirtualCamera(
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ResetVirtualCameras();
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
             cameraConfig.VirtualCameraId,
             blendDurationSeconds: 0f,
             followTarget: CameraFollowTargetFactory.Build(
@@ -632,7 +634,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
                 definition.FollowCollectionKey),
             snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
             resetRuntimeState: true);
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
         {
             VirtualCameraId = cameraConfig.VirtualCameraId,
             TargetCm = new Vector2(targetX, targetY),
@@ -641,7 +643,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             DistanceCm = distanceCm,
             FovYDeg = fovYDeg
         });
-        engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SynchronizeActiveVirtualCameraBoundsAndHeight();
         _lastEvent = "Camera reset to the TimeFlow showcase view.";
     }
 

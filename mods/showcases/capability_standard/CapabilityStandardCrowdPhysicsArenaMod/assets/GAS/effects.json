@@ -1,0 +1,63 @@
+[
+  {
+    "id": "Effect.CrowdArena.Shockwave.SpawnEpicenter",
+    "tags": [ "Effect.CrowdArena.Shockwave" ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "crowd_arena_shockwave_epicenter",
+      "count": 1,
+      "offsetRadius": 0,
+      "placementPattern": "Scatter",
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.CrowdArena.Shockwave.Search",
+    "tags": [ "Effect.CrowdArena.Shockwave" ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "origin": "Source",
+      "radius": 480
+    },
+    "targetFilter": {
+      "relationFilter": "All",
+      "excludeSource": true,
+      "maxTargets": 96
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.CrowdArena.Shockwave.Knockback"
+    }
+  },
+  {
+    "id": "Effect.CrowdArena.Shockwave.Knockback",
+    "tags": [ "Effect.CrowdArena.Shockwave" ],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "AwayFromSource",
+      "totalDistanceCm": 400,
+      "totalDurationTicks": 24,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.CrowdArena.Boulder.Spawn",
+    "tags": [ "Effect.CrowdArena.Boulder" ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "crowd_arena_boulder",
+      "count": 1,
+      "offsetRadius": 0,
+      "placementPattern": "Scatter"
+    }
+  }
+]

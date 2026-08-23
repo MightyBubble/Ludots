@@ -34,7 +34,7 @@ namespace Ludots.Core.Gameplay.Camera
     public enum CameraFollowTargetKind
     {
         None,
-        LocalPlayer,
+        SolePossessedRep,
         EntityCollectionPrimary,
         EntityCollectionGroup
     }

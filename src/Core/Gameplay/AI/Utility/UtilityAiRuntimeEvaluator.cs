@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
@@ -14,6 +15,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.AI.Utility
 {
@@ -229,6 +231,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
             if (task.OrderTypeId <= 0)
             {
                 return false;
+            }
+
+            if (task.PlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Utility AI task attempted to submit order type id {task.OrderTypeId} without a positive player id.");
             }
 
             int slotIndex = task.AbilitySlotIndex >= 0
@@ -656,7 +664,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
             if (ability.HasCooldown)
             {
-                if (ability.Cooldown.CooldownValueAttributeId > 0 &&
+                if (AttributeRegistry.IsValidId(ability.Cooldown.CooldownValueAttributeId) &&
                     _world.Has<AttributeBuffer>(actor) &&
                     _world.Get<AttributeBuffer>(actor).GetCurrent(ability.Cooldown.CooldownValueAttributeId) > 0f)
                 {
@@ -803,24 +811,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(actor);
-            var itemGranted = hasItemGranted ? _world.Get<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            for (int i = 0; i < abilities.Count; i++)
-            {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, i);
-                if (slot.AbilityId == abilityId)
-                {
-                    slotIndex = i;
-                    return true;
-                }
-            }
-
-            return false;
+            return AbilitySlotResolver.TryFindAbility(_world, actor, abilityId, out slotIndex);
         }
 
         private bool TryResolveAbilityAtSlot(Entity actor, int slotIndex, out int abilityId)
@@ -831,13 +822,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot))
             {
                 return false;
             }
 
-            abilityId = abilities.Get(slotIndex).AbilityId;
+            abilityId = slot.AbilityId;
             return abilityId > 0;
         }
 
@@ -861,9 +851,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
         private float ExecuteScoreGraph(Entity actor, Entity target, int graphId)
         {
-            if (graphId <= 0 || _graphs == null || _graphApi == null)
+            if (graphId <= 0)
             {
                 return 0f;
+            }
+
+            if (_graphs == null || _graphApi == null)
+            {
+                throw new InvalidOperationException($"AI score graph id {graphId} cannot run because graph services are not configured.");
             }
 
             if (!_graphs.TryGetProgram(graphId, out var program))
@@ -871,8 +866,9 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 throw new InvalidOperationException($"AI score graph id {graphId} is not registered.");
             }
 
+            GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind, programs: _graphs);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

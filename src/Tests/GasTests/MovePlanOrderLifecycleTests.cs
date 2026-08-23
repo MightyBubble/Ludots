@@ -21,7 +21,7 @@ public sealed class MovePlanOrderLifecycleTests
         Entity firstSource = world.Create();
         Entity secondSource = world.Create();
         Entity[] actors = { world.Create(), world.Create(), world.Create() };
-        var queue = new OrderQueue(capacity: 64);
+        var queue = CreateOrderQueue(capacity: 64);
         Order[] batch =
         {
             CreateOrder(actors[0], firstSource),
@@ -29,7 +29,7 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(actors[2], secondSource),
         };
 
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
         Assert.Multiple(() =>
         {
             Assert.That(batch[0].OrderId, Is.Positive);
@@ -38,8 +38,8 @@ public sealed class MovePlanOrderLifecycleTests
             Assert.That(queue.Count, Is.EqualTo(3));
         });
 
-        var full = new OrderQueue(capacity: 64);
-        for (int i = 0; i < 63; i++)
+        var full = CreateOrderQueue(capacity: 4, resultCapacity: 16);
+        for (int i = 0; i < 3; i++)
         {
             Order filler = CreateOrder(actors[0], firstSource);
             Assert.That(full.TryEnqueue(in filler), Is.True);
@@ -50,12 +50,14 @@ public sealed class MovePlanOrderLifecycleTests
             CreateOrder(actors[0], firstSource),
             CreateOrder(actors[1], firstSource),
         };
-        Assert.That(full.TryEnqueueClusteredBatch(rejected), Is.False);
+        Assert.That(full.TryEnqueueClusteredBatch(rejected), Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         Assert.Multiple(() =>
         {
-            Assert.That(full.Count, Is.EqualTo(63));
-            Assert.That(rejected[0].OrderId, Is.Zero);
-            Assert.That(rejected[1].OrderId, Is.Zero);
+            Assert.That(full.Count, Is.EqualTo(3));
+            Assert.That(rejected[0].OrderId, Is.Positive);
+            Assert.That(rejected[1].OrderId, Is.EqualTo(rejected[0].OrderId));
+            Assert.That(full.AdmissionResults.TryGet(rejected[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
+            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         });
 
         Order[] duplicateActor =
@@ -73,13 +75,13 @@ public sealed class MovePlanOrderLifecycleTests
         Entity source = world.Create();
         Entity validActor = world.Create(OrderBuffer.CreateEmpty());
         Entity invalidActor = world.Create();
-        var queue = new OrderQueue(capacity: 64);
+        var queue = CreateOrderQueue(capacity: 64);
         Order[] batch =
         {
             CreateOrder(validActor, source),
             CreateOrder(invalidActor, source),
         };
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
 
         var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Replace);
         var system = new OrderBufferSystem(
@@ -87,9 +89,12 @@ public sealed class MovePlanOrderLifecycleTests
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
+            queue.AdmissionResults,
             queue);
 
+        queue.AdmissionResults.BeginLogicStep();
         system.Update(0f);
+        queue.AdmissionResults.EndLogicStep();
 
         Assert.Multiple(() =>
         {
@@ -110,13 +115,13 @@ public sealed class MovePlanOrderLifecycleTests
         existing.OrderId = 99;
         world.Get<OrderBuffer>(blockedActor).SetActiveDirect(in existing, priority: 100);
 
-        var queue = new OrderQueue(capacity: 64);
+        var queue = CreateOrderQueue(capacity: 64);
         Order[] batch =
         {
             CreateOrder(firstActor, source),
             CreateOrder(blockedActor, source),
         };
-        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.True);
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
 
         var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Ignore, canInterruptSelf: false);
         var system = new OrderBufferSystem(
@@ -124,9 +129,12 @@ public sealed class MovePlanOrderLifecycleTests
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
+            queue.AdmissionResults,
             queue);
 
+        queue.AdmissionResults.BeginLogicStep();
         system.Update(0f);
+        queue.AdmissionResults.EndLogicStep();
 
         Assert.Multiple(() =>
         {
@@ -145,7 +153,7 @@ public sealed class MovePlanOrderLifecycleTests
             new OrderContinuationBuffer(),
             default(MovePlanExecutionIntent),
             default(MovePlanExecutionResult));
-        var orderTypes = new OrderTypeRegistry();
+        var orderTypes = CreateOrderTypeRegistry();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.movePlan",
@@ -229,7 +237,9 @@ public sealed class MovePlanOrderLifecycleTests
         {
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
-            Assert.That(world.Has<CompletedOrderSignal>(actor), Is.False);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(77));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
         });
     }
 
@@ -284,7 +294,7 @@ public sealed class MovePlanOrderLifecycleTests
         SameTypePolicy sameTypePolicy,
         bool canInterruptSelf = true)
     {
-        var registry = new OrderTypeRegistry();
+        var registry = CreateOrderTypeRegistry();
         registry.Register(new OrderTypeConfig
         {
             Key = "test.movePlan",
@@ -294,5 +304,16 @@ public sealed class MovePlanOrderLifecycleTests
             CanInterruptSelf = canInterruptSelf,
         });
         return registry;
+    }
+
+    private static OrderQueue CreateOrderQueue(int capacity, int? resultCapacity = null)
+    {
+        int admissionCapacity = resultCapacity ?? capacity;
+        return new OrderQueue(capacity, new OrderAdmissionResultBuffer(admissionCapacity, admissionCapacity));
+    }
+
+    private static OrderTypeRegistry CreateOrderTypeRegistry()
+    {
+        return new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
     }
 }

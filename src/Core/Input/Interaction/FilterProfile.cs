@@ -17,8 +17,8 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>Built-in anchor kinds for <see cref="FilterProfileAssociationQuery.Anchor"/>.</summary>
     public static class FilterAnchorKinds
     {
-        /// <summary>The local client's player rep entity, supplied by the caller at evaluation time.</summary>
-        public const string LocalPlayerRep = "localPlayerRep";
+        /// <summary>The sole possessed rep entity, supplied by the caller at evaluation time.</summary>
+        public const string SolePossessedRep = "solePossessedRep";
     }
 
     /// <summary>

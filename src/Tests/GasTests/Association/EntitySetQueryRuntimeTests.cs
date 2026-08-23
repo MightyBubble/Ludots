@@ -22,7 +22,9 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -32,10 +34,16 @@ namespace Ludots.Tests.GAS
     {
         private string? _tempRoot;
 
+        [SetUp]
+        public void SetUp()
+        {
+            ModRegistryAmbient.Reset();
+        }
+
         [TearDown]
         public void TearDown()
         {
-            GraphIdRegistry.Clear();
+            ModRegistryAmbient.Reset();
 
             if (!string.IsNullOrWhiteSpace(_tempRoot))
             {
@@ -198,9 +206,9 @@ namespace Ludots.Tests.GAS
             world.Add(far, new EntityLayer(category: 0b0010, mask: uint.MaxValue));
             world.Add(near, new EntityLayer(category: 0b0010, mask: uint.MaxValue));
             world.Add(offLayer, new EntityLayer(category: 0b0100, mask: uint.MaxValue));
-            world.Add(far, new Position { GridPos = new IntVector2(20, 0) });
-            world.Add(near, new Position { GridPos = new IntVector2(2, 0) });
-            world.Add(offLayer, new Position { GridPos = new IntVector2(1, 0) });
+            world.Add(far, WorldPositionCm.FromCm(20, 0));
+            world.Add(near, WorldPositionCm.FromCm(2, 0));
+            world.Add(offLayer, WorldPositionCm.FromCm(1, 0));
 
             Span<Entity> entities = stackalloc Entity[8];
             entities[0] = offLayer;
@@ -215,9 +223,36 @@ namespace Ludots.Tests.GAS
 
             Assert.That(count, Is.EqualTo(1));
             Assert.That(entities[0], Is.EqualTo(near));
-            Assert.That(setup.EntityQueries.TryMinEntityByDistance(entities.Slice(0, count), new IntVector2(0, 0), out Entity closest, out long distanceSquared), Is.True);
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(entities.Slice(0, count), WorldCmInt2.Zero, out Entity closest, out long distanceSquared), Is.True);
             Assert.That(closest, Is.EqualTo(near));
             Assert.That(distanceSquared, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void MinWorldDistance_FarFromOriginWithNonUnitGrid_KeepsWorldCmAndStableTies()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            const int gridCellSizeCm = 250;
+            var coordinates = new SpatialCoordinateConverter(gridCellSizeCm);
+            WorldCmInt2 centerCm = coordinates.GridToWorld(new IntVector2(4000, 0));
+
+            Entity exact = world.Create();
+            Entity tiedFirst = world.Create();
+            Entity tiedSecond = world.Create();
+            world.Add(exact, WorldPositionCm.FromCm(centerCm.X, centerCm.Y));
+            world.Add(tiedFirst, WorldPositionCm.FromCm(centerCm.X - gridCellSizeCm, centerCm.Y));
+            world.Add(tiedSecond, WorldPositionCm.FromCm(centerCm.X + gridCellSizeCm, centerCm.Y));
+
+            Span<Entity> candidates = stackalloc Entity[] { tiedSecond, exact, tiedFirst };
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(candidates, centerCm, out Entity closest, out long distanceSquaredCm), Is.True);
+            Assert.That(closest, Is.EqualTo(exact));
+            Assert.That(distanceSquaredCm, Is.Zero);
+
+            candidates = stackalloc Entity[] { tiedSecond, tiedFirst };
+            Assert.That(setup.EntityQueries.TryMinEntityByWorldDistanceCm(candidates, centerCm, out closest, out distanceSquaredCm), Is.True);
+            Assert.That(closest, Is.EqualTo(tiedFirst));
+            Assert.That(distanceSquaredCm, Is.EqualTo((long)gridCellSizeCm * gridCellSizeCm));
         }
 
         [Test]
@@ -253,7 +288,7 @@ namespace Ludots.Tests.GAS
                 world,
                 graph.Programs,
                 graph.OutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 graph.Collections,
                 graph.OutputValues);
 
@@ -325,10 +360,25 @@ namespace Ludots.Tests.GAS
             int collectionKeyId = graph.Collections.KeyRegistry.GetId(GraphCollectionKey);
             Assert.That(collectionKeyId, Is.GreaterThan(0));
             Assert.That(graph.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-            Assert.That(program.Length, Is.EqualTo(2));
-            Assert.That((GraphNodeOp)program[0].Op, Is.EqualTo(GraphNodeOp.LoadCaster));
-            Assert.That((GraphNodeOp)program[1].Op, Is.EqualTo(GraphNodeOp.QueryFromCollection));
-            Assert.That(program[1].Imm, Is.EqualTo(collectionKeyId));
+            int loadCasterIndex = -1;
+            int fromCollectionIndex = -1;
+            for (int i = 0; i < program.Length; i++)
+            {
+                var op = (GraphNodeOp)program[i].Op;
+                if (op == GraphNodeOp.LoadCaster && loadCasterIndex < 0)
+                {
+                    loadCasterIndex = i;
+                }
+
+                if (op == GraphNodeOp.QueryFromCollection && fromCollectionIndex < 0)
+                {
+                    fromCollectionIndex = i;
+                }
+            }
+
+            Assert.That(loadCasterIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(fromCollectionIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(program[fromCollectionIndex].Imm, Is.EqualTo(collectionKeyId));
 
             var descriptor = EntityCollectionDescriptor.Create(
                 GraphCollectionKey,
@@ -365,9 +415,11 @@ namespace Ludots.Tests.GAS
                 E = entities,
                 Targets = targets,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             Assert.That(state.TargetList.Count, Is.EqualTo(2));
             Assert.That(targets[0], Is.EqualTo(first));
@@ -382,9 +434,18 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var schemas = new GraphOutputSchemaRegistry();
             var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            var outputValues = new GraphOutputValueStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var outputValues = new GraphOutputValueStore(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                initialCapacity: 16);
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
-            programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } });
+            programs.Register(
+                graphId,
+                new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                },
+                GraphKind.Query);
             var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
@@ -469,7 +530,7 @@ namespace Ludots.Tests.GAS
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryTests", Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(_tempRoot, "Core");
-            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            string graphDir = Path.Combine(coreRoot, "GAS");
             Directory.CreateDirectory(graphDir);
             File.WriteAllText(Path.Combine(graphDir, "graphs.json"), graphJson);
 
@@ -491,6 +552,7 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
+            GraphIdRegistry.Clear();
             var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
@@ -500,7 +562,7 @@ namespace Ludots.Tests.GAS
 
         private static QueryRuntimeSetup CreateQueryRuntime(World world)
         {
-            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
             var typeRegistry = new RelationshipTypeRegistry();
             var metricRegistry = new RelationshipMetricRegistry();
             var flagRegistry = new RelationshipFlagRegistry();
@@ -656,20 +718,202 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.4x.cityEconomy",
+    "kind": "Query",
     "entry": "minProduction",
     "nodes": [
-      { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
-      { "id": "maxProduction", "op": "ConstFloat", "floatValue": 100, "next": "allMapEntities" },
-      { "id": "allMapEntities", "op": "QueryAllMapEntities", "next": "team" },
-      { "id": "team", "op": "QueryFilterTeam", "teamId": 1, "next": "template" },
-      { "id": "template", "op": "QueryFilterTemplate", "template": "tests.graph.city", "next": "notBlocked" },
-      { "id": "notBlocked", "op": "QueryFilterTagNone", "tag": "Tests.GraphQuery.Blocked", "next": "productionRange" },
-      { "id": "productionRange", "op": "QueryFilterAttributeRange", "attribute": "Health", "inputs": [ "minProduction", "maxProduction" ], "next": "sortProduction" },
-      { "id": "sortProduction", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true, "next": "countCities" },
-      { "id": "countCities", "op": "AggCount", "next": "sumProduction" },
-      { "id": "sumProduction", "op": "AggSumAttribute", "attribute": "Health", "next": "sumGold" },
-      { "id": "sumGold", "op": "AggSumAttribute", "attribute": "Mana", "next": "bestProductionCity" },
-      { "id": "bestProductionCity", "op": "AggMaxEntityByAttribute", "attribute": "Health" }
+      {
+        "id": "minProduction",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxProduction",
+        "op": "ConstFloat",
+        "floatValue": 100
+      },
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "template",
+        "op": "QueryFilterTemplate",
+        "template": "tests.graph.city"
+      },
+      {
+        "id": "notBlocked",
+        "op": "QueryFilterTagNone",
+        "tag": "Tests.GraphQuery.Blocked"
+      },
+      {
+        "id": "productionRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Health"
+      },
+      {
+        "id": "sortProduction",
+        "op": "QuerySortByAttribute",
+        "attribute": "Health",
+        "descending": true
+      },
+      {
+        "id": "countCities",
+        "op": "AggCount"
+      },
+      {
+        "id": "sumProduction",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "sumGold",
+        "op": "AggSumAttribute",
+        "attribute": "Mana"
+      },
+      {
+        "id": "bestProductionCity",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "minProduction",
+        "fromPort": "next",
+        "to": "maxProduction"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "next",
+        "to": "allMapEntities"
+      },
+      {
+        "from": "allMapEntities",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "template"
+      },
+      {
+        "from": "template",
+        "fromPort": "next",
+        "to": "notBlocked"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "next",
+        "to": "productionRange"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "next",
+        "to": "sortProduction"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "next",
+        "to": "countCities"
+      },
+      {
+        "from": "countCities",
+        "fromPort": "next",
+        "to": "sumProduction"
+      },
+      {
+        "from": "sumProduction",
+        "fromPort": "next",
+        "to": "sumGold"
+      },
+      {
+        "from": "sumGold",
+        "fromPort": "next",
+        "to": "bestProductionCity"
+      },
+      {
+        "from": "bestProductionCity",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "allMapEntities",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "template",
+        "toPort": "list"
+      },
+      {
+        "from": "template",
+        "fromPort": "list",
+        "to": "notBlocked",
+        "toPort": "list"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "list",
+        "to": "productionRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "max"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "list",
+        "to": "sortProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "countCities",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumGold",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "bestProductionCity",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -681,10 +925,34 @@ namespace Ludots.Tests.GAS
         "title": "Cities",
         "summary": "Filtered 4X economy cities"
       },
-      { "id": "cityCount", "destination": "Summary", "type": "Int", "source": "countCities", "key": "tests.graph.cityCount" },
-      { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "sumProduction", "key": "tests.graph.totalProduction" },
-      { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "sumGold", "key": "tests.graph.totalGold" },
-      { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "tests.graph.bestProductionCity" }
+      {
+        "id": "cityCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "countCities",
+        "key": "tests.graph.cityCount"
+      },
+      {
+        "id": "totalProduction",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumProduction",
+        "key": "tests.graph.totalProduction"
+      },
+      {
+        "id": "totalGold",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumGold",
+        "key": "tests.graph.totalGold"
+      },
+      {
+        "id": "bestProductionCity",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestProductionCity",
+        "key": "tests.graph.bestProductionCity"
+      }
     ]
   }
 ]
@@ -694,11 +962,44 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.collectionQuery",
+    "kind": "Query",
     "entry": "owner",
     "nodes": [
-      { "id": "owner", "op": "LoadCaster", "next": "fromCollection" },
-      { "id": "fromCollection", "op": "QueryFromCollection", "collectionKey": "tests.graph.collection.cities", "inputs": [ "owner" ] }
-    ]
+      {
+        "id": "owner",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "fromCollection",
+        "op": "QueryFromCollection",
+        "collectionKey": "tests.graph.collection.cities"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "fromCollection"
+      },
+      {
+        "from": "fromCollection",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "fromCollection",
+        "toPort": "source"
+      }
+    ],
+    "outputs": []
   }
 ]
 """;

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Config
 {
@@ -101,6 +103,12 @@ namespace Ludots.Core.Config
                 ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
+            EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity(
+                _world,
+                entity,
+                _authoringContext,
+                BuildEntityContext());
+
             // Reset for next use
             _activeTemplate = null;
             _activeTemplateId = null;
@@ -115,7 +123,7 @@ namespace Ludots.Core.Config
             if (string.Equals(componentName, "Presentation", System.StringComparison.Ordinal))
             {
                 throw new System.InvalidOperationException(
-                    "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/performers.json keyed lifecycle rules.");
+                    "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/presenters.json keyed lifecycle rules.");
             }
 
             ComponentRegistry.Apply(
@@ -129,9 +137,7 @@ namespace Ludots.Core.Config
         private string BuildComponentContext(string componentName, bool isOverride)
         {
             string templateId = string.IsNullOrWhiteSpace(_activeTemplateId) ? "<no-template>" : _activeTemplateId;
-            string context = string.IsNullOrWhiteSpace(_activeEntityContext)
-                ? $"EntityBuilder template '{templateId}'"
-                : _activeEntityContext;
+            string context = BuildEntityContext();
 
             if (isOverride)
             {
@@ -142,6 +148,14 @@ namespace Ludots.Core.Config
                 ? sourceUri
                 : "Entities/templates.json";
             return $"{context} template '{templateId}' source '{source}' component '{componentName}'";
+        }
+
+        private string BuildEntityContext()
+        {
+            string templateId = string.IsNullOrWhiteSpace(_activeTemplateId) ? "<no-template>" : _activeTemplateId;
+            return string.IsNullOrWhiteSpace(_activeEntityContext)
+                ? $"EntityBuilder template '{templateId}'"
+                : _activeEntityContext;
         }
     }
 }

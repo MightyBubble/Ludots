@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Map;
 using Ludots.Core.Persistence;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Persistence;
 
@@ -249,7 +250,7 @@ public sealed class EntityIdentityPersistenceTests
             AssertAliveName(target, restoredChildA, "child-a");
             AssertAliveName(target, restoredChildB, "child-b");
             Assert.That(FindByName(target, "excluded"), Is.EqualTo(Entity.Null));
-            Assert.That(target.Get<WorldPositionCm>(restoredParent).ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(25, 75)));
+            Assert.That(target.Get<WorldPositionCm>(restoredParent).ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(25, 75)));
         });
     }
 

@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.EntityQueries
 {
@@ -510,29 +511,29 @@ namespace Ludots.Core.EntityQueries
             return TryExtremeRelationshipMetric(entities, source, typeId, metricId, findMax: false, out entity, out value);
         }
 
-        public bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        public bool TryMinEntityByWorldDistanceCm(ReadOnlySpan<Entity> entities, WorldCmInt2 centerCm, out Entity entity, out long distanceSquaredCm)
         {
             entity = Entity.Null;
-            distanceSquared = long.MaxValue;
+            distanceSquaredCm = long.MaxValue;
             bool found = false;
             for (int i = 0; i < entities.Length; i++)
             {
                 Entity candidate = entities[i];
-                if (!_world.IsAlive(candidate) || !_world.Has<Position>(candidate))
+                if (!_world.IsAlive(candidate) || !_world.Has<WorldPositionCm>(candidate))
                 {
                     continue;
                 }
 
-                IntVector2 gridPos = _world.Get<Position>(candidate).GridPos;
-                long dx = gridPos.X - center.X;
-                long dy = gridPos.Y - center.Y;
+                WorldCmInt2 candidateCm = _world.Get<WorldPositionCm>(candidate).ToWorldCmInt2();
+                long dx = candidateCm.X - centerCm.X;
+                long dy = candidateCm.Y - centerCm.Y;
                 long current = dx * dx + dy * dy;
                 if (!found ||
-                    current < distanceSquared ||
-                    (current == distanceSquared && CompareEntityStable(candidate, entity) < 0))
+                    current < distanceSquaredCm ||
+                    (current == distanceSquaredCm && CompareEntityStable(candidate, entity) < 0))
                 {
                     entity = candidate;
-                    distanceSquared = current;
+                    distanceSquaredCm = current;
                     found = true;
                 }
             }

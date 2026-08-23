@@ -14,16 +14,18 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -40,16 +42,17 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[] _templateBatchRequests = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[BatchEntityScratchCapacity];
-        private readonly Entity[] _performerBatchOwners = new Entity[BatchEntityScratchCapacity];
-        private readonly int[] _performerBatchScopeIds = new int[BatchEntityScratchCapacity];
-        private readonly int[] _performerBatchStableIds = new int[BatchEntityScratchCapacity];
-        private readonly Entity[] _performerBatchCreated = new Entity[BatchEntityScratchCapacity];
-        private readonly VisualTransform[] _performerBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
-        private readonly CullState[] _performerBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
+        private readonly SpawnRelationshipPlan[] _batchRelationshipPlans = new SpawnRelationshipPlan[BatchEntityScratchCapacity];
+        private readonly Entity[] _presenterBatchOwners = new Entity[BatchEntityScratchCapacity];
+        private readonly int[] _presenterBatchScopeIds = new int[BatchEntityScratchCapacity];
+        private readonly int[] _presenterBatchStableIds = new int[BatchEntityScratchCapacity];
+        private readonly Entity[] _presenterBatchCreated = new Entity[BatchEntityScratchCapacity];
+        private readonly VisualTransform[] _presenterBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
+        private readonly CullState[] _presenterBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
-        private readonly PerformerEntityRuntime? _performerRuntime;
-        private readonly PerformerDefinitionRegistry? _performerDefinitions;
-        private readonly CompiledPerformerBootstrapRegistry? _performerBootstrap;
+        private readonly PresenterEntityRuntime? _presenterRuntime;
+        private readonly PresenterDefinitionRegistry? _presenterDefinitions;
+        private readonly CompiledPresenterBootstrapRegistry? _presenterBootstrap;
         private readonly PresentationEventStream? _presentationEvents;
         private readonly ISpatialPartitionWorld? _spatialPartition;
         private readonly WorldSizeSpec _worldSizeSpec;
@@ -60,6 +63,27 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly TeamEntityLookup? _teamLookup;
         private readonly RelationshipRuntime? _relationships;
         private readonly int _memberOfTypeId;
+        private readonly EntityTriggerGraphMounts? _entityTriggerGraphMounts;
+
+        private readonly struct SpawnRelationshipPlan
+        {
+            public SpawnRelationshipPlan(
+                Entity ownershipSource,
+                Entity membershipTarget,
+                Entity implicitMemberOfTarget)
+            {
+                OwnershipSource = ownershipSource;
+                MembershipTarget = membershipTarget;
+                ImplicitMemberOfTarget = implicitMemberOfTarget;
+            }
+
+            public Entity OwnershipSource { get; }
+            public Entity MembershipTarget { get; }
+            public Entity ImplicitMemberOfTarget { get; }
+            public bool HasOwnershipSource => OwnershipSource != Entity.Null;
+            public bool HasMembershipTarget => MembershipTarget != Entity.Null;
+            public bool HasImplicitMemberOfTarget => ImplicitMemberOfTarget != Entity.Null;
+        }
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -69,8 +93,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PresentationStableIdAllocator stableIds,
             EffectRequestQueue effectRequests = null,
             RuntimeEntitySpawnReceiptQueue? receipts = null,
-            PerformerEntityRuntime? performerRuntime = null,
-            PerformerDefinitionRegistry? performerDefinitions = null,
+            PresenterEntityRuntime? presenterRuntime = null,
+            PresenterDefinitionRegistry? presenterDefinitions = null,
             PresentationEventStream? presentationEvents = null,
             ISpatialPartitionWorld? spatialPartition = null,
             WorldSizeSpec worldSizeSpec = default,
@@ -80,7 +104,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PlayerEntityLookup? playerLookup = null,
             TeamEntityLookup? teamLookup = null,
             RelationshipRuntime? relationships = null,
-            int memberOfTypeId = -1)
+            int memberOfTypeId = -1,
+            EntityTriggerGraphMounts? entityTriggerGraphMounts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -100,9 +125,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 spatialPartition,
                 worldSizeSpec,
                 BatchEntityScratchCapacity);
-            _performerRuntime = performerRuntime;
-            _performerDefinitions = performerDefinitions;
-            _performerBootstrap = performerDefinitions?.BootstrapRegistry;
+            _presenterRuntime = presenterRuntime;
+            _presenterDefinitions = presenterDefinitions;
+            _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
             _presentationEvents = presentationEvents;
             _timingDiagnostics = timingDiagnostics;
             _ownership = ownership;
@@ -110,6 +135,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _teamLookup = teamLookup;
             _relationships = relationships;
             _memberOfTypeId = memberOfTypeId;
+            _entityTriggerGraphMounts = entityTriggerGraphMounts;
         }
 
         public override void Update(in float dt)
@@ -122,13 +148,19 @@ namespace Ludots.Core.Gameplay.Spawning
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
                 {
-                    if (!TryDrainTemplateBatch(peek.TemplateId, out int batchCount))
+                    if (!TryCopyTemplateBatch(peek.TemplateId, out int batchCount))
                     {
                         break;
                     }
 
                     if (batchCount > 1)
                     {
+                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                        if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                        {
+                            break;
+                        }
+
                         if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
                         {
                             throw new InvalidOperationException(
@@ -139,13 +171,21 @@ namespace Ludots.Core.Gameplay.Spawning
                         continue;
                     }
 
+                    SpawnRelationshipPlan singleRelationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
+                    if (!TryDrainCopiedTemplateBatch(peek.TemplateId, batchCount))
+                    {
+                        break;
+                    }
+
                     var singleRequest = _batchRequests[0];
-                    var spawnedSingle = SpawnTemplate(singleRequest);
+                    var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
                     PublishSpawnReceipt(in singleRequest, spawnedSingle);
                     PublishOnSpawnEffect(in singleRequest, spawnedSingle);
+                    MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
                     continue;
                 }
 
+                SpawnRelationshipPlan relationshipPlan = PreflightSingleSpawnBeforeDrain(in peek);
                 if (!_requests.TryDequeue(out var request))
                 {
                     break;
@@ -153,18 +193,33 @@ namespace Ludots.Core.Gameplay.Spawning
 
                 var spawned = request.Kind switch
                 {
-                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request),
-                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request),
-                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request),
+                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
+                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
+                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
                     _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
                 };
 
                 PublishOnSpawnEffect(in request, spawned);
                 PublishSpawnReceipt(in request, spawned);
+                if (request.Kind == RuntimeEntitySpawnKind.Template &&
+                    TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+                {
+                    MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                }
             }
         }
 
-        private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request)
+        private void MountTemplateTriggerGraphs(Entity spawned, string templateId, EntityTemplate template)
+        {
+            if (_entityTriggerGraphMounts == null || template.TriggerGraphs is not { Count: > 0 })
+            {
+                return;
+            }
+
+            _entityTriggerGraphMounts.MountRuntimeSpawned(spawned, templateId, template.TriggerGraphs);
+        }
+
+        private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
             if (request.UnitTypeId <= 0)
             {
@@ -177,19 +232,13 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
             }
 
-            PreflightSingleSpawnRelationships(
-                "Runtime unit spawn",
-                in request,
-                templateAuthorsTeam: false,
-                templateTeam: default,
-                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
-
             var entity = World.Create(
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
                 new CullState { IsVisible = false, LOD = LODLevel.Low },
-                new AttributeBuffer());
+                new AttributeBuffer(),
+                new DirtyFlags());
             EnsurePresentationStableId(entity);
 
             World.Add(entity, new Name { Value = "Unit:" + typeName });
@@ -197,14 +246,15 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
+            EnsureRuntimeState(entity, in request);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
             return entity;
         }
 
-        private Entity SpawnTemplate(in RuntimeEntitySpawnRequest request)
+        private Entity SpawnTemplate(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
             if (string.IsNullOrWhiteSpace(request.TemplateId))
             {
@@ -212,15 +262,6 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
-            EntityTemplate template = _cachedTemplates[request.TemplateId];
-            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
-            PreflightSingleSpawnRelationships(
-                $"Runtime template '{request.TemplateId}'",
-                in request,
-                templateAuthorsTeam,
-                in templateTeam,
-                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
-
             var builder = _builder
                 .UseTemplate(request.TemplateId)
                 .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
@@ -243,12 +284,12 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
-            TryBootstrapPerformer(entity, request.TemplateId);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
+            TryBootstrapPresenter(entity, request.TemplateId);
             return entity;
         }
 
-        private bool TryDrainTemplateBatch(string templateId, out int count)
+        private bool TryCopyTemplateBatch(string templateId, out int count)
         {
             count = 0;
             if (string.IsNullOrWhiteSpace(templateId))
@@ -257,20 +298,141 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             while (count < _batchRequests.Length &&
-                   _requests.TryPeek(out var next) &&
-                   next.Kind == RuntimeEntitySpawnKind.Template &&
-                   !HasComponentPatches(in next) &&
-                   string.Equals(next.TemplateId, templateId, StringComparison.Ordinal))
+                   _requests.TryPeekAt(count, out var next) &&
+                   IsTemplateBatchMember(templateId, in next))
             {
-                if (!_requests.TryDequeue(out _batchRequests[count]))
-                {
-                    break;
-                }
-
+                _batchRequests[count] = next;
                 count++;
             }
 
             return count > 0;
+        }
+
+        private bool TryDrainCopiedTemplateBatch(string templateId, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (!_requests.TryDequeue(out RuntimeEntitySpawnRequest drained))
+                {
+                    return false;
+                }
+
+                if (!IsTemplateBatchMember(templateId, in drained))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch queue changed during preflight: template='{templateId}', row={i}.");
+                }
+
+                _batchRequests[i] = drained;
+            }
+
+            return true;
+        }
+
+        private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
+        {
+            return request.Kind == RuntimeEntitySpawnKind.Template &&
+                   !HasComponentPatches(in request) &&
+                   !string.IsNullOrWhiteSpace(request.TemplateId) &&
+                   string.Equals(request.TemplateId, templateId, StringComparison.Ordinal);
+        }
+
+        private void PreflightTemplateBatchBeforeDrain(string templateId, EntityTemplate template, int count)
+        {
+            int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
+            bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
+            bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
+            bool hasRequestOnSpawnEffect = false;
+            bool templateAuthorsTeam = _templateBatchSpawner.TryGetAuthoredTeam(templateId, template, out Team templateTeam);
+            bool templateAuthorsRelationshipDomainIdentity = TemplateAuthorsRelationshipDomainIdentity(template);
+
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var request = ref _batchRequests[i];
+                hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
+            }
+
+            PreflightTemplateBatchRelationships(
+                templateId,
+                templateAuthorsTeam,
+                in templateTeam,
+                templateAuthorsRelationshipDomainIdentity,
+                count);
+            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
+
+            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
+            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                _effectRequests.RequireAvailable(count, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawn");
+            }
+            else if (_effectRequests == null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' requires EffectRequestQueue for on-spawn effects.");
+            }
+        }
+
+        private SpawnRelationshipPlan PreflightSingleSpawnBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            SpawnRelationshipPlan relationshipPlan = request.Kind switch
+            {
+                RuntimeEntitySpawnKind.UnitType => PreflightSingleUnitTypeBeforeDrain(in request),
+                RuntimeEntitySpawnKind.Template => PreflightSingleTemplateBeforeDrain(in request),
+                RuntimeEntitySpawnKind.Assembly => PreflightSingleAssemblyBeforeDrain(in request),
+                _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
+            };
+
+            PreflightSingleSpawnSuccessSignals(in request);
+            return relationshipPlan;
+        }
+
+        private SpawnRelationshipPlan PreflightSingleUnitTypeBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.UnitTypeId <= 0)
+            {
+                throw new InvalidOperationException("Runtime unit spawn requires a positive UnitTypeId.");
+            }
+
+            string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
+            if (string.IsNullOrWhiteSpace(typeName))
+            {
+                throw new InvalidOperationException($"Runtime unit spawn references unknown UnitTypeId '{request.UnitTypeId}'.");
+            }
+
+            return PreflightSingleSpawnRelationships(
+                "Runtime unit spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
+        }
+
+        private SpawnRelationshipPlan PreflightSingleTemplateBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TemplateId))
+            {
+                throw new InvalidOperationException("Runtime template spawn requires a non-empty TemplateId.");
+            }
+
+            EnsureTemplateLoaded(request.TemplateId);
+            EntityTemplate template = _cachedTemplates[request.TemplateId];
+            bool templateAuthorsTeam = TryGetTemplateAuthoredTeam(request.TemplateId, template, out Team templateTeam);
+            return PreflightSingleSpawnRelationships(
+                $"Runtime template '{request.TemplateId}'",
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                TemplateOrRequestPatchesAuthorRelationshipDomainIdentity(template, in request));
+        }
+
+        private SpawnRelationshipPlan PreflightSingleAssemblyBeforeDrain(in RuntimeEntitySpawnRequest request)
+        {
+            return PreflightSingleSpawnRelationships(
+                "Runtime assembly spawn",
+                in request,
+                templateAuthorsTeam: false,
+                templateTeam: default,
+                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
         }
 
         private bool TrySpawnTemplateBatch(string templateId, EntityTemplate template, int count)
@@ -313,9 +475,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasExplicitRelationshipWork |= request.HasOwnershipSource != 0 || request.HasMembershipTarget != 0;
             }
 
-            PreflightTemplateBatchRelationships(templateId, templateAuthorsTeam, in templateTeam, count);
-            PreflightTemplateBatchSuccessSignals(count, publishSpawnedEvent);
-
+            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
                 TemplateBatchSpawnFeatures.PresentationLifecycleState;
@@ -324,9 +484,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 features |= TemplateBatchSpawnFeatures.MapEntity;
             }
 
-            if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, template, templateKeyId))
+            if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_presenterBootstrap, template, templateKeyId))
             {
-                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload;
             }
             double prepareMs = ElapsedMs(prepareStart);
 
@@ -336,18 +496,17 @@ namespace Ludots.Core.Gameplay.Spawning
                 _templateBatchRequests.AsSpan(0, count),
                 features,
                 out ReadOnlySpan<Entity> created,
-                _performerBatchStableIds.AsSpan(0, count),
-                _performerBatchOwnerTransforms.AsSpan(0, count),
-                _performerBatchOwnerCulls.AsSpan(0, count)))
+                _presenterBatchStableIds.AsSpan(0, count),
+                _presenterBatchOwnerTransforms.AsSpan(0, count),
+                _presenterBatchOwnerCulls.AsSpan(0, count)))
             {
                 return false;
             }
 
             double postSpawnMs = 0d;
-            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
             if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
             {
-                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
+                _effectRequests.RequireAvailable(created.Length, "RuntimeEntitySpawnSystem.TemplateBatchOnSpawnPostCreate");
             }
 
             bool requiresPostSpawnLoop =
@@ -361,6 +520,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasRequestOnSpawnEffect ||
                 hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
+                template.TriggerGraphs is { Count: > 0 } ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
             {
@@ -390,7 +550,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     }
 
                     TryLinkOwnershipEdge(entity);
-                    TryLinkExplicitRelationships(in request, entity);
+                    ApplyRelationshipPlan(in _batchRelationshipPlans[i], entity);
 
                     if (publishSpawnedEvent)
                     {
@@ -403,86 +563,81 @@ namespace Ludots.Core.Gameplay.Spawning
                     {
                         PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
                     }
+
+                    MountTemplateTriggerGraphs(entity, templateId, template);
                 }
 
                 postSpawnMs = ElapsedMs(postSpawnStart);
             }
 
-            double performerBatchMs = 0d;
-            double performerCreateMs = 0d;
-            double performerBootstrapMarkMs = 0d;
-            double performerCreateSetupMs = 0d;
-            double performerWorldCreateMs = 0d;
-            double performerComponentFillMs = 0d;
-            double performerIndexWriteMs = 0d;
-            double performerOwnerPayloadMs = 0d;
-            double performerPostCreateMs = 0d;
-            double performerChildSetupMs = 0d;
-            double performerChildWorldCreateMs = 0d;
-            double performerChildComponentFillMs = 0d;
-            double performerChildIndexWriteMs = 0d;
-            double performerChildStableIdMs = 0d;
-            int performerCreated = 0;
+            double presenterBatchMs = 0d;
+            double presenterCreateMs = 0d;
+            double presenterBootstrapMarkMs = 0d;
+            double presenterCreateSetupMs = 0d;
+            double presenterWorldCreateMs = 0d;
+            double presenterComponentFillMs = 0d;
+            double presenterIndexWriteMs = 0d;
+            double presenterOwnerPayloadMs = 0d;
+            double presenterPostCreateMs = 0d;
+            double presenterChildSetupMs = 0d;
+            double presenterChildWorldCreateMs = 0d;
+            double presenterChildComponentFillMs = 0d;
+            double presenterChildIndexWriteMs = 0d;
+            double presenterChildStableIdMs = 0d;
+            int presenterCreated = 0;
             if (hasDirectBootstrap)
             {
-                long performerBatchStart = Stopwatch.GetTimestamp();
-                TryBootstrapPerformerBatch(
+                long presenterBatchStart = Stopwatch.GetTimestamp();
+                TryBootstrapPresenterBatch(
                     templateKeyId,
                     created,
-                    _performerBatchStableIds.AsSpan(0, created.Length),
-                    _performerBatchOwnerTransforms.AsSpan(0, created.Length),
-                    _performerBatchOwnerCulls.AsSpan(0, created.Length),
-                    out performerCreated,
-                    out performerCreateMs,
-                    out performerBootstrapMarkMs,
-                    out performerCreateSetupMs,
-                    out performerWorldCreateMs,
-                    out performerComponentFillMs,
-                    out performerIndexWriteMs,
-                    out performerOwnerPayloadMs,
-                    out performerPostCreateMs,
-                    out performerChildSetupMs,
-                    out performerChildWorldCreateMs,
-                    out performerChildComponentFillMs,
-                    out performerChildIndexWriteMs,
-                    out performerChildStableIdMs);
-                performerBatchMs = ElapsedMs(performerBatchStart);
+                    _presenterBatchStableIds.AsSpan(0, created.Length),
+                    _presenterBatchOwnerTransforms.AsSpan(0, created.Length),
+                    _presenterBatchOwnerCulls.AsSpan(0, created.Length),
+                    out presenterCreated,
+                    out presenterCreateMs,
+                    out presenterBootstrapMarkMs,
+                    out presenterCreateSetupMs,
+                    out presenterWorldCreateMs,
+                    out presenterComponentFillMs,
+                    out presenterIndexWriteMs,
+                    out presenterOwnerPayloadMs,
+                    out presenterPostCreateMs,
+                    out presenterChildSetupMs,
+                    out presenterChildWorldCreateMs,
+                    out presenterChildComponentFillMs,
+                    out presenterChildIndexWriteMs,
+                    out presenterChildStableIdMs);
+                presenterBatchMs = ElapsedMs(presenterBatchStart);
             }
 
             _timingDiagnostics?.ObserveRuntimeSpawnBatch(
                 count,
-                performerCreated,
+                presenterCreated,
                 prepareMs,
                 _templateBatchSpawner.LastWorldCreateMs,
                 _templateBatchSpawner.LastFillCreatedBatchMs,
                 postSpawnMs,
-                performerBatchMs,
-                performerCreateMs,
-                performerBootstrapMarkMs,
-                performerCreateSetupMs,
-                performerWorldCreateMs,
-                performerComponentFillMs,
-                performerIndexWriteMs,
-                performerOwnerPayloadMs,
-                performerPostCreateMs,
-                performerChildSetupMs,
-                performerChildWorldCreateMs,
-                performerChildComponentFillMs,
-                performerChildIndexWriteMs,
-                performerChildStableIdMs);
+                presenterBatchMs,
+                presenterCreateMs,
+                presenterBootstrapMarkMs,
+                presenterCreateSetupMs,
+                presenterWorldCreateMs,
+                presenterComponentFillMs,
+                presenterIndexWriteMs,
+                presenterOwnerPayloadMs,
+                presenterPostCreateMs,
+                presenterChildSetupMs,
+                presenterChildWorldCreateMs,
+                presenterChildComponentFillMs,
+                presenterChildIndexWriteMs,
+                presenterChildStableIdMs);
 
             return true;
         }
 
-        private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
+        private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
         {
-            PreflightSingleSpawnRelationships(
-                "Runtime assembly spawn",
-                in request,
-                templateAuthorsTeam: false,
-                templateTeam: default,
-                authorsRelationshipDomainIdentity: RequestPatchesAuthorRelationshipDomainIdentity(in request));
-
             var entity = base.World.Create();
 
             if (request.HasProjectileState != 0)
@@ -499,10 +654,11 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
             ApplyComponentPatches(in request, entity);
+            EnsureRuntimeState(entity, in request);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryLinkExplicitRelationships(in request, entity);
+            ApplyRelationshipPlan(in relationshipPlan, entity);
             return entity;
         }
 
@@ -685,45 +841,22 @@ namespace Ludots.Core.Gameplay.Spawning
             OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
         }
 
-        private void TryLinkExplicitRelationships(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void ApplyRelationshipPlan(in SpawnRelationshipPlan plan, Entity entity)
         {
-            if (request.HasOwnershipSource != 0)
+            if (plan.HasOwnershipSource)
             {
-                if (_ownership == null || !IsAliveInCurrentWorld(request.OwnershipSource))
-                {
-                    throw new InvalidOperationException("Runtime spawn explicit OwnershipSource requires a live source and OwnershipResolver.");
-                }
-
-                _ownership.EnsureOwnership(request.OwnershipSource, entity);
+                _ownership!.EnsureOwnership(plan.OwnershipSource, entity);
             }
 
-            if (request.HasMembershipTarget != 0)
+            if (plan.HasMembershipTarget)
             {
-                if (!HasRegisteredMemberOfRelationshipType() || !IsAliveInCurrentWorld(request.MembershipTarget))
-                {
-                    throw new InvalidOperationException(
-                        "Runtime spawn explicit MembershipTarget requires a live target, a registered MemberOf relationship type, and a MemberOf relationship runtime.");
-                }
-
-                _relationships.EnsureLink(entity, request.MembershipTarget, _memberOfTypeId);
+                _relationships!.EnsureLink(entity, plan.MembershipTarget, _memberOfTypeId);
                 return;
             }
 
-            if (_relationships != null &&
-                _teamLookup != null &&
-                _memberOfTypeId >= 0 &&
-                World.TryGet(entity, out Team team) &&
-                team.Id > 0 &&
-                !World.Has<PlayerIdentity>(entity) &&
-                !World.Has<TeamIdentity>(entity))
+            if (plan.HasImplicitMemberOfTarget)
             {
-                if (!_teamLookup.TryGet(team.Id, out Entity teamRep) || !IsAliveInCurrentWorld(teamRep))
-                {
-                    throw new InvalidOperationException(
-                        $"Runtime spawned entity {entity.Id} authors Team {team.Id}, but no live team relationship representative exists.");
-                }
-
-                _relationships.EnsureLink(entity, teamRep, _memberOfTypeId);
+                _relationships!.EnsureLink(entity, plan.ImplicitMemberOfTarget, _memberOfTypeId);
             }
         }
 
@@ -731,29 +864,18 @@ namespace Ludots.Core.Gameplay.Spawning
             string templateId,
             bool templateAuthorsTeam,
             in Team templateTeam,
+            bool authorsRelationshipDomainIdentity,
             int count)
         {
             for (int i = 0; i < count; i++)
             {
                 ref readonly RuntimeEntitySpawnRequest request = ref _batchRequests[i];
-                PreflightExplicitRelationship(in request);
-
-                int teamId = ResolveTemplateFinalTeamId(
+                _batchRelationshipPlans[i] = PreflightSpawnRelationships(
                     $"Runtime template batch '{templateId}'",
                     in request,
-                    templateAuthorsTeam ? templateTeam.Id : 0);
-                if (request.HasMembershipTarget != 0)
-                {
-                    PreflightMembershipTargetMatchesTeam(templateId, in request, teamId);
-                    continue;
-                }
-
-                if (teamId <= 0)
-                {
-                    continue;
-                }
-
-                PreflightImplicitMemberOfTarget($"Runtime template batch '{templateId}'", teamId);
+                    templateAuthorsTeam,
+                    in templateTeam,
+                    authorsRelationshipDomainIdentity);
             }
         }
 
@@ -773,7 +895,22 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void PreflightSingleSpawnRelationships(
+        private SpawnRelationshipPlan PreflightSingleSpawnRelationships(
+            string context,
+            in RuntimeEntitySpawnRequest request,
+            bool templateAuthorsTeam,
+            in Team templateTeam,
+            bool authorsRelationshipDomainIdentity)
+        {
+            return PreflightSpawnRelationships(
+                context,
+                in request,
+                templateAuthorsTeam,
+                in templateTeam,
+                authorsRelationshipDomainIdentity);
+        }
+
+        private SpawnRelationshipPlan PreflightSpawnRelationships(
             string context,
             in RuntimeEntitySpawnRequest request,
             bool templateAuthorsTeam,
@@ -785,26 +922,34 @@ namespace Ludots.Core.Gameplay.Spawning
                 context,
                 in request,
                 templateAuthorsTeam ? templateTeam.Id : 0);
-            if (teamId <= 0)
-            {
-                return;
-            }
-
+            Entity ownershipSource = request.HasOwnershipSource != 0
+                ? request.OwnershipSource
+                : Entity.Null;
             if (request.HasMembershipTarget != 0)
             {
-                PreflightMembershipTargetMatchesTeam(context, in request, teamId);
-                return;
+                if (teamId > 0)
+                {
+                    PreflightMembershipTargetMatchesTeam(context, in request, teamId);
+                }
+
+                return new SpawnRelationshipPlan(ownershipSource, request.MembershipTarget, Entity.Null);
+            }
+
+            if (teamId <= 0)
+            {
+                return new SpawnRelationshipPlan(ownershipSource, Entity.Null, Entity.Null);
             }
 
             if (authorsRelationshipDomainIdentity)
             {
-                return;
+                return new SpawnRelationshipPlan(ownershipSource, Entity.Null, Entity.Null);
             }
 
-            PreflightImplicitMemberOfTarget(context, teamId);
+            Entity implicitMemberOfTarget = PreflightImplicitMemberOfTarget(context, teamId);
+            return new SpawnRelationshipPlan(ownershipSource, Entity.Null, implicitMemberOfTarget);
         }
 
-        private void PreflightImplicitMemberOfTarget(string context, int teamId)
+        private Entity PreflightImplicitMemberOfTarget(string context, int teamId)
         {
             if (_relationships == null || _teamLookup == null || !HasRegisteredMemberOfRelationshipType())
             {
@@ -817,6 +962,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException(
                     $"{context} authors Team {teamId}, but no live team relationship representative exists.");
             }
+
+            return teamRepresentative;
         }
 
         private bool IsAliveInCurrentWorld(Entity entity)
@@ -832,7 +979,7 @@ namespace Ludots.Core.Gameplay.Spawning
         }
 
         private void PreflightMembershipTargetMatchesTeam(
-            string templateId,
+            string context,
             in RuntimeEntitySpawnRequest request,
             int teamId)
         {
@@ -844,13 +991,13 @@ namespace Ludots.Core.Gameplay.Spawning
             if (!World.TryGet(request.MembershipTarget, out TeamIdentity targetTeam))
             {
                 throw new InvalidOperationException(
-                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
+                    $"{context} authors Team {teamId}, but explicit MembershipTarget is not a team representative.");
             }
 
             if (targetTeam.TeamId != teamId)
             {
                 throw new InvalidOperationException(
-                    $"Runtime template batch '{templateId}' authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
+                    $"{context} authors Team {teamId}, but explicit MembershipTarget team {targetTeam.TeamId} conflicts.");
             }
         }
 
@@ -884,6 +1031,35 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 throw new InvalidOperationException("PresentationEventStream is full while publishing batch EntitySpawned.");
             }
+        }
+
+        private void PreflightSingleSpawnSuccessSignals(in RuntimeEntitySpawnRequest request)
+        {
+            if (request.EmitReceipt != 0)
+            {
+                if (_receipts == null)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+                }
+
+                if (_receipts.FreeCapacity < 1)
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+                }
+            }
+
+            if (!TryResolveOnSpawnEffectTemplateId(in request, cachedTemplateOnSpawnEffectId: 0, out int effectTemplateId, out _))
+            {
+                return;
+            }
+
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
+            }
+
+            _effectRequests.RequireAvailable(1, "RuntimeEntitySpawnSystem.OnSpawnEffect");
         }
 
         private int ResolveTemplateFinalTeamId(
@@ -1061,6 +1237,15 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
+        private void EnsureRuntimeState(Entity entity, in RuntimeEntitySpawnRequest request)
+        {
+            EntityRuntimeStatePlan.EnsureInstalledForAuthoredEntity(
+                World,
+                entity,
+                _authoringContext,
+                $"RuntimeEntitySpawn kind '{request.Kind}' entity {entity.Id}");
+        }
+
         private static bool HasComponentPatches(in RuntimeEntitySpawnRequest request)
         {
             return request.ComponentPatches is { Length: > 0 };
@@ -1202,15 +1387,38 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned, int cachedTemplateOnSpawnEffectId)
         {
-            if (_effectRequests == null)
+            if (!TryResolveOnSpawnEffectTemplateId(in request, cachedTemplateOnSpawnEffectId, out int effectTemplateId, out bool useSpawnedAsSource))
             {
                 return;
             }
 
-            int effectTemplateId = request.OnSpawnEffectTemplateId > 0
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime spawn on-spawn effect requires EffectRequestQueue: kind={request.Kind}, templateId={request.TemplateId}, effectTemplateId={effectTemplateId}.");
+            }
+
+            _effectRequests.Publish(new EffectRequest
+            {
+                RootId = 0,
+                Source = useSpawnedAsSource ? spawned : request.Source,
+                Target = spawned,
+                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
+                TemplateId = effectTemplateId,
+            });
+        }
+
+        private bool TryResolveOnSpawnEffectTemplateId(
+            in RuntimeEntitySpawnRequest request,
+            int cachedTemplateOnSpawnEffectId,
+            out int effectTemplateId,
+            out bool useSpawnedAsSource)
+        {
+            effectTemplateId = request.OnSpawnEffectTemplateId > 0
                 ? request.OnSpawnEffectTemplateId
                 : cachedTemplateOnSpawnEffectId;
-            bool useSpawnedAsSource = false;
+            useSpawnedAsSource = false;
+
             if (effectTemplateId <= 0 &&
                 request.Kind == RuntimeEntitySpawnKind.Template &&
                 !string.IsNullOrWhiteSpace(request.TemplateId))
@@ -1229,30 +1437,23 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (effectTemplateId <= 0)
             {
-                return;
+                return false;
             }
 
             useSpawnedAsSource = request.OnSpawnEffectTemplateId <= 0;
-            _effectRequests.Publish(new EffectRequest
-            {
-                RootId = 0,
-                Source = useSpawnedAsSource ? spawned : request.Source,
-                Target = spawned,
-                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
-                TemplateId = effectTemplateId,
-            });
+            return true;
         }
 
-        private void TryBootstrapPerformer(Entity owner, string templateId)
+        private void TryBootstrapPresenter(Entity owner, string templateId)
         {
-            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null)
+            if (_presenterRuntime == null || _presenterDefinitions == null || _presenterBootstrap == null)
             {
                 return;
             }
 
             int templateKeyId = ResolveTemplateKeyId(templateId, owner);
             if (templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+                !_presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
             }
@@ -1268,9 +1469,9 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
-                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                if (!_presenterDefinitions.TryGet(rule.PresenterDefinitionId, out PresenterDefinition definition))
                 {
-                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                    throw new InvalidOperationException($"Presenter definition id={rule.PresenterDefinitionId} is not registered.");
                 }
 
                 int scopeTag = rule.ResolveScopeTag(stableId);
@@ -1279,14 +1480,14 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
-                if (_performerRuntime.HasActiveScopedInstance(rule.PerformerDefinitionId, owner, scopeTag, PresentationAnchorKind.Entity, default))
+                if (_presenterRuntime.HasActiveScopedInstance(rule.PresenterDefinitionId, owner, scopeTag, PresentationAnchorKind.Entity, default))
                 {
                     continue;
                 }
 
-                Entity root = _performerRuntime.CreateHierarchy(
-                    _performerDefinitions,
-                    rule.PerformerDefinitionId,
+                Entity root = _presenterRuntime.CreateHierarchy(
+                    _presenterDefinitions,
+                    rule.PresenterDefinitionId,
                     owner,
                     scopeTag,
                     PresentationAnchorKind.Entity,
@@ -1300,14 +1501,14 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void TryBootstrapPerformerBatch(
+        private void TryBootstrapPresenterBatch(
             int templateKeyId,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls)
         {
-            TryBootstrapPerformerBatch(
+            TryBootstrapPresenterBatch(
                 templateKeyId,
                 owners,
                 stableIds,
@@ -1329,42 +1530,42 @@ namespace Ludots.Core.Gameplay.Spawning
                 out _);
         }
 
-        private void TryBootstrapPerformerBatch(
+        private void TryBootstrapPresenterBatch(
             int templateKeyId,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls,
             out int totalCreated,
-            out double performerCreateMs,
+            out double presenterCreateMs,
             out double bootstrapMarkMs,
-            out double performerCreateSetupMs,
-            out double performerWorldCreateMs,
-            out double performerComponentFillMs,
-            out double performerIndexWriteMs,
-            out double performerOwnerPayloadMs,
-            out double performerPostCreateMs,
-            out double performerChildSetupMs,
-            out double performerChildWorldCreateMs,
-            out double performerChildComponentFillMs,
-            out double performerChildIndexWriteMs,
-            out double performerChildStableIdMs)
+            out double presenterCreateSetupMs,
+            out double presenterWorldCreateMs,
+            out double presenterComponentFillMs,
+            out double presenterIndexWriteMs,
+            out double presenterOwnerPayloadMs,
+            out double presenterPostCreateMs,
+            out double presenterChildSetupMs,
+            out double presenterChildWorldCreateMs,
+            out double presenterChildComponentFillMs,
+            out double presenterChildIndexWriteMs,
+            out double presenterChildStableIdMs)
         {
             totalCreated = 0;
-            performerCreateMs = 0d;
+            presenterCreateMs = 0d;
             bootstrapMarkMs = 0d;
-            performerCreateSetupMs = 0d;
-            performerWorldCreateMs = 0d;
-            performerComponentFillMs = 0d;
-            performerIndexWriteMs = 0d;
-            performerOwnerPayloadMs = 0d;
-            performerPostCreateMs = 0d;
-            performerChildSetupMs = 0d;
-            performerChildWorldCreateMs = 0d;
-            performerChildComponentFillMs = 0d;
-            performerChildIndexWriteMs = 0d;
-            performerChildStableIdMs = 0d;
-            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null || owners.Length == 0)
+            presenterCreateSetupMs = 0d;
+            presenterWorldCreateMs = 0d;
+            presenterComponentFillMs = 0d;
+            presenterIndexWriteMs = 0d;
+            presenterOwnerPayloadMs = 0d;
+            presenterPostCreateMs = 0d;
+            presenterChildSetupMs = 0d;
+            presenterChildWorldCreateMs = 0d;
+            presenterChildComponentFillMs = 0d;
+            presenterChildIndexWriteMs = 0d;
+            presenterChildStableIdMs = 0d;
+            if (_presenterRuntime == null || _presenterDefinitions == null || _presenterBootstrap == null || owners.Length == 0)
             {
                 return;
             }
@@ -1373,11 +1574,11 @@ namespace Ludots.Core.Gameplay.Spawning
                 owners.Length != ownerTransforms.Length ||
                 owners.Length != ownerCulls.Length)
             {
-                throw new ArgumentException("Performer bootstrap batch spans must have matching lengths.");
+                throw new ArgumentException("Presenter bootstrap batch spans must have matching lengths.");
             }
 
             if (templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+                !_presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
             }
@@ -1385,9 +1586,9 @@ namespace Ludots.Core.Gameplay.Spawning
             for (int ri = 0; ri < rules.Length; ri++)
             {
                 ref readonly var rule = ref rules[ri];
-                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                if (!_presenterDefinitions.TryGet(rule.PresenterDefinitionId, out PresenterDefinition definition))
                 {
-                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                    throw new InvalidOperationException($"Presenter definition id={rule.PresenterDefinitionId} is not registered.");
                 }
 
                 int createCount = 0;
@@ -1406,11 +1607,11 @@ namespace Ludots.Core.Gameplay.Spawning
                         continue;
                     }
 
-                    _performerBatchOwners[createCount] = owner;
-                    _performerBatchScopeIds[createCount] = scopeTag;
-                    _performerBatchStableIds[createCount] = _stableIds.Allocate();
-                    _performerBatchOwnerTransforms[createCount] = ownerTransforms[oi];
-                    _performerBatchOwnerCulls[createCount] = ownerCulls[oi];
+                    _presenterBatchOwners[createCount] = owner;
+                    _presenterBatchScopeIds[createCount] = scopeTag;
+                    _presenterBatchStableIds[createCount] = _stableIds.Allocate();
+                    _presenterBatchOwnerTransforms[createCount] = ownerTransforms[oi];
+                    _presenterBatchOwnerCulls[createCount] = ownerCulls[oi];
                     createCount++;
                 }
 
@@ -1420,36 +1621,36 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
 
                 long createStart = Stopwatch.GetTimestamp();
-                _performerRuntime.CreateEntityAnchoredRootBatch(
-                    _performerDefinitions,
-                    rule.PerformerDefinitionId,
-                    _performerBatchOwners.AsSpan(0, createCount),
-                    _performerBatchScopeIds.AsSpan(0, createCount),
-                    _performerBatchStableIds.AsSpan(0, createCount),
-                    _performerBatchOwnerTransforms.AsSpan(0, createCount),
-                    _performerBatchOwnerCulls.AsSpan(0, createCount),
+                _presenterRuntime.CreateEntityAnchoredRootBatch(
+                    _presenterDefinitions,
+                    rule.PresenterDefinitionId,
+                    _presenterBatchOwners.AsSpan(0, createCount),
+                    _presenterBatchScopeIds.AsSpan(0, createCount),
+                    _presenterBatchStableIds.AsSpan(0, createCount),
+                    _presenterBatchOwnerTransforms.AsSpan(0, createCount),
+                    _presenterBatchOwnerCulls.AsSpan(0, createCount),
                     definition,
-                    _performerBatchCreated.AsSpan(0, createCount),
+                    _presenterBatchCreated.AsSpan(0, createCount),
                     _stableIds.Allocate);
-                performerCreateMs += ElapsedMs(createStart);
-                performerCreateSetupMs += _performerRuntime.LastRootBatchSetupMs;
-                performerWorldCreateMs += _performerRuntime.LastRootBatchWorldCreateMs;
-                performerComponentFillMs += _performerRuntime.LastRootBatchComponentFillMs;
-                performerIndexWriteMs += _performerRuntime.LastRootBatchIndexWriteMs;
-                performerOwnerPayloadMs += _performerRuntime.LastRootBatchOwnerPayloadMs;
-                performerPostCreateMs += _performerRuntime.LastRootBatchPostCreateMs;
-                performerChildSetupMs += _performerRuntime.LastChildBatchSetupMs;
-                performerChildWorldCreateMs += _performerRuntime.LastChildBatchWorldCreateMs;
-                performerChildComponentFillMs += _performerRuntime.LastChildBatchComponentFillMs;
-                performerChildIndexWriteMs += _performerRuntime.LastChildBatchIndexWriteMs;
-                performerChildStableIdMs += _performerRuntime.LastChildBatchStableIdMs;
+                presenterCreateMs += ElapsedMs(createStart);
+                presenterCreateSetupMs += _presenterRuntime.LastRootBatchSetupMs;
+                presenterWorldCreateMs += _presenterRuntime.LastRootBatchWorldCreateMs;
+                presenterComponentFillMs += _presenterRuntime.LastRootBatchComponentFillMs;
+                presenterIndexWriteMs += _presenterRuntime.LastRootBatchIndexWriteMs;
+                presenterOwnerPayloadMs += _presenterRuntime.LastRootBatchOwnerPayloadMs;
+                presenterPostCreateMs += _presenterRuntime.LastRootBatchPostCreateMs;
+                presenterChildSetupMs += _presenterRuntime.LastChildBatchSetupMs;
+                presenterChildWorldCreateMs += _presenterRuntime.LastChildBatchWorldCreateMs;
+                presenterChildComponentFillMs += _presenterRuntime.LastChildBatchComponentFillMs;
+                presenterChildIndexWriteMs += _presenterRuntime.LastChildBatchIndexWriteMs;
+                presenterChildStableIdMs += _presenterRuntime.LastChildBatchStableIdMs;
 
-                if (PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _performerDefinitions))
+                if (PresenterEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _presenterDefinitions))
                 {
                     long markStart = Stopwatch.GetTimestamp();
                     for (int i = 0; i < createCount; i++)
                     {
-                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_performerBatchCreated[i]);
+                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_presenterBatchCreated[i]);
                     }
 
                     bootstrapMarkMs += ElapsedMs(markStart);
@@ -1480,14 +1681,14 @@ namespace Ludots.Core.Gameplay.Spawning
                 : 0;
         }
 
-        private bool PassesBootstrapCondition(CompiledPerformerBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
+        private bool PassesBootstrapCondition(CompiledPresenterBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
         {
             return rule.InlineCondition switch
             {
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => World.Has<VisualTransform>(owner),
                 InlineConditionKind.SourceHasAttributes => World.Has<AttributeBuffer>(owner),
-                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
+                _ => throw new InvalidOperationException($"Unsupported presenter bootstrap inline condition '{rule.InlineCondition}'."),
             };
         }
 
@@ -1499,13 +1700,13 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private bool HasDirectEntitySpawnBootstrap(int templateKeyId)
         {
-            if (_performerBootstrap == null)
+            if (_presenterBootstrap == null)
             {
                 return false;
             }
 
             return templateKeyId > 0 &&
-                   _performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) &&
+                   _presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules) &&
                    rules.Length > 0;
         }
 
@@ -1516,23 +1717,23 @@ namespace Ludots.Core.Gameplay.Spawning
                 return false;
             }
 
-            if (!hasDirectBootstrap || _performerBootstrap == null)
+            if (!hasDirectBootstrap || _presenterBootstrap == null)
             {
                 return true;
             }
 
-            return _performerBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
+            return _presenterBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
         }
 
         private void MarkHierarchyForBootstrap(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            MarkPerformer(root);
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            MarkPresenter(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1543,32 +1744,32 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void MarkPerformer(Entity performer)
+        private void MarkPresenter(Entity presenter)
         {
-            if (World.Has<PerformerBootstrapPending>(performer))
+            if (World.Has<PresenterBootstrapPending>(presenter))
             {
                 return;
             }
 
-            World.Add(performer, new PerformerBootstrapPending());
+            World.Add(presenter, new PresenterBootstrapPending());
         }
 
         private void MarkHierarchyForBootstrapIfNeeded(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
-            if (_performerDefinitions != null &&
-                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+            ref readonly PresenterState state = ref World.Get<PresenterState>(root);
+            if (_presenterDefinitions != null &&
+                _presenterDefinitions.TryGet(state.DefId, out PresenterDefinition definition) &&
                 definition.RequiresBootstrapProcessing)
             {
-                MarkPerformer(root);
+                MarkPresenter(root);
             }
 
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1581,20 +1782,20 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(Entity root)
         {
-            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            if (!World.IsAlive(root) || !World.Has<PresenterState>(root))
             {
                 return;
             }
 
-            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
-            if (_performerDefinitions != null &&
-                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
-                PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
+            ref readonly PresenterState state = ref World.Get<PresenterState>(root);
+            if (_presenterDefinitions != null &&
+                _presenterDefinitions.TryGet(state.DefId, out PresenterDefinition definition) &&
+                PresenterEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
             {
-                MarkPerformer(root);
+                MarkPresenter(root);
             }
 
-            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            ref PresenterChildren children = ref World.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -1607,12 +1808,12 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void MarkOwnerBootstrapHandled(Entity owner)
         {
-            if (World.Has<PerformerRootBootstrapHandled>(owner))
+            if (World.Has<PresenterRootBootstrapHandled>(owner))
             {
                 return;
             }
 
-            World.Add(owner, new PerformerRootBootstrapHandled());
+            World.Add(owner, new PresenterRootBootstrapHandled());
         }
     }
 }

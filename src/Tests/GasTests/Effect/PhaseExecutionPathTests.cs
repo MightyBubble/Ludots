@@ -23,7 +23,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class PhaseExecutionPathTests
     {
-        // BB key constants — each graph writes to a unique key so we can verify ordering
+        // BB key constants �?each graph writes to a unique key so we can verify ordering
         private const int BbKeyPre = 1;
         private const int BbKeyMain = 2;
         private const int BbKeyPost = 3;
@@ -72,18 +72,18 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var handlers = GasGraphOpHandlerTable.Instance;
+            var handlers = new GasGraphOpHandlerTable();
 
             int preId = 100;
             int mainId = 101;
             int postId = 102;
 
             // Pre: write BB[Accum] = 10
-            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
             // Main: BB[Accum] += 20
-            programs.Register(mainId, MakeBbAccumProgram(BbKeyAccum, 20f));
+            programs.Register(mainId, MakeBbAccumProgram(BbKeyAccum, 20f), GraphKind.Effect);
             // Post: BB[Accum] += 30
-            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f));
+            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
             // Register preset with Main graph for target phase
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -107,7 +107,7 @@ namespace Ludots.Tests.GAS
             That(bb.TryGet(BbKeyAccum, out float result), Is.True,
                 $"Phase {phase}: BB key should have been written");
             That(result, Is.EqualTo(60f).Within(1e-6f),
-                $"Phase {phase}: Pre(10) → Main(+20=30) → Post(+30=60)");
+                $"Phase {phase}: Pre(10) �?Main(+20=30) �?Post(+30=60)");
         }
 
         /// <summary>
@@ -121,10 +121,10 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var handlers = GasGraphOpHandlerTable.Instance;
+            var handlers = new GasGraphOpHandlerTable();
 
             int preId = 200;
-            programs.Register(preId, MakeBbWriteProgram(BbKeyPre, 42f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyPre, 42f), GraphKind.Effect);
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(phase, PhaseSlot.Pre, preId);
@@ -145,7 +145,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  OnCalculate (Phase 1) — compute final Modifier values
+        //  OnCalculate (Phase 1) �?compute final Modifier values
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -161,7 +161,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  OnResolve (Phase 2) — target resolution
+        //  OnResolve (Phase 2) �?target resolution
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -177,7 +177,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  OnHit (Phase 3) — per-target hit validation
+        //  OnHit (Phase 3) �?per-target hit validation
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -193,7 +193,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  OnPeriod (Phase 5) — periodic tick
+        //  OnPeriod (Phase 5) �?periodic tick
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -209,7 +209,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  OnRemove (Phase 7) — forced removal
+        //  OnRemove (Phase 7) �?forced removal
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -225,7 +225,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Cross-phase verification — ensure each phase dispatches independently
+        //  Cross-phase verification �?ensure each phase dispatches independently
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -237,7 +237,7 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var handlers = GasGraphOpHandlerTable.Instance;
+            var handlers = new GasGraphOpHandlerTable();
 
             // Register a unique graph per phase that writes the phase ordinal as BB float
             var behavior = new EffectPhaseGraphBindings();
@@ -257,7 +257,13 @@ namespace Ludots.Tests.GAS
             {
                 int graphId = 300 + i;
                 int bbKey = 50 + i; // unique BB key per phase
-                programs.Register(graphId, MakeBbWriteProgram(bbKey, (float)(i + 1)));
+                GraphKind kind = allPhases[i] == EffectPhaseId.OnPropose
+                    ? GraphKind.Validation
+                    : GraphKind.Effect;
+                GraphInstruction[] program = allPhases[i] == EffectPhaseId.OnPropose
+                    ? [new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 }]
+                    : MakeBbWriteProgram(bbKey, (float)(i + 1));
+                programs.Register(graphId, program, kind);
                 behavior.TryAddStep(allPhases[i], PhaseSlot.Pre, graphId);
             }
 
@@ -269,14 +275,27 @@ namespace Ludots.Tests.GAS
             // Execute each phase independently
             for (int i = 0; i < allPhases.Length; i++)
             {
-                executor.ExecutePhase(world, api, caster, target, default, default,
+                if (allPhases[i] == EffectPhaseId.OnPropose)
+                {
+                    That(executor.ExecutePhaseWithValidationResult(
+                        world, api, caster, target, default, default,
+                        allPhases[i], in behavior, EffectPresetType.None,
+                        effectTagId: 0, effectTemplateId: 0, mergedParams: default), Is.True);
+                    continue;
+                }
+
+                executor.ExecutePhase(
+                    world, api, caster, target, default, default,
                     allPhases[i], in behavior, EffectPresetType.None);
             }
 
-            // Verify each phase wrote its unique value
+            // Verify each non-validation phase wrote its unique value.
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
             for (int i = 0; i < allPhases.Length; i++)
             {
+                if (allPhases[i] == EffectPhaseId.OnPropose)
+                    continue;
+
                 int bbKey = 50 + i;
                 That(bb.TryGet(bbKey, out float val), Is.True,
                     $"Phase {allPhases[i]}: BB key {bbKey} should exist");
@@ -286,7 +305,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  SkipMain — verify SkipMain works across all phases
+        //  SkipMain �?verify SkipMain works across all phases
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -321,7 +340,7 @@ namespace Ludots.Tests.GAS
 
         /// <summary>
         /// Verifies that SkipMain prevents the Main handler from executing.
-        /// Pre writes 10, Main would write 999 (should be skipped), Post adds 30 → expect 40.
+        /// Pre writes 10, Main would write 999 (should be skipped), Post adds 30 �?expect 40.
         /// </summary>
         private void RunSkipMainTest(EffectPhaseId phase)
         {
@@ -331,18 +350,18 @@ namespace Ludots.Tests.GAS
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             var templates = new EffectTemplateRegistry();
-            var handlers = GasGraphOpHandlerTable.Instance;
+            var handlers = new GasGraphOpHandlerTable();
 
             int preId = 400;
             int mainId = 401;
             int postId = 402;
 
             // Pre: BB[Accum] = 10
-            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
             // Main: would overwrite BB[Accum] = 999 (should be SKIPPED)
-            programs.Register(mainId, MakeBbWriteProgram(BbKeyAccum, 999f));
+            programs.Register(mainId, MakeBbWriteProgram(BbKeyAccum, 999f), GraphKind.Effect);
             // Post: BB[Accum] += 30
-            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f));
+            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
             ptDef.DefaultPhaseHandlers[phase] = PhaseHandler.Graph(mainId);
@@ -365,7 +384,7 @@ namespace Ludots.Tests.GAS
             That(bb.TryGet(BbKeyAccum, out float result), Is.True,
                 $"Phase {phase}: BB key should exist after SkipMain execution");
             That(result, Is.EqualTo(40f).Within(1e-6f),
-                $"Phase {phase}: Pre(10) → Main(SKIPPED) → Post(+30=40), not 999");
+                $"Phase {phase}: Pre(10) �?Main(SKIPPED) �?Post(+30=40), not 999");
         }
     }
 }

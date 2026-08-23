@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using SuperweaponContextShowcaseMod.UI;
 
@@ -69,13 +70,13 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private void Enable(GameEngine engine)
         {
-            State.LocalPlayer = ResolveLocalPlayer(engine);
+            State.SolePossessedRep = RequireSolePossessedRep(engine);
             State.Commander = ResolveNamedEntity(engine, InteractionShowcaseIds.CommanderName);
             State.Arcweaver = ResolveNamedEntity(engine, InteractionShowcaseIds.ArcweaverName);
             State.Vanguard = ResolveNamedEntity(engine, InteractionShowcaseIds.VanguardName);
             State.AbilityId = AbilityIdRegistry.GetId(SuperweaponContextShowcaseIds.AbilityId);
 
-            if (State.LocalPlayer == Entity.Null ||
+            if (State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 State.Arcweaver == Entity.Null ||
                 State.Vanguard == Entity.Null ||
@@ -105,7 +106,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
         public void Update(GameEngine engine)
         {
             if (!State.IsActive ||
-                State.LocalPlayer == Entity.Null ||
+                State.SolePossessedRep == Entity.Null ||
                 State.Commander == Entity.Null ||
                 !engine.World.IsAlive(State.Commander))
             {
@@ -256,9 +257,20 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 return -1;
             }
 
+            AbilityDefinitionRegistry abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires AbilityDefinitionRegistry.");
+            Span<int> grantedAbilityIds = stackalloc int[1] { State.AbilityId };
+            AbilityRuntimeStateInstaller.EnsureForAbilities(
+                engine.World,
+                State.Commander,
+                abilityDefinitions,
+                grantedAbilityIds,
+                "Superweapon context commander grant");
+
             if (!engine.World.Has<AbilityStateBuffer>(State.Commander))
             {
-                engine.World.Add(State.Commander, new AbilityStateBuffer());
+                throw new InvalidOperationException(
+                    "Superweapon context commander requires authored AbilityStateBuffer state.");
             }
 
             ref AbilityStateBuffer abilities = ref engine.World.Get<AbilityStateBuffer>(State.Commander);
@@ -276,7 +288,8 @@ namespace SuperweaponContextShowcaseMod.Runtime
                 slotIndex = AbilityStateBuffer.CAPACITY - 1;
                 if (!engine.World.Has<GrantedSlotBuffer>(State.Commander))
                 {
-                    engine.World.Add(State.Commander, new GrantedSlotBuffer());
+                    throw new InvalidOperationException(
+                        "Superweapon context commander requires authored GrantedSlotBuffer state when all base ability slots are occupied.");
                 }
 
                 ref GrantedSlotBuffer granted = ref engine.World.Get<GrantedSlotBuffer>(State.Commander);
@@ -297,13 +310,10 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
             if (!engine.World.Has<OrderBuffer>(State.Commander))
             {
-                engine.World.Add(State.Commander, OrderBuffer.CreateEmpty());
+                throw new InvalidOperationException(
+                    "Superweapon context commander requires authored OrderBuffer state.");
             }
-
-            if (!engine.World.Has<BlackboardIntBuffer>(State.Commander))
-            {
-                engine.World.Add(State.Commander, new BlackboardIntBuffer());
-            }
+            OrderBlackboardStateInstaller.RequireInstalled(engine.World, State.Commander);
 
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("Superweapon context showcase requires OrderQueue.");
@@ -332,7 +342,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             Span<Entity> targets = stackalloc Entity[2];
             targets[0] = State.Arcweaver;
             targets[1] = State.Vanguard;
-            writer.CommitCast(State.LocalPlayer, targets, EntityCollectionSourceKind.UiAcquisition);
+            writer.CommitCast(State.SolePossessedRep, targets, EntityCollectionSourceKind.UiAcquisition);
             State.RoutedTargetCount = targets.Length;
         }
 
@@ -426,10 +436,10 @@ namespace SuperweaponContextShowcaseMod.Runtime
             return id;
         }
 
-        private static Entity ResolveLocalPlayer(GameEngine engine)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer)
-                ? localPlayer
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity solePossessedRep)
+                ? solePossessedRep
                 : Entity.Null;
         }
 

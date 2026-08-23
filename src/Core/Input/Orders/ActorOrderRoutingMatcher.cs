@@ -121,23 +121,8 @@ namespace Ludots.Core.Input.Orders
                     return false;
                 }
 
-                ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(actor);
-                bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
-                AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
-                bool hasItemGranted = world.Has<ItemGrantedSlotBuffer>(actor);
-                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? world.Get<ItemGrantedSlotBuffer>(actor) : default;
-                bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
-                GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                    in abilities,
-                    in formSlots,
-                    hasForm,
-                    in itemGrantedSlots,
-                    hasItemGranted,
-                    in grantedSlots,
-                    hasGranted,
-                    slotIndex);
-                if (slot.AbilityId <= 0)
+                if (!AbilitySlotResolver.TryResolve(world, actor, slotIndex, out AbilitySlotState slot) ||
+                    slot.AbilityId <= 0)
                 {
                     return false;
                 }

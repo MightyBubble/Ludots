@@ -1,4 +1,6 @@
 using System;
+using Ludots.Platform.Abstractions;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Scripting
 {
@@ -57,8 +59,7 @@ namespace Ludots.Core.Scripting
         public const string AttributeSinkRegistry = "AttributeSinkRegistry";
         public const string AttributeBindingRegistry = "AttributeBindingRegistry";
         public const string PresentationEventStream = "PresentationEventStream";
-        public const string PerformerCommandBuffer = "PerformerCommandBuffer";
-        public const string PresentationPrefabRegistry = "PresentationPrefabRegistry";
+        public const string PresenterCommandBuffer = "PresenterCommandBuffer";
         public const string PresentationMeshAssetRegistry = "PresentationMeshAssetRegistry";
         public const string PresentationPrimitiveDrawBuffer = "PresentationPrimitiveDrawBuffer";
         public const string PresentationWorldHudBuffer = "PresentationWorldHudBuffer";
@@ -86,19 +87,20 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRequest = "VirtualCameraRequest";
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
-        public const string LocalPlayerEntity = "LocalPlayerEntity";
+        public const string ClientLocalSeatRegistry = "ClientLocalSeatRegistry";
+        public const string LogicViewRegistry = "LogicViewRegistry";
         public const string TabTargetEntity = "TabTargetEntity";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed; unified into Performer entity-scoped definitions
+        // WorldHudConfig removed; unified into Presenter entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
-        public const string RoadSplineBuffer = "RoadSplineBuffer";
-        // IndicatorRequestBuffer removed; unified into Performer direct API
-        public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
-        public const string PerformerEntityRuntime = "PerformerEntityRuntime";
+        public const string SplineRibbonBuffer = "SplineRibbonBuffer";
+        // IndicatorRequestBuffer removed; unified into Presenter direct API
+        public const string PresenterDefinitionRegistry = "PresenterDefinitionRegistry";
+        public const string PresenterEntityRuntime = "PresenterEntityRuntime";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";
         public const string NavMeshProfiles = "NavMeshProfiles";
         public const string NavQueryServices = "NavQueryServices";

@@ -1,0 +1,24 @@
+{
+  "op": "Jump",
+  "driver": "script",
+  "title": "满了就跳过续杯",
+  "beat": "杯是满的：续杯那几行被划掉，指针直接飞到收工行。",
+  "detailTemplate": "满了就不续了。茶水 {water}/{limit}，续杯那几行划掉，直接收工。",
+  "assertDetailContains": [
+    "划掉"
+  ],
+  "featuredNodeId": "skip",
+  "graphKind": "Script",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "喝茶人",
+      "x": -2,
+      "y": 0,
+      "health": 3,
+      "healthMax": 3
+    }
+  ]
+}

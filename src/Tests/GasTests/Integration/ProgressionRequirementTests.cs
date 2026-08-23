@@ -61,7 +61,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeMembers,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create(new ProgressionStateBuffer());
             Entity barracksA = world.Create();
@@ -103,7 +103,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in tags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create();
             Entity barracksA = world.Create();
@@ -155,6 +155,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, collections));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -210,6 +211,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, relationships: relationships));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -259,6 +261,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requirements,
                 scopeKeys,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
                 scopeResolver: new ScopeResolver(world, scopeKeys, collections));
             Entity team = world.Create(new ProgressionStateBuffer());
             Entity researcher = world.Create();
@@ -281,14 +284,7 @@ namespace Ludots.Tests.GAS
                 evaluator.Evaluate(reqId, in context);
             }
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                evaluator.Evaluate(reqId, in context);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureRequirementEvaluationAllocations(evaluator, reqId, in context);
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -308,7 +304,7 @@ namespace Ludots.Tests.GAS
                 progressionId,
                 requiredCount: 2));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             var context = new RoleResolverContext(actor: city, subject: city);
 
@@ -340,7 +336,8 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
             var definition = new AbilityDefinition
             {
@@ -358,7 +355,7 @@ namespace Ludots.Tests.GAS
             PrepareScopeMember(world, barracks);
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
 
-            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, progressionRequirements: evaluator);
+            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, tagOps, progressionRequirements: evaluator);
             Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
 
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
@@ -373,7 +370,8 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ScopeKeyRegistry());
+                new ScopeKeyRegistry(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -418,7 +416,8 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ScopeKeyRegistry());
+                new ScopeKeyRegistry(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -461,7 +460,8 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ScopeKeyRegistry());
+                new ScopeKeyRegistry(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -504,14 +504,15 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ScopeKeyRegistry());
+                new ScopeKeyRegistry(),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var presetTypes = new PresetTypeRegistry();
             var preset = new PresetTypeDefinition
             {
                 Type = EffectPresetType.CompleteProgression,
                 Components = ComponentFlags.None,
-                ActivePhases = PhaseFlags.InstantCore,
+                ActivePhases = PhaseFlags.OnApply,
                 AllowedLifetimes = LifetimeFlags.InstantOnly
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.CompleteProgression);
@@ -532,18 +533,27 @@ namespace Ludots.Tests.GAS
 
             var queue = new EffectRequestQueue();
             var graphPrograms = new GraphProgramRegistry();
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/ProgressionRequirementTests.cs");
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: queue);
             var phaseExecutor = new EffectPhaseExecutor(
                 graphPrograms,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var loop = new EffectProcessingLoopSystem(
                 world,
                 queue,
                 new DiscreteClock(),
                 new GasConditionRegistry(),
+                lifetimeSnapshotCapacity: 16384,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 phaseExecutor: phaseExecutor,
@@ -582,7 +592,8 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
             var definition = new AbilityDefinition
             {
@@ -597,7 +608,7 @@ namespace Ludots.Tests.GAS
             Entity barracks = world.Create(abilities);
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
 
-            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, progressionRequirements: evaluator);
+            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, tagOps, progressionRequirements: evaluator);
             Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
 
             var args = new AbilitySystem.AbilityActivationArgs(barracks, ReadOnlySpan<Entity>.Empty, city);
@@ -622,7 +633,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 21);
             Entity target = world.Create();
@@ -652,11 +663,13 @@ namespace Ludots.Tests.GAS
                 inputRequests,
                 inputResponses,
                 effectRequests,
+                4096,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -711,7 +724,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityWithoutTech = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 22);
             Entity target = world.Create();
@@ -740,11 +753,13 @@ namespace Ludots.Tests.GAS
                 inputRequests,
                 inputResponses,
                 effectRequests,
+                4096,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -768,6 +783,11 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.True);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastCommitted), Is.True);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            ref readonly var terminal = ref orderTypes.TerminalResults[0];
+            Assert.That(terminal.OrderId, Is.EqualTo(22));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
         }
 
         [Test]
@@ -788,7 +808,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 23);
 
             var spec = default(AbilityExecSpec);
@@ -813,11 +833,13 @@ namespace Ludots.Tests.GAS
                 inputRequests,
                 new InputResponseBuffer(),
                 effectRequests,
+                4096,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -847,7 +869,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 24);
 
             var spec = default(AbilityExecSpec);
@@ -871,11 +893,13 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 effectRequests,
+                4096,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: CreateCastOrderTypes(castAbilityOrderTypeId),
-                progressionRequirements: evaluator);
+                progressionRequirements: evaluator,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 
@@ -918,7 +942,7 @@ namespace Ludots.Tests.GAS
             };
             requirements.Register(graphReqId, new ProgressionRequirementDefinition(graphReqId, nodes, new[] { 1 }));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             Assert.That(evaluator.UsesGraphValidation(graphReqId), Is.True);
         }
@@ -945,7 +969,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
             Entity hero = world.Create(new GameplayTagContainer());
@@ -989,7 +1013,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
             Entity hero = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
@@ -1006,7 +1030,7 @@ namespace Ludots.Tests.GAS
             ref var heroTags = ref world.Get<GameplayTagContainer>(hero);
             ref var heroCounts = ref world.Get<TagCountContainer>(hero);
             ref var dirty = ref world.Get<DirtyFlags>(hero);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref heroTags, ref heroCounts, heroTag, ref dirty), Is.True);
 
             var triggerQueue = new DeferredTriggerQueue();
@@ -1045,7 +1069,7 @@ namespace Ludots.Tests.GAS
                 requiredCount: 1,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create(new ProgressionStateBuffer());
             Entity barracksA = world.Create();
@@ -1098,7 +1122,7 @@ namespace Ludots.Tests.GAS
                 progressionId: 0,
                 requiredTags: in requiredTags));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
             Entity barracks = world.Create();
             PrepareScopeHost(world, city);
@@ -1113,7 +1137,7 @@ namespace Ludots.Tests.GAS
             ref var cityTags = ref world.Get<GameplayTagContainer>(city);
             ref var cityCounts = ref world.Get<TagCountContainer>(city);
             ref var dirty = ref world.Get<DirtyFlags>(city);
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Assert.That(tagOps.AddTag(ref cityTags, ref cityCounts, fortifiedTag, ref dirty), Is.True);
 
             var triggerQueue = new DeferredTriggerQueue();
@@ -1136,22 +1160,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" },
                       { "id": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" },
                       { "id": "Progression.ProvinceTrade", "scope": "province" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1182,7 +1206,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(requirement.Nodes[0].EntitySource, Is.EqualTo(RoleSlot.ScopeHost));
 
                 using var world = World.Create();
-                var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+                var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 Entity actor = world.Create();
                 Entity province = world.Create();
                 PrepareScopeHost(world, province);
@@ -1202,20 +1226,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "team", "memberSource": "EntityCollection", "collection": "team.members" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.TeamLogistics", "scope": "team" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 using var world = World.Create();
                 var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1244,20 +1268,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
 
                 var loader = CreateProgressionLoader(root, out _, out _);
                 var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
@@ -1275,20 +1299,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1319,20 +1343,20 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArchery", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"),
                     """
                     [
                       {
@@ -1363,22 +1387,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1421,22 +1445,22 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                Directory.CreateDirectory(Path.Combine(root, "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "Progression", "scopes.json"),
                     """
                     [
                       { "id": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "progressions.json"),
                     """
                     [
                       { "id": "Progression.CityArmor", "scope": "city" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -1484,7 +1508,7 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var bindingSystem = new ProgressionScopeBindingSystem(world, evaluator, scopeKeys);
 
             Entity cityA = world.Create();
@@ -1518,7 +1542,8 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                scopeKeys);
+                scopeKeys,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var bindingSystem = new ProgressionScopeBindingSystem(world, evaluator, scopeKeys);
 
             Entity barracks = world.Create();
@@ -1539,7 +1564,8 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                scopeKeys);
+                scopeKeys,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
 
@@ -1574,6 +1600,22 @@ namespace Ludots.Tests.GAS
                     in requiredTags)
             };
             return new ProgressionRequirementDefinition(requirementId, nodes, Array.Empty<int>());
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureRequirementEvaluationAllocations(
+            ProgressionRequirementEvaluator evaluator,
+            int requirementId,
+            in RoleResolverContext context)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                evaluator.Evaluate(requirementId, in context);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static int RegisterCityScope(ScopeKeyRegistry scopeKeys)
@@ -1629,7 +1671,7 @@ namespace Ludots.Tests.GAS
 
         private static OrderTypeRegistry CreateCastOrderTypes(int castAbilityOrderTypeId)
         {
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,

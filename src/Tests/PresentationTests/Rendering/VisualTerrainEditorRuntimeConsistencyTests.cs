@@ -5,6 +5,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using NUnit.Framework;
 using VisualTerrainEditorMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -48,6 +49,14 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
 
                 Assert.That(runtime.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm), Is.True, $"chunk={chunkX} vertex={vertexIndex} position={position}");
                 Assert.That(position.Y, Is.EqualTo(heightCm * 0.01f).Within(0.001f), $"chunk={chunkX} vertex={vertexIndex} position={position}");
+
+                Vector4 tangent = ReadTangent(proceduralMesh, vertexIndex);
+                Assert.That(float.IsFinite(tangent.X), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.Y), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.Z), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(float.IsFinite(tangent.W), Is.True, $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(new Vector3(tangent.X, tangent.Y, tangent.Z).LengthSquared(), Is.GreaterThan(1e-10f), $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
+                Assert.That(tangent.W, Is.EqualTo(1f).Within(0.001f), $"chunk={chunkX} vertex={vertexIndex} tangent={tangent}");
             }
         }
     }
@@ -117,7 +126,7 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         Assert.That(document.Asset.RenderRowsPerChunk, Is.EqualTo(193));
         for (int vertexIndex = 0; vertexIndex < proceduralMesh.VertexCount; vertexIndex++)
         {
-            Vector3 tangent = ReadTangent(proceduralMesh, vertexIndex);
+            Vector4 tangent = ReadTangent(proceduralMesh, vertexIndex);
             Assert.That(float.IsFinite(tangent.X), Is.True, $"vertex={vertexIndex}");
             Assert.That(float.IsFinite(tangent.Y), Is.True, $"vertex={vertexIndex}");
             Assert.That(float.IsFinite(tangent.Z), Is.True, $"vertex={vertexIndex}");
@@ -412,7 +421,7 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         }
     }
 
-    private static Vector3 ReadPosition(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    private static Vector3 ReadPosition(Ludots.Platform.Abstractions.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         int floatOffset = vertexIndex * 3;
         return new Vector3(
@@ -421,16 +430,17 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
             proceduralMesh.Positions[floatOffset + 2]);
     }
 
-    private static Vector3 ReadTangent(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    private static Vector4 ReadTangent(Ludots.Platform.Abstractions.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         int floatOffset = vertexIndex * 4;
-        return new Vector3(
+        return new Vector4(
             proceduralMesh.Tangents[floatOffset + 0],
             proceduralMesh.Tangents[floatOffset + 1],
-            proceduralMesh.Tangents[floatOffset + 2]);
+            proceduralMesh.Tangents[floatOffset + 2],
+            proceduralMesh.Tangents[floatOffset + 3]);
     }
 
-    private static (byte Red, byte Green, byte Blue) ReadColor(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
+    private static (byte Red, byte Green, byte Blue) ReadColor(Ludots.Platform.Abstractions.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         Assert.That(proceduralMesh.Colors32, Is.Not.Null);
         byte[] colors = proceduralMesh.Colors32!;

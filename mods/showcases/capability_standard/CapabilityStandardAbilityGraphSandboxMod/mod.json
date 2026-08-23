@@ -1,0 +1,20 @@
+{
+  "name": "CapabilityStandardAbilityGraphSandboxMod",
+  "version": "1.0.0",
+  "description": "Standalone GAS ability/effect graph sandbox (ability graphs only; not BT/HFSM/Level).",
+  "main": "bin/net8.0/CapabilityStandardAbilityGraphSandboxMod.dll",
+  "priority": -1900,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "ability-graph",
+    "effect-graph"
+  ]
+}

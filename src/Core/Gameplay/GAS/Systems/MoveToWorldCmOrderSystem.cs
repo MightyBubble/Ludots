@@ -15,11 +15,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class MoveToWorldCmOrderSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<WorldPositionCm, OrderBuffer>();
+            .WithAll<WorldPositionCm, OrderBuffer>()
+            .WithNone<MovementSuppressed2D>();
 
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly int _moveToOrderTypeId;
-        private readonly float _stopRadiusCm;
+        private readonly Fix64 _stopRadiusCm;
         private readonly int _moveSpeedAttributeId;
         private readonly List<Entity> _completedOrders = new(64);
 
@@ -31,7 +32,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _moveToOrderTypeId = moveToOrderTypeId;
-            _stopRadiusCm = Math.Max(0f, stopRadiusCm);
+            _stopRadiusCm = Fix64.FromFloat(Math.Max(0f, stopRadiusCm));
             _moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
         }
 
@@ -63,11 +64,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    int currentWaypointIndex = SyncMoveRuntime(ref buffer.ActiveOrder);
+                    int currentWaypointIndex = SyncMoveRuntime(ref buffer);
 
                     if (!TryResolveTarget(in buffer.ActiveOrder.Order, currentWaypointIndex, out var target))
                     {
-                        ResetMoveRuntime(ref buffer.ActiveOrder);
+                        ResetMoveRuntime(ref buffer);
                         _completedOrders.Add(entity);
                         continue;
                     }
@@ -77,17 +78,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     // a general command/ability queue and does not imply movability; there is no implicit
                     // default speed. Structures and other orderable-but-immovable entities (no MoveSpeed)
                     // ignore moveTo instead of teleporting.
-                    if (!TryResolveMoveSpeed(entity, out float speedCmPerSec))
+                    if (!TryResolveMoveSpeed(entity, out Fix64 speedCmPerSec))
                     {
                         continue;
                     }
 
                     if (TryDrivePhysicsBody(entity, in buffer.ActiveOrder.Order, currentWaypointIndex, speedCmPerSec, out bool physicsCompleted, out int physicsNextWaypointIndex))
                     {
-                        WriteMoveRuntimeIndex(ref buffer.ActiveOrder, physicsNextWaypointIndex);
+                        WriteMoveRuntimeIndex(ref buffer, physicsNextWaypointIndex);
                         if (physicsCompleted)
                         {
-                            ResetMoveRuntime(ref buffer.ActiveOrder);
+                            ResetMoveRuntime(ref buffer);
                             _completedOrders.Add(entity);
                         }
 
@@ -96,11 +97,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     ref var position = ref positions[index];
                     var current = position.Value;
-                    bool completed = AdvanceLinearRoute(in buffer.ActiveOrder.Order, currentWaypointIndex, ref current, speedCmPerSec * dt, out int nextWaypointIndex);
-                    WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
+                    Fix64 stepCm = speedCmPerSec * Fix64.FromFloat(dt);
+                    bool completed = AdvanceLinearRoute(
+                        in buffer.ActiveOrder.Order,
+                        currentWaypointIndex,
+                        ref current,
+                        stepCm,
+                        out int nextWaypointIndex);
+                    WriteMoveRuntimeIndex(ref buffer, nextWaypointIndex);
                     if (completed)
                     {
-                        ResetMoveRuntime(ref buffer.ActiveOrder);
+                        ResetMoveRuntime(ref buffer);
                         _completedOrders.Add(entity);
                     }
 
@@ -117,16 +124,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // Resolves the authored move speed. Returns false when the entity declares no positive MoveSpeed
         // attribute: such an entity is not movable via this system and its moveTo orders are ignored.
         // There is intentionally no default-speed fallback — speed must be explicit, data-driven (SSOT).
-        private bool TryResolveMoveSpeed(Entity entity, out float speedCmPerSec)
+        private bool TryResolveMoveSpeed(Entity entity, out Fix64 speedCmPerSec)
         {
-            speedCmPerSec = 0f;
+            speedCmPerSec = Fix64.Zero;
             if (_moveSpeedAttributeId != AttributeRegistry.InvalidId &&
                 World.TryGet(entity, out AttributeBuffer attributes))
             {
                 float configured = attributes.GetCurrent(_moveSpeedAttributeId);
                 if (configured > 0f)
                 {
-                    speedCmPerSec = configured;
+                    speedCmPerSec = Fix64.FromFloat(configured);
                     return true;
                 }
             }
@@ -134,14 +141,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private bool TryDrivePhysicsBody(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)
+        private bool TryDrivePhysicsBody(Entity entity, in Order order, int currentWaypointIndex, Fix64 speedCmPerSec, out bool completed, out int nextWaypointIndex)
         {
             completed = false;
             nextWaypointIndex = currentWaypointIndex;
             if (!World.TryGet(entity, out Position2D physicsPosition) ||
                 !World.TryGet(entity, out Velocity2D velocity) ||
                 !World.TryGet(entity, out Mass2D mass) ||
-                mass.IsStatic)
+                !mass.IsDynamic)
             {
                 return false;
             }
@@ -149,7 +156,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             while (TryResolveCurrentTarget(in order, nextWaypointIndex, out var target))
             {
                 var delta = target - physicsPosition.Value;
-                float distanceCm = LengthCm(delta);
+                Fix64 distanceCm = delta.Length();
                 if (distanceCm > _stopRadiusCm)
                 {
                     velocity.Linear = ComposePhysicsMoveVelocity(velocity.Linear, delta, speedCmPerSec);
@@ -172,10 +179,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static Fix64Vec2 ComposePhysicsMoveVelocity(Fix64Vec2 currentVelocity, Fix64Vec2 toTarget, float speedCmPerSec)
+        private static Fix64Vec2 ComposePhysicsMoveVelocity(Fix64Vec2 currentVelocity, Fix64Vec2 toTarget, Fix64 speedCmPerSec)
         {
-            var speed = Fix64.FromFloat(speedCmPerSec);
-            if (speed <= Fix64.Zero)
+            if (speedCmPerSec <= Fix64.Zero)
             {
                 return Fix64Vec2.Zero;
             }
@@ -185,10 +191,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var lateralVelocity = currentVelocity - desiredDirection * currentForwardSpeed;
             var drivenVelocity = currentForwardSpeed < Fix64.Zero
                 ? desiredDirection * currentForwardSpeed
-                : desiredDirection * speed;
+                : desiredDirection * speedCmPerSec;
 
             var combined = drivenVelocity + lateralVelocity;
-            return ClampLength(combined, speed);
+            return ClampLength(combined, speedCmPerSec);
         }
 
         private static Fix64Vec2 ClampLength(Fix64Vec2 value, Fix64 maxLength)
@@ -214,7 +220,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return value * (maxLength / length);
         }
 
-        private static bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
+        private bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
             if (!TryResolveCurrentTarget(in order, currentWaypointIndex, out target))
@@ -224,18 +230,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private bool AdvanceLinearRoute(in Order order, int currentWaypointIndex, ref Fix64Vec2 current, float remainingStepCm, out int nextWaypointIndex)
+        private bool AdvanceLinearRoute(
+            in Order order,
+            int currentWaypointIndex,
+            ref Fix64Vec2 current,
+            Fix64 remainingStepCm,
+            out int nextWaypointIndex)
         {
             nextWaypointIndex = currentWaypointIndex;
             int guard = OrderSpatial.MaxPoints + 1;
-            while (remainingStepCm > 0f && guard-- > 0)
+            while (remainingStepCm > Fix64.Zero && guard-- > 0)
             {
                 if (!TryResolveCurrentTarget(in order, nextWaypointIndex, out Fix64Vec2 target))
                 {
                     return true;
                 }
 
-                float distanceToTargetCm = DistanceCm(current, target);
+                Fix64 distanceToTargetCm = Fix64Vec2.Distance(current, target);
                 bool arrived = WorldMoveCmStepHelper.StepTowards(
                     ref current,
                     target,
@@ -256,16 +267,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                remainingStepCm = Math.Max(0f, remainingStepCm - distanceToTargetCm);
+                remainingStepCm = Fix64.Max(Fix64.Zero, remainingStepCm - distanceToTargetCm);
             }
 
             return false;
         }
 
-        private static bool TryResolveCurrentTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
+        private bool TryResolveCurrentTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in order);
             if (pointCount <= 0)
             {
                 return false;
@@ -274,7 +285,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int pointIndex = order.Args.Spatial.Mode == OrderCollectionMode.List
                 ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;
-            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var worldCm))
+            if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(World, in order, pointIndex, out var worldCm))
             {
                 return false;
             }
@@ -283,7 +294,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static bool TryAdvanceRoute(in Order order, ref int currentWaypointIndex)
+        private bool TryAdvanceRoute(in Order order, ref int currentWaypointIndex)
         {
             if (order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -291,7 +302,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             int nextIndex = currentWaypointIndex + 1;
-            if (nextIndex >= order.Args.Spatial.PointCount)
+            if (nextIndex >= OrderWorldSpatialResolver.GetSpatialPointCount(World, in order))
             {
                 return false;
             }
@@ -300,53 +311,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static int SyncMoveRuntime(ref QueuedOrder activeOrder)
+        private int SyncMoveRuntime(ref OrderBuffer buffer)
         {
-            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            if (buffer.ActiveOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
-                activeOrder.RuntimeInt0 = 0;
+                buffer.ActiveRuntimeInt0 = 0;
                 return 0;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
-            activeOrder.RuntimeInt0 = pointCount > 0
-                ? Math.Clamp(activeOrder.RuntimeInt0, 0, pointCount - 1)
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in buffer.ActiveOrder.Order);
+            buffer.ActiveRuntimeInt0 = pointCount > 0
+                ? Math.Clamp(buffer.ActiveRuntimeInt0, 0, pointCount - 1)
                 : 0;
-            return activeOrder.RuntimeInt0;
+            return buffer.ActiveRuntimeInt0;
         }
 
-        private static void WriteMoveRuntimeIndex(ref QueuedOrder activeOrder, int currentWaypointIndex)
+        private void WriteMoveRuntimeIndex(ref OrderBuffer buffer, int currentWaypointIndex)
         {
-            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            if (buffer.ActiveOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
-                activeOrder.RuntimeInt0 = 0;
+                buffer.ActiveRuntimeInt0 = 0;
                 return;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
-            activeOrder.RuntimeInt0 = pointCount > 0
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(World, in buffer.ActiveOrder.Order);
+            buffer.ActiveRuntimeInt0 = pointCount > 0
                 ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;
         }
 
-        private static void ResetMoveRuntime(ref QueuedOrder activeOrder)
+        private static void ResetMoveRuntime(ref OrderBuffer buffer)
         {
-            activeOrder.RuntimeInt0 = 0;
-        }
-
-        private static float DistanceCm(Fix64Vec2 current, Fix64Vec2 target)
-        {
-            var delta = target - current;
-            float dx = delta.X.ToFloat();
-            float dy = delta.Y.ToFloat();
-            return MathF.Sqrt((dx * dx) + (dy * dy));
-        }
-
-        private static float LengthCm(Fix64Vec2 value)
-        {
-            float dx = value.X.ToFloat();
-            float dy = value.Y.ToFloat();
-            return MathF.Sqrt((dx * dx) + (dy * dy));
+            buffer.ActiveRuntimeInt0 = 0;
         }
 
         public override void Dispose() => base.Dispose();

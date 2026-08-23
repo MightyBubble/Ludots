@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -320,6 +321,98 @@ namespace Ludots.Tests.GAS
             mockB.SimulateUnload(key);
             That(store.TryGetChunk(key, out _), Is.False,
                 "New source events should be processed");
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_UpdateAndReset_EmitSortedEvents()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 100, loadedChunkCapacity: 16);
+            var loaded = new List<long>();
+            var unloaded = new List<long>();
+            loadedChunks.ChunkLoaded += loaded.Add;
+            loadedChunks.ChunkUnloaded += unloaded.Add;
+
+            loadedChunks.Update(centerXcm: 0, centerYcm: 0, radiusCm: 150);
+            AssertSorted(loaded);
+
+            loaded.Clear();
+            unloaded.Clear();
+            loadedChunks.Update(centerXcm: 1000, centerYcm: -1000, radiusCm: 150);
+            AssertSorted(unloaded);
+            AssertSorted(loaded);
+
+            unloaded.Clear();
+            loadedChunks.Reset();
+            AssertSorted(unloaded);
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_RequiresExplicitPositiveCapacity()
+        {
+            var constructor = typeof(WorldGridLoadedChunks).GetConstructor(new[] { typeof(int), typeof(int) });
+            That(constructor, Is.Not.Null);
+            That(constructor!.GetParameters()[1].HasDefaultValue, Is.False,
+                "Production callers must choose the loaded chunk bound explicitly.");
+            Throws<ArgumentOutOfRangeException>(() => new WorldGridLoadedChunks(100, 0));
+            Throws<ArgumentOutOfRangeException>(() => new WorldGridLoadedChunks(100, -1));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_FirstUpdateWithinCapacity_DoesNotAllocate()
+        {
+            var warmup = new WorldGridLoadedChunks(chunkSizeCm: 100, loadedChunkCapacity: 9);
+            warmup.Update(centerXcm: 0, centerYcm: 0, radiusCm: 100);
+
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 100, loadedChunkCapacity: 9);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+
+            loadedChunks.Update(centerXcm: 0, centerYcm: 0, radiusCm: 100);
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            That(allocated, Is.Zero);
+            That(loadedChunks.ActiveChunkKeys.Count, Is.EqualTo(9));
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_UpdateOverflow_LeavesStateAndEventsUnchanged()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 100, loadedChunkCapacity: 1);
+            long initialChunk = GraphChunkKey.Pack(7, -3);
+            loadedChunks.SetLoaded(initialChunk, true);
+            var loaded = new List<long>();
+            var unloaded = new List<long>();
+            loadedChunks.ChunkLoaded += loaded.Add;
+            loadedChunks.ChunkUnloaded += unloaded.Add;
+
+            Throws<InvalidOperationException>(() =>
+                loadedChunks.Update(centerXcm: 0, centerYcm: 0, radiusCm: 100));
+
+            That(loadedChunks.ActiveChunkKeys, Is.EqualTo(new[] { initialChunk }));
+            That(loaded, Is.Empty);
+            That(unloaded, Is.Empty);
+        }
+
+        [Test]
+        public void WorldGridLoadedChunks_SetLoadedOverflow_LeavesStateAndEventsUnchanged()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 100, loadedChunkCapacity: 1);
+            long initialChunk = GraphChunkKey.Pack(1, 1);
+            long overflowChunk = GraphChunkKey.Pack(2, 2);
+            loadedChunks.SetLoaded(initialChunk, true);
+            var loaded = new List<long>();
+            loadedChunks.ChunkLoaded += loaded.Add;
+
+            Throws<InvalidOperationException>(() => loadedChunks.SetLoaded(overflowChunk, true));
+
+            That(loadedChunks.ActiveChunkKeys, Is.EqualTo(new[] { initialChunk }));
+            That(loaded, Is.Empty);
+        }
+
+        private static void AssertSorted(List<long> keys)
+        {
+            long[] sorted = keys.ToArray();
+            Array.Sort(sorted);
+            That(keys, Is.EqualTo(sorted));
         }
     }
 }

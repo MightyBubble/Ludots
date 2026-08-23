@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_UnknownOnActivateEffect_IsRejected()
+        public void Load_RemovedOnActivateEffectsField_IsRejected()
         {
             string root = CreateTempRoot();
             try
@@ -80,7 +80,8 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<AggregateException>(() => loader.Load(CreateAbilitiesCatalog(), relativePath: "GAS/abilities.json"));
 
                 That(ex!.Flatten().InnerExceptions[0].Message, Does.Contain("onActivateEffects"));
-                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("Effect.Test.Missing"));
+                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("removed"));
+                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("EffectSignal or EffectClip"));
             }
             finally
             {
@@ -209,6 +210,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_TimelineItemMissingKind_IsRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.items[0].kind"));
+            That(ex.Message, Does.Contain("required"));
+        }
+
+        [TestCase("cooldownValueAttribute", "valueAttribute")]
+        [TestCase("cooldownTag", "tag")]
+        public void CompileAbility_LegacyCooldownField_IsRejected(string legacyField, string canonicalField)
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "cooldown": {
+                        "{{legacyField}}": "Legacy.Value"
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain(legacyField));
+            That(ex.Message, Does.Contain(canonicalField));
+        }
+
+        [Test]
         public void CompileAbility_InputGateMissingPayload_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
@@ -270,7 +315,35 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_GraphSignalUnknownGraph_IsRejected()
+        public void CompileAbility_CallerParamsEntryCapacityOverflow_IsRejected()
+        {
+            string entries = string.Join(
+                ",",
+                Enumerable.Range(0, Ludots.Core.Gameplay.GAS.Components.EffectConfigParams.MAX_PARAMS + 1)
+                    .Select(i => $$"""{"key":"param.{{i}}","value":{{i}}}"""));
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "callerParams": [
+                          { "entries": [{{entries}}] }
+                        ],
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.callerParams[0].entries"));
+            That(ex.Message, Does.Contain("exceeded max"));
+        }
+
+        [Test]
+        public void CompileAbility_GraphSignal_IsRejectedAsUnknownExecutionKind()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -285,7 +358,8 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("Graph.Missing"));
+            That(ex!.Message, Does.Contain("Unknown ExecItemKind 'GraphSignal'"));
+            That(ex.Message, Does.Not.Contain("Graph.Missing"));
         }
 
         [Test]
@@ -563,6 +637,30 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_LegacyToggleTagField_IsRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "toggleSpec": {
+                        "tag": "State.Toggle"
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("toggleSpec"));
+            That(ex.Message, Does.Contain("tag"));
+            That(ex.Message, Does.Contain("toggleTag"));
+        }
+
+        [Test]
         public void CompileAbility_UnknownPresentationModeHint_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
@@ -638,8 +736,8 @@ namespace Ludots.Tests.GAS
 
         private static void WriteAbilities(string root, string json)
         {
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "abilities.json"), json);
+            Directory.CreateDirectory(Path.Combine(root, "GAS"));
+            File.WriteAllText(Path.Combine(root, "GAS", "abilities.json"), json);
         }
 
         private static string CreateTempRoot()

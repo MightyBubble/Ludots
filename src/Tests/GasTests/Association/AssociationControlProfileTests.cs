@@ -364,7 +364,7 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                string relationshipsDir = Path.Combine(root, "Configs", "Relationships");
+                string relationshipsDir = Path.Combine(root, "Relationships");
                 Directory.CreateDirectory(relationshipsDir);
                 File.WriteAllText(Path.Combine(relationshipsDir, "control_profiles.json"), """
                 {
@@ -398,9 +398,9 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                // Fragment 1: Core:Configs/... (engine defaults). Fragment 2: Core:... (loaded after,
+                // Fragment 1: Core:... (engine defaults). Fragment 2: Core:... (loaded after,
                 // same position as a mod override in LoadFromAllSources order).
-                string defaultsDir = Path.Combine(root, "Configs", "Relationships");
+                string defaultsDir = Path.Combine(root, "Relationships");
                 string overrideDir = Path.Combine(root, "Relationships");
                 Directory.CreateDirectory(defaultsDir);
                 Directory.CreateDirectory(overrideDir);
@@ -450,7 +450,7 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
             try
             {
-                string relationshipsDir = Path.Combine(root, "Configs", "Relationships");
+                string relationshipsDir = Path.Combine(root, "Relationships");
                 Directory.CreateDirectory(relationshipsDir);
                 File.WriteAllText(Path.Combine(relationshipsDir, "control_profiles.json"), """
                 {
@@ -909,7 +909,7 @@ namespace Ludots.Tests.GAS
                 types.Register("MemberOf");
                 int allyTypeId = types.Register("Ally", isSymmetric: true);
                 int grantedFlagId = flags.Register(AssociationControlProfileRuntime.GrantedFlagName);
-                var tagOps = new TagOps();
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
                 var runtime = AssociationControlProfileRuntime.Create(world, relationships, tagOps, types, catalog, grantedFlagId);
 
                 Entity p1Rep = world.Create(

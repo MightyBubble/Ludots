@@ -29,6 +29,8 @@ using Ludots.Core.Physics;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Config
 {
@@ -64,7 +66,8 @@ namespace Ludots.Core.Config
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
-            Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityStateBuffer", SetAbilityStateBuffer, null, Component<AbilityStateBuffer>.ComponentType);
+            Register<GrantedSlotBuffer>("GrantedSlotBuffer");
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);
             Register("ProgressionScopeHost", SetProgressionScopeHost);
@@ -73,11 +76,16 @@ namespace Ludots.Core.Config
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register<TagCountContainer>("TagCountContainer");
+            Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
+            Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
+            Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
             Register<CommandSourceDragState>("CommandSourceDragState");
+            Register("VisionEmitterCm", SetVisionEmitterCm, null, Component<VisionEmitterCm>.ComponentType);
+            Register("FogOccupantCm", SetFogOccupantCm, null, Component<FogOccupantCm>.ComponentType);
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
@@ -105,10 +113,7 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
-            Register<SimulationAuthority>("SimulationAuthority");
-            Register("SimulationResidencyPolicy", SetSimulationResidencyPolicy, null, Component<SimulationResidencyPolicy>.ComponentType);
-            Register("CollisionParticipation", SetCollisionParticipation, null, Component<CollisionParticipation>.ComponentType);
-            Register("AvoidanceLane", SetAvoidanceLane, null, Component<AvoidanceLane>.ComponentType);
+            Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -545,6 +550,54 @@ namespace Ludots.Core.Config
             entity.Add(new CommandSourceSelectableState { IsEnabled = enabled });
         }
 
+        private static void SetVisionEmitterCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("VisionEmitterCm requires an object payload.");
+            }
+
+            ValidateProperties(
+                obj,
+                "VisionEmitterCm",
+                "scope",
+                "layers",
+                "polarity",
+                "aperture",
+                "altitudeBand",
+                "priority",
+                "detectionStrength",
+                "trueSightStrength");
+
+            entity.Add(new VisionEmitterCm
+            {
+                ScopeKeyId = ResolveVisionScopeKeyId(context, RequireStringProperty(obj, "scope", "VisionEmitterCm")),
+                LayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "VisionEmitterCm.layers"), "VisionEmitterCm.layers"),
+                Polarity = ParseVisionPolarity(RequireStringProperty(obj, "polarity", "VisionEmitterCm")),
+                Aperture = ParseVisionAperture(RequireObjectProperty(obj, "aperture", "VisionEmitterCm.aperture")),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                Priority = ReadOptionalIntProperty(obj, "priority"),
+                DetectionStrength = ReadOptionalByteProperty(obj, "detectionStrength", "VisionEmitterCm.detectionStrength"),
+                TrueSightStrength = ReadOptionalByteProperty(obj, "trueSightStrength", "VisionEmitterCm.trueSightStrength"),
+            });
+        }
+
+        private static void SetFogOccupantCm(Entity entity, JsonNode data, ComponentAuthoringContext context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("FogOccupantCm requires an object payload.");
+            }
+
+            ValidateProperties(obj, "FogOccupantCm", "layers", "altitudeBand", "stealthLevel");
+            entity.Add(new FogOccupantCm
+            {
+                ExposeLayerMask = ResolveFogLayerMask(context, RequireArrayProperty(obj, "layers", "FogOccupantCm.layers"), "FogOccupantCm.layers"),
+                AltitudeBand = ReadOptionalIntProperty(obj, "altitudeBand"),
+                StealthLevel = ReadOptionalByteProperty(obj, "stealthLevel", "FogOccupantCm.stealthLevel"),
+            });
+        }
+
         private static void SetSpatialBounds(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -922,7 +975,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.base.{kvp.Key}");
                     buffer.SetBase(attrId, v);
                 }
             }
@@ -942,7 +995,7 @@ namespace Ludots.Core.Config
                     }
 
                     float v = kvp.Value.GetValue<float>();
-                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    int attrId = ResolveAttributeBufferAttributeId(kvp.Key, $"AttributeBuffer.current.{kvp.Key}");
                     buffer.SetCurrent(attrId, v);
                 }
             }
@@ -958,6 +1011,23 @@ namespace Ludots.Core.Config
 
             entity.Add(buffer);
             entity.Add(snapshot);
+        }
+
+        private static int ResolveAttributeBufferAttributeId(string attributeName, string context)
+        {
+            int attributeId = AttributeRegistry.GetId(attributeName);
+            if (attributeId != AttributeRegistry.InvalidId)
+            {
+                return attributeId;
+            }
+
+            if (!AttributeRegistry.IsFrozen)
+            {
+                return AttributeRegistry.Register(attributeName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
         }
 
         private static void SetEntityLocalClock(Entity entity, JsonNode data)
@@ -1351,46 +1421,73 @@ namespace Ludots.Core.Config
             entity.Add(new MassNavigationBlocker { RadiusCm = radiusCm });
         }
 
-        private static void SetSimulationResidencyPolicy(Entity entity, JsonNode data)
+        private static void SetMovementParticipation(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("SimulationResidencyPolicy requires an object payload.");
+                throw new InvalidOperationException("MovementParticipation requires an object payload.");
             }
 
-            ValidateProperties(obj, "SimulationResidencyPolicy", "kind");
-            entity.Add(new SimulationResidencyPolicy
+            ValidateProperties(obj, "MovementParticipation", "physicsPresence", "displacement");
+            PhysicsPresenceKind physicsPresence = ParsePhysicsPresenceKind(
+                RequireStringProperty(obj, "physicsPresence", "MovementParticipation"));
+
+            if (RequireProperty(obj, "displacement", "MovementParticipation") is not JsonObject displacementObj)
             {
-                Kind = ParseSimulationResidencyKind(RequireStringProperty(obj, "kind", "SimulationResidencyPolicy")),
+                throw new InvalidOperationException("MovementParticipation.displacement requires an object payload.");
+            }
+
+            ValidateProperties(
+                displacementObj,
+                "MovementParticipation.displacement",
+                "allowed",
+                "handbackSpeedThresholdCmPerSec",
+                "maxDurationMs");
+            bool displacementAllowed = ParseBooleanByte(
+                RequireProperty(displacementObj, "allowed", "MovementParticipation.displacement"),
+                "MovementParticipation.displacement.allowed") != 0;
+            float handbackSpeedThresholdCmPerSec = ReadFloatProperty(
+                displacementObj,
+                "handbackSpeedThresholdCmPerSec",
+                "MovementParticipation.displacement");
+            if (!(handbackSpeedThresholdCmPerSec > 0f))
+            {
+                throw new InvalidOperationException(
+                    "MovementParticipation.displacement.handbackSpeedThresholdCmPerSec must be > 0.");
+            }
+
+            int maxDurationMs = ReadIntProperty(displacementObj, "maxDurationMs", "MovementParticipation.displacement");
+            if (maxDurationMs <= 0)
+            {
+                throw new InvalidOperationException("MovementParticipation.displacement.maxDurationMs must be > 0.");
+            }
+
+            entity.Add(new MovementParticipation
+            {
+                PhysicsPresence = physicsPresence,
+                DisplacementAllowed = displacementAllowed,
+                DisplacementHandbackSpeedThresholdCmPerSec = handbackSpeedThresholdCmPerSec,
+                DisplacementMaxDurationMs = maxDurationMs,
+            });
+
+            // poseAuthority is runtime state, never authored: derive the initial owner from the
+            // declared physics presence so the entity enters the world with exactly one pose writer.
+            entity.Add(new PoseAuthority
+            {
+                Value = MovementParticipationRules.DeriveInitialPoseAuthority(physicsPresence),
             });
         }
 
-        private static void SetCollisionParticipation(Entity entity, JsonNode data)
+        private static PhysicsPresenceKind ParsePhysicsPresenceKind(string raw)
         {
-            if (data is not JsonObject obj)
+            return raw switch
             {
-                throw new InvalidOperationException("CollisionParticipation requires an object payload.");
-            }
-
-            ValidateProperties(obj, "CollisionParticipation", "kind");
-            entity.Add(new CollisionParticipation
-            {
-                Kind = ParseCollisionParticipationKind(RequireStringProperty(obj, "kind", "CollisionParticipation")),
-            });
-        }
-
-        private static void SetAvoidanceLane(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("AvoidanceLane requires an object payload.");
-            }
-
-            ValidateProperties(obj, "AvoidanceLane", "kind");
-            entity.Add(new AvoidanceLane
-            {
-                Kind = ParseAvoidanceLaneKind(RequireStringProperty(obj, "kind", "AvoidanceLane")),
-            });
+                "none" => PhysicsPresenceKind.None,
+                "kinematic" => PhysicsPresenceKind.Kinematic,
+                "dynamic" => PhysicsPresenceKind.Dynamic,
+                _ => throw new InvalidOperationException(
+                    $"MovementParticipation.physicsPresence '{raw}' is not configured (expected 'none', 'kinematic' or 'dynamic').")
+            };
         }
 
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)
@@ -1427,52 +1524,6 @@ namespace Ludots.Core.Config
                 "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
-            };
-        }
-
-        private static SimulationResidencyKind ParseSimulationResidencyKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("SimulationResidencyPolicy requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "AlwaysResident" => SimulationResidencyKind.AlwaysResident,
-                "BudgetedResident" => SimulationResidencyKind.BudgetedResident,
-                "Streamable" => SimulationResidencyKind.Streamable,
-                _ => throw new InvalidOperationException($"Unsupported SimulationResidencyPolicy kind '{raw}'.")
-            };
-        }
-
-        private static CollisionParticipationKind ParseCollisionParticipationKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("CollisionParticipation requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "CrowdOnly" => CollisionParticipationKind.CrowdOnly,
-                "Physics2D" => CollisionParticipationKind.Physics2D,
-                "Physics2DAndCrowd" => CollisionParticipationKind.Physics2DAndCrowd,
-                _ => throw new InvalidOperationException($"Unsupported CollisionParticipation kind '{raw}'.")
-            };
-        }
-
-        private static AvoidanceLaneKind ParseAvoidanceLaneKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("AvoidanceLane requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "MassNavigation" => AvoidanceLaneKind.MassNavigation,
-                _ => throw new InvalidOperationException($"Unsupported AvoidanceLane kind '{raw}'.")
             };
         }
 
@@ -1696,6 +1747,71 @@ namespace Ludots.Core.Config
             return requirementId;
         }
 
+        private static int ResolveVisionScopeKeyId(ComponentAuthoringContext context, string scopeKey)
+        {
+            ScopeKeyRegistry scopeKeys = context.Require<ScopeKeyRegistry>(ComponentAuthoringServiceKeys.ScopeKeyRegistry);
+            return scopeKeys.TryGetId(scopeKey, out int scopeKeyId) && scopeKeyId > 0
+                ? scopeKeyId
+                : throw new InvalidOperationException(
+                    $"VisionEmitterCm.scope references unknown progression scope '{scopeKey}'. Declare it in Progression/scopes.json.");
+        }
+
+        private static uint ResolveFogLayerMask(ComponentAuthoringContext context, JsonArray layers, string contextName)
+        {
+            if (layers.Count == 0)
+            {
+                throw new InvalidOperationException($"{contextName} requires at least one fog layer.");
+            }
+
+            FogLayerRegistry registry = context.Require<FogLayerRegistry>(ComponentAuthoringServiceKeys.VisionFogLayerRegistry);
+            uint mask = 0u;
+            for (int i = 0; i < layers.Count; i++)
+            {
+                string layerKey = ReadStringNode(
+                    layers[i] ?? throw new InvalidOperationException($"{contextName}[{i}] requires a non-null fog layer key."),
+                    $"{contextName}[{i}]");
+                FogLayerId layerId = registry.GetId(layerKey);
+                if (layerId.Value <= 0)
+                {
+                    throw new InvalidOperationException($"{contextName}[{i}] references unknown fog layer '{layerKey}'.");
+                }
+
+                mask |= registry.ToMask(layerId);
+            }
+
+            return mask;
+        }
+
+        private static VisionPolarity ParseVisionPolarity(string value)
+        {
+            return value switch
+            {
+                "Reveal" => VisionPolarity.Reveal,
+                "Deny" => VisionPolarity.Deny,
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.polarity '{value}'. Expected Reveal or Deny."),
+            };
+        }
+
+        private static VisionAperture ParseVisionAperture(JsonObject obj)
+        {
+            ValidateProperties(obj, "VisionEmitterCm.aperture", "kind", "rangeCm", "halfAngleDeg", "halfWidthCm", "halfHeightCm", "lengthCm");
+            string kind = RequireStringProperty(obj, "kind", "VisionEmitterCm.aperture");
+            return kind switch
+            {
+                "Disk" => VisionAperture.Disk(ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture")),
+                "Cone" => VisionAperture.Cone(
+                    ReadIntProperty(obj, "rangeCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfAngleDeg", "VisionEmitterCm.aperture")),
+                "Box" => VisionAperture.Box(
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfHeightCm", "VisionEmitterCm.aperture")),
+                "Line" => VisionAperture.Line(
+                    ReadIntProperty(obj, "lengthCm", "VisionEmitterCm.aperture"),
+                    ReadIntProperty(obj, "halfWidthCm", "VisionEmitterCm.aperture")),
+                _ => throw new InvalidOperationException($"Unsupported VisionEmitterCm.aperture.kind '{kind}'. Expected Disk, Cone, Box, or Line."),
+            };
+        }
+
         private static string ReadStringNode(JsonNode node, string context)
         {
             if (node == null || node.GetValueKind() == JsonValueKind.Null)
@@ -1811,6 +1927,40 @@ namespace Ludots.Core.Config
             }
 
             return node;
+        }
+
+        private static JsonObject RequireObjectProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonObject
+                ?? throw new InvalidOperationException($"{context}.{name} requires an object payload.");
+        }
+
+        private static JsonArray RequireArrayProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            return node as JsonArray
+                ?? throw new InvalidOperationException($"{context} requires an array.");
+        }
+
+        private static int ReadOptionalIntProperty(JsonObject obj, string name)
+        {
+            return TryReadIntProperty(obj, out int value, name) ? value : 0;
+        }
+
+        private static byte ReadOptionalByteProperty(JsonObject obj, string name, string context)
+        {
+            if (!TryReadIntProperty(obj, out int value, name))
+            {
+                return 0;
+            }
+
+            if (value < byte.MinValue || value > byte.MaxValue)
+            {
+                throw new InvalidOperationException($"{context} must be between {byte.MinValue} and {byte.MaxValue}.");
+            }
+
+            return (byte)value;
         }
 
         private static string RequireStringProperty(JsonObject obj, string name, string context)

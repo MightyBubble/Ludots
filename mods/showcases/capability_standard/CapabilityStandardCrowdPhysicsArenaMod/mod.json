@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardCrowdPhysicsArenaMod",
+  "version": "1.0.0",
+  "description": "Standard capability acceptance entry for the Crowd Physics Arena showcase: massnav kinematic squads, dynamic crates, pressure plate + door, shockwave knockback, and boulder release.",
+  "main": "bin/net8.0/CapabilityStandardCrowdPhysicsArenaMod.dll",
+  "priority": -2000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "capability-standard", "mass-navigation", "physics2d", "kinematic", "crowd", "pressure-plate"]
+}

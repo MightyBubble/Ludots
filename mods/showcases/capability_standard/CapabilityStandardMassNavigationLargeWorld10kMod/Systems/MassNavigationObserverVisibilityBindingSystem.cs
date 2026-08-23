@@ -8,8 +8,10 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
 
@@ -24,7 +26,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
     private readonly GameEngine _engine;
     private Entity _publishedViewer = Entity.Null;
     private int _publishedStructuralRevision = -1;
-    private int _publishedPerformerDefinitionVersion = -1;
+    private int _publishedPresenterDefinitionVersion = -1;
     private KnowledgeIdMask256 _publishedAttributeMask;
 
     public MassNavigationObserverVisibilityBindingSystem(GameEngine engine)
@@ -39,7 +41,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
             !MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine) ||
             _engine.GetService(MassNavigationKeys.RuntimeBinding) is not { IsReady: true, Current: { } simulation } ||
             _engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is not KnowledgeProjectionStore knowledge ||
-            _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry) is not PerformerDefinitionRegistry performers ||
+            _engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry) is not PresenterDefinitionRegistry presenters ||
             !TryResolveViewer(out Entity viewer))
         {
             return;
@@ -51,10 +53,10 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
             return;
         }
 
-        KnowledgeIdMask256 attributeMask = ResolveHudAttributeMask(simulation, performers);
+        KnowledgeIdMask256 attributeMask = ResolveHudAttributeMask(simulation, presenters);
         if (_publishedViewer == viewer &&
             _publishedStructuralRevision == simulation.StructuralChangeRevision &&
-            _publishedPerformerDefinitionVersion == performers.Version &&
+            _publishedPresenterDefinitionVersion == presenters.Version &&
             _publishedAttributeMask == attributeMask)
         {
             return;
@@ -82,13 +84,13 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
 
         _publishedViewer = viewer;
         _publishedStructuralRevision = simulation.StructuralChangeRevision;
-        _publishedPerformerDefinitionVersion = performers.Version;
+        _publishedPresenterDefinitionVersion = presenters.Version;
         _publishedAttributeMask = attributeMask;
     }
 
     private bool TryResolveViewer(out Entity viewer)
     {
-        Entity candidate = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity candidate = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
         viewer = candidate;
         return candidate != Entity.Null &&
                World.IsAlive(candidate) &&
@@ -102,7 +104,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
 
     private static KnowledgeIdMask256 ResolveHudAttributeMask(
         MassNavigationSimulationRuntime simulation,
-        PerformerDefinitionRegistry performers)
+        PresenterDefinitionRegistry presenters)
     {
         KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
@@ -110,60 +112,61 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
         {
             int teamId = teamIds[i];
             mask = mask.Union(ResolveHudAttributeMask(
-                performers,
-                simulation.Config.Presentation.ResolveAgentPerformerId(teamId, heavy: false)));
+                presenters,
+                simulation.Config.Presentation.ResolveAgentPresenterId(teamId, heavy: false)));
             mask = mask.Union(ResolveHudAttributeMask(
-                performers,
-                simulation.Config.Presentation.ResolveAgentPerformerId(teamId, heavy: true)));
+                presenters,
+                simulation.Config.Presentation.ResolveAgentPresenterId(teamId, heavy: true)));
         }
 
         return mask;
     }
 
     private static KnowledgeIdMask256 ResolveHudAttributeMask(
-        PerformerDefinitionRegistry performers,
-        string performerKey)
+        PresenterDefinitionRegistry presenters,
+        string presenterKey)
     {
-        int definitionId = performers.GetId(performerKey);
-        if (definitionId <= 0 || !performers.TryGet(definitionId, out PerformerDefinition definition))
+        int definitionId = presenters.GetId(presenterKey);
+        if (definitionId <= 0 || !presenters.TryGet(definitionId, out PresenterDefinition definition))
         {
             throw new InvalidOperationException(
-                $"MassNavigation observer visibility requires performer definition '{performerKey}'.");
+                $"MassNavigation observer visibility requires presenter definition '{presenterKey}'.");
         }
 
-        return ResolveHudAttributeMask(performers, definition);
+        return ResolveHudAttributeMask(presenters, definition);
     }
 
     private static KnowledgeIdMask256 ResolveHudAttributeMask(
-        PerformerDefinitionRegistry performers,
-        PerformerDefinition definition)
+        PresenterDefinitionRegistry presenters,
+        PresenterDefinition definition)
     {
         KnowledgeIdMask256 mask = HasHudAssetBinding(definition)
             ? BuildMask(definition.RequiredAttributeIds)
             : KnowledgeIdMask256.Empty;
 
-        ChildPerformerRef[] children = definition.Children;
+        ChildPresenterRef[] children = definition.Children;
         for (int i = 0; i < children.Length; i++)
         {
             int childDefinitionId = children[i].DefinitionId;
-            if (childDefinitionId <= 0 || !performers.TryGet(childDefinitionId, out PerformerDefinition child))
+            if (childDefinitionId <= 0 || !presenters.TryGet(childDefinitionId, out PresenterDefinition child))
             {
                 throw new InvalidOperationException(
-                    $"MassNavigation observer visibility requires child performer definition id {childDefinitionId}.");
+                    $"MassNavigation observer visibility requires child presenter definition id {childDefinitionId}.");
             }
 
-            mask = mask.Union(ResolveHudAttributeMask(performers, child));
+            mask = mask.Union(ResolveHudAttributeMask(presenters, child));
         }
 
         return mask;
     }
 
-    private static bool HasHudAssetBinding(PerformerDefinition definition)
+    private static bool HasHudAssetBinding(PresenterDefinition definition)
     {
         BehaviorSlot[] behaviors = definition.Behaviors;
         for (int i = 0; i < behaviors.Length; i++)
         {
-            if (behaviors[i].Kind == BehaviorKind.AssetBinding &&
+            if ((behaviors[i].Kind == BehaviorKind.AssetBinding ||
+                 behaviors[i].Kind == BehaviorKind.WorldText) &&
                 behaviors[i].AssetBinding.AssetKind is AssetKind.WorldHud or AssetKind.WorldText)
             {
                 return true;

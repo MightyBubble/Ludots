@@ -5,7 +5,7 @@ namespace VisualTerrainEditorMod;
 internal static class VisualTerrainEditorIds
 {
     public const string MapId = "visual_terrain_editor";
-    public const string ChunkMeshPerformerId = "visual_terrain_editor.chunk_mesh";
+    public const string ChunkMeshPresenterId = "visual_terrain_editor.chunk_mesh";
     public const string EditableMapTag = "visual_terrain_editable";
 
     public static bool IsEditorMap(string? mapId)

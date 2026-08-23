@@ -1,0 +1,33 @@
+[
+  {
+    "id": "showcase.graph_op.HasTag",
+    "kind": "Effect",
+    "entry": "scout",
+    "nodes": [
+      {
+        "id": "scout",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hasEnemy",
+        "op": "HasTag",
+        "tag": "State.Sandbox.Marked"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "scout",
+        "fromPort": "next",
+        "to": "hasEnemy"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "scout",
+        "fromPort": "value",
+        "to": "hasEnemy",
+        "toPort": "source"
+      }
+    ]
+  }
+]

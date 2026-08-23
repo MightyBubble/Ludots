@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -119,18 +120,43 @@ namespace Ludots.Tests.GAS.Production
 
             Entity footman = FindNewestEntityByName(world, "Footman", footmanIdsBefore);
             int castAbilityOrderTypeId = RequireOrderTypeId(engine, "castAbility");
+            var admissionResults = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer) as OrderAdmissionResultBuffer
+                ?? throw new InvalidOperationException("OrderAdmissionResultBuffer service is missing.");
+            var terminalResults = engine.GetService(CoreServiceKeys.OrderTerminalResultBuffer) as OrderTerminalResultBuffer
+                ?? throw new InvalidOperationException("OrderTerminalResultBuffer service is missing.");
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => world.Has<OrderBuffer>(footman) &&
-                      world.Get<OrderBuffer>(footman).HasActive &&
-                      world.Get<OrderBuffer>(footman).ActiveOrder.Order.OrderTypeId == castAbilityOrderTypeId,
+                () => world.Has<ChildOf>(footman) &&
+                      world.Get<ChildOf>(footman).Parent == guardTower &&
+                      terminalResults.Count == 1,
                 maxFrames: 60,
-                "Spawned Footman should receive a garrison castAbility order from ApplySpawnTargetOrder.");
+                "Spawned Footman should complete the garrison castAbility order from ApplySpawnTargetOrder.");
 
-            ref Order activeOrder = ref world.Get<OrderBuffer>(footman).ActiveOrder.Order;
-            Assert.That(activeOrder.Args.I0, Is.EqualTo(1));
-            Assert.That(activeOrder.Target, Is.EqualTo(guardTower));
+            ref readonly OrderTerminalOutcome terminal = ref terminalResults[0];
+            Assert.That(terminal.OrderId, Is.GreaterThan(0));
+            Assert.That(terminal.OrderTypeId, Is.EqualTo(castAbilityOrderTypeId));
+            Assert.That(terminal.Actor, Is.EqualTo(footman));
+            Assert.That(terminal.State, Is.EqualTo(OrderTerminalState.Completed));
+            Assert.That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.None));
+            Assert.That(admissionResults.TryGet(
+                terminal.OrderId,
+                OrderAdmissionStage.GlobalIntake,
+                out OrderAdmissionOutcome globalOutcome), Is.True);
+            Assert.That(globalOutcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(admissionResults.TryGet(
+                terminal.OrderId,
+                OrderAdmissionStage.EntityIntake,
+                out OrderAdmissionOutcome entityOutcome), Is.True);
+            Assert.That(entityOutcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(world.Get<ChildOf>(footman).Parent, Is.EqualTo(guardTower));
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !world.Get<CommandSourceSelectableState>(footman).Enabled,
+                maxFrames: 2,
+                "Garrisoned Footman should become unavailable as a command source.");
+            Assert.That(world.Get<CommandSourceSelectableState>(footman).Enabled, Is.False);
         }
 
         private static int RequireOrderTypeId(GameEngine engine, string key)

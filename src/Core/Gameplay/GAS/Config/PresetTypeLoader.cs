@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS.Config
 {
@@ -15,11 +16,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly PresetTypeRegistry _registry;
+        private readonly BuiltinHandlerRegistry _builtinHandlers;
 
-        public PresetTypeLoader(ConfigPipeline pipeline, PresetTypeRegistry registry)
+        public PresetTypeLoader(
+            ConfigPipeline pipeline,
+            PresetTypeRegistry registry,
+            BuiltinHandlerRegistry builtinHandlers)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _builtinHandlers = builtinHandlers ?? throw new ArgumentNullException(nameof(builtinHandlers));
         }
 
         public void Load(
@@ -29,20 +35,27 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var ordered = new List<MergedConfigEntry>(merged);
+            ordered.Sort((left, right) => StringComparer.Ordinal.Compare(left.Id, right.Id));
 
-            for (int i = 0; i < merged.Count; i++)
+            for (int i = 0; i < ordered.Count; i++)
             {
-                var def = ParseDefinition(merged[i].Node);
+                var def = ParseDefinition(ordered[i].Node, _registry, _builtinHandlers);
                 _registry.Register(in def);
             }
         }
 
-        public static void LoadFromJson(PresetTypeRegistry registry, string json)
+        public static void LoadFromJson(
+            PresetTypeRegistry registry,
+            string json,
+            BuiltinHandlerRegistry builtinHandlers)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
+            if (builtinHandlers == null) throw new ArgumentNullException(nameof(builtinHandlers));
             var array = JsonNode.Parse(json)?.AsArray()
                 ?? throw new InvalidOperationException("PresetTypeLoader: JSON root must be an array.");
 
+            var ordered = new List<JsonObject>(array.Count);
             foreach (var node in array)
             {
                 if (node == null)
@@ -50,12 +63,25 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException("PresetTypeLoader: preset type entry must not be null.");
                 }
 
-                var def = ParseDefinition(node.AsObject());
+                ordered.Add(node.AsObject());
+            }
+
+            ordered.Sort((left, right) =>
+                StringComparer.Ordinal.Compare(
+                    RequireString(left, "id", "PresetTypeLoader"),
+                    RequireString(right, "id", "PresetTypeLoader")));
+
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var def = ParseDefinition(ordered[i], registry, builtinHandlers);
                 registry.Register(in def);
             }
         }
 
-        private static PresetTypeDefinition ParseDefinition(JsonObject? obj)
+        private static PresetTypeDefinition ParseDefinition(
+            JsonObject? obj,
+            PresetTypeRegistry registry,
+            BuiltinHandlerRegistry builtinHandlers)
         {
             if (obj == null)
             {
@@ -63,9 +89,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             string idStr = RequireString(obj, "id", "PresetTypeLoader");
+            int typeId = registry.RegisterKey(idStr);
+            EffectPresetType builtinType = EffectPresetType.None;
+            if (Enum.TryParse(idStr, ignoreCase: false, out EffectPresetType parsedBuiltin) &&
+                parsedBuiltin != EffectPresetType.None &&
+                Enum.IsDefined(typeof(EffectPresetType), parsedBuiltin))
+            {
+                builtinType = parsedBuiltin;
+            }
+
             var def = new PresetTypeDefinition
             {
-                Type = GasEnumParser.ParsePresetType(idStr)
+                Type = builtinType,
+                TypeId = typeId,
+                TypeKey = idStr,
             };
 
             JsonArray comps = RequireArray(obj, "components", idStr);
@@ -98,14 +135,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Preset type '{idStr}' defaultPhaseHandlers has unsupported phase '{kvp.Key}'.");
                 }
 
-                var handler = ParsePhaseHandler(idStr, kvp.Key, kvp.Value?.AsObject());
+                var handler = ParsePhaseHandler(idStr, kvp.Key, kvp.Value?.AsObject(), builtinHandlers);
                 def.DefaultPhaseHandlers[phaseId] = handler;
             }
 
             return def;
         }
 
-        private static PhaseHandler ParsePhaseHandler(string presetTypeId, string phaseName, JsonObject? obj)
+        private static PhaseHandler ParsePhaseHandler(
+            string presetTypeId,
+            string phaseName,
+            JsonObject? obj,
+            BuiltinHandlerRegistry builtinHandlers)
         {
             if (obj == null)
             {
@@ -117,7 +158,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (type == "builtin")
             {
-                return PhaseHandler.Builtin(GasEnumParser.ParseBuiltinHandlerId(id));
+                int handlerId = builtinHandlers.GetId(id);
+                if (handlerId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Preset type '{presetTypeId}' handler '{phaseName}' references unknown builtin handler '{id}'.");
+                }
+
+                return PhaseHandler.Builtin(handlerId);
             }
 
             if (type == "graph")

@@ -1,5 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.UI.EntityCommandPanels;
 
 namespace UxPrototypeMod.Runtime;
@@ -101,8 +103,13 @@ internal sealed class UxPrototypeEntityCommandPanelSource : IEntityCommandPanelS
         return count;
     }
 
-    public bool ActivateSlot(Entity target, int groupIndex, int slotIndex)
+    public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
     {
-        return groupIndex == 0 && _state.TryActivateEntityCommand(_engine, target, slotIndex);
+        if (groupIndex != 0 || !_state.TryActivateEntityCommand(_engine, target, slotIndex))
+        {
+            return InputOrderActivationResult.Rejected(target, OrderSubmitResult.RejectedValidation);
+        }
+
+        return InputOrderActivationResult.Submitted(target, orderId: 0);
     }
 }

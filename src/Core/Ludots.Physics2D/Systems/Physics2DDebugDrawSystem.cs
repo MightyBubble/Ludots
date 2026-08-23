@@ -6,8 +6,8 @@ using Arch.System;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Physics2D.Systems
 {
@@ -150,7 +150,9 @@ namespace Ludots.Core.Physics2D.Systems
             }
             else
             {
-                color = mass.IsStatic ? DebugDrawColor.Blue : DebugDrawColor.Green;
+                color = mass.IsStatic ? DebugDrawColor.Blue :
+                        mass.IsKinematic ? DebugDrawColor.Yellow :
+                        DebugDrawColor.Green;
             }
 
             switch (collider.Type)

@@ -1,0 +1,8 @@
+{
+  "name": "AgentBridgeMod",
+  "version": "1.0.0",
+  "description": "Agent Debug Bridge: loopback HTTP JSON-RPC + structured runtime introspection tools for AI agents. See docs/rfcs/RFC-0066-agent-debug-bridge.md. Disable with LUDOTS_AGENT_BRIDGE=0.",
+  "main": "bin/net8.0/AgentBridgeMod.dll",
+  "priority": 950,
+  "dependencies": {}
+}

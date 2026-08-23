@@ -1,0 +1,8 @@
+{
+  "scene": "primitives",
+  "frames": 30,
+  "avgFrameMs": 2.079,
+  "p95FrameMs": 2.046,
+  "maxFrameMs": 25.148,
+  "wallMs": 599.9
+}

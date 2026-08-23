@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.Pathing
 {
@@ -323,13 +324,16 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
+            NavQueryServiceRegistry navRegistry = _navRegistry
+                ?? throw new InvalidOperationException("Auto path service is missing its required nav query registry.");
+
             if (request.Start.Kind != PathEndpointKind.WorldCm || request.Goal.Kind != PathEndpointKind.WorldCm)
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.InvalidRequest, default, expanded: 0, errorCode: 20);
                 return false;
             }
 
-            if (!_navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
+            if (!navRegistry.TryCreateQuery(agent.NavLayer, agent.NavProfileIndex, agent.NavAreaCosts, out var query))
             {
                 result = new PathResult(request.RequestId, request.Actor, PathStatus.NotReady, default, expanded: 0, errorCode: 21);
                 return false;

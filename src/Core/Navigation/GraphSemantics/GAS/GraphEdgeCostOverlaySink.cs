@@ -17,6 +17,17 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
             _overlay = overlay ?? throw new System.ArgumentNullException(nameof(overlay));
         }
 
+        public void ValidateBinding(byte channel, string bindingId, string relativePath)
+        {
+            if (channel <= 2)
+            {
+                return;
+            }
+
+            throw new System.InvalidOperationException(
+                $"Attribute binding '{bindingId}' in {relativePath}: sink '{GraphSinkNames.EdgeCostOverlay}' supports channels 0..2; found {channel}.");
+        }
+
         public void Apply(World world, AttributeBindingEntry[] entries, int start, int count)
         {
             bool resetAdd = false;
@@ -96,4 +107,3 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
         }
     }
 }
-

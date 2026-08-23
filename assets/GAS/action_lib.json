@@ -1,0 +1,62 @@
+[
+  {
+    "name": "bt.seeEnemy",
+    "graph": "Graph.BT.Leaf.SeeEnemy",
+    "kind": "Script",
+    "host": "BehaviorTree"
+  },
+  {
+    "name": "bt.inAttackRange",
+    "graph": "Graph.BT.Leaf.InAttackRange",
+    "kind": "Script",
+    "host": "BehaviorTree"
+  },
+  {
+    "name": "bt.chase",
+    "graph": "Graph.BT.Leaf.Chase",
+    "kind": "Script",
+    "host": "BehaviorTree"
+  },
+  {
+    "name": "bt.attack",
+    "graph": "Graph.BT.Leaf.Attack",
+    "kind": "Script",
+    "host": "BehaviorTree"
+  },
+  {
+    "name": "bt.patrol",
+    "graph": "Graph.BT.Leaf.Patrol",
+    "kind": "Script",
+    "host": "BehaviorTree"
+  },
+  {
+    "name": "hfsm.cond.alwaysTrue",
+    "graph": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script",
+    "host": "Hfsm"
+  },
+  {
+    "name": "hfsm.combat.onEnter",
+    "graph": "Graph.HFSM.Combat.OnEnter",
+    "kind": "Script",
+    "host": "Hfsm"
+  },
+  {
+    "name": "hfsm.combat.onTick",
+    "graph": "Graph.HFSM.Combat.OnTick",
+    "kind": "Script",
+    "host": "Hfsm"
+  },
+  {
+    "name": "hfsm.combat.onExit",
+    "graph": "Graph.HFSM.Combat.OnExit",
+    "kind": "Script",
+    "host": "Hfsm"
+  },
+  {
+    "name": "script.drinkUntilFull",
+    "graph": "Graph.Script.DrinkUntilFull",
+    "kind": "Script",
+    "host": "Script"
+  }
+]

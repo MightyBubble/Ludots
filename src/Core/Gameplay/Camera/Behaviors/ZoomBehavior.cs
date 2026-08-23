@@ -24,9 +24,6 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
             if (_factorPerWheel > 0f)
             {
-                // Proportional zoom: each wheel notch scales distance by a constant factor.
-                // This keeps zoom responsive across a huge distance range (continent maps)
-                // where a fixed cm step is either glacial when far out or jumpy when close in.
                 state.DistanceCm *= MathF.Pow(_factorPerWheel, -zoom);
             }
             else

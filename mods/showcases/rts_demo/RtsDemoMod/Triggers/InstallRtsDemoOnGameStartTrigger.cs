@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
@@ -18,6 +19,7 @@ namespace RtsDemoMod.Triggers
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {
         private const string InstalledKey = "RtsDemoMod.Installed";
+        private const string RelationEntityCapacityKey = "rtsRelationEntityCapacity";
         private readonly IModContext _ctx;
 
         public InstallRtsDemoOnGameStartTrigger(IModContext ctx)
@@ -50,9 +52,17 @@ namespace RtsDemoMod.Triggers
             engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, new RtsQuickSelectToolbarProvider(engine));
             // Run after effect/spawn processing so relation-driven garrison/build/morph state
             // becomes visible in the same simulation frame.
-            engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
+            if (!engine.MergedConfig.Constants.IntValues.TryGetValue(RelationEntityCapacityKey, out int relationEntityCapacity) ||
+                relationEntityCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"[RtsDemoMod] constants.intValues.{RelationEntityCapacityKey} must be explicitly configured as positive.");
+            }
+            engine.RegisterSystem(
+                new RtsRelationRuntimeSystem(engine, relationEntityCapacity),
+                SystemGroup.EffectProcessing);
             engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
+            engine.InsertPresentationSystemBefore<PresenterRuleSystem>(new RtsCommandSourceFeedbackPresentationSystem(engine));
             _ctx.Log("[RtsDemoMod] RTS relation runtime and command-source panel systems registered");
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");

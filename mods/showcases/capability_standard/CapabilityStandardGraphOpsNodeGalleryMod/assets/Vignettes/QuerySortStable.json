@@ -1,0 +1,94 @@
+{
+  "op": "QuerySortStable",
+  "driver": "sandbox",
+  "title": "点名名单按编号排好，次次一样",
+  "beat": "每波点名，五个人 1 到 5 的编号顺序一模一样，灰影对得上。",
+  "detailTemplate": "点名顺序稳定：{order}。",
+  "assertDetailContains": [
+    "顺序"
+  ],
+  "featuredNodeId": "sort",
+  "graphKind": "Query",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "scout",
+      "role": "unit",
+      "template": "Unit.Scout",
+      "name": "侦察兵",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处甲",
+      "x": 0,
+      "y": 4,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处乙",
+      "x": -3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearC",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丙",
+      "x": 3,
+      "y": 3,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "nearD",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "近处丁",
+      "x": -4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farA",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处甲",
+      "x": 12,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "farB",
+      "role": "unit",
+      "template": "Unit.Soldier",
+      "name": "远处乙",
+      "x": 0,
+      "y": 12,
+      "health": 100,
+      "healthMax": 100
+    }
+  ]
+}

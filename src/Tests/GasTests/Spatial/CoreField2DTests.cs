@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Core.Fields;
 using Ludots.Core.Mathematics;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -113,26 +114,13 @@ namespace Ludots.Tests.GAS
             }
 
             field.ClearDirty();
-            Span<FieldCellValue2D<Vector2>> values = stackalloc FieldCellValue2D<Vector2>[256];
+            var values = new FieldCellValue2D<Vector2>[256];
             field.CopyNonDefaultCells(values);
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
-
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            float observed = 0f;
-            for (int i = 0; i < 10_000; i++)
-            {
-                FieldCell2D cell = new(i & 15, (i >> 4) & 15);
-                Vector2 value = new(i, i * 2f);
-                field.Set(cell, value);
-                observed += field.Get(cell).X;
-                field.CopyNonDefaultCells(values);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureVectorFieldAllocations(field, values, out float observed);
             Assert.That(observed, Is.GreaterThan(0f));
             Assert.That(allocated, Is.EqualTo(0));
         }
@@ -151,8 +139,8 @@ namespace Ludots.Tests.GAS
             }
 
             field.ClearDirty();
-            Span<FieldCell2D> dirty = stackalloc FieldCell2D[256];
-            Span<FieldCellValue2D<byte>> values = stackalloc FieldCellValue2D<byte>[256];
+            var dirty = new FieldCell2D[256];
+            var values = new FieldCellValue2D<byte>[256];
             field.Set(new FieldCell2D(0, 0), 2);
             field.Set(new FieldCell2D(0, 0), 1);
             field.EnumerateDirtyCells(dirty);
@@ -162,10 +150,42 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-            GC.GetAllocatedBytesForCurrentThread();
+            long allocated = MeasureByteFieldAllocations(field, dirty, values, out int observed);
+            Assert.That(observed, Is.GreaterThan(0));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureVectorFieldAllocations(
+            ChunkedField2D<Vector2> field,
+            FieldCellValue2D<Vector2>[] values,
+            out float observed)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            int observed = 0;
+            observed = 0f;
+            for (int i = 0; i < 10_000; i++)
+            {
+                FieldCell2D cell = new(i & 15, (i >> 4) & 15);
+                Vector2 value = new(i, i * 2f);
+                field.Set(cell, value);
+                observed += field.Get(cell).X;
+                field.CopyNonDefaultCells(values);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureByteFieldAllocations(
+            ChunkedField2D<byte> field,
+            FieldCell2D[] dirty,
+            FieldCellValue2D<byte>[] values,
+            out int observed)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            observed = 0;
             for (int i = 0; i < 10_000; i++)
             {
                 FieldCell2D cell = new(i & 15, (i >> 4) & 15);
@@ -175,9 +195,7 @@ namespace Ludots.Tests.GAS
                 field.CopyNonDefaultCells(values);
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(observed, Is.GreaterThan(0));
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
     }
 }

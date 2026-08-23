@@ -10,6 +10,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -18,6 +19,14 @@ public sealed class MassNavigationOrderChainTests
 {
     internal const int LocalTeamId = 1;
     internal const int EnemyTeamId = 2;
+
+    internal static Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks CreateLoadedChunksForTests(
+        MassNavigationSimulationRuntime simulation)
+    {
+        return new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
+            simulation.WorldConfig.StreamingChunkSizeCm,
+            simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity);
+    }
 
     [Test]
     public void BindBoardWorld_RejectsActiveHotZoneOutsideBoardCenterRange()
@@ -29,7 +38,7 @@ public sealed class MassNavigationOrderChainTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm)))!;
+                CreateLoadedChunksForTests(simulation)))!;
 
         Assert.That(ex.Message, Does.Contain("active hot zone"));
         Assert.That(ex.Message, Does.Contain("center x"));
@@ -41,8 +50,7 @@ public sealed class MassNavigationOrderChainTests
     {
         MassNavigationConfig config = CreateConfigForTests();
         var simulation = new MassNavigationSimulationRuntime(config);
-        var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
-            config.World!.StreamingChunkSizeCm);
+        var loadedChunks = CreateLoadedChunksForTests(simulation);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             loadedChunks);
@@ -93,8 +101,7 @@ public sealed class MassNavigationOrderChainTests
     {
         MassNavigationConfig config = CreateConfigForTests();
         var simulation = new MassNavigationSimulationRuntime(config);
-        var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
-            config.World!.StreamingChunkSizeCm);
+        var loadedChunks = CreateLoadedChunksForTests(simulation);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             loadedChunks);
@@ -106,6 +113,51 @@ public sealed class MassNavigationOrderChainTests
         simulation.UpdateStreamingWindow(new Vector2(5_000f, 5_000f));
 
         Assert.That(loadedChunks.ActiveChunkKeys.OrderBy(key => key).ToArray(), Is.EqualTo(expected));
+    }
+
+    /// <summary>
+    /// Production-equivalent move-command entry: Prepare + capacity gate + Commit.
+    /// </summary>
+    internal static int CommitPreparedOrderMove(
+        MassNavigationSimulationRuntime simulation,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 destinationWorldCm)
+    {
+        Span<Vector2> preparedTargets = memberIndices.Length <= 32
+            ? stackalloc Vector2[memberIndices.Length]
+            : new Vector2[memberIndices.Length];
+
+        bool commandChanged = simulation.NavGroupRuntime.PrepareOrderMoveCommand(
+            simulation.MassNavigationFlow,
+            simulation.AgentState,
+            orderToken,
+            memberIndices,
+            teamId,
+            destinationWorldCm,
+            preparedTargets,
+            out Vector2 resolvedDestinationWorldCm);
+
+        if (simulation.NavGroupRuntime.RequiresNewOrderGroup(orderToken))
+        {
+            simulation.NavGroupRuntime.EnsureCanAllocateNewOrderGroups(1);
+        }
+
+        if (!commandChanged)
+        {
+            return memberIndices.Length;
+        }
+
+        return simulation.NavGroupRuntime.CommitPreparedOrderMoveCommand(
+            simulation.MassNavigationFlow,
+            simulation.AgentState,
+            orderToken,
+            memberIndices,
+            teamId,
+            destinationWorldCm,
+            resolvedDestinationWorldCm,
+            preparedTargets);
     }
 
     internal static MassNavigationConfig CreateConfigForTests()
@@ -169,6 +221,7 @@ public sealed class MassNavigationOrderChainTests
                     RouteWaypointCapacityPerAgent = 64,
                     LoadedChunkCapacity = 32,
                     RelationshipDomainCapacity = 2,
+                    DisplacedAgentCapacity = 4,
                 },
             },
             AgentProfiles = new MassNavigationAgentProfileSetConfig

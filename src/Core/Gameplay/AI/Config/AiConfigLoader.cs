@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.AI.Config
@@ -20,12 +21,18 @@ namespace Ludots.Core.Gameplay.AI.Config
         private readonly ConfigPipeline _pipeline;
         private readonly AtomRegistry _atoms;
         private readonly AiConfigValidationContext? _validation;
+        private readonly GraphActionCatalog? _actions;
 
-        public AiConfigLoader(ConfigPipeline pipeline, AtomRegistry atoms, AiConfigValidationContext? validation = null)
+        public AiConfigLoader(
+            ConfigPipeline pipeline,
+            AtomRegistry atoms,
+            AiConfigValidationContext? validation = null,
+            GraphActionCatalog? actions = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _atoms = atoms ?? throw new ArgumentNullException(nameof(atoms));
             _validation = validation;
+            _actions = actions;
         }
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
@@ -374,8 +381,9 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             var utilityRuntime = CompileUtilityRuntime(catalog, report);
+            var behavior = new GraphBehaviorDefinitionLoader(_pipeline, _actions).Load(catalog, report);
 
-            return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots, utilityRuntime);
+            return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots, utilityRuntime, behavior);
         }
 
         private UtilityAiCompiledRuntime CompileUtilityRuntime(ConfigCatalog catalog, ConfigConflictReport? report)
@@ -764,7 +772,20 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.SubmitMode", $"Unsupported submit mode value {submitMode}.");
                 }
 
-                int playerId = TryReadInt(obj, "PlayerId", out int authoredPlayerId) ? authoredPlayerId : 0;
+                int playerId = 0;
+                if (parsedKind == UtilityAiTaskKind.SubmitOrder)
+                {
+                    if (!TryReadInt(obj, "PlayerId", out playerId))
+                    {
+                        throw Fail($"{path}.PlayerId", "SubmitOrder task must declare PlayerId.");
+                    }
+
+                    if (playerId <= 0)
+                    {
+                        throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
+                    }
+                }
+
                 int intArg0 = TryReadInt(obj, "IntArg0", out int authoredIntArg0) ? authoredIntArg0 : -1;
                 int intArg1 = TryReadInt(obj, "IntArg1", out int authoredIntArg1) ? authoredIntArg1 : 0;
                 ids.Add(id, tasks.Count);
@@ -1200,6 +1221,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, $"References unknown graph id {graphId}.");
             }
 
+            _validation.Graphs.RequireKind(graphId, GraphKind.Score);
+
             try
             {
                 UtilityAiGraphSafety.ValidateScoreProgram(program, path, graphId);
@@ -1369,7 +1392,16 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail($"{path}.SubmitMode", $"Unsupported submit mode value {submitModeByte}.");
             }
 
-            int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
+            if (!TryReadInt(orderObj, "PlayerId", out int playerId))
+            {
+                throw Fail($"{path}.PlayerId", "Order must declare PlayerId.");
+            }
+
+            if (playerId <= 0)
+            {
+                throw Fail($"{path}.PlayerId", "PlayerId must be positive.");
+            }
+
             int abilityId = ResolveAbilityId(orderObj, path);
             return new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId, abilityId);
         }
@@ -1427,8 +1459,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private static ConfigCatalogEntry GetEntry(ConfigCatalog catalog, string relativePath, ConfigMergePolicy policy, string idField)
         {
-            if (catalog != null && catalog.TryGet(relativePath, out var e)) return e;
-            return new ConfigCatalogEntry(relativePath, policy, idField);
+            return ConfigPipeline.RequireEntry(catalog, relativePath, policy, idField);
         }
 
         private static (WorldStateBits256 Mask, WorldStateBits256 Values) ReadCondition(JsonObject obj, string propertyName, AtomRegistry atoms, string path)

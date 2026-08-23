@@ -29,6 +29,9 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
+        /// <summary>Maximum simultaneously loaded graph chunks. Required for NodeGraph boards.</summary>
+        public int LoadedChunkCapacity { get; set; }
+
         /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
         public string DataFile { get; set; }
 
@@ -57,6 +60,7 @@ namespace Ludots.Core.Map.Board
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,
+                LoadedChunkCapacity = LoadedChunkCapacity,
                 DataFile = DataFile,
                 VisualHeightmapAsset = VisualHeightmapAsset,
                 StructureCollisionAsset = StructureCollisionAsset,

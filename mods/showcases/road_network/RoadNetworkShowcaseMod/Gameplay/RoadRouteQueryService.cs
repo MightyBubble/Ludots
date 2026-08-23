@@ -54,7 +54,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             PathStore resolvedPathStore = pathStore!;
 
             if (!ResolveRouteOrigin(order.Actor, moveToOrderTypeId, out Vector3 originWorldCm) ||
-                !OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out Vector3 goalWorldCm))
+                !OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out Vector3 goalWorldCm))
             {
                 status = "Road command rejected: could not resolve route origin or target.";
                 return false;

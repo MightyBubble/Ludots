@@ -4,7 +4,6 @@ using System.Text;
 using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
-using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -13,6 +12,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
@@ -25,6 +25,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private readonly RoadNetworkShowcaseRuntime _runtime;
         private readonly World _world;
         private readonly RoadRouteProfileCatalog _profiles;
+        private readonly RoadNetworkOrderTypeIds _orderTypeIds;
         private readonly RoadRouteSelectionStrategy _selection = new();
 
         public RoadNetworkShowcasePanelStateBuilder(GameEngine engine, RoadNetworkShowcaseRuntime runtime)
@@ -33,6 +34,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _world = engine.World;
             _profiles = new RoadRouteProfileCatalog(_world);
+            _orderTypeIds = RoadNetworkOrderTypeIds.Require(engine.GlobalContext);
         }
 
         public RoadNetworkShowcasePanelState Build()
@@ -72,7 +74,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             MovePlanRuntime planRuntime = _world.Has<MovePlanRuntime>(actor) ? _world.Get<MovePlanRuntime>(actor) : default;
             MovePlanExecutionIntent intent = _world.Has<MovePlanExecutionIntent>(actor) ? _world.Get<MovePlanExecutionIntent>(actor) : default;
 
-            int roadMoveFollowOrderTypeId = ResolveRoadMoveFollowOrderTypeId();
+            int roadMoveFollowOrderTypeId = _orderTypeIds.RoadMoveFollow;
             bool hasRoadActiveOrder = RoadMoveActiveOrderResolver.TryResolve(_world, actor, roadMoveFollowOrderTypeId, out Order activeOrder) &&
                                       RoadMoveActiveOrderResolver.OwnsRuntime(in activeOrder, in orderRuntime);
 
@@ -148,7 +150,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;
@@ -275,7 +277,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return BuildPlanPointList("Path(plan)", in plan, planRuntime.CurrentWaypointIndex);
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in activeOrder);
             if (pointCount <= 0)
             {
                 return "Path  active order has no spatial waypoints";
@@ -285,7 +287,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             text.Append("Path(order) ").Append(pointCount).Append(" pts");
             for (int i = 0; i < pointCount; i++)
             {
-                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in activeOrder, i, out Vector3 waypoint))
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(_world, in activeOrder, i, out Vector3 waypoint))
                 {
                     continue;
                 }
@@ -346,22 +348,9 @@ namespace RoadNetworkShowcaseMod.Runtime
             return plans != null;
         }
 
-        private int ResolveRoadMoveFollowOrderTypeId()
-        {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config ||
-                !config.Constants.OrderTypeIds.TryGetValue(RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey, out int orderTypeId))
-            {
-                return 0;
-            }
-
-            return orderTypeId;
-        }
-
         private Entity ResolveLocalOwner()
         {
-            return _engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) &&
-                   ownerObj is Entity owner &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity owner) &&
                    _world.IsAlive(owner)
                 ? owner
                 : Entity.Null;
@@ -404,7 +393,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private string DescribeOrder(in Order order, int roadMoveFollowOrderTypeId)
         {
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
             string orderType = order.OrderTypeId == roadMoveFollowOrderTypeId
                 ? "roadMoveFollow"
                 : order.OrderTypeId.ToString();

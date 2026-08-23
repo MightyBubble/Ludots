@@ -8,11 +8,13 @@ using GenreInfoShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 
@@ -235,7 +237,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return;
             }
 
-            ApplyShowcaseEntityState(engine.World);
+            ApplyShowcaseEntityState(engine);
             SeedSelectionGroups(engine);
             RecallControlGroup(engine, 3);
             ShowLiveSelection(engine);
@@ -243,29 +245,32 @@ namespace GenreInfoShowcaseMod.Runtime
             engine.GlobalContext[GenreInfoShowcaseIds.SeededMapKey] = mapId;
         }
 
-        private static void ApplyShowcaseEntityState(World world)
+        private static void ApplyShowcaseEntityState(GameEngine engine)
         {
-            SetEntityAttributes(world, "Governor Aurelia", ("Health", 100f, 82f), ("Gold", 180f, 145f), ("Production", 22f, 18f), ("TechProgress", 80f, 62f), ("FoodProduction", 14f, 12f));
+            World world = engine.World;
+            TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires TagOps.");
+            SetEntityAttributes(world, tagOps, "Governor Aurelia", ("Health", 100f, 82f), ("Gold", 180f, 145f), ("Production", 22f, 18f), ("TechProgress", 80f, 62f), ("FoodProduction", 14f, 12f));
             SetEntityTags(world, "Governor Aurelia", "Status.CanColonize");
 
-            SetEntityAttributes(world, "Captain Nyx", ("Health", 920f, 640f), ("Energy", 450f, 310f), ("AttackSpeed", 115f, 115f));
+            SetEntityAttributes(world, tagOps, "Captain Nyx", ("Health", 920f, 640f), ("Energy", 450f, 310f), ("AttackSpeed", 115f, 115f));
             SetEntityTags(world, "Captain Nyx", "Cooldown.Skill.W");
 
-            SetEntityAttributes(world, "Field Barracks", ("Health", 1000f, 760f));
+            SetEntityAttributes(world, tagOps, "Field Barracks", ("Health", 1000f, 760f));
 
             for (int i = 1; i <= 18; i++)
             {
-                SetEntityAttributes(world, $"Marine {i:00}", ("Health", 40f, 24f + i), ("AttackSpeed", 100f, 100f));
+                SetEntityAttributes(world, tagOps, $"Marine {i:00}", ("Health", 40f, 24f + i), ("AttackSpeed", 100f, 100f));
             }
 
             for (int i = 1; i <= 4; i++)
             {
-                SetEntityAttributes(world, $"Siege Tank {i:00}", ("Health", 150f, 112f + (i * 6)), ("Shield", 0f, 0f));
-                SetEntityAttributes(world, $"Sky Vessel {i:00}", ("Health", 200f, 168f + (i * 8)), ("Energy", 200f, 120f + (i * 18)));
+                SetEntityAttributes(world, tagOps, $"Siege Tank {i:00}", ("Health", 150f, 112f + (i * 6)), ("Shield", 0f, 0f));
+                SetEntityAttributes(world, tagOps, $"Sky Vessel {i:00}", ("Health", 200f, 168f + (i * 8)), ("Energy", 200f, 120f + (i * 18)));
             }
         }
 
-        private static void SetEntityAttributes(World world, string entityName, params (string Name, float Base, float Current)[] values)
+        private static void SetEntityAttributes(World world, TagOps tagOps, string entityName, params (string Name, float Base, float Current)[] values)
         {
             Entity entity = FindNamedEntity(world, entityName);
             if (entity == Entity.Null)
@@ -273,21 +278,21 @@ namespace GenreInfoShowcaseMod.Runtime
                 return;
             }
 
-            AttributeBuffer attributes = world.TryGet(entity, out AttributeBuffer existing) ? existing : new AttributeBuffer();
+            if (!world.Has<AttributeBuffer>(entity))
+            {
+                world.Add(entity, new AttributeBuffer());
+            }
+
+            if (!world.Has<DirtyFlags>(entity))
+            {
+                world.Add(entity, new DirtyFlags());
+            }
+
             for (int i = 0; i < values.Length; i++)
             {
                 int attributeId = AttributeRegistry.Register(values[i].Name);
-                attributes.SetBase(attributeId, values[i].Base);
-                attributes.SetCurrent(attributeId, values[i].Current);
-            }
-
-            if (world.Has<AttributeBuffer>(entity))
-            {
-                world.Set(entity, attributes);
-            }
-            else
-            {
-                world.Add(entity, attributes);
+                AttributeMutationOps.SetBase(world, entity, attributeId, values[i].Base, tagOps);
+                AttributeMutationOps.SetCurrent(world, entity, attributeId, values[i].Current, tagOps);
             }
         }
 
@@ -299,11 +304,17 @@ namespace GenreInfoShowcaseMod.Runtime
                 return;
             }
 
-            GameplayTagContainer tags = world.TryGet(entity, out GameplayTagContainer existing) ? existing : new GameplayTagContainer();
-            tags.Clear();
+            GameplayTagContainer tags = default;
+            TagCountContainer counts = default;
             for (int i = 0; i < tagNames.Length; i++)
             {
-                tags.AddTag(TagRegistry.Register(tagNames[i]));
+                int tagId = TagRegistry.Register(tagNames[i]);
+                tags.AddTag(tagId);
+                if (!counts.AddCount(tagId))
+                {
+                    throw new InvalidOperationException(
+                        $"{TagOps.TagCountOverflowError}: entity={entity.Id}, source=GenreInfoShowcase.");
+                }
             }
 
             if (world.Has<GameplayTagContainer>(entity))
@@ -314,6 +325,17 @@ namespace GenreInfoShowcaseMod.Runtime
             {
                 world.Add(entity, tags);
             }
+
+            if (world.Has<TagCountContainer>(entity))
+            {
+                world.Set(entity, counts);
+            }
+            else
+            {
+                world.Add(entity, counts);
+            }
+
+            TagStateInstaller.EnsureInstalled(world, entity);
         }
 
         private static void EnsurePresentationStableIds(GameEngine engine)
@@ -388,21 +410,19 @@ namespace GenreInfoShowcaseMod.Runtime
         private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity viewer)
         {
             collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
-            viewer = EnsureCollectionViewer(engine);
-            return collections != null && viewer != Entity.Null && engine.World.IsAlive(viewer);
+            viewer = RequireCollectionViewer(engine);
+            return collections != null;
         }
 
-        private static Entity EnsureCollectionViewer(GameEngine engine)
+        private static Entity RequireCollectionViewer(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) &&
-                viewerObj is Entity localViewer &&
-                engine.World.IsAlive(localViewer))
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
             {
-                return localViewer;
+                throw new InvalidOperationException(
+                    "GenreInfo showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity viewer = engine.World.Create(new Name { Value = "GenreInfo Showcase Viewer" });
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = viewer;
             return viewer;
         }
 
@@ -511,7 +531,8 @@ namespace GenreInfoShowcaseMod.Runtime
                     selectedTarget.Value,
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopRight, 16f, 16f, 484f, 636f),
                     EntityInfoGasDetailFlags.None,
-                    true));
+                    true,
+                    EntityInfoPanelTemplateCatalog.CompactInsightTemplateId));
         }
 
         private static void EnsureInsightPanelTarget(GameEngine engine)

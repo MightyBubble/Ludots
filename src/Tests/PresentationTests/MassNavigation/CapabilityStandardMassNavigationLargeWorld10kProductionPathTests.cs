@@ -29,8 +29,9 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -55,8 +56,8 @@ namespace Ludots.Tests.Presentation
         private const float MovementEpsilonCm = 1f;
         private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
         private const string MouseRightButtonPath = "<Mouse>/RightButton";
-        private const string LightCommandMarkerPerformerId = "mass_navigation_agent_command_marker_light";
-        private const string HeavyCommandMarkerPerformerId = "mass_navigation_agent_command_marker_heavy";
+        private const string LightCommandMarkerPresenterId = "mass_navigation_agent_command_marker_light";
+        private const string HeavyCommandMarkerPresenterId = "mass_navigation_agent_command_marker_heavy";
 
         private static readonly string[] ShowcaseMods =
         {
@@ -71,7 +72,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [TearDown]
@@ -79,7 +80,7 @@ namespace Ludots.Tests.Presentation
         {
             AttributeRegistry.Clear();
             TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
+            PresenterScopeTagRegistry.Clear();
         }
 
         [Test]
@@ -99,6 +100,9 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireMassNavigationSimulation(engine);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
+            Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderQueueCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderAdmissionResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents * 2));
+            Assert.That(engine.MergedConfig.GasRuntimeCapacity.OrderTerminalResultCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.Scenario.Teams.Length, Is.EqualTo(ExpectedTeamCount));
 
             var hudProjection = CreateHudProjection(engine);
@@ -176,7 +180,7 @@ namespace Ludots.Tests.Presentation
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
 
             Entity[] agents = CollectMassNavigationAgents(engine, expectedAgents);
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ReplaceCommandSource(engine, localPlayer, agents);
 
             Assert.That(SnapshotCommandSource(engine), Has.Length.EqualTo(expectedAgents));
@@ -286,7 +290,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.Not.Empty);
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();
@@ -321,8 +326,8 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertStartupParticipantBindings(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupLocalPlayerId;
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            int playerId = engine.MergedConfig.StartupLocalSeats[0].PlayerId;
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.IsAlive(localPlayer), Is.True);
 
@@ -509,31 +514,31 @@ namespace Ludots.Tests.Presentation
 
                 Assert.That(engine.World.TryGet(entity, out VisualTransform visual), Is.True,
                     $"Agent {agentIndex.Value} is missing VisualTransform.");
-                Assert.That(engine.World.TryGet(entity, out PresentationOwnerHasPerformerPayload payload), Is.True,
-                    $"Agent {agentIndex.Value} is missing performer payload.");
+                Assert.That(engine.World.TryGet(entity, out PresentationOwnerHasPresenterPayload payload), Is.True,
+                    $"Agent {agentIndex.Value} is missing presenter payload.");
                 Assert.That(payload.RootCount, Is.EqualTo(1),
-                    $"Agent {agentIndex.Value} must have exactly one performer root.");
-                Assert.That(engine.World.IsAlive(payload.SingleRootPerformer), Is.True,
-                    $"Agent {agentIndex.Value} performer root is not alive.");
-                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerState performerState), Is.True,
-                    $"Agent {agentIndex.Value} performer root has no PerformerState.");
-                Assert.That(performerState.OwnerEntity, Is.EqualTo(entity),
-                    $"Agent {agentIndex.Value} performer root owner mismatch.");
-                Assert.That(performerState.StableId, Is.GreaterThan(0),
-                    $"Agent {agentIndex.Value} performer root has no stable id.");
-                Assert.That(engine.World.TryGet(payload.SingleRootPerformer, out PerformerWorldPlanePosition performerPosition), Is.True,
-                    $"Agent {agentIndex.Value} performer root has no plane position.");
+                    $"Agent {agentIndex.Value} must have exactly one presenter root.");
+                Assert.That(engine.World.IsAlive(payload.SingleRootPresenter), Is.True,
+                    $"Agent {agentIndex.Value} presenter root is not alive.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPresenter, out PresenterState presenterState), Is.True,
+                    $"Agent {agentIndex.Value} presenter root has no PresenterState.");
+                Assert.That(presenterState.OwnerEntity, Is.EqualTo(entity),
+                    $"Agent {agentIndex.Value} presenter root owner mismatch.");
+                Assert.That(presenterState.StableId, Is.GreaterThan(0),
+                    $"Agent {agentIndex.Value} presenter root has no stable id.");
+                Assert.That(engine.World.TryGet(payload.SingleRootPresenter, out PresenterWorldPlanePosition presenterPosition), Is.True,
+                    $"Agent {agentIndex.Value} presenter root has no plane position.");
 
                 Vector2 solverCm = simulation.GetAgentWorldPositionCm(agentIndex.Value);
                 Vector2 ecsCm = worldPosition.Value.ToVector2();
                 Vector2 visualCm = WorldPlane2D.VisualMetersToLogicCm(in visual.Position);
-                Vector2 performerCm = performerPosition.ValueCm;
+                Vector2 presenterCm = presenterPosition.ValueCm;
                 Assert.That(Vector2.DistanceSquared(solverCm, ecsCm), Is.LessThanOrEqualTo(toleranceSq),
                     $"Agent {agentIndex.Value} solver/ECS anchor diverged: {solverCm} vs {ecsCm}.");
                 Assert.That(Vector2.DistanceSquared(ecsCm, visualCm), Is.LessThanOrEqualTo(toleranceSq),
                     $"Agent {agentIndex.Value} ECS/VisualTransform anchor diverged: {ecsCm} vs {visualCm}.");
-                Assert.That(Vector2.DistanceSquared(visualCm, performerCm), Is.LessThanOrEqualTo(toleranceSq),
-                    $"Agent {agentIndex.Value} VisualTransform/performer root anchor diverged: {visualCm} vs {performerCm}.");
+                Assert.That(Vector2.DistanceSquared(visualCm, presenterCm), Is.LessThanOrEqualTo(toleranceSq),
+                    $"Agent {agentIndex.Value} VisualTransform/presenter root anchor diverged: {visualCm} vs {presenterCm}.");
                 sampled++;
             });
 
@@ -781,8 +786,7 @@ namespace Ludots.Tests.Presentation
         {
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
             var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
-            Entity localPlayer = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            Entity localPlayer = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local)
                     ? local
                     : default;
@@ -876,18 +880,18 @@ namespace Ludots.Tests.Presentation
 
         private static int CountActiveCommandMarkers(GameEngine engine)
         {
-            var performers = RequireService(engine, CoreServiceKeys.PerformerEntityRuntime);
-            var definitions = RequireService(engine, CoreServiceKeys.PerformerDefinitionRegistry);
-            int lightMarkerId = definitions.GetId(LightCommandMarkerPerformerId);
-            int heavyMarkerId = definitions.GetId(HeavyCommandMarkerPerformerId);
+            var presenters = RequireService(engine, CoreServiceKeys.PresenterEntityRuntime);
+            var definitions = RequireService(engine, CoreServiceKeys.PresenterDefinitionRegistry);
+            int lightMarkerId = definitions.GetId(LightCommandMarkerPresenterId);
+            int heavyMarkerId = definitions.GetId(HeavyCommandMarkerPresenterId);
             if (lightMarkerId <= 0 || heavyMarkerId <= 0)
             {
-                throw new InvalidOperationException("MassNavigation command marker performer definitions are not registered.");
+                throw new InvalidOperationException("MassNavigation command marker presenter definitions are not registered.");
             }
 
             int count = 0;
-            var query = new QueryDescription().WithAll<PerformerState>();
-            engine.World.Query(in query, (ref PerformerState state) =>
+            var query = new QueryDescription().WithAll<PresenterState>();
+            engine.World.Query(in query, (ref PresenterState state) =>
             {
                 if (state.DefId == lightMarkerId ||
                     state.DefId == heavyMarkerId)
@@ -943,7 +947,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertCommandActorsAreCommandable(GameEngine engine, ReadOnlySpan<Entity> commandActors)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             for (int i = 0; i < commandActors.Length; i++)
             {
@@ -958,7 +962,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertLocalScenarioAgentsAreCommandable(GameEngine engine)
         {
-            Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             var controlDomains = RequireService(engine, CoreServiceKeys.ControlDomainQuery);
             MassNavigationSimulationRuntime simulation = RequireService(engine, MassNavigationKeys.RuntimeBinding).RequireCurrent();
 
@@ -994,7 +998,7 @@ namespace Ludots.Tests.Presentation
         private static string DescribeEntityCommandState(GameEngine engine, Entity entity)
         {
             string alive = engine.World.IsAlive(entity) ? "alive" : "dead";
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             ControlDomainQuery? controlDomains = engine.GetService(CoreServiceKeys.ControlDomainQuery);
             bool controllable = controlDomains?.IsControllableBy(localPlayer, entity) == true;
             string controlDomain = controlDomains != null && controlDomains.TryResolveControlDomain(entity, out Entity domain)
@@ -1024,14 +1028,14 @@ namespace Ludots.Tests.Presentation
 
         private static Entity[] SnapshotCommandSource(GameEngine engine)
         {
-            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
         }
 
         private static bool TryDescribeCommandSourceView(GameEngine engine, out EntityCollectionView view)
         {
             view = default;
-            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections))
             {
                 return false;

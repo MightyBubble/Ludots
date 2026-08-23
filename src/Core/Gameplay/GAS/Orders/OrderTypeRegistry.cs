@@ -10,6 +10,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private readonly OrderTypeConfig?[] _configs = new OrderTypeConfig?[MaxOrderTypes];
         private readonly ulong[] _hasBits = new ulong[MaxOrderTypes >> 6];
         private readonly Dictionary<string, int> _idsByKey = new(StringComparer.Ordinal);
+        private readonly OrderTerminalResultBuffer _terminalResults;
+
+        public OrderTypeRegistry(OrderTerminalResultBuffer terminalResults)
+        {
+            _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
+        }
+
+        public OrderTerminalResultBuffer TerminalResults => _terminalResults;
+
+        internal void EnsureTerminalResultCapacity(int additionalCount = 1) => _terminalResults.EnsureCanWrite(additionalCount);
+
+        internal void PublishTerminalResult(in OrderTerminalOutcome outcome) => _terminalResults.Write(in outcome);
 
         public void Clear()
         {

@@ -3,6 +3,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
@@ -10,6 +11,7 @@ using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Persistence;
 
@@ -44,7 +46,7 @@ public sealed class WorldSnapshotOrchestrationTests
 
         Entity restored = FindSingleByName(target.World, "saved-actor");
         ref readonly WorldPositionCm restoredPosition = ref target.World.Get<WorldPositionCm>(restored);
-        Assert.That(restoredPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(100, 200)));
+        Assert.That(restoredPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(100, 200)));
         Assert.That(target.GameSession.CurrentTick, Is.EqualTo(snapshot.Header.Tick));
         Assert.That(target.GameSession.Globals["score"], Is.EqualTo(9));
         Assert.That(FindByName(target.World, "target-only"), Is.EqualTo(Entity.Null));
@@ -72,7 +74,7 @@ public sealed class WorldSnapshotOrchestrationTests
 
         Entity preserved = FindSingleByName(target.World, "target-survives");
         ref readonly WorldPositionCm preservedPosition = ref target.World.Get<WorldPositionCm>(preserved);
-        Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(3, 4)));
+        Assert.That(preservedPosition.ToWorldCmInt2(), Is.EqualTo(new Ludots.Platform.Abstractions.WorldCmInt2(3, 4)));
         Assert.That(target.GameSession.CurrentTick, Is.EqualTo(targetTickBeforeRestore));
     }
 
@@ -231,6 +233,43 @@ public sealed class WorldSnapshotOrchestrationTests
         string[] restoredTrace = RunFixedSteps(restored, 3);
 
         Assert.That(restoredTrace, Is.EqualTo(continuousTrace));
+    }
+
+    [Test]
+    public void RestoreDuringAdmissionStepAbortsVolatileGenerationBeforeNextLogicStep()
+    {
+        using GameEngine source = CreateInitializedEngine();
+        using GameEngine target = CreateInitializedEngine();
+        var snapshotService = new WorldSnapshotService();
+        var restoreService = new WorldRestoreService();
+        OrderAdmissionResultBuffer admission = target.GetService(CoreServiceKeys.OrderAdmissionResultBuffer);
+        OrderQueue orderQueue = target.GetService(CoreServiceKeys.OrderQueue);
+
+        WorldSaveSnapshot snapshot = snapshotService.Capture(
+            source,
+            SaveSnapshotBoundary.CleanAfter(SystemGroup.ClearPresentationFlags));
+
+        admission.BeginLogicStep();
+        var beforeRestore = new Order { OrderTypeId = 3 };
+        orderQueue.EnsureOrderId(ref beforeRestore);
+        Assert.That(admission.TryWrite(new OrderAdmissionOutcome(
+            orderId: beforeRestore.OrderId,
+            orderTypeId: 3,
+            OrderAdmissionStage.EntityIntake,
+            OrderSubmitResult.Activated)), Is.True);
+
+        restoreService.Restore(target, snapshot);
+
+        Assert.That(admission.LogicStepActive, Is.False);
+        Assert.That(admission.EntityIntakeOpen, Is.False);
+        Assert.That(admission.Count, Is.Zero);
+        Assert.That(admission.TryGet(beforeRestore.OrderId, OrderAdmissionStage.EntityIntake, out _), Is.False);
+        var afterRestore = new Order { OrderTypeId = 3 };
+        orderQueue.EnsureOrderId(ref afterRestore);
+        Assert.That(afterRestore.OrderId, Is.GreaterThan(beforeRestore.OrderId));
+        Assert.DoesNotThrow(admission.BeginLogicStep);
+        admission.EndEntityIntake();
+        admission.EndLogicStep();
     }
 
     private static Entity FindSingleByName(World world, string name)

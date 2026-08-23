@@ -1,7 +1,11 @@
-using System.Text.Json.Serialization;
+using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Config
@@ -28,11 +32,34 @@ namespace Ludots.Core.Config
         public string StartupMapId { get; set; }
 
         /// <summary>
-        /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
+        /// Cold-start local seat recipe. Injected into <see cref="MapLaunchContext.LocalSeats"/> on
+        /// <c>LoadStartupMap</c>. Not map identity; not runtime seat truth after load.
         /// </summary>
-        public int StartupLocalPlayerId { get; set; }
+        public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
+
+        public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
+
+        /// <summary>Build launch context from <see cref="StartupLocalSeats"/> (Epic #896 SSOT).</summary>
+        public MapLaunchContext? CreateStartupLaunchContext(
+            IReadOnlyDictionary<string, object>? metadata = null)
+        {
+            if (!HasStartupLocalSeats)
+            {
+                return MapLaunchContext.Create(Array.Empty<LocalSeatLaunchBinding>(), metadata);
+            }
+
+            var bindings = new LocalSeatLaunchBinding[StartupLocalSeats.Count];
+            for (int i = 0; i < StartupLocalSeats.Count; i++)
+            {
+                StartupLocalSeatConfig seat = StartupLocalSeats[i]
+                    ?? throw new InvalidOperationException($"GameConfig.startupLocalSeats[{i}] is null.");
+                bindings[i] = seat.ToLaunchBinding();
+            }
+
+            return MapLaunchContext.Create(bindings, metadata);
+        }
 
         // Engine-level defaults (these stay in Core's game.json)
         public int WindowWidth { get; set; } = 1280;
@@ -44,6 +71,8 @@ namespace Ludots.Core.Config
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
+
+        public GasRuntimeCapacityConfig GasRuntimeCapacity { get; set; } = null!;
 
         public int GridCellSizeCm { get; set; } = 100;
 
@@ -61,6 +90,27 @@ namespace Ludots.Core.Config
         public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
 
         /// <summary>
+        /// Skin id for engine-side panel presentation (e.g. "default", "markup", "compose",
+        /// "reactive", "web"). Null means the built-in default skin. Authors never write C#
+        /// to change skins — this is the whole selection surface.
+        /// </summary>
+        public string? PanelSkin { get; set; }
+
+        /// <summary>
+        /// Visual theme pack id for engine-side panel presentation (orthogonal to
+        /// PanelSkin: skin = which backend renders, theme = what it looks like).
+        /// Resolved through the merged PanelThemes/themes.json catalog; the entry's
+        /// mod-scoped root points at theme.css + images/ + fonts/.
+        /// </summary>
+        public string? PanelTheme { get; set; }
+
+        /// <summary>
+        /// For the "web" panel skin: mod-VFS path of the overlay app index.html
+        /// (e.g. "PanelSkinWebMod:Assets/overlay-app/index.html").
+        /// </summary>
+        public string? PanelWebApp { get; set; }
+
+        /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
@@ -70,6 +120,153 @@ namespace Ludots.Core.Config
     public sealed class Physics2DConfig
     {
         public bool Enabled { get; set; }
+    }
+
+    public sealed class GasRuntimeCapacityConfig
+    {
+        public int AbilityExecSnapshotCapacity { get; set; }
+        public int EffectLifetimeSnapshotCapacity { get; set; }
+        public int EffectFanOutCommandCapacity { get; set; }
+        public int EffectRequestQueueCapacity { get; set; }
+        public int OrderQueueCapacity { get; set; }
+        public int ResponseChainOrderQueueCapacity { get; set; }
+        public int OrderAdmissionResultCapacity { get; set; }
+        public int OrderAdmissionRejectionCapacity { get; set; }
+        public int OrderTerminalResultCapacity { get; set; }
+        public int DeferredTriggerActiveEntityCapacity { get; set; }
+        public int ProjectileCollisionCandidateCapacity { get; set; }
+        public int ProjectileRuntimeEntityCapacity { get; set; }
+        public int EffectPhaseGraphProgramScratchCapacity { get; set; }
+        public int GraphOutputValueCapacity { get; set; }
+        public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
+        public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
+        public int CommandIntentScratchCapacity { get; set; }
+
+        public void Validate()
+        {
+            if (AbilityExecSnapshotCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.abilityExecSnapshotCapacity must be positive.");
+            }
+
+            if (EffectLifetimeSnapshotCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectLifetimeSnapshotCapacity must be positive.");
+            }
+
+            if (EffectFanOutCommandCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectFanOutCommandCapacity must be positive.");
+            }
+
+            if (EffectRequestQueueCapacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectRequestQueueCapacity must be at least " +
+                    "GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME so a single frame can publish the full " +
+                    "effect request batch without silent expansion.");
+            }
+
+            if (OrderQueueCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderQueueCapacity must be positive.");
+            }
+
+            if (ResponseChainOrderQueueCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.responseChainOrderQueueCapacity must be positive.");
+            }
+
+            if (OrderTerminalResultCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderTerminalResultCapacity must be positive.");
+            }
+
+            if (OrderAdmissionResultCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionResultCapacity must be positive.");
+            }
+
+            if (OrderAdmissionRejectionCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionRejectionCapacity must be positive.");
+            }
+
+            long requiredAdmissionResults = checked((long)OrderQueueCapacity * 2L);
+            if (OrderAdmissionResultCapacity < requiredAdmissionResults)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionResultCapacity must be at least " +
+                    "orderQueueCapacity * 2 so the same generation can retain GlobalIntake and EntityIntake outcomes.");
+            }
+
+            if (OrderAdmissionRejectionCapacity < OrderQueueCapacity)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.orderAdmissionRejectionCapacity must be at least " +
+                    "orderQueueCapacity so a full queued batch can publish typed admission-capacity rejections.");
+            }
+
+            if (DeferredTriggerActiveEntityCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.deferredTriggerActiveEntityCapacity must be positive.");
+            }
+
+            if (ProjectileCollisionCandidateCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.projectileCollisionCandidateCapacity must be positive.");
+            }
+
+            if (ProjectileRuntimeEntityCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.projectileRuntimeEntityCapacity must be positive.");
+            }
+
+            if (EffectPhaseGraphProgramScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.effectPhaseGraphProgramScratchCapacity must be positive.");
+            }
+
+            if (GraphOutputValueCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.graphOutputValueCapacity must be positive.");
+            }
+
+            ValidateFiniteWorkBudget(
+                AbilityExecMaxWorkUnitsPerSlice,
+                "GameConfig.gasRuntimeCapacity.abilityExecMaxWorkUnitsPerSlice");
+            ValidateFiniteWorkBudget(
+                EffectProcessingMaxWorkUnitsPerSlice,
+                "GameConfig.gasRuntimeCapacity.effectProcessingMaxWorkUnitsPerSlice");
+
+            if (CommandIntentScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+        }
+
+        private static void ValidateFiniteWorkBudget(int value, string path)
+        {
+            if (value <= 0 || value == int.MaxValue)
+            {
+                throw new System.InvalidOperationException(
+                    $"{path} must be positive and finite.");
+            }
+        }
     }
 
     public sealed class BrowserRuntimeConfig

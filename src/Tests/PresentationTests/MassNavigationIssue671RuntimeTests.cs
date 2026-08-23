@@ -15,6 +15,7 @@ using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -237,7 +238,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
         var session = new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId });
         engine.SetCurrentMapSessionForTests(session);
         var binding = new MassNavigationRuntimeBinding();
@@ -245,6 +246,34 @@ public sealed class MassNavigationIssue671RuntimeTests
         binding.MarkPrepared(session.MapId, simulation);
         engine.SetService(MassNavigationKeys.RuntimeBinding, binding);
         return simulation;
+    }
+
+    [Test]
+    public void SetUnitRuntimeProfile_UnregisteredTeamLayerCombination_RejectsHotPathAllocation()
+    {
+        MassNavigationAgentLayer registeredLayer = CreateAgentLayer();
+        MassNavigationAgentLayer unregisteredLayer = new(categoryMask: 1u << 3, interactionMask: 1u << 3);
+        MassNavigationFlowSolverState flow = CreateAvoidanceFlow(
+            workerCount: 1,
+            mode: "Orca",
+            seeds: new[]
+            {
+                CreateSeed(localX: 1_000f, localY: 1_000f, registeredLayer),
+            });
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            flow.SetUnitRuntimeProfile(
+                index: 0,
+                teamId: 1,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer: unregisteredLayer))!;
+
+        Assert.That(ex.Message, Does.Contain("SetUnitRuntimeProfile must not allocate"));
+        Assert.That(ex.Message, Does.Contain("ResetAuthoredAgents"));
+        Assert.That(ex.Message, Does.Contain("AppendAuthoredAgents"));
     }
 
     private static MassNavigationFlowSolverState CreateAvoidanceFlow(

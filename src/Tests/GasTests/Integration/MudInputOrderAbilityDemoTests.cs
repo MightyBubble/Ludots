@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -29,7 +30,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudInputOrderAbilityDemoTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         // ════════════════════════════════════════════════════════════════════
         // E2E: PendingBuffer — Input Buffering Scenario
@@ -196,6 +197,8 @@ namespace Ludots.Tests.GAS
             sb.AppendLine("[MUD][SLOT] 基础技能栏: [Fireball(10), IceBlast(20), HealingWave(30), Teleport(40)]");
 
             var granted = new GrantedSlotBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
             // Item grants an override to slot 1
             int itemBuffTag = 500;
@@ -204,12 +207,12 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 4; i++)
             {
-                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, hasGranted: true, i);
+                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, i);
                 sb.AppendLine($"  Slot[{i}] = AbilityId={resolved.AbilityId}{(granted.HasOverride(i) ? " (OVERRIDE)" : "")}");
             }
 
-            That(AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 1).AbilityId, Is.EqualTo(99));
-            That(AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 0).AbilityId, Is.EqualTo(10));
+            That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 1).AbilityId, Is.EqualTo(99));
+            That(AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 0).AbilityId, Is.EqualTo(10));
 
             // Buff expires — revoke by source
             sb.AppendLine("───────────────────────────────────────────────────────────────");
@@ -217,7 +220,7 @@ namespace Ludots.Tests.GAS
             int revoked = granted.RevokeBySource(itemBuffTag);
             sb.AppendLine($"  Revoked={revoked} slots");
 
-            var resolvedAfter = AbilitySlotResolver.Resolve(in baseSlots, in granted, true, 1);
+            var resolvedAfter = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, 1);
             sb.AppendLine($"  Slot[1] = AbilityId={resolvedAfter.AbilityId} (restored)");
             That(resolvedAfter.AbilityId, Is.EqualTo(20), "Should be restored to IceBlast");
 
@@ -245,13 +248,13 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Case 1: Empty program — default pass
-            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 默认通过 (B[0]=1)。");
-            bool result1 = GasGraphExecutor.ExecuteValidation(
-                world, caster, target, default,
-                ReadOnlySpan<GraphInstruction>.Empty, null!);
-            sb.AppendLine($"  Result={result1}");
-            That(result1, Is.True);
+            // Case 1: Empty program — invalid under the explicit-halt graph contract
+            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 非法，必须显式 HaltReturnInt。");
+            var emptyError = Throws<InvalidOperationException>(() =>
+                GasGraphExecutor.ExecuteValidation(
+                    world, caster, target, default,
+                    ReadOnlySpan<GraphInstruction>.Empty, null!))!;
+            sb.AppendLine($"  Error={emptyError.Message}");
 
             // Case 2: Reject program — SetBool B[0] = 0
             sb.AppendLine("───────────────────────────────────────────────────────────────");
@@ -259,7 +262,11 @@ namespace Ludots.Tests.GAS
             var reject = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 };
             bool result2 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { reject }, null!);
+                new[]
+                {
+                    reject,
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, null!);
             sb.AppendLine($"  Result={result2}");
             That(result2, Is.False);
 
@@ -269,7 +276,11 @@ namespace Ludots.Tests.GAS
             var passInstr = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
             bool result3 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { passInstr }, null!);
+                new[]
+                {
+                    passInstr,
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, null!);
             sb.AppendLine($"  Result={result3}");
             That(result3, Is.True);
 
@@ -413,6 +424,8 @@ namespace Ludots.Tests.GAS
             var sw = Stopwatch.StartNew();
 
             var granted = new GrantedSlotBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
 
             for (int c = 0; c < cycles; c++)
             {
@@ -424,7 +437,7 @@ namespace Ludots.Tests.GAS
                 totalGrants++;
 
                 // Resolve
-                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in granted, true, slot);
+                var resolved = AbilitySlotResolver.Resolve(in baseSlots, in form, false, in itemGranted, false, in granted, true, slot);
                 totalResolves++;
 
                 // Every 3rd cycle: revoke
@@ -478,7 +491,11 @@ namespace Ludots.Tests.GAS
 
             // Small validation program: SetBool B[0] = 1 (pass)
             var passInstruction = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
-            var program = new[] { passInstruction };
+            var program = new[]
+            {
+                passInstruction,
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
 
             const int iterations = 100_000;
             int passed = 0;

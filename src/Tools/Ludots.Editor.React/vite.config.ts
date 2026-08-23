@@ -9,6 +9,16 @@ export default defineConfig({
     host: 'localhost',
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5299',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:5299',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     sourcemap: 'hidden',

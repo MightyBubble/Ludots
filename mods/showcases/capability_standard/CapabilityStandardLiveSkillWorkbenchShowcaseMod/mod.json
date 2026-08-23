@@ -1,0 +1,21 @@
+{
+  "name": "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+  "version": "1.0.0",
+  "description": "Editor hot-apply demo on Champion Skill Showcase: cast Mystic Shot, hot-swap to ice hit+debuff+blue presentation, cast again.",
+  "main": "bin/net8.0/CapabilityStandardLiveSkillWorkbenchShowcaseMod.dll",
+  "priority": -1850,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "ChampionSkillSandboxMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "live-skill-workbench",
+    "gas",
+    "hot-reload"
+  ]
+}

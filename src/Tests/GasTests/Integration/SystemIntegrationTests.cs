@@ -5,6 +5,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Physics;
 using Ludots.Core.Systems;
 using Schedulers;
@@ -16,7 +18,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class SystemIntegrationTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
         private World _world;
         private GameplayEventBus _eventBus;
         private PhysicsWorld _physicsWorld;
@@ -54,20 +56,32 @@ namespace Ludots.Tests.GAS
             // Arrange: 创建所有系统（跳过需要依赖的系统）
             var reactionSystem = new ReactionSystem(_world, null, _eventBus);
             var effectTemplates = new EffectTemplateRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                effectTemplates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "Test/SystemIntegrationTests.cs");
             var effectRequests = new EffectRequestQueue();
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var abilitySystem = new AbilitySystem(_world, effectRequests);
+            var abilitySystem = new AbilitySystem(_world, effectRequests, tagOps: _tagOps);
             var proposalSystem = new EffectProposalProcessingSystem(
                 _world,
                 effectRequests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock,
                 null,
                 effectTemplates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-            var appSystem = new EffectApplicationSystem(_world, effectRequests);
-            var aggSystem = new AttributeAggregatorSystem(_world);
-            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, effectRequests);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: _tagOps);
+            var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, clock, effectRequests, tagOps: _tagOps);
+            var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
+            var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
             
             // Act: 按Phase顺序执行
             float dt = 0.016f;
@@ -193,7 +207,7 @@ namespace Ludots.Tests.GAS
             _world.Add(entity, new DirtyFlags());
             
             var triggerQueue = new DeferredTriggerQueue();
-            var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue);
+            var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps);
             var processSystem = new DeferredTriggerProcessSystem(_world, triggerQueue, new GameplayEventBus());
             
             // 修改属性值（触发脏标记）

@@ -130,12 +130,4 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
     }
     
-    /// <summary>
-    /// 标记Effect已被修改（用于追踪修改历史）
-    /// </summary>
-    public struct EffectModified
-    {
-        public float OriginalValue;
-        public float ModifiedValue;
-    }
 }

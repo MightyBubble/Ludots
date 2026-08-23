@@ -76,6 +76,36 @@ namespace Ludots.Core.Gameplay.Spawning
         public int Capacity => _items.Length;
         public int FreeCapacity => _items.Length - _count;
 
+        internal readonly struct WriteCheckpoint
+        {
+            internal readonly int Head;
+            internal readonly int Tail;
+            internal readonly int Count;
+
+            internal WriteCheckpoint(int head, int tail, int count)
+            {
+                Head = head;
+                Tail = tail;
+                Count = count;
+            }
+        }
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            return new WriteCheckpoint(_head, _tail, _count);
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            if (_head != checkpoint.Head || _count < checkpoint.Count)
+            {
+                throw new InvalidOperationException("SPAWN.RUNTIME.ERR.InvalidWriteRollback");
+            }
+
+            _tail = checkpoint.Tail;
+            _count = checkpoint.Count;
+        }
+
         public bool TryEnqueue(in RuntimeEntitySpawnRequest request)
         {
             if (_count >= _items.Length)
@@ -133,6 +163,19 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             request = _items[_head];
+            return true;
+        }
+
+        public bool TryPeekAt(int offset, out RuntimeEntitySpawnRequest request)
+        {
+            if (offset < 0 || offset >= _count)
+            {
+                request = default;
+                return false;
+            }
+
+            int index = (_head + offset) % _items.Length;
+            request = _items[index];
             return true;
         }
 

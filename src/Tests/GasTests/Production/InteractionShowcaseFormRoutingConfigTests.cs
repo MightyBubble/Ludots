@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -10,6 +9,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -29,20 +29,30 @@ namespace Ludots.Tests.GAS.Production
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
 
-            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
+            EntityTemplate? arcweaverTemplate = null;
+            foreach (EntityTemplate template in engine.MapLoader.TemplateRegistry.GetAll())
             {
-                templates[template.Id] = template;
+                if (string.Equals(template.Id, "interaction_arcweaver_forms_demo", StringComparison.OrdinalIgnoreCase))
+                {
+                    arcweaverTemplate = template;
+                    break;
+                }
             }
 
-            var entity = new EntityBuilder(engine.World, templates)
-                .UseTemplate("interaction_arcweaver_forms_demo")
-                .Build();
+            Assert.That(arcweaverTemplate, Is.Not.Null);
+            Assert.That(
+                arcweaverTemplate!.Components.ContainsKey("PlayerOwner"),
+                Is.False,
+                "Entity templates must not bake scene ownership.");
+
+            engine.Start();
+            engine.LoadMap("interaction_showcase_hub");
+            engine.Tick(1f / 60f);
+            Entity entity = FindNamedEntity(engine.World, "ArcweaverForms");
 
             Assert.That(engine.World.Has<AbilityStateBuffer>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSetRef>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSlotBuffer>(entity), Is.True);
-            Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, "Entity templates must not bake scene ownership.");
 
             ref var abilities = ref engine.World.Get<AbilityStateBuffer>(entity);
             Assert.That(abilities.Count, Is.EqualTo(4));
@@ -60,12 +70,13 @@ namespace Ludots.Tests.GAS.Production
             routing.Update(0f);
 
             ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(entity);
+            var itemGrantedSlots = default(ItemGrantedSlotBuffer);
             var grantedSlots = default(GrantedSlotBuffer);
             int meleeQ = AbilityIdRegistry.GetId("Ability.Interaction.Arcweaver.FireLance");
             int meleeW = AbilityIdRegistry.GetId("Ability.Interaction.Arcweaver.ArcDash");
 
-            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId, Is.EqualTo(meleeQ));
-            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId, Is.EqualTo(meleeW));
+            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId, Is.EqualTo(meleeQ));
+            Assert.That(AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId, Is.EqualTo(meleeW));
         }
 
         [Test]
@@ -85,6 +96,27 @@ namespace Ludots.Tests.GAS.Production
             AssertNamedEntityOwner(engine.World, "Arcweaver", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Vanguard", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Commander", expectedPlayerId: 1);
+        }
+
+        [Test]
+        public void InteractionShowcase_HubMap_PreinstallsTimedTagStateForAbilityActors()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
+                assetsRoot);
+            engine.Start();
+            engine.LoadMap("interaction_showcase_hub");
+            engine.Tick(1f / 60f);
+
+            Entity arcweaver = FindNamedEntity(engine.World, "Arcweaver");
+            Assert.That(engine.World.Has<GameplayTagContainer>(arcweaver), Is.True);
+            Assert.That(engine.World.Has<TagCountContainer>(arcweaver), Is.True);
+            Assert.That(engine.World.Has<DirtyFlags>(arcweaver), Is.True);
+            Assert.That(engine.World.Has<TimedTagBuffer>(arcweaver), Is.True);
         }
 
         private static string FindRepoRoot()
@@ -107,6 +139,12 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertNamedEntityOwner(World world, string entityName, int expectedPlayerId)
         {
+            Entity found = FindNamedEntity(world, entityName);
+            Assert.That(world.Get<PlayerOwner>(found).PlayerId, Is.EqualTo(expectedPlayerId), $"{entityName} should receive PlayerOwner from map instance overrides.");
+        }
+
+        private static Entity FindNamedEntity(World world, string entityName)
+        {
             Entity found = default;
             var query = new QueryDescription().WithAll<Name, PlayerOwner>();
             world.Query(in query, (Entity entity, ref Name name, ref PlayerOwner owner) =>
@@ -116,11 +154,11 @@ namespace Ludots.Tests.GAS.Production
                     return;
                 }
 
-                Assert.That(owner.PlayerId, Is.EqualTo(expectedPlayerId), $"{entityName} should receive PlayerOwner from map instance overrides.");
                 found = entity;
             });
 
             Assert.That(world.IsAlive(found), Is.True, $"Expected map instance '{entityName}' with PlayerOwner.");
+            return found;
         }
     }
 }

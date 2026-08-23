@@ -45,6 +45,13 @@ namespace Ludots.Core.Physics2D.Components
         public Fix64 Penetration;
         public int ContactCount;
 
+        /// <summary>
+        /// 传感器配对：只做窄相接触检测供事件边沿使用，求解器、位置修正、
+        /// 冲量与岛屿构建全部跳过。当前唯一来源是"kinematic×static 且至少一方
+        /// 声明事件发射"的配对（压力板/触发区语义）。
+        /// </summary>
+        public byte SensorOnly;
+
         public Fix64 AccumulatedNormalImpulse0;
         public Fix64 AccumulatedTangentImpulse0;
     }

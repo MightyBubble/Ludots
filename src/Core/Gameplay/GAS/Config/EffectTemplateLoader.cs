@@ -27,11 +27,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly PresetTypeRegistry? _presetTypes;
         private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly FogLayerRegistry? _fogLayers;
+        private readonly OrderTypeRegistry? _orderTypes;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -50,17 +52,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ScopeKeyRegistry? progressionScopeKeys = null,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
-            FogLayerRegistry? fogLayers = null)
+            FogLayerRegistry? fogLayers = null,
+            OrderTypeRegistry? orderTypes = null,
+            PresetTypeRegistry? presetTypes = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _presetTypes = presetTypes;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
             _entityTemplateKeys = entityTemplateKeys;
             _relationshipTypes = relationshipTypes;
             _fogLayers = fogLayers;
+            _orderTypes = orderTypes;
         }
 
         public void Load(
@@ -200,15 +206,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 periodTicks = 0;
             }
 
-            int tagId = 0;
-            if (cfg.Tags != null && cfg.Tags.Count > 0)
+            if (cfg.Tags != null && cfg.Tags.Count > 1)
             {
-                tagId = TagRegistry.Register(cfg.Tags[0]);
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'tags' supports at most one tag.");
+            }
+            int tagId = cfg.Tags != null && cfg.Tags.Count == 1
+                ? TagRegistry.Register(RequireString(cfg.Tags[0], cfg.Id, relativePath, "tags[0]"))
+                : 0;
+
+            int presetTypeId = ParsePresetTypeId(cfg.PresetType, cfg.Id, relativePath);
+            if (_presetTypes != null && _presetTypes.IsRegistered(presetTypeId))
+            {
+                ref readonly PresetTypeDefinition presetDefinition = ref _presetTypes.Get(presetTypeId);
+                if (!presetDefinition.AllowsLifetime(lifetimeKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType '{presetDefinition.TypeKey}' does not allow lifetime '{lifetimeKind}'.");
+                }
             }
 
-            EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
-            int presetAttr0 = 0;
-            int presetAttr1 = 0;
+            EffectPresetType presetType = ResolveBuiltinPresetType(presetTypeId);
+            int presetAttr0 = AttributeRegistry.InvalidId;
+            int presetAttr1 = AttributeRegistry.InvalidId;
             int reserved = 0;
             if (presetType == EffectPresetType.ApplyForce2D)
             {
@@ -286,6 +306,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 CompilePhaseListeners(cfg.PhaseListeners, ref listenerSetup, cfg.Id, relativePath);
             }
+            if (lifetimeKind == EffectLifetimeKind.Instant && listenerSetup.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: lifetime Instant cannot declare phaseListeners because listener ownership requires cross-frame lifetime.");
+            }
 
             // ── Three-layer target resolution (new schema) ──
             var targetQuery = default(TargetQueryDescriptor);
@@ -358,27 +383,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.RevealArea != null && presetType != EffectPresetType.RevealArea)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'revealArea' block is only valid when presetType=RevealArea.");
-            }
-            if (presetType == EffectPresetType.RevealArea)
+            if (cfg.RevealArea != null)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant && lifetimeKind != EffectLifetimeKind.After)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires lifetime=Instant or lifetime=After.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea requires lifetime=Instant or lifetime=After.");
                 }
                 if (lifetimeKind == EffectLifetimeKind.After && periodTicks <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
-                }
-                if (cfg.RevealArea == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires a 'revealArea' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
                 }
 
                 revealArea = CompileRevealArea(cfg.RevealArea, cfg.Id, relativePath);
@@ -507,6 +522,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 TagId = tagId,
                 PresetType = presetType,
+                PresetTypeId = presetTypeId,
                 PresetAttribute0 = presetAttr0,
                 PresetAttribute1 = presetAttr1,
                 LifetimeKind = lifetimeKind,
@@ -742,7 +758,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 (byte)detectionStrength);
         }
 
-        private static SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
+        private SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
             SubmitOrderFromBlackboardConfig? cfg,
             string ownerId,
             string relativePath)
@@ -765,6 +781,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "submitOrderFromBlackboard.storedTarget");
             string pointMoveOrderTypeKey = RequireString(cfg.PointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
             string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
+            int pointMoveOrderTypeId = ResolveOrderTypeId(pointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
+            int entityOrderTypeId = ResolveOrderTypeId(entityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
             int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
             OrderSubmitMode submitMode = ParseOrderSubmitMode(
                 RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
@@ -782,11 +800,28 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 SourceSlot = sourceSlot,
                 TargetSlot = targetSlot,
                 StoredTargetKeys = storedTargetKeys,
-                PointMoveOrderTypeKey = pointMoveOrderTypeKey,
-                EntityOrderTypeKey = entityOrderTypeKey,
+                PointMoveOrderTypeId = pointMoveOrderTypeId,
+                EntityOrderTypeId = entityOrderTypeId,
                 EntityOrderIntArg0 = entityOrderIntArg0,
                 SubmitMode = submitMode,
             };
+        }
+
+        private int ResolveOrderTypeId(string key, string ownerId, string relativePath, string fieldName)
+        {
+            if (_orderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} requires OrderTypeRegistry during loading.");
+            }
+
+            if (!_orderTypes.TryGetId(key, out int orderTypeId) || orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} references unknown order type '{key}'.");
+            }
+
+            return orderTypeId;
         }
 
         private static BlackboardStoredTargetKeys CompileStoredTargetKeys(
@@ -835,57 +870,37 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             if (cfg == null) return default;
 
-            ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode);
-            ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy);
-            bool isLegacyTravel = travelMode == ProjectileTravelMode.Legacy;
-            bool isLegacyImpact = impactPolicy == ProjectileImpactPolicy.Legacy;
-            if (isLegacyTravel != isLegacyImpact)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode and projectile.impactPolicy must both be Legacy or both be non-Legacy.");
-            }
+            ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode, ownerId, relativePath);
+            ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy, ownerId, relativePath);
 
             int impactId = ResolveOptionalEffectTemplateId(cfg.ImpactEffect, ownerId, relativePath, "projectile.impactEffect");
             int hitId = ResolveOptionalEffectTemplateId(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect");
             int presentationId = ResolveOptionalEffectTemplateId(cfg.PresentationEffect, ownerId, relativePath, "projectile.presentationEffect");
             int collisionHalfWidth = cfg.CollisionHalfWidth ?? 0;
-            RelationshipFilter collisionRelationFilter = RelationshipFilter.All;
-            if (isLegacyImpact)
+            if (hitId <= 0)
             {
-                RequireAbsent(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionRelationFilter, ownerId, relativePath, "projectile.collisionRelationFilter", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionHalfWidth, ownerId, relativePath, "projectile.collisionHalfWidth", "impactPolicy=Legacy");
-                RequireAbsent(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource", "impactPolicy=Legacy");
-                RequireAbsent(cfg.MaxHitCount, ownerId, relativePath, "projectile.maxHitCount", "impactPolicy=Legacy");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.hitEffect.");
             }
 
-            if (impactPolicy != ProjectileImpactPolicy.Legacy)
+            if (collisionHalfWidth <= 0)
             {
-                if (hitId <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.hitEffect.");
-                }
-
-                if (collisionHalfWidth <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
-                }
-
-                collisionRelationFilter = ParseRequiredRelationshipFilter(
-                    cfg.CollisionRelationFilter,
-                    ownerId,
-                    "projectile.collisionRelationFilter",
-                    relativePath);
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
             }
-            else if (!string.IsNullOrWhiteSpace(cfg.CollisionRelationFilter))
-            {
-                collisionRelationFilter = RelationshipFilterUtil.Parse(cfg.CollisionRelationFilter);
-            }
+
+            RelationshipFilter collisionRelationFilter = ParseRequiredRelationshipFilter(
+                cfg.CollisionRelationFilter,
+                ownerId,
+                "projectile.collisionRelationFilter",
+                relativePath);
 
             RejectOptionalFalse(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource");
-            if (cfg.MaxHitCount is < 0)
+            if (!cfg.MaxHitCount.HasValue ||
+                cfg.MaxHitCount.Value <= 0 ||
+                cfg.MaxHitCount.Value > ProjectileState.HitHistoryCapacity)
             {
-                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.maxHitCount must be non-negative.");
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.maxHitCount must be within " +
+                    $"1..{ProjectileState.HitHistoryCapacity}.");
             }
 
             return new ProjectileDescriptor
@@ -901,7 +916,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 CollisionHalfWidthCm = collisionHalfWidth,
                 CollisionRelationFilter = collisionRelationFilter,
                 CollisionExcludeSource = cfg.CollisionExcludeSource ?? false,
-                MaxHitCount = cfg.MaxHitCount ?? 0
+                MaxHitCount = cfg.MaxHitCount.Value
             };
         }
 
@@ -926,35 +941,37 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return templateId;
         }
 
-        private static ProjectileTravelMode ParseProjectileTravelMode(string? raw)
+        private static ProjectileTravelMode ParseProjectileTravelMode(string? raw, string ownerId, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                throw new InvalidOperationException("projectile.travelMode is required.");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.travelMode is required.");
             }
 
             return raw switch
             {
-                "Legacy" => ProjectileTravelMode.Legacy,
                 "Direction" => ProjectileTravelMode.Direction,
                 "TrackTarget" => ProjectileTravelMode.TrackTarget,
-                _ => throw new InvalidOperationException($"Unsupported projectile.travelMode '{raw}'.")
+                "Legacy" => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy' was removed; use 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.travelMode '{raw}'.")
             };
         }
 
-        private static ProjectileImpactPolicy ParseProjectileImpactPolicy(string? raw)
+        private static ProjectileImpactPolicy ParseProjectileImpactPolicy(string? raw, string ownerId, string relativePath)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                throw new InvalidOperationException("projectile.impactPolicy is required.");
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy is required.");
             }
 
             return raw switch
             {
-                "Legacy" => ProjectileImpactPolicy.Legacy,
                 "DestroyOnFirstHit" => ProjectileImpactPolicy.DestroyOnFirstHit,
                 "ContinueOnHit" => ProjectileImpactPolicy.ContinueOnHit,
-                _ => throw new InvalidOperationException($"Unsupported projectile.impactPolicy '{raw}'.")
+                "Legacy" => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy' was removed; use 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.impactPolicy '{raw}'.")
             };
         }
 
@@ -1133,9 +1150,38 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException(
                 $"Effect template '{ownerId}' in {relativePath}: {fieldPath} uses unsupported entity slot '{slot}'. Supported: None, Source, Target, TargetContext.");
         }
-        private static EffectPresetType ParsePresetType(string? presetType, string ownerId, string relativePath)
+        private int ParsePresetTypeId(string? presetType, string ownerId, string relativePath)
         {
-            return GasEnumParser.ParsePresetTypeStrict(presetType, $"Effect template '{ownerId}' in {relativePath}");
+            string context = $"Effect template '{ownerId}' in {relativePath}";
+            if (string.IsNullOrWhiteSpace(presetType))
+            {
+                throw new InvalidOperationException($"{context}: presetType must be explicitly defined.");
+            }
+
+            if (_presetTypes != null && _presetTypes.TryGetId(presetType, out int typeId) && _presetTypes.IsRegistered(typeId))
+            {
+                return typeId;
+            }
+
+            if (Enum.TryParse<EffectPresetType>(presetType, out EffectPresetType builtin) &&
+                Enum.IsDefined(typeof(EffectPresetType), builtin))
+            {
+                return (int)builtin;
+            }
+
+            throw new InvalidOperationException(
+                $"{context}: presetType '{presetType}' is not registered in preset_types.json, a Core EffectPresetType, or a loaded mod extension.");
+        }
+
+        private static EffectPresetType ResolveBuiltinPresetType(int presetTypeId)
+        {
+            if ((uint)presetTypeId <= byte.MaxValue &&
+                Enum.IsDefined(typeof(EffectPresetType), (byte)presetTypeId))
+            {
+                return (EffectPresetType)(byte)presetTypeId;
+            }
+
+            return EffectPresetType.None;
         }
 
         // ── Phase Graph compilation ──
@@ -1170,6 +1216,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         {
                             throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: exceeded max phase steps ({EffectPhaseGraphBindings.MAX_STEPS}).");
                         }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(phaseCfg.Main))
+                {
+                    if (phaseCfg.SkipMain)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: phaseGraphs.{kvp.Key} cannot declare both main and skipMain=true.");
+                    }
+
+                    int graphId = ResolveGraphProgram(phaseCfg.Main, ownerId, $"phaseGraphs.{kvp.Key}.main", relativePath);
+                    if (!behavior.TryAddStep(phaseId, PhaseSlot.Main, graphId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: exceeded max phase steps ({EffectPhaseGraphBindings.MAX_STEPS}).");
                     }
                 }
 
@@ -1459,6 +1520,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
                 int priority = lc.Priority ?? 0;
+                if (!EffectPhaseListenerContract.TryValidateRegistration(
+                        listenTagId,
+                        listenEffectId,
+                        phaseId,
+                        scope,
+                        flags,
+                        graphProgramId,
+                        eventTagId,
+                        out string listenerError))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] is invalid. {listenerError}");
+                }
                 if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");
@@ -1579,6 +1653,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "kind=GraphProgram");
                 RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "kind=GraphProgram");
                 RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "kind=GraphProgram");
+                RequireAbsent(cfg.Origin, effectId, path, "targetQuery.origin", "kind=GraphProgram");
                 desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
                 if (desc.GraphProgramId <= 0)
                 {
@@ -1593,6 +1668,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var spatial = default(BuiltinSpatialDescriptor);
             spatial.Shape = ParseSpatialShape(RequireString(cfg.Shape, effectId, path, "targetQuery.shape"), effectId, path);
+            spatial.Origin = ParseSpatialQueryOrigin(cfg.Origin, effectId, path);
 
             switch (spatial.Shape)
             {
@@ -1650,6 +1726,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return spatial;
         }
 
+        private static SpatialQueryOrigin ParseSpatialQueryOrigin(string? rawValue, string effectId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                return SpatialQueryOrigin.Default;
+            }
+
+            return rawValue switch
+            {
+                "Default" => SpatialQueryOrigin.Default,
+                "Source" => SpatialQueryOrigin.Source,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetQuery.origin has unsupported value '{rawValue}'. Supported: Default, Source.")
+            };
+        }
+
         private static TargetFilterDescriptor CompileTargetFilter(TargetFilterConfig cfg, string effectId, string path)
         {
             var desc = default(TargetFilterDescriptor);
@@ -1661,7 +1753,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "targetFilter.relationFilter",
                 path);
             if (cfg.LayerMask != null)
-                desc.LayerMask = ParseLayerMask(cfg.LayerMask);
+                desc.LayerMask = ParseLayerMask(cfg.LayerMask, effectId, path);
             return desc;
         }
 
@@ -1742,14 +1834,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        private static void RejectOptionalZero(int? value, string effectId, string path, string fieldPath)
-        {
-            if (value.HasValue && value.Value == 0)
-            {
-                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath}=0 must be omitted.");
-            }
-        }
-
         private static float RequireFloat(float? value, string effectId, string path, string fieldPath)
         {
             if (!value.HasValue)
@@ -1774,7 +1858,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var desc = default(TargetDispatchDescriptor);
             bool hasPreset = !string.IsNullOrWhiteSpace(cfg.Preset);
-            bool hasContextMapping = cfg.ContextMapping != null;
+            ContextMappingConfig? contextMapping = cfg.ContextMapping;
 
             if (!string.IsNullOrWhiteSpace(cfg.PayloadEffect))
             {
@@ -1783,7 +1867,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetDispatch.payloadEffect '{cfg.PayloadEffect}' not found.");
             }
 
-            if (hasPreset && hasContextMapping)
+            if (hasPreset && contextMapping != null)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping, not both.");
@@ -1802,22 +1886,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 return desc;
             }
 
-            if (hasContextMapping)
+            if (contextMapping != null)
             {
                 desc.ContextMapping = new TargetResolverContextMapping
                 {
                     PayloadSource = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
+                        RequireString(contextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
                         effectId,
                         "targetDispatch.contextMapping.payloadSource",
                         path),
                     PayloadTarget = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
+                        RequireString(contextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTarget",
                         path),
                     PayloadTargetContext = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
+                        RequireString(contextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTargetContext",
                         path),
@@ -1830,9 +1914,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return desc;
         }
 
-        private static uint ParseLayerMask(List<string> layers)
+        private static uint ParseLayerMask(List<string> layers, string effectId, string path)
         {
-            throw new NotImplementedException("LayerMask parsing not yet implemented. Layer name to bit mapping requires a layer registry.");
+            try
+            {
+                return LayerRegistry.GetCombinedMask(layers);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetFilter.layerMask — {ex.Message}", ex);
+            }
         }
 
         private GasConditionHandle CompileExpireCondition(ExpireConditionConfig cfg, string effectId, string path)

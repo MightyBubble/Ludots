@@ -1,0 +1,8 @@
+{
+  "scene": "ribbon_overlay",
+  "frames": 30,
+  "avgFrameMs": 11.443,
+  "p95FrameMs": 0.75,
+  "maxFrameMs": 335.903,
+  "wallMs": 876.9
+}

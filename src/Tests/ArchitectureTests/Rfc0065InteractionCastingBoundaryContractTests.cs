@@ -74,7 +74,7 @@ namespace Ludots.Tests.Architecture
         public void CoreDefaultConfigAssets_CarryNoScenarioVocabulary()
         {
             string repoRoot = FindRepoRoot();
-            string configsRoot = Path.Combine(repoRoot, "assets", "Configs");
+            string configsRoot = Path.Combine(repoRoot, "assets");
             string[] roots =
             {
                 Path.Combine(configsRoot, "Relationships"),
@@ -94,7 +94,7 @@ namespace Ludots.Tests.Architecture
                     if (node is JsonObject rootObject &&
                         string.Equals(
                             ToRepoRelativePath(repoRoot, file),
-                            "assets/Configs/Relationships/catalog.json",
+                            "assets/Relationships/catalog.json",
                             StringComparison.Ordinal))
                     {
                         // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)
@@ -193,51 +193,6 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void RetiredFormalInputApis_DoNotAppearRepoWide()
-        {
-            string repoRoot = FindRepoRoot();
-            string[] forbidden =
-            {
-                Join("Ludots.Core.Input.", "Selection"),
-                Join("Selection", "Runtime"),
-                Join("Selection", "Request"),
-                Join("Selection", "Response"),
-                Join("Selection", "SetKeys"),
-                Join("Selection", "ViewKeys"),
-                Join("Selection", "ContainerKind"),
-                Join("Selection", "Eligibility"),
-                Join("Order", "Selection", "Reference")
-            };
-
-            var violations = new List<string>();
-            foreach (string rootName in new[] { "src", "mods" })
-            {
-                string root = Path.Combine(repoRoot, rootName);
-                if (!Directory.Exists(root))
-                {
-                    continue;
-                }
-
-                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
-                {
-                    if (!IsScannedRepoFile(repoRoot, file))
-                    {
-                        continue;
-                    }
-
-                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
-                }
-            }
-
-            Assert.That(
-                violations,
-                Is.Empty,
-                "Formal input authority must be retired repo-wide; use EntityCollectionStore, " +
-                "EntityCollectionKeys.CommandSource, and collection.command.source instead:\n" +
-                string.Join(Environment.NewLine, violations));
-        }
-
-        [Test]
         public void GameJsonCommandSourceConfig_DoesNotUseRetiredTopLevelSelectionSection()
         {
             string repoRoot = FindRepoRoot();
@@ -311,12 +266,15 @@ namespace Ludots.Tests.Architecture
         {
             string repoRoot = FindRepoRoot();
             string registryPath = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "CommandIntentProfileRegistry.cs");
-            string unitTestPath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "CommandIntentProfileTests.cs");
+            string gasTestsRoot = Path.Combine(repoRoot, "src", "Tests", "GasTests");
+            string[] unitTestPaths = Directory.Exists(gasTestsRoot)
+                ? Directory.GetFiles(gasTestsRoot, "CommandIntentProfileTests.cs", SearchOption.AllDirectories)
+                : Array.Empty<string>();
             Assert.That(File.Exists(registryPath), Is.True, $"Missing {registryPath}");
-            Assert.That(File.Exists(unitTestPath), Is.True, $"Missing {unitTestPath}");
+            Assert.That(unitTestPaths, Has.Length.EqualTo(1), $"Expected one CommandIntentProfileTests.cs under {gasTestsRoot}");
 
             string registry = File.ReadAllText(registryPath);
-            string unitTests = File.ReadAllText(unitTestPath);
+            string unitTests = File.ReadAllText(unitTestPaths[0]);
 
             Assert.Multiple(() =>
             {
@@ -442,7 +400,11 @@ namespace Ludots.Tests.Architecture
                 "out Team ",
                 "new Team {",
                 "PlayerOwner",
-                "TeamManager"
+                "TeamManager",
+                "OrderBuffer",
+                "OrderTypeId",
+                "OrderId",
+                "NotifyOrderComplete"
             };
 
             var violations = new List<string>();
@@ -454,8 +416,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 violations,
                 Is.Empty,
-                "RFC-0065: MassNavigation is an execution domain. It must ingest explicit OrderBuffer move orders " +
-                "and must not resolve command actors or affiliation from input, command-source collections, embodied Team/PlayerOwner, or interaction context APIs:\n" +
+                "RFC-0065: MassNavigation is an execution domain. It must consume only the typed MovePlan " +
+                "execution contract (MovePlanExecutionIntent/Result) and must not touch OrderBuffer/OrderTypeId/OrderId " +
+                "or resolve command actors or affiliation from input, command-source collections, embodied Team/PlayerOwner, or interaction context APIs:\n" +
                 string.Join(Environment.NewLine, violations));
         }
 

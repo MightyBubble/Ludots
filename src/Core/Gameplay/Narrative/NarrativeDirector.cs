@@ -845,7 +845,7 @@ namespace Ludots.Core.Gameplay.Narrative
             }
 
             int attributeId = AttributeRegistry.GetId(condition.AttributeId);
-            if (attributeId <= 0)
+            if (!AttributeRegistry.IsValidId(attributeId))
             {
                 return false;
             }

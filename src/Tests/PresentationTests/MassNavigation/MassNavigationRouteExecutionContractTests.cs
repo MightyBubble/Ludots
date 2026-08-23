@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
@@ -269,7 +270,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             runtime.RebuildFromAuthoredAgents(
                 world,
@@ -296,7 +297,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             runtime.RebuildFromAuthoredAgents(
                 world,

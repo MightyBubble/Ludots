@@ -1,0 +1,12 @@
+﻿flowchart TD
+    A["MapLoaded: interaction showcase hub"] --> B["castAbility.Start: commander starts superweapon"]
+    B --> C["AbilityExecInteractionContextSystem: push ability-owned frame"]
+    C --> D["InteractionContextInputContextBridge: push imc.ability.confirm"]
+    D --> E["ContextBoundCollectionWriter: route Arcweaver + Vanguard to ability collection"]
+    E --> F{"<Keyboard>/enter pressed?"}
+    F -- yes --> G["AuthoritativeInput: SuperweaponConfirm pressed"]
+    G --> H["GameplayEventBus: Event.Showcase.Superweapon.Confirmed"]
+    H --> I["AbilityExecSystem: EventGate passes, End removes exec"]
+    I --> J["AbilityExecInteractionContextSystem: restore default frame"]
+    J --> K["Default CommitCast writes collection.command.source again"]
+    F -- no --> L["GateWaiting: frame stays active, no hidden completion fallback"]

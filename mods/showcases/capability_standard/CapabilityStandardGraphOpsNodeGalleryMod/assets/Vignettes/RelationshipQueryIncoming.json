@@ -1,0 +1,13 @@
+{
+  "op": "RelationshipQueryIncoming",
+  "driver": "rel",
+  "title": "谁把我当朋友",
+  "beat": "箭头指着自己的链亮。",
+  "detailTemplate": "把我当朋友的有 {friendCount} 人。",
+  "assertDetailContains": [
+    "把我当"
+  ],
+  "featuredNodeId": "in",
+  "graphKind": "Query",
+  "field": "rel"
+}

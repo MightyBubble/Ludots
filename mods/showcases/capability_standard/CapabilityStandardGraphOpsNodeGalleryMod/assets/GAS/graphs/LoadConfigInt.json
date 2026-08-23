@@ -1,0 +1,16 @@
+[
+  {
+    "id": "showcase.graph_op.LoadConfigInt",
+    "kind": "Effect",
+    "entry": "cfgI",
+    "nodes": [
+      {
+        "id": "cfgI",
+        "op": "LoadConfigInt",
+        "configKey": "showcase.config.tier"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  }
+]

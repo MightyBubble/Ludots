@@ -12,10 +12,12 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation
 {
@@ -1039,17 +1041,17 @@ namespace Ludots.Tests.Presentation
             loader.Load(BuildCatalog());
 
             using var world = World.Create();
-            var definitions = new PerformerDefinitionRegistry();
+            var definitions = new PresenterDefinitionRegistry();
             int batchId = batches.GetId("batch.runtime");
-            int defId = definitions.Register("performer.batch", new PerformerDefinition
+            int defId = definitions.Register("presenter.batch", new PresenterDefinition
             {
                 InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
             });
-            var runtime = new PerformerEntityRuntime(world);
+            var runtime = new PresenterEntityRuntime(world);
             var owner = world.Create(new AttributeBuffer());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
             attributes.SetCurrent(attributeId, 50f);
-            Entity performer = runtime.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 500, Entity.Null, definitions.Get(defId));
+            Entity presenter = runtime.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 500, Entity.Null, definitions.Get(defId));
             var operations = new InstancedBatchOperationBuffer();
             var events = new PresentationEventStream(8);
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
@@ -1068,15 +1070,15 @@ namespace Ludots.Tests.Presentation
             ReadOnlySpan<InstancedBatchOperation> span = operations.GetSpan();
             Assert.That(span.Length, Is.EqualTo(2));
             Assert.That(span[0].Kind, Is.EqualTo(InstancedBatchOperationKind.WriteCustomData));
-            Assert.That(span[0].Performer, Is.EqualTo(performer));
+            Assert.That(span[0].Presenter, Is.EqualTo(presenter));
             Assert.That(span[0].Address.IsValid, Is.True);
             Assert.That(span[0].Value.X, Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(span[1].Kind, Is.EqualTo(InstancedBatchOperationKind.SetVisibility));
             Assert.That(span[1].State, Is.EqualTo(1));
         }
 
-        [TestCase(PresentationEventKind.PerformerCreated)]
-        [TestCase(PresentationEventKind.PerformerDestroyed)]
+        [TestCase(PresentationEventKind.PresenterCreated)]
+        [TestCase(PresentationEventKind.PresenterDestroyed)]
         public void BehaviorSystem_MatchesLifecyclePresentationEventWildcardBindings(PresentationEventKind eventKind)
         {
             string root = CreateTempCoreRoot();
@@ -1113,15 +1115,15 @@ namespace Ludots.Tests.Presentation
             Assert.That(asset.Behaviors[0].SourceKeyId, Is.EqualTo(-1));
 
             using var world = World.Create();
-            var definitions = new PerformerDefinitionRegistry();
+            var definitions = new PresenterDefinitionRegistry();
             int batchId = batches.GetId("batch.lifecycle");
-            int defId = definitions.Register("performer.lifecycle", new PerformerDefinition
+            int defId = definitions.Register("presenter.lifecycle", new PresenterDefinition
             {
                 InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
             });
-            var runtime = new PerformerEntityRuntime(world);
+            var runtime = new PresenterEntityRuntime(world);
             Entity owner = world.Create();
-            Entity performer = runtime.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 700, Entity.Null, definitions.Get(defId));
+            Entity presenter = runtime.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 700, Entity.Null, definitions.Get(defId));
             var operations = new InstancedBatchOperationBuffer();
             var events = new PresentationEventStream(8);
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
@@ -1130,7 +1132,7 @@ namespace Ludots.Tests.Presentation
                 Kind = eventKind,
                 KeyId = defId,
                 Source = owner,
-                PerformerEntity = performer,
+                PresenterEntity = presenter,
                 Magnitude = 700f,
             }), Is.True);
 
@@ -1140,22 +1142,27 @@ namespace Ludots.Tests.Presentation
             ReadOnlySpan<InstancedBatchOperation> span = operations.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
             Assert.That(span[0].Kind, Is.EqualTo(InstancedBatchOperationKind.SetVisibility));
-            Assert.That(span[0].PerformerStableId, Is.EqualTo(700));
+            Assert.That(span[0].PresenterStableId, Is.EqualTo(700));
             Assert.That(span[0].Address.IsValid, Is.True);
         }
 
         [Test]
-        public void PerformerLoader_ParsesInstancedBatchReferencesAndRejectsUnknownAssets()
+        public void PresenterLoader_ParsesInstancedBatchReferencesAndRejectsUnknownAssets()
         {
             string root = CreateTempCoreRoot();
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
-            WritePresentationFile(root, "performers.json",
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
+            WritePresentationFile(root, "presenters.json",
                 """
                 [
                   {
-                    "id": "performer.batch",
-                    "instancedBatches": [
-                      { "batchAssetId": "batch.runtime" }
+                    "id": "presenter.batch",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": { "batchAssetId": "batch.runtime" }
+                      }
                     ]
                   }
                 ]
@@ -1165,27 +1172,33 @@ namespace Ludots.Tests.Presentation
             vfs.Mount("Core", root);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = new ConfigCatalog();
-            catalog.Add(new ConfigCatalogEntry("Presentation/performers.json", ConfigMergePolicy.ArrayById, "id"));
-            var definitions = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
+            catalog.Add(new ConfigCatalogEntry("Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id"));
+            var definitions = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(
                 pipeline,
                 definitions,
                 resolveInstancedBatchAssetId: key => key == "batch.runtime" ? 42 : 0);
 
             loader.Load(catalog);
 
-            Assert.That(definitions.TryGet(definitions.GetId("performer.batch"), out PerformerDefinition definition), Is.True);
+            Assert.That(definitions.TryGet(definitions.GetId("presenter.batch"), out PresenterDefinition definition), Is.True);
             Assert.That(definition.InstancedBatches.Length, Is.EqualTo(1));
             Assert.That(definition.InstancedBatches[0].BatchAssetId, Is.EqualTo(42));
+            Assert.That(definition.InstancedBatches[0].SlotIndex, Is.EqualTo(0));
 
             string badRoot = CreateTempCoreRoot();
-            WritePresentationFile(badRoot, "performers.json",
+            WritePresentationFile(badRoot, "presenters.json",
                 """
                 [
                   {
-                    "id": "performer.bad",
-                    "instancedBatches": [
-                      { "batchAssetId": "batch.missing" }
+                    "id": "presenter.bad",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": { "batchAssetId": "batch.missing" }
+                      }
                     ]
                   }
                 ]
@@ -1193,8 +1206,8 @@ namespace Ludots.Tests.Presentation
             var badVfs = new VirtualFileSystem();
             badVfs.Mount("Core", badRoot);
             var badPipeline = new ConfigPipeline(badVfs, modLoader: null!);
-            var badDefinitions = new PerformerDefinitionRegistry();
-            var badLoader = new PerformerDefinitionConfigLoader(
+            var badDefinitions = new PresenterDefinitionRegistry();
+            var badLoader = new PresenterDefinitionConfigLoader(
                 badPipeline,
                 badDefinitions,
                 resolveInstancedBatchAssetId: _ => 0);
@@ -1235,13 +1248,13 @@ namespace Ludots.Tests.Presentation
             int batchId = batches.GetId("batch.emit");
 
             using var world = World.Create();
-            var definitions = new PerformerDefinitionRegistry();
-            int defId = definitions.Register("performer.batch", new PerformerDefinition
+            var definitions = new PresenterDefinitionRegistry();
+            int defId = definitions.Register("presenter.batch", new PresenterDefinition
             {
                 InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
             });
             Entity owner = world.Create();
-            Entity performer = world.Create(new PerformerState
+            Entity presenter = world.Create(new PresenterState
             {
                 DefId = defId,
                 StableId = 900,
@@ -1269,16 +1282,16 @@ namespace Ludots.Tests.Presentation
             requests.Clear();
             Assert.That(events.TryAdd(new PresentationEvent
             {
-                Kind = PresentationEventKind.PerformerDestroyed,
+                Kind = PresentationEventKind.PresenterDestroyed,
                 KeyId = defId,
                 Source = owner,
-                PerformerEntity = performer,
+                PresenterEntity = presenter,
                 Magnitude = 900,
             }), Is.True);
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
             Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(InstancedBatchRequestKind.Remove));
-            Assert.That(requests.GetSpan()[0].PerformerStableId, Is.EqualTo(900));
+            Assert.That(requests.GetSpan()[0].PresenterStableId, Is.EqualTo(900));
         }
 
         [Test]
@@ -1320,13 +1333,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(asset.Groups[0].InstanceCount, Is.EqualTo(5));
 
             using var world = World.Create();
-            var definitions = new PerformerDefinitionRegistry();
-            int defId = definitions.Register("performer.external.batch", new PerformerDefinition
+            var definitions = new PresenterDefinitionRegistry();
+            int defId = definitions.Register("presenter.external.batch", new PresenterDefinition
             {
                 InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
             });
             Entity owner = world.Create();
-            world.Create(new PerformerState
+            world.Create(new PresenterState
             {
                 DefId = defId,
                 StableId = 901,
@@ -1404,9 +1417,9 @@ namespace Ludots.Tests.Presentation
             registry = new InstancedBatchAssetRegistry();
 
             meshes.Register("mesh.unit", MeshAssetDescriptor.Model(0));
-            meshes.Register("effect.batch.spark", MeshAssetDescriptor.Billboard(0));
+            meshes.Register("effect.batch.spark", CreateEffectDescriptor());
 
-            materials.Register("material.unit", MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
+            materials.Register("material.unit", MaterialAssetDomain.Surface, MaterialAssetFlags.None);
             return new InstancedBatchAssetConfigLoader(
                 pipeline,
                 registry,
@@ -1424,6 +1437,54 @@ namespace Ludots.Tests.Presentation
                 : AbilityIdRegistry.GetId(key);
         }
 
+        private static MeshAssetDescriptor CreateEffectDescriptor()
+        {
+            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+            descriptor.VfxData = new VfxAssetData(CreateTestParticleVfx(),
+                particleVfxAssetId: 1);
+            return descriptor;
+        }
+
+        private static ParticleVfxAssetData CreateTestParticleVfx()
+        {
+            return new ParticleVfxAssetData(
+                ParticleVfxSpawnMode.Loop,
+                ParticleEmitterShapeKind.Cone,
+                ParticleRenderMode.Primitive,
+                ParticleBlendMode.Alpha,
+                ParticlePrimitiveKind.Sphere,
+                maxParticles: 32,
+                seed: 234567u,
+                durationSeconds: 1.2f,
+                emissionRatePerSecond: 16f,
+                burstCount: 8,
+                shapeRadius: 0.25f,
+                shapeAngleRadians: 0.35f,
+                shapeThickness: 0.8f,
+                new ParticleValueRange(0.7f, 1.1f),
+                new ParticleValueRange(0.3f, 0.8f),
+                new ParticleValueRange(0.06f, 0.14f),
+                new Vector4(0.72f, 0.72f, 0.67f, 0.45f),
+                new ParticleScalarCurve(
+                    new[]
+                    {
+                        new ParticleCurveKey(0f, 0.5f),
+                        new ParticleCurveKey(1f, 1.2f),
+                    }),
+                new ParticleColorGradient(
+                    new[]
+                    {
+                        new ParticleColorKey(0f, Vector4.One),
+                        new ParticleColorKey(1f, new Vector4(0.42f, 0.43f, 0.39f, 0f)),
+                    }),
+                new Vector3(0f, 0.2f, 0f),
+                drag: 0.08f,
+                worldSpace: true,
+                textureSheet: null,
+                stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
+        }
+
         private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)
         {
             return eventKind switch
@@ -1433,8 +1494,8 @@ namespace Ludots.Tests.Presentation
                 PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
                 PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
                 PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
-                PresentationEventKind.PerformerCreated => key == "*" ? -1 : 0,
-                PresentationEventKind.PerformerDestroyed => key == "*" ? -1 : 0,
+                PresentationEventKind.PresenterCreated => key == "*" ? -1 : 0,
+                PresentationEventKind.PresenterDestroyed => key == "*" ? -1 : 0,
                 _ => 0,
             };
         }
@@ -1442,13 +1503,13 @@ namespace Ludots.Tests.Presentation
         private static string CreateTempCoreRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_InstancedBatchTests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            Directory.CreateDirectory(Path.Combine(root, "Presentation"));
             return root;
         }
 
         private static void WritePresentationFile(string root, string fileName, string content)
         {
-            File.WriteAllText(Path.Combine(root, "Configs", "Presentation", fileName), content);
+            File.WriteAllText(Path.Combine(root, "Presentation", fileName), content);
         }
 
         private static ConfigPipeline BuildCorePipeline(string coreRoot)

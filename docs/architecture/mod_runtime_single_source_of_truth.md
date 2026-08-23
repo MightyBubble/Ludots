@@ -1,4 +1,4 @@
-﻿# Mod 运行时唯一真相与收束准则
+# Mod 运行时唯一真相与收束准则
 
 本文定义 Mod 相关链路在运行时与工具链中的统一规则，目标是消除隐式回退、路径双真相与配置歧义。读完后可以直接据此检查主线是否满足“配置表达产品意图、代码面向生产”的要求。
 
@@ -74,7 +74,7 @@
 
 参考实现：
 
-- `src/Core/Presentation/Config/PerformerDefinitionConfigLoader.cs`
+- `src/Core/Presentation/Config/PresenterDefinitionConfigLoader.cs`
 - `src/Tools/Ludots.Editor.Bridge/Program.cs`
 
 ## 4 容量边界必须可观测

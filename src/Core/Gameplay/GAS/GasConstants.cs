@@ -59,7 +59,7 @@ namespace Ludots.Core.Gameplay.GAS
         public const int EFFECT_PHASE_LISTENER_CAPACITY = 8;
 
         /// <summary>单个 Effect 最大 phase graph binding 步数</summary>
-        public const int EFFECT_PHASE_GRAPH_MAX_STEPS = 16;
+        public const int EFFECT_PHASE_GRAPH_MAX_STEPS = EffectPhaseConstants.PhaseCount * 3;
 
         /// <summary>全局 phase listener 最大数量</summary>
         public const int GLOBAL_PHASE_LISTENER_MAX = 32;

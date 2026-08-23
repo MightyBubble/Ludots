@@ -129,6 +129,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 default(AttributeBuffer),
                 new GameplayTagContainer(),
                 new TagCountContainer(),
+                new DirtyFlags(),
                 new ActiveEffectContainer());
             _entityIndex[key] = relationshipEntity;
             return relationshipEntity;
@@ -364,7 +365,13 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectOutgoing(Entity source, int typeId, Span<Entity> buffer)
         {
-            if (!IsAliveInRuntimeWorld(source) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(source))
+            return CollectOutgoing(source, typeId, buffer, out _);
+        }
+
+        public int CollectOutgoing(Entity source, int typeId, Span<Entity> buffer, out int dropped)
+        {
+            dropped = 0;
+            if (!IsAliveInRuntimeWorld(source) || !_world.Has<Relationship<RelationshipEdgeSet>>(source))
             {
                 return 0;
             }
@@ -374,17 +381,19 @@ namespace Ludots.Core.Gameplay.Relationships
             int count = 0;
             foreach ((Entity target, RelationshipEdgeSet set) in relationships)
             {
-                if (count >= buffer.Length)
-                {
-                    break;
-                }
-
                 if (!MatchesType(set, validatedTypeId))
                 {
                     continue;
                 }
 
-                buffer[count++] = target;
+                if (count < buffer.Length)
+                {
+                    buffer[count++] = target;
+                }
+                else
+                {
+                    dropped++;
+                }
             }
 
             return count;
@@ -402,12 +411,18 @@ namespace Ludots.Core.Gameplay.Relationships
         /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
         {
-            if (!IsAliveInRuntimeWorld(target) || buffer.Length == 0)
+            return CollectIncoming(target, typeId, buffer, out _);
+        }
+
+        public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer, out int dropped)
+        {
+            dropped = 0;
+            if (!IsAliveInRuntimeWorld(target))
             {
                 return 0;
             }
 
-            return _reverseIndex.CopyIncoming(target, ValidateFilterTypeId(typeId), buffer);
+            return _reverseIndex.CopyIncoming(target, ValidateFilterTypeId(typeId), buffer, out dropped);
         }
 
         public int CollectMutual(Entity first, Entity second, Span<Entity> buffer)
@@ -417,7 +432,13 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectMutual(Entity first, Entity second, int typeId, Span<Entity> buffer)
         {
-            if (!IsAliveInRuntimeWorld(first) || !IsAliveInRuntimeWorld(second) || buffer.Length == 0 || !_world.Has<Relationship<RelationshipEdgeSet>>(first))
+            return CollectMutual(first, second, typeId, buffer, out _);
+        }
+
+        public int CollectMutual(Entity first, Entity second, int typeId, Span<Entity> buffer, out int dropped)
+        {
+            dropped = 0;
+            if (!IsAliveInRuntimeWorld(first) || !IsAliveInRuntimeWorld(second) || !_world.Has<Relationship<RelationshipEdgeSet>>(first))
             {
                 return 0;
             }
@@ -427,19 +448,23 @@ namespace Ludots.Core.Gameplay.Relationships
             int count = 0;
             foreach ((Entity candidate, RelationshipEdgeSet set) in relationships)
             {
-                if (count >= buffer.Length)
-                {
-                    break;
-                }
-
                 if (!IsAliveInRuntimeWorld(candidate) || !MatchesType(set, validatedTypeId))
                 {
                     continue;
                 }
 
-                if (HasLink(candidate, second, validatedTypeId) && HasLink(second, candidate, validatedTypeId))
+                if (!HasLink(candidate, second, validatedTypeId) || !HasLink(second, candidate, validatedTypeId))
+                {
+                    continue;
+                }
+
+                if (count < buffer.Length)
                 {
                     buffer[count++] = candidate;
+                }
+                else
+                {
+                    dropped++;
                 }
             }
 
@@ -453,7 +478,13 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int CollectBetweenPair(Entity source, Entity target, int typeId, Span<Entity> buffer)
         {
-            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target) || buffer.Length == 0)
+            return CollectBetweenPair(source, target, typeId, buffer, out _);
+        }
+
+        public int CollectBetweenPair(Entity source, Entity target, int typeId, Span<Entity> buffer, out int dropped)
+        {
+            dropped = 0;
+            if (!IsAliveInRuntimeWorld(source) || !IsAliveInRuntimeWorld(target))
             {
                 return 0;
             }
@@ -462,12 +493,26 @@ namespace Ludots.Core.Gameplay.Relationships
             int count = 0;
             if (HasLink(source, target, validatedTypeId))
             {
-                buffer[count++] = target;
+                if (count < buffer.Length)
+                {
+                    buffer[count++] = target;
+                }
+                else
+                {
+                    dropped++;
+                }
             }
 
-            if (count < buffer.Length && HasLink(target, source, validatedTypeId))
+            if (HasLink(target, source, validatedTypeId))
             {
-                buffer[count++] = source;
+                if (count < buffer.Length)
+                {
+                    buffer[count++] = source;
+                }
+                else
+                {
+                    dropped++;
+                }
             }
 
             return count;

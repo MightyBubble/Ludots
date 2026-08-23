@@ -1,0 +1,31 @@
+{
+  "schema": "ludots.animation_retarget_mapping.v1",
+  "description": "Identity map for KayKit-compatible joint names. Unmapped target bones keep bind pose.",
+  "ignoreUnmappedSourceBones": true,
+  "keepUnmappedTargetBonesAtBindPose": true,
+  "bones": {
+    "root": "root",
+    "hips": "hips",
+    "spine": "spine",
+    "chest": "chest",
+    "head": "head",
+    "upperarm.l": "upperarm.l",
+    "lowerarm.l": "lowerarm.l",
+    "wrist.l": "wrist.l",
+    "hand.l": "hand.l",
+    "handslot.l": "handslot.l",
+    "upperarm.r": "upperarm.r",
+    "lowerarm.r": "lowerarm.r",
+    "wrist.r": "wrist.r",
+    "hand.r": "hand.r",
+    "handslot.r": "handslot.r",
+    "upperleg.l": "upperleg.l",
+    "lowerleg.l": "lowerleg.l",
+    "foot.l": "foot.l",
+    "toes.l": "toes.l",
+    "upperleg.r": "upperleg.r",
+    "lowerleg.r": "lowerleg.r",
+    "foot.r": "foot.r",
+    "toes.r": "toes.r"
+  }
+}

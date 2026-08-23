@@ -6,7 +6,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     public sealed class GraphConfig : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
-        public string Kind { get; set; } = "Effect";
+        /// <summary>Required authored graph kind. Parsed by <see cref="Ludots.Core.GraphRuntime.GraphKindParser"/>.</summary>
+        public string Kind { get; set; } = string.Empty;
         public string Entry { get; set; } = string.Empty;
         public List<GraphNodeConfig> Nodes { get; set; } = new();
         public List<GraphOutputConfig> Outputs { get; set; } = new();
@@ -16,7 +17,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public string Id { get; set; } = string.Empty;
         public string Op { get; set; } = string.Empty;
-        public string? Next { get; set; }
         public List<string> Inputs { get; set; } = new();
 
         public float FloatValue { get; set; }
@@ -25,14 +25,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public string? Tag { get; set; }
         public string? Attribute { get; set; }
+        /// <summary>GraphLookupTable id for ResolveTableRow / TableRead*.</summary>
+        public string? LookupTable { get; set; }
+        /// <summary>Column id within LookupTable for TableReadInt / TableReadFloat.</summary>
+        public string? LookupField { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
         public string? ValidOutput { get; set; }
+        public string? DroppedOutput { get; set; }
+        public string? QueryCapacityPolicy { get; set; }
 
-        public float Radius { get; set; }
+        public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
         public int HalfAngleDeg { get; set; }

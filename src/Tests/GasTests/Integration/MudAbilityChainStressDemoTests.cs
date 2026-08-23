@@ -7,7 +7,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -16,13 +18,16 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class MudAbilityChainStressDemoTests
     {
+        private const string ChainHealthAttributeName = "tests.mud.ability-chain.health";
+        private const string StressHealthAttributeName = "tests.mud.ability-stress.health";
+
         [Test]
         public void MudCombat_AbilityRelease_ChainAndDot_WritesLogFile()
         {
             var world = World.Create();
             try
             {
-                int attrHealth = 0;
+                int attrHealth = ResolveAttributeId(ChainHealthAttributeName);
 
                 int tagFireboltHit = 10;
                 int tagBurning = 11;
@@ -95,6 +100,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = healMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -126,33 +132,37 @@ namespace Ludots.Tests.GAS
                     onActivate.Add(tplHeal);
                 }
 
-                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer());
+                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer(), new DirtyFlags());
                 ref var playerAbilities = ref world.Get<AbilityStateBuffer>(player);
                 var abilityDefs = new AbilityDefinitionRegistry();
                 abilityDefs.RegisterFromEntity(world, abilityFirebolt, 6001);
                 abilityDefs.RegisterFromEntity(world, abilityHeal, 6002);
                 playerAbilities.AddAbility(6001);
                 playerAbilities.AddAbility(6002);
-                world.Get<AttributeBuffer>(player).SetCurrent(attrHealth, 100f);
+                world.Get<AttributeBuffer>(player).SetBase(attrHealth, 100f);
 
-                var goblinA = world.Create(new AttributeBuffer());
-                var goblinB = world.Create(new AttributeBuffer());
-                world.Get<AttributeBuffer>(goblinA).SetCurrent(attrHealth, 100f);
-                world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
+                var goblinA = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var goblinB = world.Create(new AttributeBuffer(), new DirtyFlags());
+                world.Get<AttributeBuffer>(goblinA).SetBase(attrHealth, 100f);
+                world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
                     clock,
                     conditions,
+                    16384,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
                     null,
                     null,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = 2048
                 };
@@ -220,7 +230,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                int attrHealth = 0;
+                int attrHealth = ResolveAttributeId(StressHealthAttributeName);
 
                 int tagVolleyHit = 20;
                 int tagBurning = 21;
@@ -277,6 +287,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = burnTickMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -301,9 +312,9 @@ namespace Ludots.Tests.GAS
                 var targets = new Entity[targetsCount];
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    targets[i] = world.Create(new AttributeBuffer());
+                    targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
-                    attr.SetCurrent(attrHealth, 1000f);
+                    attr.SetBase(attrHealth, 1000f);
                 }
 
                 var player = world.Create(new AbilityStateBuffer());
@@ -312,19 +323,23 @@ namespace Ludots.Tests.GAS
                 abilityDefs.RegisterFromEntity(world, abilityVolley, 7001);
                 abilities.AddAbility(7001);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
                     clock,
                     conditions,
+                    16384,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
                     null,
                     null,
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -404,6 +419,24 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static int ResolveAttributeId(string name)
+        {
+            int id = AttributeRegistry.GetId(name);
+            return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
+        }
+
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/MudAbilityChainStressDemoTests.json");
         }
     }
 }

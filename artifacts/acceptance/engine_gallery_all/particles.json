@@ -1,0 +1,8 @@
+{
+  "scene": "particles",
+  "frames": 30,
+  "avgFrameMs": 1.795,
+  "p95FrameMs": 0.783,
+  "maxFrameMs": 43.005,
+  "wallMs": 657.2
+}

@@ -12,29 +12,30 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
     internal sealed class InputInteractionContextAccessor
     {
-        private const int InitialEntityScratchCapacity = 16;
-
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly InteractionContextStack? _interactionContextStack;
-        private Entity[] _collectionScratch = new Entity[InitialEntityScratchCapacity];
+        private readonly Entity[] _collectionScratch;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
+            _collectionScratch = new Entity[ResolveCommandIntentScratchCapacity(globals)];
             _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                                  collectionsObj is EntityCollectionStore collections
                 ? collections
@@ -43,6 +44,27 @@ namespace CoreInputMod.Systems
                                        stackObj is InteractionContextStack stack
                 ? stack
                 : null;
+        }
+
+        private static int ResolveCommandIntentScratchCapacity(Dictionary<string, object> globals)
+        {
+            if (!globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
+                configObj is not Ludots.Core.Config.GameConfig gameConfig)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.GameConfig.Name} with gasRuntimeCapacity.commandIntentScratchCapacity.");
+            }
+
+            Ludots.Core.Config.GasRuntimeCapacityConfig capacity = gameConfig.GasRuntimeCapacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires GameConfig.gasRuntimeCapacity.");
+            if (capacity.CommandIntentScratchCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            return capacity.CommandIntentScratchCapacity;
         }
 
         public bool TryGetEntity(string key, out Entity entity)
@@ -60,8 +82,7 @@ namespace CoreInputMod.Systems
         public bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }
@@ -78,17 +99,16 @@ namespace CoreInputMod.Systems
             return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            Ludots.Core.Client.ClientLocalSeatRegistry seats = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out Ludots.Core.Client.ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -120,20 +140,12 @@ namespace CoreInputMod.Systems
                 return collectionPrimary;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
-                _world.IsAlive(local))
-            {
-                return local;
-            }
-
             return default;
         }
 
-        public Entity GetLocalPlayerEntityOrNull()
+        public Entity GetSolePossessedRepOrNull()
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -161,12 +173,24 @@ namespace CoreInputMod.Systems
             return true;
         }
 
-        public bool TryCopyCollectionEntities(Entity owner, string collectionKey, List<Entity> entities)
+        public bool TryCopyCollectionEntities(
+            Entity owner,
+            string collectionKey,
+            List<Entity> entities,
+            int capacity,
+            out OrderSubmitResult rejection)
         {
             entities.Clear();
+            rejection = OrderSubmitResult.RejectedInvalidActor;
             if (!TryResolveCollection(owner, collectionKey, out _, out EntityCollectionView view) ||
                 view.Count <= 0)
             {
+                return false;
+            }
+
+            if (view.Count > capacity)
+            {
+                rejection = OrderSubmitResult.RejectedAdmissionCapacity;
                 return false;
             }
 
@@ -181,10 +205,24 @@ namespace CoreInputMod.Systems
                 Entity entity = _collectionScratch[i];
                 if (_world.IsAlive(entity))
                 {
+                    if (entities.Count >= capacity)
+                    {
+                        entities.Clear();
+                        rejection = OrderSubmitResult.RejectedAdmissionCapacity;
+                        return false;
+                    }
+
                     entities.Add(entity);
                 }
             }
 
+            if (entities.Count <= 0)
+            {
+                rejection = OrderSubmitResult.RejectedInvalidActor;
+                return false;
+            }
+
+            rejection = OrderSubmitResult.Activated;
             return entities.Count > 0;
         }
 
@@ -211,13 +249,8 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            int next = _collectionScratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _collectionScratch, next);
+            throw new InvalidOperationException(
+                $"INPUT.INTERACTION_CONTEXT.ERR.CollectionScratchCapacityExceeded: required={required}, capacity={_collectionScratch.Length}.");
         }
 
         public bool TryGetCommandSourceOwner(out Entity owner)
@@ -329,24 +362,27 @@ namespace CoreInputMod.Systems
                                                    graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
                 ? resolvedGraphPrograms
                 : null;
-            GasGraphRuntimeApi? graphApi = null;
-            if (graphPrograms != null &&
-                _globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) &&
-                coordsObj is ISpatialCoordinateConverter spatialCoords &&
-                HasProductionGraphServices())
+            GasGraphOpHandlerTable? graphHandlers = _globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) &&
+                                                     graphHandlersObj is GasGraphOpHandlerTable resolvedGraphHandlers
+                ? resolvedGraphHandlers
+                : null;
+            if (graphPrograms != null && graphHandlers == null)
             {
-                graphApi = GasGraphRuntimeApi.CreateProduction(
-                    _world,
-                    spatialQueries,
-                    spatialCoords,
-                    eventBus: null,
-                    effectRequests: null,
-                    _globals);
-                if (_globals.TryGetValue(CoreServiceKeys.LoadedGraphRuntime.Name, out var graphRuntimeObj) &&
-                    graphRuntimeObj is LoadedGraphRuntime graphRuntime)
+                throw new InvalidOperationException(
+                    "Ability aim presentation graph support requires CoreServiceKeys.GasGraphOpHandlerTable.");
+            }
+
+            GasGraphRuntimeApi? graphApi = null;
+            if (graphPrograms != null)
+            {
+                if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
+                    graphApiObj is not GasGraphRuntimeApi productionGraphApi)
                 {
-                    graphApi.BindLoadedGraphRuntime(graphRuntime);
+                    throw new InvalidOperationException(
+                        "Ability aim presentation requires the engine-owned production GasGraphRuntimeApi when GraphProgramRegistry is present.");
                 }
+
+                graphApi = productionGraphApi;
             }
 
             runtime = new AbilityAimPresentationRuntime(
@@ -358,21 +394,10 @@ namespace CoreInputMod.Systems
                 events,
                 session,
                 graphPrograms,
-                graphApi);
+                graphApi,
+                graphHandlers);
             return true;
         }
 
-        private bool HasProductionGraphServices()
-        {
-            return _globals.ContainsKey(CoreServiceKeys.TagOps.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipRuntime.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipTypeRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipMetricRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipFlagRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.RelationshipReasonRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.TargetDispatchPresetRegistry.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.EntityCollectionStore.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.EntitySetQueryRuntime.Name);
-        }
     }
 }

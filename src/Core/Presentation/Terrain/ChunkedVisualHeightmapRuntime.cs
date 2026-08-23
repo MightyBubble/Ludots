@@ -21,11 +21,21 @@ namespace Ludots.Core.Presentation.Terrain
         private float _renderMinHeightCm;
         private float _renderMaxHeightCm = 1f;
         private int _renderPresentationRevision;
+        private readonly VisualHeightmapRenderProfile _renderProfile;
 
         public ChunkedVisualHeightmapRuntime(ChunkedVisualHeightmapDescriptor descriptor, ChunkedVisualHeightmapStore store)
+            : this(descriptor, store, VisualHeightmapRenderProfile.CreateDefault())
+        {
+        }
+
+        public ChunkedVisualHeightmapRuntime(
+            ChunkedVisualHeightmapDescriptor descriptor,
+            ChunkedVisualHeightmapStore store,
+            VisualHeightmapRenderProfile renderProfile)
         {
             _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _renderProfile = (renderProfile ?? throw new ArgumentNullException(nameof(renderProfile))).NormalizeAndValidate();
         }
 
         public ChunkedVisualHeightmapDescriptor Descriptor => _descriptor;
@@ -129,6 +139,7 @@ namespace Ludots.Core.Presentation.Terrain
             _renderMaxHeightCm = maxHeightCm;
             _renderPresentationRevision++;
         }
+        public VisualHeightmapRenderProfile RenderProfile => _renderProfile;
 
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
         {

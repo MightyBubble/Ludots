@@ -509,7 +509,7 @@ namespace Ludots.Core.UI.ProductionOverview
 
                     return binding.FocusedEntity;
 
-                case ProductionOverviewSourceKind.LocalPlayerRep:
+                case ProductionOverviewSourceKind.SolePossessedRep:
                 case ProductionOverviewSourceKind.EntityCollection:
                 case ProductionOverviewSourceKind.ControlPlaneView:
                     if (binding.CollectionOwner != Entity.Null)
@@ -517,13 +517,13 @@ namespace Ludots.Core.UI.ProductionOverview
                         return binding.CollectionOwner;
                     }
 
-                    if (binding.LocalPlayerRep != Entity.Null)
+                    if (binding.SolePossessedRep != Entity.Null)
                     {
-                        return binding.LocalPlayerRep;
+                        return binding.SolePossessedRep;
                     }
 
                     throw new InvalidOperationException(
-                        $"Production overview profile '{profile.Id}' requires a local player rep or collection owner in the binding context.");
+                        $"Production overview profile '{profile.Id}' requires a sole possessed rep or collection owner in the binding context.");
 
                 default:
                     throw new InvalidOperationException(
@@ -541,7 +541,7 @@ namespace Ludots.Core.UI.ProductionOverview
                 case ProductionOverviewSourceKind.ExplicitEntity:
                     return binding.InstanceKey;
 
-                case ProductionOverviewSourceKind.LocalPlayerRep:
+                case ProductionOverviewSourceKind.SolePossessedRep:
                 case ProductionOverviewSourceKind.EntityCollection:
                     return string.IsNullOrWhiteSpace(binding.InstanceKey)
                         ? profile.SourceRef
@@ -593,7 +593,7 @@ namespace Ludots.Core.UI.ProductionOverview
         /// <list type="bullet">
         /// <item>
         /// <see cref="ProductionOverviewSourceKind.ExplicitEntity"/> /
-        /// <see cref="ProductionOverviewSourceKind.LocalPlayerRep"/>:
+        /// <see cref="ProductionOverviewSourceKind.SolePossessedRep"/>:
         /// documented single-owner behavior — the resolved owner is the sole producer.
         /// </item>
         /// <item>
@@ -607,7 +607,7 @@ namespace Ludots.Core.UI.ProductionOverview
         private int CopyProducerMembers(ProductionOverviewProfile profile, Entity owner, string instanceKey)
         {
             if (profile.SourceKind is ProductionOverviewSourceKind.ExplicitEntity
-                or ProductionOverviewSourceKind.LocalPlayerRep)
+                or ProductionOverviewSourceKind.SolePossessedRep)
             {
                 _memberScratch[0] = owner;
                 return 1;
@@ -653,7 +653,7 @@ namespace Ludots.Core.UI.ProductionOverview
         {
             return sourceKind switch
             {
-                ProductionOverviewSourceKind.LocalPlayerRep => ProductionOverviewSourceKindIds.LocalPlayerRep,
+                ProductionOverviewSourceKind.SolePossessedRep => ProductionOverviewSourceKindIds.SolePossessedRep,
                 ProductionOverviewSourceKind.ExplicitEntity => ProductionOverviewSourceKindIds.ExplicitEntity,
                 ProductionOverviewSourceKind.EntityCollection => ProductionOverviewSourceKindIds.EntityCollection,
                 ProductionOverviewSourceKind.ControlPlaneView => ProductionOverviewSourceKindIds.ControlPlaneView,

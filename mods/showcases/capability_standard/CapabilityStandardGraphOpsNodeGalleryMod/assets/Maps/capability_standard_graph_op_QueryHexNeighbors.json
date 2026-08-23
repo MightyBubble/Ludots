@@ -1,0 +1,215 @@
+{
+  "Id": "capability_standard_graph_op_QueryHexNeighbors",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2800,
+    "Pitch": 72,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "east",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "东格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "northeast",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "东北格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 346,
+            "Y": -600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "northwest",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西北格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -346,
+            "Y": -600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "west",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -693,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "southwest",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西南格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -346,
+            "Y": 600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "southeast",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "东南格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 346,
+            "Y": 600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "outer",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "再远一格"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1386,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "east"
+    }
+  ]
+}

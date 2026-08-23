@@ -5,6 +5,7 @@ public sealed class MassNavigationCrowdSemantics
     public MassNavigationObstacleSemantics Obstacle { get; set; } = new();
     public MassNavigationTargetProjectionSemantics TargetProjection { get; set; } = new();
     public MassNavigationGroupSemantics Group { get; set; } = new();
+    public MassNavigationRouteSemantics Route { get; set; } = new();
     public MassNavigationSteeringSemantics Steering { get; set; } = new();
     public MassNavigationSolverSemantics Solver { get; set; } = new();
 
@@ -14,6 +15,7 @@ public sealed class MassNavigationCrowdSemantics
         Obstacle.CopyFrom(source.Obstacle);
         TargetProjection.CopyFrom(source.TargetProjection);
         Group.CopyFrom(source.Group);
+        Route.CopyFrom(source.Route);
         Steering.CopyFrom(source.Steering);
         Solver.CopyFrom(source.Solver);
     }
@@ -23,15 +25,17 @@ public sealed class MassNavigationCrowdSemantics
         if (Obstacle == null ||
             TargetProjection == null ||
             Group == null ||
+            Route == null ||
             Steering == null ||
             Solver == null)
         {
-            throw new System.InvalidOperationException("MassNavigation semantics requires obstacle, targetProjection, group, steering, and solver sections.");
+            throw new System.InvalidOperationException("MassNavigation semantics requires obstacle, targetProjection, group, route, steering, and solver sections.");
         }
 
         Obstacle.Validate();
         TargetProjection.Validate();
         Group.Validate();
+        Route.Validate();
         Steering.Validate();
         Solver.Validate();
     }
@@ -177,6 +181,33 @@ public sealed class MassNavigationGroupSemantics
         if (!(value >= 0f) || !(value <= 1f))
         {
             throw new System.InvalidOperationException($"MassNavigation group semantics requires {name} inside [0, 1].");
+        }
+    }
+}
+
+public sealed class MassNavigationRouteSemantics
+{
+    public float WaypointAdvanceStopThresholdScale { get; set; }
+    public float WaypointAdvanceBodyRadiusScale { get; set; }
+
+    public void CopyFrom(MassNavigationRouteSemantics source)
+    {
+        System.ArgumentNullException.ThrowIfNull(source);
+        WaypointAdvanceStopThresholdScale = source.WaypointAdvanceStopThresholdScale;
+        WaypointAdvanceBodyRadiusScale = source.WaypointAdvanceBodyRadiusScale;
+    }
+
+    public void Validate()
+    {
+        RequirePositive(WaypointAdvanceStopThresholdScale, nameof(WaypointAdvanceStopThresholdScale));
+        RequirePositive(WaypointAdvanceBodyRadiusScale, nameof(WaypointAdvanceBodyRadiusScale));
+    }
+
+    private static void RequirePositive(float value, string name)
+    {
+        if (!(value > 0f))
+        {
+            throw new System.InvalidOperationException($"MassNavigation route semantics requires {name} > 0.");
         }
     }
 }

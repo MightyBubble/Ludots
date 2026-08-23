@@ -30,7 +30,7 @@
 
     { "id": "c-inventory", "title": "Inventory", "tint": "clay", "x": 1220, "y": 650, "w": 130, "h": 60 },
     { "id": "c-exchange", "title": "Exchange", "tint": "clay", "x": 1360, "y": 650, "w": 130, "h": 60 },
-    { "id": "c-performer", "title": "Performer", "tint": "clay", "x": 1620, "y": 650, "w": 130, "h": 60 },
+    { "id": "c-presenter", "title": "Presenter", "tint": "clay", "x": 1620, "y": 650, "w": 130, "h": 60 },
 
     { "id": "c-fmassnav", "title": "MassNav", "tint": "sage", "x": 640, "y": 1090, "w": 130, "h": 60 },
     { "id": "c-selection", "title": "Selection", "tint": "sage", "x": 780, "y": 1090, "w": 130, "h": 60 },
@@ -58,7 +58,7 @@
     { "from": "c-collision", "to": "physics2d", "style": "dashed" },
     { "from": "c-inventory", "to": "blacksmith", "style": "dashed" },
     { "from": "c-exchange", "to": "blacksmith", "style": "dashed" },
-    { "from": "c-performer", "to": "blacksmith", "style": "dashed" },
+    { "from": "c-presenter", "to": "blacksmith", "style": "dashed" },
     { "from": "c-rmassnav", "to": "roadnetwork", "style": "dashed" },
     { "from": "c-pathstore", "to": "roadnetwork", "style": "dashed" },
     { "from": "c-transport", "to": "roadnetwork", "style": "dashed" },

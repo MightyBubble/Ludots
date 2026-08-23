@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             : base(world)
         {
             _formSets = formSets;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
         }
 
         public override void Update(in float dt)
@@ -82,7 +82,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 for (int i = 0; i < selectedRoute.SlotOverrides.Count; i++)
                 {
                     var slotOverride = selectedRoute.SlotOverrides[i];
-                    if ((uint)slotOverride.SlotIndex >= (uint)abilities.Count)
+                    if ((uint)slotOverride.SlotIndex >= AbilityStateBuffer.CAPACITY)
                     {
                         continue;
                     }

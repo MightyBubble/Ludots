@@ -8,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -55,6 +56,10 @@ namespace Ludots.Tests.GAS.Production
                 }
 
                 var (hero, enemy) = FindHeroAndEnemy(engine.World);
+                Assert.That(
+                    engine.World.Has<TimedTagBuffer>(hero),
+                    Is.True,
+                    "MOBA heroes execute TagClip timelines and must enter gameplay with TimedTagBuffer installed.");
 
                 ref var enemyAttrsBefore = ref engine.World.Get<AttributeBuffer>(enemy);
                 int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
@@ -79,6 +84,31 @@ namespace Ludots.Tests.GAS.Production
                 ref var enemyAttrsAfter = ref engine.World.Get<AttributeBuffer>(enemy);
                 float enemyHealthAfter = enemyAttrsAfter.GetCurrent(healthId);
                 Assert.That(enemyHealthAfter, Is.EqualTo(enemyHealthBefore - 20f).Within(0.0001f));
+
+                Fix64Vec2 moveStart = engine.World.Get<WorldPositionCm>(hero).Value;
+                int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+                var moveArgs = new OrderArgs();
+                moveArgs.Spatial.Kind = OrderSpatialKind.WorldCm;
+                moveArgs.Spatial.Mode = OrderCollectionMode.Single;
+                moveArgs.Spatial.WorldCm = new System.Numerics.Vector3(
+                    moveStart.X.ToFloat() + 300f,
+                    0f,
+                    moveStart.Y.ToFloat());
+                orderQueue.TryEnqueue(new Order
+                {
+                    OrderTypeId = moveToOrderTypeId,
+                    Actor = hero,
+                    Args = moveArgs,
+                });
+
+                for (int i = 0; i < 40; i++)
+                {
+                    engine.Tick(1f / 60f);
+                }
+
+                Fix64Vec2 moveEnd = engine.World.Get<WorldPositionCm>(hero).Value;
+                Assert.That(moveEnd.X.ToFloat(), Is.EqualTo(moveStart.X.ToFloat() + 300f).Within(0.01f));
+                Assert.That(moveEnd.Y.ToFloat(), Is.EqualTo(moveStart.Y.ToFloat()).Within(0.01f));
 
                 var endErrors = engine.TriggerManager.Errors;
                 Assert.That(endErrors.Count, Is.EqualTo(0));

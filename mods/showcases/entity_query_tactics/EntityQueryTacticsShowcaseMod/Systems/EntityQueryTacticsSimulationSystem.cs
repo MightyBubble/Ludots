@@ -4,9 +4,9 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace EntityQueryTacticsShowcaseMod.Systems
 {
@@ -150,7 +151,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             InitializeIdentifiers();
             PrepareEntities(context);
             SeedRelationshipRuntime(context);
-            BindCommandSourceOwner(context.Owner);
+            RequireCommandSourceOwner(context.Owner);
             PublishSelectableKnowledge(context.Owner);
             _state.SetScenarioContext(context);
             _engine.GlobalContext[EntityQueryTacticsShowcaseIds.ScenarioKey] = context;
@@ -408,21 +409,10 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 throw new InvalidOperationException($"Entity query tactics showcase cannot add invalid tag id '{tagId}'.");
             }
 
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                entity.Add(new GameplayTagContainer());
-            }
-
-            if (!_world.Has<TagCountContainer>(entity))
-            {
-                entity.Add(new TagCountContainer());
-            }
-
-            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+            TagStateInstaller.EnsureInstalled(_world, entity);
             TagOps tagOps = _engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("TagOps is missing.");
-            if (!tagOps.AddTag(ref tags, ref counts, tagId))
+            if (!tagOps.AddTag(_world, entity, tagId))
             {
                 throw new InvalidOperationException($"Entity query tactics showcase tag rule rejected configured tag id '{tagId}'.");
             }
@@ -653,12 +643,13 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             return flagId;
         }
 
-        private void BindCommandSourceOwner(Entity owner)
+        private void RequireCommandSourceOwner(Entity owner)
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+            if (!_world.IsAlive(possessed) || possessed != owner)
             {
-                _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
+                throw new InvalidOperationException(
+                    "Entity query tactics showcase requires sole ClientLocalSeat possession of the player commander from launchContext.localSeats / startupLocalSeats.");
             }
         }
 
@@ -936,13 +927,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private IGraphRuntimeApi CreateGraphApi()
         {
-            return GasGraphRuntimeApi.CreateProduction(
-                _world,
-                _engine.SpatialQueries,
-                _engine.SpatialCoords,
-                _engine.EventBus,
-                _engine.GetService(CoreServiceKeys.EffectRequestQueue),
-                _engine.GlobalContext);
+            return _engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+                ?? throw new InvalidOperationException("Engine-owned production GasGraphRuntimeApi is missing.");
         }
 
         private uint NextSeed()

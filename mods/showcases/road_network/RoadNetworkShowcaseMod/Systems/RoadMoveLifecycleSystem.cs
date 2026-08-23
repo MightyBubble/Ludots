@@ -86,11 +86,11 @@ namespace RoadNetworkShowcaseMod.Systems
                     if (orderRuntime.LifecycleState == MovePlanLifecycleState.Active &&
                         _plans.TryGetPlan(entity, activeOrder.OrderId, out MovePlanView plan))
                     {
-                        if (_arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
+                        if (_arrival.HasReachedFinalTarget(World, in activeOrder, position, execution.FinalArrivalRadiusCm))
                         {
                             orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
                         }
-                        else if (!TryResolveTimeoutTarget(in plan, planRuntime.CurrentWaypointIndex, in activeOrder, out Vector2 timeoutTarget))
+                        else if (!TryResolveTimeoutTarget(World, in plan, planRuntime.CurrentWaypointIndex, in activeOrder, out Vector2 timeoutTarget))
                         {
                             orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
                             orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
@@ -105,7 +105,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
                     if (orderRuntime.LifecycleState == MovePlanLifecycleState.NeedsReplan)
                     {
-                        if (_arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
+                        if (_arrival.HasReachedFinalTarget(World, in activeOrder, position, execution.FinalArrivalRadiusCm))
                         {
                             orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
                         }
@@ -137,7 +137,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 return false;
             }
 
-            if (!RoadRouteFinalTargetResolver.TryResolve(in activeOrder, out Vector3 destinationWorldCm))
+            if (!RoadRouteFinalTargetResolver.TryResolve(World, in activeOrder, out Vector3 destinationWorldCm))
             {
                 WriteStatus($"Road route abandoned after {replanLabel} replan: final target metadata is missing.");
                 orderRuntime.FailureReason = MovePlanFailureReason.FinalTargetMissing;
@@ -184,14 +184,14 @@ namespace RoadNetworkShowcaseMod.Systems
             return true;
         }
 
-        private static bool TryResolveTimeoutTarget(in MovePlanView plan, int waypointIndex, in Order activeOrder, out Vector2 target)
+        private static bool TryResolveTimeoutTarget(World world, in MovePlanView plan, int waypointIndex, in Order activeOrder, out Vector2 target)
         {
             if (plan.TryGetWaypoint(Math.Clamp(waypointIndex, 0, Math.Max(0, plan.Count - 1)), out target))
             {
                 return true;
             }
 
-            if (RoadRouteFinalTargetResolver.TryResolve(in activeOrder, out Vector3 finalTargetWorldCm))
+            if (RoadRouteFinalTargetResolver.TryResolve(world, in activeOrder, out Vector3 finalTargetWorldCm))
             {
                 target = new Vector2(finalTargetWorldCm.X, finalTargetWorldCm.Z);
                 return true;

@@ -102,13 +102,56 @@ namespace Ludots.Core.Scripting
             if (triggers == null || triggers.Count == 0) return;
 
             var list = new List<Trigger>(triggers.Count);
+            RegisterIntoMapList(triggers, list);
+            _mapTriggers[mapId] = list;
+            Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
+        }
+
+        /// <summary>
+        /// Append triggers to a map's registered list (runtime entity mounts). The map
+        /// must already own its initial registration via <see cref="RegisterMapTriggers"/>.
+        /// </summary>
+        public void AddMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
+        {
+            if (triggers == null || triggers.Count == 0) return;
+
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger> list))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot append triggers to map '{mapId}' before its initial map-trigger registration.");
+            }
+
+            RegisterIntoMapList(triggers, list);
+            Log.Info(in LogChannels.Engine, $"Appended {triggers.Count} triggers to map '{mapId}'.");
+        }
+
+        /// <summary>
+        /// Remove specific triggers from a map's registered list (dead entity-mount sweep)
+        /// and unregister them from event dispatch.
+        /// </summary>
+        public void RemoveMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
+        {
+            if (triggers == null || triggers.Count == 0) return;
+
+            if (!_mapTriggers.TryGetValue(mapId, out List<Trigger> list))
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                list.Remove(triggers[i]);
+                UnregisterTrigger(triggers[i]);
+            }
+        }
+
+        private void RegisterIntoMapList(IReadOnlyList<Trigger> triggers, List<Trigger> list)
+        {
             for (int i = 0; i < triggers.Count; i++)
             {
                 RegisterTrigger(triggers[i]);
                 list.Add(triggers[i]);
             }
-            _mapTriggers[mapId] = list;
-            Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
         }
 
         /// <summary>
@@ -334,6 +377,8 @@ namespace Ludots.Core.Scripting
 
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
         {
+            ArgumentNullException.ThrowIfNull(trigger);
+
             try
             {
                 if (trigger.EventKey == GameEvents.MapLoaded)
@@ -351,7 +396,7 @@ namespace Ludots.Core.Scripting
             {
                 lock (_errorsLock)
                 {
-                    _errors.Add(new TriggerError(eventKey, trigger?.Name ?? string.Empty, ex));
+                    _errors.Add(new TriggerError(eventKey, trigger.Name, ex));
                 }
                 Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;

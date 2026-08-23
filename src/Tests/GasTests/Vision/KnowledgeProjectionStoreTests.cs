@@ -138,15 +138,17 @@ namespace Ludots.Tests.GAS
             Assert.That(records[0].Position, Is.EqualTo(KnowledgePositionAccess.LastKnown));
             Assert.That(records[1].Position, Is.EqualTo(KnowledgePositionAccess.Live));
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                store.TryGet(viewer, targetA, currentTick: 4, out _);
-                store.CopyRecords(viewer, currentTick: 4, targets, records);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureStoreReadCopyAllocations(
+                store,
+                viewer,
+                targetA,
+                currentTick: 4,
+                targets,
+                records,
+                out int resolvedCount,
+                out int copiedCount);
+            Assert.That(resolvedCount, Is.EqualTo(10_000));
+            Assert.That(copiedCount, Is.EqualTo(20_000));
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -245,15 +247,17 @@ namespace Ludots.Tests.GAS
             Assert.That(store.CopyRecords(viewer, currentTick: 12, targets, records), Is.EqualTo(1));
             Assert.That(targets[0], Is.EqualTo(persistentTarget));
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                store.TryGet(viewer, persistentTarget, currentTick: 12, out _);
-                store.CopyRecords(viewer, currentTick: 12, targets, records);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureStoreReadCopyAllocations(
+                store,
+                viewer,
+                persistentTarget,
+                currentTick: 12,
+                targets,
+                records,
+                out int resolvedCount,
+                out int copiedCount);
+            Assert.That(resolvedCount, Is.EqualTo(10_000));
+            Assert.That(copiedCount, Is.EqualTo(10_000));
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -295,6 +299,34 @@ namespace Ludots.Tests.GAS
             {
                 Assert.That(records[i].Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
             }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureStoreReadCopyAllocations(
+            KnowledgeProjectionStore store,
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            Span<Entity> targets,
+            Span<KnowledgeDisclosureRecord> records,
+            out int resolvedCount,
+            out int copiedCount)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            resolvedCount = 0;
+            copiedCount = 0;
+            for (int i = 0; i < 10_000; i++)
+            {
+                if (store.TryGet(viewer, target, currentTick, out _))
+                {
+                    resolvedCount++;
+                }
+
+                copiedCount += store.CopyRecords(viewer, currentTick, targets, records);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static KnowledgeDisclosureRecord CreateRecord(

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -12,6 +12,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -261,9 +262,11 @@ namespace Ludots.Tests.GAS
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
                 new EffectRequestQueue(),
+                4096,
                 defs,
                 castAbilityOrderTypeId: 100,
-                orderTypeRegistry: new OrderTypeRegistry());
+                orderTypeRegistry: new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)),
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             system.Update(0f);
 

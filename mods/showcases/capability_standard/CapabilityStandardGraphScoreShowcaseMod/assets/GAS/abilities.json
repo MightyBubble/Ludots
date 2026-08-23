@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Ability.GraphScore.Strike",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 45, "tag": "Cooldown.GraphScore.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.GraphScore.StrikeHit" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.GraphScore.GCD"] }
+  }
+]

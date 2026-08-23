@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
@@ -21,6 +22,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public sealed class EffectRequestQueue
     {
+        public const string CapacityExceededError = "GAS.EFFECT_REQUEST_QUEUE.ERR.CapacityExceeded";
+
         private EffectRequest[] _items;
         private int _count;
         private int _nextRootId = 1;
@@ -29,24 +32,77 @@ namespace Ludots.Core.Gameplay.GAS
         private int _overflowHead;
         private int _overflowTail;
         private int _overflowCount;
-        private int _dropped;
-        private bool _budgetFused;
+        private int _responseChainListenerRevision;
+        private World? _responseChainListenerWorld;
 
         public EffectRequestQueue(int initialCapacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME)
         {
-            int capacity = initialCapacity;
-            if (capacity < GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME) capacity = GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME;
-            _items = new EffectRequest[capacity];
-            _overflow = new EffectRequest[capacity];
+            if (initialCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(initialCapacity), "EffectRequestQueue capacity must be positive.");
+            }
+
+            _items = new EffectRequest[initialCapacity];
+            _overflow = new EffectRequest[initialCapacity];
         }
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public int TotalCapacity => _items.Length + _overflow.Length;
+        public int AvailableCapacity => (_items.Length - _count) + (_overflow.Length - _overflowCount);
         public int OverflowCount => _overflowCount;
-        public int DroppedCount => _dropped;
-        public bool BudgetFused => _budgetFused;
+        public int ResponseChainListenerRevision => _responseChainListenerRevision;
+
+        internal readonly struct WriteCheckpoint
+        {
+            internal readonly int Count;
+            internal readonly int NextRootId;
+            internal readonly int OverflowHead;
+            internal readonly int OverflowTail;
+            internal readonly int OverflowCount;
+
+            internal WriteCheckpoint(
+                int count,
+                int nextRootId,
+                int overflowHead,
+                int overflowTail,
+                int overflowCount)
+            {
+                Count = count;
+                NextRootId = nextRootId;
+                OverflowHead = overflowHead;
+                OverflowTail = overflowTail;
+                OverflowCount = overflowCount;
+            }
+        }
 
         public EffectRequest this[int index] => _items[index];
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            return new WriteCheckpoint(
+                _count,
+                _nextRootId,
+                _overflowHead,
+                _overflowTail,
+                _overflowCount);
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            if (_count < checkpoint.Count ||
+                _overflowHead != checkpoint.OverflowHead ||
+                _overflowCount < checkpoint.OverflowCount)
+            {
+                throw new InvalidOperationException("GAS.EFFECT_REQUEST.ERR.InvalidWriteRollback");
+            }
+
+            _count = checkpoint.Count;
+            _nextRootId = checkpoint.NextRootId;
+            _overflowHead = checkpoint.OverflowHead;
+            _overflowTail = checkpoint.OverflowTail;
+            _overflowCount = checkpoint.OverflowCount;
+        }
 
         public void Reserve(int capacity)
         {
@@ -70,10 +126,15 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowCount = take;
         }
 
+        public int AllocateRootId()
+        {
+            return _nextRootId++;
+        }
+
         public void Publish(in EffectRequest req)
         {
             var r = req;
-            if (r.RootId == 0) r.RootId = _nextRootId++;
+            if (r.RootId == 0) r.RootId = AllocateRootId();
 
             if (_count < _items.Length)
             {
@@ -81,15 +142,10 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            if (!_budgetFused)
-            {
-                _budgetFused = true;
-            }
-
             if (_overflowCount >= _overflow.Length)
             {
-                _dropped++;
-                return;
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: capacity={_items.Length}, overflowCapacity={_overflow.Length}, requestedTemplateId={r.TemplateId}, rootId={r.RootId}.");
             }
 
             _overflow[_overflowTail] = r;
@@ -98,10 +154,28 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowCount++;
         }
 
+        public void RequireAvailable(int needed, string source)
+        {
+            if (needed < 0)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(needed));
+            }
+
+            if (AvailableCapacity >= needed)
+            {
+                return;
+            }
+
+            throw new System.InvalidOperationException(
+                $"{CapacityExceededError}: source={source}, needed={needed}, available={AvailableCapacity}, capacity={_items.Length}, overflowCapacity={_overflow.Length}.");
+        }
+
         public void Clear()
         {
             _count = 0;
-            RefillFromOverflow();
+            _overflowHead = 0;
+            _overflowTail = 0;
+            _overflowCount = 0;
         }
 
         public void ConsumePrefix(int count)
@@ -139,6 +213,45 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 _overflowHead = 0;
                 _overflowTail = 0;
+            }
+        }
+
+        internal void NotifyResponseChainListenersChanged()
+        {
+            unchecked
+            {
+                _responseChainListenerRevision++;
+            }
+        }
+
+        internal void TrackResponseChainListenerLifecycle(World world)
+        {
+            if (world == null)
+            {
+                throw new System.ArgumentNullException(nameof(world));
+            }
+
+            if (ReferenceEquals(_responseChainListenerWorld, world))
+            {
+                return;
+            }
+
+            if (_responseChainListenerWorld != null)
+            {
+                throw new System.InvalidOperationException(
+                    "GAS.RESPONSE_CHAIN.ERR.ListenerWorldAlreadyBound");
+            }
+
+            _responseChainListenerWorld = world;
+            world.SubscribeEntityDestroyed(OnResponseChainEntityDestroyed);
+        }
+
+        private void OnResponseChainEntityDestroyed(in Entity entity)
+        {
+            World world = _responseChainListenerWorld!;
+            if (world.Has<ResponseChainListener>(entity))
+            {
+                NotifyResponseChainListenersChanged();
             }
         }
     }

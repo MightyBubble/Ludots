@@ -54,7 +54,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ── Capability blocks ──
 
-        /// <summary>Per-phase graph bindings (Pre/Post/SkipMain).</summary>
+        /// <summary>Per-phase graph bindings. Main overrides preset-provided authoring sugar.</summary>
         public Dictionary<string, PhaseGraphConfig>? PhaseGraphs { get; set; }
         /// <summary>Phase listeners bound to this effect's lifecycle.</summary>
         public List<PhaseListenerConfig>? PhaseListeners { get; set; }
@@ -100,9 +100,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         /// <summary>Pre-slot graph program name (runs before preset Main).</summary>
         public string? Pre { get; set; }
+        /// <summary>Main-slot graph program name. When present, it replaces the preset default.</summary>
+        public string? Main { get; set; }
         /// <summary>Post-slot graph program name (runs after preset Main).</summary>
         public string? Post { get; set; }
-        /// <summary>If true, skip the preset Main graph for this phase.</summary>
+        /// <summary>If true, omit the preset Main handler without providing a replacement.</summary>
         public bool SkipMain { get; set; }
     }
 
@@ -154,6 +156,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? HalfHeight { get; set; }
         public int? Rotation { get; set; }
         public int? Length { get; set; }
+        public string? Origin { get; set; }
         public int? GraphProgramId { get; set; }
     }
 

@@ -1,5 +1,6 @@
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.ChunkDebug;
@@ -16,7 +17,6 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 	private readonly BrowserMinimapCompositedOverlayLayoutState _layoutState;
 	private readonly HashSet<Entity> _disclosedOwners = new();
 	private MinimapKnowledgeViewerProvider? _previousKnowledgeViewerProvider;
-	private Entity _viewer = Entity.Null;
 	private string _mapId = string.Empty;
 	private bool _knowledgeViewerProviderInstalled;
 	private bool _hasPreviousKnowledgeViewerProvider;
@@ -32,7 +32,6 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 
 	public void Initialize()
 	{
-		_viewer = _engine.World.Create();
 		InstallMinimapKnowledgeViewerProvider();
 	}
 
@@ -103,8 +102,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 			return;
 		}
 
-		Entity viewer = ResolveOrCreateViewer();
-		if (viewer == Entity.Null)
+		if (!TryResolveViewer(out Entity viewer))
 		{
 			return;
 		}
@@ -183,22 +181,6 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 		_disclosedOwners.Clear();
 	}
 
-	private Entity ResolveOrCreateViewer()
-	{
-		if (TryResolveViewer(CoreServiceKeys.LocalPlayerEntity.Name, out Entity viewer))
-		{
-			_viewer = viewer;
-			return viewer;
-		}
-
-		if (_viewer == Entity.Null || !_engine.World.IsAlive(_viewer))
-		{
-			_viewer = _engine.World.Create();
-		}
-
-		return _viewer;
-	}
-
 	private void InstallMinimapKnowledgeViewerProvider()
 	{
 		_hasPreviousKnowledgeViewerProvider = _engine.TryGetService(
@@ -210,8 +192,7 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 
 	private bool TryResolveMinimapKnowledgeViewer(GameEngine engine, out Entity viewer)
 	{
-		viewer = ResolveOrCreateViewer();
-		return viewer != Entity.Null && engine.World.IsAlive(viewer);
+		return TryResolveViewer(out viewer);
 	}
 
 	private void RestoreMinimapKnowledgeViewerProvider()
@@ -240,6 +221,15 @@ internal sealed class BrowserMinimapCompositedOverlayNativeMarkerBridgeSystem : 
 		viewer = Entity.Null;
 		return _engine.GlobalContext.TryGetValue(key, out object? value) &&
 			value is Entity candidate &&
+			candidate != Entity.Null &&
+			_engine.World.IsAlive(candidate) &&
+			(viewer = candidate) != Entity.Null;
+	}
+
+	private bool TryResolveViewer(out Entity viewer)
+	{
+		viewer = Entity.Null;
+		return ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity candidate) &&
 			candidate != Entity.Null &&
 			_engine.World.IsAlive(candidate) &&
 			(viewer = candidate) != Entity.Null;

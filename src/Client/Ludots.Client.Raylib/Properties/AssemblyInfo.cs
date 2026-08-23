@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("PresentationTests")]
+[assembly: InternalsVisibleTo("Ludots.Adapter.Raylib.Tests")]

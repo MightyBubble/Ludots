@@ -14,7 +14,12 @@ namespace Ludots.Tests.GAS
 {
     public class LifetimeConditionTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private const int TestSnapshotCapacity = 64;
+        private const int TestFanOutCommandCapacity = 64;
+
+        private readonly TagOps _tagOps = new TagOps(
+            new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
+            new TagRuleRegistry());
 
         [Test]
         public void TagSense_Effective_RespectsDisabledIf()
@@ -65,13 +70,20 @@ namespace Ludots.Tests.GAS
                 var clocks = new GasClocks(clock);
                 var conditions = new GasConditionRegistry();
                 var requests = new EffectRequestQueue();
-                var lifetime = new EffectLifetimeSystem(world, clock, conditions, requests);
+                var lifetime = new EffectLifetimeSystem(
+                    world,
+                    clock,
+                    conditions,
+                    snapshotCapacity: TestSnapshotCapacity,
+                    fanOutCommandCapacity: TestFanOutCommandCapacity,
+                    effectRequests: requests,
+                    tagOps: _tagOps);
 
                 int keepAliveTag = 3;
                 var keepAlive = conditions.Register(new GasCondition(GasConditionKind.TagPresent, keepAliveTag, TagSense.Present));
 
                 var source = world.Create();
-                var target = world.Create();
+                var target = world.Create(new DirtyFlags());
                 world.Add(target, new GameplayTagContainer());
                 world.Add(target, new TagCountContainer());
                 world.Add(target, new ActiveEffectContainer());
@@ -110,7 +122,12 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var conditions = new GasConditionRegistry();
-            var lifetime = new EffectLifetimeSystem(world, clock, conditions);
+            var lifetime = new EffectLifetimeSystem(
+                world,
+                clock,
+                conditions,
+                snapshotCapacity: TestSnapshotCapacity,
+                fanOutCommandCapacity: TestFanOutCommandCapacity);
 
             var source = world.Create();
             var target = world.Create(new ActiveEffectContainer());
@@ -141,7 +158,11 @@ namespace Ludots.Tests.GAS
 
             int durabilityId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("Durability");
 
-            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var tagOps = new TagOps(
+                new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
+                new TagRuleRegistry());
+
+            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
             ref var targetAttributes = ref world.Get<AttributeBuffer>(target);
             targetAttributes.SetBase(durabilityId, 100f);
             targetAttributes.SetCurrent(durabilityId, 100f);
@@ -153,21 +174,25 @@ namespace Ludots.Tests.GAS
             var programs = new GraphProgramRegistry();
             var presetTypes = new PresetTypeRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
-            var graphApi = new GasGraphRuntimeApi(world);
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var executor = new EffectPhaseExecutor(
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var lifetime = new EffectLifetimeSystem(
                 world,
                 clock,
                 conditions,
+                snapshotCapacity: TestSnapshotCapacity,
+                fanOutCommandCapacity: TestFanOutCommandCapacity,
                 templates: templates,
                 phaseExecutor: executor,
-                graphApi: graphApi);
-            var aggregator = new AttributeAggregatorSystem(world);
+                graphApi: graphApi,
+                tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             const int graphId = 9001;
             const int templateId = 701;
@@ -176,7 +201,8 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -7f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = durabilityId },
-            });
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            }, GraphKind.Effect);
 
             var bindings = new EffectPhaseGraphBindings();
             That(bindings.TryAddStep(EffectPhaseId.OnPeriod, PhaseSlot.Post, graphId), Is.True);
@@ -190,6 +216,12 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 2,
                 PhaseGraphBindings = bindings,
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/LifetimeConditionTests.OnPeriodPostGraph.json");
 
             var effect = GameplayEffectFactory.CreateEffect(
                 world,
@@ -283,10 +315,22 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 30,
             });
 
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/LifetimeConditionTests.InitialPeriodOffset.json");
+
             var lifetime = new EffectLifetimeSystem(
                 world,
                 clock,
                 new GasConditionRegistry(),
+                snapshotCapacity: TestSnapshotCapacity,
+                fanOutCommandCapacity: TestFanOutCommandCapacity,
                 templates: templates);
 
             Entity effect = GameplayEffectFactory.CreateEffect(

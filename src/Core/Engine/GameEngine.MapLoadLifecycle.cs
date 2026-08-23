@@ -49,18 +49,21 @@ namespace Ludots.Core.Engine
             public IPendingMapLoad PendingLoad { get; }
         }
 
-        private void EnsureMapSessionInfrastructure()
+        private MapSessionManager EnsureMapSessionInfrastructure()
         {
-            if (MapSessions != null)
+            MapSessionManager? mapSessions = MapSessions;
+            if (mapSessions != null)
             {
-                return;
+                return mapSessions;
             }
 
-            MapSessions = new MapSessionManager();
+            mapSessions = new MapSessionManager();
+            MapSessions = mapSessions;
             BoardIdRegistry = new BoardIdRegistry();
-            SetService(CoreServiceKeys.MapSessions, MapSessions);
+            SetService(CoreServiceKeys.MapSessions, mapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
             EnsureSaveParticipantRegistry();
+            return mapSessions;
         }
 
         private void EnsureSaveParticipantRegistry()
@@ -89,7 +92,12 @@ namespace Ludots.Core.Engine
             CurrentMapSession = session;
             if (session == null)
             {
-                GameSession.Camera.ResetVirtualCameras();
+                if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
+                    views != null)
+                {
+                    views.ResetAllVirtualCameras();
+                }
+
                 RemoveService(CoreServiceKeys.MapId);
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
@@ -212,6 +220,25 @@ namespace Ludots.Core.Engine
             return ctx;
         }
 
+        private void WireMapVariablePhaseDispatcher(MapSession session)
+        {
+            Gameplay.MapTriggers.MapVariableStore? variables = session?.Variables;
+            if (variables == null)
+            {
+                return;
+            }
+
+            variables.PhaseChangedDispatcher = (mapId, varName, newValue) =>
+            {
+                ScriptContext ctx = CreateMapEventContext(session!);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarName, varName);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyPhase, newValue);
+                ctx.Set(Gameplay.MapTriggers.MapVariableStore.PayloadKeyVarValueInt, newValue);
+                CompleteLifecycleEvent(
+                    TriggerManager.FireMapEventAsync(mapId, new EventKey(Gameplay.MapTriggers.MapVariableStore.PhaseChangedEventName), ctx));
+            };
+        }
+
         private void RestoreFocusedMapSession(MapSession session)
         {
             SetCurrentMapSession(session);
@@ -223,7 +250,7 @@ namespace Ludots.Core.Engine
                 LoadBoardTerrainData(session, session.MapConfig);
                 LoadNavForMap(session.MapId.Value, session.MapConfig);
             }
-            else if (session.VisualHeightmap is Ludots.Core.Presentation.Terrain.IVisualHeightmapRenderSource visualHeightmapSource)
+            else if (session.VisualHeightmap is Ludots.Platform.Abstractions.IVisualHeightmapRenderSource visualHeightmapSource)
             {
                 ApplyVisualHeightmapSpatialConfig(visualHeightmapSource);
             }
@@ -433,13 +460,8 @@ namespace Ludots.Core.Engine
         {
             session.TeamEntityLookup = participants.Teams;
             session.PlayerEntityLookup = participants.Players;
-            session.LocalPlayerId = participants.LocalPlayerId;
-            session.LocalPlayerEntity = participants.LocalPlayerEntity;
+            session.LocalSeats = participants.LocalSeats;
             session.TeamRelationships = participants.TeamRelationships;
-            if (participants.LocalPlayerId > 0)
-            {
-                GameSession.SelectLocalPlayer(participants.LocalPlayerId);
-            }
 
             if (CurrentMapSession == session)
             {
@@ -460,8 +482,7 @@ namespace Ludots.Core.Engine
                 new ParticipantBindingResult(
                     session.TeamEntityLookup,
                     session.PlayerEntityLookup,
-                    session.LocalPlayerId,
-                    session.LocalPlayerEntity,
+                    session.LocalSeats,
                     session.TeamRelationships));
         }
 
@@ -472,27 +493,30 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object entityObj) &&
-                entityObj is Entity localPlayerEntity)
+            if (!GlobalContext.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not Client.ClientLocalSeatRegistry seats)
             {
-                session.LocalPlayerEntity = localPlayerEntity;
-            }
-            else
-            {
-                session.LocalPlayerEntity = Entity.Null;
+                return;
             }
 
-            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object playerIdObj) &&
-                playerIdObj is int localPlayerId &&
-                localPlayerId > 0)
+            var snapshot = new List<ResolvedLocalSeatPossession>(seats.Count);
+            IReadOnlyList<string> ids = seats.SeatIds;
+            for (int i = 0; i < ids.Count; i++)
             {
-                session.LocalPlayerId = localPlayerId;
-                GameSession.SelectLocalPlayer(localPlayerId);
+                Client.ClientLocalSeat seat = seats.Require(ids[i]);
+                if (!seat.HasPossession)
+                {
+                    continue;
+                }
+
+                snapshot.Add(new ResolvedLocalSeatPossession(
+                    seat.SeatId,
+                    seat.PossessedPlayerId,
+                    seat.PossessedRep,
+                    seat.ControlSchemeId));
             }
-            else
-            {
-                session.LocalPlayerId = 0;
-            }
+
+            session.LocalSeats = snapshot;
         }
 
         private void CompleteMapResume(MapSession session, MapLoadStatus loadStatus)

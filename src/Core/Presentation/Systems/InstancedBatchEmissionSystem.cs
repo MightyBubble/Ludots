@@ -4,25 +4,26 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Instancing;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
     public sealed class InstancedBatchEmissionSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription PerformerQuery = new QueryDescription()
-            .WithAll<PerformerState>();
+        private static readonly QueryDescription PresenterQuery = new QueryDescription()
+            .WithAll<PresenterState>();
 
-        private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PresenterDefinitionRegistry _definitions;
         private readonly InstancedBatchAssetRegistry _batchAssets;
         private readonly InstancedBatchRequestBuffer _requests;
         private readonly InstancedBatchSubmissionRuntime _submissionRuntime;
         private readonly PresentationEventStream _events;
-        private readonly List<RemovedPerformerKey> _removedThisFrame = new(32);
+        private readonly List<RemovedPresenterKey> _removedThisFrame = new(32);
 
         public InstancedBatchEmissionSystem(
             World world,
-            PerformerDefinitionRegistry definitions,
+            PresenterDefinitionRegistry definitions,
             InstancedBatchAssetRegistry batchAssets,
             InstancedBatchRequestBuffer requests,
             InstancedBatchSubmissionRuntime submissionRuntime,
@@ -41,27 +42,27 @@ namespace Ludots.Core.Presentation.Systems
             _removedThisFrame.Clear();
             EmitRemovals();
 
-            foreach (ref readonly Chunk chunk in World.Query(in PerformerQuery))
+            foreach (ref readonly Chunk chunk in World.Query(in PresenterQuery))
             {
                 ref Entity firstEntity = ref chunk.Entity(0);
-                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                Span<PresenterState> states = chunk.GetSpan<PresenterState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Entity performer = System.Runtime.CompilerServices.Unsafe.Add(ref firstEntity, i);
-                    ref readonly PerformerState state = ref states[i];
-                    if (WasRemovedThisFrame(performer, state.StableId))
+                    Entity presenter = System.Runtime.CompilerServices.Unsafe.Add(ref firstEntity, i);
+                    ref readonly PresenterState state = ref states[i];
+                    if (WasRemovedThisFrame(presenter, state.StableId))
                     {
                         continue;
                     }
 
-                    EmitForPerformer(performer, in state);
+                    EmitForPresenter(presenter, in state);
                 }
             }
         }
 
-        private void EmitForPerformer(Entity performer, in PerformerState state)
+        private void EmitForPresenter(Entity presenter, in PresenterState state)
         {
-            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+            if (!_definitions.TryGet(state.DefId, out PresenterDefinition definition) ||
                 !definition.HasInstancedBatchBindings)
             {
                 return;
@@ -70,11 +71,17 @@ namespace Ludots.Core.Presentation.Systems
             InstancedBatchBinding[] bindings = definition.InstancedBatches;
             for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
             {
-                int batchAssetId = bindings[bindingIndex].BatchAssetId;
+                ref readonly InstancedBatchBinding binding = ref bindings[bindingIndex];
+                if (!IsBindingActive(in state, in binding))
+                {
+                    continue;
+                }
+
+                int batchAssetId = binding.BatchAssetId;
                 if (!_batchAssets.TryGet(batchAssetId, out InstancedBatchAsset asset))
                 {
                     throw new InvalidOperationException(
-                        $"Performer definition '{definition.Key}' references missing instanced batch asset id={batchAssetId}.");
+                        $"Presenter definition '{definition.Key}' references missing instanced batch asset id={batchAssetId}.");
                 }
 
                 InstancedBatchGroup[] groups = asset.Groups;
@@ -84,7 +91,7 @@ namespace Ludots.Core.Presentation.Systems
                     int totalInstances = group.InstanceCount;
                     int budget = asset.ProgressiveSubmission.MaxInstancesPerFlush;
                     if (!_submissionRuntime.ShouldSubmit(
-                            performer,
+                            presenter,
                             state.StableId,
                             batchAssetId,
                             groupIndex,
@@ -108,7 +115,7 @@ namespace Ludots.Core.Presentation.Systems
                         batchAssetId,
                         state.StableId,
                         state.OwnerEntity,
-                        performer,
+                        presenter,
                         address,
                         asset.RenderPath,
                         group.MeshAssetId,
@@ -126,16 +133,16 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < events.Length; i++)
             {
                 ref readonly PresentationEvent evt = ref events[i];
-                if (evt.Kind != PresentationEventKind.PerformerDestroyed ||
-                    evt.PerformerEntity == Entity.Null ||
-                    !_definitions.TryGet(evt.KeyId, out PerformerDefinition definition) ||
+                if (evt.Kind != PresentationEventKind.PresenterDestroyed ||
+                    evt.PresenterEntity == Entity.Null ||
+                    !_definitions.TryGet(evt.KeyId, out PresenterDefinition definition) ||
                     !definition.HasInstancedBatchBindings)
                 {
                     continue;
                 }
 
-                _submissionRuntime.Remove(evt.PerformerEntity, (int)evt.Magnitude);
-                _removedThisFrame.Add(new RemovedPerformerKey(evt.PerformerEntity, (int)evt.Magnitude));
+                _submissionRuntime.Remove(evt.PresenterEntity, (int)evt.Magnitude);
+                _removedThisFrame.Add(new RemovedPresenterKey(evt.PresenterEntity, (int)evt.Magnitude));
                 InstancedBatchBinding[] bindings = definition.InstancedBatches;
                 for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
                 {
@@ -161,7 +168,7 @@ namespace Ludots.Core.Presentation.Systems
                             batchAssetId,
                             (int)evt.Magnitude,
                             evt.Source,
-                            evt.PerformerEntity,
+                            evt.PresenterEntity,
                             address,
                             asset.RenderPath,
                             group.MeshAssetId,
@@ -174,12 +181,12 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private bool WasRemovedThisFrame(Entity performer, int performerStableId)
+        private bool WasRemovedThisFrame(Entity presenter, int presenterStableId)
         {
             for (int i = 0; i < _removedThisFrame.Count; i++)
             {
-                if (_removedThisFrame[i].Performer == performer &&
-                    _removedThisFrame[i].PerformerStableId == performerStableId)
+                if (_removedThisFrame[i].Presenter == presenter &&
+                    _removedThisFrame[i].PresenterStableId == presenterStableId)
                 {
                     return true;
                 }
@@ -188,15 +195,22 @@ namespace Ludots.Core.Presentation.Systems
             return false;
         }
 
-        private readonly struct RemovedPerformerKey
+        private static bool IsBindingActive(in PresenterState state, in InstancedBatchBinding binding)
         {
-            public readonly Entity Performer;
-            public readonly int PerformerStableId;
+            int slotIndex = binding.SlotIndex;
+            return slotIndex < 0 ||
+                   (slotIndex < 32 && (state.BehaviorActiveMask & (1u << slotIndex)) != 0);
+        }
 
-            public RemovedPerformerKey(Entity performer, int performerStableId)
+        private readonly struct RemovedPresenterKey
+        {
+            public readonly Entity Presenter;
+            public readonly int PresenterStableId;
+
+            public RemovedPresenterKey(Entity presenter, int presenterStableId)
             {
-                Performer = performer;
-                PerformerStableId = performerStableId;
+                Presenter = presenter;
+                PresenterStableId = presenterStableId;
             }
         }
     }

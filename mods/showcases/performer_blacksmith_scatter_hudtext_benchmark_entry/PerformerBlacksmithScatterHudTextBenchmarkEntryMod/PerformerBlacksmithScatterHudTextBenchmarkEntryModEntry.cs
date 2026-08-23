@@ -1,5 +1,0 @@
-namespace PerformerBlacksmithScatterHudTextBenchmarkEntryMod;
-
-public sealed class PerformerBlacksmithScatterHudTextBenchmarkEntryModEntry
-{
-}

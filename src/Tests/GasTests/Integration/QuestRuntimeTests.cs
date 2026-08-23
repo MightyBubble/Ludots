@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -91,15 +92,20 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 0,
                 Modifiers = modifiers,
             });
+            FinalizeBuffTemplates(templates);
 
             var requests = new EffectRequestQueue();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
-            var application = new EffectApplicationSystem(world, requests, templates: templates);
-            var aggregator = new AttributeAggregatorSystem(world);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: tagOps);
+            var application = new EffectApplicationSystem(world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), requests, templates: templates, tagOps: tagOps);
+            var aggregator = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             requests.Publish(new EffectRequest
             {
@@ -184,6 +190,30 @@ namespace Ludots.Tests.GAS
                 }
             });
             return definitions;
+        }
+
+        private static void FinalizeBuffTemplates(EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var buff = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Buff,
+                Components = ComponentFlags.ModifierParams | ComponentFlags.DurationParams,
+                ActivePhases = PhaseFlags.OnApply,
+                AllowedLifetimes = LifetimeFlags.Duration,
+            };
+            buff.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in buff);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/QuestRuntimeTests.json");
         }
 
         private static int EnsureTag(string tag)

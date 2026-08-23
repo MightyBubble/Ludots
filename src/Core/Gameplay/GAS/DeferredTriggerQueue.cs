@@ -2,12 +2,10 @@ using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
 {
-    /// <summary>
-    /// 延迟触发器队列（下一帧执行）
-    /// 使用数组实现，避免GC分配
-    /// </summary>
     public class DeferredTriggerQueue
     {
+        public const string CapacityExceededError = "GAS.DEFERRED_TRIGGER.ERR.CapacityExceeded";
+
         private static readonly int Capacity = GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME;
 
         private AttributeChangedTrigger[] _attributeTriggers = new AttributeChangedTrigger[Capacity];
@@ -16,7 +14,7 @@ namespace Ludots.Core.Gameplay.GAS
         private TagChangedTrigger[] _tagOverflow = new TagChangedTrigger[Capacity];
         private TagCountChangedTrigger[] _tagCountTriggers = new TagCountChangedTrigger[Capacity];
         private TagCountChangedTrigger[] _tagCountOverflow = new TagCountChangedTrigger[Capacity];
-        
+
         private int _attributeCount = 0;
         private int _tagCount = 0;
         private int _tagCountTriggerCount = 0;
@@ -24,73 +22,57 @@ namespace Ludots.Core.Gameplay.GAS
         private int _tagOverflowCount = 0;
         private int _tagCountOverflowCount = 0;
 
-        private bool _attributeBudgetFused;
-        private bool _tagBudgetFused;
-        private bool _tagCountBudgetFused;
-        
-        /// <summary>
-        /// 入队属性变化触发器
-        /// </summary>
         public void EnqueueAttributeChanged(AttributeChangedTrigger trigger)
         {
-            if (_attributeCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME)
+            if (_attributeCount < Capacity)
             {
-                if (!_attributeBudgetFused)
-                {
-                    _attributeBudgetFused = true;
-                    // Budget fused flag set above; no Console.WriteLine to avoid GC in hot path
-                }
-                if (_attributeOverflowCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME) return;
-                _attributeOverflow[_attributeOverflowCount++] = trigger;
+                _attributeTriggers[_attributeCount++] = trigger;
                 return;
             }
-            
-            _attributeTriggers[_attributeCount++] = trigger;
+
+            if (_attributeOverflowCount >= Capacity)
+            {
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: source=AttributeChanged, capacity={Capacity}, overflowCapacity={Capacity}, attributeId={trigger.AttributeId}.");
+            }
+
+            _attributeOverflow[_attributeOverflowCount++] = trigger;
         }
-        
-        /// <summary>
-        /// 入队Tag变化触发器
-        /// </summary>
+
         public void EnqueueTagChanged(TagChangedTrigger trigger)
         {
-            if (_tagCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME)
+            if (_tagCount < Capacity)
             {
-                if (!_tagBudgetFused)
-                {
-                    _tagBudgetFused = true;
-                    // Budget fused flag set above; no Console.WriteLine to avoid GC in hot path
-                }
-                if (_tagOverflowCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME) return;
-                _tagOverflow[_tagOverflowCount++] = trigger;
+                _tagTriggers[_tagCount++] = trigger;
                 return;
             }
-            
-            _tagTriggers[_tagCount++] = trigger;
+
+            if (_tagOverflowCount >= Capacity)
+            {
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: source=TagChanged, capacity={Capacity}, overflowCapacity={Capacity}, tagId={trigger.TagId}.");
+            }
+
+            _tagOverflow[_tagOverflowCount++] = trigger;
         }
-        
-        /// <summary>
-        /// 入队TagCount变化触发器
-        /// </summary>
+
         public void EnqueueTagCountChanged(TagCountChangedTrigger trigger)
         {
-            if (_tagCountTriggerCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME)
+            if (_tagCountTriggerCount < Capacity)
             {
-                if (!_tagCountBudgetFused)
-                {
-                    _tagCountBudgetFused = true;
-                    // Budget fused flag set above; no Console.WriteLine to avoid GC in hot path
-                }
-                if (_tagCountOverflowCount >= GasConstants.MAX_DEFERRED_TRIGGERS_PER_FRAME) return;
-                _tagCountOverflow[_tagCountOverflowCount++] = trigger;
+                _tagCountTriggers[_tagCountTriggerCount++] = trigger;
                 return;
             }
-            
-            _tagCountTriggers[_tagCountTriggerCount++] = trigger;
+
+            if (_tagCountOverflowCount >= Capacity)
+            {
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: source=TagCountChanged, capacity={Capacity}, overflowCapacity={Capacity}, tagId={trigger.TagId}.");
+            }
+
+            _tagCountOverflow[_tagCountOverflowCount++] = trigger;
         }
-        
-        /// <summary>
-        /// 清空队列
-        /// </summary>
+
         public void Clear()
         {
             if (_attributeOverflowCount > 0)
@@ -125,44 +107,12 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 _tagCountTriggerCount = 0;
             }
-            _attributeBudgetFused = false;
-            _tagBudgetFused = false;
-            _tagCountBudgetFused = false;
         }
-        
-        /// <summary>
-        /// Whether the attribute trigger budget was exceeded this frame.
-        /// </summary>
-        public bool AttributeBudgetFused => _attributeBudgetFused;
 
-        /// <summary>
-        /// Whether the tag trigger budget was exceeded this frame.
-        /// </summary>
-        public bool TagBudgetFused => _tagBudgetFused;
-
-        /// <summary>
-        /// Whether the tag-count trigger budget was exceeded this frame.
-        /// </summary>
-        public bool TagCountBudgetFused => _tagCountBudgetFused;
-
-        /// <summary>
-        /// 获取属性变化触发器数量
-        /// </summary>
         public int AttributeTriggerCount => _attributeCount;
-        
-        /// <summary>
-        /// 获取Tag变化触发器数量
-        /// </summary>
         public int TagTriggerCount => _tagCount;
-        
-        /// <summary>
-        /// 获取TagCount变化触发器数量
-        /// </summary>
         public int TagCountTriggerCount => _tagCountTriggerCount;
-        
-        /// <summary>
-        /// 获取属性变化触发器（只读访问）
-        /// </summary>
+
         public AttributeChangedTrigger GetAttributeTrigger(int index)
         {
             if (index < 0 || index >= _attributeCount)
@@ -171,10 +121,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             return _attributeTriggers[index];
         }
-        
-        /// <summary>
-        /// 获取Tag变化触发器（只读访问）
-        /// </summary>
+
         public TagChangedTrigger GetTagTrigger(int index)
         {
             if (index < 0 || index >= _tagCount)
@@ -183,10 +130,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             return _tagTriggers[index];
         }
-        
-        /// <summary>
-        /// 获取TagCount变化触发器（只读访问）
-        /// </summary>
+
         public TagCountChangedTrigger GetTagCountTrigger(int index)
         {
             if (index < 0 || index >= _tagCountTriggerCount)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.GraphWorld
 {
@@ -28,8 +29,8 @@ namespace Ludots.Core.Navigation.GraphWorld
             var arr = new long[set.Count];
             int w = 0;
             foreach (var k in set) arr[w++] = k;
+            Array.Sort(arr);
             return arr;
         }
     }
 }
-

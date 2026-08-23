@@ -8,16 +8,13 @@ namespace MobaDemoMod
 {
     /// <summary>
     /// Centralized configuration for MobaDemoMod.
-    /// Loaded from assets/Configs/moba_config.json.
+    /// Loaded from assets/moba_config.json.
     /// Keeps tunable values in data instead of runtime code.
     /// </summary>
     public sealed class MobaConfig
     {
         [JsonPropertyName("abilities")]
         public AbilityConfig Abilities { get; set; } = new();
-
-        [JsonPropertyName("movement")]
-        public MovementConfig Movement { get; set; } = new();
 
         [JsonPropertyName("commands")]
         public CommandConfig Commands { get; set; } = new();
@@ -48,12 +45,6 @@ namespace MobaDemoMod
             [JsonPropertyName("validColor")] public float[] ValidColor { get; set; } = { 0.3f, 0.8f, 1f, 0.4f };
             [JsonPropertyName("invalidColor")] public float[] InvalidColor { get; set; } = { 1f, 0.3f, 0.2f, 0.3f };
             [JsonPropertyName("rangeCircleColor")] public float[] RangeCircleColor { get; set; } = { 0.3f, 0.7f, 1f, 0.2f };
-        }
-
-        public sealed class MovementConfig
-        {
-            [JsonPropertyName("speedCmPerSec")] public int SpeedCmPerSec { get; set; } = 600;
-            [JsonPropertyName("stopRadiusCm")] public int StopRadiusCm { get; set; } = 20;
         }
 
         public sealed class CommandConfig
@@ -91,7 +82,7 @@ namespace MobaDemoMod
         /// </summary>
         public static MobaConfig Load(IModContext ctx)
         {
-            const string uri = "assets/Configs/moba_config.json";
+            const string uri = "assets/moba_config.json";
             string fullUri = $"{ctx.ModId}:{uri}";
             using var stream = ctx.VFS.GetStream(fullUri);
             return JsonSerializer.Deserialize<MobaConfig>(stream, JsonOptions)

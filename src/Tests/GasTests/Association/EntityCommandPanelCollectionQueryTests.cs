@@ -141,7 +141,7 @@ namespace Ludots.Tests.GAS
 
             var submitted = new List<Order>();
             var mapping = CreateMappingSystem(submitted);
-            mapping.SetLocalPlayer(collectionOwner, 7);
+            mapping.SetSolePossessedActor(collectionOwner, 7);
             mapping.SetActorProvider((out Entity actor) =>
             {
                 actor = collectionOwner;
@@ -158,13 +158,57 @@ namespace Ludots.Tests.GAS
             Assert.That(slots[2].AbilityId, Is.EqualTo(1003));
             Assert.That(slots[2].SlotIndex, Is.EqualTo(2), "UI click should address dense displayed slot 2 after sorting.");
 
-            bool activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 2);
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 2);
 
-            Assert.That(activated, Is.True);
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Submitted));
+            Assert.That(activated.Actor, Is.EqualTo(second));
+            Assert.That(activated.OrderId, Is.GreaterThan(0));
             Assert.That(submitted.Count, Is.EqualTo(1));
             Assert.That(submitted[0].Args.I0, Is.EqualTo(1), "Displayed slot 2 must route to the original owner slot 1/action SkillW.");
-            Assert.That(submitted[0].Actor, Is.EqualTo(collectionOwner));
+            Assert.That(submitted[0].Actor, Is.EqualTo(second),
+                "Collection panel activation must preserve the member that owns the displayed ability.");
             Assert.That(submitted[0].OrderTypeId, Is.EqualTo(100));
+        }
+
+        [Test]
+        public void ActivateSlot_PropagatesTypedQueueFullRejection()
+        {
+            using var engine = CreateEngineWithCommandPanelMod();
+            RegisterAbility(engine, 1001, "Arc Bolt", "Q detail");
+
+            Entity collectionOwner = engine.World.Create();
+            Entity first = CreateActor(engine.World, "Alpha", 1001);
+            ReplaceCommandCollection(engine, collectionOwner, new[] { first });
+
+            RegisterQuery(engine, new EntityCommandPanelCollectionQueryConfig
+            {
+                Id = OwnerCountQueryId,
+                CollectionKey = EntityCollectionKeys.CommandSource,
+                Filter = EntityCommandPanelCollectionFilter.Any,
+                Sort = EntityCommandPanelCollectionSortKind.AbilityIdThenSlot
+            });
+
+            var mapping = CreateMappingSystem(new List<Order>());
+            mapping.SetSolePossessedActor(collectionOwner, 7);
+            mapping.SetActorProvider((out Entity actor) =>
+            {
+                actor = collectionOwner;
+                return true;
+            });
+            mapping.SetOrderSubmitHandler((in Order _) => OrderSubmitResult.RejectedQueueFull);
+            engine.SetService(CoreServiceKeys.ActiveInputOrderMapping, mapping);
+
+            IEntityCommandPanelSource source = ResolveCollectionSource(engine);
+            var context = new EntityCommandPanelSourceContext(collectionOwner, CollectionSourceId, OwnerCountQueryId);
+            var slots = new EntityCommandPanelSlotView[8];
+            Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(1));
+
+            InputOrderActivationResult activated = EntityCommandPanelSourceDispatch.ActivateSlot(source, in context, 0, 0);
+
+            Assert.That(activated.State, Is.EqualTo(InputOrderActivationState.Rejected));
+            Assert.That(activated.Actor, Is.EqualTo(first));
+            Assert.That(activated.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(activated.OrderId, Is.GreaterThan(0));
         }
 
         private static GameEngine CreateEngineWithCommandPanelMod()
@@ -172,7 +216,7 @@ namespace Ludots.Tests.GAS
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             // EntityCommandPanelMod loads through the real ModLoader so its
-            // assets/Configs/UI/ability_aggregation_profiles.json fragment (aggregation.by_family,
+            // assets/UI/ability_aggregation_profiles.json fragment (aggregation.by_family,
             // the mod's default profile) is merged before the mod installs at GameStart.
             engine.InitializeWithConfigPipeline(
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
@@ -293,7 +337,10 @@ namespace Ludots.Tests.GAS
                 }
             });
             mapping.SetOrderTypeKeyResolver(key => string.Equals(key, "castAbility", StringComparison.Ordinal) ? 100 : 0);
-            mapping.SetOrderSubmitHandler((in Order order) => submitted.Add(order));
+            mapping.SetActivationActorValidator((actor, _) => actor != Entity.Null);
+            int nextOrderId = 1;
+            mapping.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            mapping.SetOrderSubmitHandler((in Order order) => { submitted.Add(order); return OrderSubmitResult.Queued; });
             return mapping;
         }
 

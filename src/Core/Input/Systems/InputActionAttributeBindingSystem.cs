@@ -4,9 +4,11 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Systems
@@ -15,17 +17,21 @@ namespace Ludots.Core.Input.Systems
     {
         private readonly Dictionary<string, object> _globals;
         private readonly InputActionAttributeBindingRegistry _registry;
+        private readonly TagOps _tagOps;
         private readonly QueryDescription _cameraBehaviorInputTargetQuery =
             new QueryDescription().WithAll<AttributeBuffer, CameraBehaviorInputTarget>();
+        private Entity _cameraBehaviorInputCarrier = Entity.Null;
 
         public InputActionAttributeBindingSystem(
             World world,
             Dictionary<string, object> globals,
-            InputActionAttributeBindingRegistry registry)
+            InputActionAttributeBindingRegistry registry,
+            TagOps tagOps)
             : base(world)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
         }
 
         public override void Update(in float dt)
@@ -65,8 +71,7 @@ namespace Ludots.Core.Input.Systems
                     ? 0f
                     : ReadValue(input, entry);
 
-                ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(target);
-                attributes.SetCurrent(entry.AttributeId, value);
+                AttributeMutationOps.SetCurrent(World, target, entry.AttributeId, value, _tagOps);
             }
         }
 
@@ -75,9 +80,8 @@ namespace Ludots.Core.Input.Systems
             entity = Entity.Null;
             switch (target)
             {
-                case InputActionAttributeTargetKind.LocalPlayerEntity:
-                    if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? entityObj) &&
-                        entityObj is Entity local &&
+                case InputActionAttributeTargetKind.SolePossessedRep:
+                    if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                         local != Entity.Null &&
                         World.IsAlive(local))
                     {
@@ -99,26 +103,42 @@ namespace Ludots.Core.Input.Systems
 
         private Entity ResolveCameraBehaviorInputCarrier()
         {
-            Entity resolved = Entity.Null;
-            int count = 0;
-            World.Query(
-                in _cameraBehaviorInputTargetQuery,
-                (Entity entity, ref AttributeBuffer _, ref CameraBehaviorInputTarget __) =>
-                {
-                    count++;
-                    if (count == 1)
-                    {
-                        resolved = entity;
-                    }
-                });
-
-            if (count == 1)
+            if (_cameraBehaviorInputCarrier != Entity.Null &&
+                World.IsAlive(_cameraBehaviorInputCarrier) &&
+                World.Has<AttributeBuffer>(_cameraBehaviorInputCarrier) &&
+                World.Has<CameraBehaviorInputTarget>(_cameraBehaviorInputCarrier))
             {
-                return resolved;
+                return _cameraBehaviorInputCarrier;
+            }
+
+            var job = new ResolveCameraBehaviorInputCarrierJob();
+            World.InlineEntityQuery<ResolveCameraBehaviorInputCarrierJob, AttributeBuffer, CameraBehaviorInputTarget>(
+                in _cameraBehaviorInputTargetQuery,
+                ref job);
+
+            if (job.Count == 1)
+            {
+                _cameraBehaviorInputCarrier = job.Resolved;
+                return job.Resolved;
             }
 
             throw new InvalidOperationException(
-                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {count}.");
+                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {job.Count}.");
+        }
+
+        private struct ResolveCameraBehaviorInputCarrierJob : IForEachWithEntity<AttributeBuffer, CameraBehaviorInputTarget>
+        {
+            public Entity Resolved;
+            public int Count;
+
+            public void Update(Entity entity, ref AttributeBuffer attributes, ref CameraBehaviorInputTarget target)
+            {
+                Count++;
+                if (Count == 1)
+                {
+                    Resolved = entity;
+                }
+            }
         }
 
         private static float ReadValue(IInputActionReader input, in InputActionAttributeBindingEntry entry)

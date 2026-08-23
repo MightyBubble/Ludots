@@ -1,6 +1,6 @@
 # Prefab Grounding 与 Visual Height
 
-> **注意：** 本文描述的 Prefab 系统已被 [Performer-as-Actor 架构](performer-as-actor-architecture.md) 取代。Prefab 的"层级化视觉资产"概念现在由 Performer 树的 children + AssetBinding 实现，Grounding 语义由 `PerformerGroundingUtility` 承载。本文中关于 visual height 真相归属、Core-owned lowering、adapter 不拥有 grounding 语义等原则仍然有效，只是执行载体从 `PrefabFinalizationPipeline` 变为 `PerformerBehaviorSystem` + `PerformerEmitSystem`。
+> **注意：** 本文描述的 Prefab 系统已被 [Presenter-as-Actor 架构](presenter-as-actor-architecture.md) 取代。Prefab 的"层级化视觉资产"概念现在由 Presenter 树的 children + AssetBinding 实现，Grounding 语义由 `PresenterGroundingUtility` 承载。本文中关于 visual height 真相归属、Core-owned lowering、adapter 不拥有 grounding 语义等原则仍然有效，只是执行载体从 `PrefabFinalizationPipeline` 变为 `PresenterBehaviorSystem` + `PresenterEmitSystem`。
 
 本页用人话说明 Ludots 里 prefab grounding 这件事到底在解决什么问题，以及为什么这块工作必须按固定顺序推进。
 
@@ -253,7 +253,8 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 
 - `docs/architecture/presentation_snapshot_contract.md`
 - `docs/architecture/persistent_static_adapter_sync.md`
-- `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
+- `src/Core/Presentation/Presenters/PresenterGroundingUtility.cs`
+- `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs`
 - 开发者仓库中的商业引擎 adapter render bridge
-- `src/Tests/PresentationTests/Rendering/PrefabFinalizationAndVisualHeightmapTests.cs`
+- `src/Tests/PresentationTests/Rendering/VisualHeightmapRuntimeTruthTests.cs`
 - `src/Tests/PresentationTests/Core/PresentationFoundationTests.cs`

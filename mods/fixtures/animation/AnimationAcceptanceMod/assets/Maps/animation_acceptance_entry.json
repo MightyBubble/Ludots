@@ -1,13 +1,17 @@
 {
   "Id": "animation_acceptance_entry",
-  "Tags": ["animation.acceptance", "animation.acceptance.layered"],
+  "Tags": [
+    "animation.acceptance",
+    "animation.acceptance.layered"
+  ],
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
       "WidthInMacroTiles": 1,
       "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 16
     }
   ],
   "DefaultCamera": {
@@ -26,13 +30,33 @@
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "Name": { "Value": "Static Baseline Dummy" },
-        "WorldPositionCm": { "Value": { "X": 2300, "Y": 900 } }
+        "Name": {
+          "Value": "Static Baseline Dummy"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2300,
+            "Y": 900
+          }
+        }
       }
     }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "animation-acceptance-tank" },
-    { "TeamId": 2, "RepresentativeInstanceId": "animation-acceptance-humanoid" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "animation-acceptance-tank"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "animation-acceptance-humanoid"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "animation-acceptance-tank"
+    }
   ]
 }

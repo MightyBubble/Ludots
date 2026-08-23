@@ -5,6 +5,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
 {
     public interface IAttributeSink
     {
+        void ValidateBinding(byte channel, string bindingId, string relativePath);
         void Apply(Arch.Core.World world, AttributeBindingEntry[] entries, int start, int count);
     }
 

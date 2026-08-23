@@ -18,6 +18,7 @@ using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
 using ParticipantViewCapabilityMod.Runtime;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Production;
 

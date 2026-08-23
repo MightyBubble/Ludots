@@ -5,18 +5,23 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformanceVisualizationMod.UI;
+using Ludots.Platform.Abstractions;
 
 namespace PerformanceVisualizationMod.Runtime
 {
@@ -33,6 +38,7 @@ namespace PerformanceVisualizationMod.Runtime
 
         private const int SpawnBatchSize = 2048;
         private const int DestroyBatchSize = 2048;
+        private const int LiveKnowledgeConfidencePermille = 1000;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
             .WithAll<MapEntity, Name, PresentationStableId, PresentationLocalBounds>();
@@ -58,6 +64,7 @@ namespace PerformanceVisualizationMod.Runtime
         private int _screenHudDropped;
         private int _healthAttributeId;
         private int _benchmarkCubeDefinitionId;
+        private Entity _audienceViewer = Entity.Null;
         private uint _directHudRandomState = 0x5EED_1000u;
 
         public VisualBenchmarkRuntime(IModContext context)
@@ -225,7 +232,7 @@ namespace PerformanceVisualizationMod.Runtime
                     _hasRequestedScenario = false;
                     _pipelinePhase = BenchmarkPipelinePhase.Idle;
                     _status = _requestedScenario.AttachHealthAttributes
-                        ? $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors with performer-driven health bars."
+                        ? $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors with presenter-driven health bars."
                         : $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors for pure visual stress.";
                     _context.Log($"[PerformanceVisualizationMod] {_status}");
                 }
@@ -282,14 +289,14 @@ namespace PerformanceVisualizationMod.Runtime
 
         internal VisualBenchmarkPanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new VisualBenchmarkPanelState(
                 Title: "Visual Benchmark Showcase",
                 Status: _status,
                 Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
                 Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | ScreenHUD Items: {_screenHudCount:N0} | Drops W:{_lastHudDropped:N0}/S:{_screenHudDropped:N0}",
-                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
-                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate performer HUD, 32K for pure visual stress, HUD100K/SkiaHotpath for direct screen-HUD overlay throughput.",
+                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm:0}",
+                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate presenter HUD, 32K for pure visual stress, HUD100K/SkiaHotpath for direct screen-HUD overlay throughput.",
                 Actions: new[]
                 {
                     VisualBenchmarkScenarioConfig.Small.Label,
@@ -369,13 +376,26 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             World world = engine.World;
+            Entity audienceViewer = scenario.AttachHealthAttributes
+                ? EnsureBenchmarkAudience(engine)
+                : Entity.Null;
+            KnowledgeProjectionStore? knowledge = scenario.AttachHealthAttributes
+                ? RequireKnowledgeStore(engine)
+                : null;
+            KnowledgeIdMask256 healthAttributeMask = scenario.AttachHealthAttributes
+                ? KnowledgeIdMask256.Empty.WithId(_healthAttributeId)
+                : KnowledgeIdMask256.Empty;
+            int observedTick = scenario.AttachHealthAttributes
+                ? KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext)
+                : 0;
+            var emptyKnowledgeMask = KnowledgeIdMask256.Empty;
             var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("PresentationStableIdAllocator service is missing.");
-            var commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
-                ?? throw new InvalidOperationException("PerformerCommandBuffer service is missing.");
-            var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
-            int definitionId = ResolveBenchmarkCubeDefinitionId(performers);
+            var commands = engine.GetService(CoreServiceKeys.PresenterCommandBuffer)
+                ?? throw new InvalidOperationException("PresenterCommandBuffer service is missing.");
+            var presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+                ?? throw new InvalidOperationException("PresenterDefinitionRegistry service is missing.");
+            int definitionId = ResolveBenchmarkCubeDefinitionId(presenters);
 
             MapId mapId = engine.CurrentMapSession?.MapId ?? default;
             int centerOffsetX = (scenario.Columns - 1) * scenario.SpacingCm / 2;
@@ -421,24 +441,41 @@ namespace PerformanceVisualizationMod.Runtime
                     LOD = LODLevel.High,
                 });
 
-                if (!commands.TryAdd(new PerformerCommand
+                if (!commands.TryAdd(new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.CreatePerformer,
-                        PerformerDefinitionId = definitionId,
+                        CommandKind = PresenterCommandKind.CreatePresenter,
+                        PresenterDefinitionId = definitionId,
                         ScopeTag = ResolveScenarioScopeId(entity),
                         Source = entity,
                         AnchorKind = PresentationAnchorKind.Entity,
                     }))
                 {
-                    throw new InvalidOperationException("PerformanceVisualizationMod failed to queue benchmark performer creation.");
+                    throw new InvalidOperationException("PerformanceVisualizationMod failed to queue benchmark presenter creation.");
                 }
 
                 if (scenario.AttachHealthAttributes)
                 {
                     world.Add(entity, new AttributeBuffer());
-                    ref var attributes = ref world.Get<AttributeBuffer>(entity);
-                    attributes.SetBase(_healthAttributeId, 100f);
-                    attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+                    world.Add(entity, new DirtyFlags());
+                    TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                        ?? throw new InvalidOperationException("PerformanceVisualizationMod requires TagOps.");
+                    AttributeMutationOps.SetBase(world, entity, _healthAttributeId, 100f, tagOps);
+                    AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, 40f + (i % 60), tagOps);
+
+                    knowledge!.Upsert(
+                        audienceViewer,
+                        entity,
+                        new KnowledgeDisclosureRecord(
+                            KnowledgePresence.LiveVisible,
+                            KnowledgePositionAccess.Live,
+                            healthAttributeMask,
+                            emptyKnowledgeMask,
+                            emptyKnowledgeMask,
+                            audienceViewer,
+                            observedTick,
+                            expiryTick: 0,
+                            confidencePermille: LiveKnowledgeConfidencePermille,
+                            revision: 0));
                 }
             }
 
@@ -466,6 +503,7 @@ namespace PerformanceVisualizationMod.Runtime
                     return;
                 }
 
+                RemoveBenchmarkKnowledge(engine, entity);
                 engine.World.Add(entity, new PresentationDestroyPending());
                 marked++;
             });
@@ -492,6 +530,50 @@ namespace PerformanceVisualizationMod.Runtime
             {
                 _panelController.ClearIfOwned(root);
             }
+
+            ClearOwnedBenchmarkAudience(engine);
+        }
+
+        private Entity EnsureBenchmarkAudience(GameEngine engine)
+        {
+            if (_audienceViewer != Entity.Null && engine.World.IsAlive(_audienceViewer))
+            {
+                return _audienceViewer;
+            }
+
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
+            {
+                throw new InvalidOperationException(
+                    "PerformanceVisualizationMod requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+            }
+
+            _audienceViewer = viewer;
+            return viewer;
+        }
+
+        private static KnowledgeProjectionStore RequireKnowledgeStore(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("PerformanceVisualizationMod requires KnowledgeProjectionStore before publishing benchmark HUD visibility.");
+        }
+
+        private void RemoveBenchmarkKnowledge(GameEngine engine, Entity target)
+        {
+            if (_audienceViewer == Entity.Null ||
+                !engine.World.IsAlive(_audienceViewer) ||
+                engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is not KnowledgeProjectionStore knowledge)
+            {
+                return;
+            }
+
+            knowledge.Remove(_audienceViewer, target);
+        }
+
+        private void ClearOwnedBenchmarkAudience(GameEngine engine)
+        {
+            _ = engine;
+            _audienceViewer = Entity.Null;
         }
 
         private static bool MatchesScenarioEntity(in MapEntity mapEntity, in Name name, in MapId currentMapId)
@@ -515,18 +597,18 @@ namespace PerformanceVisualizationMod.Runtime
             return count;
         }
 
-        private int ResolveBenchmarkCubeDefinitionId(PerformerDefinitionRegistry performers)
+        private int ResolveBenchmarkCubeDefinitionId(PresenterDefinitionRegistry presenters)
         {
             if (_benchmarkCubeDefinitionId > 0)
             {
                 return _benchmarkCubeDefinitionId;
             }
 
-            _benchmarkCubeDefinitionId = performers.GetId(VisualBenchmarkIds.BenchmarkCubePerformerId);
+            _benchmarkCubeDefinitionId = presenters.GetId(VisualBenchmarkIds.BenchmarkCubePresenterId);
             if (_benchmarkCubeDefinitionId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Performer '{VisualBenchmarkIds.BenchmarkCubePerformerId}' is required by PerformanceVisualizationMod.");
+                    $"Presenter '{VisualBenchmarkIds.BenchmarkCubePresenterId}' is required by PerformanceVisualizationMod.");
             }
 
             return _benchmarkCubeDefinitionId;

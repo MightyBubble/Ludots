@@ -1,0 +1,399 @@
+{
+  "Id": "capability_standard_graph_op_QueryCone",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.GraphOpsGallery",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "caster",
+      "Template": "GraphOps.Caster",
+      "Overrides": {
+        "Name": {
+          "Value": "施法者"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "ally",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "友军"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 250
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "north",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "北面的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 450
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "hexN",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "北格的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 260,
+            "Y": 500
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "hexE",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "东格的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "hexSW",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西南格的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 346,
+            "Y": -600
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "hexNW",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西北格的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -260,
+            "Y": 500
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "hexOuter",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "外环的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 1386,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "near",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "近处的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 240,
+            "Y": 196
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "side",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "身侧的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -50,
+            "Y": 30
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "diag",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "斜线上的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 180,
+            "Y": 180
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "farDiag",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "更远斜线的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 250,
+            "Y": 250
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "west",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "西边的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -900,
+            "Y": 0
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "mercenary",
+      "Template": "GraphOps.Ally",
+      "Overrides": {
+        "Name": {
+          "Value": "雇佣兵"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": -120,
+            "Y": 460
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    },
+    {
+      "InstanceId": "traitor",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "内奸"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 120,
+            "Y": 460
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 1
+        }
+      }
+    },
+    {
+      "InstanceId": "edgeOut",
+      "Template": "GraphOps.Target",
+      "Overrides": {
+        "Name": {
+          "Value": "贴边的人"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 410,
+            "Y": 590
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Health": 100
+          }
+        },
+        "Team": {
+          "Id": 2
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "caster"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "north"
+    }
+  ]
+}

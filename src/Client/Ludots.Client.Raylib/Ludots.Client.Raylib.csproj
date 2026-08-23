@@ -5,37 +5,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
-    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
-    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
-    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PresentationTests" />
+    <InternalsVisibleTo Include="Ludots.Adapter.Raylib.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Platform\Ludots.Platform.Abstractions\Ludots.Platform.Abstractions.csproj" />
+    <ProjectReference Include="..\Ludots.Raylib.Render\Ludots.Raylib.Render.csproj" />
     <ProjectReference Include="..\..\Libraries\Raylib-cs\Raylib-cs.csproj" />
-    <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\..\Libraries\SkiaSharp\SkiaSharp\SkiaSharp.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll"
-          Link="libSkiaSharp.dll"
-          CopyToOutputDirectory="PreserveNewest"
-          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll')" />
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so"
-          Link="libSkiaSharp.so"
-          CopyToOutputDirectory="PreserveNewest"
-          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so')" />
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib"
-          Link="libSkiaSharp.dylib"
-          CopyToOutputDirectory="PreserveNewest"
-          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
   </ItemGroup>
 
 </Project>

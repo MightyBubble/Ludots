@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_QuerySortByAttribute",
+  "windowTitle": "Ludots - 按血量从厚到薄排队",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -21,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public ISpatialQueryService? SpatialQueries { get; set; }
         public RootBudgetTable? FanOutBudget { get; set; }
-        public List<FanOutCommand>? FanOutCommands { get; set; }
+        public FanOutCommandBuffer? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
         public RuntimeEntityLifecycleQueue? LifecycleRequests { get; set; }
@@ -31,27 +32,38 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipRuntime? Relationships { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
         public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
+        public TagOps? TagOps { get; set; }
+        public EffectPhaseSideEffectTransaction? EffectSideEffects { get; set; }
+        public OrderQueue? OrderIntake { get; set; }
         public OrderTypeRegistry? OrderTypeRegistry { get; set; }
         public OrderRuleRegistry? OrderRuleRegistry { get; set; }
         public int CurrentStep { get; set; }
         public int StepRateHz { get; set; }
 
         public int ResolvedCandidateCount { get; private set; }
-        public int DroppedCount { get; private set; }
         public bool HasExchangeResult { get; private set; }
         public ExchangeExecutionResult LastExchangeResult { get; private set; }
         public int AttributeDeltaId { get; private set; } = -1;
         public float AttributeDelta { get; private set; }
         public bool HasAttributeDelta => AttributeDeltaId >= 0 && AttributeDelta != 0f;
+        public bool HasModifierOverride { get; private set; }
+        public EffectModifiers ModifierOverride { get; private set; }
 
         public void ResetPerEffect()
         {
             ResolvedCandidateCount = 0;
-            DroppedCount = 0;
             HasExchangeResult = false;
             LastExchangeResult = default;
             AttributeDeltaId = -1;
             AttributeDelta = 0f;
+            HasModifierOverride = false;
+            ModifierOverride = default;
+        }
+
+        public void SetModifierOverride(in EffectModifiers modifiers)
+        {
+            ModifierOverride = modifiers;
+            HasModifierOverride = true;
         }
 
         public void SetResolvedCandidateCount(int count)
@@ -62,14 +74,6 @@ namespace Ludots.Core.Gameplay.GAS
         public void ClearResolvedCandidates()
         {
             ResolvedCandidateCount = 0;
-        }
-
-        public void AddDropped(int dropped)
-        {
-            if (dropped > 0)
-            {
-                DroppedCount += dropped;
-            }
         }
 
         public void RecordExchangeResult(ExchangeExecutionResult result)

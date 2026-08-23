@@ -1,61 +1,56 @@
-# GAS Composition Gate - PR #658 / Issue #690
+# GAS Composition Gate — Self Review
 
-- Date: 2026-07-19
-- Agent: Codex
-- Result: PASS
+- **Task / Issue**: PANEL-1 收口（#1010）——面板实例化图 op + 实时/手动刷新（用户裁定 2026-08-18）
+- **Date**: 2026-08-18
+- **Agent / Author**: Kimi（接续 GLM 会话）
 
-## Core judgment
+### 1. Core judgment
 
-主要交付物：A，复用现有 Command Router、OrderQueue、OrderBuffer、GAS system phase 和 typed MovePlan contract，删除 MassNavigation/Formation 的平行 Order consumer。
+新变体主要交付物是（A/B/C/D）: **A** —— 新增 graph 节点（`CreatePanel`/`DestroyPanel`）+ 既有 `PanelTemplate` JSON 的增量字段（`realtime`），无新 profile DSL、无平行管线。
 
-本次没有新增 effect preset、profile enum、graph op、lifecycle DSL 或平行 loader。`MovePlanExecutionMode` 是中立执行端口的显式类型边界，不是 GAS 玩法变体开关。
+结论: PASS
 
-## Layer assignment
+一句话理由: 实例化走"图 op → IGraphRuntimeApi → PanelHost"与"代码 → PanelHost"同一条终端 API；刷新是 PanelHost 上对既有 PanelProjectionReader 的按需调用，二者均为 op/参数级增量。
 
-| 能力 | Layer | 实现载体 |
-| --- | --- | --- |
-| cluster actor expansion | Input/Command Router extension | `ICommandActorExpander` / `FormationCommandActorExpander` |
-| atomic admission and activation | existing GAS order infrastructure | `OrderQueue` / `OrderBufferSystem` |
-| Order to typed movement | GAS adapter | `MovePlanOrderProjectionSystem` |
-| typed movement execution | MovePlanning port + Mass adapter | `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSystem` |
-| typed result to lifecycle | GAS adapter | `MovePlanOrderLifecycleSystem` |
+### 2. Layer assignment
 
-## Reuse list
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| CreatePanel / DestroyPanel | Layer 0 op | GraphNodeOp 441/442 + GasGraphOpHandlerTable |
+| 面板实例生命周期与刷新 | Layer 0 服务 | `PanelHost`（Core/UI/PanelHosting） |
+| 蓝图作者用法 | Layer 2 | 关卡蓝图/Script 图 JSON 里调节点 |
 
-- Handlers: existing order type registry and order rules; no new BuiltinHandler.
-- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderSubmitter`, existing `SystemGroup.AbilityActivation`.
-- Resolvers / Registries: `CommandIntentProfileRegistry`, `CastDispatchProfileRegistry`, `OrderTypeRegistry`, `ControlDomainQuery`.
-- Existing contracts: `MovePlanExecutionIntent`, `IMovePlanExecutionSink`, `MassNavigationRuntimeBinding`.
+### 3. Reuse list
 
-## New Layer 0 ops
+- Handlers: `GasGraphOpHandlerTable`（注册/元数据模式同 ShowPanel/HidePanel）
+- Queues / Systems: 无新增队列；刷新由宿主系统调 `PanelHost.RefreshRealtime()`
+- Resolvers / Registries: `ConfigKeyRegistry`（模板 id/锚点符号）、`GraphProgramSymbolPatcher`、`GraphOpDescriptorTable`、`PanelTemplateLoader`、`PanelProjectionReader`、`GraphLookupTableRegistry`、`ConfigPipeline`（模板目录加载同 GraphLookupTableLoader）
+- Existing presets / graphs: 画廊 vignette/graph/wiki/coverage 四件套模式（同 ShowPanel）
 
-N/A. No entity lifecycle atomic op was added.
+### 4. New Layer 0 ops (if any)
 
-## Transaction boundary
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| CreatePanel | 按模板 id + 锚点 + scope 实例化一个面板 | ShowPanel/HidePanel 只写显隐标记，不携带模板/锚点/scope，无法表达实例化 |
+| DestroyPanel | 销毁匹配模板（+可选 scope）的面板实例 | 同上，生命周期语义不能由显隐标记组合 |
 
-- Command Router fan-out validates expansion capacity and submits one clustered batch.
-- `OrderBufferSystem` previews every row before activating any row.
-- Mass command-group execution prepares final resolved destination and member targets once, validates binding/focus/route capacity against that exact data, then commits the same prepared targets without recomputation.
-- Route rejection emits typed failure; GAS cancels the matching order and removes its continuation.
+### 5. Transaction boundary
 
-## Config SSOT
+必须原子 rollback 的步骤: 无跨步骤事务——Instantiate 单步完成（模板缺失/绑定失败当场抛出，不产生半实例）。
 
-- Order catalog: `mods/capabilities/navigation/MassNavigationMod/assets/GAS/order_types.json`
-- Formation business data: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json`
-- Input routing: `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Input/`
-- Mass capacities: each Mod's `MassNavigationConfig.json`
+### 6. Config SSOT
 
-新增 JSON schema: NO. Renamed dead ingestion capacity fields to typed MovePlan execution capacity fields and removed the unused `orderIdleScanIntervalFrames` property.
+行为配置落在: `Panels/panel_templates.json`（ConfigPipeline ArrayById，同 GraphTables 模式）+ 图 JSON 节点参数（panelType/panelAnchor）
 
-## Red flag scan
+是否新增 JSON schema: NO —— 复用既有 `PanelTemplate` schema，仅新增可选字段 `realtime`（布尔，默认 false）
+
+### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
-- [x] 未新建 spawn/order/MovePlan 平行管线
-- [x] 未添加 fallback 或兼容旁路
-- [x] MassNavigation 不读取或反写 Order
-- [x] Formation 不拥有专用 Order consumer
-- [x] 热路径容量显式，容量不足失败
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（未知模板/锚点/坏绑定全部点名抛出）
 
-## Next variant test
+### 8. Next variant test
 
-下一个 Formation Mod 变体应修改 Mod-owned anchor/member 数据和 `ICommandActorExpander` 实现，继续复用同一 Command Router、GAS Order 与 typed MovePlan 链；不得新增 Core Formation enum 或专用 order pipeline。
+「下一个 Mod 变体」将修改: **graph 连线**（在新图里调 CreatePanel 节点）或 **effect 步骤**——不改 Core enum。

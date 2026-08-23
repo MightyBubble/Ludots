@@ -1,16 +1,26 @@
 using System;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public sealed class GasBudgetReportSystem : ISystem<float>
     {
         private readonly GasBudget _budget;
+        private readonly GasDiagnosticEventBuffer _diagnostics;
+        private readonly OrderAdmissionResultBuffer? _admissionResults;
+        private long _reportedAdmissionOverflow;
+        private readonly long[] _reportedAdmissionOutcomes = new long[OrderAdmissionResultBuffer.SubmitResultCount];
 
-        public GasBudgetReportSystem(GasBudget budget)
+        public GasBudgetReportSystem(
+            GasBudget budget,
+            GasDiagnosticEventBuffer diagnostics,
+            OrderAdmissionResultBuffer? admissionResults = null)
         {
-            _budget = budget;
+            _budget = budget ?? throw new ArgumentNullException(nameof(budget));
+            _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            _admissionResults = admissionResults;
         }
 
         public void Initialize() { }
@@ -18,11 +28,102 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public void Update(in float dt)
         {
-            if (_budget == null) return;
-            if (!_budget.HasWarnings) return;
+            _diagnostics.BeginFrame(_budget.FrameIndex);
+            PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseCreatesDropped, _budget.ResponseCreatesDropped);
+            PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseDepthDropped, _budget.ResponseDepthDropped);
+            PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseStepBudgetFused, _budget.ResponseStepBudgetFused);
+            PublishIfNonZero(GasDiagnosticSystem.ResponseChain, GasDiagnosticMetric.ResponseQueueOverflow, _budget.ResponseQueueOverflowDropped);
+            PublishIfNonZero(GasDiagnosticSystem.TagContainer, GasDiagnosticMetric.TagCountOverflowDropped, _budget.TagCountOverflowDropped);
+            PublishIfNonZero(GasDiagnosticSystem.ActiveEffectContainer, GasDiagnosticMetric.ActiveEffectContainerAttachDropped, _budget.ActiveEffectContainerAttachDropped);
+            PublishIfNonZero(GasDiagnosticSystem.PhaseListener, GasDiagnosticMetric.PhaseListenerRegistrationDropped, _budget.PhaseListenerRegistrationDropped);
+            PublishIfNonZero(GasDiagnosticSystem.PhaseListener, GasDiagnosticMetric.PhaseListenerDispatchDropped, _budget.PhaseListenerDispatchDropped);
+            PublishIfNonZero(GasDiagnosticSystem.GameplayEventBus, GasDiagnosticMetric.GameplayEventBusDropped, _budget.GameplayEventBusDropped);
 
-            // Budget warnings are exposed via GasBudget fields for structured telemetry.
-            // No Console.WriteLine to avoid string allocation in hot path.
+            if (_admissionResults != null)
+            {
+                Publish(
+                    GasDiagnosticSystem.OrderAdmission,
+                    GasDiagnosticMetric.OrderAdmissionResultBacklog,
+                    _admissionResults.GenerationCapacity,
+                    _admissionResults.Count);
+                Publish(
+                    GasDiagnosticSystem.OrderAdmission,
+                    GasDiagnosticMetric.OrderAdmissionResultHighWatermark,
+                    _admissionResults.GenerationCapacity,
+                    _admissionResults.HighWatermark);
+
+                long overflow = _admissionResults.OverflowCount;
+                long delta = overflow - _reportedAdmissionOverflow;
+                if (delta < 0)
+                {
+                    throw new InvalidOperationException(
+                        "GAS.DIAGNOSTICS.ERR.OrderAdmissionOverflowCounterRegressed");
+                }
+
+                if (delta > 0)
+                {
+                    Publish(
+                        GasDiagnosticSystem.OrderAdmission,
+                        GasDiagnosticMetric.OrderAdmissionResultOverflow,
+                        _admissionResults.Capacity,
+                        delta);
+                }
+
+                _reportedAdmissionOverflow = overflow;
+                PublishAdmissionRejections();
+            }
+        }
+
+        private void PublishAdmissionRejections()
+        {
+            PublishAdmissionRejection(OrderSubmitResult.RejectedQueueFull, GasDiagnosticMetric.OrderRejectedQueueFull);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedByRule, GasDiagnosticMetric.OrderRejectedByRule);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedValidation, GasDiagnosticMetric.OrderRejectedValidation);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedInvalidActor, GasDiagnosticMetric.OrderRejectedInvalidActor);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedInvalidOrderType, GasDiagnosticMetric.OrderRejectedInvalidOrderType);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedBlackboardCapacity, GasDiagnosticMetric.OrderRejectedBlackboardCapacity);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedMissingBlackboard, GasDiagnosticMetric.OrderRejectedMissingBlackboard);
+            PublishAdmissionRejection(OrderSubmitResult.RejectedAdmissionCapacity, GasDiagnosticMetric.OrderRejectedAdmissionCapacity);
+        }
+
+        private void PublishAdmissionRejection(OrderSubmitResult result, GasDiagnosticMetric metric)
+        {
+            int index = (int)result;
+            long observed = _admissionResults!.GetObservedCount(result);
+            long delta = observed - _reportedAdmissionOutcomes[index];
+            if (delta < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.DIAGNOSTICS.ERR.OrderAdmissionCounterRegressed: result={result}.");
+            }
+
+            if (delta > 0)
+            {
+                Publish(GasDiagnosticSystem.OrderAdmission, metric, capacity: 0, delta);
+            }
+
+            _reportedAdmissionOutcomes[index] = observed;
+        }
+
+        private void PublishIfNonZero(
+            GasDiagnosticSystem system,
+            GasDiagnosticMetric metric,
+            int count)
+        {
+            if (count > 0)
+            {
+                Publish(system, metric, capacity: 0, count);
+            }
+        }
+
+        private void Publish(
+            GasDiagnosticSystem system,
+            GasDiagnosticMetric metric,
+            int capacity,
+            long count)
+        {
+            var value = new GasDiagnosticEvent(_budget.FrameIndex, system, metric, capacity, count);
+            _diagnostics.Publish(in value);
         }
 
         public void AfterUpdate(in float dt) { }

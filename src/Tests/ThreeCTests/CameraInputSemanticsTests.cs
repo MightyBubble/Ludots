@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.ThreeC
 {

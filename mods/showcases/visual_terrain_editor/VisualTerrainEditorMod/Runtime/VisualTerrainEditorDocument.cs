@@ -7,6 +7,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace VisualTerrainEditorMod.Runtime;
 
@@ -1459,30 +1460,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
     }
 
-    private static Vector3 ComputeRenderTangent(Vector3 normal)
-    {
-        Vector3 tangent = Vector3.Cross(Vector3.UnitY, normal);
-        if (!IsFiniteNonZero(tangent))
-        {
-            tangent = Vector3.Cross(Vector3.UnitZ, normal);
-        }
-
-        if (!IsFiniteNonZero(tangent))
-        {
-            tangent = Vector3.UnitX;
-        }
-
-        return Vector3.Normalize(tangent);
-    }
-
-    private static bool IsFiniteNonZero(Vector3 value)
-    {
-        return float.IsFinite(value.X) &&
-            float.IsFinite(value.Y) &&
-            float.IsFinite(value.Z) &&
-            value.LengthSquared() > 1e-10f;
-    }
-
     private static float HeightToMeters(float height, float defaultHeight01)
     {
         return HeightValueToCm(height, defaultHeight01) * 0.01f;
@@ -1508,6 +1485,36 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private float HeightToDisplayMeters(float height, float defaultHeight01)
     {
         return HeightToMeters(height, defaultHeight01) * DisplayHeightScale;
+    }
+
+    private static Vector3 ComputeRenderTangent(Vector3 normal)
+    {
+        if (!IsFiniteNonZero(normal))
+        {
+            throw new InvalidOperationException("Visual terrain editor render vertex requires a finite non-zero normal.");
+        }
+
+        Vector3 unitNormal = Vector3.Normalize(normal);
+        Vector3 tangent = Vector3.Cross(Vector3.UnitY, unitNormal);
+        if (!IsFiniteNonZero(tangent))
+        {
+            tangent = Vector3.Cross(Vector3.UnitZ, unitNormal);
+        }
+
+        if (!IsFiniteNonZero(tangent))
+        {
+            throw new InvalidOperationException("Visual terrain editor render vertex could not derive a finite non-zero tangent.");
+        }
+
+        return Vector3.Normalize(tangent);
+    }
+
+    private static bool IsFiniteNonZero(Vector3 value)
+    {
+        return float.IsFinite(value.X) &&
+            float.IsFinite(value.Y) &&
+            float.IsFinite(value.Z) &&
+            value.LengthSquared() > 1e-10f;
     }
 
     private int WorldToChunkX(int worldXCm)

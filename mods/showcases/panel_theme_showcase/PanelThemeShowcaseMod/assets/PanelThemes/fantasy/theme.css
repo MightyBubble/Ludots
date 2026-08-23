@@ -1,0 +1,36 @@
+/* fantasy — 西方魔幻主题：羊皮纸、鎏金饰、衬线。 */
+.panel {
+  background-color: rgba(61, 44, 28, 235);
+  background-image: url(images/parchment.png);
+  border: 3px solid rgb(201, 166, 90);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.panel .title {
+  color: rgb(228, 196, 122);
+  font-family: "Georgia", "Palatino Linotype", serif;
+  font-size: 17px;
+  letter-spacing: 3px;
+}
+
+.rows {
+  background-image: url(images/corner.png);
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+
+.row {
+  color: rgb(46, 30, 16);
+  font-family: "Georgia", "Palatino Linotype", serif;
+  font-size: 14px;
+}
+
+.row-health { color: rgb(140, 24, 24); }
+.row-mana { color: rgb(26, 58, 110); }
+.row-attack { color: rgb(120, 78, 20); }
+
+.hint {
+  color: rgb(94, 70, 40);
+  font-family: "Georgia", "Palatino Linotype", serif;
+}

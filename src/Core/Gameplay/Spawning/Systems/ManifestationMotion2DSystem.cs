@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Spawning.Systems
 {

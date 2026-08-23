@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Spatial
 {
@@ -41,6 +42,17 @@ namespace Ludots.Core.Spatial
         public void SetBackend(ISpatialQueryBackend backend)
         {
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        }
+
+        public void ClearPartition()
+        {
+            if (_backend is not SpatialPartitionBackendBase partition)
+            {
+                throw new InvalidOperationException(
+                    $"SpatialQueryService backend '{_backend.GetType().FullName}' cannot clear its partition.");
+            }
+
+            partition.Clear();
         }
 
         /// <summary>

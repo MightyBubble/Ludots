@@ -18,6 +18,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -153,17 +154,16 @@ namespace Ludots.Tests.GAS.Production
                 steps.Add(new StepResult("Effect template E TargetQuery params", eTpl.TargetQuery.Spatial.RadiusCm > 0, $"Radius={eTpl.TargetQuery.Spatial.RadiusCm} HalfAngle={eTpl.TargetQuery.Spatial.HalfAngleDeg}"));
                 steps.Add(new StepResult("Effect template E has PayloadEffect", eTpl.TargetDispatch.PayloadEffectTemplateId > 0, $"PayloadTplId={eTpl.TargetDispatch.PayloadEffectTemplateId}"));
 
-                var cmds = new List<FanOutCommand>(8);
+                var cmds = new FanOutCommandBuffer(8);
                 var budget = new RootBudgetTable(64);
                 var ctx = new EffectContext { RootId = 123, Source = hero, Target = enemy1, TargetContext = default };
                 var tmpBuf = new Entity[64];
-                int dropped = 0;
                 int cand = TargetResolverFanOutHelper.ResolveTargets(world, in ctx, in eTpl.TargetQuery, engine.SpatialQueries, tmpBuf);
                 steps.Add(new StepResult("TargetResolver ResolveTargets returns candidates", cand >= 2, $"Count={cand}"));
                 TargetResolverFanOutHelper.CollectFanOutTargets(
                     world, in ctx, in eTpl.TargetQuery, in eTpl.TargetFilter, in eTpl.TargetDispatch,
-                    engine.SpatialQueries, budget, cmds, tmpBuf, ref dropped);
-                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count} Dropped={dropped}"));
+                    engine.SpatialQueries, budget, cmds, tmpBuf);
+                steps.Add(new StepResult("TargetResolver creates fan-out commands", cmds.Count >= 2, $"Count={cmds.Count}"));
             }
 
             CastAbility(engine, hero, enemy1, slot: 2);
@@ -175,10 +175,11 @@ namespace Ludots.Tests.GAS.Production
 
             var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
             int dotId = EffectTemplateIdRegistry.GetId("Effect.Moba.DOT.Burn");
-            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = dotId });
-            Tick(engine, 25);
-            float e1AfterDot = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
-            steps.Add(CheckNear("DoT Burn ticks once", e1AfterE - 3f, e1AfterDot));
+            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy2, TargetContext = default, TemplateId = dotId });
+            GameplayEffect dotEffect = TickUntilCommittedEffect(engine, enemy2, dotId);
+            TickUntilFixedFrame(engine, dotEffect.NextTickAtTick);
+            float e2AfterDot = world.Get<AttributeBuffer>(enemy2).GetCurrent(healthId);
+            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e2AfterE - 6f, e2AfterDot));
 
             int hotId = EffectTemplateIdRegistry.GetId("Effect.Moba.HOT.Regen");
             int qId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
@@ -262,11 +263,19 @@ namespace Ludots.Tests.GAS.Production
             var tagOps = engine.GetService(CoreServiceKeys.TagOps);
             int stunned = TagRegistry.Register("Status.Stunned");
             int cannotMove = TagRegistry.Register("Status.CannotMove");
-            ref var tags = ref world.Get<GameplayTagContainer>(hero);
-            steps.Add(new StepResult("TagRule attached tag appears (Stunned->CannotMove)", tagOps.HasTag(ref tags, cannotMove, TagSense.Effective), "Expected Status.CannotMove"));
+            ref var tagsAfterStun = ref world.Get<GameplayTagContainer>(hero);
+            steps.Add(new StepResult("TagRule attached tag appears (Stunned->CannotMove)", tagOps.HasTag(ref tagsAfterStun, cannotMove, TagSense.Effective), "Expected Status.CannotMove"));
 
-            Tick(engine, 120);
-            steps.Add(new StepResult("TimedTag expires", !tagOps.HasTag(ref tags, stunned, TagSense.Effective), "Expected Status.Stunned expired"));
+            int stunnedExpireAt = RequireTimedTagExpiration(world, hero, stunned);
+            TickUntilFixedFrame(engine, stunnedExpireAt);
+            ref var tagsAfterExpiration = ref world.Get<GameplayTagContainer>(hero);
+            ref var timedAfterExpiration = ref world.Get<TimedTagBuffer>(hero);
+            int fixedFrameNow = engine.GetService(CoreServiceKeys.Clock).Now(ClockDomainId.FixedFrame);
+            int stunnedCount = world.Get<TagCountContainer>(hero).GetCount(stunned);
+            string timedDetail = timedAfterExpiration.Count > 0
+                ? $"Now={fixedFrameNow} TimedCount={timedAfterExpiration.Count} FirstTag={timedAfterExpiration.GetTagId(0)} FirstExpireAt={timedAfterExpiration.GetExpireAt(0)} StunnedCount={stunnedCount}"
+                : $"Now={fixedFrameNow} TimedCount=0 StunnedCount={stunnedCount}";
+            steps.Add(new StepResult("TimedTag expires", !tagOps.HasTag(ref tagsAfterExpiration, stunned, TagSense.Effective), timedDetail));
         }
 
         private static void RunFourXScenario(GameEngine engine, List<StepResult> steps)
@@ -335,6 +344,73 @@ namespace Ludots.Tests.GAS.Production
         private static void Tick(GameEngine engine, int frames)
         {
             for (int i = 0; i < frames; i++) engine.Tick(1f / 60f);
+        }
+
+        private static void TickUntilFixedFrame(GameEngine engine, int targetFixedFrame)
+        {
+            IClock clock = engine.GetService(CoreServiceKeys.Clock);
+            for (int guard = 0; clock.Now(ClockDomainId.FixedFrame) < targetFixedFrame; guard++)
+            {
+                if (guard >= 10_000)
+                {
+                    throw new InvalidOperationException(
+                        $"Fixed-frame clock did not reach {targetFixedFrame}; current={clock.Now(ClockDomainId.FixedFrame)}.");
+                }
+
+                engine.Tick(1f / 60f);
+            }
+        }
+
+        private static GameplayEffect TickUntilCommittedEffect(
+            GameEngine engine,
+            Entity target,
+            int templateId)
+        {
+            World world = engine.World;
+            for (int guard = 0; guard < 10_000; guard++)
+            {
+                if (world.Has<ActiveEffectContainer>(target))
+                {
+                    ActiveEffectContainer container = world.Get<ActiveEffectContainer>(target);
+                    for (int i = 0; i < container.Count; i++)
+                    {
+                        Entity effectEntity = container.GetEntity(i);
+                        if (!world.IsAlive(effectEntity) ||
+                            !world.Has<EffectTemplateRef>(effectEntity) ||
+                            world.Get<EffectTemplateRef>(effectEntity).TemplateId != templateId ||
+                            !world.Has<GameplayEffect>(effectEntity))
+                        {
+                            continue;
+                        }
+
+                        GameplayEffect effect = world.Get<GameplayEffect>(effectEntity);
+                        if (effect.State == EffectState.Committed && effect.NextTickAtTick > 0)
+                        {
+                            return effect;
+                        }
+                    }
+                }
+
+                engine.Tick(1f / 60f);
+            }
+
+            throw new InvalidOperationException(
+                $"Effect template {templateId} did not reach a committed periodic state on target {target.Id}.");
+        }
+
+        private static int RequireTimedTagExpiration(World world, Entity entity, int tagId)
+        {
+            ref var timed = ref world.Get<TimedTagBuffer>(entity);
+            for (int i = 0; i < timed.Count; i++)
+            {
+                if (timed.GetTagId(i) == tagId)
+                {
+                    return timed.GetExpireAt(i);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Timed tag entry is missing: entity={entity.Id}, tagId={tagId}, count={timed.Count}.");
         }
 
         private static (Entity a, Entity b) FindByNames2(World world, string aName, string bName)

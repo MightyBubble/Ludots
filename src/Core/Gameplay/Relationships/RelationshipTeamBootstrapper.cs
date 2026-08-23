@@ -23,6 +23,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 new GameplayTagContainer(),
                 new TagCountContainer(),
                 default(AttributeBuffer),
+                new DirtyFlags(),
                 new ActiveEffectContainer());
             lookup.Register(teamId, entity);
             return entity;

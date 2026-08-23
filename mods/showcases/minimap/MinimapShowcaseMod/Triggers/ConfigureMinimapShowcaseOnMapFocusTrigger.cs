@@ -2,9 +2,9 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -84,7 +84,6 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             return;
         }
 
-        Entity playerCapital = Entity.Null;
         foreach (ref var chunk in engine.World.Query(in NamedEntityQuery))
         {
             var names = chunk.GetSpan<Name>();
@@ -99,50 +98,37 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
                 Entity entity = chunk.Entity(i);
                 string name = names[i].Value ?? string.Empty;
                 EnsureTagComponents(engine.World, entity);
-                ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
-                ref var counts = ref engine.World.Get<TagCountContainer>(entity);
 
-                if (IsCapital(name)) tagOps.AddTag(ref tags, ref counts, _capitalTagId);
-                if (string.Equals(name, "Ancient Gate", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _objectiveTagId);
-                if (string.Equals(name, "Crystal Relay", StringComparison.Ordinal) || string.Equals(name, "Helium Well", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _resourceTagId);
-                if (string.Equals(name, "Void Rift", StringComparison.Ordinal) || string.Equals(name, "Ember Storm", StringComparison.Ordinal)) tagOps.AddTag(ref tags, ref counts, _hazardTagId);
-                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Carrier", StringComparison.OrdinalIgnoreCase) || name.Contains("Warpack", StringComparison.OrdinalIgnoreCase) || name.Contains("Wing", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(ref tags, ref counts, _alertTagId);
-                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Border", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(ref tags, ref counts, _frontierTagId);
-
-                if (playerCapital == Entity.Null && string.Equals(name, "Imperial Capital", StringComparison.Ordinal))
-                {
-                    playerCapital = entity;
-                }
+                if (IsCapital(name)) tagOps.AddTag(engine.World, entity, _capitalTagId);
+                if (string.Equals(name, "Ancient Gate", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _objectiveTagId);
+                if (string.Equals(name, "Crystal Relay", StringComparison.Ordinal) || string.Equals(name, "Helium Well", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _resourceTagId);
+                if (string.Equals(name, "Void Rift", StringComparison.Ordinal) || string.Equals(name, "Ember Storm", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _hazardTagId);
+                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Carrier", StringComparison.OrdinalIgnoreCase) || name.Contains("Warpack", StringComparison.OrdinalIgnoreCase) || name.Contains("Wing", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _alertTagId);
+                if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Border", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _frontierTagId);
             }
         }
 
-        if (playerCapital == Entity.Null)
+        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        if (!engine.World.IsAlive(owner))
         {
-            return;
-        }
-
-        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = playerCapital;
-        if (engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-        {
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
+            throw new InvalidOperationException(
+                "Minimap showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
         }
 
         var descriptor = EntityCollectionDescriptor.Create(
             EntityCollectionKeys.CommandSource,
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
-            playerCapital,
-            playerCapital,
+            owner,
+            owner,
             "Minimap command source",
-            "Imperial Capital is the default minimap showcase command actor.");
-        collections.Replace(playerCapital, descriptor, stackalloc[] { playerCapital }, playerCapital);
+            "Sole possessed rep is the default minimap showcase command actor.");
+        collections.Replace(owner, descriptor, stackalloc[] { owner }, owner);
     }
 
     private static void EnsureTagComponents(World world, Entity entity)
     {
-        if (!world.Has<GameplayTagContainer>(entity)) world.Add(entity, new GameplayTagContainer());
-        if (!world.Has<TagCountContainer>(entity)) world.Add(entity, new TagCountContainer());
-        if (!world.Has<TimedTagBuffer>(entity)) world.Add(entity, new TimedTagBuffer());
+        TagStateInstaller.EnsureInstalled(world, entity);
     }
 
     private static bool IsCapital(string name)

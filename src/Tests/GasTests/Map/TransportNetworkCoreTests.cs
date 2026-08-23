@@ -16,6 +16,7 @@ using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.TransportNetwork;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -26,7 +27,7 @@ namespace Ludots.Tests.GAS
         public void TransportNetworkAssetLoader_LoadsStrictJsonThroughConfigPipeline()
         {
             string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-transport-network-loader-" + Guid.NewGuid().ToString("N"));
-            string configsRoot = Path.Combine(tempRoot, "Configs");
+            string configsRoot = tempRoot;
             Directory.CreateDirectory(Path.Combine(configsRoot, "TransportNetwork"));
             File.WriteAllText(Path.Combine(configsRoot, "config_catalog.json"),
                 """

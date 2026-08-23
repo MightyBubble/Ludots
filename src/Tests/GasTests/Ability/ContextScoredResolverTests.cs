@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
@@ -13,6 +14,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -88,7 +90,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HasTag, Dst = 0, A = 2, Imm = downedTagId },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 0, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 25f },
-            });
+            }, GraphKind.Score);
 
             var resolver = new ContextScoredOrderResolver(
                 world,
@@ -96,7 +98,8 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 new StubSpatialQueryService(targetNormal, targetDowned),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -118,7 +121,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 100 : 0);
             mapping.SetHoveredEntityProvider((out Entity entity) =>
             {
@@ -126,7 +129,7 @@ namespace Ludots.Tests.GAS
                 return true;
             });
             mapping.SetContextScoredProvider(resolver.TryResolve);
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("Attack");
             input.Update();
@@ -189,7 +192,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(target),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -266,7 +270,8 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
                 new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -336,7 +341,8 @@ namespace Ludots.Tests.GAS
                 {
                     Assert.That(viewer, Is.EqualTo(actor), "the resolver gates with the acting entity as viewer.");
                     return candidate != deniedTarget;
-                });
+                },
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -456,13 +462,13 @@ namespace Ludots.Tests.GAS
                 return false;
             }
 
-            public int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => 0;
-            public int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer) => 0;
-            public int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => 0;
-            public int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => 0;
-            public int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer) => 0;
-            public int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer) => 0;
-            public int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => 0;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer) => default;
+            public Ludots.Core.Spatial.SpatialQueryResult QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => default;
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => 0;
         public int GetRelationship(int teamA, int teamB) => 0;
@@ -470,6 +476,7 @@ namespace Ludots.Tests.GAS
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
         public void RemoveEffectTemplate(Entity target, int templateId) { }
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
+        public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value) { }
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value) { value = 0f; return false; }
             public bool TryReadBlackboardInt(Entity entity, int keyId, out int value) { value = 0; return false; }

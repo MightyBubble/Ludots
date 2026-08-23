@@ -321,7 +321,7 @@ public sealed class ProductionOverviewPanelTests
 
 		Harness harness = Harness.Create(world, source);
 		var definition = CreateBaseDefinition();
-		definition.SourceKind = ProductionOverviewSourceKindIds.LocalPlayerRep;
+		definition.SourceKind = ProductionOverviewSourceKindIds.SolePossessedRep;
 		definition.SourceRef = EntityCollectionKeys.CommandSource;
 		harness.InstallProfile(definition);
 
@@ -471,7 +471,7 @@ public sealed class ProductionOverviewPanelTests
 			OrderTypeRegistry? orderTypes = null;
 			if (registerGatherOrder)
 			{
-				orderTypes = new OrderTypeRegistry();
+				orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
 				orderTypes.Register(new OrderTypeConfig
 				{
 					Key = GatherOrderKey,

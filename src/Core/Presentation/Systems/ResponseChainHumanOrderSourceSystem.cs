@@ -17,6 +17,9 @@ namespace Ludots.Core.Presentation.Systems
         private readonly OrderQueue _chainOrders;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
 
+        public OrderSubmitResult LastSubmissionResult { get; private set; } = OrderSubmitResult.RejectedByRule;
+        public int LastSubmittedOrderId { get; private set; }
+
         public ResponseChainHumanOrderSourceSystem(Dictionary<string, object> globals, ResponseChainUiState ui, OrderQueue chainOrders)
         {
             _globals = globals;
@@ -48,7 +51,7 @@ namespace Ludots.Core.Presentation.Systems
 
             if (input.PressedThisFrame(bindings.ResponseChainPassActionId))
             {
-                _chainOrders.TryEnqueue(new Order
+                Submit(new Order
                 {
                     OrderTypeId = _responseChainOrderTypes.ChainPass,
                     PlayerId = _ui.PlayerId,
@@ -61,7 +64,7 @@ namespace Ludots.Core.Presentation.Systems
 
             if (input.PressedThisFrame(bindings.ResponseChainNegateActionId))
             {
-                _chainOrders.TryEnqueue(new Order
+                Submit(new Order
                 {
                     OrderTypeId = _responseChainOrderTypes.ChainNegate,
                     PlayerId = _ui.PlayerId,
@@ -76,7 +79,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 var args = default(OrderArgs);
                 args.I0 = _ui.PromptTagId;
-                _chainOrders.TryEnqueue(new Order
+                Submit(new Order
                 {
                     OrderTypeId = _responseChainOrderTypes.ChainActivateEffect,
                     PlayerId = _ui.PlayerId,
@@ -86,6 +89,12 @@ namespace Ludots.Core.Presentation.Systems
                     Args = args
                 });
             }
+        }
+
+        private void Submit(Order order)
+        {
+            LastSubmissionResult = _chainOrders.SubmitAssigned(ref order);
+            LastSubmittedOrderId = order.OrderId;
         }
 
         private InteractionActionBindings ResolveBindings()

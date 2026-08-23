@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -18,13 +18,14 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -95,7 +96,7 @@ namespace Ludots.Tests.GAS
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
-            orders.SetActiveDirect(CreateRouteOrder(actor, OrderSpatial.MaxPoints + 1), priority: 60);
+            orders.SetActiveDirect(CreateRouteOrder(fixture.World, actor, OrderSpatial.MaxPoints), priority: 60);
 
             Assert.DoesNotThrow(() => fixture.System.Update(0.016f));
             Assert.That(
@@ -107,7 +108,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PerformerRules_ConsumeMovePathEvents_AsScopedGroundOverlayPerformers()
+        public void PresenterRules_ConsumeMovePathEvents_AsScopedGroundOverlayPresenters()
         {
             using var fixture = CommandActorMovePathFixture.Create(MoveToOrderKey);
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
@@ -116,16 +117,16 @@ namespace Ludots.Tests.GAS
             orders.SetActiveDirect(CreateMoveOrder(actor, 300, 0, orderId: 1), priority: 60);
 
             fixture.System.Update(0.016f);
-            fixture.Performers.Tick();
+            fixture.Presenters.Tick();
 
-            Entity line = fixture.Performers.FindPerformer("test.move_path.line", actor);
-            Entity waypoint = fixture.Performers.FindPerformer("test.move_path.waypoint", actor);
-            Assert.That(PerformerParamResolver.ResolveFloat(fixture.World, line, WellKnownPerformerParamKeys.OverlayLength), Is.EqualTo(3f).Within(0.001f));
-            Assert.That(PerformerParamResolver.ResolveFloat(fixture.World, line, WellKnownPerformerParamKeys.OverlayWidth), Is.EqualTo(0.28f).Within(0.001f));
-            Assert.That(PerformerParamResolver.ResolveFloat(fixture.World, waypoint, WellKnownPerformerParamKeys.OverlayRadius), Is.EqualTo(0.26f).Within(0.001f));
+            Entity line = fixture.Presenters.FindPresenter("test.move_path.line", actor);
+            Entity waypoint = fixture.Presenters.FindPresenter("test.move_path.waypoint", actor);
+            Assert.That(PresenterParamResolver.ResolveFloat(fixture.World, line, WellKnownPresenterParamKeys.OverlayLength), Is.EqualTo(3f).Within(0.001f));
+            Assert.That(PresenterParamResolver.ResolveFloat(fixture.World, line, WellKnownPresenterParamKeys.OverlayWidth), Is.EqualTo(0.28f).Within(0.001f));
+            Assert.That(PresenterParamResolver.ResolveFloat(fixture.World, waypoint, WellKnownPresenterParamKeys.OverlayRadius), Is.EqualTo(0.26f).Within(0.001f));
 
             fixture.Events.Clear();
-            fixture.Performers.Requests.Clear();
+            fixture.Presenters.Requests.Clear();
             ref OrderBuffer currentOrders = ref fixture.World.Get<OrderBuffer>(actor);
             currentOrders.Clear();
 
@@ -136,10 +137,10 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 fixture.EventsOf(PresentationEventKind.MovePathEnded, CommandActorMovePathPresentationSystem.WaypointEventKey).Length,
                 Is.EqualTo(1));
-            fixture.Performers.Tick();
+            fixture.Presenters.Tick();
 
-            Assert.That(fixture.Performers.TryFindPerformer("test.move_path.line", actor, out _), Is.False);
-            Assert.That(fixture.Performers.TryFindPerformer("test.move_path.waypoint", actor, out _), Is.False);
+            Assert.That(fixture.Presenters.TryFindPresenter("test.move_path.line", actor, out _), Is.False);
+            Assert.That(fixture.Presenters.TryFindPresenter("test.move_path.waypoint", actor, out _), Is.False);
         }
 
         private static Order CreateMoveOrder(Entity actor, int xcm, int ycm, int orderId)
@@ -167,7 +168,7 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static Order CreateRouteOrder(Entity actor, int pointCount)
+        private static Order CreateRouteOrder(World world, Entity actor, int pointCount)
         {
             var order = new Order
             {
@@ -185,10 +186,14 @@ namespace Ludots.Tests.GAS
                 }
             };
 
+            var pointXcm = new int[pointCount];
+            var pointYcm = new int[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                order.Args.Spatial.AddPointWorldCm((i + 1) * 100, 0, 0);
+                pointXcm[i] = (i + 1) * 100;
             }
+
+            OrderSpatialPayloadOps.SetPath(world, actor, ref order, pointXcm, pointYcm, pointCount);
 
             return order;
         }
@@ -204,20 +209,20 @@ namespace Ludots.Tests.GAS
                 EntityCollectionStore collections,
                 PresentationEventStream events,
                 CommandActorMovePathPresentationSystem system,
-                PerformerMovePathFixture performers)
+                PresenterMovePathFixture presenters)
             {
                 World = world;
                 _viewer = viewer;
                 _collections = collections;
                 Events = events;
                 System = system;
-                Performers = performers;
+                Presenters = presenters;
             }
 
             public World World { get; }
             public PresentationEventStream Events { get; }
             public CommandActorMovePathPresentationSystem System { get; }
-            public PerformerMovePathFixture Performers { get; }
+            public PresenterMovePathFixture Presenters { get; }
 
             public static CommandActorMovePathFixture Create(params string[] previewOrderTypeKeys)
             {
@@ -255,12 +260,12 @@ namespace Ludots.Tests.GAS
                     collections,
                     events,
                     system,
-                    new PerformerMovePathFixture(world, events));
+                    new PresenterMovePathFixture(world, events));
             }
 
             public Entity CreateSelectedActor(WorldPositionCm position)
             {
-                Entity actor = World.Create(position, OrderBuffer.CreateEmpty());
+                Entity actor = World.Create(position, OrderBuffer.CreateEmpty(), new OrderSpatialPayloadBuffer());
                 var descriptor = EntityCollectionDescriptor.Create(
                     EntityCollectionKeys.CommandSource,
                     EntityCollectionSourceKind.Explicit,
@@ -289,7 +294,7 @@ namespace Ludots.Tests.GAS
 
             private static OrderTypeRegistry CreateOrderTypeRegistry()
             {
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = MoveToOrderKey,
@@ -312,26 +317,26 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private sealed class PerformerMovePathFixture
+        private sealed class PresenterMovePathFixture
         {
             private readonly World _world;
-            private readonly PerformerDefinitionRegistry _definitions = new();
-            private readonly PerformerEntityRuntime _runtime;
-            private readonly PerformerCommandBuffer _commands = new(256);
-            private readonly PerformerRuleSystem _rules;
-            private readonly PerformerRuntimeSystem _runtimeSystem;
-            private readonly PerformerEmitSystem _emitSystem;
+            private readonly PresenterDefinitionRegistry _definitions = new();
+            private readonly PresenterEntityRuntime _runtime;
+            private readonly PresenterCommandBuffer _commands = new(256);
+            private readonly PresenterRuleSystem _rules;
+            private readonly PresenterRuntimeSystem _runtimeSystem;
+            private readonly PresenterEmitSystem _emitSystem;
 
-            public PerformerMovePathFixture(World world, PresentationEventStream events)
+            public PresenterMovePathFixture(World world, PresentationEventStream events)
             {
                 _world = world;
                 Events = events;
                 Requests = new PresentationRequestBuffer(256);
-                _runtime = new PerformerEntityRuntime(world);
+                _runtime = new PresenterEntityRuntime(world);
                 RegisterDefinitions();
 
                 var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
-                _rules = new PerformerRuleSystem(
+                _rules = new PresenterRuleSystem(
                     world,
                     events,
                     _commands,
@@ -340,7 +345,7 @@ namespace Ludots.Tests.GAS
                     new GraphProgramRegistry(),
                     graphApi,
                     new Dictionary<string, object>());
-                _runtimeSystem = new PerformerRuntimeSystem(
+                _runtimeSystem = new PresenterRuntimeSystem(
                     world,
                     _commands,
                     events,
@@ -349,7 +354,7 @@ namespace Ludots.Tests.GAS
                     _runtime,
                     new PresentationStableIdAllocator(),
                     _definitions);
-                _emitSystem = new PerformerEmitSystem(
+                _emitSystem = new PresenterEmitSystem(
                     world,
                     _runtime,
                     _definitions,
@@ -368,92 +373,92 @@ namespace Ludots.Tests.GAS
                 Events.Clear();
             }
 
-            public Entity FindPerformer(string performerId, Entity owner)
+            public Entity FindPresenter(string presenterId, Entity owner)
             {
-                Assert.That(TryFindPerformer(performerId, owner, out Entity performer), Is.True, $"Performer '{performerId}' was not created.");
-                return performer;
+                Assert.That(TryFindPresenter(presenterId, owner, out Entity presenter), Is.True, $"Presenter '{presenterId}' was not created.");
+                return presenter;
             }
 
-            public bool TryFindPerformer(string performerId, Entity owner, out Entity performer)
+            public bool TryFindPresenter(string presenterId, Entity owner, out Entity presenter)
             {
                 Entity found = Entity.Null;
-                int defId = _definitions.GetId(performerId);
-                var query = new QueryDescription().WithAll<PerformerState>();
-                _world.Query(in query, (Entity entity, ref PerformerState state) =>
+                int defId = _definitions.GetId(presenterId);
+                var query = new QueryDescription().WithAll<PresenterState>();
+                _world.Query(in query, (Entity entity, ref PresenterState state) =>
                 {
                     if (state.DefId == defId && state.OwnerEntity == owner)
                     {
                         found = entity;
                     }
                 });
-                performer = found;
-                return performer != Entity.Null;
+                presenter = found;
+                return presenter != Entity.Null;
             }
 
             private void RegisterDefinitions()
             {
                 int lineId = _definitions.GetOrRegisterId("test.move_path.line");
                 int waypointId = _definitions.GetOrRegisterId("test.move_path.waypoint");
-                _definitions.Register("test.move_path.line", new PerformerDefinition
+                _definitions.Register("test.move_path.line", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
                     ParamDefaults =
                     [
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.OverlayLength, Lane = ParamLane.Float, FloatValue = 1f },
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.OverlayWidth, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.OverlayLength, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.OverlayWidth, Lane = ParamLane.Float, FloatValue = 1f },
                     ],
                     Behaviors = SingleGroundOverlayBehavior((int)GroundOverlayShape.Line),
                 });
-                _definitions.Register("test.move_path.waypoint", new PerformerDefinition
+                _definitions.Register("test.move_path.waypoint", new PresenterDefinition
                 {
                     DefaultLifetime = -1f,
                     ParamDefaults =
                     [
-                        new ParamDefault { ParamKey = WellKnownPerformerParamKeys.OverlayRadius, Lane = ParamLane.Float, FloatValue = 1f },
+                        new ParamDefault { ParamKey = WellKnownPresenterParamKeys.OverlayRadius, Lane = ParamLane.Float, FloatValue = 1f },
                     ],
                     Behaviors = SingleGroundOverlayBehavior((int)GroundOverlayShape.Circle),
                 });
-                _definitions.Register("test.move_path.rules", new PerformerDefinition
+                _definitions.Register("test.move_path.rules", new PresenterDefinition
                 {
                     Rules =
                     [
                         CreateRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId),
-                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayLength, PerformerCommandValueSource.EventFloatA),
-                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayWidth, PerformerCommandValueSource.EventFloatB),
-                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayRotation, PerformerCommandValueSource.EventFloatC),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPresenterParamKeys.OverlayLength, PresenterCommandValueSource.EventFloatA),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPresenterParamKeys.OverlayWidth, PresenterCommandValueSource.EventFloatB),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPresenterParamKeys.OverlayRotation, PresenterCommandValueSource.EventFloatC),
                         EndRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId),
                         CreateRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId),
-                        FloatParamRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId, WellKnownPerformerParamKeys.OverlayRadius, PerformerCommandValueSource.EventFloatA),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId, WellKnownPresenterParamKeys.OverlayRadius, PresenterCommandValueSource.EventFloatA),
                         EndRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId),
                     ]
                 });
             }
 
-            private static PerformerRule CreateRule(string key, int definitionId)
+            private static PresenterRule CreateRule(string key, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.MovePathBegun, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.CreatePerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.CreatePresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                         UseEventPosition = true,
                     }
                 };
             }
 
-            private static PerformerRule FloatParamRule(string key, int definitionId, int paramKey, PerformerCommandValueSource source)
+            private static PresenterRule FloatParamRule(string key, int definitionId, int paramKey, PresenterCommandValueSource source)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.MovePathUpdated, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.SetParam,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.SetParam,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                         UseEventPosition = true,
                         ParamKey = paramKey,
                         ParamLane = ParamLane.Float,
@@ -462,16 +467,16 @@ namespace Ludots.Tests.GAS
                 };
             }
 
-            private static PerformerRule EndRule(string key, int definitionId)
+            private static PresenterRule EndRule(string key, int definitionId)
             {
-                return new PerformerRule
+                return new PresenterRule
                 {
                     Event = new EventFilter { Kind = PresentationEventKind.MovePathEnded, KeyId = TagRegistry.Register(key) },
-                    Command = new PerformerCommand
+                    Command = new PresenterCommand
                     {
-                        CommandKind = PerformerCommandKind.DestroyScopedPerformer,
-                        PerformerDefinitionId = definitionId,
-                        ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        CommandKind = PresenterCommandKind.DestroyScopedPresenter,
+                        PresenterDefinitionId = definitionId,
+                        ScopeSource = PresenterCommandScopeSource.EventPayloadA,
                     }
                 };
             }

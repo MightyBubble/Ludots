@@ -6,36 +6,31 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// <summary>
     /// Zero-GC storage for dynamic attributes.
     /// Uses a fixed buffer to avoid heap allocations.
-    /// Max 64 attributes supported per entity with this struct.
     /// </summary>
     public unsafe struct AttributeBuffer
     {
-        public const int MAX_ATTRS = 64;
+        public const int MAX_ATTRS = AttributeRegistry.MaxAttributes;
 
         public fixed float BaseValues[MAX_ATTRS];
         public fixed float CapValues[MAX_ATTRS];
         public fixed float CurrentValues[MAX_ATTRS];
         public ulong DefinedMask;
-        
-        // Modifiers could be aggregated here or calculated on the fly.
-        // For simplicity in this 0GC version, we update CurrentValues directly 
-        // when BaseValues change or when effects are applied.
-        
-        /// <summary>
-        /// Gets the current value of an attribute by ID.
-        /// </summary>
+
         public float GetCurrent(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return 0f;
+            ValidateAttributeId(attributeId);
             return CurrentValues[attributeId];
         }
 
-        /// <summary>
-        /// Gets the base value of an attribute by ID.
-        /// </summary>
+        public float GetCap(int attributeId)
+        {
+            ValidateAttributeId(attributeId);
+            return CapValues[attributeId];
+        }
+
         public float GetBase(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return 0f;
+            ValidateAttributeId(attributeId);
             if (AttributeRegistry.TryGetConstraints(attributeId, out var constraints) &&
                 constraints.ClampCurrentToBase)
             {
@@ -47,7 +42,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public bool HasAttribute(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS)
+            if ((uint)attributeId >= (uint)MAX_ATTRS)
             {
                 return false;
             }
@@ -55,18 +50,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return (DefinedMask & (1UL << attributeId)) != 0UL;
         }
 
-        /// <summary>
-        /// Sets the base value of an attribute by ID.
-        /// Also re-applies constraints to CurrentValue (e.g. ClampCurrentToBase, Min/Max).
-        /// </summary>
         public void SetBase(int attributeId, float value)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
+            ValidateAttributeId(attributeId);
             DefinedMask |= 1UL << attributeId;
             BaseValues[attributeId] = value;
             CapValues[attributeId] = value;
-            // Re-apply current value through constraints.
-            // Uses the new base as default current (reset to base), then SetCurrent applies clamping.
             SetCurrent(attributeId, value);
         }
 
@@ -80,9 +69,20 @@ namespace Ludots.Core.Gameplay.GAS.Components
             SetCurrentInternal(attributeId, value, clampToCapacity: false);
         }
 
+        public static void ValidateAttributeId(int attributeId)
+        {
+            if ((uint)attributeId >= (uint)MAX_ATTRS)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(attributeId),
+                    attributeId,
+                    $"attributeId must be in [0, {MAX_ATTRS}).");
+            }
+        }
+
         private void SetCurrentInternal(int attributeId, float value, bool clampToCapacity)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
+            ValidateAttributeId(attributeId);
             DefinedMask |= 1UL << attributeId;
             if (AttributeRegistry.TryGetConstraints(attributeId, out var constraints))
             {

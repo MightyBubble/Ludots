@@ -1,0 +1,530 @@
+[
+  {
+    "id": "raylib_visual_atmosphere_tree",
+    "components": {
+      "Name": {
+        "Value": "AtmospherePalm"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_bush",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereBush"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_blend",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereVfxAlphaBlend"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_additive",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereVfxAdditive"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_footprints",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalFootprints"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_scorch",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalScorch"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_blood",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalBlood"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_cracks",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereDecalCracks"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_rock",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereBeachRock"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_small",
+    "components": {
+      "Name": {
+        "Value": "DecalSizeSmall"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_size_large",
+    "components": {
+      "Name": {
+        "Value": "DecalSizeLarge"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thin",
+    "components": {
+      "Name": {
+        "Value": "DecalThicknessThin"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_thickness_thick",
+    "components": {
+      "Name": {
+        "Value": "DecalThicknessThick"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_white",
+    "components": {
+      "Name": {
+        "Value": "DecalTintWhite"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_tint_red",
+    "components": {
+      "Name": {
+        "Value": "DecalTintRed"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_along",
+    "components": {
+      "Name": {
+        "Value": "DecalYawAlong"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_decal_yaw_across",
+    "components": {
+      "Name": {
+        "Value": "DecalYawAcross"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_small_green",
+    "components": {
+      "Name": {
+        "Value": "CueSmallGreen"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_cue_large_yellow",
+    "components": {
+      "Name": {
+        "Value": "CueLargeYellow"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_narrow",
+    "components": {
+      "Name": {
+        "Value": "RibbonNarrow"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_wide",
+    "components": {
+      "Name": {
+        "Value": "RibbonWide"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_ribbon_bordered",
+    "components": {
+      "Name": {
+        "Value": "RibbonBordered"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  }
+]

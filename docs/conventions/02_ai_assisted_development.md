@@ -140,7 +140,7 @@ Agent 在收到任务后、写第一行代码前，必须依次做出以下三�
 | `EffectTemplateRegistry` | `src/Core/Gameplay/GAS/` | 效果模板 |
 | `AbilityDefinitionRegistry` | `src/Core/Gameplay/GAS/` | 技能定义 |
 | `OrderTypeRegistry` | `src/Core/Gameplay/GAS/Orders/` | 命令类型 |
-| `PerformerDefinitionRegistry` | `src/Core/Presentation/` | 表现定义 |
+| `PresenterDefinitionRegistry` | `src/Core/Presentation/` | 表现定义 |
 | `MeshAssetRegistry` | `src/Core/Presentation/` | 网格资产 |
 | `ComponentRegistry` | `src/Core/Config/` | 组件 JSON 反序列化 |
 | `VirtualCameraRegistry` | `src/Core/Gameplay/Camera/` | Virtual camera profile / shot 定义 |
@@ -159,7 +159,7 @@ Agent 在收到任务后、写第一行代码前，必须依次做出以下三�
 |------|------|---------|
 | ConfigPipeline | `ConfigPipeline.MergeGameConfig` | `docs/architecture/config_pipeline.md` |
 | GAS Effect Pipeline | `EffectRequestQueue` → 各 Phase System | `docs/architecture/gas_layered_architecture.md` |
-| Presentation Pipeline | Performer → ResponseChain | `docs/architecture/presentation_performer.md` |
+| Presentation Pipeline | Presenter → ResponseChain | `docs/architecture/presentation_presenter.md` |
 | Trigger Pipeline | `TriggerManager.OnEvent` | `docs/architecture/trigger_guide.md` |
 | Mod Loading | `ModLoader` → `IMod.OnLoad` | `docs/architecture/mod_architecture.md` |
 | Startup | `GameBootstrapper.InitializeFromBaseDirectory` | `docs/architecture/startup_entrypoints.md` |

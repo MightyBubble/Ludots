@@ -22,8 +22,8 @@ namespace Ludots.Core.Presentation.Config
 
         public PresentationTextCatalog Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            ValidateTokenIdsAreUnique(TokenPath);
             var tokenEntry = ConfigPipeline.RequireEntry(catalog, TokenPath, ConfigMergePolicy.ArrayById, "id");
+            ValidateTokenIdsAreUnique(in tokenEntry);
             var tokenNodes = _configs.MergeArrayByIdFromCatalog(in tokenEntry, report);
 
             var localeEntry = ConfigPipeline.RequireEntry(catalog, LocalePath, ConfigMergePolicy.DeepObject);
@@ -279,9 +279,9 @@ namespace Ludots.Core.Presentation.Config
             return new PresentationTextTemplate(source, parts.ToArray());
         }
 
-        private void ValidateTokenIdsAreUnique(string relativePath)
+        private void ValidateTokenIdsAreUnique(in ConfigCatalogEntry entry)
         {
-            List<ConfigFragment> fragments = _configs.CollectFragmentsWithSources(relativePath);
+            List<ConfigFragment> fragments = _configs.CollectFragmentsWithSources(in entry);
             var seen = new Dictionary<string, string>(StringComparer.Ordinal);
 
             for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
@@ -307,7 +307,7 @@ namespace Ludots.Core.Presentation.Config
                     if (seen.TryGetValue(tokenId, out string? firstSource))
                     {
                         throw new InvalidOperationException(
-                            $"Presentation text token catalog '{relativePath}' defines duplicate id '{tokenId}' in '{firstSource}' and '{fragments[fragmentIndex].SourceUri}'.");
+                            $"Presentation text token catalog '{entry.RelativePath}' defines duplicate id '{tokenId}' in '{firstSource}' and '{fragments[fragmentIndex].SourceUri}'.");
                     }
 
                     seen[tokenId] = fragments[fragmentIndex].SourceUri;

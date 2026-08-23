@@ -1,0 +1,17 @@
+{
+  "actions": [
+    { "id": "SkillQ", "name": "CrowdPhysicsArena_SkillQ", "type": "Button" },
+    { "id": "SkillE", "name": "CrowdPhysicsArena_SkillE", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CrowdPhysicsArena.Controls",
+      "name": "Crowd Physics Arena Controls",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
+        { "actionId": "SkillE", "path": "<Keyboard>/e" }
+      ]
+    }
+  ]
+}

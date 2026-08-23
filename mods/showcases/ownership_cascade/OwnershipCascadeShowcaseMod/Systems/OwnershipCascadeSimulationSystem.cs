@@ -30,7 +30,7 @@ internal sealed class OwnershipCascadeSimulationSystem : BaseSystem<World, float
         {
             if (input.PressedThisFrame(OwnershipCascadeIds.CaptureActionId))
             {
-                _runtime.CaptureForLocalPlayer(_engine);
+                _runtime.CaptureForSolePossessedRep(_engine);
             }
 
             if (input.PressedThisFrame(OwnershipCascadeIds.ReclaimActionId))

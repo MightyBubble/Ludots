@@ -57,6 +57,20 @@ public sealed class MapLoadLifecycleOrderingTests
         Assert.That(engine.GetService(CoreServiceKeys.MapLoadStatus), Is.EqualTo(MapLoadStatus.DeferredPending));
     }
 
+    [Test]
+    public void PushMap_BeforeAnyMapLoad_InitializesAndFocusesInnerSession()
+    {
+        using var fixture = MapLoadLifecycleFixture.Create();
+        using var engine = fixture.CreateEngine();
+
+        engine.PushMap(InnerMapId);
+
+        Assert.That(engine.MapSessions, Is.Not.Null);
+        Assert.That(engine.MapSessions.FocusedSession, Is.SameAs(engine.CurrentMapSession));
+        Assert.That(engine.CurrentMapSession.MapId.Value, Is.EqualTo(InnerMapId));
+        Assert.That(CountMapEntities(engine.World, InnerMapId), Is.EqualTo(1));
+    }
+
     private static int CountMapEntities(World world, string mapId)
     {
         int count = 0;
@@ -141,18 +155,20 @@ public sealed class MapLoadLifecycleOrderingTests
                   "startupMapId": "lifecycle_ordering",
                   "startupInputContexts": [],
                   "presentation": {
-                    "performerInstanceCapacity": 16,
+                    "presenterInstanceCapacity": 16,
                     "gasPresentationEventCapacity": 16,
                     "presentationEventStreamCapacity": 16,
                     "presentationOwnerChangeCapacity": 16,
-                    "performerCommandCapacity": 16,
+                    "presenterCommandCapacity": 16,
                     "primitiveDrawBufferCapacity": 16,
                     "visualSnapshotBufferCapacity": 16,
                     "visualProxyBufferCapacity": 16,
                     "skinnedVisualBatchCapacity": 16,
                     "presentationRequestCapacity": 16,
+                    "instancedBatchRequestCapacity": 16,
+                    "instancedBatchOperationCapacity": 16,
                     "groundOverlayCapacity": 16,
-                    "roadSplineCapacity": 16,
+                    "splineRibbonCapacity": 16,
                     "worldHudCapacity": 16,
                     "screenHudCapacity": 16,
                     "minimapMarkerCapacity": 16,
@@ -192,10 +208,6 @@ public sealed class MapLoadLifecycleOrderingTests
                     "attributes": {
                       "health": "Health"
                     }
-                  },
-                  "selection": {
-                    "targetFilter": { "relationFilter": "All" },
-                    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
                   }
                 }
                 """);

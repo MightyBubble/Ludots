@@ -31,7 +31,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _effectRequests = effectRequests ?? throw new InvalidOperationException(
                 "LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED: AbilitySystem requires EffectRequestQueue to publish activation effects.");
             _abilityDefinitions = abilityDefinitions;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _progressionRequirements = progressionRequirements;
@@ -44,12 +44,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public readonly Entity ExplicitTarget;
             public readonly ReadOnlySpan<Entity> TargetEntities;
             public readonly Entity TargetContext;
+            public readonly bool UsesTargetCollection;
+            public readonly bool HasExplicitTarget;
 
             public AbilityActivationArgs(Entity explicitTarget)
             {
                 ExplicitTarget = explicitTarget;
                 TargetEntities = ReadOnlySpan<Entity>.Empty;
                 TargetContext = default;
+                UsesTargetCollection = false;
+                HasExplicitTarget = IsSpecified(explicitTarget);
             }
 
             public AbilityActivationArgs(ReadOnlySpan<Entity> targetEntities)
@@ -57,14 +61,37 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExplicitTarget = default;
                 TargetEntities = targetEntities;
                 TargetContext = default;
+                UsesTargetCollection = true;
+                HasExplicitTarget = false;
             }
 
-            public AbilityActivationArgs(Entity explicitTarget, ReadOnlySpan<Entity> targetEntities, Entity targetContext)
+            public AbilityActivationArgs(
+                Entity explicitTarget,
+                ReadOnlySpan<Entity> targetEntities,
+                Entity targetContext)
             {
                 ExplicitTarget = explicitTarget;
                 TargetEntities = targetEntities;
                 TargetContext = targetContext;
+                UsesTargetCollection = !targetEntities.IsEmpty;
+                HasExplicitTarget = IsSpecified(explicitTarget);
             }
+
+            public AbilityActivationArgs(
+                Entity explicitTarget,
+                ReadOnlySpan<Entity> targetEntities,
+                Entity targetContext,
+                bool usesTargetCollection)
+            {
+                ExplicitTarget = explicitTarget;
+                TargetEntities = targetEntities;
+                TargetContext = targetContext;
+                UsesTargetCollection = usesTargetCollection;
+                HasExplicitTarget = IsSpecified(explicitTarget);
+            }
+
+            private static bool IsSpecified(Entity entity)
+                => entity != Entity.Null && entity != default(Entity);
         }
 
         public bool TryActivateAbility(Entity caster, int slotIndex, Entity explicitTarget = default)
@@ -76,36 +103,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.IsAlive(caster)) return false;
 
-            ref var buffer = ref World.TryGetRef<AbilityStateBuffer>(caster, out bool hasAbilityBuffer);
+            World.TryGetRef<AbilityStateBuffer>(caster, out bool hasAbilityBuffer);
             if (!hasAbilityBuffer) return false;
-            bool hasForm = World.Has<AbilityFormSlotBuffer>(caster);
-            AbilityFormSlotBuffer formSlots = hasForm ? World.Get<AbilityFormSlotBuffer>(caster) : default;
-            bool hasItemGranted = World.Has<ItemGrantedSlotBuffer>(caster);
-            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? World.Get<ItemGrantedSlotBuffer>(caster) : default;
-            bool hasGranted = World.Has<GrantedSlotBuffer>(caster);
-            GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(caster) : default;
-            var slot = AbilitySlotResolver.Resolve(in buffer, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
+            if (!TryValidateTargets(caster, in args, out Entity validationTarget)) return false;
+            if (!AbilitySlotResolver.TryResolve(World, caster, slotIndex, out AbilitySlotState slot)) return false;
 
             if (slot.AbilityId > 0 && _abilityDefinitions != null && _abilityDefinitions.TryGet(slot.AbilityId, out var def))
             {
                 if (def.HasActivationBlockTags)
                 {
                     var blockTags = def.ActivationBlockTags;
-                    ref var casterTags = ref World.TryGetRef<GameplayTagContainer>(caster, out bool hasCasterTags);
-                    if (!hasCasterTags)
-                    {
-                        if (!blockTags.RequiredAll.IsEmpty) return false;
-                    }
-                    else
-                    {
-                        if (_tagOps.Intersects(ref casterTags, in blockTags.BlockedAny, TagSense.Effective)) return false;
-                        if (!_tagOps.ContainsAll(ref casterTags, in blockTags.RequiredAll, TagSense.Effective)) return false;
-                    }
+                    if (!AbilityActivationBlockTagEvaluator.Passes(World, caster, _tagOps, in blockTags)) return false;
                 }
 
                 if (def.HasActivationPrecondition)
                 {
-                    var validationTarget = ResolveValidationTarget(in args);
                     if (!AbilityActivationPreconditionEvaluator.Evaluate(
                             World,
                             caster,
@@ -120,7 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                if (!EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in def))
+                if (!EvaluateProgressionUseRequirement(caster, validationTarget, args.TargetContext, in def))
                 {
                     return false;
                 }
@@ -128,25 +140,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
 
                 var effects = def.OnActivateEffects;
-                if (args.TargetEntities.Length > 0)
-                {
-                    for (int ti = 0; ti < args.TargetEntities.Length; ti++)
-                    {
-                        var target = args.TargetEntities[ti];
-                        if (!World.IsAlive(target)) continue;
-                        PublishEffects(caster, target, args.TargetContext, ref effects);
-                    }
-                }
-                else if (World.IsAlive(args.ExplicitTarget))
-                {
-                    PublishEffects(caster, args.ExplicitTarget, args.TargetContext, ref effects);
-                }
-                else
-                {
-                    PublishEffects(caster, caster, args.TargetContext, ref effects);
-                }
-
-                return true;
+                return TryPublishEffects(caster, in args, ref effects);
             }
 
             if (slot.TemplateEntityId <= 0) return false;
@@ -159,22 +153,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref var blockTagsEntity = ref World.TryGetRef<AbilityActivationBlockTags>(templateEntity, out bool hasBlockTagsEntity);
             if (hasBlockTagsEntity)
             {
-                ref var casterTags = ref World.TryGetRef<GameplayTagContainer>(caster, out bool hasCasterTags);
-                if (!hasCasterTags)
-                {
-                    if (!blockTagsEntity.RequiredAll.IsEmpty) return false;
-                }
-                else
-                {
-                    if (_tagOps.Intersects(ref casterTags, in blockTagsEntity.BlockedAny, TagSense.Effective)) return false;
-                    if (!_tagOps.ContainsAll(ref casterTags, in blockTagsEntity.RequiredAll, TagSense.Effective)) return false;
-                }
+                if (!AbilityActivationBlockTagEvaluator.Passes(World, caster, _tagOps, in blockTagsEntity)) return false;
             }
 
             ref var activationPreconditionEntity = ref World.TryGetRef<AbilityActivationPrecondition>(templateEntity, out bool hasActivationPreconditionEntity);
             if (hasActivationPreconditionEntity)
             {
-                var validationTarget = ResolveValidationTarget(in args);
                 int activationId = slot.AbilityId > 0 ? slot.AbilityId : slot.TemplateEntityId;
                 if (!AbilityActivationPreconditionEvaluator.Evaluate(
                         World,
@@ -192,7 +176,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             ref var progressionRequirementsEntity = ref World.TryGetRef<AbilityProgressionRequirements>(templateEntity, out bool hasProgressionRequirementsEntity);
             if (hasProgressionRequirementsEntity &&
-                !EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in progressionRequirementsEntity))
+                !EvaluateProgressionUseRequirement(caster, validationTarget, args.TargetContext, in progressionRequirementsEntity))
             {
                 return false;
             }
@@ -201,65 +185,115 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (hasOnActivateEntity)
             {
                 if (effectsEntity.Count <= 0) return true;
+                return TryPublishEffects(caster, in args, ref effectsEntity);
+            }
 
-                if (args.TargetEntities.Length > 0)
+            return true;
+        }
+
+        private unsafe bool TryPublishEffects(
+            Entity source,
+            in AbilityActivationArgs args,
+            ref AbilityOnActivateEffects effects)
+        {
+            if (effects.Count <= 0 || effects.Count > AbilityOnActivateEffects.CAPACITY)
+            {
+                return false;
+            }
+
+            int targetCount = args.UsesTargetCollection ? args.TargetEntities.Length : 1;
+            if (targetCount > _effectRequests.AvailableCapacity / effects.Count)
+            {
+                return false;
+            }
+
+            fixed (int* ids = effects.TemplateIds)
+            {
+                for (int i = 0; i < effects.Count; i++)
                 {
-                    for (int ti = 0; ti < args.TargetEntities.Length; ti++)
+                    if (ids[i] <= 0)
                     {
-                        var target = args.TargetEntities[ti];
-                        if (!World.IsAlive(target)) continue;
-                        PublishEffects(caster, target, args.TargetContext, ref effectsEntity);
+                        return false;
                     }
                 }
-                else if (World.IsAlive(args.ExplicitTarget))
+
+                if (args.UsesTargetCollection)
                 {
-                    PublishEffects(caster, args.ExplicitTarget, args.TargetContext, ref effectsEntity);
+                    for (int targetIndex = 0; targetIndex < args.TargetEntities.Length; targetIndex++)
+                    {
+                        PublishEffectsToTarget(source, args.TargetEntities[targetIndex], args.TargetContext, ids, effects.Count);
+                    }
                 }
                 else
                 {
-                    PublishEffects(caster, caster, args.TargetContext, ref effectsEntity);
+                    Entity target = args.HasExplicitTarget ? args.ExplicitTarget : source;
+                    PublishEffectsToTarget(source, target, args.TargetContext, ids, effects.Count);
                 }
             }
 
             return true;
         }
 
-        private unsafe void PublishEffects(Entity source, Entity target, Entity targetContext, ref AbilityOnActivateEffects effects)
+        private unsafe void PublishEffectsToTarget(
+            Entity source,
+            Entity target,
+            Entity targetContext,
+            int* templateIds,
+            int effectCount)
         {
-            fixed (int* ids = effects.TemplateIds)
+            for (int i = 0; i < effectCount; i++)
             {
-                for (int i = 0; i < effects.Count; i++)
+                _effectRequests.Publish(new EffectRequest
                 {
-                    int templateId = ids[i];
-                    if (templateId <= 0) continue;
-                    _effectRequests.Publish(new EffectRequest
-                    {
-                        Source = source,
-                        Target = target,
-                        TargetContext = targetContext,
-                        TemplateId = templateId
-                    });
-                }
+                    Source = source,
+                    Target = target,
+                    TargetContext = targetContext,
+                    TemplateId = templateIds[i]
+                });
             }
         }
 
-        private Entity ResolveValidationTarget(in AbilityActivationArgs args)
+        private bool TryValidateTargets(
+            Entity caster,
+            in AbilityActivationArgs args,
+            out Entity validationTarget)
         {
-            if (World.IsAlive(args.ExplicitTarget))
+            validationTarget = caster;
+            if (args.TargetContext != Entity.Null &&
+                args.TargetContext != default(Entity) &&
+                !World.IsAlive(args.TargetContext))
             {
-                return args.ExplicitTarget;
+                return false;
+            }
+            if (args.HasExplicitTarget)
+            {
+                if (!World.IsAlive(args.ExplicitTarget))
+                {
+                    return false;
+                }
+                validationTarget = args.ExplicitTarget;
             }
 
+            if (!args.UsesTargetCollection)
+            {
+                return true;
+            }
+            if (args.TargetEntities.IsEmpty)
+            {
+                return false;
+            }
             for (int i = 0; i < args.TargetEntities.Length; i++)
             {
-                var target = args.TargetEntities[i];
-                if (World.IsAlive(target))
+                if (!World.IsAlive(args.TargetEntities[i]))
                 {
-                    return target;
+                    return false;
                 }
             }
-
-            return default;
+            if (!args.HasExplicitTarget)
+            {
+                validationTarget = args.TargetEntities[0];
+            }
+            return true;
         }
 
         private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)

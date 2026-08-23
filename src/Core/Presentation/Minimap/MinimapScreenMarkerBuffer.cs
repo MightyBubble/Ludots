@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Minimap
 {

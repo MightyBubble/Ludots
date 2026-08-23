@@ -28,7 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
             _registry.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
             ValidateRawIds(fragments, entry.RelativePath);
             var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
@@ -67,6 +67,8 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
                 {
                     throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath}: unknown sink '{sink}'.");
                 }
+
+                _sinks.GetSink(sinkId).ValidateBinding((byte)channel, id, relativePath);
 
                 var mode = ParseMode(modeText, id, relativePath);
                 var reset = ParseResetPolicy(resetPolicyText, id, relativePath);

@@ -15,7 +15,15 @@ namespace Ludots.Core.Gameplay.GAS
         private readonly int[] _keys;
         private readonly int[] _counts;
         private readonly int[] _stamps;
+        private readonly int[] _rollbackSlotMarks;
+        private readonly int[] _rollbackSlots;
+        private readonly int[] _rollbackKeys;
+        private readonly int[] _rollbackCounts;
+        private readonly int[] _rollbackStamps;
         private int _stamp;
+        private int _rollbackEpoch;
+        private int _rollbackCount;
+        private bool _writeCheckpointActive;
 
         public RootBudgetTable(int capacity)
         {
@@ -23,7 +31,64 @@ namespace Ludots.Core.Gameplay.GAS
             _keys = new int[capacity];
             _counts = new int[capacity];
             _stamps = new int[capacity];
+            _rollbackSlotMarks = new int[capacity];
+            _rollbackSlots = new int[capacity];
+            _rollbackKeys = new int[capacity];
+            _rollbackCounts = new int[capacity];
+            _rollbackStamps = new int[capacity];
             _stamp = 1;
+            _rollbackEpoch = 1;
+        }
+
+        public int Capacity => _keys.Length;
+
+        internal readonly struct WriteCheckpoint
+        {
+            internal WriteCheckpoint(int epoch)
+            {
+                Epoch = epoch;
+            }
+
+            internal int Epoch { get; }
+        }
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            if (_writeCheckpointActive)
+            {
+                throw new InvalidOperationException("GAS.ROOT_BUDGET.ERR.CheckpointAlreadyActive");
+            }
+
+            _rollbackEpoch++;
+            if (_rollbackEpoch == 0)
+            {
+                Array.Clear(_rollbackSlotMarks, 0, _rollbackSlotMarks.Length);
+                _rollbackEpoch = 1;
+            }
+            _rollbackCount = 0;
+            _writeCheckpointActive = true;
+            return new WriteCheckpoint(_rollbackEpoch);
+        }
+
+        internal void CommitWrites(in WriteCheckpoint checkpoint)
+        {
+            RequireActiveCheckpoint(in checkpoint);
+            _rollbackCount = 0;
+            _writeCheckpointActive = false;
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            RequireActiveCheckpoint(in checkpoint);
+            for (int i = _rollbackCount - 1; i >= 0; i--)
+            {
+                int slot = _rollbackSlots[i];
+                _keys[slot] = _rollbackKeys[i];
+                _counts[slot] = _rollbackCounts[i];
+                _stamps[slot] = _rollbackStamps[i];
+            }
+            _rollbackCount = 0;
+            _writeCheckpointActive = false;
         }
 
         private static int NextPowerOfTwo(int v)
@@ -39,6 +104,11 @@ namespace Ludots.Core.Gameplay.GAS
         /// </summary>
         public void NextFrame()
         {
+            if (_writeCheckpointActive)
+            {
+                throw new InvalidOperationException("GAS.ROOT_BUDGET.ERR.NextFrameDuringCheckpoint");
+            }
+
             _stamp++;
             if (_stamp == 0)
             {
@@ -59,10 +129,11 @@ namespace Ludots.Core.Gameplay.GAS
 
             int mask = _keys.Length - 1;
             int idx = (unchecked(rootId * (int)0x9E3779B1)) & mask;
-            while (true)
+            for (int probes = 0; probes < _keys.Length; probes++)
             {
                 if (_stamps[idx] != _stamp)
                 {
+                    RecordOriginalSlot(idx);
                     _stamps[idx] = _stamp;
                     _keys[idx] = rootId;
                     _counts[idx] = 1;
@@ -73,11 +144,42 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     int c = _counts[idx];
                     if (c >= limit) return false;
+                    RecordOriginalSlot(idx);
                     _counts[idx] = c + 1;
                     return true;
                 }
 
                 idx = (idx + 1) & mask;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void RecordOriginalSlot(int slot)
+        {
+            if (!_writeCheckpointActive || _rollbackSlotMarks[slot] == _rollbackEpoch)
+            {
+                return;
+            }
+            if (_rollbackCount >= _rollbackSlots.Length)
+            {
+                throw new InvalidOperationException("GAS.ROOT_BUDGET.ERR.RollbackCapacityExceeded");
+            }
+
+            _rollbackSlotMarks[slot] = _rollbackEpoch;
+            int index = _rollbackCount++;
+            _rollbackSlots[index] = slot;
+            _rollbackKeys[index] = _keys[slot];
+            _rollbackCounts[index] = _counts[slot];
+            _rollbackStamps[index] = _stamps[slot];
+        }
+
+        private void RequireActiveCheckpoint(in WriteCheckpoint checkpoint)
+        {
+            if (!_writeCheckpointActive || checkpoint.Epoch != _rollbackEpoch)
+            {
+                throw new InvalidOperationException("GAS.ROOT_BUDGET.ERR.InvalidWriteCheckpoint");
             }
         }
     }

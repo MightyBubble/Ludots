@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.MovePlanning;
 
@@ -55,7 +56,7 @@ public sealed class MovePlanRuntimeService
 
         int planPointCount = _plans.TryGetPlan(entity, order.OrderId, out MovePlanView plan)
             ? plan.Count
-            : OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            : OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
 
         short executionGeneration = orderState.ExecutionGeneration;
         executionGeneration++;

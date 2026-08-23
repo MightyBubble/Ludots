@@ -4,7 +4,11 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Movement;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
@@ -47,7 +51,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -80,7 +84,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -114,7 +118,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -147,7 +151,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 10; i++)
             {
                 system.Update(0f);
@@ -181,7 +185,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 3; i++)
             {
                 system.Update(0f);
@@ -236,6 +240,58 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void BuiltinHandler_ApplyDisplacement_StackedOnSameTarget_ReplacesInsteadOfCreatingSecondState()
+        {
+            using var world = World.Create();
+
+            var target = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var firstSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(-100, 0) });
+            var secondSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(0, -100) });
+            var mergedParams = default(EffectConfigParams);
+
+            var firstContext = new EffectContext { Source = firstSource, Target = target, TargetContext = default };
+            var firstTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 500,
+                    TotalDurationTicks = 10,
+                    OverrideNavigation = true,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref firstContext, in mergedParams, in firstTemplate);
+
+            // 第二次施加命中同一目标：替换合同——覆写方向与预算，不得出现第二个驱动者。
+            var secondContext = new EffectContext { Source = secondSource, Target = target, TargetContext = default };
+            var secondTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 200,
+                    TotalDurationTicks = 4,
+                    OverrideNavigation = false,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref secondContext, in mergedParams, in secondTemplate);
+
+            int count = 0;
+            world.Query(in DisplacementQuery, (Entity _, ref DisplacementState state) =>
+            {
+                count++;
+                That(state.SourceEntity, Is.EqualTo(secondSource), "the replacement segment owns the state");
+                That(state.TotalDistanceCm, Is.EqualTo(200));
+                That(state.RemainingDistanceCm.ToFloat(), Is.EqualTo(200f).Within(0.01f), "the budget restarts with the new segment");
+                That(state.TotalDurationTicks, Is.EqualTo(4));
+                That(state.RemainingTicks, Is.EqualTo(4));
+                That(state.OverrideNavigation, Is.False);
+            });
+
+            That(count, Is.EqualTo(1), "stacking a displacement on the same target must replace, never duplicate");
+        }
+
+        [Test]
         public void BuiltinHandler_ApplyDisplacement_UsesPreservedCallerTargetPoint_WhenExecIsMissing()
         {
             using var world = World.Create();
@@ -274,7 +330,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectProposalProcessing_DisplacementInstant_RemainsEntityBacked()
+        public void EffectProposalProcessing_DisplacementInstant_ExecutesWithoutEffectEntity()
         {
             using var world = World.Create();
 
@@ -290,11 +346,39 @@ namespace Ludots.Tests.GAS
                     TotalDistanceCm = 480,
                     TotalDurationTicks = 6,
                     OverrideNavigation = true,
-                }
+                },
             });
 
-            var source = world.Create();
-            var target = world.Create();
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Displacement,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var graphPrograms = new GraphProgramRegistry();
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/displacement-effects.json");
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+
+            var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var target = world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(100, 0) });
             var requests = new EffectRequestQueue();
             requests.Publish(new EffectRequest
             {
@@ -306,9 +390,13 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 budget: null,
                 templates: templates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
             proposal.Update(0f);
 
             int effectCount = 0;
@@ -320,23 +408,131 @@ namespace Ludots.Tests.GAS
                 }
             });
 
-            That(effectCount, Is.EqualTo(1), "Displacement presets must stay entity-backed so OnApply builtins can execute.");
+            That(effectCount, Is.EqualTo(0), "Instant behavior must execute through the shared phase executor without a transient Effect entity.");
+            int displacementCount = 0;
+            world.Query(in DisplacementQuery, (Entity _, ref DisplacementState state) =>
+            {
+                if (state.TargetEntity == target) displacementCount++;
+            });
+            That(displacementCount, Is.EqualTo(1));
         }
 
-        [Test]
-        public void Displacement_OverrideNavigation_SuppressesForceAndRestoresMoveTag()
+        [TestCase(0, TestName = "EffectProposalProcessing_DisplacementWithTargetListener_FailsBeforeMutation")]
+        [TestCase(1, TestName = "EffectProposalProcessing_DisplacementWithSourceListener_FailsBeforeMutation")]
+        [TestCase(2, TestName = "EffectProposalProcessing_DisplacementWithGlobalListener_FailsBeforeMutation")]
+        public void EffectProposalProcessing_DisplacementWithMatchingListener_FailsBeforeMutation(int listenerLocation)
         {
             using var world = World.Create();
 
-            int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
+            var templates = new EffectTemplateRegistry();
+            int templateId = EffectTemplateIdRegistry.Register("Effect.Test.DisplacementListenerConflict");
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.Displacement,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 300,
+                    TotalDurationTicks = 3,
+                },
+            });
+
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Displacement,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var graphPrograms = new GraphProgramRegistry();
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/displacement-listener-effects.json");
+
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            if (listenerLocation == 2)
+            {
+                Assert.That(globalListeners.Register(
+                    listenTagId: 0,
+                    listenEffectId: templateId,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.PublishEvent,
+                    graphProgramId: 0,
+                    eventTagId: 1,
+                    priority: 0), Is.True);
+            }
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates,
+                globalListeners);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var target = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(100, 0) });
+            if (listenerLocation < 2)
+            {
+                var listener = new EffectPhaseListenerBuffer();
+                PhaseListenerScope scope = listenerLocation == 0
+                    ? PhaseListenerScope.Target
+                    : PhaseListenerScope.Source;
+                Assert.That(listener.TryAddTemplate(
+                    listenTagId: 0,
+                    listenEffectId: templateId,
+                    EffectPhaseId.OnApply,
+                    scope,
+                    PhaseListenerActionFlags.PublishEvent,
+                    graphProgramId: 0,
+                    eventTagId: 1,
+                    priority: 0), Is.True);
+                world.Add(listenerLocation == 0 ? target : source, listener);
+            }
+            var requests = new EffectRequestQueue();
+            requests.Publish(new EffectRequest
+            {
+                Source = source,
+                Target = target,
+                TemplateId = templateId,
+            });
+            using var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            var error = Assert.Throws<InvalidOperationException>(() => proposal.Update(0f));
+
+            Assert.That(error!.Message, Does.StartWith(EffectPhaseExecutor.ExternalAtomicListenerConflictError));
+            int displacementCount = 0;
+            world.Query(in DisplacementQuery, (ref DisplacementState _) => displacementCount++);
+            Assert.That(displacementCount, Is.Zero);
+        }
+
+        [Test]
+        public void Displacement_OverrideNavigation_InstallsAndClearsMovementSuppression()
+        {
+            using var world = World.Create();
+
             var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
             var target = world.Create(
                 new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) },
-                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) },
-                new GameplayTagContainer(),
-                new AbilityExecInstance());
-            ref var tags = ref world.Get<GameplayTagContainer>(target);
-            tags.AddTag(navMoveTagId);
+                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) });
 
             world.Create(new DisplacementState
             {
@@ -350,15 +546,14 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
-            That(world.Get<ForceInput2D>(target).Force, Is.EqualTo(Fix64Vec2.Zero));
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.False);
+            That(world.Has<MovementSuppressed2D>(target), Is.True);
 
             system.Update(0f);
 
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
+            That(world.Has<MovementSuppressed2D>(target), Is.False);
         }
 
         [Test]
@@ -381,7 +576,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 5; i++)
             {
                 system.Update(0f);
@@ -413,7 +608,7 @@ namespace Ludots.Tests.GAS
 
             world.Destroy(target);
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
             That(world.IsAlive(dispEntity), Is.False);

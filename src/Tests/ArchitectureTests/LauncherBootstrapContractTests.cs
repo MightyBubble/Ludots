@@ -49,12 +49,38 @@ namespace Ludots.Tests.Architecture
             }
             finally
             {
-                await Task.Delay(1_600);
-                if (Directory.Exists(tempDirectory))
-                {
-                    Directory.Delete(tempDirectory, recursive: true);
-                }
+                await DeleteDirectoryWithRetryAsync(tempDirectory, TimeSpan.FromSeconds(5));
             }
+        }
+
+        private static async Task DeleteDirectoryWithRetryAsync(string directory, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            Exception? lastFailure = null;
+            while (DateTime.UtcNow <= deadline)
+            {
+                try
+                {
+                    if (Directory.Exists(directory))
+                    {
+                        Directory.Delete(directory, recursive: true);
+                    }
+
+                    return;
+                }
+                catch (IOException ex)
+                {
+                    lastFailure = ex;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    lastFailure = ex;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new IOException($"Failed to delete temporary test directory '{directory}'.", lastFailure);
         }
 
         [Test]
@@ -185,8 +211,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -288,8 +315,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -648,12 +676,12 @@ namespace Ludots.Tests.Architecture
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_static_performer_30k" },
+                        new[] { "$capability_standard_static_presenter_30k" },
                         LauncherPlatformIds.Raylib,
                         LauncherBuildMode.Never).Plan,
-                    expectedRootModId: "CapabilityStandardStaticPerformer30kMod",
-                    expectedStartupMapId: "capability_standard_static_performer_30k_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPerformer30kMod" });
+                    expectedRootModId: "CapabilityStandardStaticPresenter30kMod",
+                    expectedStartupMapId: "capability_standard_static_presenter_30k_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPresenter30kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1029,8 +1057,9 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-order-fingerprint");
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
+                Assert.That(engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
                     "Graph-planned order should remain the runtime load order even when priority would have reordered an ad-hoc resolve path.");
             }
             finally
@@ -1176,6 +1205,255 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void Launcher_ResolvesRaylibClientParity_AsPresenterEraContract()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-raylib-client-parity-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "$raylib_client_parity" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.RootModIds, Is.EqualTo(new[] { "RaylibClientParityShowcaseMod" }));
+                Assert.That(plan.OrderedModIds, Does.Contain("RaylibClientParityShowcaseMod"));
+                Assert.That(plan.OrderedModIds, Does.Contain("RaylibPlatformMeshesMod"),
+                    "raylib_client_parity must pull its building meshes from the platform mesh fixture, not the presenter showcase.");
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"),
+                    "raylib_client_parity must not pull the legacy Performer blacksmith mod.");
+
+                var modRoot = Path.Combine(
+                    repoRoot,
+                    "mods",
+                    "showcases",
+                    "raylib_client_parity",
+                    "RaylibClientParityShowcaseMod");
+                var presentationRoot = Path.Combine(modRoot, "assets", "Presentation");
+
+                Assert.That(
+                    File.Exists(Path.Combine(presentationRoot, "performers.json")),
+                    Is.False,
+                    "Legacy performers.json must no longer ship in the raylib_client_parity showcase.");
+                Assert.That(
+                    File.Exists(Path.Combine(presentationRoot, "presenters.json")),
+                    Is.True,
+                    "raylib_client_parity must ship a Presenter-era presenters.json.");
+
+                string presentersJson = File.ReadAllText(Path.Combine(presentationRoot, "presenters.json"));
+                Assert.That(presentersJson, Does.Contain("\"CreatePresenter\""));
+                Assert.That(presentersJson, Does.Contain("\"DestroyPresenterScope\""));
+                Assert.That(presentersJson, Does.Not.Contain("CreatePerformer"));
+                Assert.That(presentersJson, Does.Not.Contain("DestroyPerformerScope"));
+
+                string hostAssetsJson = File.ReadAllText(Path.Combine(presentationRoot, "host_assets.json"));
+                Assert.That(hostAssetsJson, Does.Contain("PresenterBlacksmithShowcaseMod:"));
+                Assert.That(hostAssetsJson, Does.Not.Contain("PerformerBlacksmithShowcaseMod:"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_ResolvesEngineGallery_AsExecutableTargetWithoutModClosure()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-engine-gallery-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "$engine_gallery" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.IsExecutableTarget, Is.True);
+                Assert.That(plan.RootModIds, Is.Empty);
+                Assert.That(plan.OrderedModIds, Is.Empty);
+                Assert.That(plan.Mods, Is.Empty);
+                Assert.That(plan.BootstrapArtifactStrategy, Is.EqualTo("none"));
+                Assert.That(plan.BootstrapArtifactPath, Is.Empty);
+                Assert.That(plan.ExecutableArgs, Is.Empty);
+                Assert.That(plan.ExecutableProjectPath, Is.EqualTo(Path.Combine(
+                    repoRoot,
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
+                    "Ludots.App.RaylibEngineGallery.csproj")));
+                Assert.That(plan.AppAssemblyPath, Is.EqualTo(Path.Combine(
+                    repoRoot,
+                    "src", "Apps", "Raylib", "Ludots.App.RaylibEngineGallery",
+                    "bin", "Release", "net8.0", "Ludots.App.RaylibEngineGallery.dll")));
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_PresetArgs_ReplaceBindingArgs_OnExecutableTarget()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-args-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                var configPath = Path.Combine(tempDirectory, "launcher.config.json");
+                var presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+                File.WriteAllText(configPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "bindings": [
+                    {
+                      "name": "executable_fixture",
+                      "target": {
+                        "type": "project",
+                        "value": "src/Apps/Raylib/Ludots.App.RaylibEngineGallery/Ludots.App.RaylibEngineGallery.csproj",
+                        "args": ["--scene", "terrain"]
+                      }
+                    }
+                  ],
+                  "adapters": { "default": "raylib" }
+                }
+                """);
+                File.WriteAllText(presetsPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "presets": [
+                    {
+                      "id": "executable_fixture_skybox",
+                      "name": "Executable Fixture Skybox",
+                      "selectors": ["$executable_fixture"],
+                      "adapterId": "raylib",
+                      "buildMode": "auto",
+                      "args": ["--scene", "skybox"]
+                    }
+                  ]
+                }
+                """);
+
+                var launcher = new LauncherService(repoRoot, configPath, presetsPath, preferencesPath, userConfigPath);
+
+                var presetPlan = launcher.Resolve(
+                    new[] { "preset:executable_fixture_skybox" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                Assert.That(presetPlan.IsExecutableTarget, Is.True);
+                Assert.That(presetPlan.ExecutableArgs, Is.EqualTo(new[] { "--scene", "skybox" }),
+                    "Preset args must fully replace binding args when present.");
+
+                var bindingPlan = launcher.Resolve(
+                    new[] { "$executable_fixture" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                Assert.That(bindingPlan.IsExecutableTarget, Is.True);
+                Assert.That(bindingPlan.ExecutableArgs, Is.EqualTo(new[] { "--scene", "terrain" }),
+                    "Binding args apply when the preset defines no args.");
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_FailsLoud_WhenProjectBindingPointsToMissingCsproj()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-executable-missing-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                var configPath = Path.Combine(tempDirectory, "launcher.config.json");
+                var presetsPath = Path.Combine(tempDirectory, "launcher.presets.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+                File.WriteAllText(configPath, $$"""
+                {
+                  "schemaVersion": 1,
+                  "bindings": [
+                    {
+                      "name": "missing_executable_fixture",
+                      "target": {
+                        "type": "project",
+                        "value": "src/Apps/Raylib/DoesNotExist/DoesNotExist.csproj"
+                      }
+                    }
+                  ],
+                  "adapters": { "default": "raylib" }
+                }
+                """);
+                File.WriteAllText(presetsPath, "{ \"schemaVersion\": 1, \"presets\": [] }");
+
+                var launcher = new LauncherService(repoRoot, configPath, presetsPath, preferencesPath, userConfigPath);
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => launcher.Resolve(new[] { "$missing_executable_fixture" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never));
+
+                Assert.That(ex!.Message, Does.Contain("Executable project target not found"));
+                Assert.That(ex.Message, Does.Contain("DoesNotExist.csproj"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
         private static string CreateTestMod(string root, string modName, int priority, string? dependenciesJson = null)
         {
             var modDir = Path.Combine(root, modName);
@@ -1246,8 +1524,8 @@ namespace Ludots.Tests.Architecture
                 }
             }
 
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PresenterBlacksmithShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PresenterBlacksmithScatterHudTextBenchmarkEntryMod"));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));

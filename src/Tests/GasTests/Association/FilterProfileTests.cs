@@ -82,7 +82,7 @@ namespace Ludots.Tests.GAS
             harness.Filters.Install(Harness.Config(new FilterProfileDefinition
             {
                 Id = "filter.selectable.only",
-                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "controls" },
+                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "controls" },
                 Include = new FilterProfileTagRule { AnyTags = new List<string> { "unit.selectable" } },
             }));
 
@@ -108,7 +108,7 @@ namespace Ludots.Tests.GAS
             harness.Filters.Install(Harness.Config(new FilterProfileDefinition
             {
                 Id = "filter.anything.alive",
-                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "none" },
+                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "none" },
                 Exclude = new FilterProfileTagRule { AnyTags = new List<string> { "state.dead" } },
             }));
 
@@ -169,7 +169,7 @@ namespace Ludots.Tests.GAS
             Assert.Throws<InvalidOperationException>(() => harness.Filters.Install(Harness.Config(new FilterProfileDefinition
             {
                 Id = "filter.bad.expand",
-                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "teleports" },
+                AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "teleports" },
             })));
         }
 
@@ -198,7 +198,7 @@ namespace Ludots.Tests.GAS
                 Assert.Throws<InvalidOperationException>(() => harness.Filters.Install(Harness.Config(new FilterProfileDefinition
                 {
                     Id = "filter.bad.tag",
-                    AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "controls" },
+                    AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "controls" },
                     Exclude = new FilterProfileTagRule { AnyTags = new List<string> { "state.daed" } },
                 })));
             }
@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS
                 var ownership = new OwnershipResolver(relationships, ownsTypeId);
                 var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var filters = new FilterProfileRegistry(profileIds, world, new TagOps(new TagRuleRegistry(), new GasBudget()));
+                var filters = new FilterProfileRegistry(profileIds, world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()));
                 filters.RegisterExpander(
                     FilterAssociationExpandKinds.Controls,
                     domains.CollectControlled,
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS
                 Filters.Install(Config(new FilterProfileDefinition
                 {
                     Id = DefaultProfileId,
-                    AssociationQuery = new FilterProfileAssociationQuery { Anchor = "localPlayerRep", Expand = "controls" },
+                    AssociationQuery = new FilterProfileAssociationQuery { Anchor = "solePossessedRep", Expand = "controls" },
                     Exclude = new FilterProfileTagRule { AnyTags = new List<string> { "state.dead", "presentation.hidden" } },
                     Include = new FilterProfileTagRule { AnyTags = new List<string>() },
                 }));

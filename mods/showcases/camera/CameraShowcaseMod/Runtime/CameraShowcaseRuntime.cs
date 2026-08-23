@@ -6,9 +6,9 @@ using CameraShowcaseMod.UI;
 using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
@@ -91,47 +91,24 @@ namespace CameraShowcaseMod.Runtime
         private static bool EnsureLocalCommandSourceOwner(GameEngine engine, string? mapId, out Entity owner)
         {
             owner = Entity.Null;
-            if (engine == null || !CameraShowcaseIds.IsShowcaseMap(mapId))
+            if (engine == null ||
+                !CameraShowcaseIds.IsShowcaseMap(mapId) ||
+                string.Equals(mapId, CameraShowcaseIds.BootstrapMapId, StringComparison.OrdinalIgnoreCase))
             {
+                // Bootstrap map has no Players / seats; it only validates shared camera centering.
                 return false;
             }
 
-            if (!TryFindEntityByName(engine.World, CameraShowcaseIds.HeroName, out Entity hero))
+            owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return false;
-            }
-
-            owner = hero;
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = owner;
-            }
-
-            if (TryResolvePlayerId(engine.World, owner, out int playerId))
-            {
-                engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerId = playerId;
-                }
+                throw new InvalidOperationException(
+                    "Camera showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);
             PublishLocalKnowledge(engine, owner);
             return true;
-        }
-
-        private static bool TryResolvePlayerId(World world, Entity owner, out int playerId)
-        {
-            playerId = 0;
-            if (owner == Entity.Null || !world.IsAlive(owner) || !world.Has<PlayerOwner>(owner))
-            {
-                return false;
-            }
-
-            playerId = world.Get<PlayerOwner>(owner).PlayerId;
-            return playerId > 0;
         }
 
         private static void PublishEmptyCommandSourceCollection(GameEngine engine, Entity owner)

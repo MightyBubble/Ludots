@@ -7,6 +7,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Presentation;
 
@@ -26,7 +27,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupTransaction");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
@@ -43,9 +44,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0, 1 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -55,9 +55,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] splitMembers = { 0 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 202,
                 splitMembers,
                 teamId: 1,
@@ -87,7 +86,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupReplacement");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
@@ -104,9 +103,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0, 1 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -116,9 +114,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] replacementMembers = { 0, 2 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 101,
                 replacementMembers,
                 teamId: 1,
@@ -148,7 +145,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupMemberCapacity");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
@@ -165,9 +162,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -176,9 +172,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] replacementMembers = { 0, 1 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 101,
                 replacementMembers,
                 teamId: 1,

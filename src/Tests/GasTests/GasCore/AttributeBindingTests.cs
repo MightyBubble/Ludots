@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Physics;
@@ -22,14 +23,14 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                     """
                     [
                       { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"),
                     """
                     [
                       {
@@ -89,6 +90,95 @@ namespace Ludots.Tests.GAS
             {
                 TryDeleteDirectory(root);
             }
+        }
+
+        [Test]
+        public void AttributeBindingLoader_RejectsUnsupportedSinkChannel()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"),
+                    """
+                    [
+                      {
+                        "id": "Bind.Physics.Invalid",
+                        "attribute": "Physics.Invalid",
+                        "sink": "Physics.ForceInput2D",
+                        "channel": 2,
+                        "mode": "Override",
+                        "scale": 1.0,
+                        "resetPolicy": "None"
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var sinks = new AttributeSinkRegistry();
+                GasAttributeSinks.RegisterBuiltins(sinks);
+                var loader = new AttributeBindingLoader(pipeline, sinks, new AttributeBindingRegistry());
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(catalog, relativePath: "GAS/attribute_bindings.json"))!;
+                That(ex.Message, Does.Contain("supports channels 0 and 1"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void CameraBehaviorInputSink_Apply_IsAllocationFreeAfterWarmup()
+        {
+            using var world = World.Create();
+            int attributeId = AttributeRegistry.Register("Camera.Behavior.TestMoveX");
+            Entity target = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            world.Get<AttributeBuffer>(target).SetCurrent(attributeId, 1f);
+
+            var state = new CameraBehaviorInputState();
+            var sink = new CameraBehaviorInputSink(state);
+            var entries = new[]
+            {
+                new AttributeBindingEntry(
+                    attributeId,
+                    sinkId: 0,
+                    channel: CameraBehaviorInputChannels.MoveX,
+                    mode: AttributeBindingMode.Override,
+                    resetPolicy: AttributeBindingResetPolicy.None,
+                    scale: 1f),
+            };
+
+            for (int i = 0; i < 64; i++)
+            {
+                sink.Apply(world, entries, 0, entries.Length);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            _ = GC.GetAllocatedBytesForCurrentThread();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                sink.Apply(world, entries, 0, entries.Length);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            That(allocated, Is.LessThanOrEqualTo(64));
+            That(state.Move.X, Is.EqualTo(1f));
         }
 
         private static string CreateTempRoot()

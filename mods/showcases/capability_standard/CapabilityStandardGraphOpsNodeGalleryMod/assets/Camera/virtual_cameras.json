@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Camera.Profile.GraphOpsGallery",
+    "displayName": "GraphOps Gallery",
+    "priority": 100,
+    "rigKind": "Orbit",
+    "distanceCm": 2600,
+    "pitch": 75,
+    "yaw": 180,
+    "fovYDeg": 50,
+    "minDistanceCm": 2000,
+    "maxDistanceCm": 8000,
+    "minPitchDeg": 45,
+    "maxPitchDeg": 85,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
+  }
+]

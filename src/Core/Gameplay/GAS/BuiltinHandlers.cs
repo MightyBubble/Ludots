@@ -7,6 +7,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
@@ -16,7 +17,9 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Vision;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -26,22 +29,57 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class BuiltinHandlers
     {
+        private static bool HasAssignedAttribute(int attributeId)
+        {
+            return attributeId != AttributeRegistry.InvalidId;
+        }
+
+        public const string MissingHandlerRuntimeError = "GAS.BUILTIN.ERR.MissingHandlerRuntime";
+        public const string MissingSpatialQueriesError = "GAS.BUILTIN.ERR.MissingSpatialQueries";
+        public const string MissingFanOutBudgetError = "GAS.BUILTIN.ERR.MissingFanOutBudget";
+        public const string MissingFanOutCommandsError = "GAS.BUILTIN.ERR.MissingFanOutCommands";
+        public const string MissingResolverBufferError = "GAS.BUILTIN.ERR.MissingResolverBuffer";
+
+        private static void RejectNonTransactionalPersistentSideEffect(string operation)
+        {
+            if (BuiltinHandlerRuntimeScope.Current?.EffectSideEffects?.IsActive == true)
+            {
+                throw new InvalidOperationException(
+                    $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
+            }
+        }
+
+        private static BuiltinHandlerExecutionContext RequireHandlerRuntime()
+        {
+            BuiltinHandlerExecutionContext? runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime == null)
+            {
+                throw new InvalidOperationException(MissingHandlerRuntimeError);
+            }
+
+            return runtime;
+        }
+
         public static void RegisterAll(BuiltinHandlerRegistry registry)
         {
-            registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers);
-            registry.Register(BuiltinHandlerId.ApplyForce, HandleApplyForce);
-            registry.Register(BuiltinHandlerId.SpatialQuery, HandleSpatialQuery);
-            registry.Register(BuiltinHandlerId.DispatchPayload, HandleDispatchPayload);
-            registry.Register(BuiltinHandlerId.ReResolveAndDispatch, HandleReResolveAndDispatch);
-            registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile);
-            registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
-            registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
-            registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
-            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea);
-            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea);
-            registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
-            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
-            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
+            registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+            registry.Register(BuiltinHandlerId.ApplyForce, HandleApplyForce, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyForce)));
+            registry.Register(BuiltinHandlerId.SpatialQuery, HandleSpatialQuery, EffectOperationMetadata.Pure(nameof(BuiltinHandlerId.SpatialQuery)));
+            registry.Register(BuiltinHandlerId.DispatchPayload, HandleDispatchPayload, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.DispatchPayload)));
+            registry.Register(BuiltinHandlerId.ReResolveAndDispatch, HandleReResolveAndDispatch, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ReResolveAndDispatch)));
+            registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateProjectile)));
+            registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateUnit)));
+            registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement, EffectOperationMetadata.External(EffectAtomicDomain.Displacement, nameof(BuiltinHandlerId.ApplyDisplacement)));
+            registry.Register(
+                BuiltinHandlerId.ApplyRelation,
+                HandleApplyRelation,
+                EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, nameof(BuiltinHandlerId.ApplyRelation)),
+                ResolveApplyRelationOperationMetadata);
+            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.RevealArea)));
+            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.DecayRevealArea)));
+            registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Exchange, nameof(BuiltinHandlerId.ExecuteExchange)));
+            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression, EffectOperationMetadata.External(EffectAtomicDomain.Progression, nameof(BuiltinHandlerId.CompleteProgression)));
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard, EffectOperationMetadata.External(EffectAtomicDomain.Order, nameof(BuiltinHandlerId.SubmitOrderFromBlackboard)));
             EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
@@ -55,12 +93,30 @@ namespace Ludots.Core.Gameplay.GAS
             if (!world.IsAlive(context.Target)) return;
             if (!world.Has<AttributeBuffer>(context.Target)) return;
 
-            var modifiers = templateData.Modifiers;
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            var modifiers = runtime?.HasModifierOverride == true
+                ? runtime.ModifierOverride
+                : templateData.Modifiers;
             int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
+            if (runtime?.EffectSideEffects?.IsActive == true)
+            {
+                float stagedBefore = primaryAttrId >= 0 &&
+                    runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentBefore)
+                        ? currentBefore
+                        : 0f;
+                runtime.EffectSideEffects.StageModifiers(context.Target, in modifiers);
+                float stagedAfter = primaryAttrId >= 0 &&
+                    runtime.EffectSideEffects.TryReadAttributeCurrent(context.Target, primaryAttrId, out float currentAfter)
+                        ? currentAfter
+                        : 0f;
+                runtime.RecordAttributeDelta(primaryAttrId, stagedAfter - stagedBefore);
+                return;
+            }
+
             float before = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
-            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers);
+            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers, runtime?.TagOps);
             float after = primaryAttrId >= 0 ? world.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId) : 0f;
-            BuiltinHandlerRuntimeScope.Current?.RecordAttributeDelta(primaryAttrId, after - before);
+            runtime?.RecordAttributeDelta(primaryAttrId, after - before);
         }
 
         public static void HandleApplyForce(
@@ -76,10 +132,20 @@ namespace Ludots.Core.Gameplay.GAS
             mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
             mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
 
-            if (templateData.PresetAttribute0 > 0)
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx);
-            if (templateData.PresetAttribute1 > 0)
-                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy);
+            var transaction = BuiltinHandlerRuntimeScope.Current?.EffectSideEffects;
+            if (transaction?.IsActive == true)
+            {
+                if (HasAssignedAttribute(templateData.PresetAttribute0))
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute0, fx);
+                if (HasAssignedAttribute(templateData.PresetAttribute1))
+                    transaction.StageAttributeAdd(context.Target, templateData.PresetAttribute1, fy);
+                return;
+            }
+
+            if (HasAssignedAttribute(templateData.PresetAttribute0))
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx, BuiltinHandlerRuntimeScope.Current?.TagOps);
+            if (HasAssignedAttribute(templateData.PresetAttribute1))
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy, BuiltinHandlerRuntimeScope.Current?.TagOps);
         }
 
         public static void HandleSpatialQuery(
@@ -89,10 +155,14 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -113,10 +183,18 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.FanOutBudget == null)
             {
-                return;
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = runtime.ResolvedCandidateCount;
@@ -125,7 +203,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -136,10 +213,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -150,10 +225,22 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.SpatialQueries == null || runtime.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            var runtime = RequireHandlerRuntime();
+            if (runtime.SpatialQueries == null)
             {
-                return;
+                throw new InvalidOperationException(MissingSpatialQueriesError);
+            }
+            if (runtime.FanOutBudget == null)
+            {
+                throw new InvalidOperationException(MissingFanOutBudgetError);
+            }
+            if (runtime.FanOutCommands == null)
+            {
+                throw new InvalidOperationException(MissingFanOutCommandsError);
+            }
+            if (runtime.ResolverBuffer == null)
+            {
+                throw new InvalidOperationException(MissingResolverBufferError);
             }
 
             int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
@@ -169,7 +256,6 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
-            int dropped = 0;
             TargetResolverFanOutHelper.ValidateAndCollect(
                 world,
                 in context,
@@ -180,10 +266,8 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.ResolverBuffer,
                 candidateCount,
                 runtime.FanOutBudget,
-                runtime.FanOutCommands,
-                ref dropped);
+                runtime.FanOutCommands);
 
-            runtime.AddDropped(dropped);
             runtime.ClearResolvedCandidates();
         }
 
@@ -219,6 +303,11 @@ namespace Ludots.Core.Gameplay.GAS
                 hasTargetPoint,
                 targetPointCm,
                 out var direction);
+            if (proj.TravelMode == ProjectileTravelMode.Direction && !hasDirection)
+            {
+                throw new InvalidOperationException(
+                    $"CreateProjectile direction mode requires a resolvable direction: source={context.Source.Id}, target={context.Target.Id}.");
+            }
 
             var request = new RuntimeEntitySpawnRequest
             {
@@ -257,7 +346,11 @@ namespace Ludots.Core.Gameplay.GAS
                 request.HasWorldPosition = 1;
             }
 
-            if (!runtime.SpawnRequests.TryEnqueue(request))
+            if (runtime.EffectSideEffects?.IsActive == true)
+            {
+                runtime.EffectSideEffects.StageSpawnRequest(in request);
+            }
+            else if (!runtime.SpawnRequests.TryEnqueue(request))
             {
                 throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateProjectile.");
             }
@@ -311,7 +404,11 @@ namespace Ludots.Core.Gameplay.GAS
                     LinkSourceAsParent = (byte)(unit.LinkSourceAsParent ? 1 : 0),
                 };
 
-                if (!runtime.SpawnRequests.TryEnqueue(request))
+                if (runtime.EffectSideEffects?.IsActive == true)
+                {
+                    runtime.EffectSideEffects.StageSpawnRequest(in request);
+                }
+                else if (!runtime.SpawnRequests.TryEnqueue(request))
                 {
                     throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateUnit.");
                 }
@@ -325,6 +422,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleApplyDisplacement));
             if (!world.IsAlive(context.Target)) return;
 
             ref readonly var disp = ref templateData.Displacement;
@@ -353,22 +451,66 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
 
-            EntityCreationHelper.CreateDisplacement(world,
-                new DisplacementState
+            var replacement = new DisplacementState
+            {
+                TargetEntity = context.Target,
+                SourceEntity = context.Source,
+                DirectionTargetEntity = directionTargetEntity,
+                DirectionMode = disp.DirectionMode,
+                FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
+                TargetPointCm = targetPointCm,
+                HasTargetPoint = hasTargetPoint,
+                TotalDistanceCm = disp.TotalDistanceCm,
+                RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
+                TotalDurationTicks = disp.TotalDurationTicks,
+                RemainingTicks = disp.TotalDurationTicks,
+                OverrideNavigation = disp.OverrideNavigation,
+            };
+
+            // 叠加位移合同 = 替换：同一目标已有活跃位移时，用新位移段就地覆写预算与方向，
+            // 不新建第二个状态（两个驱动者写同一实体位姿从根上被禁止）。写权窗口保持打开，
+            // 时钟由位移系统在写权确认后刷新——上限约束单段位移而非连锁累计。
+            if (TryReplaceActiveDisplacement(world, in replacement)) return;
+
+            EntityCreationHelper.CreateDisplacement(world, replacement);
+        }
+
+        private static readonly QueryDescription _activeDisplacementQuery =
+            new QueryDescription().WithAll<DisplacementState>();
+
+        private static bool TryReplaceActiveDisplacement(World world, in DisplacementState replacement)
+        {
+            Entity target = replacement.TargetEntity;
+            DisplacementState next = replacement;
+            bool replaced = false;
+            bool clearSuppression = false;
+            var query = _activeDisplacementQuery;
+            world.Query(in query, (ref DisplacementState state) =>
+            {
+                if (replaced || state.TargetEntity != target)
                 {
-                    TargetEntity = context.Target,
-                    SourceEntity = context.Source,
-                    DirectionTargetEntity = directionTargetEntity,
-                    DirectionMode = disp.DirectionMode,
-                    FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
-                    TargetPointCm = targetPointCm,
-                    HasTargetPoint = hasTargetPoint,
-                    TotalDistanceCm = disp.TotalDistanceCm,
-                    RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
-                    TotalDurationTicks = disp.TotalDurationTicks,
-                    RemainingTicks = disp.TotalDurationTicks,
-                    OverrideNavigation = disp.OverrideNavigation,
-                });
+                    return;
+                }
+
+                // 旧位移段可能压制了移动输入而新段不再压制：标记撤销，
+                // 结构变更留到查询之外执行。
+                bool oldSuppressionApplied = state.MovementSuppressionApplied;
+                bool poseWindowRequested = state.PoseWindowRequested;
+                clearSuppression = oldSuppressionApplied && !next.OverrideNavigation;
+
+                state = next;
+                state.PoseWindowRequested = poseWindowRequested;
+                state.WindowRefreshRequested = poseWindowRequested;
+                state.MovementSuppressionApplied = oldSuppressionApplied && !clearSuppression;
+                replaced = true;
+            });
+
+            if (clearSuppression && world.IsAlive(target) && world.Has<MovementSuppressed2D>(target))
+            {
+                world.Remove<MovementSuppressed2D>(target);
+            }
+
+            return replaced;
         }
 
         public static void HandleApplyRelation(
@@ -380,9 +522,27 @@ namespace Ludots.Core.Gameplay.GAS
         {
             ref readonly var relation = ref templateData.Relation;
             Entity subject = ResolveRelationEntity(in context, relation.Subject);
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.EffectSideEffects?.IsActive == true)
+            {
+                if (relation.Operation != RelationOperation.SetParent)
+                {
+                    throw new InvalidOperationException(
+                        $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
+                }
+
+                Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                runtime.EffectSideEffects.StageSetParent(
+                    subject,
+                    stagedParent,
+                    relation.SnapSubjectToParentPosition);
+                return;
+            }
+
             if (!world.IsAlive(subject))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"GAS.RELATION.ERR.SubjectInvalid: entity={subject.Id}.");
             }
 
             switch (relation.Operation)
@@ -392,7 +552,13 @@ namespace Ludots.Core.Gameplay.GAS
                     Entity parent = ResolveRelationEntity(in context, relation.Parent);
                     if (!world.IsAlive(parent))
                     {
-                        return;
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={parent.Id}.");
+                    }
+                    if (relation.SnapSubjectToParentPosition && !world.Has<WorldPositionCm>(parent))
+                    {
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentPositionMissing: entity={parent.Id}.");
                     }
 
                     RelationOps.SetParent(world, subject, parent);
@@ -410,10 +576,10 @@ namespace Ludots.Core.Gameplay.GAS
                     Entity target = ResolveRelationEntity(in context, relation.Parent);
                     if (!world.IsAlive(target))
                     {
-                        return;
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={target.Id}.");
                     }
 
-                    var runtime = BuiltinHandlerRuntimeScope.Current;
                     if (runtime?.Relationships == null)
                     {
                         throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
@@ -427,7 +593,28 @@ namespace Ludots.Core.Gameplay.GAS
                     runtime.Relationships.EnsureLink(subject, target, relation.RelationshipTypeId);
                     break;
                 }
+                default:
+                    throw new InvalidOperationException(
+                        $"GAS.RELATION.ERR.UnsupportedOperation: operation={relation.Operation}.");
             }
+        }
+
+        private static EffectOperationMetadata ResolveApplyRelationOperationMetadata(
+            in EffectTemplateData templateData)
+        {
+            return templateData.Relation.Operation switch
+            {
+                RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
+                RelationOperation.RemoveParent => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.RemoveParent"),
+                RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.EnsureLink"),
+                _ => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.Invalid"),
+            };
         }
 
         public static void HandleRevealArea(
@@ -437,6 +624,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleRevealArea));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.KnowledgeAreaReveal == null)
             {
@@ -463,6 +651,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleDecayRevealArea));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.KnowledgeAreaReveal == null)
             {
@@ -489,6 +678,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleExecuteExchange));
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.Exchange == null)
             {
@@ -524,6 +714,7 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleCompleteProgression));
             if (templateData.ProgressionId <= 0)
             {
                 throw new InvalidOperationException("CompleteProgression requires a valid progression id.");
@@ -557,12 +748,14 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
+            RejectNonTransactionalPersistentSideEffect(nameof(HandleSubmitOrderFromBlackboard));
             ref readonly SubmitOrderFromBlackboardDescriptor descriptor = ref templateData.SubmitOrderFromBlackboard;
             Entity sourceEntity = ResolveRelationEntity(in context, descriptor.SourceSlot);
             Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);
             if (!world.IsAlive(sourceEntity) || !world.IsAlive(orderActor))
             {
-                return;
+                throw new InvalidOperationException(
+                    "SubmitOrderFromBlackboard requires live source and order actor entities.");
             }
 
             if (!BlackboardStoredTargetOps.TryRead(world, sourceEntity, in descriptor.StoredTargetKeys, out BlackboardStoredTargetSnapshot storedTarget) ||
@@ -576,61 +769,61 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 throw new InvalidOperationException("SubmitOrderFromBlackboard requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
             }
+            if (runtime.OrderIntake == null)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires the formal OrderQueue intake in BuiltinHandlerExecutionContext.");
+            }
 
             if (runtime.StepRateHz <= 0)
             {
                 throw new InvalidOperationException("SubmitOrderFromBlackboard requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
             }
 
-            if (!TryBuildOrderFromStoredTarget(
-                    in storedTarget,
-                    in descriptor,
-                    orderActor,
-                    ResolvePlayerId(world, orderActor),
-                    runtime.OrderTypeRegistry,
-                    out Order order))
-            {
-                return;
-            }
+            Order order = BuildOrderFromStoredTarget(
+                in storedTarget,
+                in descriptor,
+                orderActor,
+                ResolvePlayerId(world, orderActor));
 
             if (!world.Has<OrderBuffer>(orderActor))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"SubmitOrderFromBlackboard requires OrderBuffer on order actor entity {orderActor.Id}.");
             }
 
-            OrderSubmitter.Submit(
-                world,
-                orderActor,
-                in order,
-                runtime.OrderTypeRegistry,
-                runtime.OrderRuleRegistry,
-                runtime.CurrentStep,
-                runtime.StepRateHz);
+            OrderSubmitResult result = runtime.OrderIntake.SubmitAssigned(ref order);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                throw new InvalidOperationException(
+                    $"SubmitOrderFromBlackboard intake rejected order {order.OrderId} with result '{result}'.");
+            }
         }
 
-        private static bool TryBuildOrderFromStoredTarget(
+        private static Order BuildOrderFromStoredTarget(
             in BlackboardStoredTargetSnapshot storedTarget,
             in SubmitOrderFromBlackboardDescriptor descriptor,
             Entity orderActor,
-            int playerId,
-            OrderTypeRegistry orderTypeRegistry,
-            out Order order)
+            int playerId)
         {
-            order = default;
             switch (storedTarget.Kind)
             {
                 case BlackboardStoredTargetKind.Point:
                 case BlackboardStoredTargetKind.HexCell:
-                    if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
-                        !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
-                        !BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
+                    if (descriptor.PointMoveOrderTypeId <= 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard requires a positive point move order type id compiled at load time.");
                     }
 
-                    order = new Order
+                    if (!BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
                     {
-                        OrderTypeId = pointMoveOrderTypeId,
+                        throw new InvalidOperationException(
+                            $"SubmitOrderFromBlackboard cannot resolve world position for stored target kind '{storedTarget.Kind}'.");
+                    }
+
+                    return new Order
+                    {
+                        OrderTypeId = descriptor.PointMoveOrderTypeId,
                         PlayerId = playerId,
                         Actor = orderActor,
                         SubmitMode = descriptor.SubmitMode,
@@ -644,29 +837,33 @@ namespace Ludots.Core.Gameplay.GAS
                             },
                         },
                     };
-                    return true;
 
                 case BlackboardStoredTargetKind.Entity:
-                    if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
-                        !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
-                        storedTarget.TargetEntity == Entity.Null)
+                    if (descriptor.EntityOrderTypeId <= 0)
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard requires a positive entity order type id compiled at load time.");
                     }
 
-                    order = new Order
+                    if (storedTarget.TargetEntity == Entity.Null)
                     {
-                        OrderTypeId = entityOrderTypeId,
+                        throw new InvalidOperationException(
+                            "SubmitOrderFromBlackboard entity stored target requires a non-null target entity.");
+                    }
+
+                    return new Order
+                    {
+                        OrderTypeId = descriptor.EntityOrderTypeId,
                         PlayerId = playerId,
                         Actor = orderActor,
                         Target = storedTarget.TargetEntity,
                         SubmitMode = descriptor.SubmitMode,
                         Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
                     };
-                    return true;
 
                 default:
-                    return false;
+                    throw new InvalidOperationException(
+                        $"SubmitOrderFromBlackboard does not support stored target kind '{storedTarget.Kind}'.");
             }
         }
 

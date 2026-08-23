@@ -1,6 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
-using System.Numerics;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -11,34 +13,126 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public class TagOps
     {
+        public const string TagCountOverflowError = "GAS.TAG.ERR.TagCountOverflow";
+        public const string RuleRejectedError = "GAS.TAG.ERR.RuleRejected";
+        public const string MissingTagOpsError = "GAS.TAG.ERR.MissingTagOps";
+        public const string MissingGameplayTagContainerError = "GAS.TAG.ERR.MissingGameplayTagContainer";
+        public const string MissingTagCountContainerError = "GAS.TAG.ERR.MissingTagCountContainer";
+        public const string MissingDirtyFlagsError = "GAS.TAG.ERR.MissingDirtyFlags";
 
         private readonly TagRuleRegistry _rules;
         private readonly TagRuleTransaction _transaction;
         private readonly GasBudget _budget;
+        private readonly DirtyEntityQueue _dirtyEntities;
+        private readonly Dictionary<int, TagRuleSet> _authoredRuleSets = new();
 
-        public TagOps() : this(new TagRuleRegistry(), budget: null) { }
-
-        public TagOps(TagRuleRegistry rules, GasBudget budget = null)
+        public TagOps(DirtyEntityQueue dirtyEntities, TagRuleRegistry rules, GasBudget budget = null)
         {
-            _rules = rules;
+            _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _transaction = new TagRuleTransaction();
             _budget = budget;
+            _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
         }
 
         /// <summary>
         /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
         /// </summary>
         public TagRuleRegistry Rules => _rules;
+        public DirtyEntityQueue DirtyEntities => _dirtyEntities;
+
+        public void MarkDirtyEntity(World world, Entity entity)
+        {
+            _dirtyEntities.Track(world, entity);
+        }
+
+        public bool AddTag(World world, Entity entity, int tagId)
+        {
+            RequireTagState(world, entity);
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirty;
+            try
+            {
+                bool changed = AddTag(ref tags, ref counts, tagId, ref dirty);
+                if (changed) _dirtyEntities.Track(world, entity);
+                return changed;
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        public bool RemoveTag(World world, Entity entity, int tagId)
+        {
+            RequireTagState(world, entity);
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
+            GameplayTagContainer tagsBefore = tags;
+            TagCountContainer countsBefore = counts;
+            DirtyFlags dirtyBefore = dirty;
+            try
+            {
+                bool changed = RemoveTag(ref tags, ref counts, tagId, ref dirty);
+                if (changed) _dirtyEntities.Track(world, entity);
+                return changed;
+            }
+            catch
+            {
+                tags = tagsBefore;
+                counts = countsBefore;
+                dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        public static void RequireTagState(World world, Entity entity)
+        {
+            if (!world.IsAlive(entity)) throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
+            if (!world.Has<GameplayTagContainer>(entity)) throw new InvalidOperationException(MissingGameplayTagContainerError);
+            if (!world.Has<TagCountContainer>(entity)) throw new InvalidOperationException(MissingTagCountContainerError);
+            if (!world.Has<DirtyFlags>(entity)) throw new InvalidOperationException(MissingDirtyFlagsError);
+        }
 
         public void ClearRuleRegistry()
         {
             _rules.Clear();
+            _authoredRuleSets.Clear();
         }
 
         public void RegisterTagRuleSet(int tagId, TagRuleSet ruleSet)
         {
             _rules.Register(tagId, ruleSet);
+            _authoredRuleSets[tagId] = ruleSet;
         }
+
+        /// <summary>
+        /// NextCast-safe replace for an already-registered tag rule identity.
+        /// New tag ids (no live rule) require EngineRestart — not hot-applied.
+        /// </summary>
+        public void ReplaceTagRuleSet(int tagId, TagRuleSet ruleSet)
+        {
+            if (!_rules.HasRule(tagId))
+            {
+                throw new InvalidOperationException(
+                    $"Tag rule id {tagId} is not registered; cannot ReplaceTagRuleSet (new tag identities require EngineRestart).");
+            }
+
+            _rules.Register(tagId, ruleSet);
+            _authoredRuleSets[tagId] = ruleSet;
+        }
+
+        public bool TryGetAuthoredRuleSet(int tagId, out TagRuleSet ruleSet)
+            => _authoredRuleSets.TryGetValue(tagId, out ruleSet);
+
+        public bool HasTagRule(int tagId) => _rules.HasRule(tagId);
 
         public bool HasTag(ref GameplayTagContainer tagContainer, int tagId, TagSense sense)
         {
@@ -89,19 +183,19 @@ namespace Ludots.Core.Gameplay.GAS
 
         // ── Public API: without DirtyFlags ──
 
-        public unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
+        internal unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return AddTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
 
-        public unsafe bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
+        internal unsafe bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return RemoveTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
 
         // ── Public API: with DirtyFlags ──
 
-        public bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
+        internal bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
             unsafe
             {
@@ -112,7 +206,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        public bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
+        internal bool RemoveTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
             unsafe
             {
@@ -127,6 +221,24 @@ namespace Ludots.Core.Gameplay.GAS
 
         private unsafe bool AddTagCore(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
+            GameplayTagContainer tagsBefore = tagContainer;
+            TagCountContainer countsBefore = countContainer;
+            DirtyFlags dirtyBefore = dirty == null ? default : *dirty;
+            try
+            {
+                return AddTagCoreTransactional(ref tagContainer, ref countContainer, tagId, dirty);
+            }
+            catch
+            {
+                tagContainer = tagsBefore;
+                countContainer = countsBefore;
+                if (dirty != null) *dirty = dirtyBefore;
+                throw;
+            }
+        }
+
+        private unsafe bool AddTagCoreTransactional(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
+        {
             if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
                 throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {TagRuleRegistry.MaxCoreTags - 1}].");
 
@@ -135,7 +247,7 @@ namespace Ludots.Core.Gameplay.GAS
                 if (!countContainer.AddCount(tagId, 1))
                 {
                     if (_budget != null) _budget.TagCountOverflowDropped++;
-                    throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                    throw new InvalidOperationException(TagCountOverflowError);
                 }
                 MarkDirty(dirty, tagId);
                 return true;
@@ -146,7 +258,7 @@ namespace Ludots.Core.Gameplay.GAS
                 if (!countContainer.AddCount(tagId, 1))
                 {
                     if (_budget != null) _budget.TagCountOverflowDropped++;
-                    throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                    throw new InvalidOperationException(TagCountOverflowError);
                 }
                 tagContainer.AddTag(tagId);
                 MarkDirty(dirty, tagId);
@@ -198,7 +310,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (!countContainer.AddCount(tagId, 1))
             {
                 if (_budget != null) _budget.TagCountOverflowDropped++;
-                throw new InvalidOperationException("GAS.TAG.ERR.TagCountOverflow");
+                throw new InvalidOperationException(TagCountOverflowError);
             }
             tagContainer.AddTag(tagId);
             MarkDirty(dirty, tagId);

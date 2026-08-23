@@ -32,6 +32,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Vision;
 using Ludots.Core.Vision.Config;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -44,12 +45,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_FogLayers");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "Vision"));
+                Directory.CreateDirectory(Path.Combine(root, "Vision"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""Vision/fog_layers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Vision", "fog_layers.json"),
+                    Path.Combine(root, "Vision", "fog_layers.json"),
                     @"[
   { ""id"": ""ground"", ""cellSizeCm"": 100, ""updateHz"": 10 },
   { ""id"": ""detection"", ""cellSizeCm"": 125, ""updateHz"": 5 }
@@ -111,7 +112,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RevealAreaPreset_ExecutesApplyAndRemoveThroughPhaseExecutor()
+        public void RevealAreaMainGraphs_ExecuteApplyAndRemoveThroughPhaseExecutor()
         {
             using World world = World.Create();
             var layers = new FogLayerRegistry();
@@ -128,10 +129,31 @@ namespace Ludots.Tests.GAS
                 new FogOccupantCm { ExposeLayerMask = groundMask });
 
             var presetTypes = new PresetTypeRegistry();
-            var revealPreset = new PresetTypeDefinition { Type = EffectPresetType.RevealArea };
-            revealPreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.RevealArea);
-            revealPreset.DefaultPhaseHandlers[EffectPhaseId.OnRemove] = PhaseHandler.Builtin(BuiltinHandlerId.DecayRevealArea);
-            presetTypes.Register(in revealPreset);
+            var programs = new GraphProgramRegistry();
+            const int revealGraphId = 5901;
+            const int decayGraphId = 5902;
+            programs.Register(revealGraphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.RevealArea
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+            ], GraphKind.Effect);
+            programs.Register(decayGraphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.DecayRevealArea
+                },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+            ], GraphKind.Effect);
+
+            var behavior = new EffectPhaseGraphBindings();
+            Assert.That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, revealGraphId), Is.True);
+            Assert.That(behavior.TryAddStep(EffectPhaseId.OnRemove, PhaseSlot.Main, decayGraphId), Is.True);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
@@ -139,14 +161,14 @@ namespace Ludots.Tests.GAS
             const int templateId = 590;
             templates.Register(templateId, new EffectTemplateData
             {
-                PresetType = EffectPresetType.RevealArea,
+                PresetType = EffectPresetType.None,
                 RevealArea = new KnowledgeAreaRevealDescriptor(1, radiusCm: 150, stackalloc[] { ground }, memoryTtlTicks: 30)
             });
             var executor = new EffectPhaseExecutor(
-                new GraphProgramRegistry(),
+                programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -162,8 +184,8 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 default,
                 EffectPhaseId.OnApply,
-                default,
-                EffectPresetType.RevealArea,
+                behavior,
+                EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
@@ -180,8 +202,8 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 default,
                 EffectPhaseId.OnRemove,
-                default,
-                EffectPresetType.RevealArea,
+                behavior,
+                EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
@@ -193,22 +215,30 @@ namespace Ludots.Tests.GAS
         [Test]
         public void EffectTemplateLoader_RevealArea_CompilesRegisteredScopeAndFogLayers()
         {
+            GraphIdRegistry.Clear();
+            int revealGraphId = GraphIdRegistry.Register("Graph.Vision.RevealArea");
+            int decayGraphId = GraphIdRegistry.Register("Graph.Vision.DecayRevealArea");
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaEffect");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
-    ""presetType"": ""RevealArea"",
+    ""presetType"": ""None"",
     ""lifetime"": ""After"",
     ""duration"": { ""durationTicks"": 30, ""periodTicks"": 5, ""clockId"": ""FixedFrame"" },
     ""participatesInResponse"": true,
+    ""phaseGraphs"": {
+      ""OnApply"": { ""main"": ""Graph.Vision.RevealArea"" },
+      ""OnPeriod"": { ""main"": ""Graph.Vision.RevealArea"" },
+      ""OnRemove"": { ""main"": ""Graph.Vision.DecayRevealArea"" }
+    },
     ""revealArea"": {
       ""radius"": 600,
       ""scope"": ""team"",
@@ -238,7 +268,9 @@ namespace Ludots.Tests.GAS
                 Assert.That(templateId, Is.GreaterThan(0));
                 Assert.That(templates.TryGetRef(templateId, out int index), Is.True);
                 ref readonly EffectTemplateData template = ref templates.GetRef(index);
-                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.RevealArea));
+                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.None));
+                Assert.That(template.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnApply, PhaseSlot.Main), Is.EqualTo(revealGraphId));
+                Assert.That(template.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnRemove, PhaseSlot.Main), Is.EqualTo(decayGraphId));
                 Assert.That(template.RevealArea.RadiusCm, Is.EqualTo(600));
                 Assert.That(template.RevealArea.ScopeKeyId, Is.EqualTo(scopes.GetId("team")));
                 Assert.That(template.RevealArea.LayerCount, Is.EqualTo(2));
@@ -249,6 +281,7 @@ namespace Ludots.Tests.GAS
             }
             finally
             {
+                GraphIdRegistry.Clear();
                 TryDeleteDirectory(root);
             }
         }
@@ -256,21 +289,26 @@ namespace Ludots.Tests.GAS
         [Test]
         public void EffectTemplateLoader_RevealArea_FailsFastForUnregisteredFogLayer()
         {
+            GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.Vision.RevealArea");
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaMissingLayer");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""hero_reveal"",
-    ""presetType"": ""RevealArea"",
+    ""presetType"": ""None"",
     ""lifetime"": ""Instant"",
     ""participatesInResponse"": true,
+    ""phaseGraphs"": {
+      ""OnApply"": { ""main"": ""Graph.Vision.RevealArea"" }
+    },
     ""revealArea"": {
       ""radius"": 600,
       ""scope"": ""team"",
@@ -297,6 +335,7 @@ namespace Ludots.Tests.GAS
             }
             finally
             {
+                GraphIdRegistry.Clear();
                 TryDeleteDirectory(root);
             }
         }
@@ -334,7 +373,7 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var runtime = new BuiltinHandlerExecutionContext { Relationships = relationships };
 
@@ -361,12 +400,12 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot("Ludots_Issue590_RelationEnsureLink");
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    Path.Combine(root, "config_catalog.json"),
                     @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    Path.Combine(root, "GAS", "effects.json"),
                     @"[
   {
     ""id"": ""capture_link"",
@@ -474,10 +513,9 @@ namespace Ludots.Tests.GAS
                 }
             };
             var service = new CapturingSpatialQueryService(resolved);
-            var commands = new List<FanOutCommand>();
+            var commands = new FanOutCommandBuffer(capacity: 4);
             var budget = new RootBudgetTable(16);
             Entity[] buffer = new Entity[4];
-            int dropped = 0;
 
             TargetResolverFanOutHelper.CollectFanOutTargets(
                 world,
@@ -488,8 +526,7 @@ namespace Ludots.Tests.GAS
                 service,
                 budget,
                 commands,
-                buffer,
-                ref dropped);
+                buffer);
 
             var queue = new EffectRequestQueue();
             TargetResolverFanOutHelper.PublishFanOutCommands(commands, queue);
@@ -502,6 +539,42 @@ namespace Ludots.Tests.GAS
             Assert.That(request.Source, Is.EqualTo(source));
             Assert.That(request.Target, Is.EqualTo(resolved));
             Assert.That(request.TargetContext, Is.EqualTo(originalTarget));
+        }
+
+        [Test]
+        public void SearchDispatch_FailsBeforeGrowingBeyondConfiguredCommandCapacity()
+        {
+            using World world = World.Create();
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity firstTarget = world.Create(WorldPositionCm.FromCm(100, 0));
+            Entity secondTarget = world.Create(WorldPositionCm.FromCm(200, 0));
+            var context = new EffectContext { RootId = 9, Source = source, Target = firstTarget };
+            var query = new TargetQueryDescriptor();
+            var filter = new TargetFilterDescriptor { RelationFilter = RelationshipFilter.All };
+            var dispatch = new TargetDispatchDescriptor
+            {
+                PayloadEffectTemplateId = 777,
+                ContextMapping = TargetResolverContextMapping.Default,
+            };
+            Entity[] candidates = { firstTarget, secondTarget };
+            var commands = new FanOutCommandBuffer(capacity: 1);
+            var budget = new RootBudgetTable(16);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                TargetResolverFanOutHelper.ValidateAndCollect(
+                    world,
+                    in context,
+                    in query,
+                    in filter,
+                    in dispatch,
+                    candidates,
+                    candidates.Length,
+                    budget,
+                    commands))!;
+
+            Assert.That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
+            Assert.That(commands, Has.Count.EqualTo(1));
+            Assert.That(commands.Capacity, Is.EqualTo(1));
         }
 
         [Test]

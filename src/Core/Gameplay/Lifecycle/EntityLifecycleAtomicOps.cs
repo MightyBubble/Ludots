@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -20,7 +21,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
             string templateId,
             Fix64Vec2 positionCm)
         {
-            services.RequireTemplate(templateId);
+            EntityTemplate template = services.RequireTemplate(templateId);
             World world = services.World;
             Entity entity = services.Builder
                 .UseTemplate(templateId)
@@ -35,7 +36,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
 
             ApplyWorldPosition(world, entity, positionCm);
             RuntimeEntityMapOwnershipSupport.TryCopyMapEntityFromSource(world, source, entity);
-            services.PerformerBootstrap.TryBootstrap(entity, templateId);
+            services.PresenterBootstrap.TryBootstrap(entity, templateId);
+            services.EntityTriggerGraphMounts?.MountRuntimeSpawned(entity, templateId, template.TriggerGraphs);
             return entity;
         }
 
@@ -67,11 +69,12 @@ namespace Ludots.Core.Gameplay.Lifecycle
         }
 
         public static void CopyAttributeSlice(
-            World world,
+            EntityLifecycleRuntimeServices services,
             Entity target,
             in LifecycleSnapshot snapshot,
             LifecycleTransactionState state)
         {
+            World world = services.World;
             if (state.AttributeSliceCount == 0)
             {
                 throw new InvalidOperationException("CopyAttributeSlice requires at least one configured lifecycle attribute slice.");
@@ -112,7 +115,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                     LifecycleAttributeValueSource.Current => snapshot.Attributes.GetCurrent(attributeId),
                     _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{state.AttributeSliceSource}'."),
                 };
-                AttributeMutationOps.SetBase(world, target, attributeId, value);
+                AttributeMutationOps.SetBase(world, target, attributeId, value, services.TagOps);
             }
         }
 

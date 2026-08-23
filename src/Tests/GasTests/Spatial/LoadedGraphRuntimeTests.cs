@@ -9,6 +9,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -18,7 +19,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void LoadedGraphRuntime_RebuildsLoadedView_AndProjectsNearestNode()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 2);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
 
@@ -39,7 +40,7 @@ namespace Ludots.Tests.GAS
 
             loadedChunks.SetLoaded(aKey, loaded: true);
             Assert.That(runtime.CurrentGraph.NodeCount, Is.EqualTo(2));
-            Assert.That(runtime.TryFindNearestNode(new Ludots.Core.Mathematics.WorldCmInt2(30, 20), 400, out int nodeIdA, out _), Is.True);
+            Assert.That(runtime.TryFindNearestNode(new Ludots.Platform.Abstractions.WorldCmInt2(30, 20), 400, out int nodeIdA, out _), Is.True);
             Assert.That(nodeIdA, Is.EqualTo(0));
 
             loadedChunks.SetLoaded(bKey, loaded: true);
@@ -48,14 +49,14 @@ namespace Ludots.Tests.GAS
             loadedChunks.SetLoaded(aKey, loaded: false);
             Assert.That(store.TryGetChunk(aKey, out _), Is.False, "Chunk store should follow unload lifecycle.");
             Assert.That(runtime.CurrentGraph.NodeCount, Is.EqualTo(1));
-            Assert.That(runtime.TryFindNearestNode(new Ludots.Core.Mathematics.WorldCmInt2(1490, 0), 200, out int nodeIdB, out _), Is.True);
+            Assert.That(runtime.TryFindNearestNode(new Ludots.Platform.Abstractions.WorldCmInt2(1490, 0), 200, out int nodeIdB, out _), Is.True);
             Assert.That(nodeIdB, Is.EqualTo(0));
         }
 
         [Test]
         public void AutoPathService_RuntimeBackedGraph_RefreshesProjectionAndPathingFromLoadedChunks()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 2);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
 

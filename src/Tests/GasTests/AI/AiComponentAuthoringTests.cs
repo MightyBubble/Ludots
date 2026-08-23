@@ -9,9 +9,12 @@ using CombatStanceBehaviorMod.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -249,6 +252,7 @@ namespace Ludots.Tests.GAS
             public FunctionRegistry FunctionRegistry => null!;
             public SystemFactoryRegistry SystemFactoryRegistry => null!;
             public TriggerDecoratorRegistry TriggerDecorators => null!;
+            public IModExtensionRegistration Extensions { get; } = RejectingModExtensionRegistration.Instance;
             public LogChannel LogChannel => default;
 
             public void OnEvent(EventKey eventKey, Func<ScriptContext, Task> handler)
@@ -266,6 +270,62 @@ namespace Ludots.Tests.GAS
             public Stream GetResource(string uri)
             {
                 throw new NotSupportedException();
+            }
+        }
+
+        private sealed class RejectingModExtensionRegistration : IModExtensionRegistration
+        {
+            public static readonly RejectingModExtensionRegistration Instance = new();
+
+            private RejectingModExtensionRegistration()
+            {
+            }
+
+            public IGasModExtensionRegistration Gas { get; } = new RejectingGasRegistration();
+            public IPresentationModExtensionRegistration Presentation { get; } = new RejectingPresentationRegistration();
+
+            private sealed class RejectingGasRegistration : IGasModExtensionRegistration
+            {
+                public int RegisterBuiltinHandler(string key, BuiltinHandlerFn handler, in EffectOperationMetadata operationMetadata)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterGraphOp(
+                    string key,
+                    GraphValueType outputType,
+                    GasGraphOpHandler handler,
+                    params GraphValueType[] inputTypes)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterGraphOp(
+                    string key,
+                    GraphValueType outputType,
+                    byte? fixedRegister,
+                    GasGraphOpHandler handler,
+                    params GraphValueType[] inputTypes)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+            }
+
+            private sealed class RejectingPresentationRegistration : IPresentationModExtensionRegistration
+            {
+                public int RegisterPerformerCommand(
+                    string key,
+                    in PerformerCommandExtensionDescriptor descriptor)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterPerformerBehavior(
+                    string key,
+                    in PerformerBehaviorExtensionDescriptor descriptor)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
             }
         }
     }

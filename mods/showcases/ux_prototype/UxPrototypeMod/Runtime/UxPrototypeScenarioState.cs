@@ -6,20 +6,31 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using UxPrototypeMod.UI;
+using Ludots.Platform.Abstractions;
 
 namespace UxPrototypeMod.Runtime;
 
 internal sealed class UxPrototypeScenarioState
 {
+    private const int ShowcaseLocalPlayerId = 1;
+    private const int LiveKnowledgeConfidencePermille = 1000;
+
     private static readonly QueryDescription PrototypeEntityQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm, MapEntity>();
+
+    private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription()
+        .WithAll<CommandSourceSelectableTag, MapEntity>();
 
     private readonly Dictionary<int, ProductionLaneState> _production = new();
     private readonly List<ConstructionState> _construction = new();
@@ -75,6 +86,8 @@ internal sealed class UxPrototypeScenarioState
         }
 
         ResetForMap(mapId);
+        Entity localPlayer = RequirePrototypeSolePossessedRep(engine, mapId);
+        PublishSelectableKnowledge(engine, mapId, localPlayer);
         SeedRallyPoints(engine, mapId);
         AddEvent("War council convened around the eastern pass.");
         AddEvent("Alliance envoy arrived from the southern fort.");
@@ -137,6 +150,8 @@ internal sealed class UxPrototypeScenarioState
         }
 
         EnsureInitialized(engine, mapId!);
+        Entity localPlayer = RequirePrototypeSolePossessedRep(engine, mapId!);
+        PublishSelectableKnowledge(engine, mapId!, localPlayer);
         float speedMultiplier = _paused ? 0f : _speedIndex switch
         {
             0 => 1f,
@@ -156,6 +171,57 @@ internal sealed class UxPrototypeScenarioState
         AdvanceNavmeshBake(scaledDt);
         AdvanceEconomy(engine, scaledDt);
         AdvanceSkillCooldowns(scaledDt);
+    }
+
+    private static Entity RequirePrototypeSolePossessedRep(GameEngine engine, string activeMapId)
+    {
+        Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        if (!engine.World.IsAlive(possessed) ||
+            !engine.World.TryGet(possessed, out PlayerOwner owner) ||
+            !engine.World.TryGet(possessed, out MapEntity mapEntity) ||
+            owner.PlayerId != ShowcaseLocalPlayerId ||
+            !string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "UxPrototypeMod requires sole ClientLocalSeat possession of map playerId 1 from launchContext.localSeats / startupLocalSeats.");
+        }
+
+        return possessed;
+    }
+
+    private static void PublishSelectableKnowledge(GameEngine engine, string activeMapId, Entity viewer)
+    {
+        if (viewer == Entity.Null || !engine.World.IsAlive(viewer))
+        {
+            throw new InvalidOperationException("UxPrototypeMod requires a live local player before publishing selectable visibility.");
+        }
+
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("UxPrototypeMod requires KnowledgeProjectionStore before publishing selectable visibility.");
+        var empty = KnowledgeIdMask256.Empty;
+        int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+        engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
+        {
+            if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            knowledge.Upsert(
+                viewer,
+                target,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    empty,
+                    empty,
+                    empty,
+                    viewer,
+                    observedTick,
+                    expiryTick: 0,
+                    confidencePermille: LiveKnowledgeConfidencePermille,
+                    revision: 0));
+        });
     }
 
     public void SwitchMode(string modeId)
@@ -676,7 +742,7 @@ internal sealed class UxPrototypeScenarioState
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;

@@ -8,8 +8,8 @@ namespace Ludots.Core.Presentation.Surfaces
     public sealed class SurfaceSourceRecord
     {
         public int SourceStableId;
-        public int PerformerDefinitionId;
-        public int RenderPerformerDefinitionId;
+        public int PresenterDefinitionId;
+        public int RenderPresenterDefinitionId;
         public int ScopeId;
         public int RenderScopeId;
         public SurfaceSourceRequest Request;
@@ -17,7 +17,7 @@ namespace Ludots.Core.Presentation.Surfaces
         public int PayloadVersion;
         public int MeshAssetId;
         public Entity Entity;
-        public Entity RenderPerformerEntity;
+        public Entity RenderPresenterEntity;
         public bool Dirty = true;
         public bool PendingRemoval;
     }
@@ -27,6 +27,8 @@ namespace Ludots.Core.Presentation.Surfaces
         private readonly Dictionary<int, SurfaceSourceRecord> _records = new();
 
         public int CurrentFrame { get; private set; }
+
+        internal int Count => _records.Count;
 
         public IEnumerable<SurfaceSourceRecord> Records => _records.Values;
 
@@ -47,7 +49,7 @@ namespace Ludots.Core.Presentation.Surfaces
                 record = new SurfaceSourceRecord
                 {
                     SourceStableId = request.StableId,
-                    PerformerDefinitionId = request.PerformerDefinitionId,
+                    PresenterDefinitionId = request.PresenterDefinitionId,
                     ScopeId = request.ScopeId,
                     Request = request,
                     Payload = payload,
@@ -61,14 +63,14 @@ namespace Ludots.Core.Presentation.Surfaces
 
             record.PendingRemoval = false;
             if (record.ScopeId != request.ScopeId ||
-                record.PerformerDefinitionId != request.PerformerDefinitionId ||
+                record.PresenterDefinitionId != request.PresenterDefinitionId ||
                 record.PayloadVersion != payload.Version)
             {
                 record.Dirty = true;
             }
 
             record.ScopeId = request.ScopeId;
-            record.PerformerDefinitionId = request.PerformerDefinitionId;
+            record.PresenterDefinitionId = request.PresenterDefinitionId;
             record.Request = request;
             record.Payload = payload;
             record.PayloadVersion = payload.Version;

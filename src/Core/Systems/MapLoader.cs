@@ -9,6 +9,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -17,7 +18,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Systems
@@ -29,20 +30,21 @@ namespace Ludots.Core.Systems
         private readonly World _world;
         private readonly WorldMap _worldMap;
         private EffectRequestQueue _effectRequests;
+        private EntityTriggerGraphMounts? _entityTriggerGraphMounts;
         private TemplateEntityBatchSpawner _templateBatchSpawner;
         private PresentationStableIdAllocator _stableIds;
-        private PerformerEntityRuntime _performerRuntime;
-        private PerformerDefinitionRegistry _performerDefinitions;
-        private CompiledPerformerBootstrapRegistry _performerBootstrap;
-        private readonly Entity[] _performerBatchOwners = new Entity[TemplateBatchScratchCapacity];
-        private readonly int[] _performerBatchScopeIds = new int[TemplateBatchScratchCapacity];
-        private readonly int[] _performerBatchStableIds = new int[TemplateBatchScratchCapacity];
-        private readonly Entity[] _performerBatchCreated = new Entity[TemplateBatchScratchCapacity];
+        private PresenterEntityRuntime _presenterRuntime;
+        private PresenterDefinitionRegistry _presenterDefinitions;
+        private CompiledPresenterBootstrapRegistry _presenterBootstrap;
+        private readonly Entity[] _presenterBatchOwners = new Entity[TemplateBatchScratchCapacity];
+        private readonly int[] _presenterBatchScopeIds = new int[TemplateBatchScratchCapacity];
+        private readonly int[] _presenterBatchStableIds = new int[TemplateBatchScratchCapacity];
+        private readonly Entity[] _presenterBatchCreated = new Entity[TemplateBatchScratchCapacity];
         private readonly int[] _ownerBatchStableIds = new int[TemplateBatchScratchCapacity];
         private readonly VisualTransform[] _ownerBatchTransforms = new VisualTransform[TemplateBatchScratchCapacity];
         private readonly CullState[] _ownerBatchCulls = new CullState[TemplateBatchScratchCapacity];
         private readonly ParamDefault[][] _ownerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
-        private readonly ParamDefault[][] _performerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
+        private readonly ParamDefault[][] _presenterBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
         private ComponentAuthoringContext _authoringContext = ComponentAuthoringContext.Empty;
         
         // New Registry
@@ -64,6 +66,11 @@ namespace Ludots.Core.Systems
             _effectRequests = effectRequests;
         }
 
+        public void SetEntityTriggerGraphMounts(EntityTriggerGraphMounts entityTriggerGraphMounts)
+        {
+            _entityTriggerGraphMounts = entityTriggerGraphMounts ?? throw new ArgumentNullException(nameof(entityTriggerGraphMounts));
+        }
+
         public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
         {
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
@@ -71,15 +78,15 @@ namespace Ludots.Core.Systems
 
         public void SetPresentationRuntime(
             PresentationStableIdAllocator stableIds,
-            PerformerEntityRuntime performerRuntime,
-            PerformerDefinitionRegistry performerDefinitions,
+            PresenterEntityRuntime presenterRuntime,
+            PresenterDefinitionRegistry presenterDefinitions,
             ISpatialPartitionWorld spatialPartition,
             WorldSizeSpec worldSizeSpec)
         {
             _stableIds = stableIds;
-            _performerRuntime = performerRuntime;
-            _performerDefinitions = performerDefinitions;
-            _performerBootstrap = performerDefinitions?.BootstrapRegistry;
+            _presenterRuntime = presenterRuntime;
+            _presenterDefinitions = presenterDefinitions;
+            _presenterBootstrap = presenterDefinitions?.BootstrapRegistry;
             _templateBatchSpawner = new TemplateEntityBatchSpawner(
                 _world,
                 EntityTemplateKeys,
@@ -98,10 +105,30 @@ namespace Ludots.Core.Systems
             _templateSources.Clear();
             foreach (var template in TemplateRegistry.GetAll())
             {
+                ValidateTemplateTriggerGraphs(template);
                 EntityTemplateKeys.Register(template.Id);
                 if (report != null && report.TryGetWinner("Entities/templates.json", template.Id, out string sourceUri))
                 {
                     _templateSources[template.Id] = sourceUri;
+                }
+            }
+        }
+
+        private static void ValidateTemplateTriggerGraphs(EntityTemplate template)
+        {
+            List<string>? graphs = template.TriggerGraphs;
+            if (graphs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                string? name = graphs[i];
+                if (string.IsNullOrWhiteSpace(name) || !string.Equals(name, name.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{template.Id}' TriggerGraphs[{i}] must be a trimmed non-empty graph id string.");
                 }
             }
         }
@@ -169,10 +196,10 @@ namespace Ludots.Core.Systems
 
                 if (hasDirectBootstrap)
                 {
-                    features |= TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled;
-                    if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, activeBatchTemplate, templateKeyId))
+                    features |= TemplateBatchSpawnFeatures.PresenterRootBootstrapHandled;
+                    if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_presenterBootstrap, activeBatchTemplate, templateKeyId))
                     {
-                        features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+                        features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPresenterPayload;
                     }
                 }
 
@@ -180,17 +207,17 @@ namespace Ludots.Core.Systems
                 Span<int> stableIds = hasDirectBootstrap ? _ownerBatchStableIds.AsSpan(0, batchCount) : default;
                 Span<VisualTransform> ownerTransforms = hasDirectBootstrap ? _ownerBatchTransforms.AsSpan(0, batchCount) : default;
                 Span<CullState> ownerCulls = hasDirectBootstrap ? _ownerBatchCulls.AsSpan(0, batchCount) : default;
-                bool hasPerformerParamOverrides = BatchContainsPerformerParamOverrides(pendingBatchRequests);
-                if (hasPerformerParamOverrides && !CanApplyPerformerParamOverrides())
+                bool hasPresenterParamOverrides = BatchContainsPresenterParamOverrides(pendingBatchRequests);
+                if (hasPresenterParamOverrides && !CanApplyPresenterParamOverrides())
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PerformerParamOverrides but presentation runtime is not installed.");
+                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PresenterParamOverrides but presentation runtime is not installed.");
                 }
 
-                if (hasPerformerParamOverrides && !hasDirectBootstrap)
+                if (hasPresenterParamOverrides && !hasDirectBootstrap)
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PerformerParamOverrides but has no direct performer bootstrap.");
+                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PresenterParamOverrides but has no direct presenter bootstrap.");
                 }
 
                 if (!_templateBatchSpawner.TryCreateBatch(
@@ -211,18 +238,19 @@ namespace Ludots.Core.Systems
                 {
                     entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                    BufferEntityTriggerGraphs(created[i], activeBatchTemplateId, activeBatchTemplate);
                 }
 
                 if (hasDirectBootstrap)
                 {
                     for (int i = 0; i < batchCount; i++)
                     {
-                        _ownerBatchParamOverrides[i] = pendingBatchRequests[i].PerformerParamOverrides;
+                        _ownerBatchParamOverrides[i] = pendingBatchRequests[i].PresenterParamOverrides;
                     }
 
                     try
                     {
-                        TryBootstrapPerformerBatch(
+                        TryBootstrapPresenterBatch(
                             templateKeyId,
                             created,
                             stableIds,
@@ -276,10 +304,10 @@ namespace Ludots.Core.Systems
                     continue;
                 }
 
-                if (HasPerformerParamOverrides(entityData))
+                if (HasPresenterParamOverrides(entityData))
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' declares PerformerParamOverrides but is not compatible with the map template batch path.");
+                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' declares PresenterParamOverrides but is not compatible with the map template batch path.");
                 }
 
                 FlushPendingTemplateBatch();
@@ -301,10 +329,21 @@ namespace Ludots.Core.Systems
                 _world.Add(entity, mapEntityTag);
                 entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
+                BufferEntityTriggerGraphs(entity, entityData.Template, templates[entityData.Template]);
             }
 
             FlushPendingTemplateBatch();
             return entityIndex;
+        }
+
+        private void BufferEntityTriggerGraphs(Entity entity, string templateId, EntityTemplate template)
+        {
+            if (_entityTriggerGraphMounts == null || template.TriggerGraphs is not { Count: > 0 })
+            {
+                return;
+            }
+
+            _entityTriggerGraphMounts.BufferMapLoadSpawn(entity, templateId, template.TriggerGraphs);
         }
 
         private static bool TryBuildBatchRequest(
@@ -357,7 +396,7 @@ namespace Ludots.Core.Systems
                 hasFacing,
                 mapEntity,
                 hasMapEntity: true,
-                performerParamOverrides: ParsePerformerParamOverrides(mapId, entityData));
+                presenterParamOverrides: ParsePresenterParamOverrides(mapId, entityData));
             return true;
         }
 
@@ -368,11 +407,11 @@ namespace Ludots.Core.Systems
                 : entityData.InstanceId;
         }
 
-        private static bool BatchContainsPerformerParamOverrides(List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest> requests)
+        private static bool BatchContainsPresenterParamOverrides(List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest> requests)
         {
             for (int i = 0; i < requests.Count; i++)
             {
-                if (requests[i].PerformerParamOverrides.Length != 0)
+                if (requests[i].PresenterParamOverrides.Length != 0)
                 {
                     return true;
                 }
@@ -381,22 +420,22 @@ namespace Ludots.Core.Systems
             return false;
         }
 
-        private static bool HasPerformerParamOverrides(EntitySpawnData entityData)
+        private static bool HasPresenterParamOverrides(EntitySpawnData entityData)
         {
-            return entityData.PerformerParamOverrides != null && entityData.PerformerParamOverrides.Count != 0;
+            return entityData.PresenterParamOverrides != null && entityData.PresenterParamOverrides.Count != 0;
         }
 
-        private bool CanApplyPerformerParamOverrides()
+        private bool CanApplyPresenterParamOverrides()
         {
-            return _performerRuntime != null &&
-                   _performerDefinitions != null &&
-                   _performerBootstrap != null &&
+            return _presenterRuntime != null &&
+                   _presenterDefinitions != null &&
+                   _presenterBootstrap != null &&
                    _stableIds != null;
         }
 
-        private static ParamDefault[] ParsePerformerParamOverrides(string mapId, EntitySpawnData entityData)
+        private static ParamDefault[] ParsePresenterParamOverrides(string mapId, EntitySpawnData entityData)
         {
-            List<ParamOverrideData> overrides = entityData.PerformerParamOverrides;
+            List<ParamOverrideData> overrides = entityData.PresenterParamOverrides;
             if (overrides == null || overrides.Count == 0)
             {
                 return Array.Empty<ParamDefault>();
@@ -409,7 +448,7 @@ namespace Ludots.Core.Systems
                 if (item == null)
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}] requires an object payload.");
+                        $"Map '{mapId}' entity template '{entityData.Template}' PresenterParamOverrides[{i}] requires an object payload.");
                 }
 
                 string paramKey = item.ParamKey;
@@ -417,19 +456,19 @@ namespace Ludots.Core.Systems
                     !string.Equals(paramKey, paramKey.Trim(), StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].ParamKey must be a trimmed semantic string.");
+                        $"Map '{mapId}' entity template '{entityData.Template}' PresenterParamOverrides[{i}].ParamKey must be a trimmed semantic string.");
                 }
 
                 if (!item.Lane.HasValue)
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].Lane requires an explicit param lane.");
+                        $"Map '{mapId}' entity template '{entityData.Template}' PresenterParamOverrides[{i}].Lane requires an explicit param lane.");
                 }
 
                 ParamLane lane = item.Lane.Value;
                 var parsed = new ParamDefault
                 {
-                    ParamKey = PerformerParamKeyRegistry.Register(paramKey),
+                    ParamKey = PresenterParamKeyRegistry.Register(paramKey),
                     Lane = lane,
                 };
 
@@ -442,11 +481,11 @@ namespace Ludots.Core.Systems
                         parsed.IntValue = item.IntValue;
                         break;
                     case ParamLane.Vector:
-                        parsed.VectorValue = ParsePerformerParamOverrideVector(mapId, entityData, item, i);
+                        parsed.VectorValue = ParsePresenterParamOverrideVector(mapId, entityData, item, i);
                         break;
                     default:
                         throw new InvalidOperationException(
-                            $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].Lane '{lane}' is unsupported.");
+                            $"Map '{mapId}' entity template '{entityData.Template}' PresenterParamOverrides[{i}].Lane '{lane}' is unsupported.");
                 }
 
                 result[i] = parsed;
@@ -455,7 +494,7 @@ namespace Ludots.Core.Systems
             return result;
         }
 
-        private static Vector4 ParsePerformerParamOverrideVector(
+        private static Vector4 ParsePresenterParamOverrideVector(
             string mapId,
             EntitySpawnData entityData,
             ParamOverrideData item,
@@ -465,7 +504,7 @@ namespace Ludots.Core.Systems
             if (values == null || values.Length != 4)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{index}].VectorValue requires four numeric values.");
+                    $"Map '{mapId}' entity template '{entityData.Template}' PresenterParamOverrides[{index}].VectorValue requires four numeric values.");
             }
 
             return new Vector4(values[0], values[1], values[2], values[3]);
@@ -602,27 +641,27 @@ namespace Ludots.Core.Systems
 
         private bool HasDirectEntitySpawnBootstrap(int templateKeyId)
         {
-            if (_performerBootstrap == null)
+            if (_presenterBootstrap == null)
             {
                 return false;
             }
 
             return templateKeyId > 0 &&
-                   _performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) &&
+                   _presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules) &&
                    rules.Length > 0;
         }
 
         private bool ShouldPublishSpawnedEvent(int templateKeyId, bool hasDirectBootstrap)
         {
-            if (!hasDirectBootstrap || _performerBootstrap == null)
+            if (!hasDirectBootstrap || _presenterBootstrap == null)
             {
                 return true;
             }
 
-            return _performerBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
+            return _presenterBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
         }
 
-        private void TryBootstrapPerformerBatch(
+        private void TryBootstrapPresenterBatch(
             int templateKeyId,
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> ownerStableIds,
@@ -630,9 +669,9 @@ namespace Ludots.Core.Systems
             ReadOnlySpan<CullState> ownerCulls,
             ReadOnlySpan<ParamDefault[]> ownerParamOverrides)
         {
-            if (_performerRuntime == null ||
-                _performerDefinitions == null ||
-                _performerBootstrap == null ||
+            if (_presenterRuntime == null ||
+                _presenterDefinitions == null ||
+                _presenterBootstrap == null ||
                 _stableIds == null ||
                 owners.Length == 0)
             {
@@ -644,11 +683,11 @@ namespace Ludots.Core.Systems
                 owners.Length != ownerCulls.Length ||
                 owners.Length != ownerParamOverrides.Length)
             {
-                throw new ArgumentException("Map performer bootstrap batch spans must have matching lengths.");
+                throw new ArgumentException("Map presenter bootstrap batch spans must have matching lengths.");
             }
 
             if (templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+                !_presenterBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
             }
@@ -656,9 +695,9 @@ namespace Ludots.Core.Systems
             for (int ri = 0; ri < rules.Length; ri++)
             {
                 ref readonly var rule = ref rules[ri];
-                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                if (!_presenterDefinitions.TryGet(rule.PresenterDefinitionId, out PresenterDefinition definition))
                 {
-                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                    throw new InvalidOperationException($"Presenter definition id={rule.PresenterDefinitionId} is not registered.");
                 }
 
                 int createCount = 0;
@@ -676,8 +715,8 @@ namespace Ludots.Core.Systems
                         continue;
                     }
 
-                    if (_performerRuntime.HasActiveScopedInstance(
-                            rule.PerformerDefinitionId,
+                    if (_presenterRuntime.HasActiveScopedInstance(
+                            rule.PresenterDefinitionId,
                             owner,
                             scopeTag,
                             PresentationAnchorKind.Entity,
@@ -686,12 +725,12 @@ namespace Ludots.Core.Systems
                         continue;
                     }
 
-                    _performerBatchOwners[createCount] = owner;
-                    _performerBatchScopeIds[createCount] = scopeTag;
-                    _performerBatchStableIds[createCount] = _stableIds.Allocate();
+                    _presenterBatchOwners[createCount] = owner;
+                    _presenterBatchScopeIds[createCount] = scopeTag;
+                    _presenterBatchStableIds[createCount] = _stableIds.Allocate();
                     _ownerBatchTransforms[createCount] = ownerTransforms[oi];
                     _ownerBatchCulls[createCount] = ownerCulls[oi];
-                    _performerBatchParamOverrides[createCount] = ownerParamOverrides[oi] ?? Array.Empty<ParamDefault>();
+                    _presenterBatchParamOverrides[createCount] = ownerParamOverrides[oi] ?? Array.Empty<ParamDefault>();
                     createCount++;
                 }
 
@@ -700,54 +739,54 @@ namespace Ludots.Core.Systems
                     continue;
                 }
 
-                _performerRuntime.CreateEntityAnchoredRootBatch(
-                    _performerDefinitions,
-                    rule.PerformerDefinitionId,
-                    _performerBatchOwners.AsSpan(0, createCount),
-                    _performerBatchScopeIds.AsSpan(0, createCount),
-                    _performerBatchStableIds.AsSpan(0, createCount),
+                _presenterRuntime.CreateEntityAnchoredRootBatch(
+                    _presenterDefinitions,
+                    rule.PresenterDefinitionId,
+                    _presenterBatchOwners.AsSpan(0, createCount),
+                    _presenterBatchScopeIds.AsSpan(0, createCount),
+                    _presenterBatchStableIds.AsSpan(0, createCount),
                     _ownerBatchTransforms.AsSpan(0, createCount),
                     _ownerBatchCulls.AsSpan(0, createCount),
                     definition,
-                    _performerBatchCreated.AsSpan(0, createCount),
+                    _presenterBatchCreated.AsSpan(0, createCount),
                     _stableIds.Allocate,
-                    _performerBatchParamOverrides.AsSpan(0, createCount));
+                    _presenterBatchParamOverrides.AsSpan(0, createCount));
 
                 for (int i = 0; i < createCount; i++)
                 {
-                    _performerBatchParamOverrides[i] = null!;
-                    MarkHierarchyForBootstrapIfNeeded(_performerBatchCreated[i]);
+                    _presenterBatchParamOverrides[i] = null!;
+                    MarkHierarchyForBootstrapIfNeeded(_presenterBatchCreated[i]);
                 }
             }
         }
 
-        private bool PassesBootstrapCondition(CompiledPerformerBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
+        private bool PassesBootstrapCondition(CompiledPresenterBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
         {
             return rule.InlineCondition switch
             {
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => _world.Has<VisualTransform>(owner),
                 InlineConditionKind.SourceHasAttributes => _world.Has<AttributeBuffer>(owner),
-                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
+                _ => throw new InvalidOperationException($"Unsupported presenter bootstrap inline condition '{rule.InlineCondition}'."),
             };
         }
 
         private void MarkHierarchyForBootstrapIfNeeded(Entity root)
         {
-            if (!_world.IsAlive(root) || !_world.Has<PerformerState>(root))
+            if (!_world.IsAlive(root) || !_world.Has<PresenterState>(root))
             {
                 return;
             }
 
-            ref readonly PerformerState state = ref _world.Get<PerformerState>(root);
-            if (_performerDefinitions != null &&
-                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+            ref readonly PresenterState state = ref _world.Get<PresenterState>(root);
+            if (_presenterDefinitions != null &&
+                _presenterDefinitions.TryGet(state.DefId, out PresenterDefinition definition) &&
                 definition.RequiresBootstrapProcessing)
             {
-                MarkPerformer(root);
+                MarkPresenter(root);
             }
 
-            ref PerformerChildren children = ref _world.Get<PerformerChildren>(root);
+            ref PresenterChildren children = ref _world.Get<PresenterChildren>(root);
             for (int i = 0; i < children.Count; i++)
             {
                 Entity child = children.Get(i);
@@ -758,19 +797,19 @@ namespace Ludots.Core.Systems
             }
         }
 
-        private void MarkPerformer(Entity performer)
+        private void MarkPresenter(Entity presenter)
         {
-            if (_world.Has<PerformerBootstrapPending>(performer))
+            if (_world.Has<PresenterBootstrapPending>(presenter))
             {
                 return;
             }
 
-            _world.Add(performer, new PerformerBootstrapPending());
+            _world.Add(presenter, new PresenterBootstrapPending());
         }
 
         private void PublishTemplateOnSpawnEffect(Entity entity, string templateId)
         {
-            if (_effectRequests == null || string.IsNullOrWhiteSpace(templateId))
+            if (string.IsNullOrWhiteSpace(templateId))
             {
                 return;
             }
@@ -779,6 +818,12 @@ namespace Ludots.Core.Systems
             if (template == null || string.IsNullOrWhiteSpace(template.OnSpawnEffect))
             {
                 return;
+            }
+
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"MapLoader has no EffectRequestQueue; cannot publish onSpawnEffect '{template.OnSpawnEffect}' for template '{templateId}'.");
             }
 
             int effectTemplateId = EffectTemplateIdRegistry.GetId(template.OnSpawnEffect);

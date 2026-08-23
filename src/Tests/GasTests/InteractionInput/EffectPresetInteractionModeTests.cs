@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -81,13 +82,13 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetCollectionPrimaryEntityProvider((string _, out Entity e) => { e = target; return true; });
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             // WoW / TargetFirst: press skill -> immediate order
             input.InjectButtonPress("SkillQ");
@@ -181,7 +182,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
             mapping.SetSkillMappingOverrideProvider((Entity _, InputOrderMapping source, out InputOrderMapping overrideMapping) =>
@@ -198,7 +199,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("SkillQ");
             input.Update();

@@ -365,7 +365,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void DefaultSchemesConfigFile_DeserializesAndValidates()
         {
-            string configPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "Input", "control_schemes.json");
+            string configPath = Path.Combine(FindRepoRoot(), "assets", "Input", "control_schemes.json");
             Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
 
             var config = JsonSerializer.Deserialize<ControlSchemesConfig>(
@@ -377,7 +377,7 @@ namespace Ludots.Tests.GAS
             Assert.That(defaultScheme.AxisMove, Is.Null, "default shipped scheme keeps axis movement disabled by topology.");
             Assert.That(defaultScheme.Defaults.CastDispatchProfileId, Is.EqualTo("dispatch.all_together"));
 
-            string catalogPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "config_catalog.json");
+            string catalogPath = Path.Combine(FindRepoRoot(), "assets", "config_catalog.json");
             Assert.That(File.ReadAllText(catalogPath), Does.Not.Contain("Input/axis_move.json"));
         }
 
@@ -448,7 +448,7 @@ namespace Ludots.Tests.GAS
                     harness.Handler = new PlayerInputHandler(harness.Backend, BuildInputConfig());
                 }
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
                 var dispatch = new CastDispatchProfileRegistry(
                     new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),

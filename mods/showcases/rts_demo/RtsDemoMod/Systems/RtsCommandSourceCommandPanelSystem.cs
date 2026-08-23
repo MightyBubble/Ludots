@@ -20,7 +20,6 @@ namespace RtsDemoMod.Systems
         private EntityCommandPanelHandle _commandDeckHandle = EntityCommandPanelHandle.Invalid;
         private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
-        private bool _seededDefaultCommandSource;
 
         public RtsCommandSourceCommandPanelSystem(GameEngine engine)
         {
@@ -46,7 +45,6 @@ namespace RtsDemoMod.Systems
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);
-                _seededDefaultCommandSource = false;
                 return;
             }
 
@@ -55,15 +53,6 @@ namespace RtsDemoMod.Systems
             Entity commandSource = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity current)
                 ? current
                 : Entity.Null;
-            if (!IsPanelTarget(commandSource) && !_seededDefaultCommandSource)
-            {
-                Entity fallback = FindFallbackTarget();
-                if (IsPanelTarget(fallback) && RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, fallback, snapCamera: true))
-                {
-                    _seededDefaultCommandSource = true;
-                    commandSource = fallback;
-                }
-            }
 
             if (!IsPanelTarget(commandSource))
             {
@@ -124,85 +113,6 @@ namespace RtsDemoMod.Systems
         private bool IsPanelTarget(Entity entity)
         {
             return _engine.World.IsAlive(entity) && _engine.World.Has<AbilityStateBuffer>(entity);
-        }
-
-        private Entity FindFallbackTarget()
-        {
-            Entity result = FindFirstByNameContains("Peasant");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Barracks");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("War Factory");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Gateway");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("ConYard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Construction Yard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Drone");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            return FindFirstAbilityTarget();
-        }
-
-        private Entity FindFirstByNameContains(string nameToken)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name>();
-            _engine.World.Query(in query, (Entity entity, ref Name name) =>
-            {
-                if (result == Entity.Null &&
-                    !string.IsNullOrWhiteSpace(name.Value) &&
-                    name.Value.IndexOf(nameToken, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
-        }
-
-        private Entity FindFirstAbilityTarget()
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name, AbilityStateBuffer>();
-            _engine.World.Query(in query, (Entity entity, ref Name _, ref AbilityStateBuffer _) =>
-            {
-                if (result == Entity.Null)
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
         }
 
         private void ClosePanel(IEntityCommandPanelService service)

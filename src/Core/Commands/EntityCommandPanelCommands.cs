@@ -82,9 +82,10 @@ namespace Ludots.Core.Commands
                 return Entity.Null;
             }
 
-            if (string.Equals(contextKey, CoreServiceKeys.LocalPlayerEntity.Name, StringComparison.Ordinal))
+            if (string.Equals(contextKey, "solePossessedRep", StringComparison.Ordinal))
             {
-                return context.Get(CoreServiceKeys.LocalPlayerEntity);
+                var seats = context.Get(CoreServiceKeys.ClientLocalSeatRegistry);
+                return seats != null ? seats.RequireSolePossessedRep() : Entity.Null;
             }
 
             return context.Get<Entity>(contextKey);

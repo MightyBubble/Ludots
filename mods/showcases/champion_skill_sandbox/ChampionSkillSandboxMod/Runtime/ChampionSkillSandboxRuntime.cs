@@ -11,6 +11,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -20,6 +21,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -138,7 +140,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            Entity playerViewer = RequireSolePossessedRep(engine);
             Entity[] snapshot = SnapshotCollection(collections, playerViewer, EntityCollectionKeys.CommandSource);
             ReplaceCollection(collections, _debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, snapshot, "Command preview");
         }
@@ -187,7 +189,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private void SyncSelectionViews(GameEngine engine, bool drawOverlay)
         {
             EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
-            Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            Entity playerViewer = RequireSolePossessedRep(engine);
             if (collections == null || playerViewer == Entity.Null || !engine.World.IsAlive(playerViewer))
             {
                 return;
@@ -438,7 +440,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
             Entity initialCommandActor = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
-            Entity owner = ResolveOrAssignLocalPlayer(engine, initialCommandActor);
+            Entity owner = RequireSolePossessedRep(engine);
             if (collections == null || owner == Entity.Null || !engine.World.IsAlive(owner))
             {
                 return false;
@@ -472,76 +474,16 @@ namespace ChampionSkillSandboxMod.Runtime
             return true;
         }
 
-        private static Entity ResolveOrAssignLocalPlayer(GameEngine engine, Entity preferredLocalPlayer)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
-            int playerId = ResolveLocalPlayerId(engine, preferredLocalPlayer);
-            if (playerId <= 0)
-            {
-                return Entity.Null;
-            }
-
-            return PublishLocalPlayerBinding(engine, playerId);
-        }
-
-        private static int ResolveLocalPlayerId(GameEngine engine, Entity preferredLocalPlayer)
-        {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? localPlayerIdObj) &&
-                localPlayerIdObj is int localPlayerId &&
-                localPlayerId > 0)
-            {
-                return localPlayerId;
-            }
-
-            if (preferredLocalPlayer != Entity.Null &&
-                engine.World.IsAlive(preferredLocalPlayer) &&
-                engine.World.TryGet(preferredLocalPlayer, out PlayerOwner preferredOwner) &&
-                preferredOwner.PlayerId > 0)
-            {
-                return preferredOwner.PlayerId;
-            }
-
-            Entity firstControllable = ResolveFirstControllableChampion(engine);
-            if (firstControllable != Entity.Null &&
-                engine.World.TryGet(firstControllable, out PlayerOwner firstOwner) &&
-                firstOwner.PlayerId > 0)
-            {
-                return firstOwner.PlayerId;
-            }
-
-            return ShowcaseLocalPlayerId;
-        }
-
-        private static Entity PublishLocalPlayerBinding(GameEngine engine, int playerId)
-        {
-            if (playerId <= 0)
-            {
-                return Entity.Null;
-            }
-
-            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
-                lookup == null)
-            {
-                throw new InvalidOperationException("ChampionSkillSandbox requires PlayerEntityLookup from map participant bindings.");
-            }
-
-            if (!lookup.TryGet(playerId, out Entity localPlayer) ||
-                localPlayer == Entity.Null ||
-                !engine.World.IsAlive(localPlayer))
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(possessed))
             {
                 throw new InvalidOperationException(
-                    $"ChampionSkillSandbox requires a live player representative for PlayerId {playerId}. " +
-                    "Declare the player in the map Players binding instead of using a controllable champion as the representative.");
+                    "ChampionSkillSandbox requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
-                engine.CurrentMapSession.LocalPlayerId = playerId;
-            }
-
-            return localPlayer;
+            return possessed;
         }
 
         private static void ApplyInitialTag(GameEngine engine, string entityName, string tagName)
@@ -552,18 +494,11 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            if (!engine.World.Has<GameplayTagContainer>(entity))
-            {
-                engine.World.Add(entity, new GameplayTagContainer());
-            }
-
             int tagId = TagRegistry.Register(tagName);
-            ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
-            if (!tags.HasTag(tagId))
-            {
-                tags.AddTag(tagId);
-                engine.World.Set(entity, tags);
-            }
+            TagStateInstaller.EnsureInstalled(engine.World, entity);
+            TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox requires engine TagOps.");
+            tagOps.AddTag(engine.World, entity, tagId);
         }
 
         private void EnsureMode(GameEngine engine)
@@ -619,7 +554,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
-            engine.GameSession.Camera.ActivateVirtualCamera(
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
                 followTarget: null,
@@ -631,7 +566,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = virtualCameraId,
                 TargetCm = (cameraConfig.TargetXCm.HasValue || cameraConfig.TargetYCm.HasValue)
@@ -642,13 +577,13 @@ namespace ChampionSkillSandboxMod.Runtime
                 DistanceCm = cameraConfig.DistanceCm,
                 FovYDeg = cameraConfig.FovYDeg,
             });
-            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SynchronizeActiveVirtualCameraBoundsAndHeight();
         }
 
         private static void SyncCameraFollow(GameEngine engine)
         {
             string followModeId = ResolveCameraFollowMode(engine);
-            string activeCameraId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
+            string activeCameraId = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
             if (string.IsNullOrWhiteSpace(activeCameraId))
             {
                 return;
@@ -658,10 +593,10 @@ namespace ChampionSkillSandboxMod.Runtime
             if (string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
                 string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal))
             {
-                commandSourceOwner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+                commandSourceOwner = RequireSolePossessedRep(engine);
                 if (commandSourceOwner == Entity.Null || !engine.World.IsAlive(commandSourceOwner))
                 {
-                    engine.GameSession.Camera.SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
                     return;
                 }
             }
@@ -675,7 +610,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 _ => null
             };
 
-            engine.GameSession.Camera.SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
         }
 
         private static string ResolveCameraFollowMode(GameEngine engine)
@@ -770,7 +705,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return commandSourcePrimary;
             }
 
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (IsControllableChampion(engine, local))
             {
                 return local;
@@ -782,7 +717,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (local == Entity.Null || !engine.World.IsAlive(local))
             {
                 return false;
@@ -920,7 +855,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
             else
             {
-                owner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+                owner = RequireSolePossessedRep(engine);
             }
 
             string key = engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ActiveCollectionKey, out object? keyObj) &&

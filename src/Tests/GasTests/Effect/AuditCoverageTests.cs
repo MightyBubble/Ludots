@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -26,7 +27,7 @@ namespace Ludots.Tests.GAS
     public class AuditCoverageTests
     {
         // ════════════════════════════════════════════════════════════════════
-        //  Section 1: EffectPhaseExecutor — Builtin Handler Path
+        //  Section 1: EffectPhaseExecutor �?Builtin Handler Path
         //  (Previously zero coverage: all existing tests used empty PresetTypeRegistry)
         // ════════════════════════════════════════════════════════════════════
 
@@ -51,8 +52,9 @@ namespace Ludots.Tests.GAS
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
             var templates = new EffectTemplateRegistry();
+            int hpAttrId = AttributeRegistry.Register("Test.Audit.BuiltinPath.Health");
             var mods = default(EffectModifiers);
-            mods.Add(attrId: 0, ModifierOp.Add, -25f);
+            mods.Add(hpAttrId, ModifierOp.Add, -25f);
             templates.Register(1, new EffectTemplateData
             {
                 TagId = 1,
@@ -61,6 +63,12 @@ namespace Ludots.Tests.GAS
             });
 
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.BuiltinPath.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             // Use the NEW constructor that takes PresetTypeRegistry + BuiltinHandlerRegistry
@@ -68,16 +76,17 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
-            float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
+            float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
             That(hp, Is.EqualTo(75f), "ApplyModifiers via Builtin handler path should reduce HP by 25");
         }
 
@@ -100,17 +109,24 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
-            // Empty template registry — template ID 999 does not exist
+            // Empty template registry �?template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.MissingTemplate.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
+            int hpAttrId = AttributeRegistry.Register("Test.Audit.MissingTemplate.Health");
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
 
@@ -121,12 +137,12 @@ namespace Ludots.Tests.GAS
                     effectTagId: 1, effectTemplateId: 999));
 
             // HP unchanged — exception prevented the handler from running
-            float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
+            float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
             That(hp, Is.EqualTo(100f), "Exception prevented handler execution, HP unchanged");
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 2: EffectProposalProcessingSystem — ResetSlice
+        //  Section 2: EffectProposalProcessingSystem �?ResetSlice
         //  (Previously: only behavior test that happened to pass even with no-op)
         // ════════════════════════════════════════════════════════════════════
 
@@ -147,9 +163,19 @@ namespace Ludots.Tests.GAS
                     Modifiers = default,
                 });
 
+                var presetTypes = new PresetTypeRegistry();
+                var builtinHandlers = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(builtinHandlers);
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    new GraphProgramRegistry(),
+                    "Test/AuditCoverageTests.ResetSlice.json");
+
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
                 queue.Publish(new EffectRequest
                 {
@@ -163,6 +189,8 @@ namespace Ludots.Tests.GAS
                 var sys = new EffectProposalProcessingSystem(
                     world,
                     queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
                     inputRequests: null,
@@ -172,7 +200,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = 1 // Force partial processing
                 };
 
-                // Begin processing — should enter active state
+                // Begin processing �?should enter active state
                 sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue);
 
                 // DebugWindowPhase > 0 means the system is in an active window phase
@@ -254,7 +282,7 @@ namespace Ludots.Tests.GAS
             }
             That(container.Count, Is.EqualTo(ActiveEffectContainer.CAPACITY));
 
-            // One more — should return false
+            // One more �?should return false
             var overflow = world.Create();
             bool overflowResult = container.Add(overflow);
             That(overflowResult, Is.False, "Overflow add must return false");
@@ -316,7 +344,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Section 4: EffectPhaseExecutor — PresetType integration
+        //  Section 4: EffectPhaseExecutor �?PresetType integration
         //  (Previously: all tests used the retired preset behavior registry constructor)
         // ════════════════════════════════════════════════════════════════════
 
@@ -360,19 +388,26 @@ namespace Ludots.Tests.GAS
             });
 
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.ApplyForce.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);
             That(buf.GetCurrent(forceXAttrId), Is.EqualTo(100f), "ForceX should be applied");
@@ -416,7 +451,10 @@ namespace Ludots.Tests.GAS
             Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.Register("Graph.Shield.Absorb");
 
             var registry = new EffectTemplateRegistry();
-            var loader = new EffectTemplateLoader(pipeline, registry);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                registry,
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
 
             Assert.DoesNotThrow(() => loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"),
                 "Loading MobaDemoMod effects.json via VFS + ConfigPipeline must not throw");
@@ -458,7 +496,10 @@ namespace Ludots.Tests.GAS
             EffectTemplateIdRegistry.Clear();
 
             var registry = new EffectTemplateRegistry();
-            var loader = new EffectTemplateLoader(pipeline, registry);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                registry,
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
 
             Assert.DoesNotThrow(() => loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"),
                 "Core effects.json must load without exceptions");
@@ -473,8 +514,13 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.Directory.Exists(System.IO.Path.Combine(dir, "assets")))
+                if (Directory.Exists(Path.Combine(dir, "assets")) &&
+                    Directory.Exists(Path.Combine(dir, "mods")) &&
+                    File.Exists(Path.Combine(dir, "gitbook", "contributing", "ai-assisted-development.md")))
+                {
                     return dir;
+                }
+
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
             throw new InvalidOperationException("Cannot find repo root (looking for assets/ directory).");

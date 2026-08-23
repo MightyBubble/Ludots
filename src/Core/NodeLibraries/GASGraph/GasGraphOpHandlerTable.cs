@@ -1,13 +1,16 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -28,194 +31,771 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public GasGraphOpHandler[] Handlers { get; }
 
+        private readonly string?[] _descriptions;
+        private readonly EffectOperationMetadata[] _operationMetadata;
+
         private GasGraphOpHandlerTable()
         {
-            Handlers = CreateHandlers();
+            Handlers = new GasGraphOpHandler[GraphVmLimits.HandlerTableSize];
+            _descriptions = new string?[GraphVmLimits.HandlerTableSize];
+            _operationMetadata = new EffectOperationMetadata[GraphVmLimits.HandlerTableSize];
+            RegisterBuiltins();
+            EnsureRegistrationComplete();
         }
 
         /// <summary>
-        /// Execute a graph program using this handler table.
-        /// Mirrors <see cref="Ludots.Core.GraphRuntime.GraphExecutor.Execute{TState}"/>
-        /// but works with ref struct state.
-        /// Fail-fast on unregistered ops (non-zero) and enforces instruction budget.
+        /// Builds a table with built-in opcodes and optionally installs mod-registered
+        /// extension graph ops into the free opcode slots.
         /// </summary>
-        public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
+        public GasGraphOpHandlerTable(GasGraphOpRegistry? extensions = null)
+            : this()
         {
-            var table = handlers.Handlers;
-            int pc = 0;
-            int steps = 0;
-            int maxSteps = GraphVmLimits.MaxInstructionsPerExecution;
-
-            while ((uint)pc < (uint)program.Length)
+            if (extensions != null)
             {
-                if (++steps > maxSteps)
-                {
-                    throw new InvalidOperationException(
-                        $"Graph VM exceeded MaxInstructionsPerExecution ({maxSteps}). Possible infinite loop.");
-                }
-
-                ref readonly var ins = ref program[pc];
-                pc++;
-
-                if (ins.Op == 0) continue;
-
-                if (ins.Op >= table.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"Graph op {ins.Op} exceeds handler table capacity ({table.Length}).");
-                }
-
-                var handler = table[ins.Op];
-                if (handler == null)
-                {
-                    throw new InvalidOperationException(
-                        $"No handler registered for graph op {ins.Op}.");
-                }
-
-                handler(ref state, in ins, ref pc);
+                InstallExtensions(extensions);
             }
         }
 
-        private static GasGraphOpHandler[] CreateHandlers()
+        /// <summary>
+        /// Installs mod-registered extension graph ops into this table's free opcode slots
+        /// (ids at or above <see cref="GasGraphOpRegistry.FirstModOpCode"/>). Built-in opcodes
+        /// must already be registered; extension installs reject occupied slots.
+        /// </summary>
+        public void InstallExtensions(GasGraphOpRegistry extensions)
         {
-            var h = new GasGraphOpHandler[GraphVmLimits.HandlerTableSize];
+            if (extensions == null) throw new ArgumentNullException(nameof(extensions));
+            extensions.InstallHandlers(Handlers);
+        }
 
-            h[(ushort)GraphNodeOp.ConstBool] = HandleConstBool;
-            h[(ushort)GraphNodeOp.ConstInt] = HandleConstInt;
-            h[(ushort)GraphNodeOp.ConstFloat] = HandleConstFloat;
-            h[(ushort)GraphNodeOp.LoadCaster] = HandleLoadCaster;
-            h[(ushort)GraphNodeOp.LoadExplicitTarget] = HandleLoadExplicitTarget;
-            h[(ushort)GraphNodeOp.Jump] = HandleJump;
-            h[(ushort)GraphNodeOp.JumpIfFalse] = HandleJumpIfFalse;
-            h[(ushort)GraphNodeOp.LoadAttribute] = HandleLoadAttribute;
-            h[(ushort)GraphNodeOp.AddFloat] = HandleAddFloat;
-            h[(ushort)GraphNodeOp.MulFloat] = HandleMulFloat;
-            h[(ushort)GraphNodeOp.CompareGtFloat] = HandleCompareGtFloat;
-            h[(ushort)GraphNodeOp.SelectEntity] = HandleSelectEntity;
-            h[(ushort)GraphNodeOp.QueryRadius] = HandleQueryRadius;
-            h[(ushort)GraphNodeOp.QuerySortStable] = HandleQuerySortStable;
-            h[(ushort)GraphNodeOp.QueryLimit] = HandleQueryLimit;
-            h[(ushort)GraphNodeOp.QueryCone] = HandleQueryCone;
-            h[(ushort)GraphNodeOp.QueryRectangle] = HandleQueryRectangle;
-            h[(ushort)GraphNodeOp.QueryLine] = HandleQueryLine;
-            h[(ushort)GraphNodeOp.QueryFilterNotEntity] = HandleQueryFilterNotEntity;
-            h[(ushort)GraphNodeOp.QueryFilterLayer] = HandleQueryFilterLayer;
-            h[(ushort)GraphNodeOp.QueryFilterRelationship] = HandleQueryFilterRelationship;
-            h[(ushort)GraphNodeOp.AggCount] = HandleAggCount;
-            h[(ushort)GraphNodeOp.AggMinByDistance] = HandleAggMinByDistance;
-            h[(ushort)GraphNodeOp.TargetListGet] = HandleTargetListGet;
-            h[(ushort)GraphNodeOp.ApplyEffectTemplate] = HandleApplyEffectTemplate;
-            h[(ushort)GraphNodeOp.FanOutApplyEffect] = HandleFanOutApplyEffect;
-            h[(ushort)GraphNodeOp.RemoveEffectTemplate] = HandleRemoveEffectTemplate;
-            h[(ushort)GraphNodeOp.ModifyAttributeAdd] = HandleModifyAttributeAdd;
-            h[(ushort)GraphNodeOp.SendEvent] = HandleSendEvent;
-            h[(ushort)GraphNodeOp.RelationshipEnsureLink] = HandleRelationshipEnsureLink;
-            h[(ushort)GraphNodeOp.RelationshipRemoveLink] = HandleRelationshipRemoveLink;
-            h[(ushort)GraphNodeOp.RelationshipSetMetric] = HandleRelationshipSetMetric;
-            h[(ushort)GraphNodeOp.RelationshipAddMetric] = HandleRelationshipAddMetric;
-            h[(ushort)GraphNodeOp.RelationshipGetMetric] = HandleRelationshipGetMetric;
-            h[(ushort)GraphNodeOp.RelationshipHasFlag] = HandleRelationshipHasFlag;
-            h[(ushort)GraphNodeOp.RelationshipSetFlag] = HandleRelationshipSetFlag;
-            h[(ushort)GraphNodeOp.RelationshipQueryOutgoing] = HandleRelationshipQueryOutgoing;
-            h[(ushort)GraphNodeOp.RelationshipQueryIncoming] = HandleRelationshipQueryIncoming;
-            h[(ushort)GraphNodeOp.RelationshipQueryMutual] = HandleRelationshipQueryMutual;
-            h[(ushort)GraphNodeOp.RelationshipQueryBetweenPair] = HandleRelationshipQueryBetweenPair;
-            h[(ushort)GraphNodeOp.RelationshipFilterMetricRange] = HandleRelationshipFilterMetricRange;
-            h[(ushort)GraphNodeOp.RelationshipFilterFlag] = HandleRelationshipFilterFlag;
-            h[(ushort)GraphNodeOp.RelationshipSortByMetric] = HandleRelationshipSortByMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggSumMetric] = HandleRelationshipAggSumMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMaxMetric] = HandleRelationshipAggMaxMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggAverageMetric] = HandleRelationshipAggAverageMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMinMetric] = HandleRelationshipAggMinMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMaxEntityByMetric] = HandleRelationshipAggMaxEntityByMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMinEntityByMetric] = HandleRelationshipAggMinEntityByMetric;
-            h[(ushort)GraphNodeOp.QueryAllMapEntities] = HandleQueryAllMapEntities;
-            h[(ushort)GraphNodeOp.QueryFromCollection] = HandleQueryFromCollection;
-            h[(ushort)GraphNodeOp.QueryFilterTeam] = HandleQueryFilterTeam;
-            h[(ushort)GraphNodeOp.QueryFilterTemplate] = HandleQueryFilterTemplate;
-            h[(ushort)GraphNodeOp.QueryFilterAttributeRange] = HandleQueryFilterAttributeRange;
-            h[(ushort)GraphNodeOp.QueryFilterTagAny] = HandleQueryFilterTagAny;
-            h[(ushort)GraphNodeOp.QueryFilterTagNone] = HandleQueryFilterTagNone;
-            h[(ushort)GraphNodeOp.QuerySortByAttribute] = HandleQuerySortByAttribute;
-            h[(ushort)GraphNodeOp.AggSumAttribute] = HandleAggSumAttribute;
-            h[(ushort)GraphNodeOp.AggAverageAttribute] = HandleAggAverageAttribute;
-            h[(ushort)GraphNodeOp.AggMaxAttribute] = HandleAggMaxAttribute;
-            h[(ushort)GraphNodeOp.AggMinAttribute] = HandleAggMinAttribute;
-            h[(ushort)GraphNodeOp.AggMaxEntityByAttribute] = HandleAggMaxEntityByAttribute;
-            h[(ushort)GraphNodeOp.AggMinEntityByAttribute] = HandleAggMinEntityByAttribute;
-            h[(ushort)GraphNodeOp.BeginLifecycleTransaction] = HandleBeginLifecycleTransaction;
-            h[(ushort)GraphNodeOp.InvokeBuiltin] = HandleInvokeBuiltin;
+        /// <summary>
+        /// Registers an executable opcode. Requires a non-empty description and rejects duplicates.
+        /// </summary>
+        public void Register(GraphNodeOp op, GasGraphOpHandler handler, string description)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                throw new ArgumentException(
+                    $"Graph opcode '{op}' requires a non-empty description.",
+                    nameof(description));
+            }
 
-            // ── Int Math / Bool (29, 31-33) ──
-            h[(ushort)GraphNodeOp.AddInt] = HandleAddInt;
-            h[(ushort)GraphNodeOp.CompareLtInt] = HandleCompareLtInt;
-            h[(ushort)GraphNodeOp.CompareEqInt] = HandleCompareEqInt;
-            h[(ushort)GraphNodeOp.HasTag] = HandleHasTag;
-            h[(ushort)GraphNodeOp.CompareEqEntity] = HandleCompareEqEntity;
-            h[(ushort)GraphNodeOp.RandomFloat01] = HandleRandomFloat01;
+            ushort code = (ushort)op;
+            if (op == GraphNodeOp.None || code >= Handlers.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(op), $"Graph opcode '{op}' ({code}) is not registerable.");
+            }
 
-            // ── Hex spatial queries (130-132) ──
-            h[(ushort)GraphNodeOp.QueryHexRange] = HandleQueryHexRange;
-            h[(ushort)GraphNodeOp.QueryHexRing] = HandleQueryHexRing;
-            h[(ushort)GraphNodeOp.QueryHexNeighbors] = HandleQueryHexNeighbors;
+            if (Handlers[code] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph opcode '{op}' ({code}) is already registered; duplicate registration is not allowed.");
+            }
 
-            // ── Math (22-28) ──
-            h[(ushort)GraphNodeOp.SubFloat] = HandleSubFloat;
-            h[(ushort)GraphNodeOp.DivFloat] = HandleDivFloat;
-            h[(ushort)GraphNodeOp.MinFloat] = HandleMinFloat;
-            h[(ushort)GraphNodeOp.MaxFloat] = HandleMaxFloat;
-            h[(ushort)GraphNodeOp.ClampFloat] = HandleClampFloat;
-            h[(ushort)GraphNodeOp.AbsFloat] = HandleAbsFloat;
-            h[(ushort)GraphNodeOp.NegFloat] = HandleNegFloat;
+            Handlers[code] = handler;
+            _descriptions[code] = description.Trim();
+            _operationMetadata[code] = CreateOperationMetadata(op, description.Trim());
+        }
 
-            // ── Blackboard immediate read/write (300-305) ──
-            h[(ushort)GraphNodeOp.ReadBlackboardFloat] = HandleReadBlackboardFloat;
-            h[(ushort)GraphNodeOp.ReadBlackboardInt] = HandleReadBlackboardInt;
-            h[(ushort)GraphNodeOp.ReadBlackboardEntity] = HandleReadBlackboardEntity;
-            h[(ushort)GraphNodeOp.WriteBlackboardFloat] = HandleWriteBlackboardFloat;
-            h[(ushort)GraphNodeOp.WriteBlackboardInt] = HandleWriteBlackboardInt;
-            h[(ushort)GraphNodeOp.WriteBlackboardEntity] = HandleWriteBlackboardEntity;
+        public bool TryGetDescription(GraphNodeOp op, out string description)
+        {
+            ushort code = (ushort)op;
+            if (code < _descriptions.Length && !string.IsNullOrEmpty(_descriptions[code]))
+            {
+                description = _descriptions[code]!;
+                return true;
+            }
 
-            // ── Config parameter reading (310-312) ──
-            h[(ushort)GraphNodeOp.LoadConfigFloat] = HandleLoadConfigFloat;
-            h[(ushort)GraphNodeOp.LoadConfigInt] = HandleLoadConfigInt;
-            h[(ushort)GraphNodeOp.LoadConfigEffectId] = HandleLoadConfigEffectId;
+            description = string.Empty;
+            return false;
+        }
 
-            // ── Context entity loading (320-322) ──
-            h[(ushort)GraphNodeOp.LoadContextSource] = HandleLoadContextSource;
-            h[(ushort)GraphNodeOp.LoadContextTarget] = HandleLoadContextTarget;
-            h[(ushort)GraphNodeOp.LoadContextTargetContext] = HandleLoadContextTargetContext;
+        public string GetDescription(GraphNodeOp op)
+        {
+            if (!TryGetDescription(op, out string description))
+            {
+                throw new InvalidOperationException($"Graph opcode '{op}' has no registered description.");
+            }
 
-            // ── Dynamic dispatch (202-203) ──
-            h[(ushort)GraphNodeOp.ApplyEffectDynamic] = HandleApplyEffectDynamic;
-            h[(ushort)GraphNodeOp.FanOutApplyEffectDynamic] = HandleFanOutApplyEffectDynamic;
-            h[(ushort)GraphNodeOp.FanOutDispatchEffect] = HandleFanOutDispatchEffect;
-            h[(ushort)GraphNodeOp.FanOutDispatchEffectDynamic] = HandleFanOutDispatchEffectDynamic;
+            return description;
+        }
 
-            // ── Self attribute access for derived graphs (330-331) ──
-            h[(ushort)GraphNodeOp.LoadSelfAttribute] = HandleLoadSelfAttribute;
-            h[(ushort)GraphNodeOp.WriteSelfAttribute] = HandleWriteSelfAttribute;
+        public bool TryGetOperationMetadata(GraphNodeOp op, out EffectOperationMetadata operationMetadata)
+        {
+            ushort code = (ushort)op;
+            if (code < _operationMetadata.Length &&
+                _operationMetadata[code].Kind != EffectOperationKind.None)
+            {
+                operationMetadata = _operationMetadata[code];
+                return true;
+            }
 
-            // ── Placement validation (402-406) ──
-            h[(ushort)GraphNodeOp.LoadTargetPosX] = HandleLoadTargetPosX;
-            h[(ushort)GraphNodeOp.LoadTargetPosY] = HandleLoadTargetPosY;
-            h[(ushort)GraphNodeOp.ClampTargetToRange] = HandleClampTargetToRange;
-            h[(ushort)GraphNodeOp.IsPointInCircle] = HandleIsPointInCircle;
-            h[(ushort)GraphNodeOp.SnapToNearestInCollection] = HandleSnapToNearestInCollection;
-            h[(ushort)GraphNodeOp.SnapToNearestGraphEdge] = HandleSnapToNearestGraphEdge;
+            operationMetadata = default;
+            return false;
+        }
 
-            // ── Event evaluation context (410-412) ──
-            h[(ushort)GraphNodeOp.LoadViewer] = HandleLoadViewer;
-            h[(ushort)GraphNodeOp.LoadEventPayloadInt] = HandleLoadEventPayloadInt;
-            h[(ushort)GraphNodeOp.LoadEventPayloadFloat] = HandleLoadEventPayloadFloat;
+        private void EnsureRegistrationComplete()
+        {
+            foreach (GraphNodeOp op in Enum.GetValues<GraphNodeOp>())
+            {
+                if (op == GraphNodeOp.None)
+                {
+                    continue;
+                }
 
-            // ── Topology predicates (397, 420-422) ──
-            h[(ushort)GraphNodeOp.RelationshipHasLink] = HandleRelationshipHasLink;
-            h[(ushort)GraphNodeOp.ControlDomainResolve] = HandleControlDomainResolve;
-            h[(ushort)GraphNodeOp.ControlDomainControls] = HandleControlDomainControls;
-            h[(ushort)GraphNodeOp.KnowledgeHasProjection] = HandleKnowledgeHasProjection;
+                ushort code = (ushort)op;
+                if (Handlers[code] == null ||
+                    string.IsNullOrWhiteSpace(_descriptions[code]) ||
+                    _operationMetadata[code].Kind == EffectOperationKind.None)
+                {
+                    throw new InvalidOperationException(
+                        $"Executable graph opcode '{op}' ({code}) is missing required handler/description/operation metadata registration.");
+                }
+            }
+        }
 
-            return h;
+        private static EffectOperationMetadata CreateOperationMetadata(GraphNodeOp op, string description)
+        {
+            return op switch
+            {
+                GraphNodeOp.ApplyEffectTemplate or
+                GraphNodeOp.FanOutApplyEffect or
+                GraphNodeOp.ApplyEffectDynamic or
+                GraphNodeOp.FanOutApplyEffectDynamic or
+                GraphNodeOp.RemoveEffectTemplate or
+                GraphNodeOp.FanOutDispatchEffect or
+                GraphNodeOp.FanOutDispatchEffectDynamic or
+                GraphNodeOp.ModifyAttributeAdd or
+                GraphNodeOp.SendEvent or
+                GraphNodeOp.WriteBlackboardFloat or
+                GraphNodeOp.WriteBlackboardInt or
+                GraphNodeOp.WriteBlackboardEntity or
+                GraphNodeOp.WriteSelfAttribute
+                    => EffectOperationMetadata.GasTransactional(description),
+
+                GraphNodeOp.InvokeBuiltin
+                    => EffectOperationMetadata.DelegatedBuiltin(description),
+
+                GraphNodeOp.RelationshipEnsureLink or
+                GraphNodeOp.RelationshipRemoveLink or
+                GraphNodeOp.RelationshipSetMetric or
+                GraphNodeOp.RelationshipAddMetric or
+                GraphNodeOp.RelationshipSetFlag
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, description),
+
+                GraphNodeOp.BeginLifecycleTransaction
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, description),
+
+                GraphNodeOp.ConstBool or
+                GraphNodeOp.ConstInt or
+                GraphNodeOp.ConstFloat or
+                GraphNodeOp.LoadCaster or
+                GraphNodeOp.LoadExplicitTarget or
+                GraphNodeOp.Jump or
+                GraphNodeOp.JumpIfFalse or
+                GraphNodeOp.LoadAttribute or
+                GraphNodeOp.AddFloat or
+                GraphNodeOp.MulFloat or
+                GraphNodeOp.SubFloat or
+                GraphNodeOp.DivFloat or
+                GraphNodeOp.MinFloat or
+                GraphNodeOp.MaxFloat or
+                GraphNodeOp.ClampFloat or
+                GraphNodeOp.AbsFloat or
+                GraphNodeOp.NegFloat or
+                GraphNodeOp.RandomFloat01 or
+                GraphNodeOp.AddInt or
+                GraphNodeOp.CompareGtFloat or
+                GraphNodeOp.CompareLtInt or
+                GraphNodeOp.CompareEqInt or
+                GraphNodeOp.HasTag or
+                GraphNodeOp.CompareEqEntity or
+                GraphNodeOp.SelectEntity or
+                GraphNodeOp.QueryRadius or
+                GraphNodeOp.QuerySortStable or
+                GraphNodeOp.QueryLimit or
+                GraphNodeOp.QueryCone or
+                GraphNodeOp.QueryRectangle or
+                GraphNodeOp.QueryLine or
+                GraphNodeOp.QueryFilterNotEntity or
+                GraphNodeOp.QueryFilterLayer or
+                GraphNodeOp.QueryFilterRelationship or
+                GraphNodeOp.AggCount or
+                GraphNodeOp.AggMinByDistance or
+                GraphNodeOp.TargetListGet or
+                GraphNodeOp.QueryHexRange or
+                GraphNodeOp.QueryHexRing or
+                GraphNodeOp.QueryHexNeighbors or
+                GraphNodeOp.ReadBlackboardFloat or
+                GraphNodeOp.ReadBlackboardInt or
+                GraphNodeOp.ReadBlackboardEntity or
+                GraphNodeOp.LoadConfigFloat or
+                GraphNodeOp.LoadConfigInt or
+                GraphNodeOp.LoadConfigEffectId or
+                GraphNodeOp.LoadContextSource or
+                GraphNodeOp.LoadContextTarget or
+                GraphNodeOp.LoadContextTargetContext or
+                GraphNodeOp.LoadSelfAttribute or
+                GraphNodeOp.RelationshipGetMetric or
+                GraphNodeOp.RelationshipHasFlag or
+                GraphNodeOp.RelationshipQueryOutgoing or
+                GraphNodeOp.RelationshipQueryIncoming or
+                GraphNodeOp.RelationshipQueryMutual or
+                GraphNodeOp.RelationshipQueryBetweenPair or
+                GraphNodeOp.RelationshipFilterMetricRange or
+                GraphNodeOp.RelationshipFilterFlag or
+                GraphNodeOp.RelationshipSortByMetric or
+                GraphNodeOp.RelationshipAggSumMetric or
+                GraphNodeOp.RelationshipAggMaxMetric or
+                GraphNodeOp.RelationshipAggAverageMetric or
+                GraphNodeOp.QueryAllMapEntities or
+                GraphNodeOp.QueryFromCollection or
+                GraphNodeOp.QueryFilterTeam or
+                GraphNodeOp.QueryFilterTemplate or
+                GraphNodeOp.QueryFilterAttributeRange or
+                GraphNodeOp.QueryFilterTagAny or
+                GraphNodeOp.QueryFilterTagNone or
+                GraphNodeOp.QuerySortByAttribute or
+                GraphNodeOp.AggSumAttribute or
+                GraphNodeOp.AggAverageAttribute or
+                GraphNodeOp.AggMaxAttribute or
+                GraphNodeOp.AggMinAttribute or
+                GraphNodeOp.AggMaxEntityByAttribute or
+                GraphNodeOp.AggMinEntityByAttribute or
+                GraphNodeOp.RelationshipAggMinMetric or
+                GraphNodeOp.RelationshipAggMaxEntityByMetric or
+                GraphNodeOp.RelationshipAggMinEntityByMetric or
+                GraphNodeOp.RelationshipHasLink or
+                GraphNodeOp.LoadTargetPosX or
+                GraphNodeOp.LoadTargetPosY or
+                GraphNodeOp.ClampTargetToRange or
+                GraphNodeOp.IsPointInCircle or
+                GraphNodeOp.SnapToNearestInCollection or
+                GraphNodeOp.SnapToNearestGraphEdge or
+                GraphNodeOp.LoadViewer or
+                GraphNodeOp.LoadEventPayloadInt or
+                GraphNodeOp.LoadEventPayloadFloat or
+                GraphNodeOp.ControlDomainResolve or
+                GraphNodeOp.ControlDomainControls or
+                GraphNodeOp.KnowledgeHasProjection or
+                GraphNodeOp.Call or
+                GraphNodeOp.Return or
+                GraphNodeOp.Yield or
+                GraphNodeOp.HaltReturnInt or
+                GraphNodeOp.InvokeScript or
+                GraphNodeOp.MoveInt or
+                GraphNodeOp.ResolveTableRow or
+                GraphNodeOp.TableReadInt or
+                GraphNodeOp.TableReadFloat or
+                GraphNodeOp.ShowPanel or
+                GraphNodeOp.HidePanel or
+                GraphNodeOp.CreatePanel or
+                GraphNodeOp.DestroyPanel or
+                GraphNodeOp.ReadMapVarInt or
+                GraphNodeOp.ReadMapVarFloat or
+                GraphNodeOp.WriteMapVarInt or
+                GraphNodeOp.WriteMapVarFloat
+                    => EffectOperationMetadata.Pure(description),
+
+                _ => throw new InvalidOperationException(
+                    $"Executable graph opcode '{op}' is missing explicit effect operation metadata."),
+            };
+        }
+
+        /// <summary>
+        /// Run-to-halt execution. Budget exhaustion throws. Yield is rejected.
+        /// Falling off the program end is an error; programs must halt with HaltReturnInt.
+        /// </summary>
+        internal static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
+        {
+            if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
+            {
+                throw new InvalidOperationException(
+                    $"Execute requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} (caller-owned; heap allocation is forbidden on this path).");
+            }
+
+            if (state.TreeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
+            {
+                throw new InvalidOperationException(
+                    $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
+            }
+
+            var cursor = new GraphExecutionCursor
+            {
+                Pc = 0,
+                Steps = state.TreeSteps,
+                CallStackCount = state.CallStackCount,
+                ReturnInt = state.ReturnInt,
+                InvokeDepth = state.InvokeDepth,
+                Status = GraphExecutionStatus.Running
+            };
+
+            GraphSliceResult result = ExecuteSliceCore(
+                ref state,
+                program,
+                handlers,
+                ref cursor,
+                GraphVmLimits.MaxInstructionsPerExecution - state.TreeSteps);
+
+            state.CallStackCount = cursor.CallStackCount;
+            state.ReturnInt = cursor.ReturnInt;
+            state.TreeSteps = cursor.Steps;
+            state.Status = result.Status;
+
+            if (result.Status is GraphExecutionStatus.Running or GraphExecutionStatus.BudgetSuspended)
+            {
+                throw new InvalidOperationException(
+                    $"Graph VM exceeded MaxInstructionsPerExecution ({GraphVmLimits.MaxInstructionsPerExecution}). Possible infinite loop.");
+            }
+
+            if (result.Status == GraphExecutionStatus.Yielded)
+            {
+                throw new InvalidOperationException(
+                    "Graph Yield is not allowed in RunToHalt Execute; use ExecuteSlice with GraphKind.Script.");
+            }
+        }
+
+        /// <summary>
+        /// Resumable execution. Caller must keep <see cref="GraphExecutionState.CallStack"/>
+        /// alive across slices. Budget exhaustion returns <see cref="GraphExecutionStatus.BudgetSuspended"/>
+        /// without throwing. Callers must resume from the cursor, not restart.
+        /// </summary>
+        internal static GraphSliceResult ExecuteSlice(
+            ref GraphExecutionState state,
+            ReadOnlySpan<GraphInstruction> program,
+            GasGraphOpHandlerTable handlers,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps)
+        {
+            if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
+            {
+                throw new InvalidOperationException(
+                    $"ExecuteSlice requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} that outlives the slice.");
+            }
+
+            return ExecuteSliceCore(ref state, program, handlers, ref cursor, budgetSteps);
+        }
+
+        private static GraphSliceResult ExecuteSliceCore(
+            ref GraphExecutionState state,
+            ReadOnlySpan<GraphInstruction> program,
+            GasGraphOpHandlerTable handlers,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps)
+        {
+            ArgumentNullException.ThrowIfNull(handlers);
+            if (budgetSteps <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(budgetSteps));
+            }
+
+            if (cursor.Status == GraphExecutionStatus.Halted)
+            {
+                return new GraphSliceResult(GraphExecutionStatus.Halted, cursor.ReturnInt, cursor.Steps);
+            }
+
+            if (cursor.CallStackCount < 0 || cursor.CallStackCount > state.CallStack.Length)
+            {
+                throw new InvalidOperationException($"Graph call stack count out of range: {cursor.CallStackCount}.");
+            }
+
+            cursor.Status = GraphExecutionStatus.Running;
+
+            var table = handlers.Handlers;
+            Span<int> ints = state.I;
+            int pc = cursor.Pc;
+            int callStackCount = cursor.CallStackCount;
+            int returnInt = cursor.ReturnInt;
+            int invokeDepth = cursor.InvokeDepth;
+            int treeSteps = state.TreeSteps < cursor.Steps ? cursor.Steps : state.TreeSteps;
+            int stepsThisSlice = 0;
+            bool statePrepared = false;
+            const ushort moveIntOp = (ushort)GraphNodeOp.MoveInt;
+            const ushort constIntOp = (ushort)GraphNodeOp.ConstInt;
+            const ushort haltReturnIntOp = (ushort)GraphNodeOp.HaltReturnInt;
+
+            while (stepsThisSlice < budgetSteps)
+            {
+                if (treeSteps >= GraphVmLimits.MaxInstructionsPerExecution)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.BudgetSuspended);
+                    return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, treeSteps);
+                }
+
+                if ((uint)pc >= (uint)program.Length)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
+                    throw new InvalidOperationException(
+                        $"{GraphKindOperationPolicy.PcOutOfRangeError}: pc={pc}, length={program.Length}. 程序计数器越界；掉出程序尾部不再算成功，必须用 HaltReturnInt 显式结束。");
+                }
+
+                ref readonly var ins = ref program[pc];
+                int instructionIndex = pc;
+                pc++;
+                treeSteps++;
+                stepsThisSlice++;
+
+                ushort op = ins.Op;
+                if (op == moveIntOp)
+                {
+                    if (ins.Dst == ins.A)
+                    {
+                        if ((uint)ins.Dst >= (uint)ints.Length)
+                        {
+                            PersistSliceState(
+                                ref state,
+                                ref cursor,
+                                pc,
+                                callStackCount,
+                                returnInt,
+                                treeSteps,
+                                program.Length,
+                                invokeDepth,
+                                GraphExecutionStatus.Running);
+                            throw new InvalidOperationException(
+                                $"Graph MoveInt int register {ins.Dst} exceeds int register capacity ({ints.Length}).");
+                        }
+
+                        while (stepsThisSlice < budgetSteps && treeSteps < GraphVmLimits.MaxInstructionsPerExecution)
+                        {
+                            if ((uint)pc >= (uint)program.Length)
+                            {
+                                break;
+                            }
+
+                            ref readonly var next = ref program[pc];
+                            if (next.Op != moveIntOp || next.Dst != next.A)
+                            {
+                                break;
+                            }
+
+                            pc++;
+                            treeSteps++;
+                            stepsThisSlice++;
+                            if ((uint)next.Dst >= (uint)ints.Length)
+                            {
+                                PersistSliceState(
+                                    ref state,
+                                    ref cursor,
+                                    pc,
+                                    callStackCount,
+                                    returnInt,
+                                    treeSteps,
+                                    program.Length,
+                                    invokeDepth,
+                                    GraphExecutionStatus.Running);
+                                throw new InvalidOperationException(
+                                    $"Graph MoveInt int register {next.Dst} exceeds int register capacity ({ints.Length}).");
+                            }
+                        }
+
+                        continue;
+                    }
+                    else
+                    {
+                        ints[ins.Dst] = ints[ins.A];
+                    }
+
+                    continue;
+                }
+
+                if (op == constIntOp)
+                {
+                    ints[ins.Dst] = ins.Imm;
+                    continue;
+                }
+
+                if (op == haltReturnIntOp)
+                {
+                    returnInt = ints[ins.A];
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        instructionIndex + 1,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Halted);
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
+                }
+
+                if (op == 0)
+                {
+                    continue;
+                }
+
+                if (op >= table.Length)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
+                    throw new InvalidOperationException(
+                        $"Graph op {op} exceeds handler table capacity ({table.Length}).");
+                }
+
+                var handler = table[op];
+                if (handler == null)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Running);
+                    throw new InvalidOperationException(
+                        $"No handler registered for graph op {op}.");
+                }
+
+                if (!statePrepared)
+                {
+                    state.CallStackCount = callStackCount;
+                    state.ReturnInt = returnInt;
+                    state.Status = GraphExecutionStatus.Running;
+                    state.ProgramLength = program.Length;
+                    state.InvokeDepth = invokeDepth;
+                    statePrepared = true;
+                }
+
+                state.TreeSteps = treeSteps;
+                handler(ref state, in ins, ref pc);
+                callStackCount = state.CallStackCount;
+                returnInt = state.ReturnInt;
+                if (state.TreeSteps > treeSteps)
+                {
+                    treeSteps = state.TreeSteps;
+                }
+
+                if (state.Status == GraphExecutionStatus.Yielded)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        pc,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Yielded);
+                    return new GraphSliceResult(GraphExecutionStatus.Yielded, returnInt, cursor.Steps);
+                }
+
+                if (state.Status == GraphExecutionStatus.Halted)
+                {
+                    PersistSliceState(
+                        ref state,
+                        ref cursor,
+                        instructionIndex + 1,
+                        callStackCount,
+                        returnInt,
+                        treeSteps,
+                        program.Length,
+                        invokeDepth,
+                        GraphExecutionStatus.Halted);
+                    return new GraphSliceResult(GraphExecutionStatus.Halted, returnInt, cursor.Steps);
+                }
+            }
+
+            PersistSliceState(
+                ref state,
+                ref cursor,
+                pc,
+                callStackCount,
+                returnInt,
+                treeSteps,
+                program.Length,
+                invokeDepth,
+                GraphExecutionStatus.BudgetSuspended);
+            return new GraphSliceResult(GraphExecutionStatus.BudgetSuspended, returnInt, cursor.Steps);
+        }
+
+        private static void PersistSliceState(
+            ref GraphExecutionState state,
+            ref GraphExecutionCursor cursor,
+            int pc,
+            int callStackCount,
+            int returnInt,
+            int treeSteps,
+            int programLength,
+            int invokeDepth,
+            GraphExecutionStatus status)
+        {
+            state.CallStackCount = callStackCount;
+            state.ReturnInt = returnInt;
+            state.ProgramLength = programLength;
+            state.InvokeDepth = invokeDepth;
+            state.TreeSteps = treeSteps;
+            state.Status = status;
+            cursor.Pc = pc;
+            cursor.CallStackCount = callStackCount;
+            cursor.ReturnInt = returnInt;
+            cursor.Steps = treeSteps;
+            cursor.InvokeDepth = invokeDepth;
+            cursor.Status = status;
+        }
+
+        private void RegisterBuiltins()
+        {
+            Register(GraphNodeOp.ConstBool, HandleConstBool, "ConstBool graph opcode.");
+            Register(GraphNodeOp.ConstInt, HandleConstInt, "ConstInt graph opcode.");
+            Register(GraphNodeOp.ConstFloat, HandleConstFloat, "ConstFloat graph opcode.");
+            Register(GraphNodeOp.LoadCaster, HandleLoadCaster, "LoadCaster graph opcode.");
+            Register(GraphNodeOp.LoadExplicitTarget, HandleLoadExplicitTarget, "LoadExplicitTarget graph opcode.");
+            Register(GraphNodeOp.Jump, HandleJump, "Jump graph opcode.");
+            Register(GraphNodeOp.JumpIfFalse, HandleJumpIfFalse, "JumpIfFalse graph opcode.");
+            Register(GraphNodeOp.LoadAttribute, HandleLoadAttribute, "LoadAttribute graph opcode.");
+            Register(GraphNodeOp.AddFloat, HandleAddFloat, "AddFloat graph opcode.");
+            Register(GraphNodeOp.MulFloat, HandleMulFloat, "MulFloat graph opcode.");
+            Register(GraphNodeOp.CompareGtFloat, HandleCompareGtFloat, "CompareGtFloat graph opcode.");
+            Register(GraphNodeOp.SelectEntity, HandleSelectEntity, "SelectEntity graph opcode.");
+            Register(GraphNodeOp.QueryRadius, HandleQueryRadius, "QueryRadius graph opcode.");
+            Register(GraphNodeOp.QuerySortStable, HandleQuerySortStable, "QuerySortStable graph opcode.");
+            Register(GraphNodeOp.QueryLimit, HandleQueryLimit, "QueryLimit graph opcode.");
+            Register(GraphNodeOp.QueryCone, HandleQueryCone, "QueryCone graph opcode.");
+            Register(GraphNodeOp.QueryRectangle, HandleQueryRectangle, "QueryRectangle graph opcode.");
+            Register(GraphNodeOp.QueryLine, HandleQueryLine, "QueryLine graph opcode.");
+            Register(GraphNodeOp.QueryFilterNotEntity, HandleQueryFilterNotEntity, "QueryFilterNotEntity graph opcode.");
+            Register(GraphNodeOp.QueryFilterLayer, HandleQueryFilterLayer, "QueryFilterLayer graph opcode.");
+            Register(GraphNodeOp.QueryFilterRelationship, HandleQueryFilterRelationship, "QueryFilterRelationship graph opcode.");
+            Register(GraphNodeOp.AggCount, HandleAggCount, "AggCount graph opcode.");
+            Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
+            Register(GraphNodeOp.TargetListGet, HandleTargetListGet, "TargetListGet graph opcode.");
+            Register(GraphNodeOp.ApplyEffectTemplate, HandleApplyEffectTemplate, "ApplyEffectTemplate graph opcode.");
+            Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
+            Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
+            Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
+            Register(GraphNodeOp.SendEvent, HandleSendEvent, "SendEvent graph opcode.");
+            Register(GraphNodeOp.RelationshipEnsureLink, HandleRelationshipEnsureLink, "RelationshipEnsureLink graph opcode.");
+            Register(GraphNodeOp.RelationshipRemoveLink, HandleRelationshipRemoveLink, "RelationshipRemoveLink graph opcode.");
+            Register(GraphNodeOp.RelationshipSetMetric, HandleRelationshipSetMetric, "RelationshipSetMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAddMetric, HandleRelationshipAddMetric, "RelationshipAddMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipGetMetric, HandleRelationshipGetMetric, "RelationshipGetMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipHasFlag, HandleRelationshipHasFlag, "RelationshipHasFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipSetFlag, HandleRelationshipSetFlag, "RelationshipSetFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryOutgoing, HandleRelationshipQueryOutgoing, "RelationshipQueryOutgoing graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryIncoming, HandleRelationshipQueryIncoming, "RelationshipQueryIncoming graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryMutual, HandleRelationshipQueryMutual, "RelationshipQueryMutual graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryBetweenPair, HandleRelationshipQueryBetweenPair, "RelationshipQueryBetweenPair graph opcode.");
+            Register(GraphNodeOp.RelationshipFilterMetricRange, HandleRelationshipFilterMetricRange, "RelationshipFilterMetricRange graph opcode.");
+            Register(GraphNodeOp.RelationshipFilterFlag, HandleRelationshipFilterFlag, "RelationshipFilterFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipSortByMetric, HandleRelationshipSortByMetric, "RelationshipSortByMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggSumMetric, HandleRelationshipAggSumMetric, "RelationshipAggSumMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMaxMetric, HandleRelationshipAggMaxMetric, "RelationshipAggMaxMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggAverageMetric, HandleRelationshipAggAverageMetric, "RelationshipAggAverageMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMinMetric, HandleRelationshipAggMinMetric, "RelationshipAggMinMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMaxEntityByMetric, HandleRelationshipAggMaxEntityByMetric, "RelationshipAggMaxEntityByMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMinEntityByMetric, HandleRelationshipAggMinEntityByMetric, "RelationshipAggMinEntityByMetric graph opcode.");
+            Register(GraphNodeOp.QueryAllMapEntities, HandleQueryAllMapEntities, "QueryAllMapEntities graph opcode.");
+            Register(GraphNodeOp.QueryFromCollection, HandleQueryFromCollection, "QueryFromCollection graph opcode.");
+            Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
+            Register(GraphNodeOp.QueryFilterTemplate, HandleQueryFilterTemplate, "QueryFilterTemplate graph opcode.");
+            Register(GraphNodeOp.QueryFilterAttributeRange, HandleQueryFilterAttributeRange, "QueryFilterAttributeRange graph opcode.");
+            Register(GraphNodeOp.QueryFilterTagAny, HandleQueryFilterTagAny, "QueryFilterTagAny graph opcode.");
+            Register(GraphNodeOp.QueryFilterTagNone, HandleQueryFilterTagNone, "QueryFilterTagNone graph opcode.");
+            Register(GraphNodeOp.QuerySortByAttribute, HandleQuerySortByAttribute, "QuerySortByAttribute graph opcode.");
+            Register(GraphNodeOp.AggSumAttribute, HandleAggSumAttribute, "AggSumAttribute graph opcode.");
+            Register(GraphNodeOp.AggAverageAttribute, HandleAggAverageAttribute, "AggAverageAttribute graph opcode.");
+            Register(GraphNodeOp.AggMaxAttribute, HandleAggMaxAttribute, "AggMaxAttribute graph opcode.");
+            Register(GraphNodeOp.AggMinAttribute, HandleAggMinAttribute, "AggMinAttribute graph opcode.");
+            Register(GraphNodeOp.AggMaxEntityByAttribute, HandleAggMaxEntityByAttribute, "AggMaxEntityByAttribute graph opcode.");
+            Register(GraphNodeOp.AggMinEntityByAttribute, HandleAggMinEntityByAttribute, "AggMinEntityByAttribute graph opcode.");
+            Register(GraphNodeOp.BeginLifecycleTransaction, HandleBeginLifecycleTransaction, "BeginLifecycleTransaction graph opcode.");
+            Register(GraphNodeOp.InvokeBuiltin, HandleInvokeBuiltin, "InvokeBuiltin graph opcode.");
+            Register(GraphNodeOp.AddInt, HandleAddInt, "AddInt graph opcode.");
+            Register(GraphNodeOp.CompareLtInt, HandleCompareLtInt, "CompareLtInt graph opcode.");
+            Register(GraphNodeOp.CompareEqInt, HandleCompareEqInt, "CompareEqInt graph opcode.");
+            Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
+            Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
+            Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
+            Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
+            Register(GraphNodeOp.QueryHexRing, HandleQueryHexRing, "QueryHexRing graph opcode.");
+            Register(GraphNodeOp.QueryHexNeighbors, HandleQueryHexNeighbors, "QueryHexNeighbors graph opcode.");
+            Register(GraphNodeOp.SubFloat, HandleSubFloat, "SubFloat graph opcode.");
+            Register(GraphNodeOp.DivFloat, HandleDivFloat, "DivFloat graph opcode.");
+            Register(GraphNodeOp.MinFloat, HandleMinFloat, "MinFloat graph opcode.");
+            Register(GraphNodeOp.MaxFloat, HandleMaxFloat, "MaxFloat graph opcode.");
+            Register(GraphNodeOp.ClampFloat, HandleClampFloat, "ClampFloat graph opcode.");
+            Register(GraphNodeOp.AbsFloat, HandleAbsFloat, "AbsFloat graph opcode.");
+            Register(GraphNodeOp.NegFloat, HandleNegFloat, "NegFloat graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardFloat, HandleReadBlackboardFloat, "ReadBlackboardFloat graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardInt, HandleReadBlackboardInt, "ReadBlackboardInt graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardEntity, HandleReadBlackboardEntity, "ReadBlackboardEntity graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardFloat, HandleWriteBlackboardFloat, "WriteBlackboardFloat graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardInt, HandleWriteBlackboardInt, "WriteBlackboardInt graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardEntity, HandleWriteBlackboardEntity, "WriteBlackboardEntity graph opcode.");
+            Register(GraphNodeOp.LoadConfigFloat, HandleLoadConfigFloat, "LoadConfigFloat graph opcode.");
+            Register(GraphNodeOp.LoadConfigInt, HandleLoadConfigInt, "LoadConfigInt graph opcode.");
+            Register(GraphNodeOp.LoadConfigEffectId, HandleLoadConfigEffectId, "LoadConfigEffectId graph opcode.");
+            Register(GraphNodeOp.LoadContextSource, HandleLoadContextSource, "LoadContextSource graph opcode.");
+            Register(GraphNodeOp.LoadContextTarget, HandleLoadContextTarget, "LoadContextTarget graph opcode.");
+            Register(GraphNodeOp.LoadContextTargetContext, HandleLoadContextTargetContext, "LoadContextTargetContext graph opcode.");
+            Register(GraphNodeOp.ApplyEffectDynamic, HandleApplyEffectDynamic, "ApplyEffectDynamic graph opcode.");
+            Register(GraphNodeOp.FanOutApplyEffectDynamic, HandleFanOutApplyEffectDynamic, "FanOutApplyEffectDynamic graph opcode.");
+            Register(GraphNodeOp.FanOutDispatchEffect, HandleFanOutDispatchEffect, "FanOutDispatchEffect graph opcode.");
+            Register(GraphNodeOp.FanOutDispatchEffectDynamic, HandleFanOutDispatchEffectDynamic, "FanOutDispatchEffectDynamic graph opcode.");
+            Register(GraphNodeOp.LoadSelfAttribute, HandleLoadSelfAttribute, "LoadSelfAttribute graph opcode.");
+            Register(GraphNodeOp.WriteSelfAttribute, HandleWriteSelfAttribute, "WriteSelfAttribute graph opcode.");
+            Register(GraphNodeOp.LoadTargetPosX, HandleLoadTargetPosX, "LoadTargetPosX graph opcode.");
+            Register(GraphNodeOp.LoadTargetPosY, HandleLoadTargetPosY, "LoadTargetPosY graph opcode.");
+            Register(GraphNodeOp.ClampTargetToRange, HandleClampTargetToRange, "ClampTargetToRange graph opcode.");
+            Register(GraphNodeOp.IsPointInCircle, HandleIsPointInCircle, "IsPointInCircle graph opcode.");
+            Register(GraphNodeOp.SnapToNearestInCollection, HandleSnapToNearestInCollection, "SnapToNearestInCollection graph opcode.");
+            Register(GraphNodeOp.SnapToNearestGraphEdge, HandleSnapToNearestGraphEdge, "SnapToNearestGraphEdge graph opcode.");
+            Register(GraphNodeOp.LoadViewer, HandleLoadViewer, "LoadViewer graph opcode.");
+            Register(GraphNodeOp.LoadEventPayloadInt, HandleLoadEventPayloadInt, "LoadEventPayloadInt graph opcode.");
+            Register(GraphNodeOp.LoadEventPayloadFloat, HandleLoadEventPayloadFloat, "LoadEventPayloadFloat graph opcode.");
+            Register(GraphNodeOp.RelationshipHasLink, HandleRelationshipHasLink, "RelationshipHasLink graph opcode.");
+            Register(GraphNodeOp.ControlDomainResolve, HandleControlDomainResolve, "ControlDomainResolve graph opcode.");
+            Register(GraphNodeOp.ControlDomainControls, HandleControlDomainControls, "ControlDomainControls graph opcode.");
+            Register(GraphNodeOp.KnowledgeHasProjection, HandleKnowledgeHasProjection, "KnowledgeHasProjection graph opcode.");
+            Register(GraphNodeOp.Call, HandleCall, "Call graph opcode.");
+            Register(GraphNodeOp.Return, HandleReturn, "Return graph opcode.");
+            Register(GraphNodeOp.Yield, HandleYield, "Yield graph opcode.");
+            Register(GraphNodeOp.HaltReturnInt, HandleHaltReturnInt, "HaltReturnInt graph opcode.");
+            Register(GraphNodeOp.InvokeScript, HandleInvokeScript, "InvokeScript graph opcode.");
+            Register(GraphNodeOp.MoveInt, HandleMoveInt, "MoveInt graph opcode.");
+            Register(GraphNodeOp.ResolveTableRow, HandleResolveTableRow, "ResolveTableRow graph opcode.");
+            Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
+            Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
+            Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
+            Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
+            Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
+            Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
+            Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
+            Register(GraphNodeOp.ReadMapVarFloat, HandleReadMapVarFloat, "ReadMapVarFloat graph opcode.");
+            Register(GraphNodeOp.WriteMapVarInt, HandleWriteMapVarInt, "WriteMapVarInt graph opcode.");
+            Register(GraphNodeOp.WriteMapVarFloat, HandleWriteMapVarFloat, "WriteMapVarFloat graph opcode.");
         }
 
         // ── Value Ops ──
@@ -262,6 +842,222 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        private static void HandleCall(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.CallStackCount >= GraphVmLimits.MaxCallStackDepth)
+            {
+                throw new InvalidOperationException(
+                    $"Graph call stack exceeded MaxCallStackDepth ({GraphVmLimits.MaxCallStackDepth}).");
+            }
+
+            int target = ins.Imm;
+            if ((uint)target >= (uint)s.ProgramLength)
+            {
+                throw new InvalidOperationException($"Graph Call target out of range: {target}.");
+            }
+
+            s.CallStack[s.CallStackCount++] = pc;
+            pc = target;
+        }
+
+        private static void HandleReturn(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.CallStackCount <= 0)
+            {
+                throw new InvalidOperationException("Graph Return executed with an empty call stack.");
+            }
+
+            pc = s.CallStack[--s.CallStackCount];
+        }
+
+        private static void HandleYield(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Status = GraphExecutionStatus.Yielded;
+        }
+
+        private static void HandleHaltReturnInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.ReturnInt = s.I[ins.A];
+            s.Status = GraphExecutionStatus.Halted;
+        }
+
+        private static void HandleInvokeScript(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (s.Programs == null)
+            {
+                throw new InvalidOperationException("InvokeScript requires GraphExecutionState.Programs.");
+            }
+
+            if (s.InvokeDepth >= GraphVmLimits.MaxInvokeDepth)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvokeDepthExceeded: invoke depth {s.InvokeDepth + 1} exceeds MaxInvokeDepth ({GraphVmLimits.MaxInvokeDepth}).");
+            }
+
+            int graphId = ins.Imm;
+            if (graphId <= 0)
+            {
+                throw new InvalidOperationException("InvokeScript requires a positive Script graph id in Imm.");
+            }
+
+            s.Programs.RequireKind(graphId, GraphKind.Script);
+            if (!s.Programs.TryGetRegistration(graphId, out GraphProgramRegistration childRegistration))
+            {
+                throw new InvalidOperationException($"InvokeScript target graph id {graphId} is not registered.");
+            }
+
+            if (childRegistration.ContainsYield)
+            {
+                throw new InvalidOperationException(
+                    $"InvokeScript target graph id {graphId} contains Yield; nested Yield is not supported in this slice.");
+            }
+
+            ReadOnlySpan<GraphInstruction> childProgram = childRegistration.Program;
+
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            var targetList = new GraphTargetList(targets);
+            e[0] = s.Caster;
+            e[1] = s.ExplicitTarget;
+            e[2] = s.E.Length > 2 ? s.E[2] : default;
+
+            var child = new GraphExecutionState
+            {
+                World = s.World,
+                Caster = s.Caster,
+                ExplicitTarget = s.ExplicitTarget,
+                TargetContext = s.TargetContext,
+                Viewer = s.Viewer,
+                EventPayload = s.EventPayload,
+                TargetPosCm = s.TargetPosCm,
+                RandomSeed = s.RandomSeed,
+                Api = s.Api,
+                Programs = s.Programs,
+                F = f,
+                I = i,
+                B = b,
+                E = e,
+                Targets = targets,
+                TargetList = targetList,
+                CallStack = callStack,
+                Status = GraphExecutionStatus.Running,
+                InvokeDepth = s.InvokeDepth + 1,
+                TreeSteps = s.TreeSteps
+            };
+
+            Execute(ref child, childProgram, Instance);
+            s.TreeSteps = child.TreeSteps;
+            s.I[ins.Dst] = child.ReturnInt;
+        }
+
+        private static void HandleMoveInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.I[ins.A];
+        }
+
+        // ── Generic lookup tables (#881) ──
+
+        private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key)
+            s.I[ins.Dst] = s.Api.ResolveTableRow(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleTableReadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle)
+            s.I[ins.Dst] = s.Api.TableReadInt(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleShowPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Panel show request; the UI records the decision without orchestrating (#1014).
+            s.Api.ShowPanel(ins.Imm);
+        }
+
+        private static void HandleHidePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.HidePanel(ins.Imm);
+        }
+
+        private static void HandleCreatePanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.CreatePanel(
+                UI.PanelHosting.PanelOpEncoding.UnpackTemplate(ins.Imm),
+                UI.PanelHosting.PanelOpEncoding.UnpackAnchor(ins.Imm),
+                scope,
+                ins.B,
+                ins.ImmF);
+        }
+
+        private static void HandleDestroyPanel(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? Entity.Null : s.E[ins.A];
+            s.Api.DestroyPanel(ins.Imm, scope);
+        }
+
+        // ── Map-scoped variables ──
+
+        private static void HandleReadMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = map variable (Imm=varName keyId); map resolved from E[A] (0xFF → caster).
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.I[ins.Dst] = s.Api.ReadMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarInt)));
+        }
+
+        private static void HandleReadMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.F[ins.Dst] = s.Api.ReadMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.ReadMapVarFloat)));
+        }
+
+        private static void HandleWriteMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // store.Write(Imm=varName keyId, I[A]); map resolved from E[B] (0xFF → caster).
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarInt(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarInt)),
+                s.I[ins.A]);
+        }
+
+        private static void HandleWriteMapVarFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity scope = ins.B == byte.MaxValue ? s.Caster : s.E[ins.B];
+            s.Api.WriteMapVarFloat(
+                ins.Imm,
+                RequireMapVariableScopeMap(ref s, scope, nameof(GraphNodeOp.WriteMapVarFloat)),
+                s.F[ins.A]);
+        }
+
+        private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
+        {
+            if (s.World == null ||
+                !s.World.IsAlive(scope) ||
+                !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
+            }
+
+            return mapEntity.MapId;
+        }
+
+        private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle)
+            s.F[ins.Dst] = s.Api.TableReadFloat(ins.Imm, s.I[ins.A]);
+        }
+
         // ── Attribute ──
 
         private static void HandleLoadAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -303,22 +1099,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryRadius(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryRadius(s.TargetPos, ins.ImmF, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRadius(s.TargetPosCm, ins.ImmF, s.Targets));
         }
 
         private static void HandleQueryCone(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryCone(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.ImmF, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryCone(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.ImmF, s.Targets));
         }
 
         private static void HandleQueryRectangle(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryRectangle(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryRectangle(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
         }
 
         private static void HandleQueryLine(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryLine(s.TargetPos, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryLine(s.TargetPosCm, s.I[ins.A], s.I[ins.B], ins.Imm, s.Targets));
+        }
+
+        private static void ApplySpatialQueryResult(
+            ref GraphExecutionState s,
+            in GraphInstruction ins,
+            Ludots.Core.Spatial.SpatialQueryResult result)
+        {
+            if (ins.Flags > 1)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidSpatialQueryCapacityPolicy: flags={ins.Flags}.");
+            }
+
+            if ((uint)result.Count > (uint)s.Targets.Length || result.Dropped < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidSpatialQueryResult: count={result.Count}, dropped={result.Dropped}, capacity={s.Targets.Length}.");
+            }
+
+            if (result.Dropped > 0 && ins.Flags == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SpatialQueryIncomplete: count={result.Count}, dropped={result.Dropped}.");
+            }
+
+            s.TargetList.SetCount(result.Count);
+            if (ins.Flags == 1)
+            {
+                s.I[ins.Dst] = result.Dropped;
+            }
         }
 
         // ── Query Filters ──
@@ -361,7 +1187,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleAggMinByDistance(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.E[ins.Dst] = s.Api.TryMinEntityByDistance(s.TargetList.Span, s.TargetPos, out Entity entity, out _)
+            var centerCm = new WorldCmInt2(s.TargetPosCm.X, s.TargetPosCm.Y);
+            s.E[ins.Dst] = s.Api.TryMinEntityByWorldDistanceCm(s.TargetList.Span, centerCm, out Entity entity, out _)
                 ? entity
                 : Entity.Null;
         }
@@ -501,22 +1328,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipQueryOutgoing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectOutgoing(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectOutgoing(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryIncoming(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectIncoming(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectIncoming(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryMutual(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectMutual(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectMutual(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
         }
 
         private static void HandleRelationshipQueryBetweenPair(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.CollectBetweenPair(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectBetweenPair(s.E[ins.A], s.E[ins.B], s.Targets, ResolveQueryTypeId(ins.Dst)));
+        }
+
+        private static void ApplyRelationshipQueryResult(
+            ref GraphExecutionState s,
+            in GraphInstruction ins,
+            RelationshipQueryResult result)
+        {
+            if (ins.Flags > 1)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidRelationshipQueryCapacityPolicy: flags={ins.Flags}.");
+            }
+
+            if ((uint)result.Count > (uint)s.Targets.Length || result.Dropped < 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidRelationshipQueryResult: count={result.Count}, dropped={result.Dropped}, capacity={s.Targets.Length}.");
+            }
+
+            if (result.Dropped > 0 && ins.Flags == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.RelationshipQueryIncomplete: count={result.Count}, dropped={result.Dropped}.");
+            }
+
+            s.TargetList.SetCount(result.Count);
+            if (ins.Flags == 1)
+            {
+                s.I[ins.C] = result.Dropped;
+            }
         }
 
         private static void HandleRelationshipFilterMetricRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -790,17 +1647,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryHexRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexRange(s.TargetPos, ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexRange(s.TargetPosCm, ins.Imm, s.Targets));
         }
 
         private static void HandleQueryHexRing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexRing(s.TargetPos, ins.Imm, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexRing(s.TargetPosCm, ins.Imm, s.Targets));
         }
 
         private static void HandleQueryHexNeighbors(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SetCount(s.Api.QueryHexNeighbors(s.TargetPos, s.Targets));
+            ApplySpatialQueryResult(ref s, in ins, s.Api.QueryHexNeighbors(s.TargetPosCm, s.Targets));
         }
 
         // ── Additional Math Ops (22-28) ──
@@ -1002,17 +1859,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleLoadSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            // F[dst] = Caster.Attribute[Imm] — reads current aggregated value from self entity
-            var self = s.Caster;
-            if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
-            {
-                ref var buf = ref s.World.Get<AttributeBuffer>(self);
-                s.F[ins.Dst] = buf.GetCurrent(ins.Imm);
-            }
-            else
-            {
-                s.F[ins.Dst] = 0f;
-            }
+            s.F[ins.Dst] = s.Api.TryGetAttributeCurrent(s.Caster, ins.Imm, out float value)
+                ? value
+                : 0f;
         }
 
         private static void HandleWriteSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1021,18 +1870,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var self = s.Caster;
             if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
             {
-                AttributeMutationOps.SetCurrent(s.World, self, ins.Imm, s.F[ins.A]);
+                s.Api.ModifyAttributeSet(s.Caster, self, ins.Imm, s.F[ins.A]);
             }
         }
 
         private static void HandleLoadTargetPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.TargetPos.X;
+            s.I[ins.Dst] = s.TargetPosCm.X;
         }
 
         private static void HandleLoadTargetPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.I[ins.Dst] = s.TargetPos.Y;
+            s.I[ins.Dst] = s.TargetPosCm.Y;
         }
 
         private static void HandleClampTargetToRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1043,14 +1892,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            Fix64Vec2 targetCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            Fix64Vec2 targetCm = Fix64Vec2.FromInt(s.TargetPosCm.X, s.TargetPosCm.Y);
             PlacementValidation.ClampToRange(
                 in originCm,
                 ref targetCm,
                 Fix64.FromFloat(s.F[ins.B]),
                 out bool inRange);
             var rounded = targetCm.RoundToInt();
-            s.TargetPos = new IntVector2(rounded.x, rounded.y);
+            s.TargetPosCm = new IntVector2(rounded.x, rounded.y);
             s.B[ins.Dst] = (byte)(inRange ? 1 : 0);
         }
 
@@ -1062,7 +1911,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            Fix64Vec2 pointCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(s.TargetPosCm.X, s.TargetPosCm.Y);
             bool inside = PlacementValidation.IsPointInCircle(
                 in pointCm,
                 in centerCm,
@@ -1075,7 +1924,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             bool found = s.Api.TrySnapTargetToNearestInCollection(
                 s.E[ins.A],
                 ins.Imm,
-                ref s.TargetPos,
+                ref s.TargetPosCm,
                 s.F[ins.B],
                 out Entity snappedEntity);
             s.E[ins.Dst] = snappedEntity;
@@ -1088,7 +1937,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void HandleSnapToNearestGraphEdge(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             bool found = s.Api.TrySnapTargetToNearestGraphEdge(
-                ref s.TargetPos,
+                ref s.TargetPosCm,
                 s.F[ins.A],
                 out _);
             s.B[ins.Dst] = (byte)(found ? 1 : 0);

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
@@ -36,6 +37,8 @@ namespace TcgDemoMod.Triggers
             if (!modify && !hook && !chain && !stack && !grant) return Task.CompletedTask;
 
             var world = engine.World;
+            var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
+                ?? throw new InvalidOperationException(ResponseChainListenerOps.MissingQueueError);
             EnsureTagComponents(world);
 
             int spellTagId = TagRegistry.Register("Effect.Tcg.Spell");
@@ -46,10 +49,9 @@ namespace TcgDemoMod.Triggers
                 listener.Add(spellTagId, hook ? ResponseType.Hook : ResponseType.Modify,
                     priority: 100, modifyValue: 10, modifyOp: ModifierOp.Add);
 
-                world.Create(
-                    new Name { Value = hook ? "TcgHookListener" : "TcgModifyListener" },
-                    listener
-                );
+                Entity listenerEntity = world.Create(
+                    new Name { Value = hook ? "TcgHookListener" : "TcgModifyListener" });
+                ResponseChainListenerOps.Add(world, listenerEntity, in listener, effectRequests);
             }
 
             if (chain)
@@ -60,10 +62,8 @@ namespace TcgDemoMod.Triggers
                 chainListener.Add(spellTagId, ResponseType.Chain, priority: 50,
                     effectTemplateId: counterBlastId);
 
-                world.Create(
-                    new Name { Value = "TcgChainListener" },
-                    chainListener
-                );
+                Entity listenerEntity = world.Create(new Name { Value = "TcgChainListener" });
+                ResponseChainListenerOps.Add(world, listenerEntity, in chainListener, effectRequests);
             }
 
             return Task.CompletedTask;
@@ -89,9 +89,7 @@ namespace TcgDemoMod.Triggers
                     return;
                 }
 
-                if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
-                if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
-                if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
+                TagStateInstaller.EnsureInstalled(world, e);
             });
         }
     }

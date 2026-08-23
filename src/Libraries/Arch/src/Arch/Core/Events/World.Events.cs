@@ -1,6 +1,7 @@
 ﻿using Arch.Core.Events;
 using Arch.Core.Extensions;
 using Arch.Core.Utils;
+using System.Threading;
 
 // ReSharper disable once CheckNamespace
 namespace Arch.Core;
@@ -24,9 +25,10 @@ public partial class World
     private readonly List<EntityCreatedHandler> _entityCreatedHandlers = new(InitialCapacity);
 
     /// <summary>
-    ///     All <see cref="EntityDestroyedHandler"/>s in a <see cref="List{T}"/> which will be called after entity destruction.
+    ///     Immutable snapshot of handlers called after entity destruction.
     /// </summary>
-    private readonly List<EntityDestroyedHandler> _entityDestroyedHandlers = new(InitialCapacity);
+    private EntityDestroyedHandler[] _entityDestroyedHandlers = Array.Empty<EntityDestroyedHandler>();
+    private readonly object _entityDestroyedHandlersWriteLock = new();
 
     /// <summary>
     ///     All <see cref="Events"/> in an array which will be acessed for add, remove or set operations.
@@ -53,12 +55,19 @@ public partial class World
     /// <param name="handler">The delegate to call.</param>
     public void SubscribeEntityDestroyed(EntityDestroyedHandler handler)
     {
-#if EVENTS
-        lock (_entityDestroyedHandlers)
+        if (handler == null)
         {
-            _entityDestroyedHandlers.Add(handler);
+            throw new ArgumentNullException(nameof(handler));
         }
-#endif
+
+        lock (_entityDestroyedHandlersWriteLock)
+        {
+            EntityDestroyedHandler[] current = Volatile.Read(ref _entityDestroyedHandlers);
+            var next = new EntityDestroyedHandler[current.Length + 1];
+            Array.Copy(current, next, current.Length);
+            next[current.Length] = handler;
+            Volatile.Write(ref _entityDestroyedHandlers, next);
+        }
     }
 
     /// <summary>
@@ -174,24 +183,16 @@ public partial class World
 
     public void OnEntityDestroyed(Entity entity)
     {
-#if EVENTS
-        int count;
-        lock (_entityDestroyedHandlers)
+        EntityDestroyedHandler[] handlers = Volatile.Read(ref _entityDestroyedHandlers);
+        if (handlers.Length == 0)
         {
-            count = _entityDestroyedHandlers.Count;
+            return;
         }
 
-        for (var i = 0; i < _entityDestroyedHandlers.Count; i++)
+        for (var i = 0; i < handlers.Length; i++)
         {
-            EntityDestroyedHandler handler;
-            lock (_entityDestroyedHandlers)
-            {
-                handler = _entityDestroyedHandlers[i];
-            }
-
-            handler.Invoke(in entity);
+            handlers[i].Invoke(in entity);
         }
-#endif
     }
 
     /// <summary>

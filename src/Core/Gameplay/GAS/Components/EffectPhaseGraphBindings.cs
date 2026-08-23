@@ -8,7 +8,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// </summary>
     public unsafe struct EffectPhaseGraphBindings
     {
-        public const int MAX_STEPS = GasConstants.EFFECT_PHASE_GRAPH_MAX_STEPS; // 8 phases × 2 user slots (Pre/Post)
+        public const int MAX_STEPS = GasConstants.EFFECT_PHASE_GRAPH_MAX_STEPS; // 8 phases x Pre/Main/Post
 
         /// <summary>Number of configured steps.</summary>
         public int StepCount;
@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>EffectPhaseId for each step.</summary>
         public fixed byte StepPhases[MAX_STEPS];
 
-        /// <summary>PhaseSlot (Pre/Post) for each step. Main is never stored here; it comes from PresetTypeRegistry.DefaultPhaseHandlers.</summary>
+        /// <summary>PhaseSlot (Pre/Main/Post) for each step. A template Main replaces the preset default.</summary>
         public fixed byte StepSlots[MAX_STEPS];
 
         /// <summary>GraphProgramId for each step (resolved at load time).</summary>

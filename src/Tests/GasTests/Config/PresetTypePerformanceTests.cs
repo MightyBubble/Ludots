@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             _perfCounter = 0;
-            reg.Register(BuiltinHandlerId.ApplyModifiers, CountingHandler);
+            reg.Register(BuiltinHandlerId.ApplyModifiers, CountingHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             using var world = World.Create();
             var entity = world.Create();
@@ -260,15 +260,17 @@ namespace Ludots.Tests.GAS
         public void PresetTypeLoader_ParsePerformance()
         {
             string json = System.IO.File.ReadAllText(
-                System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
+                System.IO.Path.Combine(FindRepoRoot(), "assets", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
             GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
 
             // Warm up
             for (int i = 0; i < 10; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.LoadFromJson(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json, builtinHandlers);
             }
 
             var sw = Stopwatch.StartNew();
@@ -276,7 +278,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < iterations; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.LoadFromJson(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json, builtinHandlers);
             }
             sw.Stop();
 
@@ -295,11 +297,11 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "GAS", "preset_types.json")))
                     return dir;
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
-            throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
+            throw new InvalidOperationException("Cannot find repo root (looking for assets/GAS/preset_types.json).");
         }
     }
 }

@@ -11,6 +11,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Architecture
 {

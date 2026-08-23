@@ -26,8 +26,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         EffectSignal = 10,
         /// <summary>Publish a GameplayEvent.</summary>
         EventSignal = 11,
-        /// <summary>Execute a graph program.</summary>
-        GraphSignal = 12,
         /// <summary>Add or remove a tag instantly. PayloadA: 0=add, 1=remove.</summary>
         TagSignal = 13,
         /// <summary>Like TagSignal, but applied to the current Target entity instead of the actor.</summary>
@@ -83,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// <summary>
     /// Declarative ability execution specification. 0GC unsafe struct with SoA layout.
     /// Items are sorted by tick. Supports Clips, Signals, and Gates.
-    /// Replaces the former AbilityTaskSpec.
+    /// Compact execution timeline authored by ability configuration.
     /// </summary>
     public unsafe struct AbilityExecSpec
     {
@@ -111,7 +109,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed int ItemTemplateIds[MAX_ITEMS];
         /// <summary>Index into the CallerParams pool (0xFF = none).</summary>
         public fixed byte ItemCallerParamsIdx[MAX_ITEMS];
-        /// <summary>Extra payload (graph program ID for GraphSignal, target collection kind for TargetCollectionGate, etc.).</summary>
+        /// <summary>Extra payload (target collection kind, event magnitude, or dispatch target).</summary>
         public fixed int ItemPayloadA[MAX_ITEMS];
 
         public ExecItemKind GetKind(int index) { fixed (byte* p = ItemKinds) return (ExecItemKind)p[index]; }
@@ -186,7 +184,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// <summary>
     /// Runtime state of an ability execution. Attached to caster entities.
     /// </summary>
-    public unsafe struct AbilityExecInstance
+    public struct AbilityExecInstance
     {
         public int OrderId;
         public int AbilitySlot;
@@ -198,13 +196,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public Fix64Vec2 TargetOriginPosCm;
         public byte HasTargetOriginPos;
 
-        /// <summary>Multi-target storage for TargetCollectionGate results.</summary>
-        public int MultiTargetCount;
-        public fixed int MultiTargetIds[64];
-        public fixed int MultiTargetWorldIds[64];
-        public fixed int MultiTargetVersions[64];
-
         public AbilityExecRunState State;
+        /// <summary>
+        /// Explicit order-terminal reason for Interrupted and Failed states.
+        /// None is valid only while running or after a successful finish.
+        /// </summary>
+        public OrderFailureReason TerminalFailureReason;
         /// <summary>Elapsed ticks since execution start (relative to spec ticks).</summary>
         public int CurrentTick;
         /// <summary>The tick value at execution start (absolute clock value).</summary>
@@ -224,15 +221,5 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>Progression Use requirement needs target context from a later input or target collection gate.</summary>
         public byte PendingProgressionUseRequirement;
         public int PendingProgressionRequirementId;
-
-        public void AddMultiTarget(Entity entity)
-        {
-            if (MultiTargetCount >= 64) return;
-            int i = MultiTargetCount;
-            fixed (int* ids = MultiTargetIds) ids[i] = entity.Id;
-            fixed (int* wids = MultiTargetWorldIds) wids[i] = entity.WorldId;
-            fixed (int* vers = MultiTargetVersions) vers[i] = entity.Version;
-            MultiTargetCount++;
-        }
     }
 }

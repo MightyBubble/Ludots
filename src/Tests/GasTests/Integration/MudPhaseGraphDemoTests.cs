@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
@@ -21,7 +22,7 @@ namespace Ludots.Tests.GAS
     ///
     /// Scenario: "魔法对决"
     ///   法师对目标释放一个可配置的「冲击」效果——
-    ///   ① OnPropose Pre: 写 BB 标记 "被提案"
+    ///   ① OnPropose Pre: 验证「冲击」提案
     ///   ② OnApply   Pre: 从 Config 读取伤害倍率，写 BB "实际伤害"
     ///   ③ OnApply   Main: 预设行为——将 BB 实际伤害 应用到属性 HP
     ///   ④ OnApply   Post: 读 BB 实际伤害，写 BB "累计伤害"
@@ -31,8 +32,7 @@ namespace Ludots.Tests.GAS
     public class MudPhaseGraphDemoTests
     {
         // Attribute & BB key constants
-        private const int AttrHealth = 0;
-        private const int BbKeyProposed = 1;       // int: 1=已提案
+        private const string AttrHealthName = "tests.mud.phase.health";
         private const int BbKeyActualDamage = 2;    // float: 实际伤害值
         private const int BbKeyAccumDamage = 3;     // float: 累计伤害
         private const int BbKeyReflectValue = 4;    // float: 伤害反弹值
@@ -45,6 +45,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
+                int attrHealth = ResolveAttributeId(AttrHealthName);
                 var sb = new StringBuilder();
                 sb.AppendLine("[MUD][PHASE] 魔法对决开始。");
                 sb.AppendLine("[MUD][PHASE] 法师准备释放【冲击】。");
@@ -53,19 +54,18 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // ── Register graph programs ──
 
-                // GP1: OnPropose Pre — mark target as "proposed" via BB int
+                // GP1: OnPropose Pre — accept the impact proposal.
                 int gpProposePre = 1;
                 programs.Register(gpProposePre, new[]
                 {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 0, Imm = BbKeyProposed, B = 0 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Validation);
 
                 // GP2: OnApply Pre — read Config(baseDamage, dmgMultiplier), compute actual damage,
                 //      write to BB(actualDamage)
@@ -78,7 +78,8 @@ namespace Ludots.Tests.GAS
                     // Write actual damage to target's BB
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyActualDamage, B = 2 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 // GP3: OnApply Main (preset) — read BB(actualDamage), negate it, apply to HP
                 int gpApplyMain = 3;
@@ -89,8 +90,9 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 1, A = 0 },
                     // ModifyAttributeAdd(target, HP, -actualDamage)
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = AttrHealth, B = 1 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 1 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 // GP4: OnApply Post — read BB(actualDamage), accumulate into BB(accumDamage)
                 int gpApplyPost = 4;
@@ -102,7 +104,8 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyAccumDamage, B = 2 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 // GP5: OnExpire Pre — read BB(accumDamage), compute 50% reflect, write BB(reflectValue)
                 int gpExpirePre = 5;
@@ -114,7 +117,8 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyReflectValue, B = 2 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 // ── Register preset: None has Main graph for OnApply ──
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -134,33 +138,30 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f); // actual = 20 * 1.5 = 30
 
                 // ── Create entities ──
-                var caster = world.Create(new AttributeBuffer());
-                var target = world.Create(new AttributeBuffer(), new BlackboardFloatBuffer(), new BlackboardIntBuffer());
-                world.Get<AttributeBuffer>(caster).SetCurrent(AttrHealth, 100f);
-                world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
+                var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
+                world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
+                world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 // ═══════ Phase 1: OnPropose ═══════
                 sb.AppendLine("[MUD][PHASE] ① OnPropose: 法师提案【冲击】效果。");
-                executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnPropose, in behavior, EffectPresetType.None);
-
-                ref var bbInt = ref world.Get<BlackboardIntBuffer>(target);
-                That(bbInt.TryGet(BbKeyProposed, out int proposed), Is.True);
-                That(proposed, Is.EqualTo(1), "Target should be marked as proposed");
-                sb.AppendLine($"[MUD][PHASE]    BB.Proposed={proposed} ✓");
+                bool accepted = executor.ExecutePhaseWithValidationResult(
+                    world, api, caster, target, default, default,
+                    EffectPhaseId.OnPropose, in behavior, EffectPresetType.None,
+                    effectTagId: 0, effectTemplateId: 0, mergedParams: default);
+                That(accepted, Is.True, "Impact proposal should be accepted");
+                sb.AppendLine("[MUD][PHASE]    提案通过 ✓");
 
                 // ═══════ Phase 2: OnApply (Pre → Main → Post) ═══════
                 sb.AppendLine("[MUD][PHASE] ② OnApply: Pre读取Config计算伤害, Main施加属性修改, Post累计记录。");
 
-                // Set config context for graph to read
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
-                float hpAfterApply = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
+                float hpAfterApply = world.Get<AttributeBuffer>(target).GetCurrent(attrHealth);
                 ref var bbFloat = ref world.Get<BlackboardFloatBuffer>(target);
                 bbFloat.TryGet(BbKeyActualDamage, out float actualDmg);
                 bbFloat.TryGet(BbKeyAccumDamage, out float accumDmg);
@@ -175,12 +176,11 @@ namespace Ludots.Tests.GAS
 
                 // ═══════ Simulate second application (e.g. periodic tick reusing same behavior) ═══════
                 sb.AppendLine("[MUD][PHASE] ③ OnApply (第2次): 再次施加，累计伤害叠加。");
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
-                float hpAfterSecond = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
+                float hpAfterSecond = world.Get<AttributeBuffer>(target).GetCurrent(attrHealth);
                 bbFloat = ref world.Get<BlackboardFloatBuffer>(target);
                 bbFloat.TryGet(BbKeyAccumDamage, out float accumDmg2);
 
@@ -226,6 +226,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
+                int attrHealth = ResolveAttributeId(AttrHealthName);
                 var sb = new StringBuilder();
                 sb.AppendLine("[MUD][SKIP] 自定义效果：完全覆盖预设，使用自定义公式。");
 
@@ -233,7 +234,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Preset Main: write BB key=99 = 999 (should NOT run)
@@ -243,7 +244,8 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 999f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 99, B = 0 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 // User Pre: load config baseDamage, multiply by 2, apply as HP damage
                 int gpCustomPre = 11;
@@ -254,8 +256,9 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = AttrHealth, B = 3 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpMainPreset);
@@ -269,17 +272,16 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyBaseDamage, 25f); // damage = 25 * 2 = 50
 
                 var caster = world.Create();
-                var target = world.Create(new AttributeBuffer(), new BlackboardFloatBuffer());
-                world.Get<AttributeBuffer>(target).SetCurrent(AttrHealth, 100f);
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
+                world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
-                api.SetConfigContext(in configParams);
                 executor.ExecutePhase(world, api, caster, target, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in configParams);
 
-                float hp = world.Get<AttributeBuffer>(target).GetCurrent(AttrHealth);
+                float hp = world.Get<AttributeBuffer>(target).GetCurrent(attrHealth);
                 That(hp, Is.EqualTo(50f).Within(1e-6f), "HP = 100 - (25*2) = 50");
 
                 // Main should NOT have run — BB key=99 should not exist
@@ -310,6 +312,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
+                int attrHealth = ResolveAttributeId(AttrHealthName);
                 var sb = new StringBuilder();
                 sb.AppendLine("[MUD][CONFIG] 配置复用：同一Graph程序，不同参数。");
 
@@ -317,7 +320,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Shared graph: read config(baseDamage) * config(multiplier), negate, apply to HP
@@ -329,8 +332,9 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = AttrHealth, B = 3 },
-                });
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpShared);
@@ -349,27 +353,25 @@ namespace Ludots.Tests.GAS
                 iceConfig.TryAddFloat(ConfigKeyDmgMultiplier, 1.0f);
 
                 var caster = world.Create();
-                var targetA = world.Create(new AttributeBuffer());
-                var targetB = world.Create(new AttributeBuffer());
-                world.Get<AttributeBuffer>(targetA).SetCurrent(AttrHealth, 100f);
-                world.Get<AttributeBuffer>(targetB).SetCurrent(AttrHealth, 100f);
+                var targetA = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var targetB = world.Create(new AttributeBuffer(), new DirtyFlags());
+                world.Get<AttributeBuffer>(targetA).SetBase(attrHealth, 100f);
+                world.Get<AttributeBuffer>(targetB).SetBase(attrHealth, 100f);
 
-                var api = new GasGraphRuntimeApi(world, null, null, null);
+                var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
                 // Fire → targetA
-                api.SetConfigContext(in fireConfig);
                 executor.ExecutePhase(world, api, caster, targetA, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in fireConfig);
 
                 // Ice → targetB
-                api.SetConfigContext(in iceConfig);
                 executor.ExecutePhase(world, api, caster, targetB, default, default,
-                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
-                api.ClearConfigContext();
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    0, 0, in iceConfig);
 
-                float hpA = world.Get<AttributeBuffer>(targetA).GetCurrent(AttrHealth);
-                float hpB = world.Get<AttributeBuffer>(targetB).GetCurrent(AttrHealth);
+                float hpA = world.Get<AttributeBuffer>(targetA).GetCurrent(attrHealth);
+                float hpB = world.Get<AttributeBuffer>(targetB).GetCurrent(attrHealth);
 
                 That(hpA, Is.EqualTo(70f).Within(1e-6f), "火球: 100 - 30 = 70");
                 That(hpB, Is.EqualTo(90f).Within(1e-6f), "冰矢: 100 - 10 = 90");
@@ -385,6 +387,12 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static int ResolveAttributeId(string name)
+        {
+            int id = AttributeRegistry.GetId(name);
+            return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
         }
     }
 }

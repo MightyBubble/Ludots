@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Layers;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -27,8 +28,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -87,8 +88,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -116,13 +117,46 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_MultipleTags_AreRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.MultipleTags",
+                        "tags": ["Effect.First", "Effect.Second"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("tags"));
+                That(ex.Message, Does.Contain("at most one"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_TargetFilterWithoutRelationFilter_IsRejected()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -164,8 +198,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -212,13 +246,108 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_TargetFilterLayerMask_ResolvesRegisteredLayerBits()
+        {
+            LayerRegistry.Register("LoaderTests.LayerA");
+            LayerRegistry.Register("LoaderTests.LayerB");
+            uint expectedMask = LayerRegistry.GetCombinedMask("LoaderTests.LayerA", "LoaderTests.LayerB");
+
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search_LayerMasked",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4,
+                          "layerMask": ["LoaderTests.LayerA", "LoaderTests.LayerB"]
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry);
+
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Search_LayerMasked");
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.TargetFilter.LayerMask, Is.EqualTo(expectedMask),
+                    "targetFilter.layerMask must resolve every named layer through the LayerRegistry.");
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetFilterLayerMask_UnknownLayer_FailsWithEffectContext()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search_BadLayer",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4,
+                          "layerMask": ["LoaderTests.NoSuchLayer"]
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                var ex = Throws<InvalidOperationException>(
+                    () => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+                That(ex!.Message, Does.Contain("Effect_Search_BadLayer"),
+                    "Unknown layer names must fail at load time with the owning effect template named.");
+                That(ex.Message, Does.Contain("LoaderTests.NoSuchLayer"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_ProjectileWithoutCollisionRelationFilter_IsRejected()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -261,14 +390,60 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        [Test]
-        public void Load_LegacyProjectileOmittedOptionalRefs_AreAccepted()
+        [TestCase(0)]
+        [TestCase(ProjectileState.HitHistoryCapacity + 1)]
+        public void Load_ProjectileMaxHitCountOutsideFixedHistory_IsRejected(int invalidMaxHitCount)
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    $$"""
+                    [
+                      {
+                        "id": "Effect_Projectile",
+                        "tags": ["Event.Projectile"],
+                        "presetType": "LaunchProjectile",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "projectile": {
+                          "speed": 1000,
+                          "range": 1200,
+                          "arcHeight": 0,
+                          "hitEffect": "Effect_Projectile",
+                          "travelMode": "Direction",
+                          "impactPolicy": "ContinueOnHit",
+                          "collisionHalfWidth": 24,
+                          "collisionRelationFilter": "All",
+                          "collisionExcludeSource": true,
+                          "maxHitCount": {{invalidMaxHitCount}}
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
+                That(ex.Message, Does.Contain("projectile.maxHitCount"));
+                That(ex.Message, Does.Contain($"1..{ProjectileState.HitHistoryCapacity}"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_LegacyProjectileMode_IsRejectedWithMigrationGuidance()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -288,17 +463,13 @@ namespace Ludots.Tests.GAS
                     ]
                     """);
 
-                var loader = CreateLoader(root, out var registry);
-                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
 
-                int templateId = EffectTemplateIdRegistry.GetId("Effect_Projectile");
-                That(registry.TryGet(templateId, out var tpl), Is.True);
-                That(tpl.Projectile.ImpactEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.HitEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.PresentationEffectTemplateId, Is.EqualTo(0));
-                That(tpl.Projectile.CollisionHalfWidthCm, Is.EqualTo(0));
-                That(tpl.Projectile.CollisionExcludeSource, Is.False);
-                That(tpl.Projectile.MaxHitCount, Is.EqualTo(0));
+                That(ex.Message, Does.Contain("travelMode 'Legacy' was removed"));
+                That(ex.Message, Does.Contain("Direction"));
+                That(ex.Message, Does.Contain("TrackTarget"));
             }
             finally
             {
@@ -312,8 +483,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -327,8 +498,11 @@ namespace Ludots.Tests.GAS
                           "range": 1200,
                           "arcHeight": 0,
                           "impactEffect": "",
-                          "travelMode": "Legacy",
-                          "impactPolicy": "Legacy"
+                          "travelMode": "Direction",
+                          "impactPolicy": "DestroyOnFirstHit",
+                          "hitEffect": "Effect_Projectile",
+                          "collisionHalfWidth": 24,
+                          "collisionRelationFilter": "All"
                         }
                       }
                     ]
@@ -348,13 +522,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_NonLegacyProjectileMissingHitEffect_IsRejected()
+        public void Load_ProjectileMissingHitEffect_IsRejected()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -395,8 +569,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -430,8 +604,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -464,8 +638,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -510,6 +684,134 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_TargetDispatchInlineContextMapping_CompilesAllSlots()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "payloadEffect": "Effect_Payload",
+                          "contextMapping": {
+                            "payloadSource": "OriginalTarget",
+                            "payloadTarget": "ResolvedEntity",
+                            "payloadTargetContext": "OriginalTargetContext"
+                          }
+                        }
+                      },
+                      {
+                        "id": "Effect_Payload",
+                        "tags": ["Event.Payload"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int templateId = EffectTemplateIdRegistry.GetId("Effect_Dispatch");
+                That(registry.TryGet(templateId, out var template), Is.True);
+                That(template.TargetDispatch.ContextMapping.PayloadSource, Is.EqualTo(ContextSlot.OriginalTarget));
+                That(template.TargetDispatch.ContextMapping.PayloadTarget, Is.EqualTo(ContextSlot.ResolvedEntity));
+                That(template.TargetDispatch.ContextMapping.PayloadTargetContext, Is.EqualTo(ContextSlot.OriginalTargetContext));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetDispatchPresetAndInlineContextMapping_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "preset": "SourceToResolved",
+                          "contextMapping": {
+                            "payloadSource": "OriginalSource",
+                            "payloadTarget": "ResolvedEntity",
+                            "payloadTargetContext": "OriginalTarget"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("either preset or contextMapping, not both"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetDispatchInlineContextMappingMissingRequiredSlot_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "contextMapping": {
+                            "payloadSource": "OriginalSource",
+                            "payloadTarget": "ResolvedEntity"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("targetDispatch.contextMapping.payloadTargetContext is required"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_PhaseListenerOmittedPriority_DefaultsToZero()
         {
             GraphIdRegistry.Clear();
@@ -518,8 +820,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -559,13 +861,56 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_InstantPhaseListener_RejectsCrossFrameOwnership()
+        {
+            GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.Test.OnHit");
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Invalid.InstantListener",
+                        "tags": ["Event.Invalid"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "phaseListeners": [
+                          {
+                            "phase": "OnHit",
+                            "scope": "Target",
+                            "action": "Graph",
+                            "graphProgram": "Graph.Test.OnHit"
+                          }
+                        ]
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"))!;
+
+                That(ex.Message, Does.Contain("lifetime Instant cannot declare phaseListeners"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_ScatterUnitCreationOmittedOffsetRadius_IsAcceptedAsZero()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -603,8 +948,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -642,8 +987,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -683,8 +1028,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -723,8 +1068,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -764,13 +1109,65 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_CustomPresetType_StoresExtensionPresetId()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Custom_Status",
+                        "tags": ["Effect.Custom.Status"],
+                        "presetType": "ExampleMod.CustomStatus",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var presetTypes = new PresetTypeRegistry();
+                int customPresetId = presetTypes.RegisterKey("ExampleMod.CustomStatus");
+                var customPreset = new PresetTypeDefinition
+                {
+                    TypeId = customPresetId,
+                    TypeKey = "ExampleMod.CustomStatus",
+                    ActivePhases = PhaseFlags.InstantCore,
+                    AllowedLifetimes = LifetimeFlags.InstantOnly,
+                };
+                presetTypes.Register(in customPreset);
+
+                var registry = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, registry, presetTypes: presetTypes);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Custom_Status");
+                That(tplId, Is.GreaterThan(0));
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.PresetType, Is.EqualTo(EffectPresetType.None));
+                That(tpl.PresetTypeId, Is.EqualTo(customPresetId));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_GraphProgramTargetQuery_RequiresGraphProgramId()
         {
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -814,8 +1211,8 @@ namespace Ludots.Tests.GAS
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
                 OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
 
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -842,10 +1239,67 @@ namespace Ludots.Tests.GAS
                     ]
                     """);
 
-                var loader = CreateLoader(root, out _);
+                var loader = CreateLoader(root, out _, CreateOrderTypes());
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
                 That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SubmitOrderFromBlackboard_UnknownOrderTypeKeyIsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Kind");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Position");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Entity");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
+
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Test.SubmitOrderUnknownType",
+                        "tags": ["Effect.Test.SubmitOrder"],
+                        "presetType": "SubmitOrderFromBlackboard",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "submitOrderFromBlackboard": {
+                          "source": "Source",
+                          "target": "Target",
+                          "storedTarget": {
+                            "targetKindKey": "Test.SpawnTarget.Kind",
+                            "targetPositionKey": "Test.SpawnTarget.Position",
+                            "targetEntityKey": "Test.SpawnTarget.Entity",
+                            "hexQKey": "Test.SpawnTarget.HexQ",
+                            "hexRKey": "Test.SpawnTarget.HexR"
+                          },
+                          "pointMoveOrderTypeKey": "moveTypo",
+                          "entityOrderTypeKey": "castAbility",
+                          "entityOrderIntArg0": 1,
+                          "submitMode": "Immediate"
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _, CreateOrderTypes());
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("pointMoveOrderTypeKey"));
+                That(ex.Message, Does.Contain("moveTypo"));
+                That(ex.Message, Does.Contain("unknown order type"));
             }
             finally
             {
@@ -860,8 +1314,8 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -939,7 +1393,10 @@ namespace Ludots.Tests.GAS
             return root;
         }
 
-        private static EffectTemplateLoader CreateLoader(string root, out EffectTemplateRegistry registry)
+        private static EffectTemplateLoader CreateLoader(
+            string root,
+            out EffectTemplateRegistry registry,
+            OrderTypeRegistry? orderTypes = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", root);
@@ -947,7 +1404,15 @@ namespace Ludots.Tests.GAS
             var pipeline = new ConfigPipeline(vfs, modLoader);
 
             registry = new EffectTemplateRegistry();
-            return new EffectTemplateLoader(pipeline, registry);
+            return new EffectTemplateLoader(pipeline, registry, orderTypes: orderTypes);
+        }
+
+        private static OrderTypeRegistry CreateOrderTypes()
+        {
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 });
+            return orderTypes;
         }
 
         private static ConfigCatalog CreateEffectsCatalog()

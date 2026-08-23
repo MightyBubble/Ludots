@@ -13,10 +13,11 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 64,
-      "HeightInTiles": 64,
+      "WidthInMacroTiles": 64,
+      "HeightInMacroTiles": 64,
       "GridCellSizeCm": 400,
       "ChunkSizeCells": 32,
+      "LoadedChunkCapacity": 256,
       "NavigationEnabled": false
     }
   ],

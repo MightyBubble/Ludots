@@ -48,7 +48,7 @@ namespace Ludots.Tests.GAS.Production
             var presentationNames = GetPresentationSystemNames(engine);
 
             Assert.That(inputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
-            Assert.That(inputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
             Assert.That(inputNames, Does.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(inputNames.IndexOf("AbilityFormRoutingSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
             Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
 
-            Assert.That(presentationNames, Does.Not.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
@@ -95,9 +95,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(cast.ValidationGraphId, Is.EqualTo(0));
 
             var attack = orderTypes.Get(config.Constants.OrderTypeIds["attackTarget"]);
+            Assert.That(OrderBlackboardKeyRegistry.TryGetId("Attack.MovePosition", out int attackMovePositionKey), Is.True);
+            Assert.That(OrderBlackboardKeyRegistry.TryGetId("Attack.TargetEntity", out int attackTargetEntityKey), Is.True);
             Assert.That(attack.PendingBufferWindowMs, Is.EqualTo(400));
-            Assert.That(attack.SpatialBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Attack_MovePosition));
-            Assert.That(attack.EntityBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Attack_TargetEntity));
+            Assert.That(attack.SpatialBlackboardKey, Is.EqualTo(attackMovePositionKey));
+            Assert.That(attack.EntityBlackboardKey, Is.EqualTo(attackTargetEntityKey));
             Assert.That(attack.IntArg0BlackboardKey, Is.EqualTo(-1));
             Assert.That(attack.ValidationGraphId, Is.EqualTo(0));
 
@@ -205,7 +207,7 @@ namespace Ludots.Tests.GAS.Production
             foreach (string file in aiConfigFiles)
             {
                 string normalized = file.Replace('\\', '/');
-                if (!normalized.Contains("/assets/Configs/AI/", StringComparison.Ordinal))
+                if (!normalized.Contains("/assets/AI/", StringComparison.Ordinal))
                 {
                     continue;
                 }

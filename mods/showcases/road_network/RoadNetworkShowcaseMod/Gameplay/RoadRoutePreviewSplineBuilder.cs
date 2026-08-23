@@ -8,6 +8,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
+using Ludots.Platform.Abstractions;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -39,7 +40,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             {
                 ref Order active = ref buffer.ActiveOrder.Order;
                 EmitActivePlanRoute(world, entity, in active, originWorldCm, palette, facts, activeScopes, ref segmentIndex);
-                if (OrderWorldSpatialResolver.TryResolveMoveDestination(in active, out Vector3 activeDestination))
+                if (OrderWorldSpatialResolver.TryResolveMoveDestination(world, in active, out Vector3 activeDestination))
                 {
                     originWorldCm = activeDestination;
                 }
@@ -48,8 +49,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                EmitOrderRoute(entity, in queued, originWorldCm, palette, facts, activeScopes, ref segmentIndex);
-                if (OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out Vector3 queuedDestination))
+                EmitOrderRoute(world, entity, in queued, originWorldCm, palette, facts, activeScopes, ref segmentIndex);
+                if (OrderWorldSpatialResolver.TryResolveMoveDestination(world, in queued, out Vector3 queuedDestination))
                 {
                     originWorldCm = queuedDestination;
                 }
@@ -107,6 +108,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
         }
 
         private static void EmitOrderRoute(
+            World world,
             Entity owner,
             in Order order,
             in Vector3 originWorldCm,
@@ -120,7 +122,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(world, in order);
             if (pointCount <= 0)
             {
                 return;
@@ -131,7 +133,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             points[writeCount++] = ToVisualMeters(originWorldCm);
             for (int pointIndex = 0; pointIndex < pointCount && writeCount < points.Length; pointIndex++)
             {
-                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out Vector3 pointWorldCm))
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(world, in order, pointIndex, out Vector3 pointWorldCm))
                 {
                     continue;
                 }

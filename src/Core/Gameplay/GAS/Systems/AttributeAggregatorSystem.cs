@@ -22,12 +22,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly TagOps _tagOps;
         private readonly CommandBuffer _commandBuffer = new();
 
-        public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null) : base(world)
+        public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null, TagOps tagOps = null) : base(world)
         {
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
         }
 
         public override unsafe void Update(in float dt)
@@ -38,16 +40,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 CommandBuffer = _commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
+                TagOps = _tagOps,
             };
             World.InlineEntityQuery<AttributeAggregatorWithDirtyJob, AttributeBuffer, ActiveEffectContainer, DirtyFlags>(in _withDirtyFlagsQuery, ref withDirtyJob);
 
-            var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob
-            {
-                World = World,
-                CommandBuffer = _commandBuffer,
-                GraphPrograms = _graphPrograms,
-                GraphApi = _graphApi,
-            };
+            var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob();
             World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
 
             if (_commandBuffer.Size > 0)
@@ -64,7 +61,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static unsafe void ExecuteDerivedGraphs(
-            World world, Entity entity,
+            World world, Entity entity, ref AttributeBuffer attributes,
             GraphProgramRegistry graphPrograms, IGraphRuntimeApi graphApi)
         {
             if (!world.Has<AttributeDerivedGraphBinding>(entity)) return;
@@ -80,31 +77,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (graphPrograms == null || graphApi == null)
             {
                 throw new InvalidOperationException(
-                    "AttributeDerivedGraphBinding requires configured graph program registry and graph runtime API.");
+                    "AttributeDerivedGraphBinding requires configured graph program registry, graph runtime API, and graph handler table.");
+            }
+            if (graphApi is not IDerivedAttributeGraphRuntimeApi derivedAttributeApi)
+            {
+                throw new InvalidOperationException(IDerivedAttributeGraphRuntimeApi.MissingContractError);
             }
 
-            for (int g = 0; g < binding.Count; g++)
+            derivedAttributeApi.BeginDerivedAttributeWrites(entity, in attributes);
+            bool commit = false;
+            try
             {
-                int programId = binding.GraphProgramIds[g];
-                if (programId <= 0)
+                for (int g = 0; g < binding.Count; g++)
                 {
-                    throw new InvalidOperationException(
-                        $"AttributeDerivedGraphBinding contains invalid graph program id {programId}.");
+                    int programId = binding.GraphProgramIds[g];
+                    if (programId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"AttributeDerivedGraphBinding contains invalid graph program id {programId}.");
+                    }
+
+                    if (!graphPrograms.TryGetProgram(programId, out var program))
+                    {
+                        throw new InvalidOperationException(
+                            $"AttributeDerivedGraphBinding references missing graph program {programId}.");
+                    }
+
+                    GraphKind kind = graphPrograms.RequireKind(programId, GraphKind.Derived);
+                    NodeLibraries.GASGraph.GraphExecutor.ExecuteDerived(
+                        world,
+                        entity,
+                        program,
+                        graphApi,
+                        kind,
+                        graphPrograms);
                 }
 
-                if (!graphPrograms.TryGetProgram(programId, out var program))
-                {
-                    throw new InvalidOperationException(
-                        $"AttributeDerivedGraphBinding references missing graph program {programId}.");
-                }
-
-                NodeLibraries.GASGraph.GraphExecutor.Execute(
-                    world,
-                    caster: entity,        // E[0] = Self
-                    explicitTarget: entity, // E[1] = Self (derived graphs operate on self)
-                    targetPos: default,
-                    program,
-                    graphApi);
+                commit = true;
+            }
+            finally
+            {
+                derivedAttributeApi.EndDerivedAttributeWrites(entity, ref attributes, commit);
             }
         }
 
@@ -117,15 +130,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             GraphProgramRegistry graphPrograms,
             IGraphRuntimeApi graphApi)
         {
-            ulong touchedMask = 0UL;
-
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
-                if (attrBuffer.CapValues[i] != attrBuffer.BaseValues[i])
-                {
-                    touchedMask |= 1UL << i;
-                }
-
                 attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
             }
 
@@ -155,7 +161,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
-                    touchedMask |= BuildTouchedMask(in modifiers);
                     EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
                 }
             }
@@ -166,33 +171,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 beforeDerived[i] = attrBuffer.CurrentValues[i];
             }
 
-            ExecuteDerivedGraphs(world, entity, graphPrograms, graphApi);
+            ExecuteDerivedGraphs(world, entity, ref attrBuffer, graphPrograms, graphApi);
 
+            ulong derivedWrittenMask = 0UL;
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
                 if (beforeDerived[i] != attrBuffer.CurrentValues[i])
                 {
-                    touchedMask |= 1UL << i;
+                    derivedWrittenMask |= 1UL << i;
                 }
             }
 
-            return touchedMask;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe ulong BuildTouchedMask(in EffectModifiers modifiers)
-        {
-            ulong mask = 0UL;
-            for (int i = 0; i < modifiers.Count; i++)
-            {
-                int attributeId = modifiers.Get(i).AttributeId;
-                if ((uint)attributeId < AttributeBuffer.MAX_ATTRS)
-                {
-                    mask |= 1UL << attributeId;
-                }
-            }
-
-            return mask;
+            return derivedWrittenMask;
         }
 
         struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
@@ -201,34 +191,63 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public CommandBuffer CommandBuffer;
             public GraphProgramRegistry GraphPrograms;
             public IGraphRuntimeApi GraphApi;
+            public TagOps TagOps;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects, ref DirtyFlags dirtyFlags)
             {
+                AttributeBuffer attributesBefore = attrBuffer;
+                DirtyFlags dirtyBefore = dirtyFlags;
                 Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
+                Span<float> oldCaps = stackalloc float[AttributeBuffer.MAX_ATTRS];
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
                     oldValues[i] = attrBuffer.CurrentValues[i];
+                    oldCaps[i] = attrBuffer.CapValues[i];
                 }
 
-                ulong touchedMask = RecomputeEffectiveValues(
+                ulong derivedWrittenMask = RecomputeEffectiveValues(
                     World,
                     entity,
                     ref attrBuffer,
                     ref effects,
                     GraphPrograms,
                     GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
+                RestorePersistentCurrentValues(ref attrBuffer, oldValues, derivedWrittenMask);
                 bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
                 GameplayAttributeChangedBits presentationChangedLocal = default;
 
                 // 4. 标记脏属性（用于延迟触发器）
+                ulong changedMask = 0UL;
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
-                    if (oldValues[i] != attrBuffer.CurrentValues[i])
+                    if (oldValues[i] != attrBuffer.CurrentValues[i] ||
+                        oldCaps[i] != attrBuffer.CapValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
-                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
+                        changedMask |= 1UL << i;
+                    }
+                }
+
+                if (changedMask != 0UL)
+                {
+                    try
+                    {
+                        TagOps.MarkDirtyEntity(World, entity);
+                    }
+                    catch
+                    {
+                        attrBuffer = attributesBefore;
+                        dirtyFlags = dirtyBefore;
+                        throw;
+                    }
+
+                    for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                    {
+                        if ((changedMask & (1UL << i)) != 0UL)
+                        {
+                            MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
+                        }
                     }
                 }
 
@@ -244,71 +263,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         struct AttributeAggregatorWithoutDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer>
         {
-            public World World;
-            public CommandBuffer CommandBuffer;
-            public GraphProgramRegistry GraphPrograms;
-            public IGraphRuntimeApi GraphApi;
-
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects)
             {
-                Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    oldValues[i] = attrBuffer.CurrentValues[i];
-                }
-
-                ulong touchedMask = RecomputeEffectiveValues(
-                    World,
-                    entity,
-                    ref attrBuffer,
-                    ref effects,
-                    GraphPrograms,
-                    GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
-
-                var dirtyFlags = new DirtyFlags();
-                bool anyDirty = false;
-                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
-                GameplayAttributeChangedBits presentationChangedLocal = default;
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    if (oldValues[i] != attrBuffer.CurrentValues[i])
-                    {
-                        dirtyFlags.MarkAttributeDirty(i);
-                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
-                        anyDirty = true;
-                    }
-                }
-
-                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
-                {
-                    CommandBuffer.Add(entity, presentationChangedLocal);
-                }
-
-                if (anyDirty && World.Has<DirtyFlags>(entity))
-                {
-                    ref DirtyFlags existingDirty = ref World.Get<DirtyFlags>(entity);
-                    for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                    {
-                        if (dirtyFlags.IsAttributeDirty(i))
-                        {
-                            existingDirty.MarkAttributeDirty(i);
-                        }
-                    }
-                }
-                else if (anyDirty)
-                {
-                    CommandBuffer.Add(entity, dirtyFlags);
-                }
-
-                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
+                throw new InvalidOperationException(
+                    $"{TagOps.MissingDirtyFlagsError}: entity={entity.Id}, system=AttributeAggregatorSystem.");
             }
 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues, ulong touchedMask)
+        private static unsafe void RestorePersistentCurrentValues(
+            ref AttributeBuffer attrBuffer,
+            Span<float> previousCurrentValues,
+            ulong derivedWrittenMask)
         {
             ulong definedMask = attrBuffer.DefinedMask;
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
@@ -320,14 +288,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 attrBuffer.CapValues[i] = attrBuffer.CurrentValues[i];
-                bool touchedByAggregation = (touchedMask & bit) != 0UL;
-                bool clampsToEffectiveCap =
-                    AttributeRegistry.TryGetConstraints(i, out var constraints) &&
-                    constraints.ClampCurrentToBase;
-                if (!touchedByAggregation || clampsToEffectiveCap)
+                if ((derivedWrittenMask & bit) != 0UL)
                 {
-                    attrBuffer.SetCurrent(i, previousCurrentValues[i]);
+                    continue;
                 }
+
+                attrBuffer.SetCurrent(i, previousCurrentValues[i]);
             }
         }
 

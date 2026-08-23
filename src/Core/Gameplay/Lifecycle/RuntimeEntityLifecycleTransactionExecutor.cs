@@ -86,7 +86,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                     break;
                 case LifecycleOpId.CopyAttributeSlice:
                     EntityLifecycleAtomicOps.CopyAttributeSlice(
-                        world,
+                        services,
                         state.Target,
                         in state.Snapshot,
                         state);

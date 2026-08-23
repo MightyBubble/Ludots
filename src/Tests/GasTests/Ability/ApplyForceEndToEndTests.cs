@@ -11,12 +11,14 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -35,15 +37,16 @@ namespace Ludots.Tests.GAS
             string root = CreateTempRoot();
             try
             {
-                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
-                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                Directory.CreateDirectory(Path.Combine(root, "GAS"));
+                File.WriteAllText(Path.Combine(root, "config_catalog.json"),
                     """
                     [
                       { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+                      { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" },
                       { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                File.WriteAllText(Path.Combine(root, "GAS", "effects.json"),
                     """
                     [
                       {
@@ -59,7 +62,21 @@ namespace Ludots.Tests.GAS
                       }
                     ]
                     """);
-                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
+                File.WriteAllText(Path.Combine(root, "GAS", "preset_types.json"),
+                    """
+                    [
+                      {
+                        "id": "ApplyForce2D",
+                        "components": ["ForceParams"],
+                        "activePhases": ["OnApply"],
+                        "allowedLifetimes": ["Instant"],
+                        "defaultPhaseHandlers": {
+                          "OnApply": { "type": "builtin", "id": "ApplyForce" }
+                        }
+                      }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "GAS", "attribute_bindings.json"),
                     """
                     [
                       {
@@ -92,6 +109,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var templateLoader = new EffectTemplateLoader(pipeline, templates);
                 templateLoader.Load(catalog, relativePath: "GAS/effects.json");
+                FinalizeEffectTemplates(pipeline, catalog, templates);
 
                 var sinks = new AttributeSinkRegistry();
                 GasAttributeSinks.RegisterBuiltins(sinks);
@@ -99,21 +117,33 @@ namespace Ludots.Tests.GAS
                 var bindingLoader = new AttributeBindingLoader(pipeline, sinks, bindings);
                 bindingLoader.Load(catalog, relativePath: "GAS/attribute_bindings.json");
 
-                var graphCfg = new GraphConfig
+                var graphCfg = new GraphControlFlowDocument
                 {
                     Id = "Test.ApplyForce2D",
                     Kind = "Effect",
                     Entry = "t1",
                     Nodes =
                     {
-                        new GraphNodeConfig { Id = "t1", Op = "LoadExplicitTarget", Next = "fx" },
-                        new GraphNodeConfig { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f, Next = "fy" },
-                        new GraphNodeConfig { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f, Next = "a1" },
-                        new GraphNodeConfig { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D", Inputs = { "t1", "fx", "fy" } }
-                    }
+                        new GraphControlFlowNode { Id = "t1", Op = "LoadExplicitTarget" },
+                        new GraphControlFlowNode { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f },
+                        new GraphControlFlowNode { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f },
+                        new GraphControlFlowNode { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D" }
+                    },
+                    ControlEdges =
+                    {
+                        new("t1", GraphControlFlowPorts.Next, "fx"),
+                        new("fx", GraphControlFlowPorts.Next, "fy"),
+                        new("fy", GraphControlFlowPorts.Next, "a1"),
+                    },
+                    ValueEdges =
+                    {
+                        new("t1", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.Target),
+                        new("fx", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.A),
+                        new("fy", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.B),
+                    },
                 };
 
-                var (pkg, diags) = GraphCompiler.Compile(graphCfg);
+                var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(graphCfg);
                 That(pkg.HasValue, Is.True);
                 That(diags.Count, Is.EqualTo(0));
 
@@ -138,22 +168,25 @@ namespace Ludots.Tests.GAS
                 That(fxId, Is.GreaterThanOrEqualTo(0));
                 That(fyId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer(), new ForceInput2D());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new ForceInput2D());
 
-                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world,
                     requests,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget: null,
                     templates: templates,
                     inputRequests: null,
                     chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -180,6 +213,24 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ApplyForceEndToEndTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             return root;
+        }
+
+        private static void FinalizeEffectTemplates(
+            ConfigPipeline pipeline,
+            ConfigCatalog catalog,
+            EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            new PresetTypeLoader(pipeline, presetTypes, builtinHandlers).Load(catalog);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "GAS/effects.json");
         }
 
         private static void TryDeleteDirectory(string path)

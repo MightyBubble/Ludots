@@ -86,25 +86,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphCompiler_LoadContextTarget_ThenRemoveEffectTemplate_Compiles()
+        public void GraphControlFlowCompiler_LoadContextTarget_ThenRemoveEffectTemplate_Compiles()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.RemoveEffectTemplate",
+                Kind = "Effect",
                 Entry = "target",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "target", Op = "LoadContextTarget", Next = "remove" },
-                    new GraphNodeConfig { Id = "remove", Op = "RemoveEffectTemplate", EffectTemplate = "Effect.Test.Mark", Inputs = { "target" } },
-                }
+                    new GraphControlFlowNode { Id = "target", Op = "LoadContextTarget" },
+                    new GraphControlFlowNode { Id = "remove", Op = "RemoveEffectTemplate", EffectTemplate = "Effect.Test.Mark" },
+                },
+                ControlEdges =
+                {
+                    new("target", GraphControlFlowPorts.Next, "remove"),
+                },
+                ValueEdges =
+                {
+                    new("target", GraphControlFlowPorts.Value, "remove", GraphControlFlowPorts.Target),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
 
             That(diags, Is.Empty);
             That(pkg.HasValue, Is.True);
-            That((GraphNodeOp)pkg!.Value.Program[0].Op, Is.EqualTo(GraphNodeOp.LoadContextTarget));
-            That((GraphNodeOp)pkg.Value.Program[1].Op, Is.EqualTo(GraphNodeOp.RemoveEffectTemplate));
+            That(Array.Exists(pkg!.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.LoadContextTarget), Is.True);
+            That(Array.Exists(pkg.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.RemoveEffectTemplate), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -176,7 +185,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = t1,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = iArr,
@@ -184,14 +193,16 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets) { Count = 3 },
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.FanOutApplyEffectDynamic, A = 0, B = 0 },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(requests.Count, Is.EqualTo(3));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -288,7 +299,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipHasFlag, A = 0, B = 1, Dst = 1, Imm = relationshipSetup.TrustedFlagId, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(relationshipSetup.Runtime.GetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId), Is.EqualTo(42));
             That(relationshipSetup.Runtime.HasFlag(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.TrustedFlagId), Is.True);
@@ -326,7 +337,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipAggAverageMetric, A = 0, Dst = 4, Imm = relationshipSetup.LoyaltyMetricId, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0], Is.EqualTo(high));
@@ -358,7 +369,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutApplyEffectDynamic, A = 0 },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -397,7 +408,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -426,7 +437,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipRemoveLink, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(relationshipSetup.Runtime.HasLink(source, target, relationshipSetup.SocialBondTypeId), Is.False);
             That(relationshipSetup.Runtime.HasLink(source, target, relationshipSetup.HostilityTypeId), Is.True);
@@ -449,7 +460,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipAddMetric, A = 0, B = 1, C = 0, Imm = relationshipSetup.LoyaltyMetricId, Dst = byte.MaxValue, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(relationshipSetup.Runtime.GetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId), Is.EqualTo(17));
         }
@@ -472,7 +483,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryIncoming, A = 0, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0] == sourceA || state.TargetList.Span[1] == sourceA, Is.True);
@@ -501,7 +512,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryMutual, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(state.TargetList.Count, Is.EqualTo(1));
             That(state.TargetList.Span[0], Is.EqualTo(mutual));
@@ -524,7 +535,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryBetweenPair, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0], Is.EqualTo(target));
@@ -563,7 +574,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -576,68 +587,103 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphCompiler_ApplyEffectDynamicAndFanOutDispatchEffectDynamic_Compile()
+        public void GraphControlFlowCompiler_ApplyEffectDynamicAndFanOutDispatchEffectDynamic_Compile()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.DynamicDispatch",
+                Kind = "Effect",
                 Entry = "target",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "target", Op = "LoadExplicitTarget", Next = "effectId" },
-                    new GraphNodeConfig { Id = "effectId", Op = "ConstInt", IntValue = 77, Next = "apply" },
-                    new GraphNodeConfig { Id = "apply", Op = "ApplyEffectDynamic", Inputs = { "target", "effectId" }, Next = "fanout" },
-                    new GraphNodeConfig { Id = "fanout", Op = "FanOutDispatchEffectDynamic", PayloadPreset = "SourceToResolved", Inputs = { "effectId" } },
-                }
+                    new GraphControlFlowNode { Id = "target", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "effectId", Op = "ConstInt", IntValue = 77 },
+                    new GraphControlFlowNode { Id = "apply", Op = "ApplyEffectDynamic" },
+                    new GraphControlFlowNode { Id = "fanout", Op = "FanOutDispatchEffectDynamic", PayloadPreset = "SourceToResolved" },
+                },
+                ControlEdges =
+                {
+                    new("target", GraphControlFlowPorts.Next, "effectId"),
+                    new("effectId", GraphControlFlowPorts.Next, "apply"),
+                    new("apply", GraphControlFlowPorts.Next, "fanout"),
+                },
+                ValueEdges =
+                {
+                    new("target", GraphControlFlowPorts.Value, "apply", GraphControlFlowPorts.Target),
+                    new("effectId", GraphControlFlowPorts.Value, "apply", GraphControlFlowPorts.Value),
+                    new("effectId", GraphControlFlowPorts.Value, "fanout", GraphControlFlowPorts.Value),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
 
             That(diags, Is.Empty);
             That(pkg.HasValue, Is.True);
-            That((GraphNodeOp)pkg!.Value.Program[2].Op, Is.EqualTo(GraphNodeOp.ApplyEffectDynamic));
-            That((GraphNodeOp)pkg.Value.Program[3].Op, Is.EqualTo(GraphNodeOp.FanOutDispatchEffectDynamic));
+            That(Array.Exists(pkg!.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.ApplyEffectDynamic), Is.True);
+            That(Array.Exists(pkg.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.FanOutDispatchEffectDynamic), Is.True);
         }
 
         [Test]
-        public void GraphCompiler_FanOutDispatchEffectDynamic_RequiresPayloadPreset()
+        public void GraphControlFlowCompiler_FanOutDispatchEffectDynamic_RequiresPayloadPreset()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.FanOutDispatchMissingPreset",
+                Kind = "Effect",
                 Entry = "effectId",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "effectId", Op = "ConstInt", IntValue = 77, Next = "fanout" },
-                    new GraphNodeConfig { Id = "fanout", Op = "FanOutDispatchEffectDynamic", Inputs = { "effectId" } },
-                }
+                    new GraphControlFlowNode { Id = "effectId", Op = "ConstInt", IntValue = 77 },
+                    new GraphControlFlowNode { Id = "fanout", Op = "FanOutDispatchEffectDynamic" },
+                },
+                ControlEdges =
+                {
+                    new("effectId", GraphControlFlowPorts.Next, "fanout"),
+                },
+                ValueEdges =
+                {
+                    new("effectId", GraphControlFlowPorts.Value, "fanout", GraphControlFlowPorts.Value),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
 
-            That(pkg, Is.Null);
-            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("payloadPreset", StringComparison.Ordinal)), Is.True);
+            That(pkg.HasValue, Is.False);
+            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error &&
+                                   d.Message.Contains("payloadPreset", StringComparison.Ordinal)), Is.True);
         }
 
         [Test]
-        public void GraphCompiler_RelationshipMetricOpsRequireExplicitRelationshipType()
+        public void GraphControlFlowCompiler_RelationshipMetricOpsRequireExplicitRelationshipType()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.RelationshipMissingType",
+                Kind = "Effect",
                 Entry = "source",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "source", Op = "LoadCaster", Next = "target" },
-                    new GraphNodeConfig { Id = "target", Op = "LoadExplicitTarget", Next = "metric" },
-                    new GraphNodeConfig { Id = "metric", Op = "RelationshipGetMetric", Metric = "Loyalty", Inputs = { "source", "target" } },
-                }
+                    new GraphControlFlowNode { Id = "source", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "target", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "metric", Op = "RelationshipGetMetric", Metric = "Loyalty" },
+                },
+                ControlEdges =
+                {
+                    new("source", GraphControlFlowPorts.Next, "target"),
+                    new("target", GraphControlFlowPorts.Next, "metric"),
+                },
+                ValueEdges =
+                {
+                    new("source", GraphControlFlowPorts.Value, "metric", GraphControlFlowPorts.Source),
+                    new("target", GraphControlFlowPorts.Value, "metric", GraphControlFlowPorts.Target),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
 
-            That(pkg, Is.Null);
-            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("relationshipType", StringComparison.Ordinal)), Is.True);
+            That(pkg.HasValue, Is.False);
+            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error &&
+                                   d.Message.Contains("relationshipType", StringComparison.Ordinal)), Is.True);
         }
 
         [Test]
@@ -673,12 +719,14 @@ namespace Ludots.Tests.GAS
             var state = new GraphExecutionState
             {
                 World = world, Caster = caster, ExplicitTarget = target,
-                TargetPos = default, Api = api,
+                TargetPosCm = default, Api = api,
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
             return e[entityReg];
         }
 
@@ -696,13 +744,15 @@ namespace Ludots.Tests.GAS
             var state = new GraphExecutionState
             {
                 World = world, Caster = caster, ExplicitTarget = target,
-                TargetPos = default, Api = api,
+                TargetPosCm = default, Api = api,
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
                 TargetContext = targetCtx,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
             return e[entityReg];
         }
 
@@ -720,12 +770,27 @@ namespace Ludots.Tests.GAS
             var state = new GraphExecutionState
             {
                 World = world, Caster = caster, ExplicitTarget = target,
-                TargetPos = default, Api = api,
+                TargetPosCm = default, Api = api,
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, WithHalt(program), GasGraphOpHandlerTable.Instance);
+        }
+
+        private static GraphInstruction[] WithHalt(GraphInstruction[] program)
+        {
+            if (program.Length > 0 && program[^1].Op == (ushort)GraphNodeOp.HaltReturnInt)
+            {
+                return program;
+            }
+
+            var halted = new GraphInstruction[program.Length + 1];
+            Array.Copy(program, halted, program.Length);
+            halted[^1] = new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt };
+            return halted;
         }
 
         private static GraphExecutionState CreateState(World world, IGraphRuntimeApi api, Entity caster, Entity target)
@@ -743,7 +808,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,
@@ -751,7 +816,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
         }
 
         private static RelationshipApiSetup CreateRelationshipApi(
@@ -766,7 +833,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var runtime = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
 
             int socialBondTypeId = typeRegistry.Register("SocialBond");
             int hostilityTypeId = typeRegistry.Register("Hostility");

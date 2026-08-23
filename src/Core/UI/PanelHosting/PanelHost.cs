@@ -1,0 +1,317 @@
+using System;
+using System.Collections.Generic;
+using Arch.Core;
+using Ludots.Core.UI.PanelProjection;
+
+namespace Ludots.Core.UI.PanelHosting
+{
+    /// <summary>
+    /// Panel instance lifecycle and refresh service. Both entry paths —
+    /// the CreatePanel/DestroyPanel graph ops (via IGraphRuntimeApi) and direct system
+    /// code — terminate here; there is no second instantiation path.
+    ///
+    /// Refresh model: variables are pull-based. A variable declared `"realtime": true`
+    /// is re-evaluated by <see cref="RefreshRealtime"/>; anything else only moves when
+    /// someone calls <see cref="Refresh"/> on the instance handle. No implicit
+    /// full-panel invalidation machinery.
+    /// </summary>
+    public sealed class PanelHost
+    {
+        private readonly PanelTemplateRegistry _templates;
+        private readonly PanelProjectionReader _reader;
+        private readonly List<Entry> _entries = new();
+        private readonly Stack<int> _freeSlots = new();
+
+        public PanelHost(PanelTemplateRegistry templates, PanelProjectionReader reader)
+        {
+            _templates = templates ?? throw new ArgumentNullException(nameof(templates));
+            _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+        }
+
+        public int Count { get; private set; }
+
+        /// <summary>Instances auto-collected by the last <see cref="RefreshRealtime"/> because their scope entity died.</summary>
+        public int AutoCollectedLastRefresh { get; private set; }
+
+        /// <summary>
+        /// Creates a live instance and evaluates it once, so authoring mistakes
+        /// (missing attributes, ghost output keys) fail here — not on first paint.
+        /// </summary>
+        public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope)
+        {
+            return Instantiate(templateId, anchor, scope, null, 100);
+        }
+
+        public PanelInstanceHandle Instantiate(string templateId, string anchor, Entity scope, string? skin, int zOrder)
+        {
+            if (string.IsNullOrWhiteSpace(anchor))
+            {
+                throw new ArgumentException($"Panel '{templateId}' requires a non-empty anchor.", nameof(anchor));
+            }
+
+            PanelTemplate template = _templates.Require(templateId);
+            var entry = new Entry(template, anchor.Trim(), scope, skin, zOrder);
+            EvaluateAll(entry);
+
+            int slot = _freeSlots.Count > 0 ? _freeSlots.Pop() : _entries.Count;
+            int generation = slot < _entries.Count ? _entries[slot].Generation + 1 : 1;
+            entry.Generation = generation;
+            if (slot < _entries.Count)
+            {
+                _entries[slot] = entry;
+            }
+            else
+            {
+                _entries.Add(entry);
+            }
+
+            Count++;
+            return new PanelInstanceHandle(slot, generation);
+        }
+
+        public bool Dispose(PanelInstanceHandle handle)
+        {
+            if (!TryGetEntry(handle, out Entry? entry))
+            {
+                return false;
+            }
+
+            entry.Alive = false;
+            _freeSlots.Push(handle.Id);
+            Count--;
+            return true;
+        }
+
+        /// <summary>Manual full refresh of one instance; stale handles throw.</summary>
+        public PanelVariableSet Refresh(PanelInstanceHandle handle)
+        {
+            Entry entry = RequireEntry(handle);
+            EvaluateAll(entry);
+            return Snapshot(entry);
+        }
+
+        /// <summary>
+        /// Re-evaluates only realtime variables across all live instances.
+        /// Returns how many instances had at least one value change.
+        /// </summary>
+        public int RefreshRealtime()
+        {
+            int touched = 0;
+            int autoCollected = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (!entry.Alive || !entry.HasRealtime)
+                {
+                    continue;
+                }
+
+                // scope 实体死亡即回收：单位死亡是正常游戏事件，不是作者漏调 DestroyPanel；
+                // 每帧刷新不能把整条模拟拖炸。
+                if (!_reader.IsOwnerLive(entry.Scope))
+                {
+                    entry.Alive = false;
+                    _freeSlots.Push(i);
+                    Count--;
+                    autoCollected++;
+                    continue;
+                }
+
+                bool changed = false;
+                foreach (PanelTemplateVariable variable in entry.Template.Variables)
+                {
+                    if (!variable.Realtime)
+                    {
+                        continue;
+                    }
+
+                    PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
+                    uint previous = entry.Revisions[variable.Name];
+                    if (previous != value.Revision)
+                    {
+                        entry.Values[variable.Name] = value.FloatValue;
+                        entry.Revisions[variable.Name] = value.Revision;
+                        entry.Revision ^= previous ^ value.Revision;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    touched++;
+                }
+            }
+
+            AutoCollectedLastRefresh = autoCollected;
+            return touched;
+        }
+
+        public bool TryGetValues(PanelInstanceHandle handle, out PanelVariableSet values)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                values = Snapshot(entry);
+                return true;
+            }
+
+            values = null!;
+            return false;
+        }
+
+        public bool TryGetAnchor(PanelInstanceHandle handle, out string anchor)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                anchor = entry.Anchor;
+                return true;
+            }
+
+            anchor = string.Empty;
+            return false;
+        }
+
+        public bool TryGetScope(PanelInstanceHandle handle, out Entity scope)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                scope = entry.Scope;
+                return true;
+            }
+
+            scope = Entity.Null;
+            return false;
+        }
+
+        public bool TryGetTemplateId(PanelInstanceHandle handle, out string templateId)
+        {
+            if (TryGetEntry(handle, out Entry? entry))
+            {
+                templateId = entry.Template.Id;
+                return true;
+            }
+
+            templateId = string.Empty;
+            return false;
+        }
+
+        /// <summary>Disposes every instance whose (template, scope) matches; scope Null matches any scope.</summary>
+        public int DisposeMatching(string templateId, Entity scope)
+        {
+            int disposed = 0;
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (!entry.Alive ||
+                    !string.Equals(entry.Template.Id, templateId, StringComparison.Ordinal) ||
+                    (scope != Entity.Null && entry.Scope != scope))
+                {
+                    continue;
+                }
+
+                entry.Alive = false;
+                _freeSlots.Push(i);
+                Count--;
+                disposed++;
+            }
+
+            return disposed;
+        }
+
+        /// <summary>Live instance listing for surface adapters: handle, template, anchor, scope, revision.</summary>
+        public IReadOnlyList<PanelHostInstanceInfo> SnapshotInstances()
+        {
+            var list = new List<PanelHostInstanceInfo>(Count);
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                Entry entry = _entries[i];
+                if (entry.Alive)
+                {
+                    list.Add(new PanelHostInstanceInfo(
+                        new PanelInstanceHandle(i, entry.Generation),
+                        entry.Template.Id,
+                        entry.Anchor,
+                        entry.Scope,
+                        entry.Revision,
+                        entry.Skin,
+                        entry.ZOrder));
+                }
+            }
+
+            return list;
+        }
+
+        private void EvaluateAll(Entry entry)
+        {
+            uint revision = 0;
+            foreach (PanelTemplateVariable variable in entry.Template.Variables)
+            {
+                PanelProjectionValue value = _reader.Resolve(entry.Scope, variable.ToBinding());
+                entry.Values[variable.Name] = value.FloatValue;
+                if (entry.Revisions.TryGetValue(variable.Name, out uint previous))
+                {
+                    revision ^= previous;
+                }
+
+                entry.Revisions[variable.Name] = value.Revision;
+                revision ^= value.Revision;
+                entry.HasRealtime |= variable.Realtime;
+            }
+
+            entry.Revision = revision;
+        }
+
+        private static PanelVariableSet Snapshot(Entry entry)
+        {
+            return new PanelVariableSet(
+                entry.Template.Id,
+                new Dictionary<string, float>(entry.Values, StringComparer.Ordinal),
+                entry.Revision);
+        }
+
+        private Entry RequireEntry(PanelInstanceHandle handle)
+        {
+            if (!TryGetEntry(handle, out Entry? entry))
+            {
+                throw new InvalidOperationException($"Panel instance handle {handle.Id}#{handle.Generation} is stale or was not created by this host.");
+            }
+
+            return entry;
+        }
+
+        private bool TryGetEntry(PanelInstanceHandle handle, out Entry? entry)
+        {
+            entry = null;
+            return handle.IsValid &&
+                handle.Id < _entries.Count &&
+                _entries[handle.Id] is { Alive: true } candidate &&
+                candidate.Generation == handle.Generation &&
+                (entry = candidate) != null;
+        }
+
+        private sealed class Entry
+        {
+            public Entry(PanelTemplate template, string anchor, Entity scope, string? skin, int zOrder)
+            {
+                Template = template;
+                Anchor = anchor;
+                Scope = scope;
+                Skin = skin;
+                ZOrder = zOrder;
+                Values = new Dictionary<string, float>(template.Variables.Count, StringComparer.Ordinal);
+                Revisions = new Dictionary<string, uint>(template.Variables.Count, StringComparer.Ordinal);
+            }
+
+            public PanelTemplate Template { get; }
+            public string Anchor { get; }
+            public Entity Scope { get; }
+            public string? Skin { get; }
+            public int ZOrder { get; }
+            public Dictionary<string, float> Values { get; }
+            public Dictionary<string, uint> Revisions { get; }
+            public uint Revision { get; set; }
+            public int Generation { get; set; }
+            public bool Alive { get; set; } = true;
+            public bool HasRealtime { get; set; }
+        }
+    }
+}

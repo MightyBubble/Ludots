@@ -1,12 +1,14 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.Gas
 {
@@ -23,24 +25,24 @@ namespace Ludots.Tests.Gas
             _root = Path.Combine(Path.GetTempPath(), "Ludots_MapVisualHeightmapContractTests", Guid.NewGuid().ToString("N"));
             _coreRoot = Path.Combine(_root, "assets");
             _modRoot = Path.Combine(_root, "mods", "TestMapMod");
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Maps"));
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Navigation"));
-            Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Configs", "Maps"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Maps"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Navigation"));
+            Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Maps"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "terrain"));
 
             string repoRoot = FindRepoRoot();
-            CopyDirectory(Path.Combine(repoRoot, "assets", "Configs"), Path.Combine(_coreRoot, "Configs"));
+            CopyDirectory(Path.Combine(repoRoot, "assets"), _coreRoot);
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
-            {
-              "startupMapId": "outer_map",
-              "worldWidthInMacroTiles": 16,
-              "worldHeightInMacroTiles": 16,
-              "gridCellSizeCm": 100
-            }
-            """);
+            string gameConfigPath = Path.Combine(_coreRoot, "game.json");
+            JsonObject gameConfig = JsonNode.Parse(File.ReadAllText(gameConfigPath))?.AsObject()
+                ?? throw new InvalidOperationException("Copied core game.json must contain a JSON object.");
+            gameConfig["startupMapId"] = "outer_map";
+            gameConfig["worldWidthInMacroTiles"] = 16;
+            gameConfig["worldHeightInMacroTiles"] = 16;
+            gameConfig["gridCellSizeCm"] = 100;
+            File.WriteAllText(gameConfigPath, gameConfig.ToJsonString());
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "agent_profiles.json"), """
+            File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "agent_profiles.json"), """
             [
               {
                 "id": "Small",
@@ -55,7 +57,7 @@ namespace Ludots.Tests.Gas
             ]
             """);
 
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "pathing.json"), """
+            File.WriteAllText(Path.Combine(_coreRoot, "Navigation", "pathing.json"), """
             {
               "agentTypes": [
                 {
@@ -153,6 +155,37 @@ namespace Ludots.Tests.Gas
 
             engine.World.Create(WorldPositionCm.FromCm(434_242_944, 241_246_080));
             Assert.DoesNotThrow(() => engine.Tick(1f / 60f));
+        }
+
+        [Test]
+        public void LoadMap_BindsVisualHeightmapRenderProfileThroughRenderSource()
+        {
+            WriteHeightmap("outer.vhtm", -75);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmap": {
+                "asset": "assets/terrain/outer.vhtm",
+                "renderProfile": {
+                  "waterEnabled": true,
+                  "seaLevelCm": 0,
+                  "displayHeightScale": 500,
+                  "colorContrast": 1.4
+                }
+              }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.That(heightmap, Is.AssignableTo<IVisualHeightmapRenderSource>());
+            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            Assert.That(renderSource.RenderProfile.WaterEnabled, Is.True);
+            Assert.That(renderSource.RenderProfile.SeaLevelCm, Is.EqualTo(0f));
+            Assert.That(renderSource.RenderProfile.DisplayHeightScale, Is.EqualTo(500f));
+            Assert.That(renderSource.RenderProfile.ColorContrast, Is.EqualTo(1.4f));
         }
 
         [Test]
@@ -278,7 +311,7 @@ namespace Ludots.Tests.Gas
             using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.vhtm")))
             {
                 VisualHeightmapBinary.Write(stream, VisualHeightmapAsset.CreateSingleLayer(
-                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
+                    new Ludots.Platform.Abstractions.WorldAabbCm(0, 0, 100, 100),
                     sampleColumns: 2,
                     sampleRows: 2,
                     new[] { (short)80, (short)80, (short)80, (short)80 }));
@@ -314,7 +347,7 @@ namespace Ludots.Tests.Gas
 
         private void WriteMap(string mapId, string json)
         {
-            File.WriteAllText(Path.Combine(_modRoot, "assets", "Configs", "Maps", $"{mapId}.json"), json);
+            File.WriteAllText(Path.Combine(_modRoot, "assets", "Maps", $"{mapId}.json"), json);
         }
 
         private void WriteHeightmap(string fileName, short heightCm)

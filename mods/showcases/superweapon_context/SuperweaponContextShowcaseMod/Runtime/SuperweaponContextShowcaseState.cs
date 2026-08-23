@@ -4,7 +4,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
 {
     public sealed class SuperweaponContextShowcaseState
     {
-        public Entity LocalPlayer { get; internal set; } = Entity.Null;
+        public Entity SolePossessedRep { get; internal set; } = Entity.Null;
         public Entity Commander { get; internal set; } = Entity.Null;
         public Entity Arcweaver { get; internal set; } = Entity.Null;
         public Entity Vanguard { get; internal set; } = Entity.Null;

@@ -16,6 +16,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 using static NUnit.Framework.Assert;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Tests.GAS
 {
@@ -118,6 +119,7 @@ namespace Ludots.Tests.GAS
                     B = 1,
                     Dst = 0,
                 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
@@ -131,7 +133,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = Entity.Null,
-                TargetPos = new IntVector2(1000, 0),
+                TargetPosCm = new IntVector2(1000, 0),
                 Api = api,
                 F = f,
                 I = i,
@@ -139,10 +141,12 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-            That(state.TargetPos.X, Is.EqualTo(500));
+            That(state.TargetPosCm.X, Is.EqualTo(500));
             That(state.B[0], Is.EqualTo(0));
         }
 
@@ -156,6 +160,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 500f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ClampTargetToRange, A = 0, B = 1, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             bool passedNear = GasGraphExecutor.ExecuteValidation(
@@ -164,14 +169,18 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 new IntVector2(400, 0),
                 program,
-                api);
+                api,
+                GraphKind.Validation,
+                new GasGraphOpHandlerTable());
             bool passedFar = GasGraphExecutor.ExecuteValidation(
                 world,
                 caster,
                 Entity.Null,
                 new IntVector2(1000, 0),
                 program,
-                api);
+                api,
+                GraphKind.Validation,
+                new GasGraphOpHandlerTable());
 
             That(passedNear, Is.True);
             That(passedFar, Is.False);
@@ -247,7 +256,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void GraphOps_SnapToNearestGraphEdge_UpdatesTargetPos()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 1);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
             long chunkKey = GraphChunkKey.Pack(0, 0);
@@ -268,6 +277,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 100f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.SnapToNearestGraphEdge, A = 1, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             };
 
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
@@ -281,7 +291,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = Entity.Null,
                 ExplicitTarget = Entity.Null,
-                TargetPos = new IntVector2(50, 25),
+                TargetPosCm = new IntVector2(50, 25),
                 Api = api,
                 F = f,
                 I = i,
@@ -289,11 +299,13 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
             That(state.B[0], Is.EqualTo(1));
-            That(state.TargetPos, Is.EqualTo(new IntVector2(50, 0)));
+            That(state.TargetPosCm, Is.EqualTo(new IntVector2(50, 0)));
         }
     }
 }

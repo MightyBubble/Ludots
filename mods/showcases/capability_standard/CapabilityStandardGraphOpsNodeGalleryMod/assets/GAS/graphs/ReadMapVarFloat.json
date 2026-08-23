@@ -1,0 +1,26 @@
+[
+  {
+    "id": "showcase.graph_op.ReadMapVarFloat",
+    "kind": "Script",
+    "entry": "readMorale",
+    "nodes": [
+      {
+        "id": "readMorale",
+        "op": "ReadMapVarFloat",
+        "var": "gallery.morale"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "readMorale",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": []
+  }
+]

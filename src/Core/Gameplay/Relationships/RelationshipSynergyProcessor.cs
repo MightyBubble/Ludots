@@ -42,8 +42,6 @@ namespace Ludots.Core.Gameplay.Relationships
 
                 EnsureTagState(teamEntity);
                 ref GameplayTagContainer teamTags = ref _world.Get<GameplayTagContainer>(teamEntity);
-                ref TagCountContainer teamCounts = ref _world.Get<TagCountContainer>(teamEntity);
-                ref DirtyFlags teamDirty = ref _world.Get<DirtyFlags>(teamEntity);
 
                 for (int ruleIndex = 0; ruleIndex < runtime.Synergies.Count; ruleIndex++)
                 {
@@ -54,7 +52,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
                     if (isActive && !alreadyActive)
                     {
-                        ApplyTags(ref teamTags, ref teamCounts, ref teamDirty, rule.ApplyTagsToTeam);
+                        ApplyTags(teamEntity, rule.ApplyTagsToTeam);
                         if (!string.IsNullOrWhiteSpace(rule.EventKey.Value))
                         {
                             ScriptContext context = CreateContext(engine);
@@ -65,7 +63,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     }
                     else if (!isActive && alreadyActive)
                     {
-                        RemoveTags(ref teamTags, ref teamCounts, ref teamDirty, rule.ApplyTagsToTeam);
+                        RemoveTags(teamEntity, rule.ApplyTagsToTeam);
                     }
                 }
             }
@@ -95,44 +93,31 @@ namespace Ludots.Core.Gameplay.Relationships
             return count;
         }
 
-        private void ApplyTags(ref GameplayTagContainer tags, ref TagCountContainer counts, ref DirtyFlags dirtyFlags, int[] tagIds)
+        private void ApplyTags(Entity entity, int[] tagIds)
         {
             for (int i = 0; i < tagIds.Length; i++)
             {
                 if (tagIds[i] > 0)
                 {
-                    _tagOps.AddTag(ref tags, ref counts, tagIds[i], ref dirtyFlags);
+                    _tagOps.AddTag(_world, entity, tagIds[i]);
                 }
             }
         }
 
-        private void RemoveTags(ref GameplayTagContainer tags, ref TagCountContainer counts, ref DirtyFlags dirtyFlags, int[] tagIds)
+        private void RemoveTags(Entity entity, int[] tagIds)
         {
             for (int i = 0; i < tagIds.Length; i++)
             {
                 if (tagIds[i] > 0)
                 {
-                    _tagOps.RemoveTag(ref tags, ref counts, tagIds[i], ref dirtyFlags);
+                    _tagOps.RemoveTag(_world, entity, tagIds[i]);
                 }
             }
         }
 
         private void EnsureTagState(Entity entity)
         {
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                entity.Add(new GameplayTagContainer());
-            }
-
-            if (!_world.Has<TagCountContainer>(entity))
-            {
-                entity.Add(new TagCountContainer());
-            }
-
-            if (!_world.Has<DirtyFlags>(entity))
-            {
-                entity.Add(new DirtyFlags());
-            }
+            TagStateInstaller.EnsureInstalled(_world, entity);
         }
 
         private static ScriptContext CreateContext(GameEngine engine)

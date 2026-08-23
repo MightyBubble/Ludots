@@ -49,14 +49,14 @@ public sealed class CommandDeckDisplayModeTests
 		{
 			Id = GlobalProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.Global,
-			SourceKind = CommandDeckSourceKindIds.LocalPlayerRep,
+			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
 			SourceRef = "collection.command.source",
 			CommandPanelSourceId = PanelSourceId,
 			Topic = Topic
 		});
 
 		var binding = new CommandDeckBindingContext(
-			localPlayerRep: player,
+			solePossessedRep: player,
 			focusedEntity: Entity.Null,
 			collectionOwner: player,
 			instanceKey: "collection.command.source",
@@ -92,7 +92,7 @@ public sealed class CommandDeckDisplayModeTests
 		});
 
 		var binding = new CommandDeckBindingContext(
-			localPlayerRep: Entity.Null,
+			solePossessedRep: Entity.Null,
 			focusedEntity: focused,
 			collectionOwner: Entity.Null,
 			instanceKey: string.Empty,
@@ -177,7 +177,7 @@ public sealed class CommandDeckDisplayModeTests
 		{
 			Id = PinnedProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.ConditionalPinned,
-			SourceKind = CommandDeckSourceKindIds.LocalPlayerRep,
+			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
 			SourceRef = "collection.command.source",
 			CommandPanelSourceId = PanelSourceId,
 			VisibilityConditionId = CommandDeckVisibilityConditionIds.BindingFlag,
@@ -347,7 +347,7 @@ public sealed class CommandDeckDisplayModeTests
 			};
 
 			const string filterId = "filter.command-deck.train-only";
-			var tagOps = new TagOps();
+			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 			var filterIds = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 			var filters = new FilterProfileRegistry(filterIds, world, tagOps);
 			filters.Install(new FilterProfilesConfig
@@ -359,7 +359,7 @@ public sealed class CommandDeckDisplayModeTests
 						Id = filterId,
 						AssociationQuery = new FilterProfileAssociationQuery
 						{
-							Anchor = FilterAnchorKinds.LocalPlayerRep,
+							Anchor = FilterAnchorKinds.SolePossessedRep,
 							Expand = FilterAssociationExpandKinds.None
 						},
 						Include = new FilterProfileTagRule { AnyTags = new List<string> { "category.train" } }
@@ -457,7 +457,7 @@ public sealed class CommandDeckDisplayModeTests
 			};
 
 			const string filterId = "filter.command-deck.train-only.preserve-source";
-			var tagOps = new TagOps();
+			var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 			var filterIds = new StringIntRegistry(16, 1, 0, StringComparer.Ordinal);
 			var filters = new FilterProfileRegistry(filterIds, world, tagOps);
 			filters.Install(new FilterProfilesConfig
@@ -469,7 +469,7 @@ public sealed class CommandDeckDisplayModeTests
 						Id = filterId,
 						AssociationQuery = new FilterProfileAssociationQuery
 						{
-							Anchor = FilterAnchorKinds.LocalPlayerRep,
+							Anchor = FilterAnchorKinds.SolePossessedRep,
 							Expand = FilterAssociationExpandKinds.None
 						},
 						Include = new FilterProfileTagRule { AnyTags = new List<string> { "category.train" } }
@@ -686,7 +686,7 @@ public sealed class CommandDeckDisplayModeTests
 		{
 			Id = GlobalProfileId,
 			DisplayMode = CommandDeckDisplayModeIds.Global,
-			SourceKind = CommandDeckSourceKindIds.LocalPlayerRep,
+			SourceKind = CommandDeckSourceKindIds.SolePossessedRep,
 			SourceRef = "collection.command.source",
 			CommandPanelSourceId = PanelSourceId,
 			Topic = Topic

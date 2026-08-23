@@ -35,7 +35,7 @@
     { "id": "compdiff", "title": "Component Diff", "tint": "clay", "x": 805, "y": 610, "w": 190, "h": 56 },
     { "id": "interp", "title": "Interpolation", "tint": "clay", "x": 805, "y": 678, "w": 190, "h": 56 },
 
-    { "id": "performer", "title": "Performer", "tint": "sand", "x": 1045, "y": 610, "w": 190, "h": 56 },
+    { "id": "presenter", "title": "Presenter", "tint": "sand", "x": 1045, "y": 610, "w": 190, "h": 56 },
     { "id": "cmdbuf-r", "title": "Command Buffer", "tint": "sand", "x": 1045, "y": 678, "w": 190, "h": 56 },
 
     { "id": "rawinput", "title": "Raw Input", "tint": "mauve", "x": 1285, "y": 610, "w": 190, "h": 56 },

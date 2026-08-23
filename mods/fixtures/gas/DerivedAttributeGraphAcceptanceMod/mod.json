@@ -1,0 +1,8 @@
+{
+  "name": "DerivedAttributeGraphAcceptanceMod",
+  "version": "1.0.0",
+  "description": "Production GameEngine fixture for derived attribute graph acceptance.",
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

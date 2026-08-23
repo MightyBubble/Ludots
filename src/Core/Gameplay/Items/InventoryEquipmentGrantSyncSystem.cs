@@ -13,17 +13,23 @@ namespace Ludots.Core.Gameplay.Items
 
         private readonly InventoryRuntimeService _inventory;
         private readonly EffectRequestQueue _effectRequests;
+        private readonly AbilityDefinitionRegistry _abilityDefinitions;
         private Entity[] _dirtyActors = new Entity[64];
         private readonly List<Entity> _grantItems = new(32);
         private readonly List<Entity> _staleEffects = new(32);
         private readonly List<DesiredPassiveEffect> _desiredEffects = new(32);
         private bool[] _matchedDesiredEffects = Array.Empty<bool>();
 
-        public InventoryEquipmentGrantSyncSystem(World world, InventoryRuntimeService inventory, EffectRequestQueue effectRequests)
+        public InventoryEquipmentGrantSyncSystem(
+            World world,
+            InventoryRuntimeService inventory,
+            EffectRequestQueue effectRequests,
+            AbilityDefinitionRegistry abilityDefinitions)
             : base(world)
         {
             _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             _effectRequests = effectRequests ?? throw new ArgumentNullException(nameof(effectRequests));
+            _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
         }
 
         public override void Update(in float dt)
@@ -73,6 +79,8 @@ namespace Ludots.Core.Gameplay.Items
         {
             ItemGrantedSlotBuffer next = default;
             next.ClearAll();
+            Span<int> grantedAbilityIds = stackalloc int[ItemGrantedSlotBuffer.CAPACITY];
+            int grantedAbilityCount = 0;
             bool hasAny = false;
 
             for (int i = 0; i < grantItems.Count; i++)
@@ -111,6 +119,21 @@ namespace Ludots.Core.Gameplay.Items
 
                 return;
             }
+
+            for (int slotIndex = 0; slotIndex < ItemGrantedSlotBuffer.CAPACITY; slotIndex++)
+            {
+                if (next.HasOverride(slotIndex))
+                {
+                    grantedAbilityIds[grantedAbilityCount++] = next.GetOverride(slotIndex).AbilityId;
+                }
+            }
+
+            AbilityRuntimeStateInstaller.EnsureForAbilities(
+                World,
+                actor,
+                _abilityDefinitions,
+                grantedAbilityIds.Slice(0, grantedAbilityCount),
+                $"Equipment ability grants for actor id={actor.Id}");
 
             if (World.Has<ItemGrantedSlotBuffer>(actor))
             {

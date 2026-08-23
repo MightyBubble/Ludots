@@ -59,16 +59,30 @@ namespace Ludots.Core.Gameplay.GAS
         private static readonly Dictionary<string, int> _nameToId = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<int, string> _idToName = new();
         private static int _nextId = 1;
+        private static bool _frozen;
+
+        public static bool IsFrozen => _frozen;
+
+        public static void Freeze()
+        {
+            _frozen = true;
+        }
 
         public static void Clear()
         {
             _nameToId.Clear();
             _idToName.Clear();
             _nextId = 1;
+            _frozen = false;
         }
 
         public static int Register(string name)
         {
+            if (_frozen)
+            {
+                throw new InvalidOperationException("ContextGroupIdRegistry is frozen.");
+            }
+
             if (string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException("Context group name is required.", nameof(name));

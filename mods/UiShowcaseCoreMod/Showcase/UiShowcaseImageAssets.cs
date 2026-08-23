@@ -11,11 +11,54 @@ internal static class UiShowcaseImageAssets
 
 	private static readonly Lazy<string> BadgeSvgLazy = new Lazy<string>(CreateBadgeSvgDataUri);
 
+	private static readonly Lazy<string> InkSealSvgLazy = new Lazy<string>(
+		() => "data:image/svg+xml;utf8," + Uri.EscapeDataString(UiShowcaseAssets.GetInkSealSvg()));
+
+	private static readonly Lazy<string> InkBrushSvgLazy = new Lazy<string>(
+		() => "data:image/svg+xml;utf8," + Uri.EscapeDataString(UiShowcaseAssets.GetInkBrushSvg()));
+
+	private static readonly Lazy<string> NineSlicePanelFrameLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("nineslice_panel_frame.png")));
+
+	private static readonly Lazy<string> NineSliceButtonFrameLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("nineslice_button_frame.png")));
+
+	private static readonly Lazy<string> Slice3RibbonLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("slice3_ribbon.png")));
+
+	private static readonly Lazy<string> Tile2HorizontalLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("tile2_hstrip.png")));
+
+	private static readonly Lazy<string> Tile2VerticalLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("tile2_vstrip.png")));
+
+	private static readonly Lazy<string> Tile4OrnamentLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("tile4_ornament.png")));
+
 	internal static string CoverArtDataUri => CoverArtLazy.Value;
 
 	internal static string FrameArtDataUri => FrameArtLazy.Value;
 
 	internal static string BadgeSvgDataUri => BadgeSvgLazy.Value;
+
+	internal static string InkSealSvgDataUri => InkSealSvgLazy.Value;
+
+	internal static string InkBrushSvgDataUri => InkBrushSvgLazy.Value;
+
+	internal static string NineSlicePanelFrameDataUri => NineSlicePanelFrameLazy.Value;
+
+	internal static string NineSliceButtonFrameDataUri => NineSliceButtonFrameLazy.Value;
+
+	internal static string Slice3RibbonDataUri => Slice3RibbonLazy.Value;
+
+	internal static string Tile2HorizontalDataUri => Tile2HorizontalLazy.Value;
+
+	internal static string Tile2VerticalDataUri => Tile2VerticalLazy.Value;
+
+	internal static string Tile4OrnamentDataUri => Tile4OrnamentLazy.Value;
+
+	private static string ToPngDataUri(byte[] pngBytes) =>
+		"data:image/png;base64," + Convert.ToBase64String(pngBytes);
 
 	private static string CreateCoverArtDataUri()
 	{

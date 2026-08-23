@@ -45,14 +45,20 @@ namespace Ludots.Core.Physics2D.Ticking
             IClock clock,
             Physics2DTickPolicy tickPolicy,
             Physics2DSolverConfig solverConfig,
-            ShapeDataStorage2D shapeStorage)
+            ShapeDataStorage2D shapeStorage,
+            KinematicTargetPoseBuffer2D kinematicPoses,
+            ContactEventQueue2D contactEvents,
+            Physics2DKinematicConfig kinematicConfig)
             : this(
                 world,
                 clock,
                 tickPolicy,
                 solverConfig,
                 shapeStorage,
-                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()))
+                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()),
+                kinematicPoses,
+                contactEvents,
+                kinematicConfig)
         {
         }
 
@@ -62,7 +68,10 @@ namespace Ludots.Core.Physics2D.Ticking
             Physics2DTickPolicy tickPolicy,
             Physics2DSolverConfig solverConfig,
             ShapeDataStorage2D shapeStorage,
-            Physics2DBroadphasePolicy broadphasePolicy)
+            Physics2DBroadphasePolicy broadphasePolicy,
+            KinematicTargetPoseBuffer2D kinematicPoses,
+            ContactEventQueue2D contactEvents,
+            Physics2DKinematicConfig kinematicConfig)
         {
             _world = world;
             _clock = clock;
@@ -71,12 +80,35 @@ namespace Ludots.Core.Physics2D.Ticking
             ArgumentNullException.ThrowIfNull(solverConfig);
             ArgumentNullException.ThrowIfNull(shapeStorage);
             ArgumentNullException.ThrowIfNull(broadphasePolicy);
+            ArgumentNullException.ThrowIfNull(kinematicPoses);
+            ArgumentNullException.ThrowIfNull(contactEvents);
+            ArgumentNullException.ThrowIfNull(kinematicConfig);
 
             _broadphasePolicy = broadphasePolicy;
-            _pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, shapeStorage);
+            KinematicPoses = kinematicPoses;
+            ContactEvents = contactEvents;
+            _pipeline = Physics2DPipelineFactory.CreateProduction(
+                world,
+                solverConfig,
+                tickPolicy,
+                shapeStorage,
+                kinematicPoses,
+                contactEvents,
+                kinematicConfig);
             Build = _pipeline.Build;
             Spatial = _pipeline.Spatial;
         }
+
+        /// <summary>
+        /// Drive channel for kinematic bodies: submit one target pose per entity per fixed step.
+        /// </summary>
+        public KinematicTargetPoseBuffer2D KinematicPoses { get; }
+
+        /// <summary>
+        /// Contact event export queue: physics writes during the step, gameplay drains after
+        /// the physics step in the same frame.
+        /// </summary>
+        public ContactEventQueue2D ContactEvents { get; }
 
         public ReadOnlySpan<string> PipelineStepNames => _pipeline.StepNames;
 
@@ -118,41 +150,15 @@ namespace Ludots.Core.Physics2D.Ticking
             }
             _stopwatch.Stop();
 
-            int potentialPairs = 0;
-            int contactPairs = 0;
-            var chunks = _world.Query(in _activePairsQuery);
-            foreach (var chunk in chunks)
-            {
-                var pairs = chunk.GetArray<CollisionPair>();
-                potentialPairs += chunk.Count;
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (pairs[i].ContactCount > 0) contactPairs++;
-                }
-            }
+            var pairStatsJob = new CollisionPairStatsJob();
+            _world.InlineQuery<CollisionPairStatsJob, CollisionPair>(in _activePairsQuery, ref pairStatsJob);
 
-            bool anyAwakeDynamicBodies = false;
-            var awakeChunks = _world.Query(in _awakeDynamicBodiesQuery);
-            foreach (var chunk in awakeChunks)
-            {
-                var masses = chunk.GetArray<Mass2D>();
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (masses[i].IsDynamic)
-                    {
-                        anyAwakeDynamicBodies = true;
-                        break;
-                    }
-                }
+            var awakeDynamicBodiesJob = new AwakeDynamicBodiesJob();
+            _world.InlineQuery<AwakeDynamicBodiesJob, Mass2D>(in _awakeDynamicBodiesQuery, ref awakeDynamicBodiesJob);
 
-                if (anyAwakeDynamicBodies)
-                {
-                    break;
-                }
-            }
             _world.Set(_runtimeStateEntity, new Physics2DRuntimeState 
             { 
-                AnyAwakeDynamicBodies = anyAwakeDynamicBodies,
+                AnyAwakeDynamicBodies = awakeDynamicBodiesJob.AnyAwakeDynamicBodies,
                 LastPhysicsStepTime = stepsToRun > 0 ? Time.FixedTotalTime : _world.Get<Physics2DRuntimeState>(_runtimeStateEntity).LastPhysicsStepTime,
                 PhysicsStepDuration = physicsDt,
                 InterpolationAlpha = InterpolationAlpha  // 从 DiscreteRateTickDistributor 获取的物理帧 alpha
@@ -165,8 +171,8 @@ namespace Ludots.Core.Physics2D.Ticking
                 PhysicsHz = _tickPolicy.TargetHz,
                 PhysicsStepsLastFixedTick = stepsToRun,
                 PhysicsUpdateMs = _stopwatch.Elapsed.TotalMilliseconds,
-                PotentialPairs = potentialPairs,
-                ContactPairs = contactPairs,
+                PotentialPairs = pairStatsJob.PotentialPairs,
+                ContactPairs = pairStatsJob.ContactPairs,
                 DynamicBodies = Build.DynamicRigidBodyDescriptors.Count,
                 StaticBodies = Build.StaticRigidBodyDescriptors.Count,
                 DirtyStaticBodies = Build.DirtyStaticBodyCountLastUpdate,
@@ -183,6 +189,34 @@ namespace Ludots.Core.Physics2D.Ticking
 
         public void Dispose()
         {
+        }
+
+        private struct CollisionPairStatsJob : IForEach<CollisionPair>
+        {
+            public int PotentialPairs;
+            public int ContactPairs;
+
+            public void Update(ref CollisionPair pair)
+            {
+                PotentialPairs++;
+                if (pair.ContactCount > 0)
+                {
+                    ContactPairs++;
+                }
+            }
+        }
+
+        private struct AwakeDynamicBodiesJob : IForEach<Mass2D>
+        {
+            public bool AnyAwakeDynamicBodies;
+
+            public void Update(ref Mass2D mass)
+            {
+                if (!AnyAwakeDynamicBodies && mass.IsDynamic)
+                {
+                    AnyAwakeDynamicBodies = true;
+                }
+            }
         }
 
         private void StepOnce(float dt)

@@ -12,8 +12,8 @@ namespace Ludots.Core.Presentation.Camera
     /// </summary>
     public sealed class CoreScreenRayProvider : IScreenRayProvider, IPresentationCameraSnapshotScope
     {
-        private readonly CameraManager _cameraManager;
-        private readonly IViewController _view;
+        private CameraManager _cameraManager;
+        private IViewController _view;
         private CameraPresenter? _presenter;
         private Func<float>? _presentationAlphaProvider;
         private bool _presentationFrameActive;
@@ -22,6 +22,12 @@ namespace Ludots.Core.Presentation.Camera
         {
             _cameraManager = cameraManager ?? throw new System.ArgumentNullException(nameof(cameraManager));
             _view = view ?? throw new System.ArgumentNullException(nameof(view));
+        }
+
+        public void Rebind(CameraManager cameraManager, IViewController view)
+        {
+            _cameraManager = cameraManager ?? throw new ArgumentNullException(nameof(cameraManager));
+            _view = view ?? throw new ArgumentNullException(nameof(view));
         }
 
         public void BindPresenter(CameraPresenter presenter) => _presenter = presenter;

@@ -58,6 +58,7 @@ namespace GasBenchmarkMod
     {
         public static void Run(IModContext context)
         {
+            const int entityCount = 100_000;
             context.Log("[GasBenchmarkMod] Initializing GAS Benchmark (Abilities & Hooks)...");
 
             int healthId = AttributeRegistry.Register("Health");
@@ -73,6 +74,7 @@ namespace GasBenchmarkMod
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -88,12 +90,12 @@ namespace GasBenchmarkMod
                 Modifiers = mods
             });
 
-            var appSystem = new EffectApplicationSystem(world, effectRequests);
-            var durSystem = new EffectLifetimeSystem(world, clock, conditions, effectRequests);
-            var aggSystem = new AttributeAggregatorSystem(world);
+            var appSystem = new EffectApplicationSystem(world, fanOutCommandCapacity: 65536, clock, effectRequests, tagOps: tagOps);
+            var durSystem = new EffectLifetimeSystem(world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: 65536, effectRequests: effectRequests, tagOps: tagOps);
+            var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
-            var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, null, effectTemplates);
-            var abilitySystem = new AbilitySystem(world, effectRequests);
+            var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, fanOutCommandCapacity: 65536, clock, templates: effectTemplates, tagOps: tagOps);
+            var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
             // Removed obsolete systems
 
@@ -106,7 +108,6 @@ namespace GasBenchmarkMod
                 onActivate.Add(1);
             }
 
-            int entityCount = 100_000;
             context.Log($"[GasBenchmarkMod] Creating {entityCount} entities with Abilities...");
             var entities = new Entity[entityCount];
 
@@ -116,6 +117,7 @@ namespace GasBenchmarkMod
                 typeof(ActiveEffectContainer),
                 typeof(GameplayTagContainer),
                 typeof(TagCountContainer),
+                typeof(DirtyFlags),
                 typeof(AbilityStateBuffer),
                 typeof(ReactionBuffer)
             };
@@ -125,11 +127,10 @@ namespace GasBenchmarkMod
                 var e = world.Create(archetype);
                 entities[i] = e;
 
-                ref var attr = ref world.Get<AttributeBuffer>(e);
-                attr.SetBase(healthId, 100f);
-                attr.SetBase(manaId, 100f);
-                attr.SetCurrent(healthId, 100f);
-                attr.SetCurrent(manaId, 100f);
+                AttributeMutationOps.SetBase(world, e, healthId, 100f, tagOps);
+                AttributeMutationOps.SetBase(world, e, manaId, 100f, tagOps);
+                AttributeMutationOps.SetCurrent(world, e, healthId, 100f, tagOps);
+                AttributeMutationOps.SetCurrent(world, e, manaId, 100f, tagOps);
 
                 ref var abilities = ref world.Get<AbilityStateBuffer>(e);
                 abilities.AddAbility(abilityTemplateEntity);

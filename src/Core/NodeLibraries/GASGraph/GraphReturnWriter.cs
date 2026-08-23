@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -37,7 +38,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity caster,
             Entity explicitTarget,
             Entity targetContext,
-            IntVector2 targetPos,
+            IntVector2 targetPosCm,
             uint randomSeed,
             IGraphRuntimeApi api)
         {
@@ -45,6 +46,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
             }
+
+            _programs.RequireKind(graphId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                _handlers,
+                graphId,
+                nameof(GraphReturnWriter));
 
             GraphOutputSchema schema = _schemas.Get(graphId);
             if (!schema.HasBindings)
@@ -63,27 +72,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
-            var targetList = new GraphTargetList(targets);
-
-            var state = new GraphExecutionState
-            {
-                World = _world,
-                Caster = caster,
-                ExplicitTarget = explicitTarget,
-                TargetContext = targetContext,
-                TargetPos = targetPos,
-                RandomSeed = randomSeed,
-                Api = api ?? throw new ArgumentNullException(nameof(api)),
-                F = floats,
-                I = ints,
-                B = bools,
-                E = entities,
-                Targets = targets,
-                TargetList = targetList,
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
-            WriteOutputs(resolvedOwner, caster, explicitTarget, targetContext, schema, ref state);
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            GraphFrame frame = GraphFrame.Bind(
+                GraphKind.Query,
+                GraphEntityPreset.TargetContext(targetContext),
+                _world,
+                caster,
+                explicitTarget,
+                targetPosCm,
+                api ?? throw new ArgumentNullException(nameof(api)),
+                _programs,
+                floats,
+                ints,
+                bools,
+                entities,
+                targets,
+                callStack,
+                randomSeed: randomSeed);
+            GraphExecutor.Execute(ref frame, program, programAlreadyValidated: true);
+            WriteOutputs(resolvedOwner, caster, explicitTarget, targetContext, schema, ref frame);
         }
 
         private void WriteOutputs(
@@ -92,7 +99,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             Entity targetContext,
             GraphOutputSchema schema,
-            ref GraphExecutionState state)
+            ref GraphFrame state)
         {
             GraphOutputBinding[] bindings = schema.Bindings;
             for (int i = 0; i < bindings.Length; i++)
@@ -118,7 +125,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             Entity targetContext,
             in GraphOutputBinding binding,
-            ref GraphExecutionState state)
+            ref GraphFrame state)
         {
             if (binding.ValueKind != GraphOutputValueKind.TargetList)
             {
@@ -139,10 +146,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 primaryEntity: caster,
                 title: binding.Title,
                 summary: binding.Summary);
+            if (binding.CollectionKeyId > 0)
+            {
+                _collections.Replace(owner, binding.CollectionKeyId, descriptor, state.TargetList.Span);
+                return;
+            }
+
             _collections.Replace(owner, descriptor, state.TargetList.Span);
         }
 
-        private void WriteSummary(Entity owner, in GraphOutputBinding binding, ref GraphExecutionState state)
+        private void WriteSummary(Entity owner, in GraphOutputBinding binding, ref GraphFrame state)
         {
             if (binding.KeyId <= 0)
             {
