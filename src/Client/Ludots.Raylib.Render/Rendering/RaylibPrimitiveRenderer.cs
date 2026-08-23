@@ -522,7 +522,7 @@ namespace Ludots.Raylib.Render
                 scale,
                 descriptor.Type == MeshAssetType.ProceduralMesh && descriptor.ProceduralMeshData != null
                     ? descriptor.ProceduralMeshData.LocalBounds
-                    : default);
+                    : new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)));
         }
 
         internal bool ShouldSkipImmediateDraw(in PrimitiveDrawItem item, bool persistentStaticLanesActive)
