@@ -2899,6 +2899,198 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
+        [Test]
+        public void Load_RejectsUnknownDefinitionFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_definition",
+                    "lifecycle": { "durationSeconds": 1.0 },
+                    "lifecyle": { "durationSeconds": 1.0 }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_definition'"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'lifecyle'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownBehaviorSlotFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_behavior",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "activeByDefaul": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "renderPath": "None",
+                          "mobility": "Movable"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Presenter 'typo_behavior' behavior[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'activeByDefaul'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownChildFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "typo_child",
+                    "children": [
+                      { "definitionId": "child_marker", "scopeTag": "structure", "scopeTeg": "structure" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("unknown field 'scopeTeg'"));
+        }
+
+        [Test]
+        public void Load_RejectsUnknownRuleEventAndCommandFields()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_rule_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X", "kyeId": "Event.X" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException eventEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(eventEx.Message, Does.Contain("rules[0].event"));
+            Assert.That(eventEx.Message, Does.Contain("unknown field 'kyeId'"));
+
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "typo_rule_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.X" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed", "scopeSorce": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            registry = new PresenterDefinitionRegistry();
+            (_, _, pipeline, catalog) = BuildPipeline();
+            loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException commandEx = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(commandEx.Message, Does.Contain("rules[0].command"));
+            Assert.That(commandEx.Message, Does.Contain("unknown field 'scopeSorce'"));
+        }
+
+        [Test]
+        public void Load_AcceptsLegalConfigAcrossAllEntryPoints()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  { "id": "child_marker" },
+                  {
+                    "id": "legal_root",
+                    "lifecycle": { "durationSeconds": 1.0 },
+                    "anchor": { "offset": [0, 1, 0] },
+                    "visibility": { "inline": "SourceIsAlive" },
+                    "bindings": [
+                      { "paramKey": "legal.binding", "source": "constant", "constantValue": 3 }
+                    ],
+                    "paramDefaults": [
+                      { "paramKey": "legal.default", "lane": "Int", "intValue": 2 }
+                    ],
+                    "children": [
+                      { "definitionId": "child_marker", "scopeTag": "structure" }
+                    ],
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Legal" },
+                        "condition": { "inline": "SourceIsAlive" },
+                        "command": { "kind": "DestroyPresenterScope", "scopeTag": "scope", "scopeSource": "Fixed" }
+                      }
+                    ],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "renderPath": "None",
+                          "mobility": "Movable"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("legal_root"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(1));
+            Assert.That(definition.Children.Length, Is.EqualTo(1));
+            Assert.That(definition.Behaviors.Length, Is.EqualTo(1));
+        }
+
         private static void NoOpExtensionCommand(in PerformerCommandExecutionContext context)
         {
         }
