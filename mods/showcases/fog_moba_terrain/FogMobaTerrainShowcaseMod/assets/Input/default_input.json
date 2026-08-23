@@ -1,0 +1,31 @@
+{
+  "actions": [
+    { "id": "FogMobaTerrain.MoveNorth", "name": "FogMobaTerrain_MoveNorth", "type": "Button" },
+    { "id": "FogMobaTerrain.MoveSouth", "name": "FogMobaTerrain_MoveSouth", "type": "Button" },
+    { "id": "FogMobaTerrain.MoveWest", "name": "FogMobaTerrain_MoveWest", "type": "Button" },
+    { "id": "FogMobaTerrain.MoveEast", "name": "FogMobaTerrain_MoveEast", "type": "Button" },
+    { "id": "FogMobaTerrain.TurnLeft", "name": "FogMobaTerrain_TurnLeft", "type": "Button" },
+    { "id": "FogMobaTerrain.TurnRight", "name": "FogMobaTerrain_TurnRight", "type": "Button" },
+    { "id": "FogMobaTerrain.ToggleShape", "name": "FogMobaTerrain_ToggleShape", "type": "Button" },
+    { "id": "FogMobaTerrain.ToggleRules", "name": "FogMobaTerrain_ToggleRules", "type": "Button" },
+    { "id": "FogMobaTerrain.ToggleMemory", "name": "FogMobaTerrain_ToggleMemory", "type": "Button" },
+    { "id": "FogMobaTerrain.ChangeRange", "name": "FogMobaTerrain_ChangeRange", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "FogMobaTerrainShowcase.Controls",
+      "bindings": [
+        { "actionId": "FogMobaTerrain.MoveNorth", "path": "<Keyboard>/w" },
+        { "actionId": "FogMobaTerrain.MoveSouth", "path": "<Keyboard>/s" },
+        { "actionId": "FogMobaTerrain.MoveWest", "path": "<Keyboard>/a" },
+        { "actionId": "FogMobaTerrain.MoveEast", "path": "<Keyboard>/d" },
+        { "actionId": "FogMobaTerrain.TurnLeft", "path": "<Keyboard>/left" },
+        { "actionId": "FogMobaTerrain.TurnRight", "path": "<Keyboard>/right" },
+        { "actionId": "FogMobaTerrain.ToggleShape", "path": "<Keyboard>/v" },
+        { "actionId": "FogMobaTerrain.ToggleRules", "path": "<Keyboard>/f" },
+        { "actionId": "FogMobaTerrain.ToggleMemory", "path": "<Keyboard>/m" },
+        { "actionId": "FogMobaTerrain.ChangeRange", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}

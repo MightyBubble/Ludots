@@ -351,6 +351,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "fog_moba_terrain_raylib",
+      "name": "Fog Moba Terrain Raylib",
+      "selectors": [
+        "$fog_moba_terrain"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "fog_vision_decay_raylib",
       "name": "Fog Vision Decay Raylib",
       "selectors": [

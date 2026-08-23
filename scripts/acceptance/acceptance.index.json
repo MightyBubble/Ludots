@@ -300,6 +300,14 @@
       "hasScreenshotEvidence": false
     },
     {
+      "id": "fog_moba_terrain",
+      "preset": "fog_moba_terrain_raylib",
+      "binding": "fog_moba_terrain",
+      "testFilter": "FogMobaTerrainShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/fog-moba-terrain",
+      "hasScreenshotEvidence": false
+    },
+    {
       "id": "forge_socket",
       "preset": "forge_socket_raylib",
       "binding": "forge_socket",

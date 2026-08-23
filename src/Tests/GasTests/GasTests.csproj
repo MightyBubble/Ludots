@@ -117,6 +117,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\FogVisionDecayShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_moba_terrain\FogMobaTerrainShowcaseMod\FogMobaTerrainShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\team_research\TeamResearchShowcaseMod\TeamResearchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ownership_cascade\OwnershipCascadeShowcaseMod\OwnershipCascadeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />

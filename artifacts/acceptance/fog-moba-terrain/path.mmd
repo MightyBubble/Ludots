@@ -1,0 +1,9 @@
+flowchart LR
+  Input[WASD / arrows / V F M R] --> Runtime[FogMobaTerrainRuntime]
+  Runtime --> Components[VisionEmitterCm + FogOccupantCm]
+  Components --> Vision[Core VisionSystem]
+  Vision --> Field[FogFieldStore / FogCellMap]
+  Field --> Projector[FogGlobalFieldVisualProjector]
+  Projector --> Buffer[GlobalFieldVisualBuffer]
+  Buffer --> Presenter[RaylibFieldRenderPresenter]
+  Presenter --> Frame[Raylib frame overlay]

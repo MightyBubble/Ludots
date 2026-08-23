@@ -1,0 +1,7 @@
+{"step":"load","map":"fog_moba_terrain_showcase","source":"FogMobaTerrainShowcaseAcceptanceTests","result":"passed"}
+{"step":"vision","scopeKey":318,"layer":"moba-ground","shape":"Cone","rangeCm":5200,"result":"passed"}
+{"step":"terrain","walls":31,"brush":30,"result":"passed"}
+{"step":"raylib","presenter":"RaylibFieldRenderPresenter","result":"running"}
+{"step":"bridge.health","pid":84660,"pumpCount":"54->57","result":"passed"}
+{"step":"bridge.session","map":"fog_moba_terrain_showcase","mods":["LudotsCoreMod","CoreInputMod","FogMobaTerrainShowcaseMod","AgentBridgeMod"],"result":"passed"}
+{"step":"bridge.controls","actions":["ToggleShape","ToggleRules","ToggleMemory","ChangeRange"],"hud":"Disk / Rules OFF / memory OFF / 6200 cm","result":"passed"}

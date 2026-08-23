@@ -1,0 +1,13 @@
+{
+  "name": "FogMobaTerrainShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable Raylib war-fog terrain with lanes, river, concealment, occlusion and vision cones.",
+  "main": "bin/net8.0/FogMobaTerrainShowcaseMod.dll",
+  "priority": 134,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "vision", "fog-of-war", "raylib", "moba"]
+}

@@ -1,0 +1,14 @@
+{
+  "Id": "fog_moba_terrain_showcase",
+  "Tags": ["showcase", "vision", "fog", "moba", "raylib"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": -6500,
+    "TargetYCm": 0,
+    "DistanceCm": 15000,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

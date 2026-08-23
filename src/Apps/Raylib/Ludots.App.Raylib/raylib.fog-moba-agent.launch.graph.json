@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-24T00:00:00.0000000Z",
+  "orderedModIds": ["LudotsCoreMod", "CoreInputMod", "FogMobaTerrainShowcaseMod", "AgentBridgeMod"],
+  "plannedMods": [
+    { "id": "LudotsCoreMod", "rootPath": "../../../../../../../mods/LudotsCoreMod" },
+    { "id": "CoreInputMod", "rootPath": "../../../../../../../mods/CoreInputMod" },
+    { "id": "FogMobaTerrainShowcaseMod", "rootPath": "../../../../../../../mods/showcases/fog_moba_terrain/FogMobaTerrainShowcaseMod" },
+    { "id": "AgentBridgeMod", "rootPath": "../../../../../../../mods/AgentBridgeMod" }
+  ]
+}

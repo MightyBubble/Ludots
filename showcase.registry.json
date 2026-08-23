@@ -4522,6 +4522,30 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "fog_moba_terrain",
+      "path": "mods/showcases/fog_moba_terrain/FogMobaTerrainShowcaseMod",
+      "projectPath": "FogMobaTerrainShowcaseMod.csproj",
+      "title": "战争迷雾 MOBA 地形",
+      "summary": "Raylib 可玩三路/河道地形：移动观察者，实时观察视锥、墙体遮挡、草丛 concealment 与探索记忆。",
+      "tier": "T2",
+      "category": "demo",
+      "tags": [
+        "fog-of-war",
+        "vision",
+        "raylib",
+        "moba",
+        "terrain"
+      ],
+      "binding": "fog_moba_terrain",
+      "preset": "fog_moba_terrain_raylib",
+      "docsPath": "gitbook/showcases/fog-moba-terrain.md",
+      "readmePath": null,
+      "acceptanceTest": "FogMobaTerrainShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/fog-moba-terrain",
+      "screenshot": null,
+      "status": "active"
+    },
+    {
       "id": "forge_socket",
       "path": "mods/showcases/item_system/ForgeSocketShowcaseMod",
       "projectPath": "ForgeSocketShowcaseMod.csproj",

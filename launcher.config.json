@@ -352,6 +352,14 @@
       }
     },
     {
+      "name": "fog_moba_terrain",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/fog_moba_terrain/FogMobaTerrainShowcaseMod",
+        "projectPath": "FogMobaTerrainShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "fog_vision_decay",
       "target": {
         "type": "path",
