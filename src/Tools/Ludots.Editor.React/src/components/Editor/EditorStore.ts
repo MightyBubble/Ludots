@@ -3,6 +3,8 @@ import { TerrainStore } from '../../Core/Map/TerrainStore';
 import { hexToWorldCm, worldCmToHex } from '../../Core/Map/HexMetrics';
 import type { Camera, PerspectiveCamera } from 'three';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
+import type { LogicTerrainViewMode } from '../../Core/Render/LogicTerrainView';
+import type { PerformanceStats } from './PerformancePanel';
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
@@ -43,6 +45,10 @@ export interface EditorState {
     showGrid: boolean;
     showChunkBorders: boolean;
     showNavMesh: boolean; // Added NavMesh Toggle
+    showLogicTerrain: boolean;
+    showPerformance: boolean;
+    perfStats: PerformanceStats;
+    logicTerrainMode: LogicTerrainViewMode;
     navMeshBakeVersion: number;
     bakedNavTiles: Map<string, NavTile>;
     bakedNavTilesVersion: number;
@@ -56,6 +62,9 @@ export interface EditorState {
     toggleGrid: () => void;
     toggleChunkBorders: () => void;
     toggleNavMesh: () => void; // Added Action
+    toggleLogicTerrain: () => void;
+    setLogicTerrainMode: (mode: LogicTerrainViewMode) => void;
+    updatePerfStats: (patch: Partial<PerformanceStats>) => void;
     
     // Map Actions
     initMap: (w: number, h: number) => void;
@@ -105,7 +114,7 @@ export interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
     terrain: new TerrainStore(8, 8), // Default 8x8 chunks
 
-    bridgeBaseUrl: 'http://localhost:5299',
+    bridgeBaseUrl: 'http://localhost:5200',
     mods: [],
     selectedModId: null,
     maps: [],
@@ -134,6 +143,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     showGrid: false,
     showChunkBorders: true,
     showNavMesh: false, // Default Off
+    showLogicTerrain: false,
+    showPerformance: false,
+    perfStats: { visibleChunks: 0, totalChunks: 0, cacheSize: 0, cacheHitRate: 0, frameBuildCount: 0, frameEvictCount: 0, visibleTriangles: 0, drawTimeMs: 0, fps: 0, streamerMemoryMB: 0 },
+    logicTerrainMode: 'heightLevel' as LogicTerrainViewMode,
     navMeshBakeVersion: 0,
     bakedNavTiles: new Map(),
     bakedNavTilesVersion: 0,
@@ -154,6 +167,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleChunkBorders: () => set((state) => ({ showChunkBorders: !state.showChunkBorders })),
     toggleNavMesh: () => set((state) => ({ showNavMesh: !state.showNavMesh })),
+    toggleLogicTerrain: () => set((state) => ({ showLogicTerrain: !state.showLogicTerrain })),
+    setLogicTerrainMode: (mode) => set({ logicTerrainMode: mode }),
+    updatePerfStats: (patch) => set((state) => ({ perfStats: { ...state.perfStats, ...patch } })),
     
     bakeNavMesh: () => {
         set((state) => ({ navMeshBakeVersion: state.navMeshBakeVersion + 1 }));

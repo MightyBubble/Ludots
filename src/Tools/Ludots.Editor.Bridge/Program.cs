@@ -1026,7 +1026,7 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
     }
 });
 
-app.Run("http://localhost:5299");
+app.Run("http://localhost:5200");
 
 static IResult? TryReadRecastReactCommonOptions(
     IFormCollection form,

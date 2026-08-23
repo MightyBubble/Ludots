@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { useEditorStore } from './EditorStore';
 import { ChunkRenderer } from '../../Core/Render/ChunkRenderer';
+import { ChunkStreamer } from '../../Core/Render/ChunkStreamer';
+import { LogicTerrainView } from '../../Core/Render/LogicTerrainView';
 import { HEX_WIDTH, ROW_SPACING, getHexPosition } from '../../Core/Map/HexMetrics';
 import { TerrainStore } from '../../Core/Map/TerrainStore';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
@@ -19,7 +21,7 @@ function getNeighbors(c: number, r: number) {
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, showLogicTerrain, logicTerrainMode, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, toggleLogicTerrain, setLogicTerrainMode, updatePerfStats, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
     
     // Refs for mutable state in animation loop
     const sceneRef = useRef<THREE.Scene | null>(null);
@@ -29,6 +31,9 @@ export const HexRenderer: React.FC = () => {
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<OrbitControls | null>(null);
     const chunkRendererRef = useRef<ChunkRenderer | null>(null);
+    const chunkStreamerRef = useRef<ChunkStreamer | null>(null);
+    const logicTerrainViewRef = useRef<LogicTerrainView | null>(null);
+    const logicTerrainGroupRef = useRef<THREE.Group | null>(null);
     const terrainGroupRef = useRef<THREE.Group | null>(null);
     const cursorMeshRef = useRef<THREE.Mesh | null>(null);
     const entityGroupRef = useRef<THREE.Group | null>(null);
@@ -42,6 +47,7 @@ export const HexRenderer: React.FC = () => {
     const terrainRef = useRef(terrain);
     // Track initialization progress
     const totalInitChunksRef = useRef(0);
+    const perfFrameCountRef = useRef(0);
 
     useEffect(() => {
         terrainRef.current = terrain;

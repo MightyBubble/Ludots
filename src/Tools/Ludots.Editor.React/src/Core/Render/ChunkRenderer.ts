@@ -40,8 +40,18 @@ export class ChunkRenderer {
     constructor(store: TerrainStore) {
         this.store = store;
     }
-    
-    // Biome Color Map
+
+    /**
+     * Build a single chunk mesh for streaming. Thin wrapper around generateChunk
+     * with default rendering parameters.
+     */
+    buildChunkMesh(cx: number, cy: number): THREE.Group {
+        const group = this.generateChunk(cx, cy, 0, 0, 2.0);
+        group.name = `chunk_${cx}_${cy}`;
+        return group;
+    }
+
+
     private getVertexColor(h: number, biome: number): THREE.Color {
         const c = new THREE.Color();
         
@@ -896,3 +906,4 @@ export class ChunkRenderer {
         parent.add(mesh);
     }
 }
+
