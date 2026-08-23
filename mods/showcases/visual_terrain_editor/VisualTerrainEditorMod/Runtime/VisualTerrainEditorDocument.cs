@@ -32,6 +32,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private readonly VisualTerrainErosionParameters _parameters = new();
     private readonly ChunkedVisualHeightmapStore _heightmapStore;
     private readonly ChunkedVisualHeightmapRuntime _heightmapRuntime;
+    private readonly VisualHeightmapRenderProfile _renderProfile;
     private readonly Dictionary<long, ChunkState> _chunks = new();
     private readonly List<ChunkState> _dirtyChunksScratch = new();
 
@@ -47,11 +48,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
 
         _defaultMaterialAssetId = defaultMaterialAssetId;
+        _renderProfile = (renderProfile ?? VisualHeightmapRenderProfile.CreateDefault()).NormalizeAndValidate();
         _heightmapStore = new ChunkedVisualHeightmapStore(_asset.CreateHeightmapDescriptor());
         _heightmapRuntime = new ChunkedVisualHeightmapRuntime(
             _heightmapStore.Descriptor,
             _heightmapStore,
-            renderProfile ?? VisualHeightmapRenderProfile.CreateDefault());
+            _renderProfile);
         Reset();
     }
 
@@ -1349,7 +1351,10 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         // Land and sea normalize within their own vertical spans so land relief stays readable
         // even when the sea floor spans a far larger depth range.
         float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
-        return VisualHeightmapColorRamp.ResolveColorRanged(heightCm, slope, MinHeightCm, MaxHeightCm, seaLevelCm: 0f, DisplayColorContrast);
+        // 陆地色带跨度 = max(文档实测, 作者 profile 的 AbsoluteColorPeakSpanCm)：
+        // 拉大跨度即抬高雪线(高原不再整片落进 peak 白带)，与宿主渲染路径同一政策源。
+        float landSpanCm = MathF.Max(MathF.Max(1f, MaxHeightCm), _renderProfile.AbsoluteColorPeakSpanCm);
+        return VisualHeightmapColorRamp.ResolveColorRanged(heightCm, slope, MinHeightCm, landSpanCm, seaLevelCm: 0f, DisplayColorContrast);
     }
 
     private static Vector3 ShadeSurface(float height, Vector3 normal, float ridge, float drainage)
