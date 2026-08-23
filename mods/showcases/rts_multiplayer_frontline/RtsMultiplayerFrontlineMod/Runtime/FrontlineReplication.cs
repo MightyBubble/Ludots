@@ -520,11 +520,13 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
     private readonly FrontlineTagBinder _tagBinder;
     private readonly OwnershipResolver _ownership;
     private readonly PlayerEntityLookup _players;
+    private readonly int[] _sideVisionScopeKeyIds;
 
     protected FrontlineReplicationApplier(
         in FrontlineReplicationSpec spec,
         FrontlineClientTemplateFactory templates,
         FrontlineSideConfig[] sides,
+        int[] sideVisionScopeKeyIds,
         int healthAttributeId,
         int crystalAttributeId,
         FrontlineTagBinder tagBinder,
@@ -534,6 +536,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         _spec = spec;
         _templates = templates ?? throw new ArgumentNullException(nameof(templates));
         _sides = sides ?? throw new ArgumentNullException(nameof(sides));
+        _sideVisionScopeKeyIds = sideVisionScopeKeyIds ?? throw new ArgumentNullException(nameof(sideVisionScopeKeyIds));
         _healthAttributeId = healthAttributeId;
         _crystalAttributeId = crystalAttributeId;
         _tagBinder = tagBinder ?? throw new ArgumentNullException(nameof(tagBinder));
@@ -789,7 +792,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         world.Set(entity, in participant);
 
         ref VisionEmitterCm emitter = ref world.Get<VisionEmitterCm>(entity);
-        emitter.ScopeKeyId = sideIndex >= 0 ? _sides[sideIndex].VisionScopeKeyId : 0;
+        emitter.ScopeKeyId = sideIndex >= 0 ? _sideVisionScopeKeyIds[sideIndex] : 0;
         if (hasOwner)
         {
             if (!OwnershipEdgeBuilder.TryLinkSpawnedEntity(world, _ownership, _players, entity))
@@ -837,26 +840,26 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
 internal sealed class FrontlineCoreReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineCoreReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
-        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
+    public FrontlineCoreReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int[] sideVisionScopeKeyIds, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineHarvesterReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineHarvesterReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
-        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
+    public FrontlineHarvesterReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int[] sideVisionScopeKeyIds, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineInfantryReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineInfantryReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
-        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
+    public FrontlineInfantryReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int[] sideVisionScopeKeyIds, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal sealed class FrontlineCrystalNodeReplicationApplier : FrontlineReplicationApplier
 {
-    public FrontlineCrystalNodeReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
-        : base(in spec, templates, sides, healthId, crystalId, tagBinder, ownership, players) { }
+    public FrontlineCrystalNodeReplicationApplier(in FrontlineReplicationSpec spec, FrontlineClientTemplateFactory templates, FrontlineSideConfig[] sides, int[] sideVisionScopeKeyIds, int healthId, int crystalId, FrontlineTagBinder tagBinder, OwnershipResolver ownership, PlayerEntityLookup players)
+        : base(in spec, templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players) { }
 }
 
 internal static class FrontlineMatchStatePayload
@@ -1191,6 +1194,23 @@ internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, fl
     }
 }
 
+internal static class FrontlineVisionScopes
+{
+    public static int Resolve(GameEngine engine, string scopeKey)
+    {
+        var registry = engine.GetService(CoreServiceKeys.ScopeKeyRegistry)
+            ?? throw new InvalidOperationException(
+                $"RTS Frontline vision scope '{scopeKey}' requires the ScopeKeyRegistry service.");
+        if (!registry.TryGetId(scopeKey, out int id) || id <= 0)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline vision scope '{scopeKey}' is not declared in Progression/scopes.json.");
+        }
+
+        return id;
+    }
+}
+
 internal sealed class FrontlineVisionScopeAuthoringSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
@@ -1242,7 +1262,7 @@ internal sealed class FrontlineVisionScopeAuthoringSystem : BaseSystem<World, fl
                         "RTS Frontline participant ownership does not match its data-authored side configuration.");
                 }
 
-                emitters[index].ScopeKeyId = _sides[sideIndex].VisionScopeKeyId;
+                emitters[index].ScopeKeyId = FrontlineVisionScopes.Resolve(_engine, _sides[sideIndex].VisionScopeKey);
             }
         }
     }
@@ -1735,6 +1755,7 @@ internal static class FrontlineReplication
         PlayerEntityLookup players = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
             ?? throw new InvalidOperationException("RTS Frontline client replication requires PlayerEntityLookup.");
         RegisterHandlers(
+            engine,
             projectors,
             appliers,
             templates,
@@ -1805,6 +1826,7 @@ internal static class FrontlineReplication
     }
 
     internal static void RegisterHandlers(
+        GameEngine engine,
         ReplicationSchemaProjectorRegistry projectors,
         ClientReplicationSchemaApplierRegistry appliers,
         FrontlineClientTemplateFactory templates,
@@ -1829,10 +1851,16 @@ internal static class FrontlineReplication
         RegisterOrThrow(projectors, matchStateSchemaId, new FrontlineMatchStateReplicationProjector(runtime, matchStateSchemaId));
 
         FrontlineTagBinder tagBinder = runtime.TagBinder;
-        RegisterOrThrow(appliers, specs[0].SchemaId, new FrontlineCoreReplicationApplier(in specs[0], templates, sides, healthId, crystalId, tagBinder, ownership, players));
-        RegisterOrThrow(appliers, specs[1].SchemaId, new FrontlineHarvesterReplicationApplier(in specs[1], templates, sides, healthId, crystalId, tagBinder, ownership, players));
-        RegisterOrThrow(appliers, specs[2].SchemaId, new FrontlineInfantryReplicationApplier(in specs[2], templates, sides, healthId, crystalId, tagBinder, ownership, players));
-        RegisterOrThrow(appliers, specs[3].SchemaId, new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, sides, healthId, crystalId, tagBinder, ownership, players));
+        var sideVisionScopeKeyIds = new int[sides.Length];
+        for (int i = 0; i < sides.Length; i++)
+        {
+            sideVisionScopeKeyIds[i] = FrontlineVisionScopes.Resolve(engine, sides[i].VisionScopeKey);
+        }
+
+        RegisterOrThrow(appliers, specs[0].SchemaId, new FrontlineCoreReplicationApplier(in specs[0], templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[1].SchemaId, new FrontlineHarvesterReplicationApplier(in specs[1], templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[2].SchemaId, new FrontlineInfantryReplicationApplier(in specs[2], templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players));
+        RegisterOrThrow(appliers, specs[3].SchemaId, new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, sides, sideVisionScopeKeyIds, healthId, crystalId, tagBinder, ownership, players));
         RegisterOrThrow(
             appliers,
             matchStateSchemaId,

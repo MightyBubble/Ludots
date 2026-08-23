@@ -227,15 +227,15 @@ public sealed class FrontlineSideConfig
     public int PlayerId { get; set; }
     public int TeamId { get; set; }
     public string DisplayName { get; set; } = string.Empty;
-    public int VisionScopeKeyId { get; set; }
+    public string VisionScopeKey { get; set; } = string.Empty;
 
     internal void Validate(int index)
     {
         if (string.IsNullOrWhiteSpace(Id) || string.IsNullOrWhiteSpace(DisplayName) ||
-            PlayerId <= 0 || TeamId <= 0 || VisionScopeKeyId <= 0)
+            PlayerId <= 0 || TeamId <= 0 || string.IsNullOrWhiteSpace(VisionScopeKey))
         {
             throw new InvalidOperationException(
-                $"RTS Frontline sides[{index}] requires id, displayName, playerId, teamId and visionScopeKeyId.");
+                $"RTS Frontline sides[{index}] requires id, displayName, playerId, teamId and visionScopeKey.");
         }
     }
 }

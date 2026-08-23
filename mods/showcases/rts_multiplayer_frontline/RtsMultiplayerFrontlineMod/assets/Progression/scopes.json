@@ -1,6 +1,10 @@
 [
   {
-    "id": "rts.frontline.local",
+    "id": "rts.frontline.north",
+    "memberSource": "ScopeBinding"
+  },
+  {
+    "id": "rts.frontline.south",
     "memberSource": "ScopeBinding"
   }
 ]

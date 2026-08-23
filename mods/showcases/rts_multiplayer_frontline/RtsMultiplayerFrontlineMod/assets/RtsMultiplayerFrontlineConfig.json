@@ -23,7 +23,9 @@
     "ownedUnitsCollectionKey": "rts.frontline.owned-units",
     "publicResourcesCollectionKey": "rts.frontline.public-resources",
     "publicMatchStateCollectionKey": "rts.frontline.public-match-state",
-    "visibleEnemyAttributes": ["Health"]
+    "visibleEnemyAttributes": [
+      "Health"
+    ]
   },
   "sides": [
     {
@@ -31,14 +33,14 @@
       "displayName": "North",
       "playerId": 1,
       "teamId": 1,
-      "visionScopeKeyId": 1
+      "visionScopeKey": "rts.frontline.north"
     },
     {
       "id": "south",
       "displayName": "South",
       "playerId": 2,
       "teamId": 2,
-      "visionScopeKeyId": 2
+      "visionScopeKey": "rts.frontline.south"
     }
   ],
   "hud": {
