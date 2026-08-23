@@ -28,12 +28,13 @@
   var NAV_ITEMS = [
     { href: "index.html", label: "门户", page: "home" },
     { href: "index.html#docs", label: "文档", page: "home", hash: "#docs" },
-    { href: "raylib-engine.html", label: "Raylib 引擎", page: "raylibengine" },
+    { href: "raylib-engine.html", label: "Raylib 引擎画廊", page: "raylibengine" },
     { href: "graph-op-wiki.html", label: "Graph 节点画廊", page: "graphop" },
     { href: "agent-bridge.html", label: "Agent 调试桥", page: "agentbridge" },
     { href: "gallery.html", label: "Showcase 画廊", page: "gallery" },
     { href: "tests.html", label: "测试与验收", page: "tests" },
-    { href: "diagrams.html", label: "架构图库", page: "diagrams" }
+    { href: "diagrams.html", label: "架构图库", page: "diagrams" },
+    { href: "panels.html", label: "面板矩阵", page: "panels" }
   ];
 
   /* docs 文档页侧栏目录（原 31 页各自硬编码的 navData 收敛于此；

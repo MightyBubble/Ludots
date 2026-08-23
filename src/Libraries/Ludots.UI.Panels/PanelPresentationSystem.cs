@@ -184,10 +184,10 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private static UiElementBuilder BuildRows(PanelTemplate template, PanelVariableSet values)
     {
         var rows = new List<UiElementBuilder>();
-        foreach (PanelTemplateVariable variable in template.Variables)
+        foreach (PanelPin pin in template.Pins)
         {
-            bool isPairedBase = variable.Name.EndsWith("Base", StringComparison.Ordinal) &&
-                HasVariable(template, variable.Name[..^"Base".Length]);
+            bool isPairedBase = pin.Name.EndsWith("Base", StringComparison.Ordinal) &&
+                HasPin(template, pin.Name[..^"Base".Length]);
             if (isPairedBase)
             {
                 continue;
@@ -195,22 +195,22 @@ public sealed class PanelPresentationSystem : ISystem<float>
 
             string text;
             var color = new UiColor(230, 230, 230);
-            if (HasVariable(template, variable.Name + "Base"))
+            if (HasPin(template, pin.Name + "Base"))
             {
-                float current = values.Get(variable.Name);
-                float maximum = values.Get(variable.Name + "Base");
-                text = $"{variable.Name.ToUpperInvariant()}  {current:F0} / {maximum:F0}";
-                color = PairRowColor(variable.Name);
+                float current = values.Get(pin.Name);
+                float maximum = values.Get(pin.Name + "Base");
+                text = $"{pin.Name.ToUpperInvariant()}  {current:F0} / {maximum:F0}";
+                color = PairRowColor(pin.Name);
             }
             else
             {
-                text = $"{variable.Name.ToUpperInvariant()}  {values.Get(variable.Name):F0}";
+                text = $"{pin.Name.ToUpperInvariant()}  {values.Get(pin.Name):F0}";
             }
 
             rows.Add(new UiElementBuilder(UiNodeKind.Text)
                 .Class("row")
-                .Class($"row-{variable.Name}")
-                .Class(HasVariable(template, variable.Name + "Base") ? "row-paired" : "row-single")
+                .Class($"row-{pin.Name}")
+                .Class(HasPin(template, pin.Name + "Base") ? "row-paired" : "row-single")
                 .Text(text)
                 .FontSize(14)
                 .Color(color));
@@ -219,11 +219,11 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return new UiElementBuilder(UiNodeKind.Container).Column().Class("rows").Gap(4).Children(rows.ToArray());
     }
 
-    private static bool HasVariable(PanelTemplate template, string name)
+    private static bool HasPin(PanelTemplate template, string name)
     {
-        foreach (PanelTemplateVariable variable in template.Variables)
+        foreach (PanelPin pin in template.Pins)
         {
-            if (string.Equals(variable.Name, name, StringComparison.Ordinal))
+            if (string.Equals(pin.Name, name, StringComparison.Ordinal))
             {
                 return true;
             }

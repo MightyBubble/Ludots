@@ -1,57 +1,50 @@
 [
-  {
-    "id": "panel.night_raid.victory",
-    "variables": [
-      {
-        "name": "heroHealth",
-        "kind": "Float",
-        "realtime": true,
-        "source": {
-          "sourceKind": "SingleAttribute",
-          "attributeId": "Health"
-        }
-      }
-    ]
-  },
-  {
-    "id": "panel.night_raid.progress",
-    "variables": [
-      {
-        "name": "stage",
-        "kind": "Int",
-        "realtime": true,
-        "source": {
-          "sourceKind": "MapVariable"
-        }
-      },
-      {
-        "name": "kill_count",
-        "kind": "Int",
-        "realtime": true,
-        "source": {
-          "sourceKind": "MapVariable"
-        }
-      },
-      {
-        "name": "kill_threshold",
-        "kind": "Int",
-        "source": {
-          "sourceKind": "MapVariable"
-        }
-      }
-    ]
-  },
-  {
-    "id": "panel.night_raid.boss_alert",
-    "variables": [
-      {
-        "name": "stage",
-        "kind": "Int",
-        "realtime": true,
-        "source": {
-          "sourceKind": "MapVariable"
-        }
-      }
-    ]
-  }
+ {
+  "id": "panel.night_raid.victory",
+  "graph": "Graph.NightRaid.Panel.Values",
+  "pins": [
+   {
+    "name": "heroHealth",
+    "key": "nightraid.panel.heroHealth",
+    "mode": "realtime",
+    "default": 0
+   }
+  ]
+ },
+ {
+  "id": "panel.night_raid.progress",
+  "graph": "Graph.NightRaid.Panel.Values",
+  "pins": [
+   {
+    "name": "stage",
+    "key": "nightraid.panel.stage",
+    "mode": "realtime",
+    "default": 0
+   },
+   {
+    "name": "kill_count",
+    "key": "nightraid.panel.killCount",
+    "mode": "realtime",
+    "default": 0
+   },
+   {
+    "name": "kill_threshold",
+    "key": "nightraid.panel.killThreshold",
+    "mode": "snapshot",
+    "default": 3
+   }
+  ]
+ },
+ {
+  "id": "panel.night_raid.boss_alert",
+  "graph": "Graph.NightRaid.Panel.Values",
+  "pins": [
+   {
+    "name": "stage",
+    "key": "nightraid.panel.stage",
+    "mode": "realtime",
+    "default": 0
+   }
+  ]
+ }
 ]

@@ -6,8 +6,7 @@
 
 - [运行时总览](runtime-overview.md)
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
-- [UI 面板作者形态（四种表面）](ui-panel-authoring-form.md)
-- [UIP-0：Template / Instance / Router 合同](ui-panel-template-instance-router.md) — ADR 正本挂 [#880](https://github.com/MightyBubble/Ludots/issues/880)；本页为仓库锚点
+- [面板目录设计：配置形状与线框](panel-catalog-designs.md) — 总合同（graph-pinned panels）
 - [Mod 架构](mod-architecture.md)
 - [Mod Extensible Runtime](mod-extensible-runtime.md)
 - [Mod Extensible Runtime Showcases](mod-extensible-runtime-showcases/README.md)

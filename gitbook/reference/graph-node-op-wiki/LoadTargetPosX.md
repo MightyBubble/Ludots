@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
 | 特殊写法 | 结果写入 dst 寄存器 |
@@ -37,7 +37,7 @@
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - 同类用法：受击联动（挨打触发计数或外观变化）、事件决定施放哪张效果牌、与观看者相关的表现逻辑。
 ## 怎么进

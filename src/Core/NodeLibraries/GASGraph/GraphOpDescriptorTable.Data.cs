@@ -17,6 +17,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         // TriggerGraph mirrors the Script authorable set, including Yield (host resumption is the host's contract).
         private const GraphKindMask ScriptAndTriggerGraph = GraphKindMask.Script | GraphKindMask.TriggerGraph;
+        private const GraphKindMask ScriptTriggerQuery = ScriptAndTriggerGraph | GraphKindMask.Query;
 
         private const GraphKindMask LinearAndQuery = LinearAll | GraphKindMask.Query;
 
@@ -144,15 +145,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Add(rows, GraphNodeOp.SpawnTemplate, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.SetWorldPosition, LinearQueryScript, GraphValueType.Void, portSourceAB, queryPorts: portSourceAB, scriptPorts: portSourceAB);
             Add(rows, GraphNodeOp.DestroyPanel, LinearQueryScript, GraphValueType.Void, portSource, queryPorts: portSource, scriptPorts: portSource, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ReadMapVarInt, ScriptAndTriggerGraph, GraphValueType.Int, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
-            Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptAndTriggerGraph, GraphValueType.Float, portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadMapVarInt, ScriptTriggerQuery, GraphValueType.Int, portSource, queryOut: GraphValueType.Int, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Int, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.ReadMapVarFloat, ScriptTriggerQuery, GraphValueType.Float, portSource, queryOut: GraphValueType.Float, queryPorts: portSource, scriptPorts: portSource, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteMapVarInt, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteMapVarFloat, ScriptAndTriggerGraph, GraphValueType.Void, portSourceValue, scriptPorts: portSourceValue, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.TableReadFloat, LinearQueryScript, GraphValueType.Float, portA, queryOut: GraphValueType.Float, queryPorts: portA, scriptPorts: portA, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.LoadContextSource, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTarget, LinearAll, GraphValueType.Entity);
             Add(rows, GraphNodeOp.LoadContextTargetContext, LinearAll, GraphValueType.Entity);
-            Add(rows, GraphNodeOp.LoadSelfAttribute, LinearAndScript, GraphValueType.Float, scriptOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
+            Add(rows, GraphNodeOp.LoadSelfAttribute, LinearAndScript | QueryOnly, GraphValueType.Float, scriptOut: GraphValueType.Float, queryOut: GraphValueType.Float, imm: GraphOperandRole.SymbolImm);
             Add(rows, GraphNodeOp.WriteSelfAttribute, LinearEffectDerived, GraphValueType.Void, portValue, imm: GraphOperandRole.SymbolImm, derivedWrite: true);
             Add(rows, GraphNodeOp.RelationshipEnsureLink, LinearEffect, GraphValueType.Void, portSourceTarget, dst: GraphOperandRole.SymbolDst);
             Add(rows, GraphNodeOp.RelationshipRemoveLink, LinearEffect, GraphValueType.Void, portSourceTarget, dst: GraphOperandRole.SymbolDst);

@@ -106,7 +106,11 @@ public sealed class MapTriggerNightRaidAcceptanceTests
             "The victory panel must project the hero template attribute, never a presentation constant.");
         float heroHealth = engine.World.Get<Ludots.Core.Gameplay.GAS.Components.AttributeBuffer>(hero).GetCurrent(AttributeRegistry.GetId("Health"));
         Assert.That(FindVictoryPanelValue(panelHost, "heroHealth"), Is.EqualTo(heroHealth),
-            "heroHealth must equal the mount anchor hero's current health — pinning the LoadExplicitTarget scope semantics.");
+            "heroHealth must equal the mount anchor hero's current health — pinning the LoadSelfAttribute query-graph scope semantics.");
+        Assert.That(FindPanelValue(panelHost, "panel.night_raid.progress", "kill_count"), Is.EqualTo(3f),
+            "progress panel kill_count must flow through the Schema v2 query graph reading the map variable.");
+        Assert.That(FindPanelValue(panelHost, "panel.night_raid.progress", "stage"), Is.EqualTo(5f),
+            "progress panel stage must flow through the Schema v2 query graph reading the map variable.");
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
@@ -244,16 +248,21 @@ public sealed class MapTriggerNightRaidAcceptanceTests
 
     private static float FindVictoryPanelValue(PanelHost panelHost, string variable)
     {
+        return FindPanelValue(panelHost, VictoryPanelTemplateId, variable);
+    }
+
+    private static float FindPanelValue(PanelHost panelHost, string templateId, string variable)
+    {
         foreach (PanelHostInstanceInfo info in panelHost.SnapshotInstances())
         {
-            if (string.Equals(info.TemplateId, VictoryPanelTemplateId, StringComparison.Ordinal) &&
+            if (string.Equals(info.TemplateId, templateId, StringComparison.Ordinal) &&
                 panelHost.TryGetValues(info.Handle, out PanelVariableSet values))
             {
                 return values.Get(variable);
             }
         }
 
-        throw new InvalidOperationException("Victory panel instance missing.");
+        throw new InvalidOperationException($"Panel instance '{templateId}' missing.");
     }
 
     private static bool FindVictoryPanelValues(PanelHost panelHost)

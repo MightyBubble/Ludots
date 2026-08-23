@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Script / TriggerGraph |
+| 可用图种 | Script / TriggerGraph / Query |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `source`（来源实体） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -37,7 +37,7 @@
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query / Script / TriggerGraph；Effect / Score / Validation / Derived 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进

@@ -202,9 +202,15 @@ def parse_descriptor_table(path: Path, kind_masks: dict[str, list[str]]) -> dict
             kw[ADD_PARAM_ORDER[i]] = v
 
         mask = kw["authorable"].split(".")[-1]
-        if mask not in kind_masks:
+        if mask in kind_masks:
+            kind_names = kind_masks[mask]
+        elif all(part.strip() in kind_masks for part in mask.split("|")):
+            merged: set[str] = set()
+            for part in mask.split("|"):
+                merged.update(kind_masks[part.strip()])
+            kind_names = [k for k in ALL_KINDS if k in merged]
+        else:
             raise SystemExit(f"未知图种掩码 {mask}（op={op}）：GraphOpDescriptorTable.Data.cs 未定义该 authorableKinds 常量")
-        kind_names = kind_masks[mask]
 
         def type_of(key: str) -> str:
             raw = kw.get(key, "GraphValueType.Void")
