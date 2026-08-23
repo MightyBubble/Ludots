@@ -263,7 +263,7 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
     var h = window.location.hash || "";
     var target = null;
     if (h.indexOf("#case/") === 0) {
-      var stem = decodeURIComponent(h.slice("#case/".length)).replace(/[^A-Za-z0-9_.]/g, "");
+      var stem = decodeURIComponent(h.slice("#case/".length)).replace(/[^A-Za-z0-9_.-]/g, "");
       if (stem) target = stem + ".md";
     } else if (h === "#readme" || h === "" || h === "#") {
       target = DEFAULT_DOC;
