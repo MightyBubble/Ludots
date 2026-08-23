@@ -12,7 +12,7 @@ namespace NavMeshDebugLaunchMod
     {
         public void OnLoad(IModContext context)
         {
-            context.Log("[NavMeshDebugLaunchMod] Loaded — N: toggle navmesh overlay");
+            context.Log("[NavMeshDebugLaunchMod] Loaded - N: toggle navmesh overlay, P: spawn nav obstacle, O: clear nav obstacles");
 
             context.SystemFactoryRegistry.RegisterPresentation("NavMeshDebugOverlay", scriptCtx =>
             {
@@ -22,6 +22,16 @@ namespace NavMeshDebugLaunchMod
                 }
 
                 return new NavMeshDebugOverlaySystem(engine);
+            });
+
+            context.SystemFactoryRegistry.RegisterPresentation("NavMeshDebugObstacle", scriptCtx =>
+            {
+                if (!scriptCtx.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
+                {
+                    return new NoopSystem();
+                }
+
+                return new NavMeshDebugObstacleSystem(engine);
             });
 
             context.OnEvent(GameEvents.MapLoaded, ctx =>
@@ -37,6 +47,7 @@ namespace NavMeshDebugLaunchMod
 
                     var sfr = engine.ModLoader.SystemFactoryRegistry;
                     sfr.TryActivate("NavMeshDebugOverlay", ctx, engine);
+                    sfr.TryActivate("NavMeshDebugObstacle", ctx, engine);
                 }
                 return System.Threading.Tasks.Task.CompletedTask;
             });
@@ -54,6 +65,16 @@ namespace NavMeshDebugLaunchMod
             if (!input.HasAction(NavMeshDebugInputActions.ToggleOverlay))
             {
                 throw new System.InvalidOperationException($"Missing input action: {NavMeshDebugInputActions.ToggleOverlay}");
+            }
+
+            if (!input.HasAction(NavMeshDebugInputActions.SpawnObstacle))
+            {
+                throw new System.InvalidOperationException($"Missing input action: {NavMeshDebugInputActions.SpawnObstacle}");
+            }
+
+            if (!input.HasAction(NavMeshDebugInputActions.ClearObstacles))
+            {
+                throw new System.InvalidOperationException($"Missing input action: {NavMeshDebugInputActions.ClearObstacles}");
             }
         }
 

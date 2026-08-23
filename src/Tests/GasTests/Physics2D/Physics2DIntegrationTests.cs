@@ -678,6 +678,50 @@ namespace GasTests
         }
 
         [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_PreservesAuthoredObstaclesWhenCapturingStructuralDirtyObstacles()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(
+                world,
+                out NavObstacleSet obstacles,
+                out RuntimeIncrementalNavMeshRebuildQueue queue,
+                out NavTileStore store);
+            NavObstacleSet authoredObstacles = engine.GetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles)
+                ?? throw new InvalidOperationException("Runtime navmesh authored obstacle baseline is missing.");
+            authoredObstacles.Obstacles.Add(new NavObstacle
+            {
+                Id = "authored-wall",
+                Enabled = true,
+                Kind = NavObstacleKind.Circle,
+                LayerId = GroundNavLayerId,
+                Center = new NavPointCm(150, 150),
+                RadiusCm = 45
+            });
+
+            var runtimeEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 35,
+                    NavRadiusCm = 35
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles, Has.Count.EqualTo(2));
+            Assert.That(obstacles.Obstacles.Exists(obstacle => obstacle.Id == "authored-wall"), Is.True);
+            Assert.That(obstacles.Obstacles.Exists(obstacle => obstacle.Id == $"runtime-obstacle-{runtimeEntity.Id}"), Is.True);
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+        }
+
+        [Test]
         public void RuntimeNavMeshObstacleDirtySystem_ClearsTrackedStateWhenRuntimeModeStops()
         {
             using var world = World.Create();
@@ -797,6 +841,7 @@ namespace GasTests
                 navProfiles);
             engine.SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
             engine.SetService(CoreServiceKeys.RuntimeNavMeshObstacles, obstacles);
+            engine.SetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, new NavObstacleSet());
             engine.SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, queue);
             return engine;
         }

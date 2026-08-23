@@ -1,11 +1,13 @@
 {
   "name": "NavMeshDebugLaunchMod",
   "version": "1.0.0",
-  "description": "Launch overlay that boots the baked 4x4 open-world navmesh debug map (navmesh_debug_openworld) for the runtime navmesh overlay acceptance. Declares the NavMeshDebug_ToggleOverlay input action (N), owns the showcase navmesh profile override, and warms resident tiles on enable. Map, terrain, and tiles live in LudotsCoreMod assets.",
+  "description": "Runtime navmesh dirty-update showcase controller. N toggles the overlay, P places a structural obstacle, and O clears the obstacles so the rebuilt tiles visibly close and reopen across hex, grid, and VisualHeightmap launch maps.",
   "main": "bin/net8.0/NavMeshDebugLaunchMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["showcase", "navmesh", "debug", "navigation", "raylib"]

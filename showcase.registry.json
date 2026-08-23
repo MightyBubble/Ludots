@@ -5481,17 +5481,18 @@
     {
       "id": "navmesh_debug_grid_showcase",
       "path": "mods/showcases/navmesh_debug_grid/NavMeshDebugGridLaunchMod",
-      "title": "NavMesh 调试·grid 源",
-      "summary": "grid DataFile（React map_data.bin）源的 4x4 开放世界烤制图：运行期经 Core ReactGridTerrainBinary 直读。",
-      "tier": "T4",
-      "category": "fixture",
+      "title": "NavMesh 脏更新·Grid 地图",
+      "summary": "Grid 地图上的运行时改路展示：按 P 放下一座结构墙，导航覆盖层会在脏 tile 重建后挖出不可走区域；按 O 清墙后路线区域恢复。",
+      "tier": "T2",
+      "category": "capability",
       "binding": "navmesh_debug_grid_launch",
       "preset": "navmesh_debug_grid_raylib",
       "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
-      "status": "experimental",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
       "tags": [
         "navmesh",
-        "debug",
+        "runtime-dirty",
         "grid",
         "navigation"
       ]
@@ -5499,17 +5500,18 @@
     {
       "id": "navmesh_debug_hex_showcase",
       "path": "mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod",
-      "title": "NavMesh 调试·hex 源",
-      "summary": "hex VertexMap 源的 4x4 开放世界烤制图（16 tile）：KEY_N 看权威 overlay。",
-      "tier": "T4",
-      "category": "fixture",
+      "title": "NavMesh 脏更新·Hex 地图",
+      "summary": "Hex VertexMap 地图上的运行时改路展示：同一套 P/O 操作把结构墙写进导航脏队列，覆盖层能看到局部 tile 重建结果。",
+      "tier": "T2",
+      "category": "capability",
       "binding": "navmesh_debug_hex_launch",
       "preset": "navmesh_debug_raylib",
       "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
-      "status": "experimental",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
       "tags": [
         "navmesh",
-        "debug",
+        "runtime-dirty",
         "hex",
         "navigation"
       ]
@@ -5517,17 +5519,18 @@
     {
       "id": "navmesh_debug_showcase",
       "path": "mods/showcases/navmesh_debug/NavMeshDebugLaunchMod",
-      "title": "NavMesh 运行时调试视图",
-      "summary": "NavMesh 运行时调试能力件（输入 action + overlay 激活）；地图由 hex/grid/vhtm 各自的 launch overlay 选择。",
-      "tier": "T4",
-      "category": "fixture",
+      "title": "NavMesh 脏更新控制器",
+      "summary": "三张地图共用的操作层：N 切换覆盖层，P 放结构墙，O 清墙；地图选择由 Hex/Grid/VisualHeightmap 入口负责。",
+      "tier": "T2",
+      "category": "capability",
       "binding": "navmesh_debug",
       "preset": null,
       "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
-      "status": "experimental",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
       "tags": [
         "navmesh",
-        "debug",
+        "runtime-dirty",
         "navigation",
         "raylib"
       ]
@@ -5535,18 +5538,20 @@
     {
       "id": "navmesh_debug_vhtm_showcase",
       "path": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod",
-      "title": "NavMesh 调试·vhtm 源",
-      "summary": "VisualHeightmap 源的 4x4 烤制图（16 tile）：运行期把 .vhtm 起伏投影为 LogicTerrain，KEY_N 看 overlay 贴合渲染地形。",
-      "tier": "T4",
-      "category": "fixture",
+      "title": "NavMesh 脏更新·VisualHeightmap 地图",
+      "summary": "VisualHeightmap 地形上的运行时改路展示：.vhtm 起伏先投影为逻辑地形，再用同一套 P/O 操作演示结构墙如何触发局部导航重建。",
+      "tier": "T2",
+      "category": "capability",
       "binding": "navmesh_debug_vhtm_launch",
       "preset": "navmesh_debug_vhtm_raylib",
       "docsPath": "gitbook/reference/runtime-incremental-navmesh-rebuild.md",
-      "status": "experimental",
+      "acceptanceTest": "NavMeshDebugShowcaseLauncherTests",
+      "status": "active",
       "tags": [
         "navmesh",
-        "debug",
+        "runtime-dirty",
         "vhtm",
+        "visual-heightmap",
         "navigation"
       ]
     },

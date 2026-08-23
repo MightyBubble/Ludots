@@ -1,15 +1,30 @@
 {
-  "mode": "offline",
-  "algorithm": "recast",
+  "mode": "runtime-incremental",
+  "algorithm": "cdt",
   "profiles": [
-    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
+    {
+      "id": "Small",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    }
   ],
   "layers": [
-    { "id": "ground", "layer": 0 }
+    {
+      "id": "ground",
+      "layer": 0
+    }
   ],
   "areas": [
-    { "id": "mud", "areaId": 1, "cost": 2.0 },
-    { "id": "road", "areaId": 2, "cost": 0.7 }
+    {
+      "id": "mud",
+      "areaId": 1,
+      "cost": 2.0
+    },
+    {
+      "id": "road",
+      "areaId": 2,
+      "cost": 0.7
+    }
   ],
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 4,

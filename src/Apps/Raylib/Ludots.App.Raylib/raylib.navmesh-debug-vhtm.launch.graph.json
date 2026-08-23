@@ -6,7 +6,7 @@
     "CoreInputMod",
     "CameraProfilesMod",
     "NavMeshDebugLaunchMod",
-    "NavMeshDebugHexLaunchMod"
+    "NavMeshDebugVhtmLaunchMod"
   ],
   "plannedMods": [
     {
@@ -26,8 +26,8 @@
       "rootPath": "../../../../../../../mods/showcases/navmesh_debug/NavMeshDebugLaunchMod"
     },
     {
-      "id": "NavMeshDebugHexLaunchMod",
-      "rootPath": "../../../../../../../mods/showcases/navmesh_debug_hex/NavMeshDebugHexLaunchMod"
+      "id": "NavMeshDebugVhtmLaunchMod",
+      "rootPath": "../../../../../../../mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod"
     }
   ]
 }

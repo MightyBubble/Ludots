@@ -1,6 +1,20 @@
 {
   "actions": [
-    { "id": "NavMeshDebug_ToggleOverlay", "name": "NavMeshDebug_ToggleOverlay", "type": "Button" }
+    {
+      "id": "NavMeshDebug_ToggleOverlay",
+      "name": "NavMeshDebug_ToggleOverlay",
+      "type": "Button"
+    },
+    {
+      "id": "NavMeshDebug_SpawnNavObstacle",
+      "name": "NavMeshDebug_SpawnNavObstacle",
+      "type": "Button"
+    },
+    {
+      "id": "NavMeshDebug_ClearNavObstacles",
+      "name": "NavMeshDebug_ClearNavObstacles",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -8,7 +22,18 @@
       "name": "NavMesh Debug Overlay",
       "priority": 120,
       "bindings": [
-        { "actionId": "NavMeshDebug_ToggleOverlay", "path": "<Keyboard>/n" }
+        {
+          "actionId": "NavMeshDebug_ToggleOverlay",
+          "path": "<Keyboard>/n"
+        },
+        {
+          "actionId": "NavMeshDebug_SpawnNavObstacle",
+          "path": "<Keyboard>/p"
+        },
+        {
+          "actionId": "NavMeshDebug_ClearNavObstacles",
+          "path": "<Keyboard>/o"
+        }
       ]
     }
   ]

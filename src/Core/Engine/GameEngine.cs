@@ -2003,6 +2003,25 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
+            const string navObstacleAuthoringProviderTypeName = "Ludots.Core.Physics2D.Navigation.Physics2DNavObstacleAuthoringProvider";
+            Type? navObstacleAuthoringProviderType = TryResolveOptionalAssemblyType(
+                physics2dAssemblyName,
+                navObstacleAuthoringProviderTypeName);
+            if (navObstacleAuthoringProviderType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{navObstacleAuthoringProviderTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object? navObstacleAuthoringProviderObject = Activator.CreateInstance(navObstacleAuthoringProviderType);
+            if (navObstacleAuthoringProviderObject is not INavObstacleAuthoringProvider navObstacleAuthoringProvider)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create nav obstacle authoring provider '{navObstacleAuthoringProviderTypeName}'.");
+            }
+
+            SetService(CoreServiceKeys.NavObstacleAuthoringProvider, navObstacleAuthoringProvider);
+
             var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
                 physics2dKinematicConfig.KinematicBodyCapacity);
             var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
@@ -3119,7 +3138,18 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
+                if (bakeConfig.Layers.Count != 1)
+                {
+                    throw new InvalidOperationException("Runtime-incremental navmesh mode requires exactly one nav layer.");
+                }
+
+                NavObstacleSet authoredObstacles = BuildRuntimeNavMeshAuthoredObstacles(
+                    mapConfig,
+                    bakeConfig.Layers[0].Id);
+                SetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, authoredObstacles);
+
                 var runtimeObstacles = new NavObstacleSet();
+                runtimeObstacles.Obstacles.AddRange(authoredObstacles.Obstacles);
                 SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
                 var runtimeContext = new NavBakeContext
                 {
@@ -3158,11 +3188,34 @@ namespace Ludots.Core.Engine
             LoadNavForMap(mapId, mapConfig);
         }
 
+        private NavObstacleSet BuildRuntimeNavMeshAuthoredObstacles(
+            MapConfig mapConfig,
+            string layerId)
+        {
+            if (TryGetService(CoreServiceKeys.NavObstacleAuthoringProvider, out INavObstacleAuthoringProvider provider))
+            {
+                return provider.BuildForMap(
+                    mapConfig,
+                    MapLoader.TemplateRegistry.GetAll(),
+                    layerId)
+                    ?? throw new InvalidOperationException("Nav obstacle authoring provider returned null.");
+            }
+
+            if (mapConfig.Entities != null && mapConfig.Entities.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime-incremental navmesh map '{mapConfig.Id}' contains authored entities, but no nav obstacle authoring provider is registered.");
+            }
+
+            return new NavObstacleSet();
+        }
+
         private void ClearNavServices()
         {
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
             RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }
