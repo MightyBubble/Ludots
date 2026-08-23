@@ -19,8 +19,7 @@ internal sealed class InstallRngShowcaseOnGameStartTrigger : Trigger
 
     public override Task ExecuteAsync(ScriptContext context)
     {
-        GameEngine? engine = context.GetEngine();
-        if (engine == null)
+        if (!context.TryGet(CoreServiceKeys.Engine, out GameEngine? engine) || engine == null)
         {
             return Task.CompletedTask;
         }
