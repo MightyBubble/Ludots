@@ -10,10 +10,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     {
         public NavBakeInput(
             BoardConfig board,
-            LogicTerrainField logicTerrain,
-            IVisualHeightmap continuousHeightmap,
-            NavObstacleSet staticObstacles,
-            NavObstacleSet runtimeStructuralObstacles)
+            LogicTerrainField? logicTerrain,
+            IVisualHeightmap? continuousHeightmap,
+            NavObstacleSet? staticObstacles,
+            NavObstacleSet? runtimeStructuralObstacles)
         {
             Board = board ?? throw new ArgumentNullException(nameof(board));
             Policy = board.NavBakePolicy
@@ -36,15 +36,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public NavBakePolicy Policy { get; }
 
-        public LogicTerrainField LogicTerrain { get; }
+        public LogicTerrainField? LogicTerrain { get; }
 
-        public IVisualHeightmap ContinuousHeightmap { get; }
+        public IVisualHeightmap? ContinuousHeightmap { get; }
 
-        public NavObstacleSet StaticObstacles { get; }
+        public NavObstacleSet? StaticObstacles { get; }
 
-        public NavObstacleSet RuntimeStructuralObstacles { get; }
+        public NavObstacleSet? RuntimeStructuralObstacles { get; }
 
-        private static void RequireSelectedInput(string sourceKind, string selectedSource, object value, string inputName)
+        private static void RequireSelectedInput(string sourceKind, string selectedSource, object? value, string inputName)
         {
             if (!string.Equals(sourceKind, selectedSource, StringComparison.Ordinal))
             {

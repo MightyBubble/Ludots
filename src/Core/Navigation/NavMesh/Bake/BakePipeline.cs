@@ -391,8 +391,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if ((uint)c >= (uint)mapWidth || (uint)r >= (uint)mapHeight)
                 return 0f;
 
-            byte h = terrain.GetCell(c, r).HeightLevel;
-            return h * heightScale;
+            return terrain.GetHeightMeters(c, r, heightScale);
         }
 
         private readonly struct EdgeKey : IEquatable<EdgeKey>

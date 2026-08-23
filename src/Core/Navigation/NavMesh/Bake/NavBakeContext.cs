@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -55,6 +56,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public string SourceUri { get; init; } = string.Empty;
 
         public LogicTerrainField Terrain { get; init; } = null!;
+
+        public IVisualHeightmap? ContinuousHeightmap { get; init; }
+
+        public LogicTerrainField TerrainForBake
+            => ContinuousHeightmap == null
+                ? Terrain
+                : new NavContinuousHeightTerrainField(Terrain, ContinuousHeightmap);
 
         public NavObstacleSet Obstacles { get; init; } = new();
 

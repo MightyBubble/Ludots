@@ -16,6 +16,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
+using Ludots.Platform.Abstractions;
 using Ludots.NavBake.Recast;
 
 namespace Ludots.Tool
@@ -743,11 +744,12 @@ namespace {modId}
             }
 
             NavBakePolicy policy = NavBakePolicyValidator.Require(boardConfig);
-            if (string.Equals(policy.HeightSource, NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Board '{boardConfig.Name}' selects direct continuous-heightmap baking, but the CLI backend is not connected yet. No projection was performed.");
-            }
+            IVisualHeightmap? continuousHeightmap = string.Equals(
+                policy.HeightSource,
+                NavBakeSourceKinds.ContinuousHeightmap,
+                StringComparison.Ordinal)
+                ? NavBakeHeightmapLoader.LoadFromRepoRoot(repoRoot, mapConfig, modId)
+                : null;
 
             NavMeshBakeConfigContext bakeConfigContext;
             try
@@ -762,7 +764,9 @@ namespace {modId}
             NavObstacleSet obstacles;
             try
             {
-                obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
+                obstacles = string.Equals(policy.StaticObstacleSource, NavBakeSourceKinds.MapEntities, StringComparison.Ordinal)
+                    ? NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId)
+                    : new NavObstacleSet();
             }
             catch (Exception ex)
             {
@@ -787,6 +791,15 @@ namespace {modId}
                 targets = NavBakeTileSelection.AllTiles(terrain);
             }
 
+            _ = new NavBakeInput(
+                boardConfig,
+                terrain,
+                continuousHeightmap,
+                obstacles,
+                string.Equals(policy.RuntimeObstacleSource, NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
+                    ? null
+                    : new NavObstacleSet());
+
             NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
             return new NavBakeContext
             {
@@ -794,6 +807,7 @@ namespace {modId}
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath),
                 Terrain = terrain,
+                ContinuousHeightmap = continuousHeightmap,
                 Obstacles = obstacles,
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,

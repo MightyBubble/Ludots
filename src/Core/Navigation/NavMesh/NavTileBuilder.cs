@@ -246,7 +246,7 @@ namespace Ludots.Core.Navigation.NavMesh
             terrain.GetWorldPositionMeters(c, r, out float worldX, out float worldZ);
             float x = worldX - originXm;
             float z = worldZ - originZm;
-            float y = h * heightScale;
+            float y = terrain.GetHeightMeters(c, r, heightScale);
             float waterY = w * heightScale;
             return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, ramp, blocked, areaId);
         }
