@@ -7,7 +7,7 @@
       "OverviewVertexLimit": 65536,
       "ChunkLodErrorPx": 240,
       "DisableDistanceFog": true,
-      "DisplayHeightScale": 8
+      "DisplayHeightScale": 5
     }
   },
   "Tags": [
