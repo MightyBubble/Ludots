@@ -51,6 +51,8 @@ namespace Ludots.Core.Vision
             _observers = observers ?? throw new ArgumentNullException(nameof(observers));
         }
 
+        private int _dbgUpdates;
+
         public override void Update(in float dt)
         {
             int layerCount = CopyLayerIds();
@@ -73,6 +75,20 @@ namespace Ludots.Core.Vision
                 _resolver.Resolve(frame.Emitter, targetLayers, in rules);
             }
 
+            if (_dbgUpdates <= 5)
+            {
+                var dbgScopes = new System.Text.StringBuilder();
+                for (int i = 0; i < emitterCount; i++)
+                {
+                    dbgScopes.Append(_emitters[i].Emitter.ScopeKeyId).Append(',');
+                }
+
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ludots-emitter-scopes.txt"),
+                    "upd=" + _dbgUpdates + " emitters=[" + dbgScopes + "]" + System.Environment.NewLine);
+            }
+
+            _dbgUpdates++;
             if (occupantCount > 0)
             {
                 ReadOnlySpan<FogOccupant> occupants = _occupants.AsSpan(0, occupantCount);

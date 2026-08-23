@@ -1207,6 +1207,9 @@ internal static class FrontlineVisionScopes
                 $"RTS Frontline vision scope '{scopeKey}' is not declared in Progression/scopes.json.");
         }
 
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ludots-scope-resolve.txt"),
+                "resolve " + scopeKey + " -> " + id + System.Environment.NewLine);
         return id;
     }
 }
