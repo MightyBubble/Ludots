@@ -833,7 +833,7 @@ namespace {modId}
             {
                 return ReactMapDataBinConverter.ReadGridLogicTerrainField(
                     inputReactBinPath,
-                    boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm);
+                    ToolMapConfigResolver.RequireGridCellSizeCm(boardConfig));
             }
 
             if (spatialType.Equals("HexGrid", StringComparison.Ordinal))

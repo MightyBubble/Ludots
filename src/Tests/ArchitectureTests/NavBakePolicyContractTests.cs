@@ -4,6 +4,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Tool;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -107,6 +108,22 @@ namespace Ludots.Tests.Architecture
                 new FlatVisualHeightmap(),
                 new NavObstacleSet(),
                 new NavObstacleSet()));
+        }
+
+        [Test]
+        public void GridCellSize_IsRequiredBySharedToolResolver()
+        {
+            var board = new BoardConfig
+            {
+                Name = "missing-cell-size",
+                SpatialType = "Grid",
+                GridCellSizeCm = 0
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ToolMapConfigResolver.RequireGridCellSizeCm(board))!;
+
+            Assert.That(error.Message, Does.Contain("GridCellSizeCm"));
         }
     }
 }
