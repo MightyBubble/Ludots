@@ -368,10 +368,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         PlayerEntityLookup players = RequirePlayers(engine);
         FrontlineReplicationApplier[] appliers =
         {
-            new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCoreReplicationApplier(in specs[(int)FrontlineReplicationKind.Core], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineHarvesterReplicationApplier(in specs[(int)FrontlineReplicationKind.Harvester], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineInfantryReplicationApplier(in specs[(int)FrontlineReplicationKind.Infantry], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[(int)FrontlineReplicationKind.CrystalNode], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
         };
         string[] templateIds =
         {
@@ -740,6 +740,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             in coreSpec,
             templates,
             config.Sides,
+            ResolveSideScopeIds(engine, config),
             healthId,
             crystalId,
             runtime.TagBinder,
@@ -764,7 +765,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(engine.World.Get<Team>(mirror).Id, Is.EqualTo(config.Sides[1].TeamId));
         Assert.That(engine.World.Get<PlayerOwner>(mirror).PlayerId, Is.EqualTo(config.Sides[1].PlayerId));
         Assert.That(engine.World.Get<FrontlineParticipant>(mirror).SideIndex, Is.EqualTo(1));
-        Assert.That(engine.World.Get<VisionEmitterCm>(mirror).ScopeKeyId, Is.EqualTo(config.Sides[1].VisionScopeKeyId));
+        Assert.That(engine.World.Get<VisionEmitterCm>(mirror).ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey)));
         Assert.That(engine.World.Get<AttributeBuffer>(mirror).GetCurrent(healthId), Is.EqualTo(800f));
         Assert.That(engine.World.Get<AttributeBuffer>(mirror).GetCurrent(crystalId), Is.EqualTo(55f));
         Assert.That(engine.World.Has<AbilityStateBuffer>(mirror), Is.True);
@@ -997,10 +998,10 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         PlayerEntityLookup players = RequirePlayers(engine);
         FrontlineReplicationApplier[] appliers =
         {
-            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
-            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCoreReplicationApplier(in specs[0], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineHarvesterReplicationApplier(in specs[1], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineInfantryReplicationApplier(in specs[2], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
+            new FrontlineCrystalNodeReplicationApplier(in specs[3], templates, config.Sides, ResolveSideScopeIds(engine, config), healthId, crystalId, runtime.TagBinder, ownership, players),
         };
         string[] templateIds =
         {
@@ -1076,6 +1077,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             in spec,
             templates,
             config.Sides,
+            ResolveSideScopeIds(engine, config),
             RequireAttribute(config.HealthAttribute),
             RequireAttribute(config.CrystalAttribute),
             runtime.TagBinder,
@@ -1133,6 +1135,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             in specs[(int)FrontlineReplicationKind.Harvester],
             templates,
             config.Sides,
+            ResolveSideScopeIds(engine, config),
             healthId,
             crystalId,
             runtime.TagBinder,
@@ -1142,6 +1145,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             in specs[(int)FrontlineReplicationKind.CrystalNode],
             templates,
             config.Sides,
+            ResolveSideScopeIds(engine, config),
             healthId,
             crystalId,
             runtime.TagBinder,
@@ -1397,7 +1401,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         using GameEngine engine = CreateStartedEngine();
         engine.LoadMap(MapId);
         FrontlineConfig config = GetRuntime(engine).Config;
-        int originalScopeKeyId = config.Sides[1].VisionScopeKeyId;
+        int originalScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey);
         Entity otherMapParticipant = engine.World.Create(
             new ReplicationSchemaRef(config.Replication.CoreSchemaId),
             new FrontlineCore(),
@@ -1420,7 +1424,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         using GameEngine engine = CreateStartedEngine();
         engine.LoadMap(MapId);
         FrontlineConfig config = GetRuntime(engine).Config;
-        int originalScopeKeyId = config.Sides[1].VisionScopeKeyId;
+        int originalScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey);
         Entity external = engine.World.Create(
             new ReplicationSchemaRef(FindExternalSchemaId(config.Replication)),
             new FrontlineParticipant { SideIndex = 0 },
@@ -1485,14 +1489,14 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             new FrontlineParticipant { SideIndex = 1 },
             new Team { Id = southernSide.TeamId },
             new PlayerOwner { PlayerId = southernSide.PlayerId },
-            new VisionEmitterCm { ScopeKeyId = northernSide.VisionScopeKeyId },
+            new VisionEmitterCm { ScopeKeyId = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, northernSide.VisionScopeKey) },
             new MapEntity { MapId = engine.CurrentMapSession!.MapId });
         using var system = CreateVisionScopeSystem(engine, config);
 
         system.Update(0f);
         Assert.That(
             engine.World.Get<VisionEmitterCm>(southern).ScopeKeyId,
-            Is.EqualTo(southernSide.VisionScopeKeyId));
+            Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, southernSide.VisionScopeKey)));
 
         var wrongOwner = new PlayerOwner { PlayerId = northernSide.PlayerId };
         engine.World.Set(southern, in wrongOwner);
@@ -1544,7 +1548,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         {
             Entity ownInfantry = sideIndex == 0 ? north : south;
             VisionEmitterCm emitter = engine.World.Get<VisionEmitterCm>(ownInfantry);
-            Assert.That(emitter.ScopeKeyId, Is.EqualTo(config.Sides[sideIndex].VisionScopeKeyId));
+            Assert.That(emitter.ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[sideIndex].VisionScopeKey)));
             Assert.That(emitter.LayerMask, Is.EqualTo(layers.ToMask(groundLayer)));
             Assert.That(emitter.Aperture.RangeCm, Is.EqualTo(3_200));
             Assert.That(fields.TryGet(emitter.ScopeKeyId, groundLayer, out FogField field), Is.True);
@@ -2203,6 +2207,17 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         NetworkEntityTable table,
         FrontlineConfig config)
         => new(engine, table, config);
+
+    private static int[] ResolveSideScopeIds(GameEngine engine, FrontlineConfig config)
+    {
+        var ids = new int[config.Sides.Length];
+        for (int i = 0; i < config.Sides.Length; i++)
+        {
+            ids[i] = RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[i].VisionScopeKey);
+        }
+
+        return ids;
+    }
 
     private static FrontlineVisionScopeAuthoringSystem CreateVisionScopeSystem(
         GameEngine engine,

@@ -659,7 +659,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             Assert.That(CountTemplateEntities(engine, "rts_frontline_infantry"), Is.EqualTo(startingInfantry + 1));
             Assert.That(world.Get<PlayerOwner>(created).PlayerId, Is.EqualTo(2));
             Assert.That(world.Get<Team>(created).Id, Is.EqualTo(2));
-            Assert.That(world.Get<VisionEmitterCm>(created).ScopeKeyId, Is.EqualTo(config.Sides[1].VisionScopeKeyId));
+            Assert.That(world.Get<VisionEmitterCm>(created).ScopeKeyId, Is.EqualTo(RtsMultiplayerFrontlineMod.Runtime.FrontlineVisionScopes.Resolve(engine, config.Sides[1].VisionScopeKey)));
             Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(0f));
         });
     }
