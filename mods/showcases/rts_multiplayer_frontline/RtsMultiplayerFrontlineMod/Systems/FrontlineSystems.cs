@@ -856,7 +856,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 
         // Publish the opening focus request under the seat model: main removed the name-based
         // EnsureDefaultCommandSource seeding, so focus the existing command source primary, or seed
-        // the own core mirror when no command source exists yet.
+        // the own core mirror when no command source exists yet. CameraRuntimeSystem consumes and
+        // removes the request every frame, so capture must happen in the same frame that publishes.
         if (_engine.GetService(CoreServiceKeys.CameraPoseRequest) == null)
         {
             Entity focusTarget = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity primary) &&
@@ -864,7 +865,6 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 ? primary
                 : ownedCore;
             RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, focusTarget, snapCamera: false);
-            return;
         }
 
         CameraCullingDebugState culling = _engine.GetService(CoreServiceKeys.CameraCullingDebugState)
