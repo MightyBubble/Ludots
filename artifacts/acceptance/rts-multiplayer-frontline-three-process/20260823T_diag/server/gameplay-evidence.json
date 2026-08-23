@@ -1,17 +1,17 @@
 {
   "schemaVersion": 10,
-  "status": "running",
+  "status": "failed",
   "role": "authoritativeServer",
-  "failure": null,
-  "startedAtUtc": "2026-08-23T09:08:57.8875719Z",
-  "completedAtUtc": null,
+  "failure": "System.InvalidOperationException: Network runtime reported 1 fault(s); last=TransportClosed.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 196",
+  "startedAtUtc": "2026-08-23T09:17:29.4597967Z",
+  "completedAtUtc": "2026-08-23T09:17:32.6448563Z",
   "planFingerprint": "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
-  "contentFingerprint": "284ae8463ca6cd802fd9a675c633bc7b03f968c0f47b4989a37ca4f9e70bc8e1",
-  "sessionEpoch": 11355020974513537958,
+  "contentFingerprint": "e6174c08bc83c66a8cb7b73b66215e355cea777526a6feb9e1cf2ad09c3630c6",
+  "sessionEpoch": 6098743326600777182,
   "playerId": 0,
   "seatSlot": -1,
   "sideIndex": -1,
-  "faultCount": 0,
+  "faultCount": 1,
   "seats": [
     {
       "seatSlot": 0,
@@ -22,21 +22,21 @@
     {
       "seatSlot": 1,
       "playerId": 2,
-      "connectionState": "AwaitingReconnect",
+      "connectionState": "Connected",
       "readyState": "Unready"
     }
   ],
   "steps": [
     {
       "name": "AuthoritativeMatch",
-      "status": "running",
+      "status": "failed",
       "startedInputRevision": 0,
       "completedInputRevision": 0,
       "startedCommittedTick": 0,
       "completedCommittedTick": 0,
-      "startedAtUtc": "2026-08-23T09:08:57.8900700Z",
-      "completedAtUtc": null,
-      "detail": null
+      "startedAtUtc": "2026-08-23T09:17:29.4611565Z",
+      "completedAtUtc": "2026-08-23T09:17:32.6448616Z",
+      "detail": "Network runtime reported 1 fault(s); last=TransportClosed."
     }
   ],
   "commands": [],
@@ -113,7 +113,7 @@
     "reorderedInboundStateDatagramCount": 0
   },
   "runtime": {
-    "capturedAtUtc": "2026-08-23T09:09:01.3008156Z",
+    "capturedAtUtc": "2026-08-23T09:17:32.6401056Z",
     "stage": "AuthoritativeMatch",
     "substep": 0,
     "pendingCommandAction": "",

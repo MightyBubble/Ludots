@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "generatedAtUtc":  "2026-08-23T09:08:49.8164303+00:00",
+    "generatedAtUtc":  "2026-08-23T09:17:18.2632552+00:00",
     "planFingerprint":  "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
     "adapter":  {
                     "id":  "raylib",
@@ -125,8 +125,8 @@
                     ],
     "runtimeArtifacts":  {
                              "bootstrapArtifactStrategy":  "file",
-                             "bootstrapArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_final_replay\\client-b\\launcher.runtime.json",
-                             "graphArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_final_replay\\client-b\\launcher.graph.json",
+                             "bootstrapArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_diag\\server\\launcher.runtime.json",
+                             "graphArtifactPath":  "C:\\001_AI\\LudotsProd_issue709\\artifacts\\acceptance\\rts-multiplayer-frontline-three-process\\20260823T_diag\\server\\launcher.graph.json",
                              "appOutputDirectory":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0",
                              "appAssemblyPath":  "C:\\001_AI\\LudotsProd_issue709\\src\\Apps\\Raylib\\Ludots.App.Raylib\\bin\\Release\\net8.0\\Ludots.App.Raylib.dll",
                              "launchUrl":  ""

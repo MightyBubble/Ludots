@@ -2,11 +2,11 @@
   "schemaVersion": 10,
   "status": "failed",
   "role": "replicatedClient",
-  "failure": "System.InvalidOperationException: Initial fog projection leaked enemy infantry=2, cores=1.\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateConnecting() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 381\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 305\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 205",
-  "startedAtUtc": "2026-08-23T09:08:59.8442526Z",
-  "completedAtUtc": "2026-08-23T09:09:01.1509348Z",
+  "failure": "System.InvalidOperationException: leak infantry=2 cores=1 sideIndex=0 sides=north/rts.frontline.north south/rts.frontline.south em[side=1 scope=3 rng=4500] em[side=0 scope=2 rng=4500] em[side=0 scope=2 rng=2600] em[side=0 scope=2 rng=2600] em[side=1 scope=3 rng=2600] em[side=1 scope=3 rng=2600] em[side=0 scope=2 rng=3200] em[side=0 scope=2 rng=3200] \r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateConnecting() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 398\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 306\r\n   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single\u0026 dt) in C:\\001_AI\\LudotsProd_issue709\\mods\\fixtures\\rts_multiplayer_frontline_three_process\\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\\Runtime\\AcceptanceDriver.cs:line 206",
+  "startedAtUtc": "2026-08-23T09:17:31.1486458Z",
+  "completedAtUtc": "2026-08-23T09:17:32.5236506Z",
   "planFingerprint": "a85c40b5f9368bb16069af6231e60161b987b89c77bee7e474f6a7659d064507",
-  "contentFingerprint": "284ae8463ca6cd802fd9a675c633bc7b03f968c0f47b4989a37ca4f9e70bc8e1",
+  "contentFingerprint": "e6174c08bc83c66a8cb7b73b66215e355cea777526a6feb9e1cf2ad09c3630c6",
   "sessionEpoch": 0,
   "playerId": 0,
   "seatSlot": -1,
@@ -21,9 +21,9 @@
       "completedInputRevision": 0,
       "startedCommittedTick": 0,
       "completedCommittedTick": 0,
-      "startedAtUtc": "2026-08-23T09:08:59.8459510Z",
-      "completedAtUtc": "2026-08-23T09:09:01.1509397Z",
-      "detail": "Initial fog projection leaked enemy infantry=2, cores=1."
+      "startedAtUtc": "2026-08-23T09:17:31.1503663Z",
+      "completedAtUtc": "2026-08-23T09:17:32.5236569Z",
+      "detail": "leak infantry=2 cores=1 sideIndex=0 sides=north/rts.frontline.north south/rts.frontline.south em[side=1 scope=3 rng=4500] em[side=0 scope=2 rng=4500] em[side=0 scope=2 rng=2600] em[side=0 scope=2 rng=2600] em[side=1 scope=3 rng=2600] em[side=1 scope=3 rng=2600] em[side=0 scope=2 rng=3200] em[side=0 scope=2 rng=3200] "
     }
   ],
   "commands": [],
@@ -105,7 +105,7 @@
     "reorderedInboundStateDatagramCount": 0
   },
   "runtime": {
-    "capturedAtUtc": "2026-08-23T09:09:01.1473996Z",
+    "capturedAtUtc": "2026-08-23T09:17:32.5193306Z",
     "stage": "Connecting",
     "substep": 0,
     "pendingCommandAction": "",

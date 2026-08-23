@@ -52,7 +52,7 @@
 [INF][ModLoader] RtsMultiplayerFrontlineNetworkedMod OnLoad completed.
 [INF][ModLoader] Loaded RtsMultiplayerFrontlineNetworkedMod
 [INF][ModLoader] Loading DLL for RtsMultiplayerFrontlineThreeProcessAcceptanceMod at C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\bin\net8.0\RtsMultiplayerFrontlineThreeProcessAcceptanceMod.dll
-[INF][ModLoader] Scanning 40 types in assembly...
+[INF][ModLoader] Scanning 41 types in assembly...
 [INF][ModLoader] Instantiated entry for RtsMultiplayerFrontlineThreeProcessAcceptanceMod. Calling OnLoad...
 [INF][Mod.RtsMultiplayerFrontlineThreeProcessAcceptanceMod] [RtsMultiplayerFrontlineThreeProcessAcceptanceMod] Player-path acceptance driver loaded
 [INF][ModLoader] RtsMultiplayerFrontlineThreeProcessAcceptanceMod OnLoad completed.
@@ -206,7 +206,7 @@ INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
 INFO: RLGL: Default OpenGL state initialized successfully
 INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
 INFO: FONT: Default font loaded successfully (224 glyphs)
-INFO: SYSTEM: Working Directory: C:\001_AI\LudotsProd_issue709\artifacts\acceptance\rts-multiplayer-frontline-three-process\20260823T_final_replay\client-a
+INFO: SYSTEM: Working Directory: C:\001_AI\LudotsProd_issue709\artifacts\acceptance\rts-multiplayer-frontline-three-process\20260823T_diag\client-a
 INFO: TIMER: Target time per frame: 0.000 milliseconds
 [INF][Presentation] GPU Accelerated: False (raster UI compositor)
 INFO: TEXTURE: [ID 3] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
@@ -290,14 +290,10 @@ INFO: SHADER: [ID 10] Program shader loaded successfully
 INFO: TEXTURE: [ID 5] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
 INFO: TEXTURE: [ID 6] Cubemap texture loaded successfully (64x64)
 [INF][Presentation] GPU Accelerated: True (Raylib Skia direct framebuffer overlay)
-INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
-INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
-INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
-INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
-[ERR][Engine] Unhandled exception in game loop: System.InvalidOperationException: Initial fog projection leaked enemy infantry=2, cores=1.
-   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateConnecting() in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 381
-   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 305
-   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single& dt) in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 205
+[ERR][Engine] Unhandled exception in game loop: System.InvalidOperationException: leak infantry=2 cores=1 sideIndex=0 sides=north/rts.frontline.north south/rts.frontline.south em[side=1 scope=3 rng=4500] em[side=0 scope=2 rng=4500] em[side=0 scope=2 rng=2600] em[side=0 scope=2 rng=2600] em[side=1 scope=3 rng=2600] em[side=1 scope=3 rng=2600] em[side=0 scope=2 rng=3200] em[side=0 scope=2 rng=3200] 
+   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateConnecting() in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 398
+   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.UpdateClient() in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 306
+   at RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime.AcceptanceDriver.Update(Single& dt) in C:\001_AI\LudotsProd_issue709\mods\fixtures\rts_multiplayer_frontline_three_process\RtsMultiplayerFrontlineThreeProcessAcceptanceMod\Runtime\AcceptanceDriver.cs:line 206
    at Ludots.Core.Engine.GameEngine.UpdateReplicatedClientLocalInput(Single dt) in C:\001_AI\LudotsProd_issue709\src\Core\Engine\GameEngine.cs:line 4054
    at Ludots.Core.Engine.GameEngine.Tick(Single platformDeltaTime) in C:\001_AI\LudotsProd_issue709\src\Core\Engine\GameEngine.cs:line 3989
    at Ludots.Adapter.Raylib.RaylibHostLoop.Run(RaylibHostSetup setup) in C:\001_AI\LudotsProd_issue709\src\Adapters\Raylib\Ludots.Adapter.Raylib\RaylibHostLoop.cs:line 517
