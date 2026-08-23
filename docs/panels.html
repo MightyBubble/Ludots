@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>面板矩阵 — Ludots</title>
-<meta name="description" content="Ludots 面板矩阵：35 类面板设计一站式——高保真 web 预期（三主题切换）、设计文档直达、showcase 预留位。目录数据由构建脚本从 panel-case-designs.md 解析生成。">
+<meta name="description" content="Ludots 面板矩阵：35 类面板一案一文——配置（graph+pins）、线框预期（三主题皮肤预览）、验收。目录数据由构建脚本从 panel-cases/README.md 解析生成。">
 <link rel="stylesheet" href="site-assets/site.css">
 <style>
   .docs-layout {
@@ -27,84 +27,97 @@
   .docs-tree a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
   .docs-tree .grp > .entry { font-weight: 600; }
   .docs-tree .children { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 6px; }
-  .docs-tree .id { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--faint); margin-right: 6px; }
+  .docs-tree .id {
+    font-family: var(--mono); font-size: 11.5px; color: var(--accent);
+    background: var(--accent-light); border-radius: 4px; padding: 0 5px; margin-right: 6px;
+  }
   .wiki-filter {
-    width: 100%; margin: 0 0 10px; padding: 7px 10px; font-size: 13px;
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    background: var(--bg); color: var(--fg);
+    width: 100%; box-sizing: border-box; margin: 0 0 12px; padding: 7px 10px;
+    font-size: 13px; font-family: inherit; color: var(--fg);
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm);
   }
-  .md-body { min-width: 0; }
-  .docs-loading { color: var(--muted); padding: 40px 0; text-align: center; }
-
-  .panels-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 18px; }
-  .panels-toolbar button {
-    background: var(--card); color: var(--fg); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 6px 13px; font-size: 13px; cursor: pointer;
+  .wiki-filter:focus { outline: none; border-color: var(--accent); }
+  .docs-view {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 36px 44px; min-height: 400px;
+    max-width: 100%; overflow-x: hidden;
   }
-  .panels-toolbar button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .docs-view .doc-path { font-size: 12.5px; color: var(--faint); margin-bottom: 18px; font-family: var(--mono); }
+  .md-body h1 { font-size: 26px; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 18px; }
+  .md-body h2 { font-size: 21px; margin-top: 34px; border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+  .md-body h3 { font-size: 17px; margin-top: 26px; }
+  .md-body h4 { font-size: 15.5px; margin-top: 22px; }
+  .md-body p { margin: 12px 0; }
+  .md-body ul, .md-body ol { margin: 12px 0; padding-left: 24px; }
+  .md-body li { margin: 4px 0; }
+  .md-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; display: block; overflow-x: auto; }
+  .md-body th, .md-body td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
+  .md-body th { background: var(--bg-soft); font-weight: 600; }
+  .md-body blockquote {
+    border-left: 3px solid var(--accent); margin: 16px 0;
+    padding: 8px 16px; background: var(--bg-soft); color: var(--muted);
+  }
+  .md-body pre { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; overflow-x: auto; font-size: 13px; }
+  .md-body code { font-family: var(--mono); font-size: 0.92em; background: var(--bg-soft); border-radius: 4px; padding: 1px 5px; }
+  .md-body pre code { background: none; padding: 0; }
+  .md-body img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 14px 0; }
+  .md-body hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  .md-body video {
+    display: block; width: 100%; max-width: 900px; margin: 18px 0;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); background: #000;
+  }
+  .op-pager {
+    display: flex; justify-content: space-between; gap: 16px;
+    margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--border);
+  }
+  .op-pager a { font-size: 13.5px; color: var(--accent); }
+  .op-pager .none { font-size: 13.5px; color: var(--faint); }
+  .docs-loading { color: var(--faint); padding: 40px 0; text-align: center; }
 
-  .st { font-size: 12px; padding: 1px 9px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
-  .st.g { color: var(--green); border-color: var(--green); }
-  .st.r { color: #e0a24a; border-color: #e0a24a; }
-  .st.b { color: var(--red); border-color: var(--red); }
-  .st.x { color: var(--steel); border-color: var(--steel); }
-
-  /* 三主题皮肤：仅作用于正文里的线框代码块（```text 预期图） */
-  .md-body pre code.wire { display: block; padding: 12px 14px; border-radius: 10px;
-    border: 1.5px solid var(--border); background: var(--card); overflow-x: auto; }
-  body[data-skin="ink-wash"] .md-body pre code.wire {
-    background: #f5f0e4e0; border-color: #2b2b2bd0; color: #1c1c1c;
-    font-family: "KaiTi", "STKaiti", serif; }
-  body[data-skin="fantasy"] .md-body pre code.wire {
-    background: #3d2c1ceb; border-color: #c9a65a; color: #e2d6bc;
-    font-family: Georgia, "Palatino Linotype", serif; }
-  body[data-skin="minimal"] .md-body pre code.wire {
-    background: #fafafaf5; border-color: #141414c8; color: #111;
-    font-family: "Segoe UI", "Helvetica Neue", sans-serif; }
+  @media (max-width: 960px) {
+    .docs-layout { grid-template-columns: 1fr; }
+    .docs-tree { position: static; max-height: 320px; }
+    .docs-view { padding: 24px 20px; }
+  }
+.skin-btn { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 13px; font-size: 13px; cursor: pointer; }
+.skin-btn.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.md-body pre code.wire { display: block; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); }
+body[data-skin="ink-wash"] .md-body pre code.wire { background: #f5f0e4e0; border-color: #2b2b2bd0; color: #1c1c1c; font-family: "KaiTi","STKaiti",serif; }
+body[data-skin="fantasy"] .md-body pre code.wire { background: #3d2c1ceb; border-color: #c9a65a; color: #e2d6bc; font-family: Georgia,serif; }
+body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border-color: #141414c8; color: #111; font-family: "Segoe UI",sans-serif; }
 </style>
 </head>
-<body data-skin="default">
-<header class="topbar"><div class="wrap">
-  <a class="brand" href="index.html">Ludots <span>门户</span></a>
-  <nav class="topnav">
-    <a href="index.html#docs">文档</a><a href="gallery.html">Showcase</a><a href="tests.html">验收</a>
-    <a href="diagrams.html">图库</a><a class="on" href="panels.html">面板矩阵</a>
-  </nav>
-</div></header>
+<body data-page="panels" data-skin="default">
+<header id="topbar"></header>
 
-<main class="wrap">
-  <section class="section">
-    <div class="section-head">
-      <div class="kicker">PANEL MATRIX</div>
-      <h1>面板矩阵 — 35 类设计 · 高保真预期 · Showcase 预留位</h1>
-      <p>面板 = 一张图的输出引脚集（graph + pins）。正文即 35 案全设计文档（与本页同源，
-        <a href="index.html#docs/architecture/panel-quickstart.md">快速上手</a> ·
-        <a href="index.html#docs/architecture/panel-catalog-designs.md">总合同</a>）；
-        主题皮肤切换作用于各案线框预期图的观感预览。实机以 launcher 预设为准。</p>
-    </div>
-    <div class="panels-toolbar">
-      <span style="color:var(--muted);font-size:13px;">线框主题皮肤：</span>
-      <button data-skin="default" class="on">默认</button>
-      <button data-skin="ink-wash">水墨</button>
-      <button data-skin="fantasy">西方魔幻</button>
-      <button data-skin="minimal">极简</button>
-      <span style="flex:1"></span>
-      <span style="color:var(--muted);font-size:13px;">
-        <span class="st g">🟢 可开发</span> <span class="st r">🔴 链缺口</span>
-        <span class="st b">⛔ 装载拒</span> <span class="st x">⚙ 机制</span>
-        · showcase 位随阶段 5 逐案点亮
-      </span>
-    </div>
-    <div class="docs-layout">
-      <aside class="docs-tree" id="panel-tree">
-        <div class="docs-loading">目录加载中…（请先运行 python scripts/build-site.py）</div>
-      </aside>
-      <article class="md-body" id="panel-body">
+<div class="wrap" style="padding-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+  <span style="color:var(--muted);font-size:13px;">线框主题皮肤：</span>
+  <button data-skin="default" class="skin-btn on">默认</button>
+  <button data-skin="ink-wash" class="skin-btn">水墨</button>
+  <button data-skin="fantasy" class="skin-btn">西方魔幻</button>
+  <button data-skin="minimal" class="skin-btn">极简</button>
+</div>
+<main class="page">
+  <div class="docs-layout" style="margin-top: 22px;">
+    <aside class="docs-tree" id="panel-tree">
+      <div class="tree-title">目录加载中…</div>
+    </aside>
+    <article class="docs-view">
+      <div class="doc-path" id="doc-path"></div>
+      <div class="md-body" id="doc-body">
         <div class="docs-loading">文档加载中…</div>
-      </article>
-    </div>
-  </section>
+      </div>
+      <div class="case-pager" id="case-pager"></div>
+    </article>
+  </div>
 </main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Ludots 面板矩阵 · 写作源 gitbook/reference/graph-node-op-wiki/（生成器维护，勿手改正文）</span>
+    <span>录像存 artifacts/evidence/capability_standard_graph_op_*/ · 发布于 GitHub Pages</span>
+  </div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="site-assets/site.js"></script>
@@ -113,113 +126,157 @@
 (function () {
   "use strict";
   var esc = LudotsSite.esc;
-  var DOC_PATH = "gitbook/architecture/panel-case-designs.md";
-  var STATUS = { "🟢": ["可开发", "g"], "🔴": ["链缺口", "r"], "⛔": ["装载拒", "b"], "⚙": ["机制", "x"] };
 
-  function flatCases() {
+  var CASES_DIR = "architecture/panel-cases/";
+  var DEFAULT_DOC = "README.md";
+  var currentDoc = null;
+
+  if (window.marked && marked.setOptions) {
+    marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
+  }
+
+  /* ============ 目录树（数据源：site-assets/panels-nav.js） ============ */
+  function flatOps() {
     var flat = [];
     var nav = window.PANELS_NAV;
     if (!nav) return flat;
-    for (var i = 0; i < nav.groups.length; i++) {
-      for (var j = 0; j < nav.groups[i].cases.length; j++) flat.push(nav.groups[i].cases[j]);
+    for (var i = 0; i < nav.families.length; i++) {
+      for (var j = 0; j < nav.families[i].ops.length; j++) {
+        flat.push(nav.families[i].ops[j]);
+      }
     }
     return flat;
   }
 
+  function opName(file) {
+    return file.replace(/\.md$/i, "");
+  }
+
   function buildTree() {
     var host = document.getElementById("panel-tree");
-    var nav = window.PANELS_NAV;
-    if (!nav || !nav.groups) {
-      host.innerHTML = '<div class="tree-title">目录不可用</div><div class="docs-loading">请先运行构建。</div>';
+    if (!window.PANELS_NAV || !window.PANELS_NAV.families) {
+      host.innerHTML = '<div class="tree-title">目录不可用</div>' +
+        '<div class="docs-loading">请先运行 python scripts/build-site.py 重建站点。</div>';
       return;
     }
-    var html = '<div class="tree-title">面板矩阵 · ' + nav.total + " 案 · " + nav.groups.length + " 组</div>";
-    html += '<input class="wiki-filter" id="panel-filter" type="search" placeholder="过滤：面板 id / 名称 / 状态">';
-    for (var i = 0; i < nav.groups.length; i++) {
-      var g = nav.groups[i];
-      html += '<div class="grp"><div class="entry">' + esc(g.title) +
-        ' <span style="color:var(--faint);font-weight:400;font-size:12px;">' + g.cases.length + "</span></div><div class=\"children\">";
-      for (var j = 0; j < g.cases.length; j++) {
-        var c = g.cases[j];
-        var st = STATUS[c.status] || ["?", ""];
-        html += '<a href="#panel/' + esc(c.id) + '"><span class="id">' + esc(c.no) + "</span>" + esc(c.title || c.id) +
-          ' <span class="st ' + st[1] + '">' + esc(st[0]) + "</span></a>";
+    var nav = window.PANELS_NAV;
+    var html = '<div class="tree-title">面板矩阵 · ' + nav.total + " op · " + nav.families.length + " 家族</div>";
+    html += '<input class="wiki-filter" id="panel-filter" type="search" placeholder="过滤：面板 id / 名称">';
+    html += '<a data-doc="' + esc("README.md") + '" href="#readme">总目录 · 分组索引</a>';
+    for (var i = 0; i < nav.families.length; i++) {
+      var fam = nav.families[i];
+      html += '<div class="grp" data-family="' + esc(fam.title) + '">' +
+        '<div class="entry">' + esc(fam.title) +
+        ' <span style="color:var(--faint);font-weight:400;font-size:12px;">' + fam.ops.length + "</span></div>";
+      html += '<div class="children">';
+      for (var j = 0; j < fam.ops.length; j++) {
+        var op = fam.ops[j];
+        html += '<a data-doc="' + esc(op.file) + '" href="#case/' + esc(opName(op.file)) + '">' +
+          '<span class="id">' + esc(opName(op.file)) + "</span>" + esc(op.title) + "</a>";
       }
       html += "</div></div>";
     }
     host.innerHTML = html;
 
-    var filter = document.getElementById("panel-filter");
+    var filter = document.getElementById("wiki-filter");
     filter.addEventListener("input", function () {
       var q = filter.value.trim().toLowerCase();
       host.querySelectorAll(".grp").forEach(function (grp) {
         var visible = 0;
-        grp.querySelectorAll("a").forEach(function (a) {
-          var hit = !q || a.textContent.toLowerCase().indexOf(q) >= 0;
+        grp.querySelectorAll("a[data-doc]").forEach(function (a) {
+          var hit = !q || a.textContent.toLowerCase().indexOf(q) >= 0 ||
+            (a.getAttribute("data-desc") || "").toLowerCase().indexOf(q) >= 0;
           a.style.display = hit ? "" : "none";
           if (hit) visible++;
         });
         grp.style.display = visible ? "" : "none";
       });
     });
+    markActive();
   }
 
-  function loadDoc() {
-    var body = document.getElementById("panel-body");
-    LudotsSite.fetchText(DOC_PATH).then(function (md) {
-      body.innerHTML = marked.parse(md);
-      // 线框预期图（```text 块）加皮肤钩子；案标题注入状态徽章 + showcase 预留位
-      body.querySelectorAll("pre code.language-text").forEach(function (c) { c.classList.add("wire"); });
-      var byId = {};
-      flatCases().forEach(function (c) { byId[c.id] = c; });
-      body.querySelectorAll("h2, h3, h4").forEach(function (h) {
-        var m = h.textContent.match(/(panel\.[a-z_.]+)/);
-        if (!m) return;
-        var c = byId[m[1]];
-        if (!c) return;
-        var st = STATUS[c.status] || ["?", ""];
-        var span = document.createElement("span");
-        span.className = "st " + st[1];
-        span.style.marginLeft = "10px";
-        span.textContent = st[0] + " · showcase " + (c.status === "🟢" ? "待立项（可开工）" : "随缺口批次");
-        h.appendChild(span);
+  function markActive() {
+    document.querySelectorAll("#wiki-tree a[data-doc]").forEach(function (a) {
+      a.classList.toggle("active", a.getAttribute("data-doc") === currentDoc);
+    });
+  }
+
+  /* ============ 链接重写：同目录 .md 互链进页内路由，跨目录走门户文档区 ============ */
+  function rewriteLinks(container) {
+    container.querySelectorAll("a[href]").forEach(function (a) {
+      var href = a.getAttribute("href");
+      if (!href || /^(https?:|mailto:|#)/i.test(href)) return;
+      if (!/\.md$/i.test(href)) return;
+      var decoded = decodeURIComponent(href);
+      if (decoded.indexOf("..") < 0) {
+        var stem = decoded.replace(/\.md$/i, "");
+        a.setAttribute("href", stem.toLowerCase() === "readme" ? "#readme" : "#case/" + stem);
+        return;
+      }
+      var base = "reference/graph-node-op-wiki".split("/");
+      decoded.replace(/\.md$/i, "").split("/").forEach(function (seg) {
+        if (seg === "" || seg === ".") return;
+        if (seg === "..") base.pop(); else base.push(seg);
       });
-      route(true);
+      a.setAttribute("href", LudotsSite.SITE_BASE + "index.html#docs/" + base.join("/"));
+    });
+  }
+
+  function renderPager(file) {
+    var host = document.getElementById("case-pager");
+    var flat = flatOps();
+    var idx = -1;
+    for (var i = 0; i < flat.length; i++) if (flat[i].file === file) { idx = i; break; }
+    if (idx < 0) { host.innerHTML = ""; return; }
+    var prev = idx > 0 ? flat[idx - 1] : null;
+    var next = idx < flat.length - 1 ? flat[idx + 1] : null;
+    var html = "";
+    if (prev) html += '<a href="#case/' + esc(opName(prev.file)) + '">← ' + esc(prev.title) + "</a>";
+    else html += '<span class="none">已是第一案</span>';
+    if (next) html += '<a href="#case/' + esc(opName(next.file)) + '">' + esc(next.title) + " →</a>";
+    else html += '<span class="none">已是最后一案</span>';
+    host.innerHTML = html;
+  }
+
+  function loadDoc(file) {
+    currentDoc = file;
+    var body = document.getElementById("doc-body");
+    var pathEl = document.getElementById("doc-path");
+    body.innerHTML = '<div class="docs-loading">加载中…</div>';
+    pathEl.textContent = "gitbook/" + CASES_DIR + file;
+
+    LudotsSite.fetchText("gitbook/" + CASES_DIR + file).then(function (md) {
+      body.innerHTML = marked.parse(md);
+      rewriteLinks(body);
+      LudotsSite.bindCopyButtons(body);
+      renderPager(file);
+      markActive();
+      window.scrollTo({ top: 0, behavior: "auto" });
     }).catch(function () {
-      body.innerHTML = '<div class="docs-loading">无法加载 ' + esc(DOC_PATH) + "</div>";
+      body.innerHTML = '<div class="docs-loading">无法加载 <code>gitbook/' + esc(CASES_DIR + file) +
+        '</code><br>该篇可能尚未撰写，或需要先运行 <code>python scripts/build-site.py</code> 重建站点。</div>';
+      renderPager("");
     });
   }
 
-  function route(scroll) {
+  function route() {
     var h = window.location.hash || "";
-    if (h.indexOf("#panel/") !== 0) return;
-    var pid = decodeURIComponent(h.slice("#panel/".length));
-    var hit = null;
-    document.querySelectorAll("#panel-body h2, #panel-body h3, #panel-body h4").forEach(function (el) {
-      if (!hit && el.textContent.indexOf(pid) >= 0) hit = el;
-    });
-    document.querySelectorAll("#panel-tree a").forEach(function (a) {
-      a.classList.toggle("active", a.getAttribute("href") === "#" + h.slice(1) || a.getAttribute("href") === h);
-    });
-    if (hit && scroll) hit.scrollIntoView({ behavior: "smooth", block: "start" });
+    var target = null;
+    if (h.indexOf("#case/") === 0) {
+      var stem = decodeURIComponent(h.slice("#case/".length)).replace(/[^A-Za-z0-9_.]/g, "");
+      if (stem) target = stem + ".md";
+    } else if (h === "#readme" || h === "" || h === "#") {
+      target = DEFAULT_DOC;
+    }
+    if (target && target !== currentDoc) loadDoc(target);
   }
-
-  document.querySelectorAll(".panels-toolbar button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      document.querySelectorAll(".panels-toolbar button").forEach(function (x) { x.classList.remove("on"); });
-      b.classList.add("on");
-      document.body.dataset.skin = b.dataset.skin;
-    });
-  });
 
   document.addEventListener("DOMContentLoaded", function () {
-    if (window.marked && marked.setOptions) {
-      marked.setOptions({ gfm: true, breaks: false, headerIds: true, mangle: false });
-    }
     buildTree();
-    loadDoc();
-    window.addEventListener("hashchange", function () { route(true); });
+    route();
   });
+
+  window.addEventListener("hashchange", route);
 })();
 </script>
 </body>
