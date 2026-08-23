@@ -74,7 +74,7 @@ namespace Ludots.Core.Config
             Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
-            Register<GameplayTagContainer>("GameplayTagContainer");
+            Register<GameplayTagContainer>("GameplayTagContainer", SetGameplayTagContainer);
             Register<TagCountContainer>("TagCountContainer");
             Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
@@ -1028,6 +1028,54 @@ namespace Ludots.Core.Config
 
             throw new InvalidOperationException(
                 $"{context} references unregistered attribute '{attributeName}'. Declare it in startup GAS attribute config before map loading.");
+        }
+
+        private static void SetGameplayTagContainer(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("GameplayTagContainer requires an object payload.");
+            }
+            ValidateProperties(obj, "GameplayTagContainer", "tags");
+
+            var container = new GameplayTagContainer();
+            if (obj.TryGetPropertyValue("tags", out var tagsNode))
+            {
+                if (tagsNode is not JsonArray tags)
+                {
+                    throw new InvalidOperationException("GameplayTagContainer.tags requires an array payload.");
+                }
+
+                foreach (JsonNode? tag in tags)
+                {
+                    if (tag == null)
+                    {
+                        throw new InvalidOperationException("GameplayTagContainer.tags requires non-null string entries.");
+                    }
+
+                    string tagName = ReadStringNode(tag, "GameplayTagContainer.tags");
+                    container.AddTag(ResolveGameplayTagId(tagName, $"GameplayTagContainer.tags.{tagName}"));
+                }
+            }
+
+            entity.Add(container);
+        }
+
+        private static int ResolveGameplayTagId(string tagName, string context)
+        {
+            int tagId = TagRegistry.GetId(tagName);
+            if (tagId != TagRegistry.InvalidId)
+            {
+                return tagId;
+            }
+
+            if (!TagRegistry.IsFrozen)
+            {
+                return TagRegistry.Register(tagName);
+            }
+
+            throw new InvalidOperationException(
+                $"{context} references unregistered tag '{tagName}'. Declare it in startup GAS tag config before loading.");
         }
 
         private static void SetEntityLocalClock(Entity entity, JsonNode data)

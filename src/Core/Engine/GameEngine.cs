@@ -746,6 +746,7 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 relationshipReasonRegistry,
                 entityCollectionStore);
+            relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
             // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
             // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
             // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
