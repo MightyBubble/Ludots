@@ -67,6 +67,18 @@ namespace Ludots.Tool
                 ?? throw new InvalidOperationException($"Map '{map.Id}' has no navigation-enabled board.");
         }
 
+        public static int RequireGridCellSizeCm(BoardConfig board)
+        {
+            if (board == null) throw new ArgumentNullException(nameof(board));
+            if (board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Map board '{board.Name}' has invalid GridCellSizeCm {board.GridCellSizeCm}; value must be positive.");
+            }
+
+            return board.GridCellSizeCm;
+        }
+
         private static List<ModInfo> DiscoverMods(string repoRoot)
         {
             string modsRoot = Path.Combine(repoRoot, "mods");

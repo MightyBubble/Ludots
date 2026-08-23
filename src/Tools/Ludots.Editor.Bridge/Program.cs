@@ -787,6 +787,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     if (string.IsNullOrWhiteSpace(mapId)) return Results.BadRequest(new { error = "Missing form field 'mapId'" });
     var modId = form.TryGetValue("modId", out var modIdVal) ? modIdVal.ToString() : null;
     var boardName = form.TryGetValue("boardName", out var boardNameVal) ? boardNameVal.ToString() : null;
+    if (string.IsNullOrWhiteSpace(boardName)) return Results.BadRequest(new { error = "Missing form field 'boardName'" });
     var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
 
     if (TryReadRecastReactCommonOptions(
@@ -941,6 +942,7 @@ app.MapPost("/api/nav/estimate-recast-react", async (HttpRequest req) =>
     if (string.IsNullOrWhiteSpace(mapId)) return Results.BadRequest(new { error = "Missing form field 'mapId'" });
     var modId = form.TryGetValue("modId", out var modIdVal) ? modIdVal.ToString() : null;
     var boardName = form.TryGetValue("boardName", out var boardNameVal) ? boardNameVal.ToString() : null;
+    if (string.IsNullOrWhiteSpace(boardName)) return Results.BadRequest(new { error = "Missing form field 'boardName'" });
     var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
 
     if (TryReadRecastReactCommonOptions(
@@ -1068,6 +1070,15 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
         if (!EditorRepo.IsGridBoard(boardConfig))
         {
             return Results.BadRequest(new { ok = false, error = $"Flat baseline NavTile bootstrap only supports Grid boards. Board '{boardConfig.Name}' is {EditorRepo.NormalizeSpatialType(boardConfig)}." });
+        }
+
+        if (boardInfo.HasDataFile)
+        {
+            return Results.BadRequest(new
+            {
+                ok = false,
+                error = $"Flat baseline bootstrap only supports boards without authored terrain data. Board '{boardConfig.Name}' declares DataFile '{boardInfo.DataFile}'; use the declared NavBakePolicy and Recast bake instead."
+            });
         }
 
         bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, payload.ModId);
@@ -3075,14 +3086,7 @@ static class EditorRepo
 
     public static int RequireGridCellSizeCm(Ludots.Core.Map.Board.BoardConfig board)
     {
-        if (board == null) throw new ArgumentNullException(nameof(board));
-        if (board.GridCellSizeCm <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Map board '{board.Name}' has invalid GridCellSizeCm {board.GridCellSizeCm}; value must be positive.");
-        }
-
-        return board.GridCellSizeCm;
+        return ToolMapConfigResolver.RequireGridCellSizeCm(board);
     }
 
     public static bool TryResolveDataFile(ModContext ctx, string dataFile, out string fullPath, out List<string> checkedPaths)
