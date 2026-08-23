@@ -12,6 +12,7 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - P2: 4（完成度差距本体、非法字符 token、四文档零截图、指南两处失真；均修复）
 - P3: 2（topbar 标签、productization 失联；均修复）
 - P2-05：**引擎画廊缺页内录像（graph 画廊的核心形态）**——画廊 App 无多帧截屏通道，已按宿主同一环境变量合同（`LUDOTS_TAKE_SCREENSHOT_PATH/FRAMES`，产物 `<基名>_<序号:000>_f<帧:0000>.png`）补齐，新增 `scripts/record-engine-galleries.py` 全量录制 20 场景（真实运行采样拼制 play.mp4 + poster.png，sky_daynight 覆盖整圈昼夜相位），Wiki 20 页由静态截图升级为页内 `<video>`，`build-site.py` 媒体拷贝覆盖引擎证据目录（+40 文件）。浏览器实测：video 元素 1280×720 / 9.5s / readyState 4 可播。
+- P1-03：**录像证据未入 git（`.gitignore` 白名单只覆盖 graph 画廊）**——本地 `validate-docs.ps1` 以文件系统为准，未跟踪文件在场即通过，CI checkout 后 20 页回退文本的 `artifacts/evidence/engine_raylib_*/play.mp4` 引用全部 missing-backtick-target。已扩展白名单（`engine_raylib_*/play.mp4|poster.png`）并补提交。教训：新增证据目录时，本地校验通过≠CI 会通过，先 `git ls-files` 确认已跟踪。
 - 附带治理改进 1 项：文档内示例一律用真实路径（假想路径占位符会被校验器拦截两次，已改用 `vegetation_cutout` 真实场景作走查样本）
 
 ### P1-02 引擎画廊证据落后于阴影代码（用户第三轮指出的截图过期）

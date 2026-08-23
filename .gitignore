@@ -73,8 +73,9 @@ debug_output*.txt
 # ----- User Requested Ignores -----
 external/
 # docs/  <-- Un-ignore docs to keep archived documentation
-# Ignore build/runtime evidence by default, but keep GraphNodeOp player
-# gallery videos (Git LFS) and gallery posters for GitHub Pages.
+# Ignore build/runtime evidence by default, but keep gallery player
+# videos (Git LFS) and gallery posters for GitHub Pages:
+# GraphNodeOp node galleries and Raylib engine gallery scenes.
 artifacts/*
 !artifacts/gas-composition-gate.md
 !artifacts/gas-composition-gate-*.md
@@ -84,6 +85,10 @@ artifacts/evidence/*
 artifacts/evidence/capability_standard_graph_op_*/*
 !artifacts/evidence/capability_standard_graph_op_*/play.mp4
 !artifacts/evidence/capability_standard_graph_op_*/poster.png
+!artifacts/evidence/engine_raylib_*/
+artifacts/evidence/engine_raylib_*/*
+!artifacts/evidence/engine_raylib_*/play.mp4
+!artifacts/evidence/engine_raylib_*/poster.png
 # acceptance evidence already force-tracked historically; keep pattern open
 !artifacts/acceptance/
 !artifacts/acceptance/**
