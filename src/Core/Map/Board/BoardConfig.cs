@@ -47,6 +47,12 @@ namespace Ludots.Core.Map.Board
         public bool NavigationEnabled { get; set; }
 
         /// <summary>
+        /// Explicit NavMesh bake input roles. Null means this board has not migrated to
+        /// the policy contract yet; callers that require policy-driven baking must reject it.
+        /// </summary>
+        public NavBakePolicy NavBakePolicy { get; set; }
+
+        /// <summary>
         /// Clone this config to prevent aliasing during merge operations.
         /// </summary>
         public BoardConfig Clone()
@@ -66,7 +72,8 @@ namespace Ludots.Core.Map.Board
                 StructureCollisionAsset = StructureCollisionAsset,
                 StructureAwareGrounding = StructureAwareGrounding,
                 StructureAwareNavigation = StructureAwareNavigation,
-                NavigationEnabled = NavigationEnabled
+                NavigationEnabled = NavigationEnabled,
+                NavBakePolicy = NavBakePolicy?.Clone()
             };
         }
     }
