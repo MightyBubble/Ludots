@@ -1,6 +1,8 @@
 #### 案 1：panel.time.elapsed —— 时间流逝（纯展示走表）
 
 > 状态：🟢 今日可装载——纯展示，图输出 realtime 回读，字段全过白名单（新形状不写 scope）。
+>
+> ⚠️ **基建依赖**：引擎时钟仅有 `time.scale_permille` 缩放与 EntityLocalClock.LocalStep 计数，无“流逝分钟/昼夜相位”推进系统——`Clock.ElapsedMin`/`Clock.DayPhase` 属性无底层系统。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

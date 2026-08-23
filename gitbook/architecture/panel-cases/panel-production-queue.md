@@ -1,6 +1,8 @@
 #### 案 25：panel.production.queue —— 生产队列（#1012 验收场景）
 
 > 状态：⛔ 装载即拒 G3（global scope）+ G6（pins 非空）；运行链路：G8（事件载荷值）、#1015、集合形态见 G12（#1012 验收场景）。聚合/百分比=图内节点（已落地），无 G2。
+>
+> ⚠️ **基建依赖**：`Queue.ProgressPercent`/`Queue.Count` 未注册为 GAS 属性——生产队列投影基建存在（Core/UI ProductionOverview、EntityCommandPanelSupplemental 队列项视图含 ProgressPermille），出口是命令面板补充源，装载前需映射为属性/图输出。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

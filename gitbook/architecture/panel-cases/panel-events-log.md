@@ -1,6 +1,8 @@
 #### 案 21：panel.events.log —— 事件日志（交互模态）
 
 > 状态：🔴 目标态——拒因：G5（modal.center）+ G8（$payload）+ G9 + G10（close 编排）+ #1015。
+>
+> ⚠️ **基建依赖**：同 panel.events.feed——面板级事件日志数据源不存在（EventBus 仅事件分发）；`Events.PageCount` 属性无底层系统。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

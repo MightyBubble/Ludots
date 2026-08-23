@@ -1,6 +1,8 @@
 #### 案 22：panel.formation.info —— 编队信息（纯展示）
 
 > 状态：🔴（配置可装载）——计数/标量 pin 可用；条目内容依赖 G12（列表型引脚）；纯展示；编队聚合=图内节点。
+>
+> ⚠️ **基建依赖**：Formation 仅存在于 showcase mod（mods/showcases/formation_capability），Core 无 Formation runtime——阵型集合/阵型 kind 无稳定出口；avgSpeed 聚合的 `MoveSpeed` 属性本身存在（GAS）。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

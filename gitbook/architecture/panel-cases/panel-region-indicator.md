@@ -1,6 +1,8 @@
 #### 案 11：panel.region.indicator —— 区域指示（纯展示）
 
 > 状态：🟢 今日可装载——纯展示；区域归属/威胁=图内读取。
+>
+> ⚠️ **基建依赖**：`Map.Region.Id`/`Map.Region.Level` 无属性出口——区域基建存在（MapRegionDefinition/RegionTriggerSystem），但区域归属目前只驱动 Trigger 事件，未物化为 entity 属性。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

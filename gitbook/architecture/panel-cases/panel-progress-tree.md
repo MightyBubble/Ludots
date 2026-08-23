@@ -1,6 +1,8 @@
 #### 案 24：panel.progress.tree —— 进度节点树（交互模态）
 
 > 状态：⛔ 装载即拒 G5（gesture/modal 锚点）——运行链路：G8、G9、#1015、节点树展示依赖 G12（列表型引脚）。
+>
+> ⚠️ **基建依赖**：值图引用的 `Tree.NodeCount`/`Tree.Unlocked` 无底层系统——Core Progression 基建存在（`ProgressionDomain`/`ProgressionRegistries`/`ProgressionScopeBindingSystem`），但进度树未物化为 entity 属性，无 LoadSelfAttribute 可读出口。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

@@ -1,6 +1,8 @@
 #### 案 2：panel.date.cycle —— 日期（纯展示）
 
 > 状态：🟢 今日可装载——纯展示；年/季/月查表为图内节点。
+>
+> ⚠️ **基建依赖**：无日历/日期推进系统（引擎时钟仅 `time.scale_permille` + LocalStep 计数）；`Clock.DayIndex`/`Clock.Year`/`Clock.Season` 属性无底层系统。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

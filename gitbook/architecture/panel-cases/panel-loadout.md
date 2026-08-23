@@ -1,6 +1,8 @@
 #### 案 28：panel.loadout —— 物品装备（交互）
 
 > 状态：🔴 目标态——拒因：G8（$payload）+ #1015。
+>
+> ⚠️ **基建依赖**：Item 基建已存在（Core `Gameplay/Items/` InventoryRuntimeService/ItemModel 布局与命名槽位、showcase item_system ForgeSocket/ItemLoadout），但 `Loadout.SlotCount` 无 GAS 属性注册出口——值图为目标设计，装备槽位计数物化为属性前不可装载。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

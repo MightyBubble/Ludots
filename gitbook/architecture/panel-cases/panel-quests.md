@@ -1,6 +1,8 @@
 #### 案 23：panel.quests —— 任务面板（交互）
 
 > 状态：🔴（配置可装载）——运行链路：G8/$payload、G9、#1015、任务条目依赖 G12（列表型引脚）。
+>
+> ⚠️ **基建依赖**：任务/活动系统 y5k 线建设中（#773/#774/#775/#830 均 OPEN，#774 为 Quest 退役重做）——值图与 mock 为设计意图，底层 Task/Activity entity 物化落地前不可装载；旧 Core `Gameplay/Quests/`（QuestRuntimeService 等）将退役，`Quests.Count`/`Quests.Active` 无稳定出口。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

@@ -1,6 +1,8 @@
 #### 案 5：panel.subsystem.entries —— 子系统入口（交互路由）
 
 > 状态：🔴 目标态——拒因：G8（$payload）+ G9（actorSource none）+ #1015。
+>
+> ⚠️ **基建依赖**：`UI.Tech.Unread` 无底层系统——科技进度属性 TechProgress 存在（fourx_demo 注册），但“未读角标”数据源无稳定出口。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

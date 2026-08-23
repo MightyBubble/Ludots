@@ -1,6 +1,8 @@
 #### 案 14：panel.entity.aggregate —— 实体信息聚合（纯展示）
 
 > 状态：🟢 今日可装载——纯展示，图内 LoadSelfAttribute 聚合（总合同实体链路）。
+>
+> ⚠️ **基建依赖**：`Level` 未注册为 GAS 属性（引擎现有注册为 Health/Mana/MoveSpeed/AttackDamage/AttackSpeed 等）——值图引用的 Level 无底层等级系统出口；Health/Mana 本身存在。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 

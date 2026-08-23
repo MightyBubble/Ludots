@@ -1,6 +1,8 @@
 #### 案 4：panel.info.banner —— 全局信息横幅（纯展示）
 
 > 状态：🟢 今日可装载——纯展示；显隐由 TriggerGraph 听游戏事件驱动（现有 op，非 UI 事件不涉 G10）。
+>
+> ⚠️ **基建依赖**：`Info.Banner.Current`/`Info.Banner.Level` 无底层系统——TriggerGraph 显隐机制存在，但“横幅当前文案/威胁等级”数据源无稳定出口。
 
 > **高保真预期**（门户面板矩阵页可交互预览）：
 
