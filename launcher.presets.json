@@ -47,6 +47,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "nav_domain_editor_raylib",
+      "name": "Nav Domain Editor Raylib",
+      "selectors": [
+        "mod:NavDomainShowcaseMod"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "champion_skill_stress_raylib",
       "name": "Champion Skill Stress Raylib",
       "selectors": [

@@ -1,0 +1,13 @@
+{
+  "name": "NavDomainShowcaseMod",
+  "version": "1.0.0",
+  "description": "Epic #281 nav authoring showcase: logic terrain editor with dirty-tile bake and navmesh debug view.",
+  "main": "bin/net8.0/NavDomainShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["nav", "logic-terrain", "bake", "navmesh", "showcase", "editor"]
+}

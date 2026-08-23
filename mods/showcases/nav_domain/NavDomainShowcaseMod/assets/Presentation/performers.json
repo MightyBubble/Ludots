@@ -1,0 +1,34 @@
+[
+  {
+    "id": "nav_domain.mesh",
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "nav_domain.mesh.asset",
+        "lane": "Int",
+        "intValue": 1
+      },
+      {
+        "paramKey": "nav_domain.mesh.material",
+        "lane": "Int",
+        "intValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "assetIdParamKey": "nav_domain.mesh.asset",
+          "materialParamKey": "nav_domain.mesh.material"
+        }
+      }
+    ]
+  }
+]

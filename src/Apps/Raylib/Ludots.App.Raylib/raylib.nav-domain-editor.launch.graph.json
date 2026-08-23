@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-23T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "NavDomainShowcaseMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "NavDomainShowcaseMod",
+      "rootPath": "../../../../../../../mods/showcases/nav_domain/NavDomainShowcaseMod"
+    }
+  ]
+}
