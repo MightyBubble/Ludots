@@ -7451,6 +7451,30 @@
       ]
     },
     {
+      "id": "panel_theme_sci_fi",
+      "path": "mods/showcases/panel_theme_sci_fi/PanelThemeSciFiMod",
+      "projectPath": null,
+      "title": "Panel Theme Sci-Fi",
+      "summary": "Sci-fi panel theme with an AI-generated transparent sprite sheet, orthogonal to the four surface backends",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_theme_sci_fi",
+      "preset": "panel_theme_sci_fi_raylib",
+      "docsPath": "gitbook/architecture/panel-skins.md",
+      "readmePath": null,
+      "acceptanceTest": "PanelFireballShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_theme_sci_fi",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "theme",
+        "sci-fi",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",

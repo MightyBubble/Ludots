@@ -217,6 +217,21 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         Assert.That(root.Scene, Is.Not.Null);
     }
 
+    [Test]
+    public void PanelFireballThemePack_SciFiTheme_LoadsCutSpriteSheet()
+    {
+        using GameEngine engine = CreateEngine("PanelThemeSciFiMod", out TestInputBackend _, extraMods: new[] { "PanelThemeShowcaseMod" });
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        Ludots.UI.Panels.PanelTheme? theme = Ludots.UI.Panels.PanelThemeCatalog.TryLoad(engine);
+        Assert.That(theme, Is.Not.Null);
+        Assert.That(theme!.Id, Is.EqualTo("sci-fi"));
+        Assert.That(theme.WebCss, Does.Contain("data:image/png;base64,"),
+            "The sci-fi theme must inline its generated cut sprite sheet for Web UI.");
+    }
+
     private static Ludots.UI.Runtime.UiNode? FindNodeByClass(Ludots.UI.Runtime.UiNode node, string className)
     {
         foreach (string name in node.ClassNames)

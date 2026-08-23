@@ -1,0 +1,36 @@
+/* sci-fi — generated sprite accents, cyan telemetry, and amber alert states. */
+.panel {
+  background-color: rgba(12, 18, 25, 242);
+  background-image: url(images/sprite-sheet.png);
+  border: 2px solid rgb(44, 208, 232);
+  border-radius: 3px;
+  padding: 12px;
+}
+
+.panel .title {
+  color: rgb(119, 239, 255);
+  font-family: "Segoe UI", "Arial", sans-serif;
+  font-size: 15px;
+  letter-spacing: 3px;
+}
+
+.rows {
+  background-image: url(images/sprite-sheet.png);
+  background-repeat: no-repeat;
+  background-position: right bottom;
+}
+
+.row {
+  color: rgb(208, 231, 238);
+  font-family: "Segoe UI", "Arial", sans-serif;
+  font-size: 13px;
+}
+
+.row-health { color: rgb(76, 235, 174); }
+.row-mana { color: rgb(91, 196, 255); }
+.row-attack { color: rgb(255, 177, 63); }
+
+.hint {
+  color: rgb(122, 157, 170);
+  font-family: "Segoe UI", "Arial", sans-serif;
+}

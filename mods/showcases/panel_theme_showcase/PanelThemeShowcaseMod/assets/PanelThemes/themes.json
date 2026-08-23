@@ -10,5 +10,9 @@
   {
     "id": "minimal",
     "root": "PanelThemeShowcaseMod:assets/PanelThemes/minimal/theme.css"
+  },
+  {
+    "id": "sci-fi",
+    "root": "PanelThemeShowcaseMod:assets/PanelThemes/sci-fi/theme.css"
   }
 ]
