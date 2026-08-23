@@ -105,6 +105,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
+        public static readonly ServiceKey<Ludots.Core.Engine.Randomization.IRngStreamService> RngStreamService = new("RngStreamService");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
@@ -223,6 +224,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ItemShapeRegistry> ItemShapeRegistry = new("ItemShapeRegistry");
         public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
         public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Rng.RngPickService> RngPickService = new("RngPickService");
         public static readonly ServiceKey<OwnershipResolver> OwnershipResolver = new("OwnershipResolver");
         public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
         public static readonly ServiceKey<ExchangeOperationRegistry> ExchangeOperationRegistry = new("ExchangeOperationRegistry");

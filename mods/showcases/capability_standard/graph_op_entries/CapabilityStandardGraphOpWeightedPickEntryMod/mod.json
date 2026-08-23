@@ -1,0 +1,17 @@
+{
+  "name": "CapabilityStandardGraphOpWeightedPickEntryMod",
+  "version": "1.0.0",
+  "description": "Launcher entry for GraphNodeOp WeightedPick player gallery.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpWeightedPickEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "CapabilityStandardGraphOpsNodeGalleryMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "per-op"
+  ]
+}

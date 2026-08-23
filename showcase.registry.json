@@ -7503,6 +7503,33 @@
       "video": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4",
       "status": "active",
       "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_WeightedPick",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpWeightedPickEntryMod",
+      "projectPath": "CapabilityStandardGraphOpWeightedPickEntryMod.csproj",
+      "title": "命运袋里掏一件",
+      "summary": "掌心探进命运袋，掏出第几件全看权重，木桩照数挨一下。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "WeightedPick"
+      ],
+      "binding": "capability_standard_graph_op_WeightedPick",
+      "preset": "capability_standard_graph_op_WeightedPick_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/WeightedPick.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_WeightedPick",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_WeightedPick/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_WeightedPick/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

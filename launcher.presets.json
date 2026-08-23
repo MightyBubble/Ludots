@@ -2190,6 +2190,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_WeightedPick_raylib",
+      "name": "Graph Op WeightedPick Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_WeightedPick"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

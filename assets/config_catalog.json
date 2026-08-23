@@ -352,6 +352,12 @@
     "IdField": "id"
   },
   {
+    "Path": "Rng/distributions.json",
+    "Policy": "ArrayById",
+    "IdField": "id",
+    "AllowEmpty": true
+  },
+  {
     "Path": "Items/definitions.json",
     "Policy": "ArrayById",
     "IdField": "id"
