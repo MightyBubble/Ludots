@@ -21,6 +21,17 @@ namespace Ludots.Core.Map.Board
 
         public string RuntimeObstacleSource { get; set; }
 
+        public static NavBakePolicy ForBoardLogicTerrain()
+        {
+            return new NavBakePolicy
+            {
+                HeightSource = NavBakeSourceKinds.BoardLogicTerrain,
+                ClassificationSource = NavBakeSourceKinds.BoardLogicTerrain,
+                StaticObstacleSource = NavBakeSourceKinds.None,
+                RuntimeObstacleSource = NavBakeSourceKinds.None
+            };
+        }
+
         public NavBakePolicy Clone()
         {
             return new NavBakePolicy
@@ -95,6 +106,20 @@ namespace Ludots.Core.Map.Board
                 throw new InvalidOperationException(
                     $"Board '{board.Name}' selects board-logic-terrain height without a DataFile on non-Grid board '{spatialType}'.");
             }
+        }
+
+        public static NavBakePolicy Require(BoardConfig board)
+        {
+            ArgumentNullException.ThrowIfNull(board);
+            if (board.NavBakePolicy == null)
+            {
+                throw new InvalidOperationException(
+                    $"Board '{board.Name}' has NavigationEnabled={board.NavigationEnabled} but no NavBakePolicy. " +
+                    "Declare the height, classification, static-obstacle, and runtime-obstacle roles explicitly.");
+            }
+
+            Validate(board, board.NavBakePolicy);
+            return board.NavBakePolicy;
         }
 
         private static void ValidateSource(string value, string propertyName, params string[] allowed)

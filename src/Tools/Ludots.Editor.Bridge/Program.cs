@@ -1038,6 +1038,8 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
             return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
         }
 
+        Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
+
         if (!EditorRepo.IsGridBoard(boardConfig))
         {
             return Results.BadRequest(new { ok = false, error = $"Flat baseline NavTile bootstrap only supports Grid boards. Board '{boardConfig.Name}' is {EditorRepo.NormalizeSpatialType(boardConfig)}." });
@@ -2020,6 +2022,25 @@ static bool TryBuildEditorUploadRecastContext(
         return false;
     }
 
+    try
+    {
+        Ludots.Core.Map.Board.NavBakePolicy policy =
+            Ludots.Core.Map.Board.NavBakePolicyValidator.Require(boardConfig);
+        if (string.Equals(policy.HeightSource, Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
+        {
+            error = Results.BadRequest(new
+            {
+                error = $"Board '{boardConfig.Name}' selects direct continuous-heightmap baking, but the Recast editor endpoint only accepts the authored board terrain until the continuous-height backend is enabled. No projection was performed."
+            });
+            return false;
+        }
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { error = ex.Message });
+        return false;
+    }
+
     NavMeshBakeConfigContext bakeConfigContext;
     try
     {
@@ -2643,9 +2664,29 @@ static class EditorRepo
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
         bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
-        bool canBake = canEditTerrain && board.NavigationEnabled;
+        bool policyValid = true;
+        string? policyError = null;
+        if (board.NavigationEnabled)
+        {
+            try
+            {
+                Ludots.Core.Map.Board.NavBakePolicy policy = Ludots.Core.Map.Board.NavBakePolicyValidator.Require(board);
+                if (string.Equals(policy.HeightSource, Ludots.Core.Map.Board.NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
+                {
+                    policyValid = false;
+                    policyError = "Direct continuous-height bake backend is not connected yet; no projection fallback is allowed.";
+                }
+            }
+            catch (Exception ex)
+            {
+                policyValid = false;
+                policyError = ex.Message;
+            }
+        }
+        bool canBake = canEditTerrain && board.NavigationEnabled && policyValid;
         string reason =
             topologyError != null ? topologyError :
+            !policyValid ? policyError! :
             canBake ? "Ready for nav bake." :
             canUseVirtualEmptyTerrain ? "Sparse empty terrain is virtual; missing chunks are treated as flat until saved." :
             !board.NavigationEnabled ? "Board NavigationEnabled is false." :
@@ -2769,6 +2810,9 @@ static class EditorRepo
             ChunkSizeCells = chunkSizeCells,
             DataFile = dataFile,
             NavigationEnabled = request.NavigationEnabled,
+            NavBakePolicy = request.NavigationEnabled
+                ? Ludots.Core.Map.Board.NavBakePolicy.ForBoardLogicTerrain()
+                : null,
         };
 
         string? dataPath = null;
