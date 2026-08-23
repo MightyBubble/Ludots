@@ -9,8 +9,8 @@ Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkM
 Logical terrain and visual terrain remain separate:
 
 - Logical terrain is gameplay truth: height level, water, ramp, blocked, area id, and cost.
-- Visual terrain is rendering truth: continuous centimeter height, used by presentation and grounding.
-- Visual height never changes walkability unless a caller explicitly runs the projection adapter.
+- Visual terrain is continuous centimeter geometry, used by presentation, grounding, and NavMesh vertex sampling when the board policy selects it.
+- Visual height does not change walkability classification: blocked/water/ramp/area/topology still come from `LogicTerrainField`.
 
 ## Target
 
@@ -24,7 +24,7 @@ In scope:
 - Grid and hex both build `TriWalkMask` and `NavTile`.
 - Recast and CDT entry points can consume `LogicTerrainField`.
 - Runtime map load creates flat grid logic terrain when a grid board has no `.vtxm`.
-- A visual-height projection adapter exists and is explicit.
+- Nav bake can combine direct visual-height geometry with logic classification without projecting VHTM into a second logic-height dataset.
 
 Out of scope:
 
@@ -40,7 +40,7 @@ Given a grid board with navigation enabled, when bake code receives its `LogicTe
 
 As an artist, I want visual terrain to be independent from walkability truth, so sculpting render height does not silently change gameplay.
 
-Given a visual heightmap change, when no projection adapter is invoked, then logical walkability remains unchanged.
+Given a visual heightmap change, when the board selects direct VHTM geometry, then NavTile vertex heights change while logical walkability remains unchanged.
 
 ## UAT Showcase
 
@@ -57,7 +57,7 @@ Command:
 | Start grid topology map with water, ramps, and blockers | HUD shows `Topology: Grid`; navmesh overlay covers walkable cells only |
 | Command one unit across the map | Unit routes around blocked/water cells and reaches the target |
 | Switch to hex topology and rebake | HUD shows `Topology: Hex`; navmesh overlay remains equivalent for the same logical terrain |
-| Raise visual height only | Rendered ground changes height; navmesh and unit path do not change |
+| Raise visual height only | Rendered ground and NavTile geometry change height; blocked/area decisions and route topology do not change |
 | Run explicit visual-to-logic projection and rebake | Logic height levels change and bake output changes accordingly |
 
 ## Configuration
@@ -107,7 +107,7 @@ Reused:
 Added:
 
 - `LogicTerrainField` abstraction and grid/hex backends.
-- Explicit visual-height projection adapter.
+- Direct `IVisualHeightmap` geometry adapter used by `NavBakeContext`.
 
 No external branch was merged for NAV-4.
 

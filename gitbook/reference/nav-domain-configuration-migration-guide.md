@@ -19,7 +19,7 @@
 | 用 `NavTile` 命名地形块尺度 | `TerrainChunk` footprint | NavTile 是 bake 产物用途，不是新的尺度 owner。 |
 | 私有 obstacle json / loader | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与 MassNavigationFlow 执行消费同一障碍数据。 |
 | `ObstacleGeometryProfile2D` | 不创建 | 主线不存在这个 owner。 |
-| 视觉高度图直接当 navmesh 输入 | 通过显式投影进入 `LogicTerrainField` | 视觉表现与逻辑通行分离。 |
+| 视觉高度图直接当 navmesh 输入 | Board policy 选择 `continuous-heightmap`，与 `board-logic-terrain` 分类组合 | VHTM 直接提供连续几何；不生成投影后的逻辑高度中间层。 |
 | 每条工具链单独写 bake 参数 | `NavBakeContext` + `NavBakeService` | CLI、Bridge、runtime incremental 共用同一对象。 |
 | 假 navmesh 平面 / 自造寻路 debug | DotRecast Recast/Detour artifact + query result | debug view 必须能说明 tile/profile/layer/query engine。 |
 | 旧二维导航移动执行 | MassNavigationFlow / MassNavigation execution sink | route 只产出路径/waypoints，执行统一进入 MassNavigationFlow。 |
@@ -152,7 +152,7 @@ Bake、runtime incremental、MassNavigationFlow avoidance 都应从 manifestatio
 
 - Grid editor 的高度、水、blocked、area id 写入逻辑地形数据。
 - Hex / VertexMap 通过 `VertexMapLogicTerrainField` 暴露同一接口。
-- VisualHeightmap 可投影到 `MutableGridLogicTerrainField`，但必须显式声明 projection 参数。
+- Nav bake 的 `continuous-heightmap` 直接采样 `IVisualHeightmap`；`LogicTerrainField` 继续提供 blocked/water/ramp/area/topology。通用 projection adapter 只用于明确要求量化逻辑地形的其他功能，不是 Nav bake 默认路径。
 - `areaId` 是通行 cost / layer 的索引，不是颜色或材质名字。
 
 迁移时需要确认：

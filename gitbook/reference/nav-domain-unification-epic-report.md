@@ -29,7 +29,7 @@ flowchart LR
 | 领域 | 新 owner / 入口 | 说明 |
 |---|---|---|
 | 尺度 | `SpatialScaleDefaults`、`WorldExtentSpec`、`BoardConfig.WidthInMacroTiles` / `HeightInMacroTiles` | `CellCm` 是唯一 cm 基准；`MacroTileCells` 引用 `MapTile.Size`；编辑器可让作者填米数，但 MapConfig 存派生的 MacroTile 数量。 |
-| 地形 | `LogicTerrainField` | Grid / Hex 共享逻辑地形抽象；视觉高度图只经显式投影 adapter 进入逻辑地形，不再隐式决定可走性。 |
+| 地形 | `NavBakePolicy` + `LogicTerrainField` + `IVisualHeightmap` | Grid / Hex 共享逻辑分类；连续高度图直接提供 NavMesh 几何高度，不投影成第二套逻辑高度；可走性仍由逻辑分类决定。 |
 | 障碍 | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与执行消费同一套障碍数据；不新增 `ObstacleGeometryProfile2D` 或私有 obstacles loader。 |
 | Agent | `agent_profiles.json` / AgentProfile registry | navmesh、pathing、MassNavigationFlow、road 通过 profile id 对齐 radius / height / clearance / mass / layer。 |
 | Bake | `NavBakeContext` + `NavBakeService` | CLI、Bridge、runtime incremental 共用同一参数对象；Recast / CDT 都走统一服务；缺参 fail-fast。 |

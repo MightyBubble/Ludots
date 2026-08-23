@@ -6,19 +6,19 @@ This page is the product and engineering contract for a real Ludots nav authorin
 
 ## Current Boundary
 
-The production target is:
+The production input contract is:
 
 ```text
-Board -> VisualHeightmap -> LogicTerrain -> NavMesh
+Board policy -> {continuous VHTM geometry, LogicTerrain classification, authored/runtime obstacles} -> NavBakeContext -> NavMesh
 ```
 
-Current code now has the shared bake route for CLI and Editor Bridge. Remaining work is concentrated on the terrain-classification SSOT, strict visual/logic single-source enforcement, and a dedicated Raylib navmesh debug view:
+The shared bake route is now used by Runtime, CLI, and Editor Bridge. VHTM is sampled directly for mesh vertex heights; it is not projected into a JSON or logic-height intermediate.
 
 | Area | Current status | Contract for the next implementation |
 |---|---|---|
 | Grid / HexGrid production bake | CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose `MutableGridLogicTerrainField` for `Grid`, `VertexMapLogicTerrainField` for `HexGrid`; `NodeGraph` fails fast because it does not bake navmesh | Keep all production bake adapters on `NavBakeContext` + `NavBakeService`; do not reintroduce a topology-private bake entry |
-| Terrain classification | React terrain stride-4 preserves `areaId` and blocked flags into logic terrain and nav bake; `LogicTerrainCell.Cost` still exists as a design smell | NAV-14 must move terrain classification to map/terrain SSOT and keep cost as per-agent consumer data |
-| Pipeline order | Visual and logic terrain can still drift in authoring shape | NAV-15 must enforce `Board -> VisualHeightmap -> LogicTerrain -> NavMesh` and fail on conflicting independent sources |
+| Terrain classification | React terrain stride-4 preserves `areaId` and blocked flags into logic terrain and nav bake; `LogicTerrainCell.Cost` still exists as a design smell | NAV-14 must keep classification in the board logic-terrain SSOT and keep cost as per-agent consumer data |
+| Pipeline order | Policy selects independent roles: VHTM supplies continuous geometry; LogicTerrain supplies blocked/water/ramp/area/topology; obstacle authoring supplies carve geometry | All three producers must be present when selected; missing or duplicate assets fail before bake |
 | Editor surface | React editor can paint height, blocked cells, `areaId`, obstacles, agent/profile/layer config, estimate bake cost, and call Bridge Recast bake through the shared context | The final product should persist the official VisualHeightmap/terrain-classification assets once NAV-15 closes the single-source contract |
 | Raylib debug | Debug draw and primitive buffers exist, but navmesh inspection needs a dedicated accurate view | Raylib must render cached tile geometry from `NavTile` data, not frame-by-frame disconnected line commands |
 
@@ -34,7 +34,7 @@ Any implementation of this page must reuse:
 | Bake profile | `Navigation/navmesh.json` through `NavMeshBakeConfig` |
 | Pathing cost | `Navigation/pathing.json` through `PathingConfig` |
 | Obstacles | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` |
-| Terrain input | official `VisualHeightmap` projection to official `LogicTerrainField` |
+| Terrain input | `IVisualHeightmap` direct geometry sampling plus official `LogicTerrainField` classification |
 | Runtime query | `NavTileStore`, `NavQueryServiceRegistry`, `NavQueryService` |
 | Presentation/debug | `PresentationPrimitiveDrawBuffer`, `GroundOverlayBuffer`, `DebugDrawCommandBuffer` where appropriate |
 
@@ -45,8 +45,8 @@ Do not add a second config loader, second obstacle file, direct navmesh authorin
 The target editor flow is:
 
 1. Create a board: choose `Grid`, `HexGrid`, or `NodeGraph`; set `WidthInMacroTiles`, `HeightInMacroTiles`, `GridCellSizeCm`, and `ChunkSizeCells`.
-2. Paint terrain height on `VisualHeightmap` in centimeters.
-3. Paint terrain classification as `areaId` and optional tags on the visual/terrain authoring layer.
+2. Paint terrain height on `VisualHeightmap` in centimeters; this remains continuous bake geometry.
+3. Paint terrain classification (`blocked`, `water`, `ramp`, `areaId`, topology) in the board logic-terrain source.
 4. Draw static structural obstacles as official ECS authored shapes: circle, box, polygon, or compound.
 5. Configure agent geometry in `Navigation/agent_profiles.json`.
 6. Configure bake profiles and layers in `Navigation/navmesh.json`.
@@ -68,8 +68,8 @@ Ludots world-space authoring uses centimeters. This matches the Unreal-style con
 |---|---:|---|---|---|
 | `CellCm` / `GridCellSizeCm` | cm | board config | Physical size of one logical board cell | Yes |
 | `VisualHeightmap.heightCm` | cm | terrain authoring | Continuous rendered/authoring height | Yes for visual terrain |
-| `LogicTerrain.heightLevel` | discrete level | projected logic terrain | Compact logic height after projection | Yes for nav bake |
-| `heightScaleMeters` | m per logic height unit | `NavBuildConfig` / runtime incremental config | Legacy conversion from height level to meters | Required today; target should be derived from projection profile |
+| `LogicTerrain.heightLevel` | discrete level | board logic terrain | Classification and topology input; remains separate from visual height | Yes when selected as classification source |
+| `heightScaleMeters` | m per logic height unit | `NavBuildConfig` / runtime incremental config | Conversion used only when height source is board logic terrain | Required for logic-height bake; ignored for direct VHTM geometry |
 | `areaId` | integer key | terrain classification SSOT | Terrain class id; no cost embedded | Yes when terrain classification is enabled |
 | tags | tag bits / strings | terrain classification SSOT | Orthogonal terrain attributes such as forest, road, swamp | Optional, explicit when used |
 
@@ -107,8 +107,8 @@ Current CDT/runtime legacy knobs are still present:
 | Legacy field | Meaning | Target direction |
 |---|---|---|
 | `minWalkableUpDot` | normal-up dot threshold | Derive from `maxSlopeDeg` as `cos(maxSlopeDeg)` when CDT slope filtering is normalized |
-| `cliffHeightThreshold` | discrete height delta threshold | Replace or derive from `maxClimbCm` through projection metadata |
-| `heightScaleMeters` | level-to-meter conversion | Keep explicit until `VisualHeightmap -> LogicTerrain` projection profile owns quantization |
+| `cliffHeightThreshold` | discrete height delta threshold | Applies to logic classification; direct VHTM slope comes from sampled geometry |
+| `heightScaleMeters` | level-to-meter conversion | Applies only to board-logic height geometry; direct VHTM does not quantize |
 
 Do not expose both `maxSlopeDeg` and `minWalkableUpDot` as independent user-facing knobs in the final editor. Show the derived value for debugging, but make `maxSlopeDeg` the authoring source.
 
