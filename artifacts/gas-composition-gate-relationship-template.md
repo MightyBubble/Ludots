@@ -119,3 +119,29 @@ catalog `types` 条目支持 `template.components`（组件字典 authoring）�
   showcase mod catalog 增量）。
 - 模板继承/引用（基模板特化）二期，本票不做。
 - Reserved 三名（Owns/Controls/MemberOf）与 RFC-0065 语义不动。
+
+## 验证记录（2026-08-23）
+
+- `dotnet build src/Core/Ludots.Core.csproj`：0 错误。
+- `dotnet test GasTests --filter RelationshipTypeTemplate`：5/5 通过
+  （catalog JSON 模板物化断言、重复 EnsureLink 幂等不重放、无模板默认形态、
+  authoring `RelationshipInstanceCm` fail-fast 且无原型残留、带模板类型 churn 预热后 0 分配）。
+- `dotnet test GasTests --filter Association`：21/21 通过。
+- ArchitectureTests：241/245 通过；4 个失败
+  （SkiaSharp 白名单、GenreInfoShowcaseMod Team 绑定、presentation capacity 合并、
+  `RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan` 源码扫描）经
+  clean-tree 对照全部为分支基线（b5ff09490d）既有失败，与本票无关。
+- GasTests Spawn/Production 过滤集：90/94 通过；4 个失败（`Shield`/`Durability` 属性未注册）
+  经 clean-tree 对照同为基线既有失败，与本票无关。
+
+### 防幻觉自检（新增构造/调用存在性）
+
+`ComponentRegistry.Apply(Entity, string, JsonNode, ComponentAuthoringContext, string)`、
+`ComponentAuthoringContext.Empty`、`Entity.Get(ComponentType)` 扩展
+（`Arch.Core.Extensions.EntityExtensions`）、`World.GetArchetype(Entity).Signature`、
+`World.Add(Entity, in object)`、`World.Set(Entity, object)`、`Component<T>.ComponentType`、
+`AttributeBuffer.SetBase/SetCurrent/GetBase/GetCurrent/DefinedMask`、
+`GameplayTagContainer.AddTag/RemoveTag/HasTag/IsEmpty`、
+`TagRegistry.GetId/Register/InvalidId/IsFrozen`、
+`RelationshipTypeRegistry.Count`、`ComponentRegistry.ReadStringNode/ValidateProperties`
+——均逐一 grep 确认存在于本仓源码后引用。
