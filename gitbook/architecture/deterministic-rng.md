@@ -9,7 +9,8 @@
 |---|---|---|
 | 种子流 | `src/Core/Engine/Randomization/` | 命名确定性流（xorshift32 显式推进、快照/恢复、FNV 种子混合）；fail-closed 声明/查询 |
 | 分布原语 | `src/Core/Gameplay/Rng/` | `DistributionTable`（权重归一化、锁定份额构造期锚定、调制 permille clamp）；`RngPickService`（分布 registry + key id intern） |
-| 图 op | `GraphNodeOp.WeightedPick = 443` | `Imm`=分布 key id、`I[A]`=调制 permille、`I[Dst]`=条目索引；经 `IGraphRuntimeApi.WeightedPick` 执行。**注意：作者 JSON 引用该 op 的符号绑定（分布名→key id）尚未实现，当前仅 C# 侧可调用** |
+| 图 op | `GraphNodeOp.WeightedPick = 443` | `Imm`=分布 key id、`I[A]`=调制 permille、`I[Dst]`=条目索引；经 `IGraphRuntimeApi.WeightedPick` 执行。作者 JSON 以分布名符号引用，编译期 `RequireSymbol(node.Distribution)` 收进符号表，加载期 `GraphProgramSymbolPatcher` 经 `ResolveRngDistribution` 绑定 key id，未知分布名失败关闭 |
+| 存档 | `src/Core/Persistence/CoreSaveParticipants.cs` 的 `RngSaveParticipant`（domain `rng`） | 捕获全部已声明流的 (streamId, seed, state, position)；读档声明集/种子不一致即失败关闭，恢复后流位置与序列延续 |
 | 作者数据 | mod `assets/Rng/distributions.json` | Core catalog 声明 `Rng/distributions.json`（ArrayById+AllowEmpty），各 mod 分片供数据 |
 | Showcase | `mods/showcases/rng/RngShowcaseMod` | 自动抽取主循环 + 旋钮 + 重放证明 + AgentBridge 工具 |
 
@@ -30,11 +31,11 @@
 5. **旋钮**（`ludots.rng.knob`）：调制 permille / burstSize / intervalTicks / autoRun / distribution 切换。
 6. **结构**：主演示 = hunt.loot 自动环；hunt.critical 为第二分布（含禁用条目与 invert 调制示例）。
 7. **门户资产**：本页 + `showcase.registry.json`（id `rng_distribution_showcase`）；截图经 AgentBridge 采集。
-8. **反向 API 审计已兑现项**：流快照/恢复、分布期望只读、运行时旋钮、抽取审计计数（state 工具）；待补：卡组/可耗尽状态组件、分布名字符串的作者图符号补丁、mod op 前门泛化。
+8. **反向 API 审计已兑现项**：流快照/恢复、分布期望只读、运行时旋钮、抽取审计计数（state 工具）、分布名作者图符号绑定（编译期 `RequireSymbol` + 加载期 `ResolveRngDistribution`）、存档 participant（domain `rng`，声明集/种子失败关闭）；待补：卡组/可耗尽状态组件、mod op 前门泛化。
 
 ## 四、验收
 
-- 单测：`src/Tests/RngCoreTests/`（33 项固定种子断言：同种子同序列、快照重放、锁定守恒、调制方向/熔断、失败关闭、key 互通）。
+- 单测：`src/Tests/RngCoreTests/`（39 项固定种子断言：同种子同序列、快照重放、锁定守恒、调制方向/熔断、失败关闭、key 互通、存档→读档→续抽序列相等、篡改快照拒绝）。
 - 桥验收：`ludots.rng.replay` 必须 `matched:true`；`ludots.rng.draw` 两次同快照序列相等；调制拨动后 expectedPct 偏移。
 - 启动：`run-mod-launcher.cmd cli launch --selector rng_showcase --mod AgentBridgeMod`。
 
