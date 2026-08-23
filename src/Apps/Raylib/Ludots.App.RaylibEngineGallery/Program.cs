@@ -48,15 +48,31 @@ namespace Ludots.App.RaylibEngineGallery
 
         private static int RunScene(IEngineScene scene, string? screenshotPath, string? jsonPath, int frames)
         {
-            bool headless = screenshotPath != null;
+            // 多帧截屏与宿主 RaylibHostLoop 同一环境变量合同（录像脚本的取样通道）：
+            // LUDOTS_TAKE_SCREENSHOT_PATH 基名 + LUDOTS_TAKE_SCREENSHOT_FRAMES 1 起帧号表，
+            // 产物命名 <基名>_<序号:000>_f<帧:0000>.png。
+            string? stillBasePath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
+            int[] stillFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+            bool stillSequence = !string.IsNullOrWhiteSpace(stillBasePath) && stillFrames.Length > 0;
+            string? stillDirectory = stillSequence
+                ? Path.GetDirectoryName(Path.GetFullPath(stillBasePath!))
+                : null;
+            var stillMoves = new List<(string Source, string Target)>();
+
+            bool headless = screenshotPath != null || stillSequence;
             if (headless)
             {
                 Rl.SetConfigFlags(GalleryWindowFlags.FlagWindowHidden);
             }
 
-            if (headless)
+            if (screenshotPath != null)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(screenshotPath!))!);
+            }
+
+            if (stillDirectory != null)
+            {
+                Directory.CreateDirectory(stillDirectory);
             }
 
             GalleryFont.Reset();
@@ -71,6 +87,7 @@ namespace Ludots.App.RaylibEngineGallery
             var watch = Stopwatch.StartNew();
             double total = 0.0;
             int drawn = 0;
+            int stillIndex = 0;
 
             while (drawn < frames && !Rl.WindowShouldClose())
             {
@@ -90,6 +107,15 @@ namespace Ludots.App.RaylibEngineGallery
                     // raylib 5.5 TakeScreenshot 读取当前帧缓冲，须先冲刷 Skia 文字与 rl 渲染批次。
                     Rl.rlDrawRenderBatchActive();
                     Rl.TakeScreenshot(Path.GetFileName(screenshotPath));
+                }
+
+                if (stillSequence && stillIndex < stillFrames.Length && drawn == stillFrames[stillIndex] - 1)
+                {
+                    Rl.rlDrawRenderBatchActive();
+                    string stillName = BuildStillFileName(stillBasePath!, stillIndex, stillFrames[stillIndex]);
+                    Rl.TakeScreenshot(stillName);
+                    stillMoves.Add((stillName, Path.Combine(stillDirectory!, stillName)));
+                    stillIndex++;
                 }
 
                 Rl.EndDrawing();
@@ -112,6 +138,23 @@ namespace Ludots.App.RaylibEngineGallery
                 {
                     Console.Error.WriteLine($"Failed to write screenshot '{screenshotPath}'.");
                     exitCode = 3;
+                }
+            }
+
+            foreach ((string source, string target) in stillMoves)
+            {
+                string workingPath = Path.Combine(Environment.CurrentDirectory, source);
+                if (!File.Exists(workingPath))
+                {
+                    Console.Error.WriteLine($"Failed to write still '{source}'.");
+                    exitCode = exitCode == 0 ? 3 : exitCode;
+                    continue;
+                }
+
+                if (!string.Equals(workingPath, target, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Copy(workingPath, target, overwrite: true);
+                    File.Delete(workingPath);
                 }
             }
 
@@ -273,6 +316,37 @@ namespace Ludots.App.RaylibEngineGallery
             };
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
             File.WriteAllText(path, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        private static int[] ReadEnvFrameList(string key)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return Array.Empty<int>();
+            }
+
+            var parsed = new List<int>();
+            foreach (string part in raw.Split(','))
+            {
+                if (int.TryParse(part.Trim(), out int frame) && frame >= 1)
+                {
+                    parsed.Add(frame);
+                }
+            }
+
+            return parsed.ToArray();
+        }
+
+        private static string BuildStillFileName(string basePath, int sequenceIndex, int frame)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(basePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "screenshot";
+            }
+
+            return $"{fileName}_{sequenceIndex + 1:000}_f{frame:0000}.png";
         }
 
         private static string? ParseOption(string[] args, string name)

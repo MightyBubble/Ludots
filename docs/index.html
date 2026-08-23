@@ -412,6 +412,8 @@
   }
 
   function loadDoc(path, scroll) {
+    // 画廊门户的重写链接会剥 .md（graph-op-wiki / raylib-engine 同一约定），此处统一补回
+    if (!/\.md$/i.test(path)) path = path + ".md";
     currentDoc = path;
     var body = document.getElementById("doc-body");
     var pathEl = document.getElementById("doc-path");
