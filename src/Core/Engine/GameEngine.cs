@@ -116,6 +116,7 @@ namespace Ludots.Core.Engine
 {
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
+        private Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem _mapDeathRuleSystem;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
         private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
@@ -748,6 +749,7 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 relationshipReasonRegistry,
                 entityCollectionStore);
+            relationshipRuntime.InstallTypeTemplates(relationshipCatalog);
             // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
             // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
             // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
@@ -802,6 +804,8 @@ namespace Ludots.Core.Engine
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
+            var customEventRegistry = new Ludots.Core.Gameplay.MapTriggers.CustomEventCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.CustomEventNameRegistry, customEventRegistry);
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
@@ -973,6 +977,7 @@ namespace Ludots.Core.Engine
                 clock,
                 graphLookupTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
+            gasGraphApi.BindTriggerManager(TriggerManager);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
@@ -1037,6 +1042,7 @@ namespace Ludots.Core.Engine
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
+            gasGraphApi.BindRuntimeEntitySpawn(runtimeEntitySpawnQueue, MapLoader.EntityTemplateKeys);
             var runtimeEntityLifecycleQueue = new RuntimeEntityLifecycleQueue(presentationConfig.RuntimeEntityLifecycleQueueCapacity);
             var runtimeEntityLifecycleReceiptQueue = new RuntimeEntityLifecycleReceiptQueue(presentationConfig.RuntimeEntityLifecycleReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
@@ -1780,8 +1786,13 @@ namespace Ludots.Core.Engine
                 SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
+            var poseAuthorityArbiter = new PoseAuthorityArbiter();
+            SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(World, poseAuthorityArbiter);
+            SetService(CoreServiceKeys.AttachmentPositionSync, attachmentPositionSyncSystem);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
+            RegisterSystem(attachmentPositionSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
             RegisterSystem(
@@ -1844,7 +1855,7 @@ namespace Ludots.Core.Engine
                 presenterDefinitions,
                 componentAuthoringContext,
                 entityTriggerGraphMounts: EntityTriggerGraphMounts);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasRuntimeCapacity.EffectLifetimeSnapshotCapacity, gasRuntimeCapacity.EffectFanOutCommandCapacity, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime, maxWorkUnitsPerSlice: gasRuntimeCapacity.EffectProcessingMaxWorkUnitsPerSlice, orderIntake: orderQueue, poseAuthorityArbiter: poseAuthorityArbiter), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(
                 World,
                 effectRequestQueue,
@@ -1911,8 +1922,8 @@ namespace Ludots.Core.Engine
             }
             // Pose-authority arbitration: transitions queue during the tick and are
             // committed at the next fixed-step boundary by PoseAuthorityCommitSystem (SchemaUpdate).
-            var poseAuthorityArbiter = new PoseAuthorityArbiter();
-            SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            // The arbiter instance itself is created before the EffectProcessing loop is
+            // registered so effect-side attach/detach ops share the same arbitration state.
             RegisterSystem(new PoseAuthorityCommitSystem(World, poseAuthorityArbiter), SystemGroup.SchemaUpdate);
             RegisterSystem(new DisplacementRuntimeSystem(World, poseAuthorityArbiter), SystemGroup.EffectProcessing);
 
@@ -1927,6 +1938,18 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new MapHeartbeatClockSystem(() => MapSessions, World, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
             RegisterSystem(new RegionTriggerSystem(World, () => MapSessions, TriggerManager, CreateContext), SystemGroup.DeferredTriggerCollection);
+            _mapDeathRuleSystem = new Ludots.Core.Gameplay.MapTriggers.MapDeathRuleSystem(World, () => CurrentMapSession);
+            RegisterSystem(_mapDeathRuleSystem, SystemGroup.DeferredTriggerCollection);
+            var inputTriggerActions = new Ludots.Core.Gameplay.MapTriggers.InputTriggerActionCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            RegisterSystem(
+                new Ludots.Core.Gameplay.MapTriggers.InputActionTriggerBridgeSystem(
+                    World,
+                    () => CurrentMapSession,
+                    TriggerManager,
+                    CreateContext,
+                    () => GetService(CoreServiceKeys.AuthoritativeInput),
+                    inputTriggerActions),
+                SystemGroup.DeferredTriggerCollection);
 
             // Phase 6: Cleanup
             RegisterSystem(orderContinuationSystem, SystemGroup.Cleanup);
@@ -2968,7 +2991,16 @@ namespace Ludots.Core.Engine
 
             // From JSON MapConfig.TriggerGraphs (graph mounts resolved against the entity index);
             // entity-domain mounts declared in map JSON route through the entity mount pipeline
-            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts));
+            if (mapConfig.DeathRule != null)
+            {
+                _mapDeathRuleSystem.Declare(session.MapId, mapConfig.DeathRule);
+            }
+            else
+            {
+                _mapDeathRuleSystem.Retract(session.MapId);
+            }
+
+            triggers.AddRange(TriggerGraphMounting.BuildTriggers(session, GetService(CoreServiceKeys.GraphProgramRegistry), EntityTriggerGraphMounts, GetService(CoreServiceKeys.CustomEventNameRegistry)));
 
             // Entity-domain mounts from entity templates (map-load spawns, buffered by MapLoader)
             triggers.AddRange(EntityTriggerGraphMounts.FlushMapLoadMounts(session));

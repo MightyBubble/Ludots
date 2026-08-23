@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 六种全可用（Effect / Score / Validation / Derived / Query / Script） |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `list`（目标名单） |
 | 特殊写法 | — |
@@ -37,7 +37,7 @@ QueryRadius → LoadCaster → QueryFilterNotEntity → **QuerySortStable**（�
 
 ## 边界与更多用法
 
-- 图种边界：六种图全都能用，不必为它挑图种。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - 同类用法：多节点串成完整小玩法的组合示范，可整段抄走改。
 ## 怎么进
 

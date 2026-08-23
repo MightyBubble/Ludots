@@ -381,6 +381,7 @@ namespace Ludots.Tests.Gas.Graph
                         "presentationEventStreamCapacity": 16,
                         "presentationOwnerChangeCapacity": 16,
                         "presenterCommandCapacity": 16,
+                        "presenterTimerCapacity": 16,
                         "primitiveDrawBufferCapacity": 16,
                         "visualSnapshotBufferCapacity": 16,
                         "visualProxyBufferCapacity": 16,
@@ -479,6 +480,7 @@ namespace Ludots.Tests.Gas.Graph
                         Path.Combine(Root, ModId),
                     },
                     Path.Combine(repoRoot, "assets"));
+                engine.GetService(CoreServiceKeys.CustomEventNameRegistry)?.Register(EntryEventName);
                 return engine;
             }
 

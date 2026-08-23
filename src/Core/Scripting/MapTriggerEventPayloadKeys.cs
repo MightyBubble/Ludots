@@ -23,5 +23,8 @@ namespace Ludots.Core.Scripting
         public const string AbilityId = "MapTrigger.AbilityId";            // int
         public const string EffectId = "MapTrigger.EffectId";              // int
         public const string Moment = "MapTrigger.Moment";                  // string
+        public const string InputAction = "MapTrigger.InputAction";              // string
+        public const string GroundXCm = "MapTrigger.GroundXCm";                  // float
+        public const string GroundYCm = "MapTrigger.GroundYCm";                  // float
     }
 }

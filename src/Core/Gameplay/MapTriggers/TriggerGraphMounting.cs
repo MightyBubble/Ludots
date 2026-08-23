@@ -15,7 +15,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public static List<Trigger> BuildTriggers(
             MapSession session,
             GraphProgramRegistry? programs,
-            EntityTriggerGraphMounts? entityMounts)
+            EntityTriggerGraphMounts? entityMounts,
+            CustomEventNameRegistry? customEvents = null)
         {
             if (session == null)
             {
@@ -55,7 +56,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     continue;
                 }
 
-                AppendMapMountTriggers(triggers, session, programs, mounts[m], mapId);
+                AppendMapMountTriggers(triggers, session, programs, mounts[m], mapId, customEvents);
             }
 
             return triggers;
@@ -82,7 +83,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             MapSession session,
             GraphProgramRegistry programs,
             TriggerGraphMount mount,
-            string mapId)
+            string mapId,
+            CustomEventNameRegistry? customEvents)
         {
             GraphProgramRegistration registration = RequireGraphRegistration(
                 programs,
@@ -103,7 +105,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 scope,
                 TriggerGraphMountDomain.Map,
                 TriggerGraphMount.FieldName,
-                $"Map '{mapId}'");
+                $"Map '{mapId}'",
+                customEvents);
         }
 
         private static void AppendEntityMountTriggers(
@@ -165,13 +168,28 @@ namespace Ludots.Core.Gameplay.MapTriggers
             Entity scope,
             TriggerGraphMountDomain domain,
             string fieldName,
-            string ownerLabel)
+            string ownerLabel,
+            CustomEventNameRegistry? customEvents = null)
         {
             IReadOnlyList<TriggerGraphEntry> entries = registration.TriggerGraphEntries;
             if (entries == null || entries.Count == 0)
             {
                 throw new InvalidOperationException(
                     $"{ownerLabel} {fieldName} graph '{graph}' declares no event entries.");
+            }
+
+            if (customEvents != null)
+            {
+                for (int v = 0; v < entries.Count; v++)
+                {
+                    string eventName = entries[v].EventName;
+                    if (!customEvents.IsKnownEntryEvent(eventName))
+                    {
+                        throw new InvalidOperationException(
+                            $"{ownerLabel} {fieldName} graph '{graph}' entry '{entries[v].Label}' names unknown event '{eventName}'. " +
+                            $"Known events — {customEvents.DescribeVocabulary()}. Declare custom events in {CustomEventNameRegistry.ConfigPath}.");
+                    }
+                }
             }
 
             GraphInstruction[] program = registration.Program;

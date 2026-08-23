@@ -217,6 +217,14 @@ namespace Ludots.Tests.Gas.AI
 
         private sealed class AttributeReadApi : IGraphRuntimeApi
         {
+            public void SpawnTemplate(int templateKeyId, Arch.Core.Entity source, float xCm, float yCm, bool hasPosition)
+            {
+            }
+            public void SetWorldPosition(Arch.Core.Entity target, int xCm, int yCm)
+            {
+            }
+
+
             private readonly World _world;
 
             public AttributeReadApi(World world) => _world = world;

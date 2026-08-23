@@ -83,7 +83,7 @@
 
 新开了一条线，别当成图能力收口的回锅：触发器图（TriggerGraph，原 MapTriggerGraph）。
 进度与计划只认两张票：地图域线 https://github.com/MightyBubble/Ludots/issues/1030 ；域扩展线（实体域挂载、GAS 事件桥、技能/效果时刻桥、presenter 时序合同）https://github.com/MightyBubble/Ludots/issues/1031 ——两张票顶部各有进度快照与剩余切片清单，新活从快照开工，别重做已落地的。
-方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落在 codex/panel-four-skins-showcase 分支上；技能域挂载、mod 域/叠加仲裁/override、图侧 spawn 动词还开在票里。合不合、什么时候合，看那两张票。
+方言/挂载、事件词典（MapHeartbeat 地图心跳/实体死生/区域）、地图变量存储、时间线续跑、实体域挂载、GAS 桥、「夜袭三波」全数据旗舰与旧 LevelDirector 试验线退役，都已落在 codex/panel-four-skins-showcase 分支上；技能域挂载、mod 域/叠加仲裁/override 还开在票里。图侧 spawn 动词已经落地：SpawnTemplate（GraphNodeOp 447）在 TriggerGraph 与 Script 都能用，「夜袭三波」旗舰的 stage3 就用它在图内生成 boss（`mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod/assets/GAS/graphs.json` 的 `spawn_boss` 节点）。合不合、什么时候合，看那两张票。
 
 下面这些早就知道、还没做，**不要当成新发现再审一轮**：默认「看见敌人 / 进入射程」还要有人先塞数字；图号在代码里还是普通整数；有一条事件丢弃计数永远是零；两个节点钉同一格时说不清。
 

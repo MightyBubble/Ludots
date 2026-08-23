@@ -1,0 +1,3 @@
+[
+  { "Path": "Presentation/presenters.json", "Policy": "ArrayById", "IdField": "id" }
+]

@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Script |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Float → 小数寄存器 |
 | 输入端口（值边 toPort） | 无（不收值边，靠 imm/自身上下文） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -37,7 +37,7 @@
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Script；Query 图不可用（编译期白名单拒绝）。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - 不接值边：输入来自 imm 与运行时上下文（施法者、显式目标等）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。

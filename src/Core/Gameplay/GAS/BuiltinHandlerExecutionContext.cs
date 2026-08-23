@@ -30,6 +30,7 @@ namespace Ludots.Core.Gameplay.GAS
         public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
         public RelationshipRuntime? Relationships { get; set; }
+        public Ludots.Core.Movement.PoseAuthorityArbiter? PoseAuthorityArbiter { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
         public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
         public TagOps? TagOps { get; set; }

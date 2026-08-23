@@ -43,7 +43,7 @@ ReadMapVarInt → ConstInt → AddInt → **WriteMapVarInt**（本篇） → Hal
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Script；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Script / TriggerGraph；Effect / Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进

@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Script |
+| 可用图种 | Effect / Script / TriggerGraph |
 | 返回 | 无（副作用节点） |
 | 输入端口（值边 toPort） | `condition`（条件） |
 | 特殊写法 | — |
@@ -43,7 +43,7 @@ ConstInt → ConstInt → ConstInt → MoveInt → MoveInt → CompareLtInt → 
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Script；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Script / TriggerGraph；Score / Validation / Derived / Query 图不可用（编译期白名单拒绝）。
 - 同类用法：跨帧等待（读条、喝药回满）、子图复用、循环收口。
 ## 怎么进
 

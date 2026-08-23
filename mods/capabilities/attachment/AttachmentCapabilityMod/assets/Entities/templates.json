@@ -1,0 +1,168 @@
+[
+  {
+    "id": "attachment_tank_chassis",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Tank.Chassis"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "MovementParticipation": {
+        "physicsPresence": "none",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 20,
+          "maxDurationMs": 2000
+        }
+      }
+    },
+    "children": [
+      {
+        "template": "attachment_tank_turret",
+        "localPose": {
+          "offsetXCm": 0,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_tank_turret",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Tank.Turret"
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      }
+    },
+    "children": [
+      {
+        "template": "attachment_tank_barrel",
+        "localPose": {
+          "offsetXCm": 220,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": true,
+          "offsetRotation": "ParentFacing"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_tank_barrel",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Tank.Barrel"
+      }
+    }
+  },
+  {
+    "id": "attachment_rider",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Rider"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 1200,
+          "Y": -400
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MovementParticipation": {
+        "physicsPresence": "none",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 20,
+          "maxDurationMs": 2000
+        }
+      }
+    }
+  },
+  {
+    "id": "attachment_settlement_hall",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Settlement.Hall"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 5000,
+          "Y": 5000
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      }
+    },
+    "children": [
+      {
+        "template": "attachment_settlement_annex",
+        "localPose": {
+          "offsetXCm": 700,
+          "offsetYCm": 0,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      },
+      {
+        "template": "attachment_settlement_tower",
+        "localPose": {
+          "offsetXCm": -350,
+          "offsetYCm": 600,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      }
+    ]
+  },
+  {
+    "id": "attachment_settlement_annex",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Settlement.Annex"
+      }
+    }
+  },
+  {
+    "id": "attachment_settlement_tower",
+    "components": {
+      "Name": {
+        "Value": "Attachment.Settlement.Tower"
+      }
+    }
+  }
+]
