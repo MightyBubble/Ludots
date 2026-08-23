@@ -31,7 +31,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// - After death the entity's mounts are inert (TriggerGraphMountTrigger
     ///   CheckConditions false on dead scope) and swept lazily at think waves with a
     ///   bounded budget; entity mounts with any other event key dispatch through the
-    ///   map bus registration normally.
+    ///   map bus registration normally. Entity payloads are scope-filtered: an
+    ///   unmarked scope accepts only its own source/target, while a scope carrying
+    ///   EntityTriggerGraphAggregateRoot accepts attached descendants too.
     /// - Map unload drops the map's entity mounts before entity teardown, so
     ///   unload-time destruction produces no death dispatches.
     /// </summary>
@@ -115,14 +117,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 for (int i = 0; i < _mapLoadBuffer.Count; i++)
                 {
                     MapLoadSpawn spawn = _mapLoadBuffer[i];
-                    for (int g = 0; g < spawn.GraphNames.Count; g++)
-                    {
-                        triggers.AddRange(MountEntityGraphs(
-                            session,
-                            spawn.Entity,
-                            spawn.GraphNames[g],
-                            $"entity template '{spawn.TemplateId}'"));
-                    }
+                    List<Trigger> spawnTriggers = BuildEntityGraphList(
+                        spawn.Entity,
+                        spawn.GraphNames,
+                        $"entity template '{spawn.TemplateId}'");
+                    DecorateTrackAndDispatch(session, spawn.Entity, spawnTriggers);
+                    triggers.AddRange(spawnTriggers);
                 }
             }
             finally
@@ -154,12 +154,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                     $"Entity template '{templateId}' declares TriggerGraphs but the entity's map '{mapId.Value}' has no active session; entity-domain mounts register through their map.");
             }
 
-            List<Trigger> triggers = new List<Trigger>(graphNames.Count);
-            for (int g = 0; g < graphNames.Count; g++)
-            {
-                triggers.AddRange(MountEntityGraphs(session, entity, graphNames[g], $"entity template '{templateId}'"));
-            }
-
+            List<Trigger> triggers = BuildEntityGraphList(entity, graphNames, $"entity template '{templateId}'");
+            DecorateTrackAndDispatch(session, entity, triggers);
             _triggerManager.AddMapTriggers(mapId, triggers);
         }
 
@@ -171,18 +167,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// </summary>
         public List<Trigger> MountEntityGraphs(MapSession session, Entity scope, string graph, string ownerLabel)
         {
-            GraphProgramRegistry? programs = _programs()
-                ?? throw new InvalidOperationException(
-                    $"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraph '{graph}'.");
             if (!_world.IsAlive(scope))
             {
                 throw new InvalidOperationException(
                     $"{ownerLabel} cannot mount TriggerGraph '{graph}' on a dead scope entity.");
             }
 
-            List<Trigger> triggers = TriggerGraphMounting.BuildEntityMountTriggers(programs, scope, graph, ownerLabel);
-            Track(session.MapId, scope, triggers);
+            List<Trigger> triggers = BuildEntityGraphList(scope, new[] { graph }, ownerLabel);
+            DecorateTrackAndDispatch(session, scope, triggers);
+            return triggers;
+        }
 
+        private void DecorateTrackAndDispatch(MapSession session, Entity scope, List<Trigger> triggers)
+        {
+            Track(session.MapId, scope, triggers);
             TriggerDecoratorRegistry? decorators = _decorators();
             for (int i = 0; i < triggers.Count; i++)
             {
@@ -190,6 +188,24 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             DispatchLifecycle(session, scope, GameEvents.EntitySpawned, triggers);
+        }
+
+        private List<Trigger> BuildEntityGraphList(Entity scope, IReadOnlyList<string> graphNames, string ownerLabel)
+        {
+            GraphProgramRegistry programs = _programs()
+                ?? throw new InvalidOperationException($"{ownerLabel} requires GraphProgramRegistry to mount TriggerGraphs.");
+            var triggers = new List<Trigger>(graphNames.Count);
+            for (int g = 0; g < graphNames.Count; g++)
+            {
+                // Build every graph before tracking or dispatching any lifecycle entry.
+                // A missing graph therefore cannot leave a partially mounted entity.
+                triggers.AddRange(TriggerGraphMounting.BuildEntityMountTriggers(
+                    programs,
+                    scope,
+                    graphNames[g],
+                    ownerLabel));
+            }
+
             return triggers;
         }
 

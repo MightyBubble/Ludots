@@ -193,6 +193,7 @@ namespace Ludots.Core.Systems
                 return;
             }
 
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < graphs.Count; i++)
             {
                 string? name = graphs[i];
@@ -200,6 +201,12 @@ namespace Ludots.Core.Systems
                 {
                     throw new InvalidOperationException(
                         $"Entity template '{template.Id}' TriggerGraphs[{i}] must be a trimmed non-empty graph id string.");
+                }
+
+                if (!seen.Add(name))
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{template.Id}' TriggerGraphs[{i}] repeats graph id '{name}'; each graph may be mounted only once per entity.");
                 }
             }
         }
