@@ -290,6 +290,7 @@ namespace Ludots.Core.Presentation.Presenters
                 new PresenterEmitCache());
 
             InitializeAnimatorSlotIfPresent(entity, definition);
+            AddIndexes(entity, in state, definition);
             AddBehaviorMarkers(entity, definition, state.BehaviorActiveMask);
             AddEventDrivenStaticEmitMarkers(entity, definition);
             AddRetainedPresentationRequestMarkers(entity, definition);
@@ -304,7 +305,6 @@ namespace Ludots.Core.Presentation.Presenters
 
             _activeCount++;
             _structureVersion++;
-            AddIndexes(entity, in state, definition);
             return entity;
         }
 
@@ -391,7 +391,10 @@ namespace Ludots.Core.Presentation.Presenters
             if (writeOwnerPayloadBatch)
             {
                 long payloadStart = Stopwatch.GetTimestamp();
-                WriteSingleRootOwnerPayloadMarkersBatch(owners, created.Slice(0, owners.Length));
+                WriteSingleRootOwnerPayloadMarkersBatch(
+                    owners,
+                    created.Slice(0, owners.Length),
+                    includeOwnerPayloadTransformSync);
                 LastRootBatchOwnerPayloadCount = owners.Length;
                 LastRootBatchOwnerPayloadMs = ElapsedMs(payloadStart);
             }
@@ -1528,10 +1531,23 @@ namespace Ludots.Core.Presentation.Presenters
 
             state.BehaviorActiveMask = nextMask;
             state.Version++;
+            RefreshOwnerPayloadMarker(state.OwnerEntity);
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
             MarkStaticDirty(entity);
             return true;
+        }
+
+        private void RefreshOwnerPayloadMarker(Entity owner)
+        {
+            if (owner == Entity.Null ||
+                !_byOwner.TryGetValue(new OwnerKey(owner), out OwnerPresenterBucket bucket) ||
+                bucket.Count == 0)
+            {
+                return;
+            }
+
+            WriteOwnerPayloadMarker(owner, in bucket);
         }
 
         private static bool IsRequestBackedVisual(AssetKind kind)
@@ -2907,6 +2923,8 @@ namespace Ludots.Core.Presentation.Presenters
                 MarkRetainedPresentationRequestDirty(entity);
             }
 
+            RebuildOwnerPayloadMarkersFromIndex();
+
             for (int i = 0; i < syncTickWork.Count; i++)
             {
                 ReconcileDefinitionWork work = syncTickWork[i];
@@ -2928,7 +2946,6 @@ namespace Ludots.Core.Presentation.Presenters
                 }
             }
 
-            RebuildOwnerPayloadMarkersFromIndex();
             SortEntityIndexesByStableId(_byDefinition);
             SortOwnerDefinitionIndexesByStableId();
         }
@@ -3425,7 +3442,10 @@ namespace Ludots.Core.Presentation.Presenters
             return _world.IsAlive(owners[0]) && _world.Has<PresentationOwnerHasPresenterPayload>(owners[0]);
         }
 
-        private void WriteSingleRootOwnerPayloadMarkersBatch(ReadOnlySpan<Entity> owners, ReadOnlySpan<Entity> presenters)
+        private void WriteSingleRootOwnerPayloadMarkersBatch(
+            ReadOnlySpan<Entity> owners,
+            ReadOnlySpan<Entity> presenters,
+            bool singleRootTransformSync)
         {
             if (owners.Length != presenters.Length || owners.Length == 0)
             {
@@ -3451,7 +3471,7 @@ namespace Ludots.Core.Presentation.Presenters
                         Count = 1,
                         RootCount = 1,
                         SingleRootPresenter = presenters[index],
-                        SingleRootTransformSync = CanUseOwnerPayloadTransformSync(presenters[index]) ? (byte)1 : (byte)0,
+                        SingleRootTransformSync = singleRootTransformSync ? (byte)1 : (byte)0,
                     };
                 }
 
@@ -3828,7 +3848,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
-            WriteOwnerPayloadMarker(owner, in bucket);
+            WriteOwnerPayloadMarker(owner, in bucket, excludedPresenter: presenter);
         }
 
         private void AddToOwnerDefinitionIndex(Entity owner, int defId, Entity presenter)
@@ -3865,7 +3885,7 @@ namespace Ludots.Core.Presentation.Presenters
             }
         }
 
-        private void WriteOwnerPayloadMarker(Entity owner, in OwnerPresenterBucket bucket)
+        private void WriteOwnerPayloadMarker(Entity owner, in OwnerPresenterBucket bucket, Entity excludedPresenter = default)
         {
             if (owner == Entity.Null || !_world.IsAlive(owner))
             {
@@ -3873,6 +3893,7 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             bool singleRoot = TryGetSingleRoot(in bucket, out Entity singleRootPresenter);
+            bool hasPreviousPayload = _world.TryGet(owner, out PresentationOwnerHasPresenterPayload previousPayload);
             var next = new PresentationOwnerHasPresenterPayload
             {
                 Count = bucket.Count,
@@ -3881,14 +3902,36 @@ namespace Ludots.Core.Presentation.Presenters
                 SingleRootTransformSync = singleRoot && OwnerPayloadTransformEligible(singleRootPresenter) ? (byte)1 : (byte)0,
             };
 
-            if (_world.Has<PresentationOwnerHasPresenterPayload>(owner))
+            if (hasPreviousPayload)
             {
-                ref PresentationOwnerHasPresenterPayload marker = ref _world.Get<PresentationOwnerHasPresenterPayload>(owner);
-                marker = next;
+                _world.Get<PresentationOwnerHasPresenterPayload>(owner) = next;
+            }
+            else
+            {
+                _world.Add(owner, next);
+            }
+
+            if (!hasPreviousPayload ||
+                previousPayload.RootCount != next.RootCount ||
+                previousPayload.SingleRootPresenter != next.SingleRootPresenter ||
+                previousPayload.SingleRootTransformSync != next.SingleRootTransformSync)
+            {
+                SyncSingleRootTransformSyncMarker(previousPayload.SingleRootPresenter, excludedPresenter);
+                SyncSingleRootTransformSyncMarker(next.SingleRootPresenter, excludedPresenter);
+            }
+        }
+
+        private void SyncSingleRootTransformSyncMarker(Entity presenter, Entity excludedPresenter)
+        {
+            if (presenter == Entity.Null ||
+                presenter == excludedPresenter ||
+                !_world.IsAlive(presenter) ||
+                !_world.Has<PresenterState>(presenter))
+            {
                 return;
             }
 
-            _world.Add(owner, next);
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(presenter, CanUseOwnerPayloadTransformSync(presenter));
         }
 
         private void RemoveOwnerPayloadMarker(Entity owner)
@@ -3903,18 +3946,15 @@ namespace Ludots.Core.Presentation.Presenters
 
         private bool CanUseOwnerPayloadTransformSync(Entity presenter)
         {
-            if (!OwnerPayloadTransformEligible(presenter))
+            if (presenter == Entity.Null ||
+                !_world.IsAlive(presenter) ||
+                !_world.Has<PresenterState>(presenter))
             {
                 return false;
             }
 
-            // The single-root fast path only covers owners whose payload names this
-            // presenter as the one root; multi-root owners must keep the per-presenter
-            // anchored sync (the anchored query excludes this marker), otherwise every
-            // root presenter freezes at its bootstrap transform.
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
-            Entity owner = state.OwnerEntity;
-            return _world.TryGet(owner, out PresentationOwnerHasPresenterPayload payload) &&
+            return _world.TryGet(state.OwnerEntity, out PresentationOwnerHasPresenterPayload payload) &&
                 payload.RootCount == 1 &&
                 payload.SingleRootPresenter == presenter &&
                 payload.SingleRootTransformSync != 0;
