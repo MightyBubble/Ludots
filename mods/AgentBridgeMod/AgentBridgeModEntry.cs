@@ -98,6 +98,7 @@ namespace AgentBridgeMod
             tools.Register(new PresentersScreenTool());
             tools.Register(new NavProjectTool());
             tools.Register(new NavFindPathTool());
+            tools.Register(new GraphDebugTool());
 
             engine.SetService(ToolRegistryKey, tools);
 
