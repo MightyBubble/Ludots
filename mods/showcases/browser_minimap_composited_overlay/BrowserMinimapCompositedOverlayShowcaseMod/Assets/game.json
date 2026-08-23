@@ -10,7 +10,15 @@
       "zoomSliderEnabled": false,
       "modeToggleEnabled": false,
       "rotateToggleEnabled": false,
-      "debugMarkerSampleCapacity": 0
+      "debugMarkerSampleCapacity": 0,
+      "skin": "sci-fi",
+      "nativeChromeVisible": false,
+      "fieldClipShape": "Circle",
+      "layoutMode": "External",
+      "externalFieldX": 1128,
+      "externalFieldY": 24,
+      "externalFieldWidth": 288,
+      "externalFieldHeight": 288
     }
   }
 }

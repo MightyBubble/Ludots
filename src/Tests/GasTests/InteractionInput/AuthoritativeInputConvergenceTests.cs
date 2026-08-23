@@ -974,6 +974,10 @@ namespace Ludots.Tests.GAS
                 MinZoomExplicitHalfExtentCm = InputConvergenceMinZoomHalfExtentCm,
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
+                Skin = "default",
+                NativeChromeVisible = true,
+                FieldClipShape = PresentationClipShapeKind.None,
+                LayoutMode = MinimapLayoutMode.Native,
             });
         }
 

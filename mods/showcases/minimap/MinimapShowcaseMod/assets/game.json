@@ -4,7 +4,15 @@
     "minimap": {
       "minZoomExtentMode": "ExplicitCm",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExtentMode": "FullMap"
+      "maxZoomExtentMode": "FullMap",
+      "skin": "ink-wash",
+      "nativeChromeVisible": true,
+      "fieldClipShape": "Circle",
+      "layoutMode": "Native",
+      "externalFieldX": 0,
+      "externalFieldY": 0,
+      "externalFieldWidth": 1,
+      "externalFieldHeight": 1
     }
   },
   "startupLocalSeats": [

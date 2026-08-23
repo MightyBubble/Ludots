@@ -45,7 +45,15 @@
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
-      "maxZoomExplicitHalfExtentCm": 0.0
+      "maxZoomExplicitHalfExtentCm": 0.0,
+      "skin": "default",
+      "nativeChromeVisible": true,
+      "fieldClipShape": "None",
+      "layoutMode": "Native",
+      "externalFieldX": 0,
+      "externalFieldY": 0,
+      "externalFieldWidth": 1,
+      "externalFieldHeight": 1
     }
   },
   "constants": {

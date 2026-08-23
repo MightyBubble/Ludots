@@ -235,6 +235,10 @@ public sealed class MinimapKnowledgeProjectionTests
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
             MaxZoomExplicitHalfExtentCm = 5000f,
+            Skin = "default",
+            NativeChromeVisible = true,
+            FieldClipShape = PresentationClipShapeKind.None,
+            LayoutMode = MinimapLayoutMode.Native,
         });
     }
 

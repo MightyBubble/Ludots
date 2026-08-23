@@ -326,6 +326,10 @@ public sealed class NativeSkiaOverlayTests
             MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExplicitHalfExtentCm = 0f,
+            Skin = "default",
+            NativeChromeVisible = true,
+            FieldClipShape = PresentationClipShapeKind.None,
+            LayoutMode = MinimapLayoutMode.Native,
         });
         var overlay = new ScreenOverlayBuffer();
 
@@ -340,6 +344,71 @@ public sealed class NativeSkiaOverlayTests
             "Minimap panel must be an opaque TopMost mask so UnderUi world HUD cannot bleed through it.");
         Assert.That(span[1].BackgroundColor.W, Is.EqualTo(1f),
             "Minimap field must be an opaque TopMost mask so UnderUi world HUD cannot bleed through it.");
+    }
+
+    [Test]
+    public void MinimapRuntime_ConfiguresSkinChromeAndClipFromPresentationContract()
+    {
+        var runtime = new MinimapRuntime(new MinimapRuntimeConfig
+        {
+            InitialZoomNormalized = 1f,
+            WheelZoomNormalizedStep = 0.08f,
+            ButtonZoomNormalizedStep = 0.18f,
+            ZoomSliderEnabled = false,
+            ModeToggleEnabled = false,
+            RotateToggleEnabled = false,
+            DebugMarkerSampleCapacity = 0,
+            MinZoomExtentMode = MinimapZoomExtentMode.OneChunk,
+            MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
+            MinZoomExplicitHalfExtentCm = 750f,
+            MaxZoomExplicitHalfExtentCm = 0f,
+            Skin = "sci-fi",
+            NativeChromeVisible = false,
+            FieldClipShape = PresentationClipShapeKind.Circle,
+            LayoutMode = MinimapLayoutMode.External,
+            ExternalFieldX = 100,
+            ExternalFieldY = 120,
+            ExternalFieldWidth = 288,
+            ExternalFieldHeight = 288,
+        });
+
+        Assert.That(runtime.SkinId, Is.EqualTo("sci-fi"));
+        Assert.That(runtime.NativeChromeVisible, Is.False);
+        Assert.That(runtime.FieldClipShapeKind, Is.EqualTo(PresentationClipShapeKind.Circle));
+    }
+
+    [Test]
+    public void MinimapRuntimeConfig_RejectsUnknownSkinAndIncompleteExternalLayout()
+    {
+        MinimapRuntimeConfig unknownSkin = CreateMinimapConfig();
+        unknownSkin.Skin = "not-a-skin";
+        Assert.That(() => unknownSkin.Validate(), Throws.InvalidOperationException);
+
+        MinimapRuntimeConfig incompleteExternal = CreateMinimapConfig();
+        incompleteExternal.LayoutMode = MinimapLayoutMode.External;
+        Assert.That(() => incompleteExternal.Validate(), Throws.InvalidOperationException);
+    }
+
+    private static MinimapRuntimeConfig CreateMinimapConfig()
+    {
+        return new MinimapRuntimeConfig
+        {
+            InitialZoomNormalized = 1f,
+            WheelZoomNormalizedStep = 0.08f,
+            ButtonZoomNormalizedStep = 0.18f,
+            ZoomSliderEnabled = false,
+            ModeToggleEnabled = false,
+            RotateToggleEnabled = false,
+            DebugMarkerSampleCapacity = 0,
+            MinZoomExtentMode = MinimapZoomExtentMode.OneChunk,
+            MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
+            MinZoomExplicitHalfExtentCm = 750f,
+            MaxZoomExplicitHalfExtentCm = 0f,
+            Skin = "default",
+            NativeChromeVisible = true,
+            FieldClipShape = PresentationClipShapeKind.None,
+            LayoutMode = MinimapLayoutMode.Native,
+        };
     }
 
     [Test]

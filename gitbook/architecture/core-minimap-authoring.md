@@ -178,6 +178,27 @@ Core runtime 类型：`MinimapRuntime`。
 
 若 board/bounds 缺失，runtime 报错；不得切换到其他推断路径。
 
+### 7.1 纯配置外壳与换肤
+
+小地图外壳也由同一个 `presentation.minimap` 配置声明，不需要 showcase 为布局和颜色编写 C#：
+
+```json
+{
+  "skin": "default",
+  "nativeChromeVisible": true,
+  "fieldClipShape": "None",
+  "layoutMode": "Native",
+  "externalFieldX": 0,
+  "externalFieldY": 0,
+  "externalFieldWidth": 1,
+  "externalFieldHeight": 1
+}
+```
+
+`skin` 只能使用 `default`、`ink-wash`、`fantasy`、`minimal`、`sci-fi`；`fieldClipShape` 只能使用 `None`、`Rect`、`Circle`、`Diamond`。未知值或外部布局缺少正宽高会在配置加载时失败，不会静默退回另一种皮肤或布局。
+
+当 `layoutMode` 为 `External` 时，Core 仍负责 marker 投影、SoA 缓冲和裁剪；外部 Web/Compose 外壳只提供矩形和输入，不得复制 marker 数据或回查 World。运行时桥接可以更新该矩形，桥接退出后由配置的原生布局合同恢复。
+
 ## 8. Showcase 验收基线
 
 `presenter_blacksmith_minimap_marker_large_world_showcase` 是当前大世界小地图验收场景。

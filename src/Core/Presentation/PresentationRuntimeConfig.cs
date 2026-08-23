@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation
@@ -155,6 +156,12 @@ namespace Ludots.Core.Presentation
         ExplicitCm = 2,
     }
 
+    public enum MinimapLayoutMode
+    {
+        Native = 0,
+        External = 1,
+    }
+
     public sealed class MinimapRuntimeConfig
     {
         private float? _initialZoomNormalized;
@@ -168,6 +175,14 @@ namespace Ludots.Core.Presentation
         private MinimapZoomExtentMode? _maxZoomExtentMode;
         private float? _minZoomExplicitHalfExtentCm;
         private float? _maxZoomExplicitHalfExtentCm;
+        private string? _skin;
+        private bool? _nativeChromeVisible;
+        private PresentationClipShapeKind? _fieldClipShape;
+        private MinimapLayoutMode? _layoutMode;
+        private int? _externalFieldX;
+        private int? _externalFieldY;
+        private int? _externalFieldWidth;
+        private int? _externalFieldHeight;
 
         public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
         public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
@@ -180,6 +195,14 @@ namespace Ludots.Core.Presentation
         public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
         public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
         public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
+        public string Skin { get => _skin ?? string.Empty; set => _skin = value; }
+        public bool NativeChromeVisible { get => _nativeChromeVisible ?? false; set => _nativeChromeVisible = value; }
+        public PresentationClipShapeKind FieldClipShape { get => _fieldClipShape ?? PresentationClipShapeKind.None; set => _fieldClipShape = value; }
+        public MinimapLayoutMode LayoutMode { get => _layoutMode ?? MinimapLayoutMode.Native; set => _layoutMode = value; }
+        public int ExternalFieldX { get => _externalFieldX ?? 0; set => _externalFieldX = value; }
+        public int ExternalFieldY { get => _externalFieldY ?? 0; set => _externalFieldY = value; }
+        public int ExternalFieldWidth { get => _externalFieldWidth ?? 0; set => _externalFieldWidth = value; }
+        public int ExternalFieldHeight { get => _externalFieldHeight ?? 0; set => _externalFieldHeight = value; }
 
         public void Validate()
         {
@@ -253,6 +276,31 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.maxZoomExplicitHalfExtentCm must be > 0 when maxZoomExtentMode is ExplicitCm.");
+            }
+
+            if (string.IsNullOrWhiteSpace(_skin))
+            {
+                throw new InvalidOperationException("presentation.minimap.skin must be explicitly configured.");
+            }
+
+            MinimapSkinCatalog.Require(_skin);
+            PresentationRuntimeConfig.RequireBool(_nativeChromeVisible, "presentation.minimap.nativeChromeVisible");
+            if (!_fieldClipShape.HasValue || !Enum.IsDefined(typeof(PresentationClipShapeKind), _fieldClipShape.Value))
+            {
+                throw new InvalidOperationException("presentation.minimap.fieldClipShape must be explicitly configured as a known clip shape.");
+            }
+
+            if (!_layoutMode.HasValue || !Enum.IsDefined(typeof(MinimapLayoutMode), _layoutMode.Value))
+            {
+                throw new InvalidOperationException("presentation.minimap.layoutMode must be explicitly configured as Native or External.");
+            }
+
+            if (_layoutMode.Value == MinimapLayoutMode.External &&
+                (!_externalFieldWidth.HasValue || _externalFieldWidth.Value <= 0 ||
+                 !_externalFieldHeight.HasValue || _externalFieldHeight.Value <= 0))
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap external layout requires positive externalFieldWidth and externalFieldHeight.");
             }
         }
     }

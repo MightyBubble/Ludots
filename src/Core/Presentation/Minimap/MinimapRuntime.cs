@@ -105,6 +105,7 @@ namespace Ludots.Core.Presentation.Minimap
         private const byte LineClipOutTop = 8;
 
         private readonly MinimapRuntimeConfig _config;
+        private readonly MinimapSkinDescriptor _skin;
         private readonly int _debugMarkerSampleCapacity;
         private static readonly string[] BandLabels =
         {
@@ -196,16 +197,29 @@ namespace Ludots.Core.Presentation.Minimap
             _config = config ?? throw new InvalidOperationException(
                 "MinimapRuntime requires explicit presentation.minimap configuration.");
             _config.Validate();
+            _skin = MinimapSkinCatalog.Require(_config.Skin);
             _debugMarkerSampleCapacity = _config.DebugMarkerSampleCapacity;
             _debugVisibleMarkers = _debugMarkerSampleCapacity > 0
                 ? new List<MinimapDebugMarker>(_debugMarkerSampleCapacity)
                 : new List<MinimapDebugMarker>(0);
             _zoomNormalized = Math.Clamp(_config.InitialZoomNormalized, 0f, 1f);
+            NativeChromeVisible = _config.NativeChromeVisible;
+            _fieldClipShapeKind = _config.FieldClipShape;
+            if (_config.LayoutMode == MinimapLayoutMode.External)
+            {
+                SetExternalFieldRect(
+                    _config.ExternalFieldX,
+                    _config.ExternalFieldY,
+                    _config.ExternalFieldWidth,
+                    _config.ExternalFieldHeight);
+            }
         }
 
         public bool Visible { get; set; }
 
         public bool NativeChromeVisible { get; set; } = true;
+
+        public string SkinId => _skin.Id;
 
         public MinimapPreset Preset { get; private set; } = MinimapPreset.RtsFullMap;
 
@@ -416,20 +430,20 @@ namespace Ludots.Core.Presentation.Minimap
                     _panelY,
                     _panelWidth,
                     _panelHeight,
-                    new Vector4(0.02f, 0.05f, 0.07f, 1f),
-                    new Vector4(0.48f, 0.70f, 0.86f, 1f));
+                    _skin.PanelBackground,
+                    _skin.PanelBorder);
                 overlay.AddRect(
                     _fieldX,
                     _fieldY,
                     _fieldSize,
                     _fieldSize,
-                    new Vector4(0.01f, 0.04f, 0.06f, 1f),
-                    new Vector4(0.42f, 0.65f, 0.80f, 1f),
+                    _skin.FieldBackground,
+                    _skin.FieldBorder,
                     stableId: 0,
                     dirtySerial: 0,
                     clipShape: fieldClip);
-                overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
-                overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
+                overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, _skin.Title);
+                overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, _skin.Band);
             }
             else
             {
@@ -438,7 +452,7 @@ namespace Ludots.Core.Presentation.Minimap
                     _fieldY,
                     _fieldSize,
                     _fieldSize,
-                    new Vector4(0.01f, 0.04f, 0.06f, 1f),
+                    _skin.FieldBackground,
                     Vector4.Zero,
                     stableId: 0,
                     dirtySerial: 0,
@@ -456,11 +470,11 @@ namespace Ludots.Core.Presentation.Minimap
             RenderToggleButtons(overlay);
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
-                overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
+                overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, _skin.Band);
             }
 
             int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
-            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
+            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, _skin.Footer);
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -1101,8 +1115,8 @@ namespace Ludots.Core.Presentation.Minimap
             _metricGridStepCm = ResolveMetricGridStepCm();
             ResolveViewportWorldAabb(out float minX, out float minY, out float maxX, out float maxY);
             float step = _metricGridStepCm;
-            Vector4 minor = new(0.24f, 0.39f, 0.49f, 0.70f);
-            Vector4 major = new(0.48f, 0.66f, 0.78f, 0.88f);
+            Vector4 minor = _skin.GridMinor;
+            Vector4 major = _skin.GridMajor;
 
             float startX = MathF.Ceiling(minX / step) * step;
             int lineCount = 0;
@@ -1135,10 +1149,10 @@ namespace Ludots.Core.Presentation.Minimap
             int thumbCenterX = trackX + (int)MathF.Round(_zoomNormalized * MathF.Max(1, _zoomSliderWidth));
             int thumbX = thumbCenterX - (ZoomSliderThumbWidth / 2);
             int thumbY = _zoomSliderY + ((ZoomSliderHeight - ZoomSliderThumbHeight) / 2);
-            Vector4 track = new(0.15f, 0.25f, 0.31f, 0.95f);
-            Vector4 fill = new(0.93f, 0.72f, 0.28f, 0.98f);
-            Vector4 thumb = new(1f, 0.93f, 0.62f, 1f);
-            Vector4 border = new(0.48f, 0.70f, 0.86f, 1f);
+            Vector4 track = _skin.SliderTrack;
+            Vector4 fill = _skin.SliderFill;
+            Vector4 thumb = _skin.SliderThumb;
+            Vector4 border = _skin.PanelBorder;
             overlay.AddRect(trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
             int fillWidth = Math.Max(0, thumbCenterX - trackX);
             if (fillWidth > 0)
@@ -1158,7 +1172,8 @@ namespace Ludots.Core.Presentation.Minimap
                     _rotateToggleX,
                     _rotateToggleY,
                     ResolveRotateToggleLabel(),
-                    RotateWithCamera);
+                    RotateWithCamera,
+                    _skin);
             }
 
             if (_config.ModeToggleEnabled)
@@ -1168,21 +1183,22 @@ namespace Ludots.Core.Presentation.Minimap
                     _presetToggleX,
                     _presetToggleY,
                     ResolvePresetToggleLabel(),
-                    Preset != MinimapPreset.RtsFullMap);
+                    Preset != MinimapPreset.RtsFullMap,
+                    _skin);
             }
         }
 
-        private static void RenderToggleButton(ScreenOverlayBuffer overlay, int x, int y, string label, bool active)
+        private static void RenderToggleButton(
+            ScreenOverlayBuffer overlay,
+            int x,
+            int y,
+            string label,
+            bool active,
+            MinimapSkinDescriptor skin)
         {
-            Vector4 fill = active
-                ? new Vector4(0.20f, 0.40f, 0.50f, 0.96f)
-                : new Vector4(0.07f, 0.13f, 0.17f, 0.96f);
-            Vector4 border = active
-                ? new Vector4(0.82f, 0.89f, 0.48f, 1f)
-                : new Vector4(0.34f, 0.53f, 0.64f, 1f);
-            Vector4 text = active
-                ? new Vector4(0.98f, 0.96f, 0.72f, 1f)
-                : new Vector4(0.70f, 0.80f, 0.88f, 1f);
+            Vector4 fill = active ? skin.ToggleActiveFill : skin.ToggleInactiveFill;
+            Vector4 border = active ? skin.ToggleActiveBorder : skin.ToggleInactiveBorder;
+            Vector4 text = active ? skin.ToggleActiveText : skin.ToggleInactiveText;
             overlay.AddRect(x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
             overlay.AddText(x + 8, y + 5, label, 12, text);
         }
