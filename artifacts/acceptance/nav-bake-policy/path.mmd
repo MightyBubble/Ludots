@@ -1,0 +1,10 @@
+flowchart TD
+    A[Board JSON loaded] --> B[Read NavBakePolicy]
+    B --> C{Roles compatible?}
+    C -- no --> X[Fail fast with reason]
+    C -- yes --> D{Selected input present?}
+    D -- no --> Y[Reject before bake]
+    D -- yes --> E[Use existing NavBake pipeline]
+    E --> F[Emit NavTile artifacts]
+    B --> G{Height source is direct VHTM?}
+    G -- yes, backend unavailable --> H[Explicitly reject; do not project]

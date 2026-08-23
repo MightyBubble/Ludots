@@ -3034,6 +3034,32 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
+            BoardConfig navBoard = null;
+            if (mapConfig.Boards != null)
+            {
+                for (int i = 0; i < mapConfig.Boards.Count; i++)
+                {
+                    BoardConfig candidate = mapConfig.Boards[i];
+                    if (candidate != null && candidate.NavigationEnabled)
+                    {
+                        navBoard = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (navBoard == null)
+            {
+                throw new InvalidOperationException($"NavMesh enabled for map '{mapId}' but no NavigationEnabled board is declared.");
+            }
+
+            NavBakePolicy policy = NavBakePolicyValidator.Require(navBoard);
+            if (string.Equals(policy.HeightSource, NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Board '{navBoard.Name}' selects direct continuous-heightmap baking, but the runtime bake backend is not connected yet. No projection was performed.");
+            }
+
             if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
 
             var bakeConfig = LoadNavMeshBakeConfig();

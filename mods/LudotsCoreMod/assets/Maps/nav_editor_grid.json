@@ -11,7 +11,13 @@
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 16,
       "DataFile": "nav_editor_grid.bin",
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "NavBakePolicy": {
+        "HeightSource": "board-logic-terrain",
+        "ClassificationSource": "board-logic-terrain",
+        "StaticObstacleSource": "none",
+        "RuntimeObstacleSource": "none"
+      }
     },
     {
       "Name": "board_2",
@@ -23,7 +29,13 @@
       "ChunkSizeCells": 64,
       "LoadedChunkCapacity": 256,
       "DataFile": "nav_editor_grid_board_2.bin",
-      "NavigationEnabled": true
+      "NavigationEnabled": true,
+      "NavBakePolicy": {
+        "HeightSource": "board-logic-terrain",
+        "ClassificationSource": "board-logic-terrain",
+        "StaticObstacleSource": "none",
+        "RuntimeObstacleSource": "none"
+      }
     }
   ],
   "Entities": [],

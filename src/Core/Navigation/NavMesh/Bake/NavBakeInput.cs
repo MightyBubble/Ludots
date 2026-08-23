@@ -2,7 +2,7 @@ using System;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
-using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {

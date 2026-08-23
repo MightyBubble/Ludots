@@ -1,0 +1,3 @@
+{"id":"policy.parse","event":"board_policy_loaded","result":"accepted","heightSource":"continuous-heightmap","classificationSource":"board-logic-terrain","staticObstacleSource":"map-entities","runtimeObstacleSource":"runtime-entities"}
+{"id":"policy.guard.nodegraph","event":"nodegraph_navmesh_roles","result":"rejected","reason":"NodeGraph has no NavMesh bake input"}
+{"id":"policy.guard.missing-height","event":"selected_height_input_missing","result":"rejected","reason":"continuousHeightmap is required by policy"}
