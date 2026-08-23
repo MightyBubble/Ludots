@@ -1,3 +1,4 @@
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Platform.Abstractions;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -22,16 +23,19 @@ public sealed class ResourceTransportSystem : BaseSystem<World, float>
     private readonly OrderQueue _orders;
     private readonly OrderTypeRegistry _orderTypes;
     private readonly IGameplayActionLoopGate _gate;
+    private readonly TagOps _tagOps;
 
     public ResourceTransportSystem(
         World world,
         OrderQueue orders,
         OrderTypeRegistry orderTypes,
-        IGameplayActionLoopGate gate) : base(world)
+        IGameplayActionLoopGate gate,
+        TagOps tagOps) : base(world)
     {
         _orders = orders ?? throw new ArgumentNullException(nameof(orders));
         _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
+        _tagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
     }
 
     public override void Update(in float dt)
@@ -162,10 +166,12 @@ public sealed class ResourceTransportSystem : BaseSystem<World, float>
                     destinationPosition.Y,
                     profile.ArrivalRadiusCm,
                     "resource sink");
-                destinationAttributes.SetCurrent(
+                AttributeMutationOps.SetCurrent(
+                    World,
+                    destination,
                     profile.ResourceAttributeId,
-                    destinationAttributes.GetCurrent(profile.ResourceAttributeId) + profile.CargoAmount);
-                World.Set(destination, destinationAttributes);
+                    destinationAttributes.GetCurrent(profile.ResourceAttributeId) + profile.CargoAmount,
+                    _tagOps);
                 state = default;
             }
         }

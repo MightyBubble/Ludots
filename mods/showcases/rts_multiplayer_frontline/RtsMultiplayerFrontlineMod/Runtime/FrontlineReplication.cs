@@ -12,6 +12,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
@@ -755,20 +756,19 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
         if (_spec.HasHealth || _spec.HasCrystals)
         {
-            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
             if (_spec.HasHealth)
             {
                 float health = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.HealthValid)
                     ? FrontlineReplicationPayload.UnpackLowFloat(values.Value1)
                     : 0f;
-                attributes.SetCurrent(_healthAttributeId, health);
+                AttributeMutationOps.SetCurrent(world, entity, _healthAttributeId, health, _tagBinder.TagOps);
             }
             if (_spec.HasCrystals)
             {
                 float crystals = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.CrystalsValid)
                     ? FrontlineReplicationPayload.UnpackHighFloat(values.Value1)
                     : 0f;
-                attributes.SetCurrent(_crystalAttributeId, crystals);
+                AttributeMutationOps.SetCurrent(world, entity, _crystalAttributeId, crystals, _tagBinder.TagOps);
             }
         }
 
@@ -1614,6 +1614,7 @@ internal sealed class FrontlineReplicationLifecycle
             }
             IClock clock = engine.GetService(CoreServiceKeys.Clock)
                 ?? throw new InvalidOperationException("RTS Frontline visibility requires Clock.");
+            // capabilityId: rts-frontline.dynamic-participant-visibility
             engine.RegisterSystem(
                 new DynamicParticipantVisibilitySystem(engine.World, () => _visibilityPublisher, clock),
                 SystemGroup.RuntimeEntityBinding);
@@ -1688,7 +1689,7 @@ internal sealed class FrontlineReplicationLifecycle
 
     private static GameEngine RequireEngine(ScriptContext context, string eventName)
     {
-        return context.GetEngine() as GameEngine
+        return context.Get(CoreServiceKeys.Engine) as GameEngine
             ?? throw new InvalidOperationException($"RTS Frontline replication requires GameEngine on {eventName}.");
     }
 
@@ -1714,6 +1715,7 @@ internal static class FrontlineReplication
         ArgumentNullException.ThrowIfNull(runtime);
         FrontlineConfig config = runtime.Config;
 
+        // capabilityId: rts-frontline.vision-scope-authoring
         engine.RegisterSystem(
             new FrontlineVisionScopeAuthoringSystem(engine, config),
             SystemGroup.SchemaUpdate);
@@ -1772,6 +1774,7 @@ internal static class FrontlineReplication
         {
             NetworkEntityTable entities = engine.GetService(CoreServiceKeys.NetworkEntityTable)
                 ?? throw new InvalidOperationException("RTS Frontline authoritative launch requires NetworkEntityTable.");
+            // capabilityId: rts-frontline.network-entity-binding
             engine.RegisterSystem(
                 new FrontlineNetworkEntityBindingSystem(engine, entities, config),
                 SystemGroup.Cleanup);

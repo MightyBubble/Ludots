@@ -67,6 +67,7 @@ namespace CoreInputMod.Triggers
             {
                 foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
             };
+            // capabilityId: core-input.command-source-acquisition
             engine.RegisterSystem(commandSourceAcquisition, SystemGroup.LocalInput);
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);

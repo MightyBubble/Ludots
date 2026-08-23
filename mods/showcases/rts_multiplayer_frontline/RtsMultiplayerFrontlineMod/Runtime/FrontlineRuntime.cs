@@ -111,7 +111,7 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
 
     public Task HandleGameStartAsync(ScriptContext context)
     {
-        if (context.GetEngine() is not GameEngine engine)
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine)
         {
             throw new InvalidOperationException("RTS Frontline requires GameEngine on GameStart.");
         }
@@ -130,7 +130,7 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
 
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
-        if (context.GetEngine() is not GameEngine engine)
+        if (context.Get(CoreServiceKeys.Engine) is not GameEngine engine)
         {
             throw new InvalidOperationException("RTS Frontline requires GameEngine on map focus.");
         }
@@ -556,13 +556,17 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
             new FrontlinePreMatchOrderGateSystem(engine.World, this, orderBufferSystem),
             SystemGroup.AbilityActivation);
         _tagBinder = new FrontlineTagBinder(Config, tagOps);
+        // capabilityId: rts-frontline.tag-binding
         engine.RegisterSystem(new FrontlineTagBindingSystem(engine.World, this, _tagBinder), SystemGroup.RuntimeEntityBinding);
+        // capabilityId: rts-frontline.resource-transport
         engine.RegisterSystem(
-            new ResourceTransportSystem(engine.World, orderQueue, orderTypes, this),
+            new ResourceTransportSystem(engine.World, orderQueue, orderTypes, this, tagOps),
             SystemGroup.AbilityActivation);
+        // capabilityId: rts-frontline.direct-attack
         engine.RegisterSystem(
             new DirectAttackSystem(engine.World, orderQueue, orderTypes, effectRequests, this),
             SystemGroup.AbilityActivation);
+        // capabilityId: rts-frontline.death-and-match
         engine.RegisterSystem(
             new FrontlineDeathAndMatchSystem(engine.World, this, orderBufferSystem),
             SystemGroup.Cleanup);
@@ -575,6 +579,7 @@ public sealed class FrontlineRuntime : IGameplayActionLoopGate
                 throw new InvalidOperationException("RTS Frontline network room capacity does not match the configured sides.");
             }
 
+            // capabilityId: rts-frontline.network-room-sync
             engine.RegisterSystem(
                 new FrontlineNetworkRoomSynchronizationSystem(this, observer),
                 SystemGroup.SchemaUpdate);

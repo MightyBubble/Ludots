@@ -135,6 +135,8 @@ internal sealed class FrontlineTagBinder
         _crystalNodeTagId = TagRegistry.Register(config.CrystalNodeTag);
     }
 
+    public TagOps TagOps => _tagOps;
+
     public void BindParticipant(
         World world,
         Entity entity,

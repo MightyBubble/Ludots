@@ -16,7 +16,7 @@ public sealed class RtsMultiplayerFrontlineThreeProcessAcceptanceModEntry : IMod
         var frontline = AcceptancePlan.LoadFrontlineConfig(context);
         context.OnEvent(GameEvents.NetworkRuntimeReady, scriptContext =>
         {
-            GameEngine engine = scriptContext.GetEngine()
+            GameEngine engine = scriptContext.Get(CoreServiceKeys.Engine)
                 ?? throw new InvalidOperationException("Three-process acceptance requires a running game engine.");
             var progress = new AcceptanceProgress();
             var driver = new AcceptanceDriver(engine, plan, frontline, progress);
@@ -35,11 +35,13 @@ public sealed class RtsMultiplayerFrontlineThreeProcessAcceptanceModEntry : IMod
                 engine.SetService(
                     CoreServiceKeys.PresentationCaptureMilestoneSource,
                     (IPresentationCaptureMilestoneSource)progress);
+                // capabilityId: rts-frontline-acceptance.driver-local-input
                 engine.RegisterSystem(driver, SystemGroup.LocalInput);
                 engine.RegisterPresentationSystem(new AcceptancePresentationSystem(engine, plan, progress));
             }
             else if (role == NetworkProcessRole.AuthoritativeServer)
             {
+                // capabilityId: rts-frontline-acceptance.driver-cleanup
                 engine.RegisterSystem(driver, SystemGroup.Cleanup);
             }
             else

@@ -62,7 +62,7 @@ Showcase 的正式交付形态必须同时包含：
 | 实体生成 | `src/Core/Gameplay/Spawning/RuntimeEntitySpawnQueue.cs` | 生产完成后通过正式生命周期边界生成步兵 |
 | RTS 资源花费与生产 | `mods/showcases/rts_demo/RtsDemoMod/assets/GAS/abilities.json`、`mods/showcases/rts_demo/RtsDemoMod/assets/GAS/effects.json` | 复用数据驱动的花费、训练和生成组合 |
 | RTS 输入与移动入口 | `mods/showcases/rts_demo/RtsDemoMod/assets/Input/input_order_mappings.json` | 复用正式移动 Order 映射，不让网络层直接改位置 |
-| RTS 实体与表现 | `mods/showcases/rts_demo/RtsDemoMod/assets/Entities/templates.json`、`mods/showcases/rts_demo/RtsDemoMod/assets/Presentation/performers.json` | 提取可复用的单位、建筑与表现资产；新场景不照搬三阵营陈列布局 |
+| RTS 实体与表现 | `mods/showcases/rts_demo/RtsDemoMod/assets/Entities/templates.json`、`mods/showcases/rts_demo/RtsDemoMod/assets/Presentation/presenters.json` | 提取可复用的单位、建筑与表现资产；新场景不照搬三阵营陈列布局 |
 | 玩家知识与披露规则 | `src/Core/Knowledge/KnowledgeProjectionStore.cs`、`src/Core/Knowledge/KnowledgeProjectionResolver.cs`、`src/Core/ParticipantVisibility/DynamicParticipantVisibilityPublisher.cs` | 作为“玩家允许知道什么”的规则基础；网络热路径需新增定容增量游标 |
 | 基础迷雾 | `src/Core/Vision/FogField.cs`、`src/Core/Vision/FogKnowledgeProjector.cs` | 决定敌军何时进入或离开玩家的实时视野 |
 | 冷恢复基础 | `src/Core/Persistence/WorldSnapshotService.cs`、`src/Core/Persistence/WorldRestoreService.cs` | 用于冷检查点与恢复边界，不能直接充当逐 Tick 网络快照 |

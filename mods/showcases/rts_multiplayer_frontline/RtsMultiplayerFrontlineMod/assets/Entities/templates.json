@@ -2,8 +2,12 @@
   {
     "id": "rts_frontline_team_representative",
     "components": {
-      "Name": { "Value": "Frontline Team" },
-      "AttributeBuffer": { "base": {} },
+      "Name": {
+        "Value": "Frontline Team"
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "CommandSourceDragState": {}
@@ -12,8 +16,12 @@
   {
     "id": "rts_frontline_player_representative",
     "components": {
-      "Name": { "Value": "Frontline Player" },
-      "AttributeBuffer": { "base": {} },
+      "Name": {
+        "Value": "Frontline Player"
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "CommandSourceDragState": {}
@@ -22,8 +30,12 @@
   {
     "id": "rts_frontline_match_state",
     "components": {
-      "Name": { "Value": "Frontline Match State" },
-      "ReplicationSchemaRef": { "SchemaId": 705 },
+      "Name": {
+        "Value": "Frontline Match State"
+      },
+      "ReplicationSchemaRef": {
+        "SchemaId": 705
+      },
       "FrontlineMatchStateEntity": {},
       "FrontlineMatchStateProjection": {
         "CommittedTick": 0,
@@ -41,31 +53,91 @@
   {
     "id": "rts_frontline_core",
     "components": {
-      "Name": { "Value": "Command Core" },
-      "Team": { "Id": 0 },
-      "PlayerOwner": { "PlayerId": 0 },
-      "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualTransform": {
-        "Position": { "X": 0, "Y": 0, "Z": 0 },
-        "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 3.0, "Y": 2.2, "Z": 3.0 }
+      "Name": {
+        "Value": "Command Core"
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 60, "halfSizeZCm": 60 },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualTransform": {
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Rotation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Scale": {
+          "X": 3.0,
+          "Y": 2.2,
+          "Z": 3.0
+        }
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 60,
+        "halfSizeYCm": 60,
+        "halfSizeZCm": 60
+      },
       "VisualHeightmapSampleState": {},
-      "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
-      "ReplicationSchemaRef": { "SchemaId": 701 },
+      "CullState": {
+        "IsVisible": true,
+        "LOD": 0,
+        "DistanceToCameraSq": 0,
+        "ScreenCoverage01": 1
+      },
+      "ReplicationSchemaRef": {
+        "SchemaId": 701
+      },
       "VisionEmitterCm": {
         "scope": "rts.frontline.north",
-        "layers": ["ground"],
+        "layers": [
+          "ground"
+        ],
         "polarity": "Reveal",
-        "aperture": { "kind": "Disk", "rangeCm": 4500 }
+        "aperture": {
+          "kind": "Disk",
+          "rangeCm": 4500
+        }
       },
-      "FogOccupantCm": { "layers": ["ground"] },
-      "AttributeBuffer": { "base": { "Health": 1000, "Crystals": 40 } },
-      "AbilityStateBuffer": { "abilityIds": ["Ability.Rts.Frontline.TrainInfantry"] },
+      "FogOccupantCm": {
+        "layers": [
+          "ground"
+        ]
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Crystals": 40
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Frontline.TrainInfantry"
+        ]
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "TimedTagBuffer": {},
@@ -73,7 +145,9 @@
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardIntBuffer": {},
-      "FrontlineParticipant": { "SideIndex": -1 },
+      "FrontlineParticipant": {
+        "SideIndex": -1
+      },
       "FrontlineCore": {},
       "ResourceSinkProfile": {
         "ResourceAttribute": "Crystals",
@@ -88,30 +162,86 @@
   {
     "id": "rts_frontline_harvester",
     "components": {
-      "Name": { "Value": "Crystal Harvester" },
-      "Team": { "Id": 0 },
-      "PlayerOwner": { "PlayerId": 0 },
-      "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualTransform": {
-        "Position": { "X": 0, "Y": 0, "Z": 0 },
-        "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 1.8, "Y": 1.4, "Z": 2.4 }
+      "Name": {
+        "Value": "Crystal Harvester"
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 50, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 50, "halfSizeZCm": 50 },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualTransform": {
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Rotation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Scale": {
+          "X": 1.8,
+          "Y": 1.4,
+          "Z": 2.4
+        }
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 50,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 50,
+        "halfSizeYCm": 50,
+        "halfSizeZCm": 50
+      },
       "VisualHeightmapSampleState": {},
-      "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
-      "ReplicationSchemaRef": { "SchemaId": 702 },
+      "CullState": {
+        "IsVisible": true,
+        "LOD": 0,
+        "DistanceToCameraSq": 0,
+        "ScreenCoverage01": 1
+      },
+      "ReplicationSchemaRef": {
+        "SchemaId": 702
+      },
       "VisionEmitterCm": {
         "scope": "rts.frontline.north",
-        "layers": ["ground"],
+        "layers": [
+          "ground"
+        ],
         "polarity": "Reveal",
-        "aperture": { "kind": "Disk", "rangeCm": 2600 }
+        "aperture": {
+          "kind": "Disk",
+          "rangeCm": 2600
+        }
       },
-      "FogOccupantCm": { "layers": ["ground"] },
-      "AttributeBuffer": { "base": { "Health": 120, "MoveSpeed": 700 } },
+      "FogOccupantCm": {
+        "layers": [
+          "ground"
+        ]
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 120,
+          "MoveSpeed": 700
+        }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "TimedTagBuffer": {},
@@ -119,7 +249,9 @@
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardIntBuffer": {},
-      "FrontlineParticipant": { "SideIndex": -1 },
+      "FrontlineParticipant": {
+        "SideIndex": -1
+      },
       "FrontlineHarvester": {},
       "ResourceTransportProfile": {
         "GatherOrderTypeId": 172,
@@ -137,30 +269,86 @@
   {
     "id": "rts_frontline_infantry",
     "components": {
-      "Name": { "Value": "Frontline Infantry" },
-      "Team": { "Id": 0 },
-      "PlayerOwner": { "PlayerId": 0 },
-      "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualTransform": {
-        "Position": { "X": 0, "Y": 0, "Z": 0 },
-        "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 1.15, "Y": 1.65, "Z": 1.15 }
+      "Name": {
+        "Value": "Frontline Infantry"
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 45, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 48, "halfSizeYCm": 52, "halfSizeZCm": 48 },
+      "Team": {
+        "Id": 1
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualTransform": {
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Rotation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Scale": {
+          "X": 1.15,
+          "Y": 1.65,
+          "Z": 1.15
+        }
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 45,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 48,
+        "halfSizeYCm": 52,
+        "halfSizeZCm": 48
+      },
       "VisualHeightmapSampleState": {},
-      "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
-      "ReplicationSchemaRef": { "SchemaId": 703 },
+      "CullState": {
+        "IsVisible": true,
+        "LOD": 0,
+        "DistanceToCameraSq": 0,
+        "ScreenCoverage01": 1
+      },
+      "ReplicationSchemaRef": {
+        "SchemaId": 703
+      },
       "VisionEmitterCm": {
         "scope": "rts.frontline.north",
-        "layers": ["ground"],
+        "layers": [
+          "ground"
+        ],
         "polarity": "Reveal",
-        "aperture": { "kind": "Disk", "rangeCm": 3200 }
+        "aperture": {
+          "kind": "Disk",
+          "rangeCm": 3200
+        }
       },
-      "FogOccupantCm": { "layers": ["ground"] },
-      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 800 } },
+      "FogOccupantCm": {
+        "layers": [
+          "ground"
+        ]
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "MoveSpeed": 800
+        }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "TimedTagBuffer": {},
@@ -168,7 +356,9 @@
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardIntBuffer": {},
-      "FrontlineParticipant": { "SideIndex": -1 },
+      "FrontlineParticipant": {
+        "SideIndex": -1
+      },
       "FrontlineInfantry": {},
       "DirectAttackProfile": {
         "AttackOrderTypeId": 102,
@@ -186,24 +376,64 @@
   {
     "id": "rts_frontline_crystal_node",
     "components": {
-      "Name": { "Value": "Crystal Field" },
-      "CommandSourceSelectableTag": {},
-      "CommandSourceSelectableState": { "IsEnabled": true },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualTransform": {
-        "Position": { "X": 0, "Y": 0, "Z": 0 },
-        "Rotation": { "X": 0, "Y": 0, "Z": 0, "W": 1 },
-        "Scale": { "X": 2.2, "Y": 1.6, "Z": 2.2 }
+      "Name": {
+        "Value": "Crystal Field"
       },
-      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 60, "localCenterZCm": 0 },
-      "SpatialBox3D": { "halfSizeXCm": 60, "halfSizeYCm": 70, "halfSizeZCm": 60 },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualTransform": {
+        "Position": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0
+        },
+        "Rotation": {
+          "X": 0,
+          "Y": 0,
+          "Z": 0,
+          "W": 1
+        },
+        "Scale": {
+          "X": 2.2,
+          "Y": 1.6,
+          "Z": 2.2
+        }
+      },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterXCm": 0,
+        "localCenterYCm": 60,
+        "localCenterZCm": 0
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 60,
+        "halfSizeYCm": 70,
+        "halfSizeZCm": 60
+      },
       "VisualHeightmapSampleState": {},
-      "CullState": { "IsVisible": true, "LOD": 0, "DistanceToCameraSq": 0, "ScreenCoverage01": 1 },
-      "ReplicationSchemaRef": { "SchemaId": 704 },
+      "CullState": {
+        "IsVisible": true,
+        "LOD": 0,
+        "DistanceToCameraSq": 0,
+        "ScreenCoverage01": 1
+      },
+      "ReplicationSchemaRef": {
+        "SchemaId": 704
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "FrontlineCrystalNode": {},
-      "ResourceSourceProfile": { "ResourceAttribute": "Crystals" },
+      "ResourceSourceProfile": {
+        "ResourceAttribute": "Crystals"
+      },
       "FrontlineTagBindingState": {}
     }
   }

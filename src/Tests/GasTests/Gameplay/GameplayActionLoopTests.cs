@@ -28,7 +28,7 @@ public sealed class GameplayActionLoopTests
         OrderTypeRegistry orderTypes = CreateOrderTypes();
         var admissionResults = new OrderAdmissionResultBuffer(64, 64);
         var orders = new OrderQueue(64, admissionResults);
-        var system = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance);
+        var system = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance, new Ludots.Core.Gameplay.GAS.TagOps(new DirtyEntityQueue(8), new TagRuleRegistry()));
 
         AttributeBuffer sinkAttributes = default;
         sinkAttributes.SetCurrent(resourceAttributeId, 40f);
@@ -40,6 +40,7 @@ public sealed class GameplayActionLoopTests
                 DockOffsetYCm = -200,
             },
             sinkAttributes,
+            new DirtyFlags(),
             WorldPositionCm.FromCm(0, 0),
             new PlayerOwner { PlayerId = 1 });
         Entity source = world.Create(
@@ -476,7 +477,7 @@ public sealed class GameplayActionLoopTests
         var admissionResults = new OrderAdmissionResultBuffer(64, 64);
         var orders = new OrderQueue(64, admissionResults);
         var effects = new EffectRequestQueue();
-        var resourceSystem = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance);
+        var resourceSystem = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance, new Ludots.Core.Gameplay.GAS.TagOps(new DirtyEntityQueue(8), new TagRuleRegistry()));
         var attackSystem = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
         _ = world.Create(
             new ResourceTransportProfile

@@ -13,7 +13,9 @@ public sealed class S14LayeringRatchetTests
     public const int MaxGetEngineCalls = 205;
     public const int MaxUndeclaredModRegisterSystemCalls = 100;
     public const int MaxProductionStaticRegistryClearCalls = 9;
-    public const int MaxModProjectsReferencingFacadeGameEngine = 138;
+    // 138 -> 141: #711 frontline 联机新增 3 个 mod 工程（frontline/networked/三进程验收夹具），
+    // 在 S14 mod 端口覆盖 GameEngine 级 API 前落旧门面；端口就绪后回落。
+    public const int MaxModProjectsReferencingFacadeGameEngine = 141;
     public const int MaxModGraphIdRegistryClearCalls = 5;
 
     private static readonly Regex GetEngineCall = new(@"\.GetEngine\s*\(", RegexOptions.Compiled);
