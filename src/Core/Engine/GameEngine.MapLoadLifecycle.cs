@@ -248,7 +248,7 @@ namespace Ludots.Core.Engine
             {
                 ApplyBoardSpatialConfig(primaryBoard);
                 LoadBoardTerrainData(session, session.MapConfig);
-                LoadNavForMap(session.MapId.Value, session.MapConfig);
+                LoadNavForMap(session.MapId.Value, session.MapConfig, session.NavigationBoardName);
             }
 
             LoadPathingForSession(session);

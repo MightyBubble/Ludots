@@ -37,34 +37,27 @@ namespace Ludots.Tool
             return LoadMergedMap(root, mods, loadOrder, mapId);
         }
 
-        public static BoardConfig ResolvePrimaryNavigationBoard(MapConfig map)
+        public static BoardConfig ResolveBoardByName(MapConfig map, string boardName)
         {
-            if (map == null) throw new ArgumentNullException(nameof(map));
-            if (map.Boards == null || map.Boards.Count == 0)
-            {
-                throw new InvalidOperationException($"Map '{map.Id}' has no BoardConfig entries.");
-            }
+            if (string.IsNullOrWhiteSpace(boardName))
+                throw new InvalidOperationException($"Map '{map?.Id}' requires boardName for navigation baking.");
+            return NavBakeBoardSelector.Resolve(map, boardName);
+        }
 
-            BoardConfig? defaultNavigationBoard = null;
-            BoardConfig? firstNavigationBoard = null;
-            for (int i = 0; i < map.Boards.Count; i++)
-            {
-                BoardConfig board = map.Boards[i];
-                if (board == null || !board.NavigationEnabled)
-                {
-                    continue;
-                }
+        public static IReadOnlyList<string> ResolveAssetRoots(string repoRoot, string mapId, string? targetModId)
+        {
+            if (string.IsNullOrWhiteSpace(repoRoot)) throw new ArgumentException("Repository root is required.", nameof(repoRoot));
+            if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("Map id is required.", nameof(mapId));
 
-                firstNavigationBoard ??= board;
-                if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
-                {
-                    defaultNavigationBoard = board;
-                    break;
-                }
-            }
-
-            return defaultNavigationBoard ?? firstNavigationBoard
-                ?? throw new InvalidOperationException($"Map '{map.Id}' has no navigation-enabled board.");
+            string root = Path.GetFullPath(repoRoot);
+            var mods = DiscoverMods(root);
+            var loadOrder = string.IsNullOrWhiteSpace(targetModId)
+                ? ResolveUniqueMapLoadOrder(root, mods, mapId)
+                : ResolveLoadOrder(mods, targetModId!);
+            var roots = new List<string>(1 + loadOrder.Count) { root };
+            var byId = mods.ToDictionary(mod => mod.Id, StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < loadOrder.Count; i++) roots.Add(byId[loadOrder[i]].RootPath);
+            return roots;
         }
 
         public static int RequireGridCellSizeCm(BoardConfig board)

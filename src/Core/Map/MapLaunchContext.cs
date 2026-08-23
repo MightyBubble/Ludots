@@ -67,13 +67,29 @@ namespace Ludots.Core.Map
         }
     }
 
-    public readonly record struct MapLoadRequest(MapId MapId, MapLaunchContext? LaunchContext = null)
+    public readonly record struct MapLoadRequest(
+        MapId MapId,
+        MapLaunchContext? LaunchContext = null,
+        string? BoardName = null)
     {
         public static MapLoadRequest FromMapId(string mapId) => new(new MapId(mapId));
 
         public static MapLoadRequest FromMapId(string mapId, MapLaunchContext? launchContext) =>
             new(new MapId(mapId), launchContext);
 
+        public static MapLoadRequest FromMapId(string mapId, string boardName) =>
+            new(new MapId(mapId), null, RequireBoardName(boardName));
+
+        public static MapLoadRequest FromMapId(string mapId, MapLaunchContext? launchContext, string? boardName) =>
+            new(new MapId(mapId), launchContext, NormalizeBoardName(boardName));
+
         public string MapIdValue => MapId.Value;
+
+        private static string? NormalizeBoardName(string? boardName)
+            => string.IsNullOrWhiteSpace(boardName) ? null : boardName.Trim();
+
+        private static string RequireBoardName(string boardName)
+            => NormalizeBoardName(boardName)
+                ?? throw new ArgumentException("Board name is required.", nameof(boardName));
     }
 }

@@ -2228,11 +2228,19 @@ namespace Ludots.Core.Engine
             if (mapConfig != null)
             {
                 var previousFocused = MapSessions.FocusedSession;
-                IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+                var navigationBoardsForVisuals = mapConfig.Boards?.Where(board => board != null && board.NavigationEnabled).ToList();
+                BoardConfig? requestedBoard = !string.IsNullOrWhiteSpace(request.BoardName)
+                    ? navigationBoardsForVisuals?.FirstOrDefault(board =>
+                        string.Equals(board.Name, request.BoardName.Trim(), StringComparison.Ordinal))
+                    : navigationBoardsForVisuals?.Count == 1 ? navigationBoardsForVisuals[0] : null;
+                IVisualHeightmap? visualHeightmap = requestedBoard != null
+                    ? MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig, requestedBoard)
+                    : MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
                 StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                session.NavigationBoardName = request.BoardName;
                 WireMapVariablePhaseDispatcher(session);
                 // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
                 session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
@@ -2261,7 +2269,7 @@ namespace Ludots.Core.Engine
                     LoadBoardTerrainData(session, mapConfig);
                 }
 
-                LoadNavForMap(mapId, mapConfig);
+                LoadNavForMap(mapId, mapConfig, request.BoardName);
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
@@ -2382,7 +2390,7 @@ namespace Ludots.Core.Engine
         /// <summary>
         /// Push a nested inner map (三国志12 mode). Outer map is suspended, inner map becomes active.
         /// </summary>
-        public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
+        public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null, string? boardName = null)
         {
             MapSessionManager mapSessions = EnsureMapSessionInfrastructure();
 
@@ -2396,12 +2404,20 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+            var navigationBoardsForVisuals = mapConfig.Boards?.Where(board => board != null && board.NavigationEnabled).ToList();
+            BoardConfig? requestedBoard = !string.IsNullOrWhiteSpace(boardName)
+                ? navigationBoardsForVisuals?.FirstOrDefault(board =>
+                    string.Equals(board.Name, boardName.Trim(), StringComparison.Ordinal))
+                : navigationBoardsForVisuals?.Count == 1 ? navigationBoardsForVisuals[0] : null;
+            IVisualHeightmap? visualHeightmap = requestedBoard != null
+                ? MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig, requestedBoard)
+                : MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
             StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
+            session.NavigationBoardName = string.IsNullOrWhiteSpace(boardName) ? null : boardName.Trim();
             WireMapVariablePhaseDispatcher(session);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
@@ -2434,7 +2450,7 @@ namespace Ludots.Core.Engine
             {
                 ApplyBoardSpatialConfig(primaryBoard);
                 LoadBoardTerrainData(session, mapConfig);
-                LoadNavForMap(innerMapId, mapConfig);
+                LoadNavForMap(innerMapId, mapConfig, session.NavigationBoardName);
             }
             LoadPathingForSession(session);
 
@@ -3037,7 +3053,7 @@ namespace Ludots.Core.Engine
                 $"Unknown GroundOverlay shape '{key}'. Expected Circle, Cone, Line, or Ring.");
         }
 
-        private void LoadNavForMap(string mapId, MapConfig mapConfig)
+        private void LoadNavForMap(string mapId, MapConfig mapConfig, string? boardName)
         {
             ClearNavServices();
 
@@ -3053,24 +3069,7 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            BoardConfig navBoard = null;
-            if (mapConfig.Boards != null)
-            {
-                for (int i = 0; i < mapConfig.Boards.Count; i++)
-                {
-                    BoardConfig candidate = mapConfig.Boards[i];
-                    if (candidate != null && candidate.NavigationEnabled)
-                    {
-                        navBoard = candidate;
-                        break;
-                    }
-                }
-            }
-
-            if (navBoard == null)
-            {
-                throw new InvalidOperationException($"NavMesh enabled for map '{mapId}' but no NavigationEnabled board is declared.");
-            }
+            BoardConfig navBoard = NavBakeBoardSelector.Resolve(mapConfig, boardName);
 
             NavBakePolicy policy = NavBakePolicyValidator.Require(navBoard);
             IVisualHeightmap? continuousHeightmap = null;
@@ -3137,18 +3136,18 @@ namespace Ludots.Core.Engine
             {
                 var runtimeObstacles = new NavObstacleSet();
                 NavObstacleSet authoredObstacles = new NavObstacleSet();
-                if (string.Equals(policy.StaticObstacleSource, NavBakeSourceKinds.MapEntities, StringComparison.Ordinal))
+                if (policy.UsesMapEntityObstacles)
                 {
                     authoredObstacles = BuildRuntimeNavMeshAuthoredObstacles(mapConfig, bakeConfig.Layers[0].Id);
                     runtimeObstacles.Obstacles.AddRange(authoredObstacles.Obstacles);
                     SetService(CoreServiceKeys.RuntimeNavMeshAuthoredObstacles, authoredObstacles);
                 }
-                _ = new NavBakeInput(
+                var bakeInput = new NavBakeInput(
                     navBoard,
                     LogicTerrain,
                     continuousHeightmap,
                     authoredObstacles,
-                    string.Equals(policy.RuntimeObstacleSource, NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal)
+                    policy.UsesRuntimeEntityObstacles
                         ? runtimeObstacles
                         : new NavObstacleSet());
                 SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
@@ -3157,6 +3156,8 @@ namespace Ludots.Core.Engine
                     MapId = mapId,
                     ModId = string.Empty,
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
+                    Input = bakeInput,
+                    Policy = bakeInput.Policy,
                     Terrain = LogicTerrain,
                     ContinuousHeightmap = continuousHeightmap,
                     Obstacles = runtimeObstacles,
@@ -3185,9 +3186,9 @@ namespace Ludots.Core.Engine
             }
         }
 
-        internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
+        internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig, string? boardName = null)
         {
-            LoadNavForMap(mapId, mapConfig);
+            LoadNavForMap(mapId, mapConfig, boardName);
         }
 
         private NavObstacleSet BuildRuntimeNavMeshAuthoredObstacles(MapConfig mapConfig, string layerId)

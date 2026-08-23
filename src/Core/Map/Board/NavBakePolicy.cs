@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using Ludots.Core.Config;
 
 namespace Ludots.Core.Map.Board
 {
@@ -42,6 +44,14 @@ namespace Ludots.Core.Map.Board
                 RuntimeObstacleSource = RuntimeObstacleSource
             };
         }
+
+        public bool UsesContinuousHeightmap => string.Equals(HeightSource, NavBakeSourceKinds.ContinuousHeightmap, StringComparison.Ordinal);
+
+        public bool UsesBoardLogicTerrainHeight => string.Equals(HeightSource, NavBakeSourceKinds.BoardLogicTerrain, StringComparison.Ordinal);
+
+        public bool UsesMapEntityObstacles => string.Equals(StaticObstacleSource, NavBakeSourceKinds.MapEntities, StringComparison.Ordinal);
+
+        public bool UsesRuntimeEntityObstacles => string.Equals(RuntimeObstacleSource, NavBakeSourceKinds.RuntimeEntities, StringComparison.Ordinal);
     }
 
     public static class NavBakePolicyValidator
@@ -98,7 +108,6 @@ namespace Ludots.Core.Map.Board
                 throw new InvalidOperationException(
                     $"Board '{board.Name}' selects continuous-heightmap but VisualHeightmapAsset is empty.");
             }
-
         }
 
         public static NavBakePolicy Require(BoardConfig board)
@@ -146,5 +155,29 @@ namespace Ludots.Core.Map.Board
         private static bool IsNodeGraph(string spatialType)
             => string.Equals(spatialType, "NodeGraph", StringComparison.OrdinalIgnoreCase);
 
+    }
+
+    public static class NavBakeBoardSelector
+    {
+        public static BoardConfig Resolve(MapConfig map, string? boardName)
+        {
+            ArgumentNullException.ThrowIfNull(map);
+            var boards = map.Boards ?? throw new InvalidOperationException($"Map '{map.Id}' has no boards.");
+            var navigationBoards = boards.Where(board => board != null && board.NavigationEnabled).ToList();
+
+            if (!string.IsNullOrWhiteSpace(boardName))
+            {
+                string requested = boardName.Trim();
+                return navigationBoards.FirstOrDefault(board => string.Equals(board.Name, requested, StringComparison.Ordinal))
+                    ?? throw new InvalidOperationException($"Map '{map.Id}' has no navigation-enabled board named '{requested}'.");
+            }
+
+            return navigationBoards.Count switch
+            {
+                0 => throw new InvalidOperationException($"NavMesh enabled for map '{map.Id}' but no NavigationEnabled board is declared."),
+                1 => navigationBoards[0],
+                _ => throw new InvalidOperationException($"Map '{map.Id}' has {navigationBoards.Count} navigation-enabled boards. An explicit boardName is required.")
+            };
+        }
     }
 }
