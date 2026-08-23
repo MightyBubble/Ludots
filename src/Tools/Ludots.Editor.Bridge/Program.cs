@@ -1610,6 +1610,7 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
             linearInputPorts = descriptor.LinearInputPorts,
             queryInputPorts = descriptor.QueryInputPorts,
             scriptInputPorts = descriptor.ScriptInputPorts,
+            controlOutputPorts = ControlOutputPorts(op),
             dstRole = descriptor.DstRole.ToString(),
             flagsRole = descriptor.FlagsRole.ToString(),
             immRole = descriptor.ImmRole.ToString(),
@@ -1618,8 +1619,52 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
     }
 
     var authoringSugars = new List<object>();
+    if (graphKind is GraphKind.Script or GraphKind.Effect or GraphKind.TriggerGraph)
+    {
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.BranchBool,
+            controlOutputPorts = new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
+            valueInputPorts = new[] { GraphControlFlowPorts.Condition },
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.JumpIfFalse.ToString(),
+        });
+    }
+
     if (graphKind is GraphKind.Script or GraphKind.TriggerGraph)
     {
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.SwitchInt,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Default },
+            valueInputPorts = new[] { GraphControlFlowPorts.Selector },
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.CompareEqInt.ToString(),
+        });
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.Wait,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Next },
+            valueInputPorts = Array.Empty<string>(),
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.Yield.ToString(),
+        });
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.While,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Body, GraphControlFlowPorts.Next },
+            valueInputPorts = new[] { GraphControlFlowPorts.Condition },
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.JumpIfFalse.ToString(),
+        });
+        authoringSugars.Add(new
+        {
+            op = GraphAuthoringSugar.Until,
+            controlOutputPorts = new[] { GraphControlFlowPorts.Body, GraphControlFlowPorts.Next },
+            valueInputPorts = new[] { GraphControlFlowPorts.Condition },
+            outputType = GraphValueType.Void.ToString(),
+            lowersTo = GraphNodeOp.JumpIfFalse.ToString(),
+        });
         authoringSugars.Add(new
         {
             op = GraphAuthoringSugar.Break,
@@ -1632,6 +1677,16 @@ app.MapGet("/api/graph/descriptors/{kind}", (string kind) =>
 
     return Results.Ok(new { ok = true, kind = graphKind.ToString(), descriptors, authoringSugars });
 });
+
+static string[] ControlOutputPorts(GraphNodeOp op)
+    => op switch
+    {
+        GraphNodeOp.Jump => new[] { GraphControlFlowPorts.Target },
+        GraphNodeOp.Call => new[] { GraphControlFlowPorts.Call, GraphControlFlowPorts.Next },
+        GraphNodeOp.JumpIfFalse => new[] { GraphControlFlowPorts.True, GraphControlFlowPorts.False },
+        GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => Array.Empty<string>(),
+        _ => new[] { GraphControlFlowPorts.Next },
+    };
 
 app.MapGet("/api/mods/{modId}/gas/graph-editor/{graphId}", (string modId, string graphId) =>
 {

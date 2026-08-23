@@ -11,7 +11,7 @@ namespace Ludots.Tests.Gas.Graph
     public void DisabledTraceDoesNotAdvanceSequence()
     {
         var trace = new GraphDebugTrace(2);
-        trace.RecordNode(1, 2, 1, GraphDebugTraceEvent.NodeEnter);
+        trace.RecordNode(7, 1, 2, 1, GraphDebugTraceEvent.NodeEnter);
 
         NUnit.Framework.Assert.That(trace.LatestSequence, Is.EqualTo(0));
         NUnit.Framework.Assert.That(trace.DroppedCount, Is.EqualTo(0));
@@ -22,9 +22,9 @@ namespace Ludots.Tests.Gas.Graph
     {
         var trace = new GraphDebugTrace(2);
         trace.Configure(GraphDebugTraceMode.NodeAndPins);
-        trace.RecordNode(1, 2, 1, GraphDebugTraceEvent.NodeEnter);
-        trace.RecordIntPin(2, 0, 7, 2, 2);
-        trace.RecordEntityPin(3, 1, Entity.Null, 3, 3);
+        trace.RecordNode(7, 1, 2, 1, GraphDebugTraceEvent.NodeEnter);
+        trace.RecordIntPin(7, 2, 0, 7, 2, 2);
+        trace.RecordEntityPin(9, 3, 1, Entity.Null, 3, 3);
 
         var records = new GraphDebugTraceRecord[4];
         int count = trace.ReadSince(0, records, out long oldest);

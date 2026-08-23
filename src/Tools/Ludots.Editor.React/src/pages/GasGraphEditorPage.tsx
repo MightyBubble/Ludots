@@ -24,9 +24,13 @@ type GraphNodeConfig = {
   op: string;
   next?: string | null;
   inputs?: string[];
+  graphId?: number;
+  functionName?: string | null;
   teamId?: number;
   attribute?: string | null;
   tag?: string | null;
+  lookupTable?: string | null;
+  lookupField?: string | null;
   collectionKey?: string | null;
   effectTemplate?: string | null;
   floatValue?: number;
@@ -59,9 +63,15 @@ type GraphNodeConfig = {
   validOutput?: string | null;
   droppedOutput?: string | null;
   queryCapacityPolicy?: string | null;
+  panelType?: string | null;
+  panelAnchor?: string | null;
+  panelSkin?: string | null;
+  panelZOrder?: number | null;
+  var?: string | null;
+  pinRegister?: number;
 };
 
-type GasNodeData = GraphNodeConfig & { label: string; descriptor?: GraphDescriptor; sugar?: GraphSugarDescriptor };
+type GasNodeData = GraphNodeConfig & { label: string; descriptor?: GraphDescriptor; sugar?: GraphSugarDescriptor; controlOutputPorts?: string[] };
 
 type GraphDescriptor = {
   op: string;
@@ -71,6 +81,7 @@ type GraphDescriptor = {
   linearInputPorts: string[];
   queryInputPorts: string[];
   scriptInputPorts: string[];
+  controlOutputPorts: string[];
   dstRole: string;
   flagsRole: string;
   immRole: string;
@@ -135,10 +146,27 @@ type GraphOutputConfig = {
   key?: string;
 };
 
+type GraphEntryConfig = {
+  label: string;
+  event: string;
+  start: string;
+  once?: boolean;
+  refire?: string | null;
+  filters?: {
+    region?: string | null;
+    tag?: string | null;
+    team?: number | null;
+    threshold?: number | null;
+    direction?: string | null;
+    action?: string | null;
+  } | null;
+};
+
 type GraphConfig = {
   id: string;
   kind: string;
   entry: string;
+  entries?: GraphEntryConfig[];
   nodes: GraphNodeConfig[];
   controlEdges?: GraphControlEdgeConfig[];
   valueEdges?: GraphValueEdgeConfig[];
@@ -203,7 +231,16 @@ function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
         {valueOutput ? <span className="rounded bg-violet-950 px-1 text-violet-300">{valueOutput}</span> : null}
         {inputPorts.map((port) => <span key={port} className="rounded bg-emerald-950 px-1 text-emerald-300">{port}</span>)}
       </div>
-      <Handle id={sugar?.controlOutputPorts[0] ?? 'next'} type="source" position={Position.Right} className="!top-4 !bg-sky-400" />
+      {(data.controlOutputPorts ?? []).map((port, index) => (
+        <Handle
+          key={port}
+          id={port}
+          type="source"
+          position={Position.Right}
+          style={{ top: 16 + index * 18 }}
+          className="!bg-sky-400"
+        />
+      ))}
       {valueOutput ? (
         <Handle id={valueOutput} type="source" position={Position.Right} className="!top-12 !bg-violet-400" />
       ) : null}
@@ -228,11 +265,15 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
   return omitUndefined({
     id: n.id,
     op: n.op,
+    graphId: n.graphId,
+    functionName: n.functionName ?? undefined,
     next: n.next ?? undefined,
     inputs: n.inputs && n.inputs.length > 0 ? n.inputs : undefined,
     teamId: n.teamId,
     attribute: n.attribute ?? undefined,
     tag: n.tag ?? undefined,
+    lookupTable: n.lookupTable ?? undefined,
+    lookupField: n.lookupField ?? undefined,
     collectionKey: n.collectionKey ?? undefined,
     effectTemplate: n.effectTemplate ?? undefined,
     floatValue: n.floatValue,
@@ -265,6 +306,12 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
     validOutput: n.validOutput ?? undefined,
     droppedOutput: n.droppedOutput ?? undefined,
     queryCapacityPolicy: n.queryCapacityPolicy ?? undefined,
+    panelType: n.panelType ?? undefined,
+    panelAnchor: n.panelAnchor ?? undefined,
+    panelSkin: n.panelSkin ?? undefined,
+    panelZOrder: n.panelZOrder,
+    var: n.var ?? undefined,
+    pinRegister: n.pinRegister,
   });
 }
 
@@ -272,8 +319,14 @@ function isControlFlowGraph(graph: GraphConfig): boolean {
   return Array.isArray(graph.controlEdges) || Array.isArray(graph.valueEdges);
 }
 
+function resolveControlOutputPorts(op: string, descriptor?: GraphDescriptor, sugar?: GraphSugarDescriptor): string[] {
+  if (sugar) return sugar.controlOutputPorts;
+  if (descriptor) return descriptor.controlOutputPorts;
+  throw new Error(`Descriptor missing for graph op '${op}'.`);
+}
+
 function edgeLabel(edge: Edge<GasEdgeData>): string {
-  if (edge.data?.kind === 'control') return String(edge.sourceHandle ?? 'next');
+  if (edge.data?.kind === 'control') return String(edge.sourceHandle ?? '');
   return `${String(edge.sourceHandle ?? '')} -> ${String(edge.targetHandle ?? '')}`;
 }
 
@@ -283,11 +336,24 @@ function graphToFlow(
   sugars: Record<string, GraphSugarDescriptor> = {},
   layout: EditorLayout = {},
 ): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
+  const switchPorts = new Map<string, string[]>();
+  for (const edge of graph.controlEdges ?? []) {
+    if (!edge.fromPort.startsWith('case:')) continue;
+    const ports = switchPorts.get(edge.from) ?? [];
+    if (!ports.includes(edge.fromPort)) ports.push(edge.fromPort);
+    switchPorts.set(edge.from, ports);
+  }
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => ({
     id: n.id,
     type: 'gas',
     position: layout.nodes?.[n.id] ?? { x: 40 + index * 220, y: 80 + (index % 2) * 40 },
-    data: { ...n, label: n.id, descriptor: descriptors[n.op], sugar: sugars[n.op] },
+    data: {
+      ...n,
+      label: n.id,
+      descriptor: descriptors[n.op],
+      sugar: sugars[n.op],
+      controlOutputPorts: [...resolveControlOutputPorts(n.op, descriptors[n.op], sugars[n.op]), ...(switchPorts.get(n.id) ?? [])],
+    },
   }));
 
   const edges: Edge<GasEdgeData>[] = [];
@@ -367,6 +433,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       id: graph.id,
       kind: graph.kind,
       entry: graph.entry,
+      entries: graph.entries,
       nodes: wireNodes.map((n) => {
         const rest = { ...n };
         delete rest.next;
@@ -375,11 +442,10 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
       }),
       controlEdges: edges
         .filter((edge) => edge.data?.kind === 'control')
-        .map((edge) => ({
-          from: edge.source,
-          fromPort: String(edge.sourceHandle ?? 'next'),
-          to: edge.target,
-        })),
+        .map((edge) => {
+          if (!edge.sourceHandle) throw new Error(`Control edge '${edge.id}' is missing a source port.`);
+          return { from: edge.source, fromPort: edge.sourceHandle, to: edge.target };
+        }),
       valueEdges: edges
         .filter((edge) => edge.data?.kind === 'value')
         .map((edge) => ({
@@ -397,6 +463,7 @@ function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge
     kind: graph.kind,
     entry: graph.entry,
     outputs: graph.outputs,
+    entries: graph.entries,
     nodes: wireNodes,
   };
 }
@@ -422,6 +489,8 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  const [switchCaseValue, setSwitchCaseValue] = React.useState('0');
+  const [switchCaseTarget, setSwitchCaseTarget] = React.useState('');
   const debugPollInFlight = React.useRef(false);
 
   const selectedNode = React.useMemo(
@@ -460,6 +529,9 @@ export const GasGraphEditorPage: React.FC = () => {
       }
       const nextDescriptors: Record<string, GraphDescriptor> = {};
       for (const descriptor of (descriptorPayload.descriptors ?? []) as GraphDescriptor[]) {
+        if (!descriptor.op || !Array.isArray(descriptor.controlOutputPorts)) {
+          throw new Error('Descriptor response is missing control output ports.');
+        }
         nextDescriptors[descriptor.op] = descriptor;
       }
       const nextSugars: Record<string, GraphSugarDescriptor> = {};
@@ -562,6 +634,34 @@ export const GasGraphEditorPage: React.FC = () => {
     }, prev));
   }, []);
 
+  const addSwitchCase = React.useCallback(() => {
+    if (!selectedNodeId || !graph || !isControlFlowGraph(graph) || selectedData?.op !== 'SwitchInt') return;
+    const caseValue = Number.parseInt(switchCaseValue, 10);
+    if (!Number.isInteger(caseValue) || !switchCaseTarget || !nodes.some((node) => node.id === switchCaseTarget)) {
+      setStatus('SwitchInt case requires an integer value and an existing target node.');
+      return;
+    }
+    const sourceHandle = `case:${caseValue}`;
+    if (edges.some((edge) => edge.source === selectedNodeId && edge.sourceHandle === sourceHandle)) {
+      setStatus(`SwitchInt case '${sourceHandle}' already exists.`);
+      return;
+    }
+    setEdges((previous) => addEdge({
+      id: `control:${selectedNodeId}:${sourceHandle}:${switchCaseTarget}:control-in`,
+      source: selectedNodeId,
+      sourceHandle,
+      target: switchCaseTarget,
+      targetHandle: 'control-in',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      label: sourceHandle,
+      data: { kind: 'control' },
+    }, previous));
+    setNodes((previous) => previous.map((node) => node.id !== selectedNodeId
+      ? node
+      : { ...node, data: { ...node.data, controlOutputPorts: [...new Set([...(node.data.controlOutputPorts ?? []), sourceHandle])] } }));
+    setStatus(`Added SwitchInt ${sourceHandle} -> ${switchCaseTarget}.`);
+  }, [edges, graph, nodes, selectedData?.op, selectedNodeId, switchCaseTarget, switchCaseValue]);
+
   const availableNodes = React.useMemo(() => {
     const entries = [
       ...Object.values(descriptors).map((descriptor) => ({ op: descriptor.op, descriptor, sugar: undefined })),
@@ -584,7 +684,14 @@ export const GasGraphEditorPage: React.FC = () => {
       id,
       type: 'gas',
       position: { x: 80 + (nodes.length % 3) * 240, y: 120 + Math.floor(nodes.length / 3) * 150 },
-      data: { id, op, label: id, descriptor: descriptors[op], sugar: sugars[op] },
+      data: {
+        id,
+        op,
+        label: id,
+        descriptor: descriptors[op],
+        sugar: sugars[op],
+        controlOutputPorts: resolveControlOutputPorts(op, descriptors[op], sugars[op]),
+      },
     };
     setNodes((previous) => [...previous, next]);
     setSelectedNodeId(id);
@@ -929,6 +1036,41 @@ export const GasGraphEditorPage: React.FC = () => {
                         ? selectedData.descriptor.queryOutputType
                         : selectedData.descriptor.linearOutputType}
                     </div>
+                  </div>
+                ) : null}
+                {selectedData.op === 'SwitchInt' && graph && isControlFlowGraph(graph) ? (
+                  <div className="space-y-2 rounded border border-sky-900 bg-sky-950/30 p-2">
+                    <div className="text-sky-300">Switch cases</div>
+                    <label className="block">
+                      <div className="mb-1 text-slate-500">Case value</div>
+                      <input
+                        type="number"
+                        step="1"
+                        value={switchCaseValue}
+                        onChange={(event) => setSwitchCaseValue(event.target.value)}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      />
+                    </label>
+                    <label className="block">
+                      <div className="mb-1 text-slate-500">Target node</div>
+                      <select
+                        value={switchCaseTarget}
+                        onChange={(event) => setSwitchCaseTarget(event.target.value)}
+                        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                      >
+                        <option value="">Select target</option>
+                        {nodes.filter((node) => node.id !== selectedNodeId).map((node) => (
+                          <option key={node.id} value={node.id}>{node.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addSwitchCase}
+                      className="w-full rounded bg-sky-700 px-2 py-1 font-semibold text-sky-50 hover:bg-sky-600"
+                    >
+                      Add case edge
+                    </button>
                   </div>
                 ) : null}
                 {!graph || !isControlFlowGraph(graph) ? (

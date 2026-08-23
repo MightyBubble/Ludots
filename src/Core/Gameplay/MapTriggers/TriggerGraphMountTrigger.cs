@@ -296,7 +296,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ref _cursor,
                 TriggerGraphLimits.SliceBudgetSteps,
                 GraphKind.Script,
-                _debugTrace);
+                _debugTrace,
+                _graphId);
             LastSliceResult = result;
 
             RecordDebugTrace(result);
@@ -333,11 +334,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             if (result.Halted)
             {
-                _debugTrace.RecordNode(sourcePc, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Halted);
+                _debugTrace.RecordNode(_graphId, sourcePc, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Halted);
             }
             else if (result.Yielded || result.BudgetSuspended)
             {
-                _debugTrace.RecordNode(sourcePc, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Suspended);
+                _debugTrace.RecordNode(_graphId, sourcePc, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Suspended);
             }
 
             if (_debugTrace.Mode != GraphDebugTraceMode.NodeAndPins)
@@ -349,7 +350,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmIntRegisters[i] != _previousIntRegisters[i])
                 {
-                    _debugTrace.RecordIntPin(sourcePc, i, _vmIntRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordIntPin(_graphId, sourcePc, i, _vmIntRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousIntRegisters[i] = _vmIntRegisters[i];
                 }
             }
@@ -358,7 +359,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmBoolRegisters[i] != _previousBoolRegisters[i])
                 {
-                    _debugTrace.RecordBoolPin(sourcePc, i, _vmBoolRegisters[i] != 0, _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordBoolPin(_graphId, sourcePc, i, _vmBoolRegisters[i] != 0, _cursor.Pc, _cursor.Steps);
                     _previousBoolRegisters[i] = _vmBoolRegisters[i];
                 }
             }
@@ -367,7 +368,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmFloatRegisters[i] != _previousFloatRegisters[i])
                 {
-                    _debugTrace.RecordFloatPin(sourcePc, i, _vmFloatRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordFloatPin(_graphId, sourcePc, i, _vmFloatRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousFloatRegisters[i] = _vmFloatRegisters[i];
                 }
             }
@@ -376,7 +377,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmEntityRegisters[i] != _previousEntityRegisters[i])
                 {
-                    _debugTrace.RecordEntityPin(sourcePc, i, _vmEntityRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordEntityPin(_graphId, sourcePc, i, _vmEntityRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousEntityRegisters[i] = _vmEntityRegisters[i];
                 }
             }
