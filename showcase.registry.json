@@ -6974,6 +6974,26 @@
       "screenshot": null,
       "status": "active",
       "notes": "截图证据待 CI 验收产物补录"
+    },
+    {
+      "id": "navmesh_runtime_gate_showcase",
+      "path": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod",
+      "title": "Navmesh 运行时更新·隘口封锁",
+      "summary": "一支小队穿越山谷隘口，城门落下的瞬间 navmesh 增量重烤并全队改道：绿折线断裂、黄新路径绕山、脏瓦片橙框闪烁；F 键冻结重烤即为消融对照（旧路径直穿城门）。",
+      "tier": "T1",
+      "category": "capability",
+      "binding": "nav_gate",
+      "preset": "nav_gate_raylib",
+      "docsPath": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod/README.md",
+      "acceptanceTest": "NavGateShowcaseContractTests",
+      "status": "active",
+      "tags": [
+        "navmesh",
+        "runtime-update",
+        "recast",
+        "vhtm",
+        "showcase"
+      ]
     }
   ]
 }

@@ -144,6 +144,7 @@ namespace Ludots.Tool
             var navInOption = new Option<string>("--in", "Input .vtxm path") { IsRequired = true };
             var navOutDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Nav)");
             var navHeightScaleOption = new Option<float>("--heightScale", () => 2.0f, "Height scale in meters per height unit");
+            var navHeightStepOption = new Option<int>("--heightStep", () => SpatialScaleDefaults.CellCm, "VisualHeightmap projection quantization step in cm");
             var navMinUpDotOption = new Option<float>("--minUpDot", () => 0.6f, "Triangle walkability threshold by normal.Y");
             var navCliffThresholdOption = new Option<int>("--cliffThreshold", () => 1, "Max height delta allowed for non-ramp base triangles");
             var navArtifactOption = new Option<bool>("--artifact", () => true, "Write BakeArtifact json for each tile");
@@ -255,6 +256,7 @@ namespace Ludots.Tool
             bakeVhtmNavCommand.AddOption(reactIncludeNeighborsOption);
             bakeVhtmNavCommand.AddOption(navOutDirOption);
             bakeVhtmNavCommand.AddOption(navHeightScaleOption);
+            bakeVhtmNavCommand.AddOption(navHeightStepOption);
             bakeVhtmNavCommand.AddOption(navMinUpDotOption);
             bakeVhtmNavCommand.AddOption(navCliffThresholdOption);
             bakeVhtmNavCommand.AddOption(navArtifactOption);
@@ -280,7 +282,8 @@ namespace Ludots.Tool
                 var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
                 var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
                 var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
-                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
+                var heightStep = ctx.ParseResult.GetValueForOption(navHeightStepOption);
+                ctx.ExitCode = BakeNavFromVhtm(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, heightStep, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
             });
             navCommand.AddCommand(bakeVhtmNavCommand);
 
@@ -656,6 +659,7 @@ namespace {modId}
             bool includeNeighbors,
             string? outDir,
             float heightScale,
+            int heightStep,
             float minUpDot,
             int cliffThreshold,
             bool writeArtifact,
@@ -675,6 +679,7 @@ namespace {modId}
                     includeNeighbors,
                     outDir,
                     heightScale,
+                    heightStep,
                     minUpDot,
                     cliffThreshold,
                     parallel,
@@ -715,6 +720,7 @@ namespace {modId}
             bool includeNeighbors,
             string? outDir,
             float heightScale,
+            int heightStep,
             float minUpDot,
             int cliffThreshold,
             bool parallel,
@@ -793,7 +799,7 @@ namespace {modId}
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions.Default);
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStep));
 
             IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath))

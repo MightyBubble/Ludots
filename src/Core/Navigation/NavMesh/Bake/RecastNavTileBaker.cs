@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Ludots.Core.Spatial;
 using DotRecast.Core;
 using DotRecast.Core.Numerics;
 using DotRecast.Detour;
@@ -49,6 +50,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
     public static class RecastNavTileBaker
     {
+        private const float CmPerMeter = SpatialScaleDefaults.CellCm;
+
         public static bool TryBake(
             VertexMap map,
             int chunkX,
@@ -205,8 +208,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return 0;
             }
 
-            int localXcm = (int)MathF.Round((sx / count) * 100f) - baseTile.OriginXcm;
-            int localZcm = (int)MathF.Round((sz / count) * 100f) - baseTile.OriginZcm;
+            int localXcm = (int)MathF.Round((sx / count) * CmPerMeter) - baseTile.OriginXcm;
+            int localZcm = (int)MathF.Round((sz / count) * CmPerMeter) - baseTile.OriginZcm;
 
             for (int i = 0; i < baseTile.TriangleCount; i++)
             {
@@ -292,9 +295,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 detailVertsCount = dmesh.nverts,
                 detailTris = dmesh.tris,
                 detailTriCount = dmesh.ntris,
-                walkableHeight = agentProfile.HeightCm / 100f,
-                walkableRadius = agentProfile.RadiusCm / 100f,
-                walkableClimb = navProfile.MaxClimbCm / 100f,
+                walkableHeight = agentProfile.HeightCm / CmPerMeter,
+                walkableRadius = agentProfile.RadiusCm / CmPerMeter,
+                walkableClimb = navProfile.MaxClimbCm / CmPerMeter,
                 bmin = new RcVec3f(tileBmin.X, pmesh.bmin.Y, tileBmin.Z),
                 bmax = new RcVec3f(tileBmax.X, pmesh.bmax.Y, tileBmax.Z),
                 cs = pmesh.cs,
@@ -369,9 +372,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             float tileMaxX,
             float tileMaxZ)
         {
-            float radius = agentProfile.RadiusCm / 100f;
-            float height = agentProfile.HeightCm / 100f;
-            float maxClimb = navProfile.MaxClimbCm / 100f;
+            float radius = agentProfile.RadiusCm / CmPerMeter;
+            float height = agentProfile.HeightCm / CmPerMeter;
+            float maxClimb = navProfile.MaxClimbCm / CmPerMeter;
             float maxSlope = navProfile.MaxSlopeDeg;
 
             float cellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
@@ -380,6 +383,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int tileSizeZ = Math.Max(1, (int)MathF.Ceiling((tileMaxZ - tileMinZ) / cellSize));
             int borderSize = RcConfig.CalcBorder(radius, cellSize);
 
+            // detail 采样参数是运行时重烤的稳定性约束（NAV-R2）：采样间距过细 +
+            // 误差阈值过紧时，BuildPolyDetail 的逐样例插入循环在大多边形上呈平方级
+            // 膨胀，量化地形上误差永难收敛 → 单瓦分钟级阻塞。hull 顶点高度本就精确，
+            // 粗间距 + 宽误差只损失面内高度细化，不影响寻路拓扑。sampleDist=0 会令
+            // 部分多边形 detail 为空、Detour 序列化越界，故必须保持非零。
             return new RcConfig(
                 true,
                 tileSizeX,
@@ -392,7 +400,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 20 * 20 * cellSize * cellSize,
                 12f, 1.3f,
                 6,
-                6f, 1f,
+                16f, 4f,
                 true, true, true,
                 new RcAreaModification(RcRecast.RC_WALKABLE_AREA), true);
         }
@@ -441,7 +449,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private static float GetTerrainCellStepMeters(LogicTerrainField terrain)
         {
             int stepCm = Math.Max(1, Math.Min(terrain.HorizontalStepCm, terrain.VerticalStepCm));
-            return stepCm / 100f;
+            return stepCm / CmPerMeter;
         }
 
         private static void AppendRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, string layerId, List<float> verts, List<int> tris)
@@ -450,9 +458,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int vCount = baseTile.VertexCount;
             for (int i = 0; i < vCount; i++)
             {
-                verts.Add((baseTile.OriginXcm + baseTile.VertexXcm[i]) / 100f);
-                verts.Add(baseTile.VertexYcm[i] / 100f);
-                verts.Add((baseTile.OriginZcm + baseTile.VertexZcm[i]) / 100f);
+                verts.Add((baseTile.OriginXcm + baseTile.VertexXcm[i]) / CmPerMeter);
+                verts.Add(baseTile.VertexYcm[i] / CmPerMeter);
+                verts.Add((baseTile.OriginZcm + baseTile.VertexZcm[i]) / CmPerMeter);
             }
 
             for (int i = 0; i < baseTile.TriangleCount; i++)
@@ -643,9 +651,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             float wy = detail.verts[vi + 1];
             float wz = detail.verts[vi + 2];
 
-            int worldXcm = (int)MathF.Round(wx * 100f);
-            int worldYcm = (int)MathF.Round(wy * 100f);
-            int worldZcm = (int)MathF.Round(wz * 100f);
+            int worldXcm = (int)MathF.Round(wx * CmPerMeter);
+            int worldYcm = (int)MathF.Round(wy * CmPerMeter);
+            int worldZcm = (int)MathF.Round(wz * CmPerMeter);
 
             int localXcm = worldXcm - baseTile.OriginXcm;
             int localZcm = worldZcm - baseTile.OriginZcm;

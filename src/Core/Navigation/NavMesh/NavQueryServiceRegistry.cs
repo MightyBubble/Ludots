@@ -22,11 +22,31 @@ namespace Ludots.Core.Navigation.NavMesh
     public sealed class NavQueryServiceRegistry
     {
         private readonly Dictionary<NavQueryServiceKey, NavTileStore> _stores;
+        private readonly int _tileWidthCm;
+        private readonly int _tileHeightCm;
 
+        /// <summary>
+        /// 兼容旧调用：瓦片尺寸退回 NavQueryService 的六边形默认——仅适用于
+        /// Hex 拓扑地图；Grid 拓扑必须用带尺寸重载，否则世界→瓦片映射错位。
+        /// </summary>
         public NavQueryServiceRegistry(Dictionary<NavQueryServiceKey, NavTileStore> stores)
         {
             _stores = stores ?? throw new ArgumentNullException(nameof(stores));
+            _tileWidthCm = 0;
+            _tileHeightCm = 0;
         }
+
+        public NavQueryServiceRegistry(Dictionary<NavQueryServiceKey, NavTileStore> stores, int tileWidthCm, int tileHeightCm)
+        {
+            _stores = stores ?? throw new ArgumentNullException(nameof(stores));
+            if (tileWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCm));
+            if (tileHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCm));
+            _tileWidthCm = tileWidthCm;
+            _tileHeightCm = tileHeightCm;
+        }
+
+        public int TileWidthCm => _tileWidthCm;
+        public int TileHeightCm => _tileHeightCm;
 
         public bool TryGetStore(int layer, int profile, out NavTileStore store)
         {
@@ -37,7 +57,9 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             if (TryGetStore(layer, profile, out var store))
             {
-                service = new NavQueryService(store, layer, areaCosts);
+                service = _tileWidthCm > 0 && _tileHeightCm > 0
+                    ? new NavQueryService(store, layer, areaCosts, _tileWidthCm, _tileHeightCm)
+                    : new NavQueryService(store, layer, areaCosts);
                 return true;
             }
             service = null;

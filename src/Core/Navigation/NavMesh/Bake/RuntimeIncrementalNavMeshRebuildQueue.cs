@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -99,6 +100,22 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public int PendingTileCount => _fifo.Count;
 
+        /// <summary>False 时泵送循环跳过本帧消费——供"冻结增量重烤"的消融演示与诊断使用。</summary>
+        public bool ProcessingEnabled { get; set; } = true;
+
+        /// <summary>最近一次实际执行重烤批次的自挂钟耗时（ms）；从未执行过为 0。</summary>
+        public double LastBatchElapsedMs { get; private set; }
+
+        /// <summary>待重烤瓦片坐标快照（按入队顺序），供脏瓦片可视化与诊断读取。</summary>
+        public NavBakeTileCoord[] PendingTilesSnapshot()
+        {
+            lock (this)
+            {
+                return _fifo.ToArray();
+            }
+        }
+
+
         public bool EnqueueDirtyTile(NavBakeTileCoord target)
         {
             RequireTargetInRange(target, nameof(target));
@@ -179,9 +196,15 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new ArgumentOutOfRangeException(nameof(maxTiles), "Runtime navmesh rebuild budget must be > 0.");
             }
 
+            if (!ProcessingEnabled)
+            {
+                return new RuntimeNavMeshRebuildBatch(0, 0, 0, _fifo.Count, Array.Empty<RuntimeNavMeshRebuildPublishedTile>(), Array.Empty<NavBakeResultEntry>());
+            }
+
             var published = new List<RuntimeNavMeshRebuildPublishedTile>();
             var failures = new List<NavBakeResultEntry>();
             int processedTiles = 0;
+            long batchStartTimestamp = Stopwatch.GetTimestamp();
 
             while (processedTiles < maxTiles && _fifo.Count > 0)
             {
@@ -223,6 +246,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 processedTiles++;
             }
 
+            LastBatchElapsedMs = (Stopwatch.GetTimestamp() - batchStartTimestamp) * 1000d / Stopwatch.Frequency;
             return new RuntimeNavMeshRebuildBatch(
                 maxTiles,
                 processedTiles,

@@ -1,0 +1,27 @@
+{
+  "actions": [
+    { "id": "NavGate_ToggleGate", "name": "NavGate_ToggleGate", "type": "Button" },
+    { "id": "NavGate_ToggleFreeze", "name": "NavGate_ToggleFreeze", "type": "Button" },
+    { "id": "NavGate_ToggleOverlay", "name": "NavGate_ToggleOverlay", "type": "Button" },
+    { "id": "NavGate_SpawnObstacle", "name": "NavGate_SpawnObstacle", "type": "Button" },
+    { "id": "NavGate_ClearObstacles", "name": "NavGate_ClearObstacles", "type": "Button" },
+    { "id": "NavGate_CycleRadius", "name": "NavGate_CycleRadius", "type": "Button" },
+    { "id": "NavGate_CyclePace", "name": "NavGate_CyclePace", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "NavGate_Overlay",
+      "name": "NavGate Overlay",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "NavGate_ToggleGate", "path": "<Keyboard>/g" },
+        { "actionId": "NavGate_ToggleFreeze", "path": "<Keyboard>/f" },
+        { "actionId": "NavGate_ToggleOverlay", "path": "<Keyboard>/n" },
+        { "actionId": "NavGate_SpawnObstacle", "path": "<Keyboard>/p" },
+        { "actionId": "NavGate_ClearObstacles", "path": "<Keyboard>/o" },
+        { "actionId": "NavGate_CycleRadius", "path": "<Keyboard>/r" },
+        { "actionId": "NavGate_CyclePace", "path": "<Keyboard>/t" }
+      ]
+    }
+  ]
+}

@@ -1473,6 +1473,13 @@
         "type": "path",
         "value": "mods/showcases/navmesh_debug_vhtm/NavMeshDebugVhtmLaunchMod"
       }
+    },
+    {
+      "name": "nav_gate",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh_runtime_gate/NavGateShowcaseMod"
+      }
     }
   ],
   "adapters": {

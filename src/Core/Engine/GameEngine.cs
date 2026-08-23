@@ -2797,7 +2797,8 @@ namespace Ludots.Core.Engine
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
-                            board.Name);
+                            board.Name,
+                            boardConfig);
                         gridBoard.LogicTerrain = projected ?? new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
@@ -2837,7 +2838,8 @@ namespace Ludots.Core.Engine
             int widthCells,
             int heightCells,
             int cellSizeCm,
-            string boardName)
+            string boardName,
+            BoardConfig boardConfig)
         {
             Ludots.Platform.Abstractions.IVisualHeightmap? heightmap = session.VisualHeightmap;
             if (heightmap == null)
@@ -2860,12 +2862,15 @@ namespace Ludots.Core.Engine
                 return null;
             }
 
+            int heightStepCm = boardConfig.TerrainHeightStepCm > 0
+                ? boardConfig.TerrainHeightStepCm
+                : SpatialScaleDefaults.CellCm;
             return Ludots.Core.Navigation.Terrain.VisualHeightmapLogicTerrainProjection.ProjectToGrid(
                 heightmap,
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions.Default);
+                new Ludots.Core.Navigation.Terrain.LogicTerrainProjectionOptions(heightStepCm));
         }
 
         private LogicTerrainField LoadGridTerrainFromFile(string dataFile, BoardConfig boardConfig)
@@ -3134,7 +3139,10 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores);
+            var navRegistry = new NavQueryServiceRegistry(
+                stores,
+                LogicTerrain.ChunkSizeCells * LogicTerrain.HorizontalStepCm,
+                LogicTerrain.ChunkSizeCells * LogicTerrain.VerticalStepCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
             if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
             {
