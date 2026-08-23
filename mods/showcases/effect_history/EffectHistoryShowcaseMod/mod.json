@@ -1,0 +1,13 @@
+{
+  "name": "EffectHistoryShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable entity identity, knowledge snapshot, delayed effect and explicit stale-result showcase.",
+  "main": "bin/net8.0/EffectHistoryShowcaseMod.dll",
+  "priority": 133,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "entity-history", "knowledge", "effect"]
+}

@@ -13,7 +13,7 @@ Feature: Effect history and knowledge-safe target resolution
   Scenario: An effect freezes the last-known value
     Given a viewer has a KnowledgeSnapshot containing a subject position
     And an effect is configured with the last-known target policy
-    When the subject changes position after the snapshot expires
+    When the subject changes position after the snapshot is observed but before its TTL expires
     Then the effect uses the stored snapshot value
     And the record does not read the current World position
 

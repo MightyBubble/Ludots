@@ -360,6 +360,14 @@
       }
     },
     {
+      "name": "effect_history",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/effect_history/EffectHistoryShowcaseMod",
+        "projectPath": "EffectHistoryShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "item_system",
       "target": {
         "type": "path",

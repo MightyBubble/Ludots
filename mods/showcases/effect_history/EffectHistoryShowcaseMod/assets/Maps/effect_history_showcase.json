@@ -1,0 +1,14 @@
+{
+  "Id": "effect_history_showcase",
+  "Tags": ["showcase", "entity_history", "knowledge", "effect"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 8000,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

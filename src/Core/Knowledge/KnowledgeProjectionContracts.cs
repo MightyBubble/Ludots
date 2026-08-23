@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.EntityHistory;
 
 namespace Ludots.Core.Knowledge
 {
@@ -30,6 +31,25 @@ namespace Ludots.Core.Knowledge
         public readonly int ExpiryTick;
         public readonly int ConfidencePermille;
         public readonly uint Revision;
+
+        public KnowledgeSnapshot ToSnapshot(Entity viewer, Entity target, in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 position, bool hasPosition)
+        {
+            return new KnowledgeSnapshot
+            {
+                Viewer = EntityRef.From(viewer),
+                Target = EntityRef.From(target),
+                Presence = Presence,
+                PositionAccess = Position,
+                Position = position,
+                HasPosition = hasPosition ? (byte)1 : (byte)0,
+                AttributeMask = AttributeMask,
+                TagMask = TagMask,
+                ObservedTick = ObservedTick,
+                ExpiryTick = ExpiryTick,
+                ConfidencePermille = ConfidencePermille,
+                Revision = Revision,
+            };
+        }
 
         public KnowledgeDisclosureRecord(
             KnowledgePresence presence,

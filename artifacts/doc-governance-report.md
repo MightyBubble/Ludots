@@ -86,3 +86,9 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。
 - 本次操作事故记录：在他人工作树 `.worktrees/audit-raylib-main` 做 stash 验证时，因多工作树共享 stash 栈弹入了他人 stash 造成冲突残留；已 `git reset --hard` 恢复至该分支干净 HEAD（`a4b594a118`），他人 stash（wip-nr）完好保留。教训：不在共享仓库的他人工作树执行 stash/pop。
+
+## Issue #1087 附录
+
+- P2：Effect History Showcase 的真实 Agent Bridge 运行证据尚未产生；设计和 UAT 已就位，但不能把静态设计当作实机验收。
+- Evidence: `gitbook/entity/effect-history-showcase-design.md:88`, `gitbook/entity/effect-history-showcase-uat.md:1`。
+- Fix order: build `effect_history_raylib`, capture two `/health` samples and Live/LastKnown/Stale traces, then register concrete artifact paths.

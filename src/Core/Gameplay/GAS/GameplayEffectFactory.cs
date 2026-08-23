@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.Buffer;
+using Ludots.Core.EntityHistory;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -50,6 +51,36 @@ namespace Ludots.Core.Gameplay.GAS
         public static Entity CreateEffect(World world, Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, Entity targetContext = default, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
         {
             return CreateEffect(world, rootId: 0, source, target, durationTicks, lifetimeKind, periodTicks, targetContext, clockId, expireCondition);
+        }
+
+        public static Entity CreateEffect(World world, int rootId, Entity source, in EffectTargetRef target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, Entity targetContext = default, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)
+        {
+            RequireEntityLifetime(lifetimeKind);
+            var ge = new GameplayEffect
+            {
+                LifetimeKind = lifetimeKind,
+                ClockId = clockId,
+                TotalTicks = durationTicks,
+                RemainingTicks = durationTicks,
+                PeriodTicks = periodTicks,
+                ExpireCondition = expireCondition,
+                State = EffectState.Pending
+            };
+            var entity = world.Create(
+                ge,
+                new EffectContext
+                {
+                    RootId = rootId,
+                    Source = source,
+                    Target = target.Target.ToEntity(),
+                    TargetContext = targetContext,
+                    HasTargetRef = 1,
+                    TargetRef = target
+                },
+                new EffectModifiers(),
+                new EffectResolveOrder());
+            AddLifetimeMarkers(world, entity, in ge);
+            return entity;
         }
 
         public static Entity CreateEffect(World world, int rootId, Entity source, Entity target, int durationTicks, EffectLifetimeKind lifetimeKind, int periodTicks = 0, Entity targetContext = default, GasClockId clockId = GasClockId.FixedFrame, GasConditionHandle expireCondition = default)

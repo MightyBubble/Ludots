@@ -350,15 +350,24 @@
       "adapterId": "raylib",
       "buildMode": "auto"
     },
-    {
-      "id": "fog_vision_decay_raylib",
+      {
+        "id": "fog_vision_decay_raylib",
       "name": "Fog Vision Decay Raylib",
       "selectors": [
         "$fog_vision_decay"
       ],
       "adapterId": "raylib",
-      "buildMode": "auto"
-    },
+        "buildMode": "auto"
+      },
+      {
+        "id": "effect_history_raylib",
+        "name": "Effect History Raylib",
+        "selectors": [
+          "$effect_history"
+        ],
+        "adapterId": "raylib",
+        "buildMode": "auto"
+      },
     {
       "id": "item_system_raylib",
       "name": "Item System Raylib",
