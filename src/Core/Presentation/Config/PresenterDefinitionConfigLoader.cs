@@ -1006,9 +1006,15 @@ namespace Ludots.Core.Presentation.Config
             }
 
             string name = ParseRequiredSemanticString(node, $"{context}.timerName");
-            if (commandKind == PresenterCommandKind.TimerKill && string.Equals(name, "*", StringComparison.Ordinal))
+            if (string.Equals(name, "*", StringComparison.Ordinal))
             {
-                return PresenterTimerNameRegistry.AllTimersId;
+                if (commandKind == PresenterCommandKind.TimerKill)
+                {
+                    return PresenterTimerNameRegistry.AllTimersId;
+                }
+
+                // "*" 是 TimerKill 的保留通配名；TimerSet 注册它会得到一个无法被精确 TimerExpired 匹配的名字
+                throw new InvalidOperationException($"{context}.timerName \"*\" is reserved as the TimerKill wildcard and cannot be registered by TimerSet.");
             }
 
             return PresenterTimerNameRegistry.Register(name);

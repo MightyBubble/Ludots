@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
@@ -269,6 +270,63 @@ namespace Ludots.Tests.Presentation
             Assert.That(evt.Magnitude, Is.EqualTo(stableId));
         }
 
+        [Test]
+        public void Pipeline_OwnerPendingDestroy_TimerExpiryIsSuppressed()
+        {
+            using var fixture = TimerFixture.Create();
+            int rootDefId = fixture.RegisterRootWithPhaseRule(out int spawnedDefId);
+            Entity presenter = fixture.CreateRoot(rootDefId, scopeTag: 100);
+            int phaseNameId = PresenterTimerNameRegistry.GetId("it.phase2");
+
+            fixture.SetTimer(presenter, phaseNameId, durationSeconds: 0.05f);
+            // 生命周期系统本帧早些时候已把 owner 标记为待销毁，销毁命令要等同帧尾才执行
+            fixture.World.Add(fixture.Owner, new PresentationDestroyPending());
+
+            fixture.TickAll(0.10f);
+            Assert.That(fixture.ExpiredEventCount, Is.EqualTo(0), "owner 待销毁时不应发布 TimerExpired");
+            Assert.That(fixture.Timers.Count, Is.EqualTo(0), "到期 timer 应随销毁抑制一并出表");
+            Assert.That(fixture.CreatedKeyIds, Does.Not.Contain(spawnedDefId), "不应给将死实例接续创建 presenter");
+        }
+
+        [Test]
+        public void Pipeline_OwnerDead_TimerExpiryIsSuppressed()
+        {
+            using var fixture = TimerFixture.Create();
+            int rootDefId = fixture.RegisterRootWithPhaseRule(out int spawnedDefId);
+            Entity presenter = fixture.CreateRoot(rootDefId, scopeTag: 100);
+            int phaseNameId = PresenterTimerNameRegistry.GetId("it.phase2");
+
+            fixture.SetTimer(presenter, phaseNameId, durationSeconds: 0.05f);
+            fixture.World.Destroy(fixture.Owner);
+
+            fixture.TickAll(0.10f);
+            Assert.That(fixture.ExpiredEventCount, Is.EqualTo(0), "owner 已销毁时不应发布 TimerExpired");
+            Assert.That(fixture.Timers.Count, Is.EqualTo(0));
+            Assert.That(fixture.CreatedKeyIds, Does.Not.Contain(spawnedDefId));
+        }
+
+        [Test]
+        public void Pipeline_TimerExpiredWildcardRule_MatchesAnyTimerName()
+        {
+            using var fixture = TimerFixture.Create();
+            int rootDefId = fixture.RegisterRootWithWildcardPhaseRule(out int spawnedDefId);
+            Entity presenter = fixture.CreateRoot(rootDefId, scopeTag: 100);
+            int nameA = PresenterTimerNameRegistry.Register("it.wild.a");
+            int nameB = PresenterTimerNameRegistry.Register("it.wild.b");
+
+            fixture.SetTimer(presenter, nameA, durationSeconds: 0.05f);
+            fixture.SetTimer(presenter, nameB, durationSeconds: 0.05f);
+            fixture.TickTimerOnly(0.10f);
+            Assert.That(fixture.ExpiredEventCount, Is.EqualTo(2), "两个命名 timer 都应到期");
+
+            fixture.Rules.Update(0.016f);
+            Assert.That(fixture.Commands.Count, Is.EqualTo(2), "通配规则应对每个到期事件各产一条命令");
+
+            fixture.Runtime.Update(0.016f);
+            fixture.CaptureEvents();
+            Assert.That(fixture.CreatedKeyIds, Does.Contain(spawnedDefId), "通配规则命中的到期应建出后续 presenter");
+        }
+
         // ── 配置加载 ──
 
         [Test]
@@ -385,6 +443,51 @@ namespace Ludots.Tests.Presentation
                 ]
                 """);
             Assert.That(ex!.Message, Does.Contain("timerName"));
+        }
+
+        [Test]
+        public void ConfigLoader_TimerSetWildcardName_Throws()
+        {
+            var ex = AssertLoaderThrows("""
+                [
+                  {
+                    "id": "cfg_bad_wildcard_set",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "TimerCfg.Bad" },
+                        "command": { "kind": "TimerSet", "timerName": "*", "durationSeconds": 1.0 }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            Assert.That(ex!.Message, Does.Contain("reserved"));
+        }
+
+        [Test]
+        public void ConfigLoader_TimerExpiredWildcard_ParsesAsMatchAnyKey()
+        {
+            WriteCatalog();
+            WritePresenters("""
+                [
+                  {
+                    "id": "cfg_timer_wildcard",
+                    "rules": [
+                      {
+                        "event": { "kind": "TimerExpired", "keyId": "*" },
+                        "command": { "kind": "DestroyPresenter" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var registry = LoadDefinitions();
+            PresenterDefinition def = registry.Get(registry.GetId("cfg_timer_wildcard"));
+
+            Assert.That(def.Rules, Has.Length.EqualTo(1));
+            Assert.That(def.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.TimerExpired));
+            Assert.That(def.Rules[0].Event.KeyId, Is.EqualTo(-1), "keyId \"*\" 应解析为匹配任意 timer 名的通配");
         }
 
         // ── Headless E2E 验收：SC2 受击闪黄同构（命名 timer 原语，真实 JSON 配置驱动） ──
@@ -762,6 +865,34 @@ namespace Ludots.Tests.Presentation
                                 RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
                                 PresenterDefinitionId = spawnedDefId,
                                 ScopeTag = 200,
+                                ScopeSource = PresenterCommandScopeSource.Fixed,
+                            },
+                        },
+                    },
+                });
+            }
+
+            public int RegisterRootWithWildcardPhaseRule(out int spawnedDefId)
+            {
+                spawnedDefId = Definitions.Register("it.wildspawned", new PresenterDefinition());
+                return Definitions.Register("it.wildroot", new PresenterDefinition
+                {
+                    Rules = new[]
+                    {
+                        new PresenterRule
+                        {
+                            Event = new EventFilter
+                            {
+                                Kind = PresentationEventKind.TimerExpired,
+                                KeyId = -1,
+                            },
+                            Command = new PresenterCommand
+                            {
+                                CommandKind = PresenterCommandKind.CreatePresenter,
+                                CommandKindId = (byte)PresenterCommandKind.CreatePresenter,
+                                RouteStrategy = PerformerCommandRouteStrategy.CreatePerformer,
+                                PresenterDefinitionId = spawnedDefId,
+                                ScopeTag = 300,
                                 ScopeSource = PresenterCommandScopeSource.Fixed,
                             },
                         },

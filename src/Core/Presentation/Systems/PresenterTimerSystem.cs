@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Platform.Abstractions;
@@ -40,13 +41,29 @@ namespace Ludots.Core.Presentation.Systems
 
             for (int i = 0; i < _timers.ExpiredCount; i++)
             {
+                Entity presenter = _timers.GetExpiredPresenter(i);
+                Entity owner = _timers.GetExpiredOwner(i);
+                // Destroy-race guard: PresentationEntityLifecycleSystem queues teardown earlier in the
+                // frame, but the runtime drain happens after rules run. A presenter whose owner is dead
+                // or already carries PresentationDestroyPending must not publish TimerExpired, otherwise
+                // rules would sequence follow-up work on an instance that dies later in the same frame.
+                if (!World.IsAlive(presenter) || !World.Has<PresenterState>(presenter))
+                {
+                    continue;
+                }
+
+                if (!World.IsAlive(owner) || World.Has<PresentationDestroyPending>(owner))
+                {
+                    continue;
+                }
+
                 if (!_events.TryAdd(new PresentationEvent
                 {
                     Kind = PresentationEventKind.TimerExpired,
                     KeyId = _timers.GetExpiredNameId(i),
-                    Source = _timers.GetExpiredOwner(i),
-                    Target = _timers.GetExpiredOwner(i),
-                    PresenterEntity = _timers.GetExpiredPresenter(i),
+                    Source = owner,
+                    Target = owner,
+                    PresenterEntity = presenter,
                     Magnitude = _timers.GetExpiredStableId(i),
                 }))
                 {
