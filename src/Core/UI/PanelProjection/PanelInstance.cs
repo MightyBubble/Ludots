@@ -60,5 +60,10 @@ namespace Ludots.Core.UI.PanelProjection
                 ? value
                 : throw new InvalidOperationException($"Panel '{TemplateId}' has no pin '{pinName}'.");
         }
+
+        public bool TryGet(string pinName, out float value)
+        {
+            return Values.TryGetValue(pinName, out value);
+        }
     }
 }
