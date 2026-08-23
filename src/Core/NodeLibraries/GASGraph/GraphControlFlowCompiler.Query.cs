@@ -29,6 +29,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
+                case GraphNodeOp.LoadSelfAttribute:
+                    RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.QueryRadius:
                     RequireSpatialCapacityPolicy(node, graphId, diagnostics);
                     break;
@@ -304,6 +307,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 case GraphNodeOp.ConstFloat:
                     instruction.ImmF = node.FloatValue;
+                    break;
+                case GraphNodeOp.LoadSelfAttribute:
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.ConstInt:
                     instruction.Imm = node.IntValue;
