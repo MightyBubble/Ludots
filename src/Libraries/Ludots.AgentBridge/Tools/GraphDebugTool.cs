@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.GraphRuntime;
@@ -107,11 +108,12 @@ namespace Ludots.AgentBridge.Tools
             int count = mount.DebugTrace.ReadSince(since, buffer, out long oldestSequence);
             var events = new JsonArray();
 
-            context.Engine.TryGetService(Ludots.Core.Scripting.CoreServiceKeys.GraphProgramRegistry, out GraphProgramRegistry? programs);
-            GraphInstructionSourceMap sourceMap = GraphInstructionSourceMap.Empty;
-            if (programs != null)
+            if (!context.Engine.TryGetService(Ludots.Core.Scripting.CoreServiceKeys.GraphProgramRegistry, out GraphProgramRegistry? programs) ||
+                programs == null || !programs.TryGetSourceMap(mount.GraphId, out GraphInstructionSourceMap sourceMap) ||
+                !sourceMap.HasSources || !string.Equals(sourceMap.GraphId, mount.GraphName, StringComparison.OrdinalIgnoreCase))
             {
-                programs.TryGetSourceMap(mount.GraphId, out sourceMap);
+                throw new AgentToolException(AgentBridgeErrorCodes.ServiceUnavailable,
+                    $"Graph debug source map is unavailable for mounted graph '{mount.GraphName}'.");
             }
 
             for (int i = 0; i < count; i++)
@@ -123,7 +125,7 @@ namespace Ludots.AgentBridge.Tools
             }
 
             long latest = mount.DebugTrace.LatestSequence;
-            bool gap = since > 0 && oldestSequence > since + 1;
+            bool gap = oldestSequence <= latest && oldestSequence > since + 1;
             return new JsonObject
             {
                 ["mount"] = MountSnapshot(mount),
@@ -184,10 +186,15 @@ namespace Ludots.AgentBridge.Tools
                 result["pinIndex"] = record.RegisterIndex;
                 result["value"] = record.FloatValue;
             }
-            else if (record.EventKind == GraphDebugTraceEvent.PinEntity)
+            else if (record.EventKind == GraphDebugTraceEvent.PinEntity || record.EventKind == GraphDebugTraceEvent.BlackboardEntity)
             {
                 result["pinIndex"] = record.RegisterIndex;
                 result["value"] = record.EntityValue.Id;
+            }
+            else if (record.EventKind is GraphDebugTraceEvent.BlackboardInt or GraphDebugTraceEvent.BlackboardFloat)
+            {
+                result["keyId"] = record.RegisterIndex;
+                result["value"] = record.EventKind == GraphDebugTraceEvent.BlackboardInt ? record.IntValue : record.FloatValue;
             }
 
             return result;

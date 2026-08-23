@@ -401,6 +401,7 @@ export const GasGraphEditorPage: React.FC = () => {
   const [debugEvents, setDebugEvents] = React.useState<DebugEvent[]>([]);
   const [debugSince, setDebugSince] = React.useState(0);
   const [debugStatus, setDebugStatus] = React.useState('Bridge idle');
+  const debugPollInFlight = React.useRef(false);
 
   const selectedNode = React.useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
@@ -433,10 +434,15 @@ export const GasGraphEditorPage: React.FC = () => {
       if (!descriptorRes.ok || !descriptorPayload.ok) {
         throw new Error(descriptorPayload.error ?? `Descriptor load failed (${descriptorRes.status})`);
       }
+      if (!layoutRes.ok || !layoutPayload.ok || !layoutPayload.layout || typeof layoutPayload.layout !== 'object' || Array.isArray(layoutPayload.layout)) {
+        throw new Error(layoutPayload.error ?? `Layout load failed (${layoutRes.status})`);
+      }
       const nextDescriptors: Record<string, GraphDescriptor> = {};
       for (const descriptor of (descriptorPayload.descriptors ?? []) as GraphDescriptor[]) {
         nextDescriptors[descriptor.op] = descriptor;
       }
+      const missingDescriptor = loaded.nodes.find((node) => !nextDescriptors[node.op]);
+      if (missingDescriptor) throw new Error(`Descriptor missing for graph op '${missingDescriptor.op}'.`);
       const nextLayout = (layoutPayload.layout ?? {}) as EditorLayout;
       setDescriptors(nextDescriptors);
       setLayout(nextLayout);
@@ -633,6 +639,8 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const pollDebug = React.useCallback(async () => {
     if (!debugEnabled || !debugEntryLabel) return;
+    if (debugPollInFlight.current) return;
+    debugPollInFlight.current = true;
     try {
       const result = await bridgeRpc('ludots.graph.debug', {
         action: 'drain', graphId, entryLabel: debugEntryLabel, since: debugSince, max: 128,
@@ -643,10 +651,13 @@ export const GasGraphEditorPage: React.FC = () => {
       if (incoming.length > 0) {
         setDebugEvents((previous) => [...previous, ...incoming].slice(-300));
       }
+      if (latestSequence < debugSince) return;
       if (result.gap || incoming.length > 0) setDebugSince(latestSequence);
       setDebugStatus(`Live: ${String(result.mount ? (result.mount as DebugMount).cursor.status : 'unknown')} · ${incoming.length} changes`);
     } catch (err) {
       setDebugStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      debugPollInFlight.current = false;
     }
   }, [bridgeRpc, debugEnabled, debugEntryLabel, debugSince, graphId]);
 

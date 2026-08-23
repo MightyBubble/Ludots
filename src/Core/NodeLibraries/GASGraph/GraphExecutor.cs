@@ -268,6 +268,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            GraphSliceResult result = ExecuteResolvedRegisteredScriptSlice(
+                programs, program, floats, ints, bools, entities, targets, callStack, ref cursor,
+                budgetSteps, world, caster, explicitTarget, api);
+            if (!result.Halted)
+            {
+                throw new InvalidOperationException("Resumable Script execution requires caller-owned float, entity, and target register spans.");
+            }
+            return result;
+        }
+
+        public static GraphSliceResult ExecuteResolvedRegisteredScriptSlice(
+            GraphProgramRegistry programs,
+            ReadOnlySpan<GraphInstruction> program,
+            Span<float> floats,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<Entity> entities,
+            Span<Entity> targets,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            World? world = null,
+            Entity caster = default,
+            Entity explicitTarget = default,
+            IGraphRuntimeApi? api = null)
+        {
             GraphFrame frame = GraphFrame.Bind(
                 GraphKind.Script,
                 GraphEntityPreset.None,
@@ -305,7 +331,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<int> callStack,
             ref GraphExecutionCursor cursor,
             int budgetSteps,
-            GraphKind kind = GraphKind.Script)
+            GraphKind kind = GraphKind.Script,
+            GraphDebugTrace? debugTrace = null)
         {
             RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
             GraphFrame frame = GraphFrame.Bind(
@@ -323,7 +350,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 entities,
                 targets,
                 callStack,
-                cursor);
+                cursor,
+                debugTrace: debugTrace);
             GraphSliceResult result = ExecuteSlice(ref frame, program, budgetSteps);
             cursor = frame.Cursor;
             return result;

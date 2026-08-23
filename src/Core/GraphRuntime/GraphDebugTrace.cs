@@ -19,6 +19,9 @@ namespace Ludots.Core.GraphRuntime
         PinFloat = 5,
         PinBool = 6,
         PinEntity = 7,
+        BlackboardInt = 8,
+        BlackboardFloat = 9,
+        BlackboardEntity = 10,
     }
 
     public readonly struct GraphDebugTraceRecord
@@ -151,6 +154,24 @@ namespace Ludots.Core.GraphRuntime
             }
 
             Write(GraphDebugTraceEvent.PinEntity, sourcePc, cursorPc, steps, registerIndex, 0, 0f, value);
+        }
+
+        public void RecordBlackboardInt(int sourcePc, int keyId, int value, int cursorPc, int steps)
+        {
+            if (Mode != GraphDebugTraceMode.NodeAndPins) return;
+            Write(GraphDebugTraceEvent.BlackboardInt, sourcePc, cursorPc, steps, keyId, value, 0f, default);
+        }
+
+        public void RecordBlackboardFloat(int sourcePc, int keyId, float value, int cursorPc, int steps)
+        {
+            if (Mode != GraphDebugTraceMode.NodeAndPins) return;
+            Write(GraphDebugTraceEvent.BlackboardFloat, sourcePc, cursorPc, steps, keyId, 0, value, default);
+        }
+
+        public void RecordBlackboardEntity(int sourcePc, int keyId, Entity value, int cursorPc, int steps)
+        {
+            if (Mode != GraphDebugTraceMode.NodeAndPins) return;
+            Write(GraphDebugTraceEvent.BlackboardEntity, sourcePc, cursorPc, steps, keyId, 0, 0f, value);
         }
 
         public int ReadSince(long since, Span<GraphDebugTraceRecord> destination, out long oldestSequence)
