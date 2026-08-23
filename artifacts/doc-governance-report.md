@@ -1,16 +1,17 @@
 # Documentation Governance Report — Raylib 引擎画廊对齐 Graph 节点画廊
 
-Date: 2026-08-21
-Scope: `gitbook/reference/engine-gallery-wiki/`（新增 21 文件）、`docs/raylib-engine.html`、`docs/index.html`、`docs/site-assets/site.js`、`scripts/build-site.py`、`scripts/validate-docs.ps1`、`gitbook/architecture/raylib-engine-capabilities.md`、`gitbook/architecture/engine-capability-showcases.md`
+Date: 2026-08-23（第二轮：对齐最新 main `6daa88a45d` 后按用户四点缺口补全）
+Scope: `gitbook/reference/engine-gallery-wiki/`（21 文件）、`gitbook/architecture/raylib-{render-code-shape,engine-gallery-dev-guide,render-productization,engine-capabilities,render-lighting-guide}.md`、`gitbook/reference/raylib-render-config-structure.md`、`gitbook/SUMMARY.md`、`docs/raylib-engine.html`、`docs/index.html`、`docs/site-assets/site.js`、`scripts/build-site.py`、`scripts/validate-docs.ps1`
 Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `scripts/build-site.py` 结构自验 + ludots-doc-governance checklist
 
 ## Summary
 
-- Total findings: 5
+- Total findings: 9（第一轮 5 + 第二轮 4）
 - P0: 1（跨目录深链 404，存量，已修复）
 - P1: 1（下划线文件名被命名规则拒绝，规则已对齐）
-- P2: 2（完成度差距本体、反引号非法字符 token，已修复）
-- P3: 1（topbar 标签语义过时，已修复）
+- P2: 4（完成度差距本体、非法字符 token、四文档零截图、指南两处失真；均修复）
+- P3: 2（topbar 标签、productization 失联；均修复）
+- 附带治理改进 1 项：文档内示例一律用真实路径（假想路径占位符会被校验器拦截两次，已改用 `vegetation_cutout` 真实场景作走查样本）
 
 ## Findings
 
@@ -38,6 +39,29 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 ### P3-01 topbar 标签「Raylib 引擎」语义过时
 - Problem: 页面升级为画廊门户后，导航标签仍为「Raylib 引擎」。
 - Recommendation（已实施）: 改为「Raylib 引擎画廊」，与「Graph 节点画廊」对仗。
+
+### P2-03 四个 Raylib 架构文档零截图（用户第二轮缺口①）
+- Problem: `raylib-engine-capabilities.md` / `render-lighting-guide.md` / `engine-capability-showcases.md` / `raylib-render-productization.md` 均无任何证据图；graph 画廊水准要求页内有可看的东西。
+- Recommendation（已实施）: 嵌入 9 张引擎画廊验收截图（`artifacts/` 根相对路径，两个查看器均有豁免先例），图即证据、路径即出处。
+
+### P2-04 光照指南两处事实失真（用户第二轮缺口②的根因之一）
+- Problem: 指南写 `Presentation/materials.json`，装载器真名是 `Presentation/material_assets.json`（`PresentationMaterialConfigLoader.DefaultRelativePath`）；示例 `"flags": "Opaque"` 是字符串，装载器要求数组（字符串直接抛出）。
+- Recommendation（已实施）: 改为真实文件名与数组写法，并链接到新配置结构文档。
+
+### P3-02 productization 文档失联 + 过期表述
+- Problem: `raylib-render-productization.md` 不在 `gitbook/SUMMARY.md`（导航不可达）；「光照栈」节仍写"平面投影阴影"（该车道已退役）。
+- Recommendation（已实施）: 注册进 SUMMARY；表述改为"方向光 shadow map"。
+
+## 第二轮新增交付（用户四点缺口的对应物）
+
+| 缺口 | 交付物 |
+|---|---|
+| 截图 | 四个架构文档嵌 9 张验收截图；Wiki 21 页本就有图 |
+| 配置结构说明 | `gitbook/reference/raylib-render-config-structure.md`——material_assets 字段全表（对照 `PresentationMaterialConfigLoader` 逐字段）、host_assets 双行型、mesh_assets、环境配置树、preset 结构 |
+| 开发指南 | `gitbook/architecture/raylib-engine-gallery-dev-guide.md`——加场景六处登记 / 加着色器五处登记+三铁律 / 加材质两处登记，附决策表 |
+| 代码形状分析 | `gitbook/architecture/raylib-render-code-shape.md`——六装配体依赖方向图、合同层速查、38 文件渲染器分组清单、15 组着色器清单、帧内数据流 |
+
+三份新文档全部注册 `gitbook/SUMMARY.md` 并从 Wiki 总目录、能力总览互链。
 
 ## Fix Order（执行顺序）
 

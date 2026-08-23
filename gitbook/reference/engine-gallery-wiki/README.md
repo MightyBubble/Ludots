@@ -2,7 +2,7 @@
 
 每个引擎渲染场景一页：一张验收截图看清画面，一节作者写法看清入口。场景清单的单一事实源是 `src/Apps/Raylib/Ludots.App.RaylibEngineGallery/SceneCatalog.cs`（20 场景显式注册）与 `showcase.registry.json`（每场景一条 `engine_raylib_<scene id>` 条目）；截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/`（CI 批跑）与 `artifacts/acceptance/engine_raylib_lighting/`、`artifacts/acceptance/engine_raylib_crowd_anim/`（重场景独立批）。目录由 `scripts/build-site.py` 解析本页生成侧栏导航，并校验链接页面存在。
 
-整个画廊一条命令浏览菜单，单场景加 preset 名直达（见每页「怎么跑」）。分层边界（引擎画廊 / 平台基准 / 表现系统 showcase）见 [Raylib 引擎能力标准化 Showcase](../../architecture/engine-capability-showcases.md)。
+整个画廊一条命令浏览菜单，单场景加 preset 名直达（见每页「怎么跑」）。分层边界（引擎画廊 / 平台基准 / 表现系统 showcase）见 [Raylib 引擎能力标准化 Showcase](../../architecture/engine-capability-showcases.md)；改代码前先看 [渲染装配代码形状](../../architecture/raylib-render-code-shape.md) 与 [渲染配置结构](../raylib-render-config-structure.md)；给画廊加新场景/新着色器的登记环见 [引擎画廊开发指南](../../architecture/raylib-engine-gallery-dev-guide.md)。
 
 ## 光照与大气
 

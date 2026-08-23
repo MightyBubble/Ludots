@@ -17,9 +17,15 @@ Ludots 的 Raylib 桌面引擎适配器（`src/Client/Ludots.Raylib.Render` + `s
 
 两条主光照车道（合批 + 单物体）合同词汇一致：**Cook-Torrance GGX 单灯 metallic-roughness + split-sum 天空 IBL**，光照总线 `RaylibFrameLighting`（光向/环境/光色/强度/雾/视点）。
 
+车道实拍（引擎画廊验收截图，逐场景讲解见 [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)）：
+
+<img src="artifacts/acceptance/engine_raylib_crowd_anim/screen.png" alt="GPU 蒙皮合批 4096 实例验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/water.png" alt="反射水面验收截图" width="560">
+
+代码住哪里、依赖朝哪流、渲染器与着色器全清单见 [渲染装配代码形状](raylib-render-code-shape.md)；作者面配置文件的字段与装载规则见 [渲染配置结构](../reference/raylib-render-config-structure.md)；加场景/加着色器/加材质的登记环见 [引擎画廊开发指南](raylib-engine-gallery-dev-guide.md)。
+
 ## 材质系统
 
-三轴正交、全部数据驱动（`Presentation/materials.json` + `MaterialAssetDescriptor`）：
+三轴正交、全部数据驱动（`Presentation/material_assets.json` + `MaterialAssetDescriptor`）：
 
 - **换贴图 / 改参数**：材质实例链 `ParentKey`，子材质只写差异字段，`MaterialAssetResolver` 沿链合并；
 - **改着色行为**：`ShaderKey` + `RaylibShaderCatalog` 注册表分派到实例化车道；非实例化车道遇自定义 key fail-loud；

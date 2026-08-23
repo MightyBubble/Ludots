@@ -39,6 +39,10 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 | 19 | lighting | 光照全效（GGX 梯度/split-sum 天空 IBL/深度阴影） | RaylibLitModel + RaylibSkyIbl + RaylibDirectionalShadowMap |
 | 20 | crowd_anim | 大量动画实例合批 | skinning_instanced 真骨骼 GPU 蒙皮 × 4k 实例 |
 
+画廊实拍选粹（全 20 场景截图见 Wiki 各场景页与 `artifacts/acceptance/engine_gallery_all/`）：
+
+<img src="artifacts/acceptance/engine_gallery_all/instancing.png" alt="GPU 实例化合批验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/terrain_heightmap.png" alt="视觉高度图验收截图" width="560"> <img src="artifacts/acceptance/engine_gallery_all/sky_daynight.png" alt="昼夜天空验收截图" width="560">
+
 ## 标准化合同
 
 1. **场景代码**：`Scenes/<Id>Scene.cs` 实现 `IEngineScene { Id, Title, Summary, Load, Draw, Dispose }`；自含可读、数据程序化生成；`SceneCatalog` 显式注册；画廊菜单自动枚举。
