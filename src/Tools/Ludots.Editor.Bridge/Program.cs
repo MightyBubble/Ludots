@@ -49,6 +49,39 @@ builder.Services.AddCors(o =>
 var app = builder.Build();
 app.UseCors("dev");
 
+static bool IsValidGraphEditorLayout(JsonNode? node, out string error)
+{
+    error = string.Empty;
+    if (node is not JsonObject layout) { error = "layout must be an object."; return false; }
+    if (layout["nodes"] is JsonNode nodesNode)
+    {
+        if (nodesNode is not JsonObject nodes) { error = "layout.nodes must be an object."; return false; }
+        foreach (KeyValuePair<string, JsonNode?> entry in nodes)
+        {
+            if (entry.Value is not JsonObject position ||
+                position["x"] is not JsonValue x || !x.TryGetValue<double>(out _) ||
+                position["y"] is not JsonValue y || !y.TryGetValue<double>(out _))
+            { error = $"layout.nodes['{entry.Key}'] requires numeric x and y."; return false; }
+            if (position["collapsed"] is JsonNode collapsed &&
+                (collapsed is not JsonValue cb || !cb.TryGetValue<bool>(out _)))
+            { error = $"layout.nodes['{entry.Key}'].collapsed must be boolean."; return false; }
+        }
+    }
+    if (layout["viewport"] is JsonNode viewportNode)
+    {
+        if (viewportNode is not JsonObject viewport ||
+            viewport["x"] is not JsonValue vx || !vx.TryGetValue<double>(out _) ||
+            viewport["y"] is not JsonValue vy || !vy.TryGetValue<double>(out _) ||
+            viewport["zoom"] is not JsonValue vz || !vz.TryGetValue<double>(out _))
+        { error = "layout.viewport requires numeric x, y, and zoom."; return false; }
+    }
+    foreach (KeyValuePair<string, JsonNode?> field in layout)
+    {
+        if (field.Key is not ("nodes" or "viewport")) { error = $"Unknown layout field '{field.Key}'."; return false; }
+    }
+    return true;
+}
+
 if (Directory.Exists(launcherDistPath))
 {
     var launcherDistProvider = new PhysicalFileProvider(launcherDistPath);
@@ -1601,13 +1634,16 @@ app.MapGet("/api/mods/{modId}/gas/graph-editor/{graphId}", (string modId, string
         JsonNode? rootNode = JsonNode.Parse(File.ReadAllText(sidecarPath));
         if (rootNode is not JsonObject root || root["graphs"] is not JsonObject graphs)
             return Results.BadRequest(new { ok = false, error = "graph_editor.json must contain an object property 'graphs'." });
+        JsonNode? layoutNode = graphs[graphId];
+        if (layoutNode != null && !IsValidGraphEditorLayout(layoutNode, out string layoutError))
+            return Results.BadRequest(new { ok = false, error = layoutError });
 
         return Results.Ok(new
         {
             ok = true,
             graphId,
             path = sidecarPath,
-            layout = graphs[graphId]?.DeepClone() ?? new JsonObject(),
+            layout = layoutNode?.DeepClone() ?? new JsonObject(),
         });
     }
     catch (JsonException ex)
@@ -1628,6 +1664,8 @@ app.MapPut("/api/mods/{modId}/gas/graph-editor/{graphId}", async (string modId, 
     catch (JsonException ex) { return Results.BadRequest(new { ok = false, error = $"Malformed layout JSON: {ex.Message}" }); }
     if (layoutNode is not JsonObject layout)
         return Results.BadRequest(new { ok = false, error = "Layout must be a JSON object." });
+    if (!IsValidGraphEditorLayout(layout, out string layoutError))
+        return Results.BadRequest(new { ok = false, error = layoutError });
 
     string sidecarPath = Path.Combine(modRoot, "assets", "GAS", "graph_editor.json");
     JsonObject root;
@@ -1648,6 +1686,12 @@ app.MapPut("/api/mods/{modId}/gas/graph-editor/{graphId}", async (string modId, 
     }
 
     JsonObject graphs = (JsonObject)root["graphs"]!;
+
+    foreach (KeyValuePair<string, JsonNode?> existingLayout in graphs)
+    {
+        if (!IsValidGraphEditorLayout(existingLayout.Value, out string existingLayoutError))
+            return Results.BadRequest(new { ok = false, error = $"Invalid layout for graph '{existingLayout.Key}': {existingLayoutError}" });
+    }
 
     graphs[graphId] = layout.DeepClone();
     Directory.CreateDirectory(Path.GetDirectoryName(sidecarPath)!);

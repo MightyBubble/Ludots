@@ -279,7 +279,6 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 GraphKind.TriggerGraph,
                 "触发器图挂载");
 
-            int sourcePcBefore = _cursor.Pc;
             GraphSliceResult result = GraphExecutor.ExecuteScriptSlice(
                 dependencies.Engine.World,
                 _runCaster,
@@ -295,10 +294,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 _vmTargetRegisters,
                 _vmCallStack,
                 ref _cursor,
-                TriggerGraphLimits.SliceBudgetSteps);
+                TriggerGraphLimits.SliceBudgetSteps,
+                GraphKind.Script,
+                _debugTrace);
             LastSliceResult = result;
 
-            RecordDebugTrace(sourcePcBefore, result);
+            RecordDebugTrace(result);
 
             if (result.Halted)
             {
@@ -316,22 +317,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
         }
 
-        private void RecordDebugTrace(int sourcePcBefore, GraphSliceResult result)
+        private void RecordDebugTrace(GraphSliceResult result)
         {
             if (_debugTrace.Mode == GraphDebugTraceMode.Disabled)
             {
                 return;
             }
 
-            _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.NodeEnter);
-            _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.NodeExit);
             if (result.Halted)
             {
-                _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Halted);
+                _debugTrace.RecordNode(_cursor.Pc - 1, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Halted);
             }
             else if (result.Yielded || result.BudgetSuspended)
             {
-                _debugTrace.RecordNode(sourcePcBefore, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Suspended);
+                _debugTrace.RecordNode(_cursor.Pc - 1, _cursor.Pc, _cursor.Steps, GraphDebugTraceEvent.Suspended);
             }
 
             if (_debugTrace.Mode != GraphDebugTraceMode.NodeAndPins)
@@ -343,7 +342,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmIntRegisters[i] != _previousIntRegisters[i])
                 {
-                    _debugTrace.RecordIntPin(sourcePcBefore, i, _vmIntRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordIntPin(_cursor.Pc - 1, i, _vmIntRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousIntRegisters[i] = _vmIntRegisters[i];
                 }
             }
@@ -352,7 +351,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmBoolRegisters[i] != _previousBoolRegisters[i])
                 {
-                    _debugTrace.RecordBoolPin(sourcePcBefore, i, _vmBoolRegisters[i] != 0, _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordBoolPin(_cursor.Pc - 1, i, _vmBoolRegisters[i] != 0, _cursor.Pc, _cursor.Steps);
                     _previousBoolRegisters[i] = _vmBoolRegisters[i];
                 }
             }
@@ -361,7 +360,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmFloatRegisters[i] != _previousFloatRegisters[i])
                 {
-                    _debugTrace.RecordFloatPin(sourcePcBefore, i, _vmFloatRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordFloatPin(_cursor.Pc - 1, i, _vmFloatRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousFloatRegisters[i] = _vmFloatRegisters[i];
                 }
             }
@@ -370,7 +369,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             {
                 if (_vmEntityRegisters[i] != _previousEntityRegisters[i])
                 {
-                    _debugTrace.RecordEntityPin(sourcePcBefore, i, _vmEntityRegisters[i], _cursor.Pc, _cursor.Steps);
+                    _debugTrace.RecordEntityPin(_cursor.Pc - 1, i, _vmEntityRegisters[i], _cursor.Pc, _cursor.Steps);
                     _previousEntityRegisters[i] = _vmEntityRegisters[i];
                 }
             }
