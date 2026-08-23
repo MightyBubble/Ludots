@@ -972,14 +972,6 @@ namespace Ludots.Core.Engine
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var panelTemplates = new PanelTemplateCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            var panelHost = new PanelHost(
-                panelTemplates,
-                new PanelProjectionReader(World, graphOutputValueStore, lookupTables: graphLookupTables));
-            gasGraphApi.BindPanelHost(panelHost);
-            var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
-            var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
-            gasGraphApi.BindPanelActivation(panelActivationApi);
-            gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -987,6 +979,15 @@ namespace Ludots.Core.Engine
                 graphHandlers,
                 entityCollectionStore,
                 graphOutputValueStore);
+            var panelHost = new PanelHost(
+                panelTemplates,
+                new PanelProjectionReader(World, graphOutputValueStore),
+                new Ludots.Core.UI.PanelHosting.GraphReturnWriterPanelEvaluator(graphReturnWriter, gasGraphApi));
+            gasGraphApi.BindPanelHost(panelHost);
+            var panelActivationStore = new Ludots.Core.UI.PanelActivation.UiPanelActivationStore();
+            var panelActivationApi = new Ludots.Core.UI.PanelActivation.PanelActivationApi(panelActivationStore);
+            gasGraphApi.BindPanelActivation(panelActivationApi);
+            gasGraphApi.BindMapVariableStoreResolver(mapId => MapSessions?.GetSession(mapId)?.Variables);
             var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
                 progressionRequirements,
