@@ -24,11 +24,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/sky_daynight.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/sky_daynight.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 1.97 | 21.75 | 31.93 |
+| 120 | 4.01 | 0.21 | 409.30 |
 
 （p95 高是相位步进触发渐变重烘的节流帧，属预期行为。）
 

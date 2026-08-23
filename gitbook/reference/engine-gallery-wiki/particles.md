@@ -24,11 +24,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/particles.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/particles.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 1.79 | 0.78 | 43.01 |
+| 120 | 4.13 | 0.81 | 417.22 |
 
 ## 怎么跑
 

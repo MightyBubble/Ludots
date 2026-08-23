@@ -24,11 +24,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/skia_overlay.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/skia_overlay.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 5.41 | 8.31 | 18.10 |
+| 120 | 3.45 | 4.31 | 31.12 |
 
 ## 怎么跑
 

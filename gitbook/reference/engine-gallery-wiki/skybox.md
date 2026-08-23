@@ -24,11 +24,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/skybox.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/skybox.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 0.36 | 0.26 | 7.47 |
+| 120 | 0.56 | 0.23 | 35.50 |
 
 ## 怎么跑
 

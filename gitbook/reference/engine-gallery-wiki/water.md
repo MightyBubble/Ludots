@@ -24,11 +24,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/water.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/water.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 6.01 | 4.43 | 93.05 |
+| 120 | 3.05 | 2.94 | 150.39 |
 
 （世界画三遍是本车道固有成本，数值供回归比对。）
 

@@ -6,12 +6,18 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 
 ## Summary
 
-- Total findings: 9（第一轮 5 + 第二轮 4）
+- Total findings: 10（第一轮 5 + 第二轮 4 + 第三轮 1）
 - P0: 1（跨目录深链 404，存量，已修复）
-- P1: 1（下划线文件名被命名规则拒绝，规则已对齐）
+- P1: 2（下划线文件名规则对齐；**引擎证据落后于阴影代码三代提交**，已全部再生成）
 - P2: 4（完成度差距本体、非法字符 token、四文档零截图、指南两处失真；均修复）
 - P3: 2（topbar 标签、productization 失联；均修复）
 - 附带治理改进 1 项：文档内示例一律用真实路径（假想路径占位符会被校验器拦截两次，已改用 `vegetation_cutout` 真实场景作走查样本）
+
+### P1-02 引擎画廊证据落后于阴影代码（用户第三轮指出的截图过期）
+- Problem: 已提交截图最后再生成于 2026-08-17/18（批目录 `cc98330005`、lighting/crowd `6cd04be3eb`），而阴影车道在 08-20~21 又修了三代（`476d5aa463` 采样块单一来源 → `bdb2ec7cc2` ShadowConfig 进环境配置树 → `a0bc7e5214` 镂空 alpha 打孔 + 透明不投影），**之后无人再生成证据**。远端全部分支与开放 PR 均无新证据；本地仅 `.worktrees/recut` 有 08-21 的再生成，但其代码不含上述三修，不可用。
+- Impact: Wiki 与四个架构文档嵌的全是修正前渲染（lighting 旧图平均亮度 31、87.5% 暗像素≈黑图；vegetation_cutout 旧图暗像素仅 2.2%＝几乎无影）。
+- Evidence: 本报告附带的亮度对比脚本输出；`git log` 证据路径 vs `RaylibDirectionalShadowMap.cs`/`shadow_sampling.glsl.inc` 最后提交时间差。
+- Recommendation（已实施）: 在最新代码上重跑 20 场景验收（120 帧合同，写入 `artifacts/acceptance/engine_raylib_<id>/` 并镜像批目录 `engine_gallery_all/`），Wiki 20 页 stats 表同步更新。新图实测：lighting 平均亮度 98、vegetation 暗像素 38.1%（打孔阴影出现）。
 
 ## Findings
 

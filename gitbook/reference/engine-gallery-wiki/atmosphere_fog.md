@@ -25,11 +25,11 @@
 
 ## 验收证据
 
-截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/atmosphere_fog.png` / `.json`（CI 批跑，30 帧）：
+截图与帧统计摘自 `artifacts/acceptance/engine_gallery_all/atmosphere_fog.png` / `.json`（120 帧验收批）：
 
 | frames | avg ms | p95 ms | max ms |
 |---|---|---|---|
-| 30 | 2.77 | 2.10 | 44.56 |
+| 120 | 3.80 | 0.69 | 408.83 |
 
 ## 怎么跑
 
