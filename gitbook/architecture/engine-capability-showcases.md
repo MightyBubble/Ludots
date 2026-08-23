@@ -14,6 +14,8 @@ Raylib 相关 showcase 分三层，层间以依赖方向区分，不得越层引
 
 ## 20 项引擎渲染能力目录（画廊场景清单）
 
+逐场景的演示讲解（验收截图 + 作者写法 + 怎么跑）见 [引擎画廊 Wiki](../reference/engine-gallery-wiki/README.md)；下表是能力矩阵与承接渲染器。
+
 | # | scene id | 能力 | 承接渲染器 |
 |---|---|---|---|
 | 1 | skybox | 天空盒 | RaylibSkyboxRenderer |
