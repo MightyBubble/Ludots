@@ -5,16 +5,24 @@ using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Attachment;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Movement;
 using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Systems
 {
+    /// <summary>
+    /// 驻防/施工进出的玩法编排（tag 驱动）。绑定、写权、位置跟随与周界落位全部委托 Core
+    /// attachment 原子 op（AttachmentOps）：本系统只决定"谁在何时进出"，不再自带父子边
+    /// 缓冲、逐帧吸附与周界散布数学。
+    /// </summary>
     public sealed class RtsRelationRuntimeSystem : ISystem<float>
     {
         private const string ConstructingTagName = "State.Rts.Constructing";
@@ -22,6 +30,7 @@ namespace RtsDemoMod.Systems
         private const string MorphConsumedTagName = "State.Rts.MorphConsumed";
         private const string WarpingTagName = "State.Rts.Warping";
         private const string UngarrisonAllTagName = "Command.Rts.UngarrisonAll";
+        private const int DetachPerimeterRadiusCm = 180;
 
         private static readonly QueryDescription TaggedPositionQuery = new QueryDescription()
             .WithAll<GameplayTagContainer, WorldPositionCm>();
@@ -29,8 +38,6 @@ namespace RtsDemoMod.Systems
             .WithAll<GameplayTagContainer, ChildrenBuffer, WorldPositionCm>();
         private static readonly QueryDescription ConstructionHostQuery = new QueryDescription()
             .WithAll<ChildrenBuffer, WorldPositionCm>();
-        private static readonly QueryDescription AttachedChildQuery = new QueryDescription()
-            .WithAll<ChildOf>();
         private static readonly QueryDescription SelectableWithStateQuery = new QueryDescription()
             .WithAll<CommandSourceSelectableTag, CommandSourceSelectableState>();
         private static readonly QueryDescription SelectableWithoutStateQuery = new QueryDescription()
@@ -40,16 +47,14 @@ namespace RtsDemoMod.Systems
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly TagOps _tagOps;
+        private readonly PoseAuthorityArbiter _poseAuthorityArbiter;
         private readonly EntityScratchBuffer _constructingHosts;
         private readonly EntityScratchBuffer _pendingAttachEntities;
         private readonly EntityScratchBuffer _ungarrisonHosts;
         private readonly EntityScratchBuffer _completedHosts;
-        private readonly EntityScratchBuffer _attachedChildren;
         private readonly EntityScratchBuffer _missingSelectableStates;
         private readonly CommandBuffer _structuralCommands;
-        private readonly Entity[] _pendingParentEntities;
-        private readonly ChildrenBuffer[] _pendingParentBuffers;
-        private int _pendingParentCount;
+        private readonly Entity[] _childrenSnapshot;
 
         private int _constructingTagId;
         private int _builderAttachedTagId;
@@ -63,22 +68,20 @@ namespace RtsDemoMod.Systems
             {
                 throw new ArgumentOutOfRangeException(nameof(entityScratchCapacity));
             }
-            int structuralCommandCapacity = checked(entityScratchCapacity * 2);
 
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("RtsRelationRuntimeSystem requires engine TagOps.");
+            _poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
+                ?? throw new InvalidOperationException("RtsRelationRuntimeSystem requires engine PoseAuthorityArbiter.");
             _constructingHosts = new EntityScratchBuffer(entityScratchCapacity);
             _pendingAttachEntities = new EntityScratchBuffer(entityScratchCapacity);
             _ungarrisonHosts = new EntityScratchBuffer(entityScratchCapacity);
             _completedHosts = new EntityScratchBuffer(entityScratchCapacity);
-            _attachedChildren = new EntityScratchBuffer(entityScratchCapacity);
             _missingSelectableStates = new EntityScratchBuffer(entityScratchCapacity);
-            _structuralCommands = new CommandBuffer(structuralCommandCapacity);
-            _pendingParentEntities = new Entity[entityScratchCapacity];
-            _pendingParentBuffers = new ChildrenBuffer[entityScratchCapacity];
-        }
+            _structuralCommands = new CommandBuffer(checked(entityScratchCapacity * 2));
+            _childrenSnapshot = new Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];        }
 
         public void Initialize()
         {
@@ -99,7 +102,6 @@ namespace RtsDemoMod.Systems
             AttachPendingUnitsToConstruction();
             ProcessUngarrisonCommands();
             ProcessCompletedConstructionHosts();
-            SyncAttachedChildrenToParents();
             SyncCommandSourceAvailability();
         }
 
@@ -176,12 +178,23 @@ namespace RtsDemoMod.Systems
                     continue;
                 }
 
-                QueueSetParent(entity, host);
-                SnapEntityToHost(entity, host);
+                AttachmentOps.Attach(
+                    _world,
+                    _poseAuthorityArbiter,
+                    entity,
+                    host,
+                    AnchoredAtParentPose);
             }
-
-            FlushStructuralCommands();
         }
+
+        /// <summary>驻防吸附位姿：零偏移锚定在宿主位置（写权由 Attach 授予/归还）。</summary>
+        private static AttachedLocalPose AnchoredAtParentPose => new AttachedLocalPose
+        {
+            OffsetCm = Fix64Vec2.Zero,
+            LocalFacingRad = Fix64.Zero,
+            InheritParentFacing = 0,
+            OffsetRotation = AttachedOffsetRotation.None,
+        };
 
         private bool TryFindNearestConstructingHost(Entity child, in Fix64Vec2 childPosition, out Entity host)
         {
@@ -234,7 +247,6 @@ namespace RtsDemoMod.Systems
                 ref job);
             _ungarrisonHosts.Sort();
 
-            Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
             for (int hostIndex = 0; hostIndex < _ungarrisonHosts.Count; hostIndex++)
             {
                 Entity host = _ungarrisonHosts[hostIndex];
@@ -244,23 +256,25 @@ namespace RtsDemoMod.Systems
                 }
 
                 ChildrenBuffer children = _world.Get<ChildrenBuffer>(host);
-                int childCount = SnapshotChildren(in children, childrenSnapshot);
-                Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
+                int childCount = SnapshotChildren(in children, _childrenSnapshot);
                 for (int i = 0; i < childCount; i++)
                 {
-                    Entity child = childrenSnapshot[i];
+                    Entity child = _childrenSnapshot[i];
                     if (!_world.IsAlive(child))
                     {
                         continue;
                     }
 
-                    DetachChildToHostPerimeter(child, host, in hostPosition, i, childCount);
+                    AttachmentOps.Detach(
+                        _world,
+                        _poseAuthorityArbiter,
+                        child,
+                        DetachPlacement.ParentPerimeterRing,
+                        DetachPerimeterRadiusCm);
                 }
 
                 RemovePersistentTag(host, _ungarrisonAllTagId);
             }
-
-            FlushStructuralCommands();
         }
 
         private void ProcessCompletedConstructionHosts()
@@ -272,7 +286,6 @@ namespace RtsDemoMod.Systems
                 ref job);
             _completedHosts.Sort();
 
-            Span<Entity> childrenSnapshot = stackalloc Entity[GasConstants.MAX_CHILDREN_BUFFER_CAPACITY];
             for (int hostIndex = 0; hostIndex < _completedHosts.Count; hostIndex++)
             {
                 Entity host = _completedHosts[hostIndex];
@@ -282,12 +295,10 @@ namespace RtsDemoMod.Systems
                 }
 
                 ChildrenBuffer children = _world.Get<ChildrenBuffer>(host);
-                int childCount = SnapshotChildren(in children, childrenSnapshot);
-                Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
-                int detachIndex = 0;
+                int childCount = SnapshotChildren(in children, _childrenSnapshot);
                 for (int i = 0; i < childCount; i++)
                 {
-                    Entity child = childrenSnapshot[i];
+                    Entity child = _childrenSnapshot[i];
                     if (!_world.IsAlive(child))
                     {
                         continue;
@@ -303,51 +314,34 @@ namespace RtsDemoMod.Systems
                     if (isMorph)
                     {
                         RemovePersistentTag(child, _morphConsumedTagId);
-                        RemoveRequiredParent(child, host);
+                        if (_world.IsAlive(child) && _world.Has<ChildOf>(child))
+                        {
+                            AttachmentOps.Detach(
+                                _world,
+                                _poseAuthorityArbiter,
+                                child,
+                                DetachPlacement.KeepWorldPose,
+                                0);
+                        }
+
                         _structuralCommands.Destroy(child);
                         continue;
                     }
 
                     RemovePersistentTag(child, _builderAttachedTagId);
-                    DetachChildToHostPerimeter(
+                    AttachmentOps.Detach(
+                        _world,
+                        _poseAuthorityArbiter,
                         child,
-                        host,
-                        in hostPosition,
-                        detachIndex,
-                        Math.Max(1, childCount));
-                    detachIndex++;
+                        DetachPlacement.ParentPerimeterRing,
+                        DetachPerimeterRadiusCm);
                 }
             }
 
-            FlushStructuralCommands();
-        }
-
-        private void SyncAttachedChildrenToParents()
-        {
-            _attachedChildren.Clear();
-            var job = new CollectAttachedChildrenJob { Entities = _attachedChildren };
-            _world.InlineEntityQuery<CollectAttachedChildrenJob, ChildOf>(in AttachedChildQuery, ref job);
-            _attachedChildren.Sort();
-
-            for (int i = 0; i < _attachedChildren.Count; i++)
+            if (_structuralCommands.Size > 0)
             {
-                Entity child = _attachedChildren[i];
-                if (!_world.IsAlive(child) || !_world.Has<ChildOf>(child))
-                {
-                    continue;
-                }
-
-                Entity parent = _world.Get<ChildOf>(child).Parent;
-                if (!_world.IsAlive(parent))
-                {
-                    QueueRemoveParent(child, parent, requireLiveParent: false);
-                    continue;
-                }
-
-                SnapEntityToHost(child, parent);
+                _structuralCommands.Playback(_world);
             }
-
-            FlushStructuralCommands();
         }
 
         private void SyncCommandSourceAvailability()
@@ -377,155 +371,6 @@ namespace RtsDemoMod.Systems
             }
         }
 
-        private void DetachChildToHostPerimeter(
-            Entity child,
-            Entity host,
-            in Fix64Vec2 hostPosition,
-            int index,
-            int total)
-        {
-            RemoveRequiredParent(child, host);
-            SetWorldPosition(child, hostPosition + ComputeDetachOffset(index, total));
-        }
-
-        private void RemoveRequiredParent(Entity child, Entity expectedParent)
-        {
-            QueueRemoveParent(child, expectedParent, requireLiveParent: true);
-        }
-
-        private void QueueSetParent(Entity child, Entity parent)
-        {
-            if (!_world.IsAlive(child) || !_world.IsAlive(parent))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.AttachEntityInvalid: child={child.Id}, parent={parent.Id}.");
-            }
-            if (_world.Has<ChildOf>(child))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.ChildAlreadyAttached: child={child.Id}, parent={parent.Id}.");
-            }
-
-            int parentIndex = GetOrCreatePendingParent(parent, allowMissingBuffer: true);
-
-            if (!_pendingParentBuffers[parentIndex].Add(in child))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.ParentChildrenCapacityExceeded: parent={parent.Id}, child={child.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
-            }
-
-            _structuralCommands.Add(child, new ChildOf { Parent = parent });
-        }
-
-        private void QueueRemoveParent(Entity child, Entity expectedParent, bool requireLiveParent)
-        {
-            if (!_world.IsAlive(child) || !_world.Has<ChildOf>(child))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.MissingChildOf: child={child.Id}, expectedParent={expectedParent.Id}.");
-            }
-
-            Entity actualParent = _world.Get<ChildOf>(child).Parent;
-            if (actualParent != expectedParent)
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.ParentMismatch: child={child.Id}, expectedParent={expectedParent.Id}, actualParent={actualParent.Id}.");
-            }
-
-            if (_world.IsAlive(expectedParent))
-            {
-                int parentIndex = GetOrCreatePendingParent(expectedParent, allowMissingBuffer: false);
-                if (!_pendingParentBuffers[parentIndex].Remove(in child))
-                {
-                    throw new InvalidOperationException(
-                        $"RTS.RELATION.ERR.ParentMissingChild: child={child.Id}, parent={expectedParent.Id}.");
-                }
-            }
-            else if (requireLiveParent)
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.ParentNotAlive: child={child.Id}, parent={expectedParent.Id}.");
-            }
-
-            _structuralCommands.Remove<ChildOf>(child);
-        }
-
-        private int GetOrCreatePendingParent(Entity parent, bool allowMissingBuffer)
-        {
-            int parentIndex = FindPendingParent(parent);
-            if (parentIndex >= 0)
-            {
-                return parentIndex;
-            }
-            if (_pendingParentCount >= _pendingParentEntities.Length)
-            {
-                throw ScratchCapacityExceeded("pendingParentBuffers", _pendingParentCount + 1, _pendingParentEntities.Length);
-            }
-            if (!allowMissingBuffer && !_world.Has<ChildrenBuffer>(parent))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.RELATION.ERR.MissingChildrenBuffer: parent={parent.Id}.");
-            }
-
-            parentIndex = _pendingParentCount++;
-            _pendingParentEntities[parentIndex] = parent;
-            _pendingParentBuffers[parentIndex] = _world.Has<ChildrenBuffer>(parent)
-                ? _world.Get<ChildrenBuffer>(parent)
-                : default;
-            return parentIndex;
-        }
-
-        private int FindPendingParent(Entity parent)
-        {
-            for (int i = 0; i < _pendingParentCount; i++)
-            {
-                if (_pendingParentEntities[i] == parent) return i;
-            }
-            return -1;
-        }
-
-        private void FlushStructuralCommands()
-        {
-            for (int i = 0; i < _pendingParentCount; i++)
-            {
-                Entity parent = _pendingParentEntities[i];
-                if (!_world.IsAlive(parent))
-                {
-                    throw new InvalidOperationException(
-                        $"RTS.RELATION.ERR.ParentDiedBeforeCommit: parent={parent.Id}.");
-                }
-
-                ChildrenBuffer children = _pendingParentBuffers[i];
-                if (_world.Has<ChildrenBuffer>(parent))
-                {
-                    _world.Get<ChildrenBuffer>(parent) = children;
-                }
-                else
-                {
-                    _structuralCommands.Add(parent, children);
-                }
-                _pendingParentEntities[i] = Entity.Null;
-                _pendingParentBuffers[i] = default;
-            }
-            _pendingParentCount = 0;
-
-            if (_structuralCommands.Size > 0)
-            {
-                _structuralCommands.Playback(_world);
-            }
-        }
-
-        private static Fix64Vec2 ComputeDetachOffset(int index, int total)
-        {
-            if (total <= 0)
-            {
-                return Fix64Vec2.Zero;
-            }
-
-            float angle = (MathF.PI * 2f * index) / Math.Max(1, total);
-            return Fix64Vec2.FromFloat(MathF.Cos(angle) * 180f, MathF.Sin(angle) * 180f);
-        }
-
         private static int SnapshotChildren(in ChildrenBuffer children, Span<Entity> destination)
         {
             if (children.Count > destination.Length)
@@ -540,39 +385,6 @@ namespace RtsDemoMod.Systems
             }
 
             return children.Count;
-        }
-
-        private void SnapEntityToHost(Entity entity, Entity host)
-        {
-            RequirePositionState(host, "host");
-            Fix64Vec2 hostPosition = _world.Get<WorldPositionCm>(host).Value;
-            Fix64Vec2 previousPosition = _world.Get<PreviousWorldPositionCm>(host).Value;
-            SetWorldPosition(entity, in hostPosition, in previousPosition);
-        }
-
-        private void SetWorldPosition(Entity entity, in Fix64Vec2 position)
-        {
-            SetWorldPosition(entity, in position, in position);
-        }
-
-        private void SetWorldPosition(Entity entity, in Fix64Vec2 position, in Fix64Vec2 previous)
-        {
-            RequirePositionState(entity, "entity");
-            ref WorldPositionCm current = ref _world.Get<WorldPositionCm>(entity);
-            current.Value = position;
-            ref PreviousWorldPositionCm previousPosition = ref _world.Get<PreviousWorldPositionCm>(entity);
-            previousPosition.Value = previous;
-        }
-
-        private void RequirePositionState(Entity entity, string role)
-        {
-            if (!_world.IsAlive(entity) ||
-                !_world.Has<WorldPositionCm>(entity) ||
-                !_world.Has<PreviousWorldPositionCm>(entity))
-            {
-                throw new InvalidOperationException(
-                    $"RTS.POSITION.ERR.MissingPositionState: role={role}, entity={entity.Id}.");
-            }
         }
 
         private bool HasTag(Entity entity, int tagId)
@@ -676,16 +488,6 @@ namespace RtsDemoMod.Systems
                 {
                     Entities.Add(entity);
                 }
-            }
-        }
-
-        private struct CollectAttachedChildrenJob : IForEachWithEntity<ChildOf>
-        {
-            public EntityScratchBuffer Entities;
-
-            public void Update(Entity entity, ref ChildOf _)
-            {
-                Entities.Add(entity);
             }
         }
 
