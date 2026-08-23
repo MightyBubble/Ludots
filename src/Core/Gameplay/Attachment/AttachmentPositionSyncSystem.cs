@@ -111,6 +111,14 @@ namespace Ludots.Core.Gameplay.Attachment
             Entity parent = childOf.Parent;
             if (!World.IsAlive(parent) || !World.Has<WorldPositionCm>(parent))
             {
+                // 带自管生命周期的子实体（如 DestroyWhenParentExecutionEnds 的 manifestation）
+                // 由其生命周期系统处置死父；sink 不抢拆它们的 ChildOf，位置冻结在最后派生位姿
+                //（与迁移前的 manifestation 行为一致）。
+                if (World.Has<Ludots.Core.Gameplay.Spawning.DestroyWhenParentExecutionEnds>(child))
+                {
+                    return;
+                }
+
                 CleanupOrphan(child, parent);
                 return;
             }

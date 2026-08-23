@@ -102,6 +102,7 @@ namespace Ludots.Core.Config
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
             Register<RuntimeNavMeshStructuralObstacle>("RuntimeNavMeshStructuralObstacle");
             Register("ManifestationMotion2D", SetManifestationMotion2D);
+            Register("AttachedLocalPose", SetAttachedLocalPose);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
             Register<UtilityAiState>("UtilityAiState", SetUtilityAiState);
@@ -1371,12 +1372,50 @@ namespace Ludots.Core.Config
             }
             ValidateProperties(obj, "ManifestationMotion2D", "followParentPosition", "facingSource", "sweepDegreesPerSecond", "forwardOffsetCm");
 
+            byte followParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition");
+            int forwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D");
             entity.Add(new ManifestationMotion2D
             {
-                FollowParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition"),
+                FollowParentPosition = followParentPosition,
                 FacingSource = ParseManifestationFacingSource(RequireStringProperty(obj, "facingSource", "ManifestationMotion2D")),
                 SweepDegreesPerSecond = ReadFloatProperty(obj, "sweepDegreesPerSecond", "ManifestationMotion2D"),
-                ForwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D"),
+                ForwardOffsetCm = forwardOffsetCm,
+            });
+
+            // 位置跟随职责已并入通用 AttachmentPositionSyncSystem：跟随父的 manifestation
+            // 在装配期取得 AttachedLocalPose（前向偏移沿自身朝向旋转），朝向仍由
+            // ManifestationMotion2DSystem 计算。既有模板 JSON 无需变更。
+            if (followParentPosition != 0)
+            {
+                entity.Add(new Ludots.Core.Components.AttachedLocalPose
+                {
+                    OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(forwardOffsetCm, 0),
+                    LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.Zero,
+                    InheritParentFacing = 0,
+                    OffsetRotation = Ludots.Core.Components.AttachedOffsetRotation.OwnFacing,
+                });
+            }
+        }
+
+        private static void SetAttachedLocalPose(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AttachedLocalPose requires an object payload.");
+            }
+            ValidateProperties(obj, "AttachedLocalPose", "offsetXCm", "offsetYCm", "facingDeg", "inheritParentFacing", "offsetRotation");
+
+            entity.Add(new Ludots.Core.Components.AttachedLocalPose
+            {
+                OffsetCm = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(
+                    ReadIntProperty(obj, "offsetXCm", "AttachedLocalPose"),
+                    ReadIntProperty(obj, "offsetYCm", "AttachedLocalPose")),
+                LocalFacingRad = Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(
+                    ReadIntProperty(obj, "facingDeg", "AttachedLocalPose")) * (Ludots.Core.Mathematics.FixedPoint.Fix64.Pi / Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(180)),
+                InheritParentFacing = ParseBooleanByte(RequireProperty(obj, "inheritParentFacing", "AttachedLocalPose"), "AttachedLocalPose.inheritParentFacing"),
+                OffsetRotation = Ludots.Core.Gameplay.Attachment.AttachedLocalPoseAuthoring.ParseOffsetRotation(
+                    RequireStringProperty(obj, "offsetRotation", "AttachedLocalPose"),
+                    "AttachedLocalPose"),
             });
         }
 

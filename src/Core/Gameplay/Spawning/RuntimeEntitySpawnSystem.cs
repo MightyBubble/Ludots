@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
@@ -286,7 +287,98 @@ namespace Ludots.Core.Gameplay.Spawning
             TryLinkOwnershipEdge(entity);
             ApplyRelationshipPlan(in relationshipPlan, entity);
             TryBootstrapPresenter(entity, request.TemplateId);
+            EnqueueTemplateChildren(in request, entity);
             return entity;
+        }
+
+        /// <summary>
+        /// 模板 children 预置组合：以刚落位的父实体为原点，把每个 child 作为一个普通
+        /// Template spawn 请求（Parent + 派生世界位姿 + overrides 补丁）enqueue 进同一队列——
+        /// 复用既有 spawn 管线，不建第二条物化路径。本 Update 的 drain 循环会继续消费它们。
+        /// </summary>
+        private void EnqueueTemplateChildren(in RuntimeEntitySpawnRequest request, Entity parent)
+        {
+            if (!TryGetTemplate(request.TemplateId, out EntityTemplate template) ||
+                template.Children is not { Count: > 0 })
+            {
+                return;
+            }
+
+            if (!World.IsAlive(parent) || !World.Has<WorldPositionCm>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenParentPositionMissing: template='{request.TemplateId}', parent={parent.Id}.");
+            }
+
+            Fix64Vec2 parentPosition = World.Get<WorldPositionCm>(parent).Value;
+            float parentFacing = World.Has<FacingDirection>(parent) ? World.Get<FacingDirection>(parent).AngleRad : 0f;
+            for (int i = 0; i < template.Children.Count; i++)
+            {
+                EntityTemplateChild child = template.Children[i];
+                if (child == null || string.IsNullOrWhiteSpace(child.Template))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.TemplateChildInvalid: template='{request.TemplateId}', index={i}.");
+                }
+
+                Ludots.Core.Components.AttachedLocalPose localPose = Ludots.Core.Gameplay.Attachment
+                    .AttachedLocalPoseAuthoring.Parse(
+                        child.LocalPose,
+                        $"Entity template '{request.TemplateId}' children[{i}] '{child.Template}'");
+                Fix64Vec2 childPosition = Ludots.Core.Gameplay.Attachment.AttachedPoseMath.ComposeWorldPosition(
+                    in parentPosition,
+                    parentFacing,
+                    ownFacingRad: 0f,
+                    in localPose);
+                float childFacing;
+                byte hasFacing;
+                if (localPose.InheritParentFacing != 0)
+                {
+                    childFacing = parentFacing + localPose.LocalFacingRad.ToFloat();
+                    hasFacing = 1;
+                }
+                else if (localPose.LocalFacingRad != Fix64.Zero)
+                {
+                    childFacing = localPose.LocalFacingRad.ToFloat();
+                    hasFacing = 1;
+                }
+                else
+                {
+                    childFacing = 0f;
+                    hasFacing = 0;
+                }
+
+                RuntimeEntitySpawnComponentPatch[]? patches = null;
+                if (child.Overrides is { Count: > 0 })
+                {
+                    patches = new RuntimeEntitySpawnComponentPatch[child.Overrides.Count];
+                    int patchIndex = 0;
+                    foreach (var kvp in child.Overrides)
+                    {
+                        patches[patchIndex++] = new RuntimeEntitySpawnComponentPatch(kvp.Key, kvp.Value);
+                    }
+                }
+
+                var childRequest = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = child.Template,
+                    WorldPositionCm = childPosition,
+                    HasWorldPosition = 1,
+                    FacingAngleRad = childFacing,
+                    HasFacing = hasFacing,
+                    MapId = request.MapId,
+                    Parent = parent,
+                    ComponentPatches = patches,
+                    AttachedLocalPose = localPose,
+                    HasAttachedLocalPose = 1,
+                };
+                if (!_requests.TryEnqueue(in childRequest))
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
+                }
+            }
         }
 
         private bool TryCopyTemplateBatch(string templateId, out int count)
@@ -331,8 +423,12 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
         {
+            // 带父链接/attachment 局部姿的请求只能走单实体 lane（batch lane 不处理父子链接）。
             return request.Kind == RuntimeEntitySpawnKind.Template &&
                    !HasComponentPatches(in request) &&
+                   request.Parent == Entity.Null &&
+                   request.LinkSourceAsParent == 0 &&
+                   request.HasAttachedLocalPose == 0 &&
                    !string.IsNullOrWhiteSpace(request.TemplateId) &&
                    string.Equals(request.TemplateId, templateId, StringComparison.Ordinal);
         }
@@ -1323,6 +1419,32 @@ namespace Ludots.Core.Gameplay.Spawning
             Entity parent = request.LinkSourceAsParent != 0 ? request.Source : request.Parent;
             if (!World.IsAlive(parent))
             {
+                if (request.HasAttachedLocalPose != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachedChildParentInvalid: template='{request.TemplateId}', child={entity.Id}.");
+                }
+
+                return;
+            }
+
+            if (request.HasAttachedLocalPose != 0)
+            {
+                // 模板 children 的挂接：spawn 管线不授予写权——子模板在装载期被禁止声明
+                // MovementParticipation，sink 即其唯一位姿写者；持有写权的实体须走 AttachOp。
+                if (World.Has<PoseAuthority>(entity) &&
+                    World.Get<PoseAuthority>(entity).Value != PoseAuthorityKind.Attached)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.AttachedChildPoseAuthority: template='{request.TemplateId}', child={entity.Id}——模板 children 禁止声明 MovementParticipation。");
+                }
+
+                RelationOps.SetParent(World, entity, parent);
+                Ludots.Core.Gameplay.Attachment.AttachmentOps.ApplyAttachedPose(
+                    World,
+                    entity,
+                    parent,
+                    request.AttachedLocalPose);
                 return;
             }
 
