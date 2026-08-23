@@ -460,6 +460,8 @@ internal sealed class VisualTerrainEditorRuntime
                 defaultMaterialAssetId: DefaultChunkMaterialAssetId,
                 defaultHeight01: ImportedVisualHeightmapDefaultHeight01,
                 renderProfile: mapRenderProfile);
+            // 垂直夸张 = 编辑器导入基线 × 作者 profile 系数(1=维持基线)。
+            nextDocument.SetDisplayHeightScale(ImportedDefaultDisplayHeightScale * mapRenderProfile.DisplayHeightScale);
             statusText = $"Loaded visual heightmap from {nextSavePath}";
         }
 
