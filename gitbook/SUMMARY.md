@@ -14,8 +14,6 @@
   - [运行时总览](architecture/runtime-overview.md)
   - [Agent 调试桥](architecture/agent-debug-bridge.md)
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
-  - [UI 面板作者形态（四种表面）](architecture/ui-panel-authoring-form.md)
-  - [UIP-0：Template / Instance / Router 合同](architecture/ui-panel-template-instance-router.md)
   - [四皮面板：工程结构与换肤合同](architecture/panel-skins.md)
   - [面板目录设计：配置形状与线框](architecture/panel-catalog-designs.md)
   - [面板典型案例全设计](architecture/panel-case-designs.md)

@@ -72,5 +72,97 @@
         "toPort": "value"
       }
     ]
+  },
+  {
+    "id": "Graph.Fireball.Panel.Values",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      {
+        "id": "hp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "mp",
+        "op": "LoadSelfAttribute",
+        "attribute": "Mana"
+      },
+      {
+        "id": "atk",
+        "op": "LoadSelfAttribute",
+        "attribute": "Attack"
+      },
+      {
+        "id": "hpBase",
+        "op": "ConstFloat",
+        "floatValue": 100
+      },
+      {
+        "id": "mpBase",
+        "op": "ConstFloat",
+        "floatValue": 80
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "hp",
+        "fromPort": "next",
+        "to": "mp"
+      },
+      {
+        "from": "mp",
+        "fromPort": "next",
+        "to": "atk"
+      },
+      {
+        "from": "atk",
+        "fromPort": "next",
+        "to": "hpBase"
+      },
+      {
+        "from": "hpBase",
+        "fromPort": "next",
+        "to": "mpBase"
+      }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      {
+        "id": "health",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hp",
+        "key": "fireball.panel.health"
+      },
+      {
+        "id": "mana",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "mp",
+        "key": "fireball.panel.mana"
+      },
+      {
+        "id": "attack",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "atk",
+        "key": "fireball.panel.attack"
+      },
+      {
+        "id": "healthBase",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "hpBase",
+        "key": "fireball.panel.healthBase"
+      },
+      {
+        "id": "manaBase",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "mpBase",
+        "key": "fireball.panel.manaBase"
+      }
+    ]
   }
 ]

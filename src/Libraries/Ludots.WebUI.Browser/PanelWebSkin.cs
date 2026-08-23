@@ -478,14 +478,14 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
             }
 
             PanelTemplate template = _templates.Require(_templateId);
-            var payload = new Dictionary<string, object?>(template.Variables.Count + 1, StringComparer.Ordinal)
+            var payload = new Dictionary<string, object?>(template.Pins.Count + 1, StringComparer.Ordinal)
             {
                 ["ready"] = true,
             };
 
-            foreach (PanelTemplateVariable variable in template.Variables)
+            foreach (PanelPin pin in template.Pins)
             {
-                payload[variable.Name] = values.Get(variable.Name);
+                payload[pin.Name] = values.Get(pin.Name);
             }
 
             packet = CreatePacket(payload, in context);

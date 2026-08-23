@@ -1,22 +1,24 @@
 namespace Ludots.Core.UI.PanelProjection
 {
     /// <summary>
-    /// Resolved numeric panel projection value. Text/token semantics are a later slice;
-    /// this mouth carries Float/Int/Bool already materialised by Attribute or GraphOutput.
+    /// One resolved pin value: graph output when present, else the pin's declared
+    /// default. Revision comes from the graph output store; defaults carry revision 0.
     /// </summary>
     public readonly struct PanelProjectionValue
     {
-        public PanelProjectionValue(string variableId, PanelBindingSourceKind sourceKind, float floatValue, uint revision)
+        public PanelProjectionValue(string pinName, float floatValue, uint revision, bool fromGraph)
         {
-            VariableId = variableId;
-            SourceKind = sourceKind;
+            PinName = pinName;
             FloatValue = floatValue;
             Revision = revision;
+            FromGraph = fromGraph;
         }
 
-        public string VariableId { get; }
-        public PanelBindingSourceKind SourceKind { get; }
+        public string PinName { get; }
         public float FloatValue { get; }
         public uint Revision { get; }
+
+        /// <summary>False = the graph has not produced this output yet; the pin default is showing.</summary>
+        public bool FromGraph { get; }
     }
 }
