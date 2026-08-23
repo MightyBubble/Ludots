@@ -1,0 +1,49 @@
+[
+  {
+    "id": "Graph.Unit.Status",
+    "kind": "Query",
+    "entry": "hp",
+    "nodes": [
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "hpMax", "op": "ConstFloat", "floatValue": 100 },
+      { "id": "mp", "op": "LoadSelfAttribute", "attribute": "Mana" },
+      { "id": "mpMax", "op": "ConstFloat", "floatValue": 80 }
+    ],
+    "controlEdges": [
+      { "from": "hp", "fromPort": "next", "to": "hpMax" },
+      { "from": "hpMax", "fromPort": "next", "to": "mp" },
+      { "from": "mp", "fromPort": "next", "to": "mpMax" }
+    ],
+    "valueEdges": [],
+    "outputs": [
+      { "id": "hp", "destination": "Summary", "type": "Float", "source": "hp", "key": "unit.status.hp" },
+      { "id": "hpMax", "destination": "Summary", "type": "Float", "source": "hpMax", "key": "unit.status.hpMax" },
+      { "id": "mp", "destination": "Summary", "type": "Float", "source": "mp", "key": "unit.status.mp" },
+      { "id": "mpMax", "destination": "Summary", "type": "Float", "source": "mpMax", "key": "unit.status.mpMax" }
+    ]
+  },
+  {
+    "id": "Graph.Unit.Status.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.unit.status", "panelAnchor": "screen.topLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.unit.status" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

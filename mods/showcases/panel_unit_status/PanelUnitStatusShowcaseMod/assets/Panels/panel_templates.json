@@ -1,0 +1,12 @@
+[
+  {
+    "id": "panel.unit.status",
+    "graph": "Graph.Unit.Status",
+    "pins": [
+      { "name": "hp", "key": "unit.status.hp", "mode": "realtime", "default": 0 },
+      { "name": "hpMax", "key": "unit.status.hpMax", "mode": "snapshot", "default": 100 },
+      { "name": "mp", "key": "unit.status.mp", "mode": "realtime", "default": 0 },
+      { "name": "mpMax", "key": "unit.status.mpMax", "mode": "snapshot", "default": 80 }
+    ]
+  }
+]

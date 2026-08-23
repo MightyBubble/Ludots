@@ -7475,6 +7475,30 @@
       ]
     },
     {
+      "id": "panel_unit_status",
+      "path": "mods/showcases/panel_unit_status/PanelUnitStatusShowcaseMod",
+      "projectPath": null,
+      "title": "Unit Status Panel",
+      "summary": "Schema v2 live status panel: health and mana are read from the unit through a Query graph",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_unit_status",
+      "preset": "panel_unit_status_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-unit-status.md",
+      "readmePath": null,
+      "acceptanceTest": "PanelUnitStatusShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_unit_status",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "schema-v2",
+        "unit-status",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",

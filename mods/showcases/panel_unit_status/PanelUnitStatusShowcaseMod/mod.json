@@ -1,0 +1,9 @@
+{
+  "name": "PanelUnitStatusShowcaseMod",
+  "version": "1.0.0",
+  "description": "Schema v2 unit status panel showcase: live health and mana from a Query graph",
+  "priority": 0,
+  "dependencies": {
+    "FireballSharedMod": "^1.0.0"
+  }
+}

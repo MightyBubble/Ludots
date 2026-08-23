@@ -232,6 +232,30 @@ public sealed class PanelFireballShowcaseAcceptanceTests
             "The sci-fi theme must inline its generated cut sprite sheet for Web UI.");
     }
 
+    [Test]
+    public void PanelUnitStatusShowcase_LoadsSchemaV2TemplateAndCreatesLivePanel()
+    {
+        using GameEngine engine = CreateEngine("PanelSkinMarkupMod", out TestInputBackend _,
+            extraMods: new[] { "PanelUnitStatusShowcaseMod" });
+        engine.Start();
+        engine.LoadMap(MapId);
+        Tick(engine, 4);
+
+        PanelTemplateRegistry templates = engine.GetService(CoreServiceKeys.PanelTemplateRegistry)
+            ?? throw new InvalidOperationException("Panel template registry missing.");
+        Assert.That(templates.TryGet("panel.unit.status", out PanelTemplate? template), Is.True);
+        Assert.That(template!.Graph, Is.EqualTo("Graph.Unit.Status"));
+
+        PanelHost host = engine.GetService(CoreServiceKeys.PanelHost)
+            ?? throw new InvalidOperationException("PanelHost missing.");
+        Entity hero = FindEntity(engine.World, "Hero");
+        Assert.That(host.SnapshotInstances(), Has.Some.Property("TemplateId").EqualTo("panel.unit.status"));
+        PanelInstanceHandle handle = FindPanel(host, hero, "panel.unit.status");
+        Assert.That(host.TryGetValues(handle, out PanelVariableSet values), Is.True);
+        Assert.That(values.Get("hp"), Is.EqualTo(100f));
+        Assert.That(values.Get("mp"), Is.EqualTo(80f));
+    }
+
     private static Ludots.UI.Runtime.UiNode? FindNodeByClass(Ludots.UI.Runtime.UiNode node, string className)
     {
         foreach (string name in node.ClassNames)
@@ -334,6 +358,19 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         }
 
         throw new InvalidOperationException("Fireball status panel was not instantiated for the hero.");
+    }
+
+    private static PanelInstanceHandle FindPanel(PanelHost host, Entity scope, string templateId)
+    {
+        foreach (PanelHostInstanceInfo info in host.SnapshotInstances())
+        {
+            if (info.Scope == scope && string.Equals(info.TemplateId, templateId, StringComparison.Ordinal))
+            {
+                return info.Handle;
+            }
+        }
+
+        throw new InvalidOperationException($"Panel '{templateId}' was not instantiated for the hero.");
     }
 
     private static void AssertPanelValues(
