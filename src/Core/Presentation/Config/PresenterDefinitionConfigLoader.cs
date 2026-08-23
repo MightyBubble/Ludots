@@ -501,6 +501,7 @@ namespace Ludots.Core.Presentation.Config
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
 
             RejectRemovedFields(node, key);
+            RejectUnknownFields((JsonObject)node, $"Presenter '{key}'", DefinitionFields);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
             PresenterDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
@@ -586,6 +587,62 @@ namespace Ludots.Core.Presentation.Config
                 {
                     throw new InvalidOperationException(
                         $"Presenter '{key}' still uses removed field '{field}'. Migrate Presenter authoring to lifecycle, anchor, visibility, and behaviors[].");
+                }
+            }
+        }
+
+        private static readonly string[] DefinitionFields =
+        {
+            "id", "extends", "lifecycle", "anchor", "visibility",
+            "rules", "bindings", "paramDefaults", "behaviors", "children",
+        };
+
+        private static readonly string[] BehaviorSlotFields =
+        {
+            "kind", "slot", "activeByDefault", "activationCondition", "execution",
+            "style", "motion",
+            "assetBinding", "attributeBinding", "tagBinding", "animator",
+            "attachment", "sound", "material", "spline", "grounding",
+            "minimapMarker", "worldText", "surfaceSource", "instancedBatch",
+        };
+
+        private static readonly string[] ChildFields =
+        {
+            "definitionId", "scopeTag", "overrides",
+        };
+
+        private static readonly string[] EventFilterFields =
+        {
+            "kind", "key", "keyId",
+        };
+
+        private static readonly string[] CommandFields =
+        {
+            "kind", "route", "definitionId", "scopeTag", "scopeSource", "ownerSource",
+            "useEventPosition", "paramKey", "paramLane", "valueSource",
+            "paramValue", "intValue", "vectorValue", "paramGraphProgramId",
+            "vectorXSource", "vectorYSource", "vectorZSource", "vectorWSource",
+            "targetBehaviorSlot", "timerName", "durationSeconds", "durationRangeSeconds",
+        };
+
+        private static void RejectUnknownFields(JsonObject obj, string context, string[] allowedFields)
+        {
+            foreach (var property in obj)
+            {
+                bool known = false;
+                for (int i = 0; i < allowedFields.Length; i++)
+                {
+                    if (string.Equals(property.Key, allowedFields[i], StringComparison.Ordinal))
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+
+                if (!known)
+                {
+                    throw new InvalidOperationException(
+                        $"{context} contains unknown field '{property.Key}'. Allowed fields: {string.Join(", ", allowedFields)}.");
                 }
             }
         }
@@ -827,6 +884,8 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
 
+            RejectUnknownFields(obj, context, EventFilterFields);
+
             PresentationEventKind kind = ParseRequiredNonNoneEnum<PresentationEventKind>(obj["kind"], $"{context}.kind");
             return new EventFilter
             {
@@ -929,6 +988,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
+
+            RejectUnknownFields(obj, context, CommandFields);
 
             string kindText = ParseRequiredSemanticString(obj["kind"], $"{context}.kind");
             if (!TryParseDefinedEnum(kindText, out PresenterCommandKind commandKind))
@@ -1700,6 +1761,8 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Presenter child[{i}] must be an object.");
                 }
 
+                RejectUnknownFields(obj, $"children[{i}]", ChildFields);
+
                 if (obj["paramOverrides"] != null)
                 {
                     throw new InvalidOperationException(
@@ -1973,6 +2036,8 @@ namespace Ludots.Core.Presentation.Config
                 {
                     throw new InvalidOperationException($"Presenter behavior[{i}] must be an object.");
                 }
+
+                RejectUnknownFields(obj, $"Presenter '{ownerKey}' behavior[{i}]", BehaviorSlotFields);
 
                 string kindText = ParseRequiredSemanticString(obj["kind"], $"Presenter '{ownerKey}' behavior[{i}].kind");
                 bool parsedBuiltinKind = TryParseDefinedEnum(kindText, out BehaviorKind kind);
