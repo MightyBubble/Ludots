@@ -198,6 +198,54 @@ WIKI_FAMILY_HEADING = re.compile(r"^## (.+?)\s*$")
 WIKI_OP_ITEM = re.compile(r"^-\s+\[(?P<title>[^\]]+)\]\((?P<file>[^)]+?\.md)\)\s*(?:—|-)\s*(?P<desc>.*)$")
 
 
+
+PANEL_CASE_HEADING = re.compile(r"^#{2,4} 案 (?P<no>[A-Z]|\d+)[：:](?P<rest>.+)$")
+PANEL_ID_IN_TEXT = re.compile(r"`?(panel\.[a-z_.]+)`?")
+PANEL_STATUS_LINE = re.compile(r"^>\s*(?:状态[：:]\s*)?(?P<status>[🟢🔴⛔⚙])")
+
+def parse_panel_cases(md_path: Path, label: str) -> dict:
+    """解析 panel-case-designs.md 的案标题/状态行为分组树（面板矩阵页数据源）。
+
+    两种标题排列都收：`案 A：玩家信息聚合 \`panel.x\` —— 定位`（前四案）与
+    `案 5：panel.x —— 定位`（31 案）；状态徽章取案首引用行的 emoji。
+    """
+    nav: dict = {"groups": [], "total": 0}
+    if not md_path.exists():
+        warn(f"{label} 不存在 -> 面板目录为空")
+        return nav
+    current_group = None
+    pending_case = None
+    for raw in md_path.read_text(encoding="utf-8").splitlines():
+        heading = PANEL_CASE_HEADING.match(raw)
+        if heading:
+            rest = heading.group("rest")
+            found = PANEL_ID_IN_TEXT.search(rest)
+            if not found:
+                continue
+            pid = found.group(1)
+            title = re.sub(r"\s+", " ", " — ".join(rest.replace(found.group(0), "").split(" —— "))).strip()
+            if current_group is None:
+                current_group = {"title": "前四案（全设计）", "cases": []}
+                nav["groups"].insert(0, current_group)
+            pending_case = {"id": pid, "no": heading.group("no"), "title": title, "status": ""}
+            current_group["cases"].append(pending_case)
+            nav["total"] += 1
+            continue
+        if raw.startswith("## ") and not raw.startswith("## 案"):
+            title = raw.strip("# ").strip()
+            if title.startswith("五、") or title.startswith("二、") or title.startswith("三、") or title.startswith("四、") or title.startswith("六、") or title.startswith("七、"):
+                current_group = {"title": title, "cases": []}
+                nav["groups"].append(current_group)
+                pending_case = None
+            continue
+        status = PANEL_STATUS_LINE.match(raw)
+        if status and pending_case is not None:
+            pending_case["status"] = status.group("status")
+            pending_case = None
+    if nav["total"] == 0:
+        warn(f"{label} 未解析到任何案条目 -> 检查案标题格式")
+    return nav
+
 def parse_wiki_catalog(readme_path: Path, label: str) -> dict:
     """解析 wiki 总目录为家族树（站点画廊页数据源；条目缺失页面时硬失败防 404）。"""
     nav: dict = {"families": [], "total": 0}
@@ -489,6 +537,14 @@ def build(out_dir: Path) -> int:
         **parse_wiki_catalog(ENGINE_GALLERY_WIKI_DIR / "README.md", "engine-gallery-wiki"),
     }
 
+    print("-- 解析 panel-case-designs.md 案目录 -> panels-nav.js")
+    panels_nav = {
+        "generatedAt": now,
+        "source": "gitbook/architecture/panel-case-designs.md",
+        **parse_panel_cases(GITBOOK_DIR / "architecture" / "panel-case-designs.md", "panel-case-designs"),
+    }
+    write_js(out_dir / "site-assets" / "panels-nav.js", "PANELS_NAV", panels_nav)
+
     print("-- 读取 showcase.registry.json → gallery-data.js")
     showcases, schema_version = load_registry(REGISTRY_JSON)
     gallery_data = {
@@ -543,6 +599,7 @@ def build(out_dir: Path) -> int:
         "graph-op-wiki.html", "raylib-engine.html", "agent-bridge.html",
         "site-assets/site.css", "site-assets/site.js",
         "site-assets/docs-nav.js", "site-assets/prd-nav.js", "site-assets/graph-op-nav.js",
+        "site-assets/panels-nav.js",
         "site-assets/engine-gallery-nav.js",
         "site-assets/gallery-data.js", "site-assets/evidence-data.js",
         ".nojekyll",
