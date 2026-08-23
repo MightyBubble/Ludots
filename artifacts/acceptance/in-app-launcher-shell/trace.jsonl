@@ -1,0 +1,9 @@
+{"step":1,"event":"mode-dispatch","input":"args=['launcher.runtime.json']","expect":"GameMode","result":"pass","test":"LauncherShellLifecycle_DispatchesMode_ByFirstArgument"}
+{"step":2,"event":"mode-dispatch","input":"args=[]","expect":"ShellMode(null)","result":"pass","test":"LauncherShellLifecycle_DispatchesMode_ByFirstArgument"}
+{"step":3,"event":"mode-dispatch","input":"args=[' ']","expect":"ShellMode(null)","result":"pass","test":"LauncherShellLifecycle_DispatchesMode_ByFirstArgument"}
+{"step":4,"event":"relay-restart-contract","input":"current process","expect":"dotnet host carries entry dll arg; apphost spawns bare; UseShellExecute=false","result":"pass","test":"LauncherShellLifecycle_RelayRestart_SpawnsCurrentProcessWithoutLauncherArguments"}
+{"step":5,"event":"prepare-launch","input":"selectors=['mod:LudotsCoreMod'] adapter=raylib build=never","expect":"ok + bootstrap+graph written","result":"pass","test":"PrepareLaunchAsync_WritesBootstrapAndGraph_ConsumableByGameBootstrapper"}
+{"step":6,"event":"gamebootstrapper-verify","input":"prepared.BootstrapPath","expect":"fingerprint/freshness checks pass; LoadedModIds==OrderedModIds; assetsRoot=repo/assets","result":"pass","test":"PrepareLaunchAsync_WritesBootstrapAndGraph_ConsumableByGameBootstrapper"}
+{"step":7,"event":"regression-suite","input":"LauncherBootstrapContractTests full fixture","expect":"23/23 pass","result":"pass","suite":"ArchitectureTests"}
+{"step":8,"event":"spawn-smoke","input":"cli launch mod:LudotsCoreMod --adapter raylib + LUDOTS_AUTO_EXIT_FRAME=10","expect":"pid issued, bootstrap written, game self-exits, cli exit=0","result":"pass","pid":50272}
+{"step":9,"event":"failure-branch","input":"executable target via PrepareLaunchAsync","expect":"error: executable targets require external process","result":"covered-by-construction","note":"PrepareLaunchAsync returns error before writing artifacts"}

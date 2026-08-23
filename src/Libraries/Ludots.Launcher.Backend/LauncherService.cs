@@ -412,7 +412,7 @@ public sealed class LauncherService
         return WriteRuntimeBootstrap(plan);
     }
 
-    public async Task<LauncherLaunchResult> LaunchAsync(
+    public async Task<LauncherPrepareResult> PrepareLaunchAsync(
         IEnumerable<string> selectors,
         string? adapterId = null,
         LauncherBuildMode buildMode = LauncherBuildMode.Auto,
@@ -432,14 +432,18 @@ public sealed class LauncherService
             browserProviderOverride);
         if (resolveResult.Plan.IsExecutableTarget)
         {
-            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
+            return new LauncherPrepareResult(
+                false,
+                "Executable targets run in an external process; the in-app shell only prepares mod plans.",
+                string.Empty,
+                null);
         }
 
         var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
         {
-            return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            return new LauncherPrepareResult(false, failedModBuild.Output, string.Empty, resolveResult.Plan);
         }
 
         var appBuild = ShouldSkipAppBuild(resolveResult.Plan)
@@ -447,10 +451,11 @@ public sealed class LauncherService
             : await BuildAppAsync(resolveResult.Plan.AdapterId);
         if (!appBuild.Ok)
         {
-            return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
+            return new LauncherPrepareResult(false, appBuild.Output, string.Empty, resolveResult.Plan);
         }
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
+<<<<<<< HEAD:src/Tools/Ludots.Launcher.Backend/LauncherService.cs
         ReplacePreviousActiveProcess(resolveResult.Plan);
         Process process;
         try
@@ -464,14 +469,52 @@ public sealed class LauncherService
         {
             return new LauncherLaunchResult(false, ex.Message, -1, string.Empty, bootstrapPath, resolveResult.Plan);
         }
+=======
+        return new LauncherPrepareResult(true, string.Empty, bootstrapPath, resolveResult.Plan);
+    }
+
+    public async Task<LauncherLaunchResult> LaunchAsync(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        var config = LoadConfig();
+        var resolveResult = ResolvePlan(
+            selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(),
+            adapterId,
+            buildMode,
+            config,
+            BuildCatalog(config),
+            LoadPresets());
+        if (resolveResult.Plan.IsExecutableTarget)
+        {
+            return await LaunchExecutableTargetAsync(resolveResult.Plan, config);
+        }
+
+        var prepared = await PrepareLaunchAsync(selectors, adapterId, buildMode);
+        if (!prepared.Ok || prepared.Plan is null)
+        {
+            return new LauncherLaunchResult(false, prepared.Error, -1, string.Empty, string.Empty, resolveResult.Plan);
+        }
+
+        var plan = prepared.Plan;
+        ReplacePreviousActiveProcess(plan);
+        var startInfo = new ProcessStartInfo(
+            ResolveDotnetCommand(),
+            $"exec --roll-forward Major \"{plan.AppAssemblyPath}\" \"{prepared.BootstrapPath}\"")
+        {
+            WorkingDirectory = plan.AppOutputDirectory,
+            UseShellExecute = false
+        };
+>>>>>>> 918b9dfe80 (feat(launcher): in-app launcher shell 首切片——启动器嵌入 App.Raylib 进程生命周期（epic #1055 IALS-2/3/4/6 首刀）):src/Libraries/Ludots.Launcher.Backend/LauncherService.cs
 
         if (process == null)
         {
-            return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, bootstrapPath, resolveResult.Plan);
+            return new LauncherLaunchResult(false, "Failed to start platform process.", -1, string.Empty, prepared.BootstrapPath, plan);
         }
 
-        PersistActiveProcess(resolveResult.Plan, bootstrapPath, process);
-        return new LauncherLaunchResult(true, string.Empty, process.Id, resolveResult.Plan.LaunchUrl, bootstrapPath, resolveResult.Plan);
+        PersistActiveProcess(plan, prepared.BootstrapPath, process);
+        return new LauncherLaunchResult(true, string.Empty, process.Id, plan.LaunchUrl, prepared.BootstrapPath, plan);
     }
 
     private async Task<LauncherLaunchResult> LaunchExecutableTargetAsync(LauncherLaunchPlan plan, LauncherConfig config)

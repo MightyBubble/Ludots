@@ -32,7 +32,7 @@
 
 - `scripts/run-mod-launcher.ps1`
 - `src/Tools/Ludots.Launcher.Cli/Program.cs`
-- `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+- `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Tools/Ludots.Tool/Program.cs`
 
 ### 2.2 依赖闭包与顺序

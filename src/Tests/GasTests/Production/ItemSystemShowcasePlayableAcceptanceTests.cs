@@ -840,7 +840,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         sb.AppendLine("## Cross-Layer Note");
         sb.AppendLine("- debt id: `launcher-env-propagation`");
         sb.AppendLine("- finding: launcher startup used `UseShellExecute = true`, which dropped Raylib screenshot and diagnostic environment variables during acceptance capture.");
-        sb.AppendLine("- containment: fixed in `src/Tools/Ludots.Launcher.Backend/LauncherService.cs` and documented in `artifacts/techdebt/2026-03-23-launcher-env-propagation.md`.");
+        sb.AppendLine("- containment: fixed in `src/Libraries/Ludots.Launcher.Backend/LauncherService.cs` and documented in `artifacts/techdebt/2026-03-23-launcher-env-propagation.md`.");
         return sb.ToString();
     }
 

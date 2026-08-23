@@ -112,6 +112,12 @@ public sealed record LauncherLaunchResult(
     string BootstrapPath,
     LauncherLaunchPlan? Plan);
 
+public sealed record LauncherPrepareResult(
+    bool Ok,
+    string Error,
+    string BootstrapPath,
+    LauncherLaunchPlan? Plan);
+
 public sealed record LauncherExecutableTargetRun(
     string CommandLine,
     int ExitCode,

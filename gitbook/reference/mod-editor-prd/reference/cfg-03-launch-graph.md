@@ -18,11 +18,11 @@
 | 引导配置（锚文件字段：计划路径、选择器、根 mod、顺序、指纹、schema 版本、浏览器运行时） | src/Core/Hosting/GameBootstrapper.cs:19-30 |
 | 引导入口（读锚 → 解析计划 → 校验 → 交引擎） | src/Core/Hosting/GameBootstrapper.cs:41-95 |
 | 计划路径解析与缺失校验 | src/Core/Hosting/GameBootstrapper.cs:97-130 |
-| 生成侧：依赖闭包解析（DFS 后序、依赖按名字字母序、错误抛出） | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
-| 生成侧：priority 的现实作用（目录索引展示排序） | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:1303 附近 |
+| 生成侧：依赖闭包解析（DFS 后序、依赖按名字字母序、错误抛出） | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:729-777 |
+| 生成侧：priority 的现实作用（目录索引展示排序） | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:1303 附近 |
 | 消费侧：引擎按计划有序清单加载 | src/Core/Engine/GameEngine.cs:451-461 |
-| 生成侧：指纹计算 | src/Tools/Ludots.Launcher.Backend/LauncherService.cs:569 附近 |
-| 生成侧：计划与锚文件写出 | src/Tools/Ludots.Launcher.Backend/LauncherService.cs（WriteLaunchGraphDocument / WriteRuntimeBootstrap） |
+| 生成侧：指纹计算 | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs:569 附近 |
+| 生成侧：计划与锚文件写出 | src/Libraries/Ludots.Launcher.Backend/LauncherService.cs（WriteLaunchGraphDocument / WriteRuntimeBootstrap） |
 | 计划顺序直用加载路径 | src/Core/Modding/ModLoader.cs:127-214 |
 | 计划文件实例 | src/Apps/Raylib/Ludots.App.Raylib/raylib.launch.graph.json |
 
