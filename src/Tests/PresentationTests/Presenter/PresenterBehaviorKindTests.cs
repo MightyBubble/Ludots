@@ -1110,6 +1110,137 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void OwnerSyncPathSelection_HandsOverBetweenSingleRootFastPathAndPerPresenterSync()
+        {
+            using var world = World.Create();
+            var instances = new PresenterEntityRuntime(world);
+            var definitions = new PresenterDefinitionRegistry();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            int bodyDefId = definitions.Register("sync.path.selection.body", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int ringDefId = definitions.Register("sync.path.selection.ring", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, instances, definitions)
+            {
+                DebugSyncPathAssertionsEnabled = true,
+            };
+
+            Entity body = instances.CreateHierarchy(
+                definitions,
+                bodyDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9201,
+                Entity.Null,
+                definitions.Get(bodyDefId));
+
+            ref readonly PresentationOwnerHasPresenterPayload payload = ref world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.That(payload.Count, Is.EqualTo(1));
+            Assert.That(payload.RootCount, Is.EqualTo(1));
+            Assert.That(payload.SingleRootPresenter, Is.EqualTo(body));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(1));
+            Assert.That(world.Has<PerfTransformSyncTick>(body), Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(body), Is.True,
+                "A freshly created single root of an eligible owner must enter the single-root fast path.");
+
+            world.Get<VisualTransform>(owner).Position = new Vector3(30f, 0f, 40f);
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+            Assert.That(world.Get<PresenterWorldPosition>(body).Value, Is.EqualTo(new Vector3(30f, 0f, 40f)));
+            Assert.That(world.Get<PresenterWorldPlanePosition>(body).ValueCm, Is.EqualTo(new Vector2(3000f, 4000f)));
+
+            Entity ring = instances.CreateHierarchy(
+                definitions,
+                ringDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9202,
+                Entity.Null,
+                definitions.Get(ringDefId));
+
+            payload = ref world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.That(payload.Count, Is.EqualTo(2));
+            Assert.That(payload.RootCount, Is.EqualTo(2));
+            Assert.That(payload.SingleRootPresenter, Is.EqualTo(Entity.Null));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(0));
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(body), Is.False,
+                "Adding a second root must revoke the fast-path marker from the surviving root.");
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(ring), Is.False);
+
+            world.Get<VisualTransform>(owner).Position = new Vector3(50f, 0f, 60f);
+            sync.Update(0.016f);
+            Assert.That(world.Get<PresenterWorldPosition>(body).Value, Is.EqualTo(new Vector3(50f, 0f, 60f)),
+                "Every root of a multi-root owner must stay covered by the per-presenter anchored sync.");
+            Assert.That(world.Get<PresenterWorldPosition>(ring).Value, Is.EqualTo(new Vector3(50f, 0f, 60f)));
+
+            instances.Destroy(ring);
+
+            payload = ref world.Get<PresentationOwnerHasPresenterPayload>(owner);
+            Assert.That(payload.RootCount, Is.EqualTo(1));
+            Assert.That(payload.SingleRootPresenter, Is.EqualTo(body));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(1));
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(body), Is.True,
+                "Dropping back to a single root must re-arm the fast-path marker.");
+
+            world.Get<VisualTransform>(owner).Position = new Vector3(70f, 0f, 80f);
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(7000, 8000).Value;
+            sync.Update(0.016f);
+            Assert.That(world.Get<PresenterWorldPosition>(body).Value, Is.EqualTo(new Vector3(70f, 0f, 80f)));
+            Assert.That(world.Get<PresenterWorldPlanePosition>(body).ValueCm, Is.EqualTo(new Vector2(7000f, 8000f)));
+        }
+
+        [Test]
         public void EntityAnchoredRootBatch_AppliesPerRootParamOverrides_BeforeChildrenResolveParentParams()
         {
             using var world = World.Create();

@@ -1,0 +1,38 @@
+{
+  "op": "SpawnTemplate",
+  "driver": "linear",
+  "title": "图内造兵",
+  "beat": "不用预置实体，阈值一到援军从图里长了出来。",
+  "detailTemplate": "图内生成落地——援军入场，木桩血量{healthBefore}→{healthAfter}。",
+  "assertDetailContains": [
+    "图内生成落地"
+  ],
+  "featuredNodeId": "spawn",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

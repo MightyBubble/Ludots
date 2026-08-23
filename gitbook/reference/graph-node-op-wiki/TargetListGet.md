@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | Effect / Score / Validation / Derived / Script |
+| 可用图种 | Effect / Score / Validation / Derived / Script / TriggerGraph |
 | 返回 | Entity → 实体寄存器 |
 | 输入端口（值边 toPort） | `value`（数值） |
 | 特殊写法 | 结果写入 dst 寄存器；flags 填布尔暂存位编号 |
@@ -43,7 +43,7 @@ ConstInt → ConstInt → QueryCone → LoadCaster → QueryFilterNotEntity → 
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Script；Query 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Script / TriggerGraph；Query 图不可用（编译期白名单拒绝）。
 - 同类用法：范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。
 ## 怎么进
 

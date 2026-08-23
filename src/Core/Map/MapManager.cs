@@ -345,6 +345,12 @@ namespace Ludots.Core.Map
             // Merge DefaultCamera (source wins)
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
 
+            // Merge DeathRule (source wins)
+            if (source.DeathRule != null)
+            {
+                target.DeathRule = source.DeathRule;
+            }
+
             // Merge HeartbeatIntervalTicks (source wins)
             if (source.HeartbeatIntervalTicks.HasValue)
             {

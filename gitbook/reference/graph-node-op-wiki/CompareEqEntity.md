@@ -44,7 +44,7 @@ LoadCaster → LoadExplicitTarget → **CompareEqEntity**（本篇） → JumpIf
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived / Query；Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived / Query；Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - 同类用法：按属性读写与直写、层数叠加引爆、先查对方状态再决定出手。
 ## 怎么进
 

@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |----|----|
-| 可用图种 | 六种全可用（Effect / Score / Validation / Derived / Query / Script） |
+| 可用图种 | 七种全可用（Effect / Score / Validation / Derived / Query / Script / TriggerGraph） |
 | 返回 | Int → 整数寄存器 |
 | 输入端口（值边 toPort） | `a`（第一操作数） |
 | 特殊写法 | 结果写入 dst 寄存器；imm 填符号名（编译期解析） |
@@ -43,7 +43,7 @@ ConstInt → ResolveTableRow → **TableReadInt**（本篇） → TableReadFloat
 
 ## 边界与更多用法
 
-- 图种边界：六种图全都能用，不必为它挑图种。
+- 图种边界：七种图全都能用，不必为它挑图种。
 - imm 是装载期解析的符号名：符号改名后，引用它的图要跟着改并重编译。
 - 同类用法：伤害公式的缩放与浮动、斩杀线/格挡线这类阈值判断、把读数换算成另一个数。
 ## 怎么进

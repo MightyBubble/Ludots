@@ -252,9 +252,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         }
 
                         break;
+                    case "action":
+                        if (field.Value is not JsonValue actionValue || !actionValue.TryGetValue<string>(out _) ||
+                            string.IsNullOrWhiteSpace(field.Value.GetValue<string>()))
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'action' must be a non-empty string.");
+                        }
+
+                        break;
                     default:
                         throw new InvalidOperationException(
-                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction.");
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction, action.");
                 }
             }
         }

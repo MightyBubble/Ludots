@@ -1,51 +1,243 @@
 {
   "Id": "night_raid",
-  "Tags": ["showcase", "night-raid"],
+  "Tags": [
+    "showcase",
+    "night-raid"
+  ],
+  "VisualHeightmapAsset": "assets/terrain/night_raid_flat.vhtm",
   "HeartbeatIntervalTicks": 6,
   "Variables": [
-    { "name": "wave", "type": "int", "initial": 0 },
-    { "name": "phase", "type": "int", "initial": 0, "phase": true }
+    {
+      "name": "stage",
+      "type": "int",
+      "initial": 0,
+      "phase": true
+    },
+    {
+      "name": "kill_count",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "kill_threshold",
+      "type": "int",
+      "initial": 3
+    },
+    {
+      "name": "tool_uses",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "override_active",
+      "type": "int",
+      "initial": 0
+    },
+    {
+      "name": "override_seen",
+      "type": "int",
+      "initial": 0
+    }
   ],
   "Regions": [
-    { "id": "raid_circle", "shape": "circle", "x": 0, "y": 0, "radiusCm": 250 }
+    {
+      "id": "raid_circle",
+      "shape": "circle",
+      "x": 0,
+      "y": 0,
+      "radiusCm": 250
+    }
   ],
   "TriggerGraphs": [
-    { "graph": "Graph.NightRaid.Flow", "scopeInstanceId": "night_raid_hero" }
+    {
+      "graph": "Graph.NightRaid.Flow",
+      "scopeInstanceId": "night_raid_hero"
+    }
   ],
   "Entities": [
-    { "InstanceId": "night_raid_hero", "Template": "night_raid_hero" },
-    { "InstanceId": "night_raid_gate", "Template": "night_raid_gate" },
-    { "InstanceId": "wave1_raider_a", "Template": "night_raid_raider", "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": -120 } } } },
-    { "InstanceId": "wave1_raider_b", "Template": "night_raid_raider", "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } } } },
-    { "InstanceId": "wave1_raider_c", "Template": "night_raid_raider", "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": 120 } } } },
-    { "InstanceId": "wave2_raider_a", "Template": "night_raid_raider", "Overrides": { "Team": { "Id": 3 }, "WorldPositionCm": { "Value": { "X": 900, "Y": -80 } } } },
-    { "InstanceId": "wave2_raider_b", "Template": "night_raid_raider", "Overrides": { "Team": { "Id": 3 }, "WorldPositionCm": { "Value": { "X": 900, "Y": 80 } } } },
-    { "InstanceId": "night_raid_boss", "Template": "night_raid_boss" }
+    {
+      "InstanceId": "night_raid_hero",
+      "Template": "night_raid_hero"
+    },
+    {
+      "InstanceId": "night_raid_gate",
+      "Template": "night_raid_gate"
+    },
+    {
+      "InstanceId": "wave1_raider_a",
+      "Template": "night_raid_raider",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 600,
+            "Y": -120
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wave1_raider_b",
+      "Template": "night_raid_raider",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 600,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wave1_raider_c",
+      "Template": "night_raid_raider",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 600,
+            "Y": 120
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wave2_raider_a",
+      "Template": "night_raid_raider",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 900,
+            "Y": -80
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wave2_raider_b",
+      "Template": "night_raid_raider",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 900,
+            "Y": 80
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "boss_camp",
+      "Template": "night_raid_boss_camp"
+    }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "night_raid_hero" },
-    { "TeamId": 2, "RepresentativeInstanceId": "wave1_raider_b" },
-    { "TeamId": 3, "RepresentativeInstanceId": "wave2_raider_a" },
-    { "TeamId": 4, "RepresentativeInstanceId": "night_raid_boss" }
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "night_raid_hero"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "wave1_raider_b"
+    },
+    {
+      "TeamId": 3,
+      "RepresentativeInstanceId": "wave2_raider_a"
+    },
+    {
+      "TeamId": 4,
+      "RepresentativeInstanceId": "boss_camp"
+    }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "night_raid_hero" }
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "night_raid_hero"
+    }
   ],
   "ParticipantRelationships": {
     "Teams": [
-      { "TeamA": 1, "TeamB": 1, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 3, "TeamB": 3, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 4, "TeamB": 4, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 3, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 2, "TeamB": 4, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 3, "TeamB": 4, "TypeId": "LudotsCore.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 3, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 4, "TypeId": "LudotsCore.Participant", "Attitude": "Hostile", "Symmetric": true }
+      {
+        "TeamA": 1,
+        "TeamB": 1,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 3,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 3,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 2,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 3,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 2,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 3,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Friendly",
+        "Symmetric": true
+      },
+      {
+        "TeamA": 1,
+        "TeamB": 4,
+        "TypeId": "LudotsCore.Participant",
+        "Attitude": "Hostile",
+        "Symmetric": true
+      }
     ],
     "Players": [],
     "PlayerTeams": []
   },
-  "DefaultCamera": { "TargetXCm": 200, "TargetYCm": 0, "Yaw": 45, "Pitch": 35, "DistanceCm": 1400, "FovYDeg": 50 }
+  "DefaultCamera": {
+    "TargetXCm": 150,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 52,
+    "DistanceCm": 2200,
+    "FovYDeg": 50
+  },
+  "DeathRule": {
+    "attribute": "Health",
+    "onZero": "destroy"
+  }
 }

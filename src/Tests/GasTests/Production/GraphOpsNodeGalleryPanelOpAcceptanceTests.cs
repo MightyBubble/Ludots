@@ -51,6 +51,34 @@ public sealed class GraphOpsNodeGalleryPanelOpAcceptanceTests
     }
 
     [Test]
+    public void SetWorldPositionVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SetWorldPosition");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"SetWorldPosition detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
+
+    [Test]
+    public void SpawnTemplateVignette_ExecutesOpWithoutThrow()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("SpawnTemplate");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase),
+                $"SpawnTemplate detail missing phrase: {runtime.Metrics.Detail}");
+        }
+    }
+
+    [Test]
     public void DestroyPanelVignette_ExecutesOpWithoutThrow()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

@@ -1,0 +1,12 @@
+{
+  "name": "NightRaidShowcaseMod",
+  "version": "1.0.0",
+  "description": "临时交互测试层：左键瞬移英雄、右键处决最近可杀实体、发 KillTool.Used 自定义事件；目标是未来被输入→图事件桥取代。",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "MapTriggerNightRaidMod": "^1.0.0"
+  },
+  "main": "bin/net8.0/NightRaidShowcaseMod.dll"
+}

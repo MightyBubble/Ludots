@@ -18,7 +18,7 @@
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
+      "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -39,13 +39,17 @@
       "Team": {
         "Id": 2
       },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 600,
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
+      "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -65,13 +69,17 @@
       "Team": {
         "Id": 4
       },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 1000,
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
+      "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
       },
@@ -94,9 +102,29 @@
           "Y": 0
         }
       },
-      "PresentationStaticTransform": {},
+      "VisualHeightmapSampleState": {},
       "FacingDirection": {
         "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "night_raid_boss_camp",
+    "components": {
+      "Name": {
+        "Value": "NightRaidBossCamp"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 1000,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
       }
     }
   }

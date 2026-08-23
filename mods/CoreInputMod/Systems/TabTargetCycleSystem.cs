@@ -113,7 +113,9 @@ namespace CoreInputMod.Systems
 
             if (count == 0)
             {
-                _globals.Remove(CoreServiceKeys.TabTargetEntity.Name);
+                // No candidates in range: keep the current focus untouched. Clearing a
+                // focus another writer set explicitly (seat acquisition, mods, tests)
+                // is not this system's call; focus clears on target death or Cancel.
                 return;
             }
 

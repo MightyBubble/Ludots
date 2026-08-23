@@ -32,6 +32,11 @@ namespace Ludots.Core.Scripting
         // Map-scoped trigger tracking
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
 
+        // Map -> Event -> triggers, maintained in priority order at registration time so
+        // steady-state dispatch is a dictionary lookup with zero allocations.
+        private readonly Dictionary<MapId, Dictionary<EventKey, List<Trigger>>> _mapEventTriggers
+            = new Dictionary<MapId, Dictionary<EventKey, List<Trigger>>>();
+
         // EventHandler storage (non-Trigger, simple callbacks registered by Mods)
         private readonly Dictionary<EventKey, List<Func<ScriptContext, Task>>> _eventHandlers
             = new Dictionary<EventKey, List<Func<ScriptContext, Task>>>();
@@ -102,8 +107,9 @@ namespace Ludots.Core.Scripting
             if (triggers == null || triggers.Count == 0) return;
 
             var list = new List<Trigger>(triggers.Count);
-            RegisterIntoMapList(triggers, list);
             _mapTriggers[mapId] = list;
+            _mapEventTriggers[mapId] = new Dictionary<EventKey, List<Trigger>>();
+            RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
         }
 
@@ -121,7 +127,7 @@ namespace Ludots.Core.Scripting
                     $"Cannot append triggers to map '{mapId}' before its initial map-trigger registration.");
             }
 
-            RegisterIntoMapList(triggers, list);
+            RegisterIntoMapList(mapId, triggers, list);
             Log.Info(in LogChannels.Engine, $"Appended {triggers.Count} triggers to map '{mapId}'.");
         }
 
@@ -141,16 +147,57 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < triggers.Count; i++)
             {
                 list.Remove(triggers[i]);
+                RemoveMapEventTrigger(mapId, triggers[i]);
                 UnregisterTrigger(triggers[i]);
             }
         }
 
-        private void RegisterIntoMapList(IReadOnlyList<Trigger> triggers, List<Trigger> list)
+        private void RegisterIntoMapList(MapId mapId, IReadOnlyList<Trigger> triggers, List<Trigger> list)
         {
             for (int i = 0; i < triggers.Count; i++)
             {
                 RegisterTrigger(triggers[i]);
                 list.Add(triggers[i]);
+                AddMapEventTrigger(mapId, triggers[i]);
+            }
+        }
+
+        private void AddMapEventTrigger(MapId mapId, Trigger trigger)
+        {
+            if (string.IsNullOrEmpty(trigger.EventKey.Value))
+            {
+                return;
+            }
+
+            Dictionary<EventKey, List<Trigger>> eventTriggers = _mapEventTriggers[mapId];
+            if (!eventTriggers.TryGetValue(trigger.EventKey, out List<Trigger> triggers))
+            {
+                triggers = new List<Trigger>();
+                eventTriggers[trigger.EventKey] = triggers;
+            }
+
+            int insertIndex = triggers.Count;
+            while (insertIndex > 0 && triggers[insertIndex - 1].Priority > trigger.Priority)
+            {
+                insertIndex--;
+            }
+
+            triggers.Insert(insertIndex, trigger);
+        }
+
+        private void RemoveMapEventTrigger(MapId mapId, Trigger trigger)
+        {
+            if (string.IsNullOrEmpty(trigger.EventKey.Value) ||
+                !_mapEventTriggers.TryGetValue(mapId, out Dictionary<EventKey, List<Trigger>> eventTriggers) ||
+                !eventTriggers.TryGetValue(trigger.EventKey, out List<Trigger> triggers))
+            {
+                return;
+            }
+
+            triggers.Remove(trigger);
+            if (triggers.Count == 0)
+            {
+                eventTriggers.Remove(trigger.EventKey);
             }
         }
 
@@ -179,6 +226,7 @@ namespace Ludots.Core.Scripting
             }
 
             _mapTriggers.Remove(mapId);
+            _mapEventTriggers.Remove(mapId);
             Log.Info(in LogChannels.Engine, $"Unregistered all triggers for map '{mapId}'.");
         }
 
@@ -186,6 +234,22 @@ namespace Ludots.Core.Scripting
         // Map-scoped event firing — only triggers belonging to the
         // specified map are evaluated, sorted by Priority (ascending).
         // ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Fire a declared custom event on a map. Fail-closed: the event name must be
+        /// declared in the map's Events/custom_events.json catalog (vocabulary gate).
+        /// </summary>
+        public void FireMapCustomEvent(MapId mapId, string eventName, ScriptContext context, Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry registry)
+        {
+            ArgumentNullException.ThrowIfNull(registry);
+            if (!registry.IsDeclaredCustom(eventName))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot fire '{eventName}' on map '{mapId.Value}': not a declared custom event. Declared: {registry.DescribeVocabulary()}.");
+            }
+
+            FireMapEvent(mapId, new EventKey(eventName), context);
+        }
 
         /// <summary>
         /// Fire an event only to triggers registered for the given map.
@@ -197,16 +261,14 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks) always fire
             FireEventHandlers(eventKey, context);
 
-            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+            if (!_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) ||
+                !eventTriggers.TryGetValue(eventKey, out var matching) ||
+                matching.Count == 0)
                 return;
-
-            // Only map-scoped triggers — no global fallback
-            var matching = CollectSortedMapTriggers(mapList, eventKey);
-            if (matching.Count == 0) return;
 
             for (int i = 0; i < matching.Count; i++)
             {
-                _ = FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: false);
+                FireTrigger(matching[i], eventKey, context);
             }
         }
 
@@ -218,12 +280,10 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks)
             var handlerTask = FireEventHandlersAsync(eventKey, context);
 
-            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+            if (!_mapEventTriggers.TryGetValue(mapId, out var eventTriggers) ||
+                !eventTriggers.TryGetValue(eventKey, out var matching) ||
+                matching.Count == 0)
                 return handlerTask;
-
-            // Only map-scoped triggers — no global fallback
-            var matching = CollectSortedMapTriggers(mapList, eventKey);
-            if (matching.Count == 0) return handlerTask;
 
             var tasks = new Task[matching.Count + 1];
             tasks[0] = handlerTask;
@@ -372,6 +432,78 @@ namespace Ludots.Core.Scripting
             lock (_errorsLock)
             {
                 _errors.Clear();
+            }
+        }
+
+private void RecordTriggerError(EventKey eventKey, Trigger trigger, Exception exception)
+        {
+            lock (_errorsLock)
+            {
+                _errors.Add(new TriggerError(eventKey, trigger.Name, exception));
+            }
+
+            Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {exception}");
+        }
+
+private static Exception GetExecutionException(Task execution)
+        {
+            if (execution.IsFaulted && execution.Exception != null)
+            {
+                return execution.Exception.InnerException ?? execution.Exception;
+            }
+
+            return new TaskCanceledException(execution);
+        }
+
+private async Task ObserveTriggerExecutionAsync(Trigger trigger, EventKey eventKey, Task execution)
+        {
+            try
+            {
+                await execution;
+            }
+            catch (Exception ex)
+            {
+                RecordTriggerError(eventKey, trigger, ex);
+            }
+        }
+
+        /// <summary>
+        /// Synchronous fire path for steady-state dispatch: synchronously-completing
+        /// triggers must not allocate a Task per invocation.
+        /// </summary>
+        private void FireTrigger(Trigger trigger, EventKey eventKey, ScriptContext context)
+        {
+            ArgumentNullException.ThrowIfNull(trigger);
+
+            try
+            {
+                if (trigger.EventKey == GameEvents.MapLoaded)
+                {
+                    trigger.OnMapEnter(context);
+                }
+
+                if (!trigger.CheckConditions(context))
+                {
+                    return;
+                }
+
+                Task execution = trigger.ExecuteAsync(context);
+                if (execution.IsCompletedSuccessfully)
+                {
+                    return;
+                }
+
+                if (execution.IsFaulted || execution.IsCanceled)
+                {
+                    RecordTriggerError(eventKey, trigger, GetExecutionException(execution));
+                    return;
+                }
+
+                _ = ObserveTriggerExecutionAsync(trigger, eventKey, execution);
+            }
+            catch (Exception ex)
+            {
+                RecordTriggerError(eventKey, trigger, ex);
             }
         }
 

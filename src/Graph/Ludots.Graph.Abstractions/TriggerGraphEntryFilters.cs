@@ -13,13 +13,15 @@ namespace Ludots.Core.GraphRuntime
             string? tag,
             int? team,
             float? threshold,
-            TriggerGraphEntryFilterDirection? direction)
+            TriggerGraphEntryFilterDirection? direction,
+            string? action = null)
         {
             Region = region;
             Tag = tag;
             Team = team;
             Threshold = threshold;
             Direction = direction;
+            Action = action;
         }
 
         public string? Region { get; }
@@ -27,13 +29,15 @@ namespace Ludots.Core.GraphRuntime
         public int? Team { get; }
         public float? Threshold { get; }
         public TriggerGraphEntryFilterDirection? Direction { get; }
+        public string? Action { get; }
 
         public bool IsEmpty =>
             Region == null &&
             Tag == null &&
             !Team.HasValue &&
             !Threshold.HasValue &&
-            !Direction.HasValue;
+            !Direction.HasValue &&
+            Action == null;
     }
 
     /// <summary>

@@ -93,6 +93,9 @@ namespace AgentBridgeMod
             tools.Register(new EventsFireTool());
             tools.Register(new EntitiesPickTool());
             tools.Register(new SpatialQueryTool());
+            tools.Register(new PresentersQueryTool());
+            tools.Register(new PresentersDesyncTool());
+            tools.Register(new PresentersScreenTool());
             tools.Register(new NavProjectTool());
             tools.Register(new NavFindPathTool());
 
