@@ -79,24 +79,33 @@
     .docs-tree { position: static; max-height: 320px; }
     .docs-view { padding: 24px 20px; }
   }
-.skin-btn { background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 13px; font-size: 13px; cursor: pointer; }
-.skin-btn.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-.md-body pre code.wire { display: block; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); }
-body[data-skin="ink-wash"] .md-body pre code.wire { background: #f5f0e4e0; border-color: #2b2b2bd0; color: #1c1c1c; font-family: "KaiTi","STKaiti",serif; }
-body[data-skin="fantasy"] .md-body pre code.wire { background: #3d2c1ceb; border-color: #c9a65a; color: #e2d6bc; font-family: Georgia,serif; }
-body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border-color: #141414c8; color: #111; font-family: "Segoe UI",sans-serif; }
+.hifi { border: 1.5px solid var(--border); border-radius: 12px; margin: 14px 0 18px; overflow: hidden; }
+.hifi .hifi-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--bg-soft); }
+.hifi .hifi-head .lbl { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; flex: 1; }
+.hifi .hifi-head button { border: 1px solid var(--border); background: var(--card); color: var(--fg); border-radius: 99px; padding: 2px 10px; font-size: 11.5px; cursor: pointer; }
+.hifi .hifi-head button.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.hifi .mock { --m-panel: var(--card); --m-border: var(--border); --m-fg: var(--fg); --m-muted: var(--muted); --m-accent: var(--accent);
+  padding: 14px 16px; font-size: 13.5px; display: flex; flex-direction: column; gap: 8px;
+  background: var(--m-panel); color: var(--m-fg); }
+.hifi[data-skin="ink-wash"] .mock { --m-panel:#f5f0e4e0; --m-border:#2b2b2bd0; --m-fg:#1c1c1c; --m-muted:#786e64; --m-accent:#8c1d18; font-family:"KaiTi","STKaiti",serif; }
+.hifi[data-skin="fantasy"] .mock { --m-panel:#3d2c1ceb; --m-border:#c9a65a; --m-fg:#e2d6bc; --m-muted:#a08a68; --m-accent:#e4c47a; font-family:Georgia,"Palatino Linotype",serif; }
+.hifi[data-skin="minimal"] .mock { --m-panel:#fafafaf5; --m-border:#141414c8; --m-fg:#111; --m-muted:#999; --m-accent:#111; font-family:"Segoe UI","Helvetica Neue",sans-serif; }
+.mock .row { display: flex; align-items: center; gap: 8px; }
+.mock .bar { flex: 1; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--m-muted) 25%, transparent); overflow: hidden; }
+.mock .bar > i { display: block; height: 100%; background: var(--m-accent); border-radius: 4px; }
+.mock .bar.hp > i { background:#e5484d; } .mock .bar.mp > i { background:#4c7ce5; }
+.mock .t { font-size: 12px; color: var(--m-muted); }
+.mock .chip { border:1px solid var(--m-border); border-radius:6px; padding:3px 8px; font-size:12px; }
+.mock .chip.on { border-color:var(--m-accent); color:var(--m-accent); font-weight:700; }
+.mock .item { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed color-mix(in srgb, var(--m-border) 60%, transparent); }
+.mock .mini { background: color-mix(in srgb, var(--m-accent) 12%, var(--m-panel)); border-radius:8px; height:96px; position:relative; overflow:hidden; }
+.mock .mini i { position:absolute; width:6px; height:6px; border-radius:50%; background:var(--m-accent); }
 </style>
 </head>
-<body data-page="panels" data-skin="default">
+<body data-page="panels">
 <header id="topbar"></header>
 
-<div class="wrap" style="padding-top:18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-  <span style="color:var(--muted);font-size:13px;">线框主题皮肤：</span>
-  <button data-skin="default" class="skin-btn on">默认</button>
-  <button data-skin="ink-wash" class="skin-btn">水墨</button>
-  <button data-skin="fantasy" class="skin-btn">西方魔幻</button>
-  <button data-skin="minimal" class="skin-btn">极简</button>
-</div>
+
 <main class="page">
   <div class="docs-layout" style="margin-top: 22px;">
     <aside class="docs-tree" id="panel-tree">
@@ -178,7 +187,7 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
     }
     host.innerHTML = html;
 
-    var filter = document.getElementById("wiki-filter");
+    var filter = document.getElementById("panel-filter");
     filter.addEventListener("input", function () {
       var q = filter.value.trim().toLowerCase();
       host.querySelectorAll(".grp").forEach(function (grp) {
@@ -196,7 +205,7 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
   }
 
   function markActive() {
-    document.querySelectorAll("#wiki-tree a[data-doc]").forEach(function (a) {
+    document.querySelectorAll("#panel-tree a[data-doc]").forEach(function (a) {
       a.classList.toggle("active", a.getAttribute("data-doc") === currentDoc);
     });
   }
@@ -238,6 +247,55 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
     host.innerHTML = html;
   }
 
+  /* ============ 高保真预期：案内 mock 代码块渲染为可换肤组件卡片 ============ */
+  function mockHtml(spec) {
+    var t = spec.type;
+    if (t === "stat") return '<div class="row" style="gap:18px">' + (spec.items || []).map(function (x) { return "<b>" + esc(String(x)) + "</b>"; }).join("") + "</div>";
+    if (t === "text") return '<div class="row">' + esc(spec.text || "") + "</div>";
+    if (t === "bars") return (spec.bars || []).map(function (b) {
+      return '<div class="row"><span style="width:26px">' + esc(b[0]) + '</span><div class="bar ' + String(b[0]).toLowerCase() + '"><i style="width:' + b[1] + '%"></i></div><span class="t">' + b[1] + "%</span></div>";
+    }).join("");
+    if (t === "chips") return '<div class="row" style="flex-wrap:wrap">' + (spec.chips || []).map(function (c, i) {
+      return '<span class="chip' + (i === spec.on ? " on" : "") + '">' + esc(c) + "</span>";
+    }).join("") + "</div>";
+    if (t === "list") return (spec.rows || []).map(function (r) {
+      return '<div class="item"><span>' + esc(r[0]) + '</span><span class="t">' + esc(r[1] || "") + "</span></div>";
+    }).join("");
+    if (t === "queue") return '<div class="row"><div class="bar hp" style="height:12px"><i style="width:' + spec.percent + '%"></i></div><span class="t">' + spec.percent + '%</span></div><div class="row" style="flex-wrap:wrap">' + (spec.items || []).map(function (c) { return '<span class="chip">' + esc(c) + "</span>"; }).join("") + "</div>";
+    if (t === "mini") return '<div class="mini">' + (spec.dots || []).map(function (d) {
+      return '<i style="left:' + d[0] + '%;top:' + d[1] + '%"></i>';
+    }).join("") + "</div>";
+    return '<div class="row">' + esc(JSON.stringify(spec)) + "</div>";
+  }
+
+  function renderHifi(container) {
+    container.querySelectorAll("pre code.language-mock").forEach(function (code) {
+      var spec = null;
+      try { spec = JSON.parse(code.textContent); } catch (e) { spec = null; }
+      if (!spec) return;
+      var pre = code.parentElement;
+      var card = document.createElement("div");
+      card.className = "hifi";
+      card.dataset.skin = "default";
+      card.innerHTML =
+        '<div class="hifi-head"><span class="lbl">高保真预期</span></div>' +
+        '<div class="mock">' + mockHtml(spec) + "</div>";
+      var names = { "default": "默认", "ink-wash": "水墨", "fantasy": "魔幻", "minimal": "极简" };
+      Object.keys(names).forEach(function (skin) {
+        var b = document.createElement("button");
+        b.textContent = names[skin];
+        if (skin === "default") b.classList.add("on");
+        b.onclick = function () {
+          card.querySelectorAll(".hifi-head button").forEach(function (x) { x.classList.remove("on"); });
+          b.classList.add("on");
+          card.dataset.skin = skin;
+        };
+        card.querySelector(".hifi-head").appendChild(b);
+      });
+      pre.replaceWith(card);
+    });
+  }
+
   function loadDoc(file) {
     currentDoc = file;
     var body = document.getElementById("doc-body");
@@ -249,6 +307,7 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
       body.innerHTML = marked.parse(md);
       rewriteLinks(body);
       LudotsSite.bindCopyButtons(body);
+      renderHifi(body);
       renderPager(file);
       markActive();
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -263,7 +322,7 @@ body[data-skin="minimal"] .md-body pre code.wire { background: #fafafaf5; border
     var h = window.location.hash || "";
     var target = null;
     if (h.indexOf("#case/") === 0) {
-      var stem = decodeURIComponent(h.slice("#case/".length)).replace(/[^A-Za-z0-9_.]/g, "");
+      var stem = decodeURIComponent(h.slice("#case/".length)).replace(/[^A-Za-z0-9_.-]/g, "");
       if (stem) target = stem + ".md";
     } else if (h === "#readme" || h === "" || h === "#") {
       target = DEFAULT_DOC;
