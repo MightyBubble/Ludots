@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Knowledge;
 
@@ -33,6 +34,16 @@ namespace Ludots.Core.Gameplay.Relationships.Config
     {
         public string Id { get; set; } = string.Empty;
         public bool IsSymmetric { get; set; }
+        public RelationshipTypeTemplateConfig? Template { get; set; }
+    }
+
+    /// <summary>
+    /// Birth components for materialized relationship entities of a type; same component-dictionary
+    /// authoring shape as <c>EntityTemplate.Components</c>, resolved through the ComponentRegistry chain.
+    /// </summary>
+    public sealed class RelationshipTypeTemplateConfig
+    {
+        public Dictionary<string, JsonNode> Components { get; set; } = new();
     }
 
     public sealed class RelationshipMetricConfig : IIdentifiable
