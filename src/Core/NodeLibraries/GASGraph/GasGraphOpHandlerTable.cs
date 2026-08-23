@@ -207,6 +207,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AbsFloat or
                 GraphNodeOp.NegFloat or
                 GraphNodeOp.RandomFloat01 or
+                GraphNodeOp.WeightedPick or
                 GraphNodeOp.AddInt or
                 GraphNodeOp.CompareGtFloat or
                 GraphNodeOp.CompareLtInt or
