@@ -119,7 +119,7 @@
         "polarity": "Reveal",
         "aperture": {
           "kind": "Disk",
-          "rangeCm": 4500
+          "rangeCm": 1200
         }
       },
       "FogOccupantCm": {
@@ -228,7 +228,7 @@
         "polarity": "Reveal",
         "aperture": {
           "kind": "Disk",
-          "rangeCm": 2600
+          "rangeCm": 900
         }
       },
       "FogOccupantCm": {
@@ -335,7 +335,7 @@
         "polarity": "Reveal",
         "aperture": {
           "kind": "Disk",
-          "rangeCm": 3200
+          "rangeCm": 1000
         }
       },
       "FogOccupantCm": {
