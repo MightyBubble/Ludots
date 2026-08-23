@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Tasks
     public readonly record struct TaskObjectiveProgressView(
         string ObjectiveId,
         string Title,
+        string Hint,
         TaskObjectiveKind Kind,
         bool Completed,
         int Current,
@@ -17,10 +18,18 @@ namespace Ludots.Core.Gameplay.Tasks
         Entity Entity,
         string TaskId,
         string DisplayName,
+        string Summary,
         TaskInstanceState State,
         TaskCompletionRule CompletionRule,
         int InstanceId,
+        Entity ScopeHost,
         IReadOnlyList<TaskObjectiveProgressView> Objectives);
+
+    public readonly record struct TaskStateChangedInfo(
+        string TaskId,
+        TaskInstanceState State,
+        Entity TaskEntity,
+        Entity ScopeHost);
 
     public sealed record TaskRuntimeSnapshot(
         IReadOnlyDictionary<string, int> Signals,
@@ -57,6 +66,11 @@ namespace Ludots.Core.Gameplay.Tasks
 
         public TaskPresentationBuffer Presentation => _presentation;
         public IReadOnlyDictionary<string, int> Signals => _signals;
+
+        public event Action<TaskStateChangedInfo>? TaskStateChanged;
+
+        public bool TryGetDefinition(string taskId, out TaskDefinition definition)
+            => _definitions.TryGet(taskId, out definition);
 
         public TaskRuntimeSnapshot CaptureSnapshot()
         {
@@ -178,7 +192,7 @@ namespace Ludots.Core.Gameplay.Tasks
                     string.Empty));
             }
 
-            EmitStateSource(definition.Id, initial, scopeHost);
+            EmitStateSource(definition.Id, initial, entity, scopeHost);
             return entity;
         }
 
@@ -198,7 +212,7 @@ namespace Ludots.Core.Gameplay.Tasks
 
             task.State = TaskInstanceState.Active;
             task.Revision++;
-            EmitStateSource(definition.Id, task.State, task.ScopeHost);
+            EmitStateSource(definition.Id, task.State, taskEntity, task.ScopeHost);
         }
 
         public void EmitSignal(string signalKey, int amount = 1)
@@ -248,7 +262,7 @@ namespace Ludots.Core.Gameplay.Tasks
                 task.InstanceId,
                 string.Empty,
                 reason ?? string.Empty));
-            EmitStateSource(definition.Id, task.State, task.ScopeHost);
+            EmitStateSource(definition.Id, task.State, taskEntity, task.ScopeHost);
         }
 
         public void Fail(Entity taskEntity, string reason)
@@ -269,7 +283,7 @@ namespace Ludots.Core.Gameplay.Tasks
                 task.InstanceId,
                 string.Empty,
                 reason ?? string.Empty));
-            EmitStateSource(definition.Id, task.State, task.ScopeHost);
+            EmitStateSource(definition.Id, task.State, taskEntity, task.ScopeHost);
         }
 
         public bool TryGetView(Entity taskEntity, out TaskView view)
@@ -298,6 +312,7 @@ namespace Ludots.Core.Gameplay.Tasks
                 objectives.Add(new TaskObjectiveProgressView(
                     objective.Id,
                     objective.Title,
+                    objective.Hint,
                     objective.Kind,
                     completed,
                     current,
@@ -308,11 +323,97 @@ namespace Ludots.Core.Gameplay.Tasks
                 taskEntity,
                 definition.Id,
                 definition.DisplayName,
+                definition.Summary,
                 task.State,
                 definition.CompletionRule,
                 task.InstanceId,
+                task.ScopeHost,
                 objectives);
             return true;
+        }
+
+        public bool TryResolveInstance(string taskId, Entity scopeHost, out Entity entity)
+        {
+            entity = Entity.Null;
+            int definitionId = _definitions.GetId(taskId);
+            if (definitionId <= 0)
+            {
+                return false;
+            }
+
+            int scopeKey = ScopeKey(NormalizeScope(scopeHost));
+            int bestInstanceId = -1;
+            Entity found = Entity.Null;
+            _world.Query(in TaskQuery, (Entity candidate, ref TaskInstanceCm task) =>
+            {
+                if (task.DefinitionId == definitionId &&
+                    ScopeKey(task.ScopeHost) == scopeKey &&
+                    task.InstanceId > bestInstanceId)
+                {
+                    bestInstanceId = task.InstanceId;
+                    found = candidate;
+                }
+            });
+            entity = found;
+            return entity != Entity.Null;
+        }
+
+        public bool TryGetState(string taskId, out TaskInstanceState state)
+        {
+            if (TryResolveInstance(taskId, Entity.Null, out Entity entity))
+            {
+                state = _world.Get<TaskInstanceCm>(entity).State;
+                return true;
+            }
+
+            state = default;
+            return false;
+        }
+
+        public void Complete(string taskId, Entity scopeHost = default)
+        {
+            if (!TryResolveInstance(taskId, scopeHost, out Entity entity))
+            {
+                throw new InvalidOperationException($"Task '{taskId}' has no live instance.");
+            }
+
+            ref TaskInstanceCm task = ref Require(entity);
+            if (task.State is not (TaskInstanceState.Offered or TaskInstanceState.Active))
+            {
+                throw new InvalidOperationException(
+                    $"Task instance {task.InstanceId} cannot complete from state {task.State}.");
+            }
+
+            if (!_definitions.TryGet(task.DefinitionId, out TaskDefinition definition))
+            {
+                throw new InvalidOperationException($"Missing task definition '{task.DefinitionId}'.");
+            }
+
+            task.State = TaskInstanceState.Completed;
+            task.Revision++;
+            _index.Remove((task.DefinitionId, ScopeKey(task.ScopeHost)));
+            _presentation.Add(new TaskPresentationCue(
+                TaskPresentationCueKind.Completed,
+                definition.Id,
+                task.InstanceId,
+                string.Empty,
+                string.Empty));
+            EmitStateSource(definition.Id, task.State, entity, task.ScopeHost);
+
+            if (!string.IsNullOrWhiteSpace(definition.NextTaskId))
+            {
+                OfferOrStart(definition.NextTaskId, task.ScopeHost);
+            }
+        }
+
+        public void Fail(string taskId, Entity scopeHost, string reason)
+        {
+            if (!TryResolveInstance(taskId, scopeHost, out Entity entity))
+            {
+                throw new InvalidOperationException($"Task '{taskId}' has no live instance.");
+            }
+
+            Fail(entity, reason);
         }
 
         public List<TaskView> CaptureViews()
@@ -395,7 +496,7 @@ namespace Ludots.Core.Gameplay.Tasks
                 task.InstanceId,
                 string.Empty,
                 string.Empty));
-            EmitStateSource(definition.Id, task.State, task.ScopeHost);
+            EmitStateSource(definition.Id, task.State, entity, task.ScopeHost);
 
             if (!string.IsNullOrWhiteSpace(definition.NextTaskId))
             {
@@ -474,8 +575,10 @@ namespace Ludots.Core.Gameplay.Tasks
             }
         }
 
-        private void EmitStateSource(string taskId, TaskInstanceState state, Entity scopeHost)
+        private void EmitStateSource(string taskId, TaskInstanceState state, Entity taskEntity, Entity scopeHost)
         {
+            TaskStateChanged?.Invoke(new TaskStateChangedInfo(taskId, state, taskEntity, NormalizeScope(scopeHost)));
+
             if (!_providers.Sources.Contains("task.state_changed"))
             {
                 return;
@@ -510,5 +613,10 @@ namespace Ludots.Core.Gameplay.Tasks
 
         private static int ScopeKey(Entity scopeHost) =>
             scopeHost == Entity.Null ? 0 : scopeHost.Id;
+
+        private static Entity NormalizeScope(Entity scopeHost) =>
+            scopeHost.Equals(default(Entity)) || scopeHost.Equals(Entity.Null)
+                ? Entity.Null
+                : scopeHost;
     }
 }

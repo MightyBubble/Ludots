@@ -22,7 +22,6 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
-using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
@@ -617,10 +616,6 @@ namespace Ludots.Core.Engine
             bool reloadNarrative = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
-            bool reloadQuests = string.IsNullOrWhiteSpace(group)
-                             || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
-                             || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
-
             bool reloadActivities = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Activities", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Activities/", StringComparison.OrdinalIgnoreCase));
@@ -646,14 +641,6 @@ namespace Ludots.Core.Engine
                 new TaskConfigLoader(ConfigPipeline, taskDefinitions, taskProviderServices.Validator)
                     .Load(ConfigCatalog, ConfigConflictReport);
                 taskRuntime.ResetState();
-            }
-
-            if (reloadQuests &&
-                GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
-                GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
-            {
-                new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-                questRuntime.ResetState();
             }
 
             if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
@@ -1746,11 +1733,6 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
-            var questDefinitions = new QuestDefinitionRegistry();
-            new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var questRuntime = new QuestRuntimeService(World, questDefinitions);
-            SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
-            SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
             var providerServices = new ProviderServices();
             SetService(CoreServiceKeys.ProviderServices, providerServices);
             SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
@@ -1786,7 +1768,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, taskRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             AttributeRegistry.Freeze();
