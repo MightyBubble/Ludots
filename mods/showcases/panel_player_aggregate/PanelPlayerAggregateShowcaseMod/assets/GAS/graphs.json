@@ -1,0 +1,26 @@
+[
+  {
+    "id": "Graph.Panel.PlayerAggregate.Open",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
+    ],
+    "nodes": [
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.player.aggregate", "panelAnchor": "screen.topLeft" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.player.aggregate" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

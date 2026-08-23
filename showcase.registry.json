@@ -7499,6 +7499,30 @@
       ]
     },
     {
+      "id": "panel_player_aggregate",
+      "path": "mods/showcases/panel_player_aggregate/PanelPlayerAggregateShowcaseMod",
+      "projectPath": null,
+      "title": "Player Aggregate Panel",
+      "summary": "Schema v2 resource totals projected from the existing player aggregate Query graph",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "panel_player_aggregate",
+      "preset": "panel_player_aggregate_raylib",
+      "docsPath": "gitbook/architecture/panel-cases/panel-player-aggregate.md",
+      "readmePath": null,
+      "acceptanceTest": "PanelPlayerAggregateShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/panel_player_aggregate",
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "panel",
+        "ui",
+        "schema-v2",
+        "player-aggregate",
+        "showcase"
+      ]
+    },
+    {
       "id": "capability_standard_graph_op_SpawnTemplate",
       "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
       "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",

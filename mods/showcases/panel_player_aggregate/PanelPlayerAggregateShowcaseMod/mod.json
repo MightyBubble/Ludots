@@ -1,0 +1,9 @@
+{
+  "name": "PanelPlayerAggregateShowcaseMod",
+  "version": "1.0.0",
+  "description": "Schema v2 player aggregate panel backed by the existing resource Query graph",
+  "priority": 0,
+  "dependencies": {
+    "UiPlayerAggregateGraphMvpShowcaseMod": "^1.0.0"
+  }
+}

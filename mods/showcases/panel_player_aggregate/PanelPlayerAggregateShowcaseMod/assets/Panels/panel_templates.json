@@ -1,0 +1,10 @@
+[
+  {
+    "id": "panel.player.aggregate",
+    "graph": "ui.panel.player.resource.aggregate",
+    "pins": [
+      { "name": "oreTotal", "key": "ui.panel.player.ore.total", "mode": "realtime", "default": 0 },
+      { "name": "crystalTotal", "key": "ui.panel.player.crystal.total", "mode": "realtime", "default": 0 }
+    ]
+  }
+]
