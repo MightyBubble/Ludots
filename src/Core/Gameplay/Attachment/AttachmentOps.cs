@@ -126,6 +126,46 @@ namespace Ludots.Core.Gameplay.Attachment
             ApplyAttachedPose(world, child, parent, in localPose);
         }
 
+        /// <summary>
+        /// 直接路径的周界落位 detach：槽位由调用方显式给出（批量卸下时调用方先快照
+        /// ChildrenBuffer，再按快照序传入 slot/total——同批天然错开且不受缓冲收缩影响）。
+        /// 事务路径（StageDetach）内部用父行槽位位图自动完成同一件事。
+        /// </summary>
+        public static void DetachToPerimeter(
+            World world,
+            PoseAuthorityArbiter? arbiter,
+            Entity child,
+            int perimeterRadiusCm,
+            int ringSlot,
+            int ringSlotCount)
+        {
+            ArgumentNullException.ThrowIfNull(world);
+            if (!world.IsAlive(child) || !world.Has<ChildOf>(child))
+            {
+                throw new InvalidOperationException($"{MissingChildOfError}: child={child.Id}.");
+            }
+
+            Entity parent = world.Get<ChildOf>(child).Parent;
+            if (!world.IsAlive(parent) || !world.Has<WorldPositionCm>(parent))
+            {
+                throw new InvalidOperationException(
+                    $"{TargetInvalidError}: child={child.Id}, parent={parent.Id}, reason=perimeter-requires-live-parent.");
+            }
+
+            HandbackAttachedAuthority(world, arbiter, child);
+
+            Fix64Vec2 ringOffset = AttachedPoseMath.PerimeterRingOffsetCm(ringSlot, ringSlotCount, perimeterRadiusCm);
+            Fix64Vec2 ringPosition = world.Get<WorldPositionCm>(parent).Value + ringOffset;
+            Upsert(world, child, new WorldPositionCm { Value = ringPosition });
+            Upsert(world, child, new PreviousWorldPositionCm { Value = ringPosition });
+            if (world.Has<AttachedLocalPose>(child))
+            {
+                world.Remove<AttachedLocalPose>(child);
+            }
+
+            RelationOps.RemoveParent(world, child);
+        }
+
         public static void Detach(
             World world,
             PoseAuthorityArbiter? arbiter,
@@ -199,6 +239,23 @@ namespace Ludots.Core.Gameplay.Attachment
             RelationOps.RemoveParent(world, child);
         }
 
+        private static void HandbackAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
+        {
+            if (!world.Has<PoseAuthority>(child) ||
+                world.Get<PoseAuthority>(child).Value != PoseAuthorityKind.Attached)
+            {
+                return;
+            }
+
+            if (arbiter == null)
+            {
+                throw new InvalidOperationException(
+                    $"{MissingArbiterError}: child={child.Id}, operation=AttachedHandback.");
+            }
+
+            arbiter.RequestAttachedHandback(world, child);
+        }
+
         /// <summary>环检测单点在 <see cref="RelationOps.WouldCreateCycle"/>（组件边基座的所有入口共用）。</summary>
         public static bool WouldCreateCycle(World world, Entity child, Entity parent)
         {
@@ -242,12 +299,20 @@ namespace Ludots.Core.Gameplay.Attachment
 
         /// <summary>
         /// 授予 Attached 写权。返回 true 表示实体持有 PoseAuthority 且已处理（授予或本就 Attached）；
-        /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权时 fail-fast。
+        /// 返回 false 表示实体无 PoseAuthority（无竞争写者）。持有 Displacement/Physics 写权、
+        /// 或是 nav agent 却未声明 MovementParticipation（求解器写它但无写权可仲裁——attach 会双写）时
+        /// fail-fast。
         /// </summary>
         private static bool TryGrantAttachedAuthority(World world, PoseAuthorityArbiter? arbiter, Entity child)
         {
             if (!world.Has<PoseAuthority>(child))
             {
+                if (world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(child))
+                {
+                    throw new InvalidOperationException(
+                        $"{AuthorityConflictError}: child={child.Id}, reason=nav-agent-without-movement-participation.");
+                }
+
                 return false;
             }
 

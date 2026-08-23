@@ -47,10 +47,19 @@ namespace Ludots.Core.Config
 
     public sealed class EntityTemplateLocalPose
     {
+        [JsonPropertyName("offsetXCm")]
         public int? OffsetXCm { get; set; }
+
+        [JsonPropertyName("offsetYCm")]
         public int? OffsetYCm { get; set; }
+
+        [JsonPropertyName("facingDeg")]
         public int? FacingDeg { get; set; }
+
+        [JsonPropertyName("inheritParentFacing")]
         public bool? InheritParentFacing { get; set; }
+
+        [JsonPropertyName("offsetRotation")]
         public string? OffsetRotation { get; set; }
     }
 }

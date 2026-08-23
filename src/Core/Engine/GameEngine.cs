@@ -1743,11 +1743,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             var poseAuthorityArbiter = new PoseAuthorityArbiter();
             SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            var attachmentPositionSyncSystem = new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(World, poseAuthorityArbiter);
+            SetService(CoreServiceKeys.AttachmentPositionSync, attachmentPositionSyncSystem);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
-            RegisterSystem(
-                new Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem(World, poseAuthorityArbiter),
-                SystemGroup.PostMovement);
+            RegisterSystem(attachmentPositionSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
             RegisterSystem(

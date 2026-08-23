@@ -613,16 +613,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 ownerId,
                 "relation.subject",
                 relativePath);
-            RelationEntitySlot parent = ParseRelationEntitySlot(
-                cfg.Parent,
-                ownerId,
-                "relation.parent",
-                relativePath);
-            bool snapSubjectToParentPosition = RequireBool(
-                cfg.SnapSubjectToParentPosition,
-                ownerId,
-                relativePath,
-                "relation.snapSubjectToParentPosition");
+            // parent 槽对 Detach/RemoveParent 无意义（父由 ChildOf 给出）：缺省即 None，
+            // 需要父槽的操作（SetParent/EnsureLink/Attach）由下方显式校验兜底。
+            RelationEntitySlot parent = string.IsNullOrWhiteSpace(cfg.Parent)
+                ? RelationEntitySlot.None
+                : ParseRelationEntitySlot(
+                    cfg.Parent,
+                    ownerId,
+                    "relation.parent",
+                    relativePath);
+            bool snapSubjectToParentPosition = operation == RelationOperation.SetParent
+                ? RequireBool(
+                    cfg.SnapSubjectToParentPosition,
+                    ownerId,
+                    relativePath,
+                    "relation.snapSubjectToParentPosition")
+                : false;
 
             if (subject == RelationEntitySlot.None)
             {

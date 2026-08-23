@@ -110,6 +110,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly FacingDirection[] _relationFacingOriginalValues;
     private readonly bool[] _relationAuthorityPendingAttached;
     private readonly bool[] _relationAuthorityPendingHandback;
+    private readonly int[] _relationParentRingTotal;
+    private readonly ushort[] _relationParentRingSlotsTaken;
     private readonly Ludots.Core.Movement.PoseAuthorityArbiter? _poseAuthorityArbiter;
     private CommandBuffer _structuralCommands;
     private readonly CommandBuffer _structuralRollbackCommands;
@@ -247,6 +249,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _relationFacingOriginalValues = new FacingDirection[attributeEntityCapacity];
         _relationAuthorityPendingAttached = new bool[attributeEntityCapacity];
         _relationAuthorityPendingHandback = new bool[attributeEntityCapacity];
+        _relationParentRingTotal = new int[relationParentCapacity];
+        _relationParentRingSlotsTaken = new ushort[relationParentCapacity];
         _poseAuthorityArbiter = poseAuthorityArbiter;
         _structuralCommandCapacity = checked(attributeEntityCapacity * 8);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
@@ -464,13 +468,35 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         {
             parentIndex = GetOrAddRelationParent(parent);
             ChildrenBuffer stagedChildren = _relationParentValues[parentIndex];
-            ringSlotCount = stagedChildren.Count;
-            ringSlot = Ludots.Core.Gameplay.Attachment.AttachmentOps.FindChildIndex(in stagedChildren, in subject);
-            if (ringSlot < 0)
+            if (Ludots.Core.Gameplay.Attachment.AttachmentOps.FindChildIndex(in stagedChildren, in subject) < 0)
             {
                 throw new InvalidOperationException(
                     $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.ParentBufferMissingError}: parent={parent.Id}, subject={subject.Id}.");
             }
+
+            // 周界槽位按父行分配：总槽数定格于该父本事务内第一次 detach 时的子数，
+            // 槽位用位图取首个空位——同事务批量 detach 天然错开，不受缓冲收缩影响。
+            if (_relationParentRingTotal[parentIndex] == 0)
+            {
+                _relationParentRingTotal[parentIndex] = stagedChildren.Count;
+            }
+
+            ringSlotCount = _relationParentRingTotal[parentIndex];
+            if (ringSlotCount > sizeof(ushort) * 8)
+            {
+                throw new InvalidOperationException(
+                    $"{CapacityExceededError}: destination=DetachRingSlots, parent={parent.Id}, count={ringSlotCount}.");
+            }
+
+            ushort freeMask = (ushort)(~_relationParentRingSlotsTaken[parentIndex] & ((1 << ringSlotCount) - 1));
+            if (freeMask == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{CapacityExceededError}: destination=DetachRingSlots, parent={parent.Id}, all {ringSlotCount} slots taken.");
+            }
+
+            ringSlot = System.Numerics.BitOperations.TrailingZeroCount(freeMask);
+            _relationParentRingSlotsTaken[parentIndex] |= (ushort)(1 << ringSlot);
         }
         else if (placement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
         {
@@ -480,6 +506,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         StageDetachedAuthorityHandback(childIndex, subject);
 
+        // 同事务 attach→detach：attach 阶段 stage 过的初始位姿写不再落地
+        //（净效果是未挂接），除非本 detach 自身声明了落位策略。
+        _relationSnapPositions[childIndex] = false;
         if (placement == Ludots.Core.Gameplay.Attachment.DetachPlacement.ParentPerimeterRing)
         {
             if (!TryReadRelationWorldPosition(parent, out WorldPositionCm parentPosition))
@@ -539,6 +568,12 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         if (!_world.Has<PoseAuthority>(subject))
         {
+            if (_world.Has<Ludots.Core.MassNavigation.Runtime.MassNavigationAgentIndex>(subject))
+            {
+                throw new InvalidOperationException(
+                    $"{Ludots.Core.Gameplay.Attachment.AttachmentOps.AuthorityConflictError}: subject={subject.Id}, reason=nav-agent-without-movement-participation.");
+            }
+
             return;
         }
 
@@ -2429,6 +2464,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             ? _world.Get<ChildrenBuffer>(parent)
             : default;
         _relationParentValues[index] = _relationParentOriginalValues[index];
+        _relationParentRingTotal[index] = 0;
+        _relationParentRingSlotsTaken[index] = 0;
         return index;
     }
 

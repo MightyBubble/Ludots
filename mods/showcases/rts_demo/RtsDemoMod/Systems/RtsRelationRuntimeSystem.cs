@@ -265,12 +265,13 @@ namespace RtsDemoMod.Systems
                         continue;
                     }
 
-                    AttachmentOps.Detach(
+                    AttachmentOps.DetachToPerimeter(
                         _world,
                         _poseAuthorityArbiter,
                         child,
-                        DetachPlacement.ParentPerimeterRing,
-                        DetachPerimeterRadiusCm);
+                        DetachPerimeterRadiusCm,
+                        ringSlot: i,
+                        ringSlotCount: childCount);
                 }
 
                 RemovePersistentTag(host, _ungarrisonAllTagId);
@@ -296,6 +297,7 @@ namespace RtsDemoMod.Systems
 
                 ChildrenBuffer children = _world.Get<ChildrenBuffer>(host);
                 int childCount = SnapshotChildren(in children, _childrenSnapshot);
+                int detachSlot = 0;
                 for (int i = 0; i < childCount; i++)
                 {
                     Entity child = _childrenSnapshot[i];
@@ -329,12 +331,14 @@ namespace RtsDemoMod.Systems
                     }
 
                     RemovePersistentTag(child, _builderAttachedTagId);
-                    AttachmentOps.Detach(
+                    AttachmentOps.DetachToPerimeter(
                         _world,
                         _poseAuthorityArbiter,
                         child,
-                        DetachPlacement.ParentPerimeterRing,
-                        DetachPerimeterRadiusCm);
+                        DetachPerimeterRadiusCm,
+                        ringSlot: detachSlot,
+                        ringSlotCount: Math.Max(1, childCount));
+                    detachSlot++;
                 }
             }
 
