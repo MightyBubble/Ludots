@@ -175,5 +175,39 @@
         "toPort": "value"
       }
     ]
+  },
+  {
+    "id": "Graph.NightRaid.Override.Mod",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "mod_loaded", "event": "ModLoaded", "start": "loaded_value", "once": true }
+    ],
+    "nodes": [
+      { "id": "loaded_value", "op": "ConstInt", "intValue": 1 },
+      { "id": "loaded", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "loaded_value", "fromPort": "next", "to": "loaded" }
+    ],
+    "valueEdges": [
+      { "from": "loaded_value", "fromPort": "value", "to": "loaded", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.NightRaid.Override.GlobalObserver",
+    "kind": "TriggerGraph",
+    "entries": [
+      { "label": "any_map_loaded", "event": "MapLoaded", "start": "loaded_value", "once": false }
+    ],
+    "nodes": [
+      { "id": "loaded_value", "op": "ConstInt", "intValue": 1 },
+      { "id": "loaded", "op": "HaltReturnInt" }
+    ],
+    "controlEdges": [
+      { "from": "loaded_value", "fromPort": "next", "to": "loaded" }
+    ],
+    "valueEdges": [
+      { "from": "loaded_value", "fromPort": "value", "to": "loaded", "toPort": "value" }
+    ]
   }
 ]

@@ -24,6 +24,11 @@
       "initial": 5
     },
     {
+      "name": "entity_ready",
+      "type": "int",
+      "initial": 0
+    },
+    {
       "name": "tool_uses",
       "type": "int",
       "initial": 0

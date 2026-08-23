@@ -27,8 +27,10 @@
           "Health": 100
         }
       },
-      "OrderBuffer": {}
-    }
+      "OrderBuffer": {},
+      "EntityTriggerGraphAggregateRoot": {}
+    },
+    "TriggerGraphs": ["Graph.NightRaid.EntitySettlement"]
   },
   {
     "id": "night_raid_raider",

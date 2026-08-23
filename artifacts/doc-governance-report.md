@@ -82,6 +82,12 @@ Ruleset: `scripts/validate-docs.ps1`（链接/反引号路径/命名规则）+ `
 
 ## Residual Risks
 
+### TriggerGraph domain expansion review (2026-08-24)
+
+- Scope: `gitbook/architecture/entity-trigger-graph-subworld.md`, `gitbook/architecture/graph-layering-flow-and-behavior.md`, `artifacts/acceptance/trigger-entity-subworld/trigger-domain-expansion.md`.
+- Result: no new broken repository-relative paths or duplicate SSOT claims.
+- Remaining evidence gaps are explicit in the acceptance artifact: real AgentBridge runtime evidence and a registered playable showcase are not yet present.
+
 - 场景页正文为手写（graph wiki 为生成器产物）：scene id/标题/摘要若在 `SceneCatalog.cs` 或 `showcase.registry.json` 变更，wiki 需人工同步；构建期已防 404（README 条目缺页硬失败、孤儿页告警），但不防内容漂移。
 - 帧统计表摘自当前验收工件（`engine_gallery_all/*.json` 等），证据重跑后数值会变化；页面已标注工件路径供对账。
 - 侧栏 Playwright 自动化点击在粘性滚动容器内偶发超时（人工路径不受影响；哈希路由 `#scene/<id>` 等价可达，实测正常）。

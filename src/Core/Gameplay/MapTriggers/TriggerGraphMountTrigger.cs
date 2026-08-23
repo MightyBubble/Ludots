@@ -60,7 +60,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
     /// entity's mounts are inert (CheckConditions false) and lazily swept at think
     /// waves by the mount pipeline.
     /// </summary>
-    public sealed class TriggerGraphMountTrigger : Trigger
+    public sealed class TriggerGraphMountTrigger : Trigger, IMapTriggerRoute
     {
         private const string TargetEntityPayloadKey = "MapTrigger.TargetEntity";
         private const string TagIdPayloadKey = "MapTrigger.TagId";
@@ -71,6 +71,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly TriggerGraphEntry _entry;
         private readonly Entity _scope;
         private readonly TriggerGraphMountDomain _domain;
+        private readonly TriggerGraphMountRoute _route;
+        private readonly int _abilityIdFilter;
+        private readonly string? _modIdFilter;
         private readonly TriggerGraphRefirePolicy _refirePolicy;
         private readonly bool _entryIsResumeEvent;
         private readonly int[] _vmIntRegisters = new int[GraphVmLimits.MaxIntRegisters];
@@ -91,7 +94,10 @@ namespace Ludots.Core.Gameplay.MapTriggers
             TriggerGraphEntry entry,
             Entity scope,
             TriggerGraphRefirePolicy refirePolicy = TriggerGraphRefirePolicy.Ignore,
-            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map)
+            TriggerGraphMountDomain domain = TriggerGraphMountDomain.Map,
+            TriggerGraphMountRoute route = TriggerGraphMountRoute.Local,
+            int abilityIdFilter = 0,
+            string? modIdFilter = null)
         {
             if (graphId <= 0)
             {
@@ -120,11 +126,39 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 throw new ArgumentOutOfRangeException(nameof(domain));
             }
 
+            if (!Enum.IsDefined(typeof(TriggerGraphMountRoute), route))
+            {
+                throw new ArgumentOutOfRangeException(nameof(route));
+            }
+
+            if (domain == TriggerGraphMountDomain.Ability && abilityIdFilter <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(abilityIdFilter), "Ability-domain mounts require a positive ability id filter.");
+            }
+
+            if (domain != TriggerGraphMountDomain.Ability && abilityIdFilter != 0)
+            {
+                throw new ArgumentException("Only ability-domain mounts may specify an ability id filter.", nameof(abilityIdFilter));
+            }
+
+            if (domain == TriggerGraphMountDomain.Mod && string.IsNullOrWhiteSpace(modIdFilter))
+            {
+                throw new ArgumentException("Mod-domain mounts require an owning mod id.", nameof(modIdFilter));
+            }
+
+            if (domain != TriggerGraphMountDomain.Mod && modIdFilter != null)
+            {
+                throw new ArgumentException("Only mod-domain mounts may specify an owning mod id.", nameof(modIdFilter));
+            }
+
             _graphId = graphId;
             _graphName = graphName;
             _entry = entry;
             _scope = scope;
             _domain = domain;
+            _route = route;
+            _abilityIdFilter = abilityIdFilter;
+            _modIdFilter = modIdFilter;
             _refirePolicy = refirePolicy;
             _entryIsResumeEvent = new EventKey(entry.EventName) == GameEvents.MapHeartbeat;
             _runCaster = scope;
@@ -135,6 +169,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public override string Name => $"TriggerGraph:{_graphName}:{_entry.Label}";
 
         public TriggerGraphMountDomain Domain => _domain;
+
+        public TriggerGraphMountRoute Route => _route;
+
+        public bool IsGlobalRoute => _route == TriggerGraphMountRoute.Global;
+
+        public int AbilityIdFilter => _abilityIdFilter;
 
         public GraphSliceResult LastSliceResult { get; private set; }
 
@@ -170,6 +210,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return false;
             }
 
+            if (_domain == TriggerGraphMountDomain.Ability &&
+                (!context.Contains(MapTriggerEventPayloadKeys.AbilityId) ||
+                 context.Get<int>(MapTriggerEventPayloadKeys.AbilityId) != _abilityIdFilter))
+            {
+                return false;
+            }
+
+            if (_domain == TriggerGraphMountDomain.Mod && context.Contains("ModId") &&
+                !string.Equals(context.Get<string>("ModId"), _modIdFilter, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             if (!TriggerGraphEntryFiltersEvaluator.Matches(context, _entry.Filters))
             {
                 return false;
@@ -187,26 +240,28 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             bool hasEntityPayload = false;
             bool matches = false;
+            GameEngine engine = context.Get(CoreServiceKeys.Engine)
+                ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GameEngine for entity scope evaluation.");
             if (context.Contains(MapTriggerEventPayloadKeys.SourceEntity))
             {
                 hasEntityPayload = true;
                 Entity source = context.Get<Entity>(MapTriggerEventPayloadKeys.SourceEntity);
-                matches |= IsInScope(source);
+                matches |= IsInScope(source, engine.World);
             }
 
             if (context.Contains(MapTriggerEventPayloadKeys.TargetEntity))
             {
                 hasEntityPayload = true;
                 Entity target = context.Get<Entity>(MapTriggerEventPayloadKeys.TargetEntity);
-                matches |= IsInScope(target);
+                matches |= IsInScope(target, engine.World);
             }
 
             return !hasEntityPayload || matches;
         }
 
-        private bool IsInScope(Entity entity)
+        private bool IsInScope(Entity entity, Arch.Core.World world)
         {
-            if (entity == Entity.Null || entity == default || !_world.IsAlive(entity))
+            if (entity == Entity.Null || entity == default || !world.IsAlive(entity))
             {
                 return false;
             }
@@ -216,20 +271,20 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 return true;
             }
 
-            if (!_world.Has<EntityTriggerGraphAggregateRoot>(_scope))
+            if (!world.Has<EntityTriggerGraphAggregateRoot>(_scope))
             {
                 return false;
             }
 
             Entity current = entity;
-            for (int depth = 0; depth < 1024 && _world.IsAlive(current); depth++)
+            for (int depth = 0; depth < 1024 && world.IsAlive(current); depth++)
             {
-                if (!_world.Has<ChildOf>(current))
+                if (!world.Has<ChildOf>(current))
                 {
                     return false;
                 }
 
-                current = _world.Get<ChildOf>(current).Parent;
+                current = world.Get<ChildOf>(current).Parent;
                 if (current == _scope)
                 {
                     return true;

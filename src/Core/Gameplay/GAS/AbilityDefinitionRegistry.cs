@@ -119,6 +119,8 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
+        /// <summary>Ordered TriggerGraph names owned by this ability definition.</summary>
+        public List<string> TriggerGraphs;
         // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
@@ -216,6 +218,20 @@ namespace Ludots.Core.Gameplay.GAS
 
             definition = _items[abilityId];
             return true;
+        }
+
+        public IReadOnlyList<int> RegisteredAbilityIds
+        {
+            get
+            {
+                var ids = new List<int>();
+                for (int i = 1; i < _has.Length; i++)
+                {
+                    if (_has[i]) ids.Add(i);
+                }
+
+                return ids;
+            }
         }
 
         /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>

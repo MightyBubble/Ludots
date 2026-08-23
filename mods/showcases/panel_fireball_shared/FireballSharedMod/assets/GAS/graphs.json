@@ -3,74 +3,24 @@
     "id": "Graph.Fireball.Panel.OpenStatus",
     "kind": "TriggerGraph",
     "entries": [
-      {
-        "label": "on_map_loaded",
-        "event": "MapLoaded",
-        "start": "scope",
-        "once": true
-      }
+      { "label": "on_map_loaded", "event": "MapLoaded", "start": "scope", "once": true }
     ],
     "nodes": [
-      {
-        "id": "scope",
-        "op": "LoadExplicitTarget"
-      },
-      {
-        "id": "create",
-        "op": "CreatePanel",
-        "panelType": "panel.fireball.status",
-        "panelAnchor": "screen.topRight"
-      },
-      {
-        "id": "ok",
-        "op": "ConstInt",
-        "intValue": 1
-      },
-      {
-        "id": "halt",
-        "op": "HaltReturnInt"
-      },
-      {
-        "id": "show",
-        "op": "ShowPanel",
-        "panelType": "panel.fireball.status"
-      }
+      { "id": "scope", "op": "LoadExplicitTarget" },
+      { "id": "create", "op": "CreatePanel", "panelType": "panel.fireball.status", "panelAnchor": "screen.topRight" },
+      { "id": "show", "op": "ShowPanel", "panelType": "panel.fireball.status" },
+      { "id": "ok", "op": "ConstInt", "intValue": 1 },
+      { "id": "halt", "op": "HaltReturnInt" }
     ],
     "controlEdges": [
-      {
-        "from": "scope",
-        "fromPort": "next",
-        "to": "create"
-      },
-      {
-        "from": "create",
-        "fromPort": "next",
-        "to": "show"
-      },
-      {
-        "from": "show",
-        "fromPort": "next",
-        "to": "ok"
-      },
-      {
-        "from": "ok",
-        "fromPort": "next",
-        "to": "halt"
-      }
+      { "from": "scope", "fromPort": "next", "to": "create" },
+      { "from": "create", "fromPort": "next", "to": "show" },
+      { "from": "show", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
-      {
-        "from": "scope",
-        "fromPort": "value",
-        "to": "create",
-        "toPort": "source"
-      },
-      {
-        "from": "ok",
-        "fromPort": "value",
-        "to": "halt",
-        "toPort": "value"
-      }
+      { "from": "scope", "fromPort": "value", "to": "create", "toPort": "source" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
     ]
   },
   {
@@ -78,91 +28,25 @@
     "kind": "Query",
     "entry": "hp",
     "nodes": [
-      {
-        "id": "hp",
-        "op": "LoadSelfAttribute",
-        "attribute": "Health"
-      },
-      {
-        "id": "mp",
-        "op": "LoadSelfAttribute",
-        "attribute": "Mana"
-      },
-      {
-        "id": "atk",
-        "op": "LoadSelfAttribute",
-        "attribute": "Attack"
-      },
-      {
-        "id": "hpBase",
-        "op": "ConstFloat",
-        "floatValue": 100
-      },
-      {
-        "id": "mpBase",
-        "op": "ConstFloat",
-        "floatValue": 80
-      }
+      { "id": "hp", "op": "LoadSelfAttribute", "attribute": "Health" },
+      { "id": "mp", "op": "LoadSelfAttribute", "attribute": "Mana" },
+      { "id": "atk", "op": "LoadSelfAttribute", "attribute": "Attack" },
+      { "id": "hpBase", "op": "ConstFloat", "floatValue": 100 },
+      { "id": "mpBase", "op": "ConstFloat", "floatValue": 80 }
     ],
     "controlEdges": [
-      {
-        "from": "hp",
-        "fromPort": "next",
-        "to": "mp"
-      },
-      {
-        "from": "mp",
-        "fromPort": "next",
-        "to": "atk"
-      },
-      {
-        "from": "atk",
-        "fromPort": "next",
-        "to": "hpBase"
-      },
-      {
-        "from": "hpBase",
-        "fromPort": "next",
-        "to": "mpBase"
-      }
+      { "from": "hp", "fromPort": "next", "to": "mp" },
+      { "from": "mp", "fromPort": "next", "to": "atk" },
+      { "from": "atk", "fromPort": "next", "to": "hpBase" },
+      { "from": "hpBase", "fromPort": "next", "to": "mpBase" }
     ],
     "valueEdges": [],
     "outputs": [
-      {
-        "id": "health",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "hp",
-        "key": "fireball.panel.health"
-      },
-      {
-        "id": "mana",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "mp",
-        "key": "fireball.panel.mana"
-      },
-      {
-        "id": "attack",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "atk",
-        "key": "fireball.panel.attack"
-      },
-      {
-        "id": "healthBase",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "hpBase",
-        "key": "fireball.panel.healthBase"
-      },
-      {
-        "id": "manaBase",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "mpBase",
-        "key": "fireball.panel.manaBase"
-      }
+      { "id": "health", "destination": "Summary", "type": "Float", "source": "hp", "key": "fireball.panel.health" },
+      { "id": "mana", "destination": "Summary", "type": "Float", "source": "mp", "key": "fireball.panel.mana" },
+      { "id": "attack", "destination": "Summary", "type": "Float", "source": "atk", "key": "fireball.panel.attack" },
+      { "id": "healthBase", "destination": "Summary", "type": "Float", "source": "hpBase", "key": "fireball.panel.healthBase" },
+      { "id": "manaBase", "destination": "Summary", "type": "Float", "source": "mpBase", "key": "fireball.panel.manaBase" }
     ]
   }
 ]

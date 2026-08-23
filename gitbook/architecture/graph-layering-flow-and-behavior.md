@@ -37,7 +37,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 | Kind | 用途 | Yield |
 |------|------|-------|
 | Script | 可复用流程函数 | 允许 |
-| TriggerGraph | 触发器图：挂载域 map/entity（实体模板 TriggerGraphs/地图 TriggerGraphs）、事件入口表（entries[] + filters）、挂载（MapConfig.TriggerGraphs）、入口起 PC 分发、地图变量与面板算子 | 允许（宿主在思考波上逐拍续跑；旗舰样例见「夜袭三波」展厅） |
+| TriggerGraph | 触发器图：挂载域 map/entity/ability/mod（实体模板、地图、abilities.json、mod.json）、事件入口表（entries[] + filters）、地图事件 route(local/global)、入口起 PC 分发、地图变量与面板算子 | 允许（宿主在思考波上逐拍续跑；旗舰样例见「夜袭三波」展厅） |
 | Effect | 技能阶段 | **禁止** |
 | Score | 效用打分 | 禁止 |
 | Validation / Query / Derived | 既有专项 | 禁止 |
@@ -85,11 +85,18 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
 
+### L2 TriggerGraph 时序合同
+
+TriggerGraph 的域与事件时序以 [Trigger Guide](../../docs/architecture/trigger_guide.md) 第 11-14 节为准。这里保留分层侧的硬边界：图只在模拟组内联执行；GAS 桥提供本拍换页后的事件视图；图内新事件下一拍生效；Presenter 只读本拍副作用并消费表现缓冲。地图、实体、技能和 Mod 共用同一个 `TriggerManager`/VM，不允许为域复制事件总线或执行器。
+
 ## 4. 场景
 
 - 技能复用一段通用「结算脚本」→ Effect/`InvokeScript` → Script
 - 角色 AI 行为树叶子「巡逻一步」→ BT scheduler → Script（可 Yield 跨拍）
 - 关卡流「进圈开袭、清场过波、Boss 阵亡翻阶段」→ TriggerGraph（MapConfig.TriggerGraphs 挂载，思考波续跑）
+- 聚落反应「居民受击、根实体统计、根死亡收束」→ TriggerGraph（EntityTemplate.TriggerGraphs，attachment 子树作用域）
+- 技能反应「命中事件叠层、施法完成结算」→ TriggerGraph（abilities.json.triggerGraphs，施法者作用域）
+- Mod 扩展「ModLoaded 初始化、跨 Mod 叠加」→ TriggerGraph（mod.json.triggerGraphs，ModId 隔离）
 
 ## 5. 边界
 
