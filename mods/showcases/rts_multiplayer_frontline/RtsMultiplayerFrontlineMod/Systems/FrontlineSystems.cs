@@ -802,12 +802,16 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 $"RTS Frontline opening camera found {ownedCoreCount} owned core mirrors for player {localPlayerId}; expected one.");
         }
 
-        // Seed the initial command source on the own core mirror under the seat model: main removed
-        // the name-based EnsureDefaultCommandSource seeding, and the opening camera waits on the
-        // focus request this publishes.
-        if (RtsShowcaseCommandSourceHelper.GetCommandSourceCount(_engine) == 0)
+        // Publish the opening focus request under the seat model: main removed the name-based
+        // EnsureDefaultCommandSource seeding, so focus the existing command source primary, or seed
+        // the own core mirror when no command source exists yet.
+        if (_engine.GetService(CoreServiceKeys.CameraPoseRequest) == null)
         {
-            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, ownedCore, snapCamera: false);
+            Entity focusTarget = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity primary) &&
+                                 _world.IsAlive(primary)
+                ? primary
+                : ownedCore;
+            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, focusTarget, snapCamera: false);
             return;
         }
 
