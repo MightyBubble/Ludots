@@ -23,8 +23,9 @@ public sealed class CefBrowserRuntimeOptions
     public string CacheRootPath { get; }
 
     /// <summary>
-    /// 并发的 Ludots 实例（多 worktree）不得共享 CEF user-data-dir——第二个宿主会
-    /// Cef.Initialize 失败。按 runtime root 稳定分桶：同树会话复用缓存，异树互不干扰。
+    /// CEF user-data-dir 必须会话独占：并发 Ludots 实例（多 worktree）会 Cef.Initialize false，
+    /// 异常死亡实例残留的子进程/损坏档案会让后续会话延迟自亡。按 runtime root 分桶 + 进程号
+    /// 隔离——代价仅是冷档案（本地环回秒级回填）。
     /// </summary>
     private static string ComputeCacheSegment(string runtimeRootPath)
     {
@@ -36,7 +37,7 @@ public sealed class CefBrowserRuntimeOptions
                 hash = (hash ^ c) * 16777619;
             }
 
-            return hash.ToString("x8");
+            return $"{hash:x8}_{Environment.ProcessId}";
         }
     }
 }
