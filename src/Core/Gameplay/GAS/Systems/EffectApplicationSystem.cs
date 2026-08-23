@@ -118,7 +118,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IClock _clock;
         private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null) : base(world)
+        public EffectApplicationSystem(World world, int fanOutCommandCapacity, IClock clock, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null, Ludots.Core.Movement.PoseAuthorityArbiter poseAuthorityArbiter = null) : base(world)
         {
             _fanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
             _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
@@ -153,6 +153,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
             _builtinRuntime.TagOps = _tagOps;
             _builtinRuntime.OrderIntake = orderIntake;
+            _builtinRuntime.PoseAuthorityArbiter = poseAuthorityArbiter;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _stepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectApplicationSystem));
@@ -163,7 +164,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 spawnRequests,
                 presentationEvents,
                 _resolverBuffer.Length,
-                _fanOutBudget);
+                _fanOutBudget,
+                poseAuthorityArbiter);
         }
 
         private void RefreshBuiltinOrderContext()

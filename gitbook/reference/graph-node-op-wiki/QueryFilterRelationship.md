@@ -43,7 +43,7 @@ ConstInt → ConstInt → QueryCone → LoadCaster → QueryFilterNotEntity → 
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Effect / Score / Validation / Derived；Query / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - 同类用法：范围技能圈人、六角战棋邻域/环带、扇形与矩形范围判定。
 ## 怎么进
 

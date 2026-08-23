@@ -12,6 +12,8 @@ namespace Ludots.Core.Presentation.Presenters
         SinkParamToAsset = 7,
         InitializeTransform = 8,
         DestroyScopedPresenter = 9,
+        TimerSet = 10,
+        TimerKill = 11,
         Extension = 255,
     }
 }

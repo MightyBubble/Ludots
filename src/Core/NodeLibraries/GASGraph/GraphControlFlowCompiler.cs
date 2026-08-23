@@ -583,7 +583,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     $"TriggerGraph graph '{graphId}' entry '{shown}' filters fields 'threshold' and 'direction' must be declared together."));
             }
 
-            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction);
+            string? action = null;
+            if (filters.Action != null)
+            {
+                action = filters.Action.Trim();
+                if (action.Length == 0)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.InvalidEntryFilters,
+                        $"TriggerGraph graph '{graphId}' entry '{shown}' filters field 'action' must be a non-empty action id.", filters.Action));
+                }
+            }
+
+            return new TriggerGraphEntryFilters(region, tag, filters.Team, filters.Threshold, direction, action);
         }
 
         private static Dictionary<string, int> BuildNodeIndex(

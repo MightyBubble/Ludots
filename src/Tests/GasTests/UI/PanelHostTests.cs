@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.UI.PanelHosting;
@@ -256,6 +258,40 @@ namespace Ludots.Tests.GasTests.UI
             Assert.That(host.TryGetValues(
                 FindSingle(host), out PanelVariableSet values), Is.True);
             Assert.That(values.Get("hp"), Is.EqualTo(5f), "snapshot pin keeps its instantiated value");
+        }
+
+        [Test]
+        public void RefreshRealtime_DeadScopeWithoutRealtimeVariables_AutoCollectsInstance()
+        {
+            var templates = new PanelTemplateRegistry();
+            templates.Register(PanelTemplateLoader.Load(TemplateJson));
+            templates.Freeze();
+            foreach (PanelTemplate template in templates.Snapshot())
+            {
+                template.GraphId = -1;
+            }
+
+            var store = new GraphOutputValueStore(OutputKeys, initialCapacity: 16);
+            store.SetFloat(_caster, "tests.panel.hp", 87f);
+            var host = new PanelHost(templates, new PanelProjectionReader(_world, store));
+            host.Instantiate(TemplateId, AnchorId, _caster);
+
+            _world.Destroy(_caster);
+
+            Assert.That(host.RefreshRealtime(), Is.Zero);
+            Assert.That(host.AutoCollectedLastRefresh, Is.EqualTo(1));
+            Assert.That(host.Count, Is.Zero);
+        }
+
+        [Test]
+        public void DisposeMatching_DisposesOnlyTheMatchingScopeInstance()
+        {
+            _host.Instantiate(TemplateId, AnchorId, _caster);
+            _host.Instantiate(TemplateId, AnchorId, _target);
+
+            Assert.That(_host.DisposeMatching(TemplateId, _caster), Is.EqualTo(1));
+            Assert.That(_host.Count, Is.EqualTo(1));
+            Assert.That(_host.SnapshotInstances()[0].Scope, Is.EqualTo(_target));
         }
 
         [Test]

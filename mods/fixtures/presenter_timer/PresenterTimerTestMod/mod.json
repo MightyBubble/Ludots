@@ -1,0 +1,8 @@
+{
+  "name": "PresenterTimerTestMod",
+  "version": "1.0.0",
+  "description": "Presenter named-timer fixture mod for engine-loop E2E tests.",
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

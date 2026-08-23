@@ -32,6 +32,11 @@
       "reason": "parallel-session work in flight (mods/games/coc); replace with a formal entry when it lands"
     },
     {
+      "kind": "binding",
+      "value": "agent_bridge",
+      "reason": "AgentBridgeMod 是 AI agent 调试桥工具 mod（loopback HTTP JSON-RPC），非 showcase，不设注册条目"
+    },
+    {
       "kind": "csproj",
       "value": "mods/showcases/panel_fireball_shared/FireballSharedMod",
       "reason": "shared fireball gameplay library consumed by all panel skin/theme showcase mods; not a standalone showcase entry"
@@ -4933,9 +4938,8 @@
     {
       "id": "map_trigger_night_raid",
       "path": "mods/showcases/map_trigger_night_raid/MapTriggerNightRaidMod",
-      "projectPath": "MapTriggerNightRaidMod.csproj",
       "title": "夜袭三波",
-      "summary": "MapTriggerGraph 旗舰展厅：英雄进圈开袭、清场跨思考波过第二波、Boss 阵亡翻阶段并开出胜利面板；关卡流全部在地图 JSON + 触发图数据里。",
+      "summary": "MapTriggerGraph 旗舰展厅：英雄进圈后按真实事件生成两波敌人，累计击杀达阈值后在营地生成 Boss；阶段链与胜利面板全数据驱动。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -4951,7 +4955,52 @@
       "artifactDir": "artifacts/evidence/map_trigger_night_raid",
       "screenshot": null,
       "status": "active",
-      "notes": "Headless data-flow acceptance; raid parties are map-data pre-placed entities (MapTrigger graphs are pure-op only, no spawn op yet)."
+      "notes": "波次 raider 不再预置于地图；RegionEntered 触发 wave1，EntityAliveCountChanged(team 2, cross_below 0) 触发 wave2，累计 kill_threshold=5 后由 SpawnTemplate 图 op（op 447）在 boss_camp 锚点生成 Boss；阶段链与胜利面板全数据驱动。"
+    },
+    {
+      "id": "night_raid_showcase",
+      "path": "mods/showcases/night_raid_showcase/NightRaidShowcaseMod",
+      "projectPath": "NightRaidShowcaseMod.csproj",
+      "title": "夜袭交互测试层",
+      "summary": "临时交互测试层：左键瞬移英雄、右键处决最近可杀实体、发 KillTool.Used 自定义事件；目标是未来被输入→图事件桥取代。",
+      "tier": "T3",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "map-trigger",
+        "input",
+        "interaction"
+      ],
+      "binding": "night_raid_showcase",
+      "preset": null,
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": "Human-play interaction layer; every rule it triggers lives in map TriggerGraph data."
+    },
+    {
+      "id": "night_raid_override",
+      "path": "mods/showcases/map_trigger_night_raid_override/NightRaidOverrideMod",
+      "title": "夜袭 override 叠加",
+      "summary": "跨 mod 触发图叠加：地图片段把 kill_threshold 3→2，叠加 override 计数图（override_active / override_seen）与基底图同拍运行。",
+      "tier": "T3",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "map-trigger",
+        "override"
+      ],
+      "binding": "night_raid_override",
+      "preset": null,
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active"
     },
     {
       "id": "multi_layer_fog_field",
@@ -7400,6 +7449,60 @@
         "web",
         "showcase"
       ]
+    },
+    {
+      "id": "capability_standard_graph_op_SpawnTemplate",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSpawnTemplateEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSpawnTemplateEntryMod.csproj",
+      "title": "图内造兵",
+      "summary": "不用预置实体，阈值一到援军从图里长了出来。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SpawnTemplate"
+      ],
+      "binding": "capability_standard_graph_op_SpawnTemplate",
+      "preset": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SpawnTemplate.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SpawnTemplate/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
+    },
+    {
+      "id": "capability_standard_graph_op_SetWorldPosition",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpSetWorldPositionEntryMod",
+      "projectPath": "CapabilityStandardGraphOpSetWorldPositionEntryMod.csproj",
+      "title": "隔空落子",
+      "summary": "不用挪动命令，一枚棋子从图里被放到了指定点。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "SetWorldPosition"
+      ],
+      "binding": "capability_standard_graph_op_SetWorldPosition",
+      "preset": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "docsPath": "gitbook/reference/graph-node-op-wiki/SetWorldPosition.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition",
+      "screenshot": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/poster.png",
+      "video": "artifacts/evidence/capability_standard_graph_op_SetWorldPosition/play.mp4",
+      "status": "active",
+      "notes": "Per-op player gallery. play.mp4 is Git LFS; wiki under graph-node-op-wiki."
     }
   ]
 }

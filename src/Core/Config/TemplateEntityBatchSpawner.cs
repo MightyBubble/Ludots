@@ -643,6 +643,12 @@ namespace Ludots.Core.Config
                     throw new InvalidOperationException($"Entity template '{templateId}' requires an explicit components object.");
                 }
 
+                // children 预置组合需要逐子挂接与局部姿落位，只能走单实体 spawn lane。
+                if (template.Children is { Count: > 0 })
+                {
+                    return Incompatible(onSpawnEffectTemplateId);
+                }
+
                 if (!IsBatchCandidate(template.Components))
                 {
                     return Incompatible(onSpawnEffectTemplateId);

@@ -1,0 +1,7 @@
+[
+  {
+    "Path": "GAS/graphs.json",
+    "Policy": "ArrayById",
+    "IdField": "id"
+  }
+]

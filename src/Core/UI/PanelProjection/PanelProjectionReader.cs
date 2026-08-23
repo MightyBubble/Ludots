@@ -31,7 +31,13 @@ namespace Ludots.Core.UI.PanelProjection
             if (_values.TryGet(owner, pin.Key, out GraphOutputValueHandle handle) &&
                 _values.TryGetView(handle, out GraphOutputValueView view))
             {
-                return new PanelProjectionValue(pin.Name, view.FloatValue, view.Revision, fromGraph: true);
+                float value = view.Kind switch
+                {
+                    GraphOutputValueKind.Int => view.IntValue,
+                    GraphOutputValueKind.Bool => view.BoolValue ? 1f : 0f,
+                    _ => view.FloatValue,
+                };
+                return new PanelProjectionValue(pin.Name, value, view.Revision, fromGraph: true);
             }
 
             return new PanelProjectionValue(pin.Name, pin.Default, revision: 0, fromGraph: false);

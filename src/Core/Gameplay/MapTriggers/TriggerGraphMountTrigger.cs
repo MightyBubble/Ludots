@@ -266,7 +266,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 dependencies.Engine.World,
                 _runCaster,
                 _scope,
-                default,
+                ResolveTargetPosCm(context),
                 program,
                 dependencies.GraphApi,
                 dependencies.Programs,
@@ -306,6 +306,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 ?? throw new InvalidOperationException($"{nameof(TriggerGraphMountTrigger)} requires GasGraphRuntimeApi.");
 
             return new TriggerGraphTriggerDependencies(engine, programs, graphApi);
+        }
+
+        private static Ludots.Platform.Abstractions.IntVector2 ResolveTargetPosCm(ScriptContext context)
+        {
+            if (context.Contains(MapTriggerEventPayloadKeys.GroundXCm) &&
+                context.Contains(MapTriggerEventPayloadKeys.GroundYCm))
+            {
+                return new Ludots.Platform.Abstractions.IntVector2(
+                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundXCm),
+                    (int)context.Get<float>(MapTriggerEventPayloadKeys.GroundYCm));
+            }
+
+            return default;
         }
 
         private Entity ResolveRunCaster(ScriptContext context)

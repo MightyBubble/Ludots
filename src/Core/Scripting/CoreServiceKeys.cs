@@ -110,6 +110,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
         public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.Attachment.AttachmentPositionSyncSystem> AttachmentPositionSync = new("AttachmentPositionSync");
 
         // --- Map ---
         public static readonly ServiceKey<MapId> MapId = new("MapId");
@@ -137,6 +138,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<object> UiTextMeasurer = new("UiTextMeasurer");
         public static readonly ServiceKey<object> UiImageSizeProvider = new("UiImageSizeProvider");
         public static readonly ServiceKey<Ludots.Core.UI.PanelHosting.PanelHost> PanelHost = new("PanelHost");
+        public static readonly ServiceKey<Ludots.Core.Gameplay.MapTriggers.CustomEventNameRegistry> CustomEventNameRegistry = new("CustomEventNameRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.PanelHosting.PanelTemplateRegistry> PanelTemplateRegistry = new("PanelTemplateRegistry");
         public static readonly ServiceKey<Ludots.Core.UI.PanelActivation.PanelActivationApi> PanelActivationApi = new("PanelActivationApi");
         public static readonly ServiceKey<Ludots.Core.UI.PanelActivation.UiPanelActivationStore> PanelActivationStore = new("PanelActivationStore");

@@ -29,6 +29,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterVisualStableIdTable? _visualStableIds;
         private readonly PerformerCommandKindRegistry? _extensionCommands;
         private readonly PerformerCommandOps _extensionCommandOps;
+        private readonly PresenterTimerTable? _timers;
         private Entity[] _ownerDestroyScratch = Array.Empty<Entity>();
         private int _lastCullSyncStructureVersion = -1;
 
@@ -44,7 +45,8 @@ namespace Ludots.Core.Presentation.Systems
             PresenterAnimatorStateBuffer? animatorStates = null,
             StableDrawCache? stableDrawCache = null,
             PresenterVisualStableIdTable? visualStableIds = null,
-            PerformerCommandKindRegistry? extensionCommands = null)
+            PerformerCommandKindRegistry? extensionCommands = null,
+            PresenterTimerTable? timers = null)
             : base(world)
         {
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -58,6 +60,7 @@ namespace Ludots.Core.Presentation.Systems
             _stableDrawCache = stableDrawCache;
             _visualStableIds = visualStableIds;
             _extensionCommands = extensionCommands;
+            _timers = timers;
             _extensionCommandOps = new PerformerCommandOps(World, _runtime, _definitions, MarkHierarchyForBootstrap);
             _runtime.BindDefinitions(_definitions);
         }
@@ -164,6 +167,36 @@ namespace Ludots.Core.Presentation.Systems
                         HandleInitializeTransform(in cmd);
                         break;
 
+                    case PresenterCommandKind.TimerSet:
+                        if (World.IsAlive(cmd.PresenterEntity) && World.Has<PresenterState>(cmd.PresenterEntity))
+                        {
+                            ref readonly PresenterState timerOwner = ref World.Get<PresenterState>(cmd.PresenterEntity);
+                            RequireTimerTable(PresenterCommandKind.TimerSet).Set(
+                                timerOwner.StableId,
+                                cmd.PresenterEntity,
+                                timerOwner.OwnerEntity,
+                                cmd.TimerNameId,
+                                cmd.TimerDurationSeconds,
+                                cmd.TimerDurationRangeSeconds);
+                        }
+                        break;
+
+                    case PresenterCommandKind.TimerKill:
+                        if (World.IsAlive(cmd.PresenterEntity) && World.Has<PresenterState>(cmd.PresenterEntity))
+                        {
+                            ref readonly PresenterState timerOwner = ref World.Get<PresenterState>(cmd.PresenterEntity);
+                            PresenterTimerTable table = RequireTimerTable(PresenterCommandKind.TimerKill);
+                            if (cmd.TimerNameId == PresenterTimerNameRegistry.AllTimersId)
+                            {
+                                table.KillAll(timerOwner.StableId);
+                            }
+                            else
+                            {
+                                table.Kill(timerOwner.StableId, cmd.TimerNameId);
+                            }
+                        }
+                        break;
+
                     case PresenterCommandKind.Extension:
                         HandleExtensionCommand(in cmd);
                         break;
@@ -186,6 +219,12 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _markers.TickAndRequest(_requests, dt, World);
             }
+        }
+
+        private PresenterTimerTable RequireTimerTable(PresenterCommandKind kind)
+        {
+            return _timers ?? throw new InvalidOperationException(
+                $"{kind} requires a PresenterTimerTable; this PresenterRuntimeSystem was constructed without one.");
         }
 
         private void ReleaseDestroyedOwnerAnchors()
@@ -663,6 +702,7 @@ namespace Ludots.Core.Presentation.Systems
             RemoveStableVisualCacheIfPresent(presenter, in state);
             EmitRetainedPresentationRemovalIfPresent(presenter, in state);
             _animatorStates?.Clear(presenter);
+            _timers?.KillAll(state.StableId);
 
             if (!_events.TryAdd(new PresentationEvent
                 {

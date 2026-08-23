@@ -47,6 +47,7 @@ namespace Ludots.Core.GraphRuntime
         public int? Team { get; set; }
         public float? Threshold { get; set; }
         public string? Direction { get; set; }
+        public string? Action { get; set; }
     }
 
     public sealed class GraphControlFlowNode

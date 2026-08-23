@@ -27,6 +27,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public sealed class GasGraphOpHandlerTable
     {
+        private static readonly Arch.Core.QueryDescription SoleMapEntityQuery = new Arch.Core.QueryDescription()
+            .WithAll<MapEntity>();
+
         public static readonly GasGraphOpHandlerTable Instance = new();
 
         public GasGraphOpHandler[] Handlers { get; }
@@ -294,7 +297,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ReadMapVarInt or
                 GraphNodeOp.ReadMapVarFloat or
                 GraphNodeOp.WriteMapVarInt or
-                GraphNodeOp.WriteMapVarFloat
+                GraphNodeOp.WriteMapVarFloat or
+                GraphNodeOp.SpawnTemplate or
+                GraphNodeOp.SetWorldPosition
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -790,6 +795,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.ShowPanel, HandleShowPanel, "ShowPanel graph opcode.");
             Register(GraphNodeOp.HidePanel, HandleHidePanel, "HidePanel graph opcode.");
             Register(GraphNodeOp.CreatePanel, HandleCreatePanel, "CreatePanel graph opcode.");
+        Register(GraphNodeOp.SpawnTemplate, HandleSpawnTemplate, "SpawnTemplate graph opcode.");
+        Register(GraphNodeOp.SetWorldPosition, HandleSetWorldPosition, "SetWorldPosition graph opcode.");
             Register(GraphNodeOp.DestroyPanel, HandleDestroyPanel, "DestroyPanel graph opcode.");
             Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.ReadMapVarInt, HandleReadMapVarInt, "ReadMapVarInt graph opcode.");
@@ -1001,6 +1008,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             s.Api.DestroyPanel(ins.Imm, scope);
         }
 
+        private static void HandleSetWorldPosition(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity target = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SetWorldPosition(target, s.I[ins.B], s.I[ins.C]);
+        }
+
+        private static void HandleSpawnTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = ins.A == byte.MaxValue ? s.Caster : s.E[ins.A];
+            s.Api.SpawnTemplate(
+                ins.Imm,
+                source,
+                s.F[ins.B],
+                s.F[ins.C],
+                ins.Flags == 1);
+        }
+
         // ── Map-scoped variables ──
 
         private static void HandleReadMapVarInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -1041,15 +1065,64 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static MapId RequireMapVariableScopeMap(ref GraphExecutionState s, Entity scope, string opName)
         {
+            // Event-driven graphs often carry dead sources (EntityDied's caster is the
+            // destroyed entity); the trigger mount scope is always a live map anchor, so it
+            // is the fallback before failing.
+            if (s.World != null &&
+                (!s.World.IsAlive(scope) || !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity)) &&
+                s.World.IsAlive(s.ExplicitTarget) &&
+                s.World.TryGet(s.ExplicitTarget, out mapEntity))
+            {
+                scope = s.ExplicitTarget;
+            }
+
             if (s.World == null ||
                 !s.World.IsAlive(scope) ||
-                !s.World.TryGet<MapEntity>(scope, out MapEntity mapEntity))
+                !s.World.TryGet<MapEntity>(scope, out mapEntity))
             {
+                // Schema v2 panel query graphs evaluate with the panel scope (a gameplay
+                // entity, not a map anchor) as caster; their map variables resolve against
+                // the sole loaded map, mirroring QueryAllMapEntities' world-scoped semantics.
+                // Ambiguous multi-map loads stay fail-closed.
+                if (TryResolveSoleLoadedMap(s.World, out MapId soleMapId))
+                {
+                    return soleMapId;
+                }
+
                 throw new InvalidOperationException(
                     $"GAS.GRAPH.ERR.MapVariableScopeEntity: {opName} requires a scope entity with a MapEntity component (caster or explicit register).");
             }
 
             return mapEntity.MapId;
+        }
+
+        private static bool TryResolveSoleLoadedMap(World? world, out MapId mapId)
+        {
+            mapId = default;
+            if (world == null)
+            {
+                return false;
+            }
+
+            bool found = false;
+            foreach (ref var chunk in world.Query(in SoleMapEntityQuery))
+            {
+                Span<MapEntity> maps = chunk.GetSpan<MapEntity>();
+                for (int i = 0; i < maps.Length; i++)
+                {
+                    if (!found)
+                    {
+                        mapId = maps[i].MapId;
+                        found = true;
+                    }
+                    else if (maps[i].MapId != mapId)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return found;
         }
 
         private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

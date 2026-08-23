@@ -43,7 +43,7 @@ QueryAllMapEntities → **QueryFilterTeam**（本篇）
 
 ## 边界与更多用法
 
-- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script 图不可用（编译期白名单拒绝）。
+- 图种边界：可用于 Query；Effect / Score / Validation / Derived / Script / TriggerGraph 图不可用（编译期白名单拒绝）。
 - 同类用法：战场统计（全场均值/最值）、点名最残或最能扛的目标、按条件筛名单再排序。
 ## 怎么进
 

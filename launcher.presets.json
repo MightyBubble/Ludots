@@ -462,7 +462,9 @@
       "id": "map_trigger_night_raid_raylib",
       "name": "Map Trigger Night Raid Raylib",
       "selectors": [
-        "$map_trigger_night_raid"
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$agent_bridge"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -2106,6 +2108,18 @@
       "buildMode": "auto"
     },
     {
+      "id": "map_trigger_night_raid_override_raylib",
+      "name": "Map Trigger Night Raid Override Raylib",
+      "selectors": [
+        "$map_trigger_night_raid",
+        "$night_raid_showcase",
+        "$night_raid_override",
+        "$agent_bridge"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "panel_theme_ink_raylib",
       "name": "Panel Theme Ink-wash Raylib",
       "selectors": [
@@ -2155,6 +2169,24 @@
       "name": "Panel Theme Minimal Web Raylib",
       "selectors": [
         "$panel_theme_minimal_web"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SpawnTemplate_raylib",
+      "name": "Graph Op SpawnTemplate Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SpawnTemplate"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_SetWorldPosition_raylib",
+      "name": "Graph Op SetWorldPosition Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_SetWorldPosition"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
